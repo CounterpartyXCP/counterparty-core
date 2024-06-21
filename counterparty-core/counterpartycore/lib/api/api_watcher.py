@@ -24,6 +24,7 @@ UPDATE_EVENTS_ID_FIELDS = {
     "ORDER_UPDATE": ["tx_hash"],
     "RPS_MATCH_UPDATE": ["id"],
     "RPS_UPDATE": ["tx_hash"],
+    "ADDRESS_OPTIONS_UPDATE": ["address"],
 }
 
 EXPIRATION_EVENTS_OBJECT_ID = {

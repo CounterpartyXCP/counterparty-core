@@ -6,6 +6,7 @@ import argparse
 import binascii
 import json
 import logging
+import os
 import time
 from datetime import datetime
 
@@ -13,6 +14,7 @@ import apsw
 import bitcoin as bitcoinlib
 import pycoin
 import pytest
+import requests
 from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
@@ -218,18 +220,14 @@ def server_db(request, cp_server, api_server):
     return db
 
 
-@pytest.fixture(scope="function")
-def server_api_db(request, cp_server, api_server):
-    """Enable database access for unit test vectors."""
-    db = database.get_db_connection(config.API_DATABASE, read_only=False)
+""" @pytest.fixture(scope="function")
+def server_api_db(request, api_server_v2):
+    db = database.get_db_connection(config.API_DATABASE, read_only=True)
     cursor = db.cursor()
-    cursor.execute("""BEGIN""")
-    # util_test.reset_current_block_index(db)
-
-    request.addfinalizer(lambda: cursor.execute("""ROLLBACK"""))
-    # request.addfinalizer(lambda: util_test.reset_current_block_index(db))
-
-    return db
+    cursor.execute("BEGIN")
+    request.addfinalizer(lambda: cursor.execute("ROLLBACK"))
+    api_server_v2.watcher.api_db = db
+    return db """
 
 
 @pytest.fixture(scope="module")
@@ -324,11 +322,25 @@ def api_server_v2(request, cp_server):
             "api_port": TEST_RPC_PORT + 10,
         }
     )
+
+    if os.path.exists(config.API_DATABASE):
+        os.unlink(config.API_DATABASE)
+
     args = argparse.Namespace(**server_config)
     api_server = api_v2.APIServer()
     api_server.start(args)
     # TODO: wait for server to be ready
-    time.sleep(1.5)
+
+    while True:
+        try:
+            result = requests.get("http://localhost:10009/v2/", timeout=30)
+            if result.status_code != 200:
+                raise TimeoutError
+            break
+        except requests.exceptions.RequestException:
+            print("TimeoutError: waiting for API server to be ready")
+            time.sleep(1.5)
+            pass
 
     request.addfinalizer(lambda: api_server.stop())
 

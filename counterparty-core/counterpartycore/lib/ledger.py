@@ -1085,7 +1085,7 @@ def get_addresses(db, address=None):
         where.append("address = ?")
         bindings.append(address)
     # no sql injection here
-    query = f"""SELECT * FROM addresses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    query = f"""SELECT *, MAX(rowid) AS rowid FROM addresses WHERE ({" AND ".join(where)}) GROUP BY address"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

@@ -9,7 +9,7 @@
                 "difficulty": null,
                 "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
                 "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
-                "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
+                "messages_hash": "4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96",
                 "transaction_count": 0
             },
             {
@@ -20,7 +20,7 @@
                 "difficulty": null,
                 "ledger_hash": "b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9",
                 "txlist_hash": "032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5",
-                "messages_hash": "d6aedacd4f81520d86ae47c9c776d17a213c706a5cf7c91203a4299261d1648c",
+                "messages_hash": "dc4258fd460745fe443598c0119627362b7bceea1892f32243221551f45db0c9",
                 "transaction_count": 0
             },
             {
@@ -31,7 +31,7 @@
                 "difficulty": null,
                 "ledger_hash": "5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414",
                 "txlist_hash": "b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7",
-                "messages_hash": "113207bd13dda56b5e5edf305f70a56e62cc861184e1e95a64e79ce100462c98",
+                "messages_hash": "31fb849548f5054c3f49f5ba1fc015a6169db27f00e90ea2baa6fe453e2744a5",
                 "transaction_count": 1
             },
             {
@@ -42,7 +42,7 @@
                 "difficulty": null,
                 "ledger_hash": "28c6e92b2299b9cbbb5953f8b7ff3de0fe962d15642ba27e43faa64e1935e819",
                 "txlist_hash": "ff8136601b9e0138a999d1f0467af6e8535a2bcdd2b622af7be0178a083b9519",
-                "messages_hash": "ac8d8759fbddc8f92ad8b5d8b4637a63b8d21a04ba1a4126baf2b42a87edfce3",
+                "messages_hash": "ad86d199894b3c4e8a2d05332b58b81350bfaf9686b5a0896fdc286cd5d95833",
                 "transaction_count": 1
             },
             {
@@ -53,7 +53,7 @@
                 "difficulty": null,
                 "ledger_hash": "7ac6121c624b634f44695172761830926afe76bb18c4cc9195773f3a26966941",
                 "txlist_hash": "9eda85cce745579122ba9c6e24b63cd83f2e5161031a34e6ee9bf08b80823cb4",
-                "messages_hash": "1b1ed76f99d39b36f4d0737299ce15b21fed9e077d0476658c023b09819853a7",
+                "messages_hash": "1417fc5280cab90a898e1b89baf5e8ebafcf666e43ecc2042bae44519c54794e",
                 "transaction_count": 1
             },
             {
@@ -64,7 +64,7 @@
                 "difficulty": null,
                 "ledger_hash": "5a7e5a36882466373d576bb5f4ccd1bc72ecaf548b9589baa803a7275a7a24cd",
                 "txlist_hash": "09e9db121649cacd979fd18bbaa35e519361e727e7e072e2f2f86291160cdb29",
-                "messages_hash": "56518bc9abc11bf108188834058bb9c51c9b8dc3b6276116c5b786b07c797fab",
+                "messages_hash": "c426ad40e2d4e6e3e6301c9122fdb9ef7f28fad2ef6135985046a4a9b2acdedb",
                 "transaction_count": 1
             },
             {
@@ -75,7 +75,7 @@
                 "difficulty": null,
                 "ledger_hash": "72d71bd72263699ea9f2b097ad141be5bc394f49d8b0b0a6b2ff6a87b0ee3919",
                 "txlist_hash": "9350c3ba33d0546d1194c5fa767ced28834b26246aedc56d89b1d48ec4f26014",
-                "messages_hash": "0d3c87692d49dc033eed975eb8b8ee17ff2f0f877c8ed5a5866f73ce63bf8715",
+                "messages_hash": "ab785cd4356200a496f5b85e7f824d03bb32b81cafa403176a6ded65e0aa8a0a",
                 "transaction_count": 1
             },
             {
@@ -86,7 +86,7 @@
                 "difficulty": null,
                 "ledger_hash": "29119cd30a4733916fbfd0551506eaa16f7bb1bdfbdf8d17ac4e5bb20d1cb09c",
                 "txlist_hash": "7ec4cfa94544900c8e8732ad51be7cee6452aa1884ea940cd5c98862fb4aaba6",
-                "messages_hash": "53a339feb73df3a98bc4acc84af77e111d4780533c8f5a26cf250594d9613cf2",
+                "messages_hash": "2a51d45368d39a8ed09a7c24aab6271397a8a6dbabc960b4b26d051547f15f3e",
                 "transaction_count": 1
             },
             {
@@ -97,7 +97,7 @@
                 "difficulty": null,
                 "ledger_hash": "98af18583618fdeed545347c013763d068e8294405d265911cc5e1bc420bc740",
                 "txlist_hash": "daf4d2c1a1ad5206abcf7744bdd06fae99c442fb2607a843dcabb5727d02916e",
-                "messages_hash": "0d34fbc26126add5a57b7e8f6f71bad150d7232abf046f3fa9b1fc72b10d61b2",
+                "messages_hash": "fc77802662487506752caa901851d67dee6b960606286e180c6e9cd5a5f6cba0",
                 "transaction_count": 1
             },
             {
@@ -108,7 +108,7 @@
                 "difficulty": null,
                 "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
                 "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
-                "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
+                "messages_hash": "fa5278b9c27ee7e35fb9b13329e4146133c9219897aaa6fde667e2eda5ac015f",
                 "transaction_count": 1
             }
         ],
@@ -124,7 +124,7 @@
             "difficulty": null,
             "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
             "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
-            "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
+            "messages_hash": "4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96",
             "transaction_count": 0
         }
     },
@@ -137,7 +137,7 @@
             "difficulty": null,
             "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
             "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
-            "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
+            "messages_hash": "fa5278b9c27ee7e35fb9b13329e4146133c9219897aaa6fde667e2eda5ac015f",
             "transaction_count": 1
         }
     },
@@ -150,7 +150,7 @@
             "difficulty": null,
             "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
             "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
-            "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
+            "messages_hash": "4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96",
             "transaction_count": 0
         }
     },
@@ -207,7 +207,7 @@
     "http://localhost:10009/v2/blocks/310491/events?verbose=true": {
         "result": [
             {
-                "event_index": 1183,
+                "event_index": 1185,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607",
@@ -221,12 +221,12 @@
                 "tx_hash": null
             },
             {
-                "event_index": 1182,
+                "event_index": 1184,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310491,
                     "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
-                    "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
+                    "messages_hash": "fa5278b9c27ee7e35fb9b13329e4146133c9219897aaa6fde667e2eda5ac015f",
                     "transaction_count": 1,
                     "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
                     "block_time": 310491000
@@ -234,7 +234,7 @@
                 "tx_hash": null
             },
             {
-                "event_index": 1181,
+                "event_index": 1183,
                 "event": "TRANSACTION_PARSED",
                 "params": {
                     "supported": true,
@@ -244,7 +244,7 @@
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
-                "event_index": 1180,
+                "event_index": 1182,
                 "event": "OPEN_ORDER",
                 "params": {
                     "block_index": 310491,
@@ -291,7 +291,7 @@
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
-                "event_index": 1179,
+                "event_index": 1181,
                 "event": "DEBIT",
                 "params": {
                     "action": "open order",
@@ -314,7 +314,7 @@
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
-                "event_index": 1178,
+                "event_index": 1180,
                 "event": "NEW_TRANSACTION",
                 "params": {
                     "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
@@ -990,7 +990,7 @@
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/events?verbose=true": {
         "result": [
             {
-                "event_index": 1181,
+                "event_index": 1183,
                 "event": "TRANSACTION_PARSED",
                 "params": {
                     "supported": true,
@@ -1003,7 +1003,7 @@
                 "block_time": 310491000
             },
             {
-                "event_index": 1180,
+                "event_index": 1182,
                 "event": "OPEN_ORDER",
                 "params": {
                     "block_index": 310491,
@@ -1053,7 +1053,7 @@
                 "block_time": 310491000
             },
             {
-                "event_index": 1179,
+                "event_index": 1181,
                 "event": "DEBIT",
                 "params": {
                     "action": "open order",
@@ -1120,132 +1120,12 @@
         "result_count": 0
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
-        "result": [
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "A95428956661682277",
-                "quantity": 100000000,
-                "asset_info": {
-                    "asset_longname": "PARENT.already.issued",
-                    "description": "Child of parent",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "1"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "XCP",
-                "quantity": 91875000000,
-                "asset_info": {
-                    "divisible": true,
-                    "asset_longname": "Counterparty",
-                    "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
-                },
-                "quantity_normalized": "918.75"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "PARENT",
-                "quantity": 100000000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Parent asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "1"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "DIVISIBLE",
-                "quantity": 98800000000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "988"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "MAXI",
-                "quantity": 9223372036854775807,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Maximum quantity",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "92233720000"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "NODIVISIBLE",
-                "quantity": 985,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "985"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "LOCKED",
-                "quantity": 1000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Locked asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": true
-                },
-                "quantity_normalized": "0.00001"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "CALLABLE",
-                "quantity": 1000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Callable asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "0.00001"
-            }
-        ],
+        "result": [],
         "next_cursor": null,
-        "result_count": 8
+        "result_count": 0
     },
-    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances/NODIVISIBLE?verbose=true": {
-        "result": {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "NODIVISIBLE",
-            "quantity": 985,
-            "block_index": 310015,
-            "tx_index": 16,
-            "block_time": 310015000,
-            "asset_info": {
-                "asset_longname": null,
-                "description": "No divisible asset",
-                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "divisible": false,
-                "locked": false
-            },
-            "quantity_normalized": "985"
-        }
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances/DIVISIBLE?verbose=true": {
+        "error": "Not found"
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/credits?verbose=true": {
         "result": [
@@ -2079,55 +1959,76 @@
         "next_cursor": null,
         "result_count": 1
     },
-    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends/NODIVISIBLE?verbose=true": {
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/sends/DIVISIBLE?verbose=true": {
         "result": [
             {
-                "tx_index": 16,
-                "tx_hash": "e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c",
-                "block_index": 310015,
+                "tx_index": 111,
+                "tx_hash": "f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7",
+                "block_index": 310110,
                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "destination": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
-                "asset": "NODIVISIBLE",
-                "quantity": 10,
+                "destination": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
-                "block_time": 310015000,
+                "block_time": 310110000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "No divisible asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "tx_index": 14,
+                "tx_hash": "0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132",
+                "block_index": 310013,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                "asset": "DIVISIBLE",
+                "quantity": 1000000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310013000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
                     "locked": false
                 },
                 "quantity_normalized": "10"
             },
             {
-                "tx_index": 15,
-                "tx_hash": "1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a",
-                "block_index": 310014,
+                "tx_index": 8,
+                "tx_hash": "6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753",
+                "block_index": 310007,
                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                "asset": "NODIVISIBLE",
-                "quantity": 5,
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
-                "block_time": 310014000,
+                "block_time": 310007000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "No divisible asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
+                    "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "5"
+                "quantity_normalized": "1"
             }
         ],
         "next_cursor": null,
-        "result_count": 2
+        "result_count": 3
     },
-    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives/NODIVISIBLE?verbose=true": {
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/receives/DIVISIBLE?verbose=true": {
         "result": [],
         "next_cursor": null,
         "result_count": 0
@@ -2179,12 +2080,12 @@
         "next_cursor": null,
         "result_count": 0
     },
-    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends/NODIVISIBLE?verbose=true": {
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends/DIVISIBLE?verbose=true": {
         "result": [],
         "next_cursor": null,
         "result_count": 0
     },
-    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/receives/NODIVISIBLE?verbose=true": {
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/receives/DIVISIBLE?verbose=true": {
         "result": [],
         "next_cursor": null,
         "result_count": 0
@@ -3149,221 +3050,287 @@
         "next_cursor": null,
         "result_count": 10
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE?verbose=true": {
+    "http://localhost:10009/v2/assets/DIVISIBLE?verbose=true": {
         "result": {
-            "asset": "NODIVISIBLE",
+            "asset": "DIVISIBLE",
             "asset_longname": null,
             "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "divisible": false,
+            "divisible": true,
             "locked": false,
-            "supply": 1000,
-            "description": "No divisible asset",
+            "supply": 100000000000,
+            "description": "Divisible asset",
             "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "holder_count": 3,
-            "first_issuance_block_index": 310002,
-            "last_issuance_block_index": 310002,
-            "first_issuance_block_time": 310002000,
-            "last_issuance_block_time": 310002000
+            "holder_count": 0,
+            "first_issuance_block_index": 310001,
+            "last_issuance_block_index": 310001,
+            "first_issuance_block_time": 310001000,
+            "last_issuance_block_time": 310001000
         }
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/balances?verbose=true": {
-        "result": [
-            {
-                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
-                "asset": "NODIVISIBLE",
-                "quantity": 10,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "10"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "NODIVISIBLE",
-                "quantity": 985,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "985"
-            },
-            {
-                "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                "asset": "NODIVISIBLE",
-                "quantity": 5,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "5"
-            }
-        ],
-        "next_cursor": null,
-        "result_count": 3
-    },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/balances/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc?verbose=true": {
-        "result": {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "NODIVISIBLE",
-            "quantity": 985,
-            "block_index": 310015,
-            "tx_index": 16,
-            "block_time": 310015000,
-            "asset_info": {
-                "asset_longname": null,
-                "description": "No divisible asset",
-                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "divisible": false,
-                "locked": false
-            },
-            "quantity_normalized": "985"
-        }
-    },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/orders?verbose=true": {
+    "http://localhost:10009/v2/assets/DIVISIBLE/balances?verbose=true": {
         "result": [],
         "next_cursor": null,
         "result_count": 0
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/credits?verbose=true": {
+    "http://localhost:10009/v2/assets/DIVISIBLE/balances/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc?verbose=true": {
+        "error": "Not found"
+    },
+    "http://localhost:10009/v2/assets/DIVISIBLE/orders?verbose=true": {
         "result": [
             {
-                "block_index": 310015,
-                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
-                "asset": "NODIVISIBLE",
-                "quantity": 10,
+                "tx_index": 10,
+                "tx_hash": "21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b",
+                "block_index": 310009,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "DIVISIBLE",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312009,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open",
+                "block_time": 310009000,
+                "give_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "get_asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "1",
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.000068"
+            },
+            {
+                "tx_index": 7,
+                "tx_hash": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8",
+                "block_index": 310006,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "DIVISIBLE",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312006,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open",
+                "block_time": 310006000,
+                "give_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "get_asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "1",
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.000068"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 2
+    },
+    "http://localhost:10009/v2/assets/DIVISIBLE/credits?verbose=true": {
+        "result": [
+            {
+                "block_index": 310110,
+                "address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
                 "calling_function": "send",
-                "event": "e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c",
-                "tx_index": 16,
-                "block_time": 310015000,
+                "event": "f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7",
+                "tx_index": 111,
+                "block_time": 310110000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "No divisible asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "block_index": 310013,
+                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                "asset": "DIVISIBLE",
+                "quantity": 1000000000,
+                "calling_function": "send",
+                "event": "0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132",
+                "tx_index": 14,
+                "block_time": 310013000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
                     "locked": false
                 },
                 "quantity_normalized": "10"
             },
             {
-                "block_index": 310014,
+                "block_index": 310007,
                 "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                "asset": "NODIVISIBLE",
-                "quantity": 5,
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
                 "calling_function": "send",
-                "event": "1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a",
-                "tx_index": 15,
-                "block_time": 310014000,
+                "event": "6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753",
+                "tx_index": 8,
+                "block_time": 310007000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "No divisible asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
+                    "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "5"
+                "quantity_normalized": "1"
             },
             {
-                "block_index": 310002,
+                "block_index": 310001,
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "NODIVISIBLE",
-                "quantity": 1000,
+                "asset": "DIVISIBLE",
+                "quantity": 100000000000,
                 "calling_function": "issuance",
-                "event": "7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584",
-                "tx_index": 3,
-                "block_time": 310002000,
+                "event": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                "tx_index": 2,
+                "block_time": 310001000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "No divisible asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
+                    "divisible": true,
                     "locked": false
                 },
                 "quantity_normalized": "1000"
             }
         ],
         "next_cursor": null,
-        "result_count": 3
+        "result_count": 4
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/debits?verbose=true": {
+    "http://localhost:10009/v2/assets/DIVISIBLE/debits?verbose=true": {
         "result": [
             {
-                "block_index": 310015,
+                "block_index": 310110,
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "NODIVISIBLE",
-                "quantity": 10,
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
                 "action": "send",
-                "event": "e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c",
-                "tx_index": 16,
-                "block_time": 310015000,
+                "event": "f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7",
+                "tx_index": 111,
+                "block_time": 310110000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "No divisible asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "block_index": 310013,
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "DIVISIBLE",
+                "quantity": 1000000000,
+                "action": "send",
+                "event": "0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132",
+                "tx_index": 14,
+                "block_time": 310013000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
                     "locked": false
                 },
                 "quantity_normalized": "10"
             },
             {
-                "block_index": 310014,
+                "block_index": 310007,
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "NODIVISIBLE",
-                "quantity": 5,
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
                 "action": "send",
-                "event": "1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a",
-                "tx_index": 15,
-                "block_time": 310014000,
+                "event": "6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753",
+                "tx_index": 8,
+                "block_time": 310007000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "No divisible asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
+                    "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "5"
+                "quantity_normalized": "1"
             }
         ],
         "next_cursor": null,
-        "result_count": 2
+        "result_count": 3
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/dividends?verbose=true": {
+    "http://localhost:10009/v2/assets/DIVISIBLE/dividends?verbose=true": {
         "result": [],
         "next_cursor": null,
         "result_count": 0
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/issuances?verbose=true": {
+    "http://localhost:10009/v2/assets/DIVISIBLE/issuances?verbose=true": {
         "result": [
             {
-                "tx_index": 3,
-                "tx_hash": "7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584",
+                "tx_index": 2,
+                "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "msg_index": 0,
-                "block_index": 310002,
-                "asset": "NODIVISIBLE",
-                "quantity": 1000,
-                "divisible": false,
+                "block_index": 310001,
+                "asset": "DIVISIBLE",
+                "quantity": 100000000000,
+                "divisible": true,
                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "transfer": false,
                 "callable": false,
                 "call_date": 0,
                 "call_price": 0.0,
-                "description": "No divisible asset",
+                "description": "Divisible asset",
                 "fee_paid": 50000000,
                 "locked": false,
                 "status": "valid",
                 "asset_longname": null,
                 "reset": false,
-                "block_time": 310002000,
+                "block_time": 310001000,
                 "quantity_normalized": "1000",
                 "fee_paid_normalized": "0.5"
             }
@@ -3371,55 +3338,76 @@
         "next_cursor": null,
         "result_count": 1
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/sends?verbose=true": {
+    "http://localhost:10009/v2/assets/DIVISIBLE/sends?verbose=true": {
         "result": [
             {
-                "tx_index": 16,
-                "tx_hash": "e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c",
-                "block_index": 310015,
+                "tx_index": 111,
+                "tx_hash": "f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7",
+                "block_index": 310110,
                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "destination": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
-                "asset": "NODIVISIBLE",
-                "quantity": 10,
+                "destination": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
-                "block_time": 310015000,
+                "block_time": 310110000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "No divisible asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "1"
+            },
+            {
+                "tx_index": 14,
+                "tx_hash": "0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132",
+                "block_index": 310013,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                "asset": "DIVISIBLE",
+                "quantity": 1000000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310013000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
                     "locked": false
                 },
                 "quantity_normalized": "10"
             },
             {
-                "tx_index": 15,
-                "tx_hash": "1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a",
-                "block_index": 310014,
+                "tx_index": 8,
+                "tx_hash": "6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753",
+                "block_index": 310007,
                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                "asset": "NODIVISIBLE",
-                "quantity": 5,
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
-                "block_time": 310014000,
+                "block_time": 310007000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "No divisible asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
+                    "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "5"
+                "quantity_normalized": "1"
             }
         ],
         "next_cursor": null,
-        "result_count": 2
+        "result_count": 3
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/dispensers?verbose=true": {
+    "http://localhost:10009/v2/assets/DIVISIBLE/dispensers?verbose=true": {
         "result": [],
         "next_cursor": null,
         "result_count": 0
@@ -3456,64 +3444,12 @@
             "satoshirate_normalized": "0.000001"
         }
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/holders?verbose=true": {
-        "result": [
-            {
-                "asset": "NODIVISIBLE",
-                "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                "quantity": 5,
-                "escrow": null,
-                "cursor_id": "balances_23",
-                "holding_type": "balances",
-                "status": null,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "5"
-            },
-            {
-                "asset": "NODIVISIBLE",
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "quantity": 985,
-                "escrow": null,
-                "cursor_id": "balances_24",
-                "holding_type": "balances",
-                "status": null,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "985"
-            },
-            {
-                "asset": "NODIVISIBLE",
-                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
-                "quantity": 10,
-                "escrow": null,
-                "cursor_id": "balances_25",
-                "holding_type": "balances",
-                "status": null,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "10"
-            }
-        ],
+    "http://localhost:10009/v2/assets/DIVISIBLE/holders?verbose=true": {
+        "result": [],
         "next_cursor": null,
-        "result_count": 3
+        "result_count": 0
     },
-    "http://localhost:10009/v2/assets/NODIVISIBLE/dispenses?verbose=true": {
+    "http://localhost:10009/v2/assets/DIVISIBLE/dispenses?verbose=true": {
         "result": [],
         "next_cursor": null,
         "result_count": 0
@@ -3854,10 +3790,101 @@
         "next_cursor": null,
         "result_count": 0
     },
-    "http://localhost:10009/v2/orders/NODIVISIBLE/XCP?verbose=true": {
-        "result": [],
+    "http://localhost:10009/v2/orders/DIVISIBLE/XCP?verbose=true": {
+        "result": [
+            {
+                "tx_index": 10,
+                "tx_hash": "21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b",
+                "block_index": 310009,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "DIVISIBLE",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312009,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open",
+                "market_pair": "DIVISIBLE/XCP",
+                "market_dir": "BUY",
+                "block_time": 310009000,
+                "give_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "get_asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "1",
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.000068",
+                "market_price": "1"
+            },
+            {
+                "tx_index": 7,
+                "tx_hash": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8",
+                "block_index": 310006,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "give_asset": "XCP",
+                "give_quantity": 100000000,
+                "give_remaining": 100000000,
+                "get_asset": "DIVISIBLE",
+                "get_quantity": 100000000,
+                "get_remaining": 100000000,
+                "expiration": 2000,
+                "expire_index": 312006,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "fee_provided": 6800,
+                "fee_provided_remaining": 6800,
+                "status": "open",
+                "market_pair": "DIVISIBLE/XCP",
+                "market_dir": "BUY",
+                "block_time": 310006000,
+                "give_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "get_asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "give_quantity_normalized": "1",
+                "get_quantity_normalized": "1",
+                "get_remaining_normalized": "1",
+                "give_remaining_normalized": "1",
+                "fee_provided_normalized": "0.000068",
+                "fee_required_normalized": "0",
+                "fee_required_remaining_normalized": "0",
+                "fee_provided_remaining_normalized": "0.000068",
+                "market_price": "1"
+            }
+        ],
         "next_cursor": null,
-        "result_count": 0
+        "result_count": 2
     },
     "http://localhost:10009/v2/bets?verbose=true": {
         "result": [
@@ -4157,12 +4184,12 @@
     "http://localhost:10009/v2/events?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1237,
+                "event_index": 1239,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310500,
                     "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
-                    "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
+                    "messages_hash": "4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96",
                     "transaction_count": 0,
                     "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
                     "block_time": 310500000
@@ -4173,7 +4200,7 @@
                 "block_time": 310500000
             },
             {
-                "event_index": 1236,
+                "event_index": 1238,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b",
@@ -4190,12 +4217,12 @@
                 "block_time": 310499000
             },
             {
-                "event_index": 1235,
+                "event_index": 1237,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310499,
                     "ledger_hash": "b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9",
-                    "messages_hash": "d6aedacd4f81520d86ae47c9c776d17a213c706a5cf7c91203a4299261d1648c",
+                    "messages_hash": "dc4258fd460745fe443598c0119627362b7bceea1892f32243221551f45db0c9",
                     "transaction_count": 0,
                     "txlist_hash": "032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5",
                     "block_time": 310499000
@@ -4206,7 +4233,7 @@
                 "block_time": 310499000
             },
             {
-                "event_index": 1234,
+                "event_index": 1236,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764",
@@ -4223,12 +4250,12 @@
                 "block_time": 310498000
             },
             {
-                "event_index": 1233,
+                "event_index": 1235,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310498,
                     "ledger_hash": "5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414",
-                    "messages_hash": "113207bd13dda56b5e5edf305f70a56e62cc861184e1e95a64e79ce100462c98",
+                    "messages_hash": "31fb849548f5054c3f49f5ba1fc015a6169db27f00e90ea2baa6fe453e2744a5",
                     "transaction_count": 1,
                     "txlist_hash": "b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7",
                     "block_time": 310498000
@@ -4239,8 +4266,8 @@
                 "block_time": 310498000
             }
         ],
-        "next_cursor": 1232,
-        "result_count": 1238
+        "next_cursor": 1234,
+        "result_count": 1240
     },
     "http://localhost:10009/v2/events/10?limit=5&verbose=true": {
         "result": {
@@ -4283,12 +4310,12 @@
             }
         ],
         "next_cursor": "OPEN_DISPENSER",
-        "result_count": 21
+        "result_count": 22
     },
     "http://localhost:10009/v2/events/CREDIT?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1231,
+                "event_index": 1233,
                 "event": "CREDIT",
                 "params": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -4314,7 +4341,7 @@
                 "block_time": 310498000
             },
             {
-                "event_index": 1223,
+                "event_index": 1225,
                 "event": "CREDIT",
                 "params": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -4340,7 +4367,7 @@
                 "block_time": 310497000
             },
             {
-                "event_index": 1214,
+                "event_index": 1216,
                 "event": "CREDIT",
                 "params": {
                     "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
@@ -4366,7 +4393,7 @@
                 "block_time": 310496000
             },
             {
-                "event_index": 1207,
+                "event_index": 1209,
                 "event": "CREDIT",
                 "params": {
                     "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
@@ -4392,7 +4419,7 @@
                 "block_time": 310495000
             },
             {
-                "event_index": 1201,
+                "event_index": 1203,
                 "event": "CREDIT",
                 "params": {
                     "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
@@ -4418,7 +4445,7 @@
                 "block_time": 310494000
             }
         ],
-        "next_cursor": 1193,
+        "next_cursor": 1195,
         "result_count": 34
     },
     "http://localhost:10009/v2/events/CREDIT/count?limit=5&verbose=true": {
