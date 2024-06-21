@@ -232,8 +232,6 @@ def api_server(request, cp_server):
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
 
-    # watcher = api_watcher.APIWatcher()
-    # watcher.start()
     # print(config.DATABASE, config.API_DATABASE)
 
     # start RPC server and wait for server to be ready
