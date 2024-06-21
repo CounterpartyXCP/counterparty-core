@@ -18,10 +18,7 @@ use bitcoincore_rpc::{
     Auth, Client, RpcApi,
 };
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
-use crypto::buffer::{RefReadBuffer, RefWriteBuffer, WriteBuffer};
 use crypto::rc4::Rc4;
-use crypto::symmetriccipher::Decryptor;
-use tracing::debug;
 use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use super::{
@@ -83,11 +80,11 @@ impl BlockHasEntries for Block {
     }
 }
 
-fn arc4_decrypt(key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error> {
+fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
     let mut rc4 = Rc4::new(key);
     let mut result: Vec<u8> = repeat(0).take(data.len()).collect();
     rc4.process(data, &mut result);
-    Ok(result)
+    result
 }
 
 fn is_valid_segwit_script(script: &Script) -> bool {
@@ -124,7 +121,7 @@ fn parse_vout(
             .collect::<Vec<_>>()
             .as_slice()
         {
-            let bytes = arc4_decrypt(&key, pb.as_bytes())?;
+            let bytes = arc4_decrypt(&key, pb.as_bytes());
             if bytes.starts_with(&config.prefix) {
                 return Ok((
                     ParseOutput::Data(bytes[config.prefix.len()..].to_vec()),
@@ -143,7 +140,7 @@ fn parse_vout(
                 .collect::<Vec<_>>()
                 .as_slice()
         {
-            let bytes = arc4_decrypt(&key, pb.as_bytes())?;
+            let bytes = arc4_decrypt(&key, pb.as_bytes());
             if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
                 let data_len = bytes[0] as usize;
                 let data = bytes[1..=data_len].to_vec();
@@ -227,7 +224,7 @@ fn parse_vout(
         for chunk in chunks.iter().take(chunks.len() - 1) { // (No data in last pubkey.)
             enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec()); // Skip sign byte and nonce byte.
         }
-        let bytes = arc4_decrypt(&key, &enc_bytes)?;
+        let bytes = arc4_decrypt(&key, &enc_bytes);
         if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
             let chunk_len = bytes[0] as usize;
             let chunk = bytes[1..=chunk_len].to_vec();
