@@ -8560,11 +8560,11 @@ UNITTEST_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1237,
+                    "message_index": 1239,
                     "block_index": 310500,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310500,"ledger_hash":"5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d","messages_hash":"45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f","transaction_count":0,"txlist_hash":"35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"}',
+                    "bindings": '{"block_index":310500,"ledger_hash":"5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d","messages_hash":"4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96","transaction_count":0,"txlist_hash":"35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,

@@ -220,16 +220,6 @@ def server_db(request, cp_server, api_server):
     return db
 
 
-""" @pytest.fixture(scope="function")
-def server_api_db(request, api_server_v2):
-    db = database.get_db_connection(config.API_DATABASE, read_only=True)
-    cursor = db.cursor()
-    cursor.execute("BEGIN")
-    request.addfinalizer(lambda: cursor.execute("ROLLBACK"))
-    api_server_v2.watcher.api_db = db
-    return db """
-
-
 @pytest.fixture(scope="module")
 def api_server(request, cp_server):
     """
@@ -335,7 +325,7 @@ def api_server_v2(request, cp_server):
         try:
             result = requests.get("http://localhost:10009/v2/", timeout=30)
             if result.status_code != 200:
-                raise TimeoutError
+                raise requests.exceptions.RequestException
             break
         except requests.exceptions.RequestException:
             print("TimeoutError: waiting for API server to be ready")

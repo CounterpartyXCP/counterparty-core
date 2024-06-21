@@ -24,7 +24,7 @@ API_ROOT = "http://localhost:10009"
 def test_api_v2(request):
     block_index = 310491
     address = "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"
-    asset = "DIVISIBLE"
+    asset = "NODIVISIBLE"
     asset1 = asset
     asset2 = "XCP"
     tx_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
@@ -86,6 +86,7 @@ def test_api_v2(request):
             url += "?verbose=true"
         print(url)
         result = requests.get(url)  # noqa: S113
+        print(result)
         results[url] = result.json()
         print(result.json())
         assert result.status_code == 200

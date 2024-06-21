@@ -233,7 +233,7 @@ def update_balances(api_db, event):
     sql = "SELECT * FROM balances WHERE address = :address AND asset = :asset"
     existing_balance = fetch_one(api_db, sql, event_bindings)
 
-    if existing_balance is None:
+    if existing_balance is not None:
         sql = """
             UPDATE balances
             SET quantity = quantity + :quantity
