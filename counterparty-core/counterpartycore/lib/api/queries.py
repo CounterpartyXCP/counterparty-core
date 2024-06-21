@@ -1109,11 +1109,11 @@ def get_balance_by_address_and_asset(db, address: str, asset: str):
     Returns the balance of an address and asset
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     :param str asset: The asset to return (e.g. XCP)
-    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_row(
         db,
         "balances",
+        select="address, asset, quantity",
         where={"address": address, "asset": asset},
     )
 

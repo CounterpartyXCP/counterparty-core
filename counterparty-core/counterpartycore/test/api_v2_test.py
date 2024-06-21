@@ -122,21 +122,21 @@ def test_new_get_balances_by_address():
             "asset": "A95428956661682277",
             "quantity": 100000000,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91875000000},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "PARENT", "quantity": 100000000},
-        {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "DIVISIBLE",
-            "quantity": 98800000000,
-        },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "MAXI",
             "quantity": 9223372036854775807,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "NODIVISIBLE", "quantity": 985},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "LOCKED", "quantity": 1000},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "CALLABLE", "quantity": 1000},
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "NODIVISIBLE", "quantity": 985},
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "DIVISIBLE",
+            "quantity": 98800000000,
+        },
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91875000000},
     ]
 
 
