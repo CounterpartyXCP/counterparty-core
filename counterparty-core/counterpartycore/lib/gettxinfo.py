@@ -356,10 +356,28 @@ def get_tx_info_new(
 
     # Get destinations and data outputs.
     if "parsed_vouts" in decoded_tx:
-        if decoded_tx["parsed_vouts"] == "DecodeError":
+        if isinstance(decoded_tx["parsed_vouts"], Exception):
+            raise DecodeError(str(decoded_tx["parsed_vouts"]))
+        elif decoded_tx["parsed_vouts"] == "DecodeError":
             raise DecodeError("unrecognised output type")
         destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
+        if block_index >= 724000:
+            destinations1, btc_amount1, fee1, data1, potential_dispensers1 = (
+                parse_transaction_vouts(decoded_tx)
+            )
+            if (
+                destinations != destinations1
+                or btc_amount != btc_amount1
+                or fee != fee1
+                or data != data1
+                or potential_dispensers != potential_dispensers1
+            ):
+                logger.warning(decoded_tx["tx_hash"])
+                logger.warning((destinations, btc_amount, fee, data, potential_dispensers))
+                logger.warning((destinations1, btc_amount1, fee1, data1, potential_dispensers1))
+                raise KeyboardInterrupt("parsed_vouts mismatch")
     else:
+        logger.warning("parsed_vouts not in decoded_tx")
         destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(
             decoded_tx
         )

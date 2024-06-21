@@ -66,7 +66,7 @@ where
 
     handles.append(&mut new_worker_pool(
         "Fetcher".into(),
-        parallelism / 2,
+        parallelism / 4,
         rx_c1.clone(),
         tx_c2.clone(),
         stopper.clone(),
@@ -75,7 +75,7 @@ where
 
     handles.append(&mut new_worker_pool(
         "Extractor".into(),
-        parallelism / 4,
+        parallelism / 2,
         rx_c2.clone(),
         tx_c3.clone(),
         stopper.clone(),
