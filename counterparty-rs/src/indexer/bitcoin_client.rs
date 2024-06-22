@@ -227,6 +227,12 @@ fn parse_vout(
         let bytes = arc4_decrypt(&key, &enc_bytes);
         if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
             let chunk_len = bytes[0] as usize;
+            if chunk_len > bytes.len() {
+                return Err(Error::ParseVout(format!(
+                    "Encountered invalid chunk length | tx: {}, vout: {}",
+                    txid, vi
+                )));
+            }
             let chunk = bytes[1..=chunk_len].to_vec();
             return Ok((
                 ParseOutput::Data(chunk[config.prefix.len()..].to_vec()),
