@@ -42,8 +42,8 @@ def get_file_openers(filename):
     return pids
 
 
-def check_wal_file():
-    wal_file = f"{config.DATABASE}-wal"
+def check_wal_file(db_file):
+    wal_file = f"{db_file}-wal"
     if os.path.exists(wal_file):
         pids = get_file_openers(wal_file)
         if len(pids) > 0:
@@ -51,13 +51,13 @@ def check_wal_file():
         raise exceptions.WALFileFoundError("Found WAL file. Database may be corrupted.")
 
 
-def get_db_connection(db_file, read_only=True, check_wal=True):
+def get_db_connection(db_file, read_only=True, check_wal=False):
     """Connects to the SQLite database, returning a db `Connection` object"""
     logger.debug(f"Creating connection to `{db_file}`...")
 
     if not read_only and check_wal:
         try:
-            check_wal_file()
+            check_wal_file(db_file)
         except exceptions.WALFileFoundError:
             logger.warning(
                 "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."

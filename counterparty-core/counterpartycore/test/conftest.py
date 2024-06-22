@@ -573,7 +573,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         else:
             return ARC4.new(binascii.unhexlify("00" * 32))
 
-    def check_wal_file():
+    def check_wal_file(dbfile):
         pass
 
     def rps_expire(db, block_index):
