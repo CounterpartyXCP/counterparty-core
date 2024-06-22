@@ -356,10 +356,13 @@ def get_tx_info_new(
 
     # Get destinations and data outputs.
     if "parsed_vouts" in decoded_tx:
-        if decoded_tx["parsed_vouts"] == "DecodeError":
+        if isinstance(decoded_tx["parsed_vouts"], Exception):
+            raise DecodeError(str(decoded_tx["parsed_vouts"]))
+        elif decoded_tx["parsed_vouts"] == "DecodeError":
             raise DecodeError("unrecognised output type")
         destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
     else:
+        logger.warning("parsed_vouts not in decoded_tx")
         destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(
             decoded_tx
         )
