@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
 use std::iter::repeat;
+use std::cmp::min;
 
 use crate::b58::b58_encode;
 use crate::utils::script_to_address;
@@ -226,13 +227,7 @@ fn parse_vout(
         }
         let bytes = arc4_decrypt(&key, &enc_bytes);
         if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
-            let chunk_len = bytes[0] as usize;
-            if chunk_len > bytes.len() {
-                return Err(Error::ParseVout(format!(
-                    "Encountered invalid chunk length | tx: {}, vout: {}",
-                    txid, vi
-                )));
-            }
+            let chunk_len = min(bytes[0] as usize, bytes.len() - 1);
             let chunk = bytes[1..=chunk_len].to_vec();
             return Ok((
                 ParseOutput::Data(chunk[config.prefix.len()..].to_vec()),
