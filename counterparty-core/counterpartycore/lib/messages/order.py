@@ -618,7 +618,7 @@ def parse(db, tx, message):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, "orders", bindings, "OPEN_ORDER")
+        ledger.insert_order(db, bindings)
 
     logger.info(
         "Order opened for %(give_quantity)s %(give_asset)s at %(source)s (%(tx_hash)s) [%(status)s]",
@@ -678,16 +678,16 @@ def match(db, tx, block_index=None):
         if tx1_status != "open":
             break
 
-        logger.debug("Considering: " + tx0["tx_hash"])
+        logger.trace("Considering: " + tx0["tx_hash"])
         tx0_give_remaining = tx0["give_remaining"]
         tx0_get_remaining = tx0["get_remaining"]
 
         # Ignore previous matches. (Both directions, just to be sure.)
         if ledger.get_order_match(db, id=util.make_id(tx0["tx_hash"], tx1["tx_hash"])):
-            logger.debug("Skipping: previous match")
+            logger.trace("Skipping: previous match")
             continue
         if ledger.get_order_match(db, id=util.make_id(tx1["tx_hash"], tx0["tx_hash"])):
-            logger.debug("Skipping: previous match")
+            logger.trace("Skipping: previous match")
             continue
 
         # Get fee provided remaining.
@@ -697,7 +697,7 @@ def match(db, tx, block_index=None):
         # Make sure that that both orders still have funds remaining (if order involves BTC, and so cannot be ‘filled’).
         if tx0["give_asset"] == config.BTC or tx0["get_asset"] == config.BTC:  # Gratuitous
             if tx0_give_remaining <= 0 or tx1_give_remaining <= 0:
-                logger.debug("Skipping: negative give quantity remaining")
+                logger.trace("Skipping: negative give quantity remaining")
                 continue
             if (
                 block_index >= 292000
@@ -706,21 +706,21 @@ def match(db, tx, block_index=None):
                 or config.REGTEST
             ):  # Protocol changes
                 if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
-                    logger.debug("Skipping: negative get quantity remaining")
+                    logger.trace("Skipping: negative get quantity remaining")
                     continue
 
             if block_index >= 294000 or config.TESTNET or config.REGTEST:  # Protocol change.
                 if tx0["fee_required_remaining"] < 0:
-                    logger.debug("Skipping: negative tx0 fee required remaining")
+                    logger.trace("Skipping: negative tx0 fee required remaining")
                     continue
                 if tx0["fee_provided_remaining"] < 0:
-                    logger.debug("Skipping: negative tx0 fee provided remaining")
+                    logger.trace("Skipping: negative tx0 fee provided remaining")
                     continue
                 if tx1_fee_provided_remaining < 0:
-                    logger.debug("Skipping: negative tx1 fee provided remaining")
+                    logger.trace("Skipping: negative tx1 fee provided remaining")
                     continue
                 if tx1_fee_required_remaining < 0:
-                    logger.debug("Skipping: negative tx1 fee required remaining")
+                    logger.trace("Skipping: negative tx1 fee required remaining")
                     continue
 
         # If the prices agree, make the trade. The found order sets the price,
@@ -733,28 +733,28 @@ def match(db, tx, block_index=None):
         if tx["block_index"] < 286000:
             tx1_inverse_price = ledger.price(1, tx1_price)
 
-        logger.debug(
+        logger.trace(
             f"Tx0 Price: {float(tx0_price)}; Tx1 Inverse Price: {float(tx1_inverse_price)}"
         )
         if tx0_price > tx1_inverse_price:
-            logger.debug("Skipping: price mismatch.")
+            logger.trace("Skipping: price mismatch.")
         else:
-            logger.debug(
+            logger.trace(
                 f"Potential forward quantities: {tx0_give_remaining}, {int(ledger.price(tx1_give_remaining, tx0_price))}"
             )
             forward_quantity = int(
                 min(tx0_give_remaining, int(ledger.price(tx1_give_remaining, tx0_price)))
             )
-            logger.debug(f"Forward Quantity: {forward_quantity}")
+            logger.trace(f"Forward Quantity: {forward_quantity}")
             backward_quantity = round(forward_quantity * tx0_price)
-            logger.debug(f"Backward Quantity: {backward_quantity}")
+            logger.trace(f"Backward Quantity: {backward_quantity}")
 
             if not forward_quantity:
-                logger.debug("Skipping: zero forward quantity.")
+                logger.trace("Skipping: zero forward quantity.")
                 continue
             if block_index >= 286500 or config.TESTNET or config.REGTEST:  # Protocol change.
                 if not backward_quantity:
-                    logger.debug("Skipping: zero backward quantity.")
+                    logger.trace("Skipping: zero backward quantity.")
                     continue
 
             forward_asset, backward_asset = tx1["get_asset"], tx1["give_asset"]
@@ -764,7 +764,7 @@ def match(db, tx, block_index=None):
                 if (forward_asset == config.BTC and forward_quantity <= min_btc_quantity) or (
                     backward_asset == config.BTC and backward_quantity <= min_btc_quantity
                 ):
-                    logger.debug(f"Skipping: below minimum {config.BTC} quantity")
+                    logger.trace(f"Skipping: below minimum {config.BTC} quantity")
                     continue
 
             # Check and update fee remainings.
@@ -786,11 +786,11 @@ def match(db, tx, block_index=None):
                             * ledger.price(forward_quantity, tx1_get_remaining)
                         )
 
-                    logger.debug(
+                    logger.trace(
                         f"Tx0 fee provided remaining: {tx0_fee_provided_remaining / config.UNIT}; required fee: {fee / config.UNIT}"
                     )
                     if tx0_fee_provided_remaining < fee:
-                        logger.debug("Skipping: tx0 fee provided remaining is too low.")
+                        logger.trace("Skipping: tx0 fee provided remaining is too low.")
                         continue
                     else:
                         tx0_fee_provided_remaining -= fee
@@ -813,11 +813,11 @@ def match(db, tx, block_index=None):
                             * ledger.price(backward_quantity, tx0_get_remaining)
                         )
 
-                    logger.debug(
+                    logger.trace(
                         f"Tx1 fee provided remaining: {tx1_fee_provided_remaining / config.UNIT}; required fee: {fee / config.UNIT}"
                     )
                     if tx1_fee_provided_remaining < fee:
-                        logger.debug("Skipping: tx1 fee provided remaining is too low.")
+                        logger.trace("Skipping: tx1 fee provided remaining is too low.")
                         continue
                     else:
                         tx1_fee_provided_remaining -= fee
