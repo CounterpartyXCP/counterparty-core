@@ -33,6 +33,8 @@ def test_api_v2(request):
     dispenser_hash = "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec"
     block_hash = "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b"
     dividend_hash = "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518"
+    issuance_hash = "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf"
+    broadcast_hash = "7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af"
     event = "CREDIT"
     event_index = 10
     tx_index = 2
@@ -77,6 +79,10 @@ def test_api_v2(request):
         url = url.replace("<order_hash>", order_hash)
         url = url.replace("<bet_hash>", bet_hash)
         url = url.replace("<dispenser_hash>", dispenser_hash)
+        if "issuances" in url:
+            url = url.replace("<tx_hash>", issuance_hash)
+        if "broadcasts" in url:
+            url = url.replace("<tx_hash>", broadcast_hash)
         url = url.replace("<tx_hash>", tx_hash)
         url = url.replace("<block_hash>", block_hash)
         url = url.replace("<dividend_hash>", dividend_hash)
@@ -205,9 +211,6 @@ def test_new_get_asset_info():
         "divisible": False,
         "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "locked": False,
-        "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-        "supply": 1000,
-        "holder_count": 3,
         "first_issuance_block_index": 310002,
         "last_issuance_block_index": 310002,
     }
