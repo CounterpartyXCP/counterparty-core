@@ -336,16 +336,11 @@ def initialize_api_db(api_db, ledger_db):
     last_api_block = queries.get_last_block(api_db)
     if last_api_block is not None:
         last_api_block = last_api_block.result
-    if last_api_block is None and last_ledger_block is None:
-        return
-    elif last_api_block is None and last_ledger_block is not None:
-        catch_up(api_db, ledger_db)
-    elif last_ledger_block is None and last_api_block is not None:
+
+    if last_ledger_block is None and last_api_block is not None:
         rollback_events(api_db, 0)
     elif last_api_block["block_index"] > last_ledger_block["block_index"]:
         rollback_events(api_db, last_ledger_block["block_index"])
-    else:
-        catch_up(api_db, ledger_db)
 
 
 class APIWatcher(Thread):
@@ -371,6 +366,7 @@ class APIWatcher(Thread):
 
     def run(self):
         logger.info("Starting API Watcher...")
+        catch_up(self.api_db, self.ledger_db)
         try:
             while True and not self.stopping and not self.stopped:
                 next_event = get_next_event_to_parse(self.api_db, self.ledger_db)
