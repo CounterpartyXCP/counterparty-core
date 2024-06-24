@@ -75,3 +75,19 @@ def test_api_database():
         assert ledger_order_match["status"] == api_order_match["status"]
         assert ledger_order_match["tx0_hash"] == api_order_match["tx0_hash"]
         assert ledger_order_match["tx1_hash"] == api_order_match["tx1_hash"]
+
+    # assets_info
+    sql_ledger = "SELECT count(*) AS count FROM assets WHERE asset_name NOT IN ('XCP', 'BTC')"
+    sql_api = "SELECT count(*) AS count FROM assets_info"
+    assert (
+        ledger_db.execute(sql_ledger).fetchone()["count"]
+        == api_db.execute(sql_api).fetchone()["count"]
+    )
+
+    ledger_assets_info = ledger_db.execute(
+        "SELECT asset_name FROM assets WHERE asset_name NOT IN ('XCP', 'BTC') ORDER BY asset_name"
+    ).fetchall()
+    api_assets_info = api_db.execute("SELECT asset FROM assets_info ORDER BY asset").fetchall()
+    assert len(ledger_assets_info) == len(api_assets_info)
+    for ledger_asset_info, api_asset_info in zip(ledger_assets_info, api_assets_info):
+        assert ledger_asset_info["asset_name"] == api_asset_info["asset"]

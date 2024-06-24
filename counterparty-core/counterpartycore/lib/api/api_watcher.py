@@ -270,6 +270,82 @@ def update_expiration(api_db, event):
     cursor.execute(sql, bindings)
 
 
+def update_assets_info(api_db, event):
+    if event["event"] not in [
+        "ASSET_CREATION",
+        "ASSET_ISSUANCE",
+        "ASSET_DESTRUCTION",
+        "RESET_ISSUANCE",
+        "ASSET_TRANSFER",
+    ]:
+        return
+
+    if event["event"] == "ASSET_CREATION":
+        event_bindings = json.loads(event["bindings"])
+        sql = """
+            INSERT INTO assets_info 
+                (asset, asset_id, asset_longname, first_issuance_block_index) 
+            VALUES 
+                (:asset_name, :asset_id, :asset_longname, :block_index)
+            """
+        cursor = api_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
+    if event["event"] in ["ASSET_ISSUANCE", "RESET_ISSUANCE"]:
+        event_bindings = json.loads(event["bindings"])
+        if event_bindings["status"] != "valid":
+            return
+        existing_asset = fetch_one(
+            api_db,
+            "SELECT * FROM assets_info WHERE asset = :asset",
+            {"asset": event_bindings["asset"]},
+        )
+        set_data = []
+        set_data.append("divisible = :divisible")
+        set_data.append("description = :description")
+        set_data.append("owner = :issuer")
+        set_data.append("supply = supply + :quantity")
+        set_data.append("last_issuance_block_index = :block_index")
+        set_data.append("asset_longname = :asset_longname")
+        if event_bindings["locked"]:
+            set_data.append("locked = :locked")
+        if not existing_asset["issuer"]:  # first issuance
+            set_data.append("issuer = :issuer")
+        set_data = ", ".join(set_data)
+
+        sql = f"UPDATE assets_info SET {set_data} WHERE asset = :asset"  # noqa: S608
+        cursor = api_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
+    if event["event"] == "ASSET_DESTRUCTION":
+        event_bindings = json.loads(event["bindings"])
+        if event_bindings["status"] != "valid":
+            return
+        sql = """
+            UPDATE assets_info 
+            SET supply = supply - :quantity
+            WHERE asset = :asset
+            """
+        cursor = api_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
+    if event["event"] == "ASSET_TRANSFER":
+        event_bindings = json.loads(event["bindings"])
+        if event_bindings["status"] != "valid":
+            return
+        sql = """
+            UPDATE assets_info 
+            SET owner = :issuer
+            WHERE asset = :asset
+            """
+        cursor = api_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
+
 def execute_event(api_db, event):
     sql, sql_bindings = event_to_sql(event)
     if sql is not None:
@@ -286,6 +362,7 @@ def parse_event(api_db, event):
         event["insert_rowid"] = execute_event(api_db, event)
         update_balances(api_db, event)
         update_expiration(api_db, event)
+        update_assets_info(api_db, event)
         insert_event(api_db, event)
         logger.trace(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 

@@ -630,3 +630,23 @@ CREATE VIEW  IF NOT EXISTS xcp_holders AS
             tx_hash AS escrow, CONCAT('open_dispenser_', CAST(rowid AS VARCAHR)) AS cursor_id,
             'open_dispenser' AS holding_type, status
             FROM dispensers WHERE status = 0;
+
+
+CREATE TABLE IF NOT EXISTS assets_info(
+                      asset TEXT UNIQUE,
+                      asset_id TEXT UNIQUE,
+                      asset_longname TEXT,
+                      issuer TEXT,
+                      owner TEXT,
+                      divisible BOOL,
+                      locked BOOL DEFAULT 0,
+                      supply INTEGER DEFAULT 0,
+                      description TEXT,
+                      first_issuance_block_index INTEGER,
+                      last_issuance_block_index INTEGER
+                      );
+
+CREATE INDEX IF NOT EXISTS assets_info_asset_idx ON assets_info (asset);
+CREATE INDEX IF NOT EXISTS assets_info_asset_longname_idx ON assets_info (asset_longname);
+CREATE INDEX IF NOT EXISTS assets_info_issuer_idx ON assets_info (issuer);
+CREATE INDEX IF NOT EXISTS assets_info_owner_idx ON assets_info (owner);

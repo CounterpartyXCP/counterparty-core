@@ -313,6 +313,10 @@ def api_server_v2(request, cp_server):
 
     if os.path.exists(config.API_DATABASE):
         os.unlink(config.API_DATABASE)
+        os.unlink(config.API_DATABASE + "-shm")
+        os.unlink(config.API_DATABASE + "-wal")
+
+    print(config.API_DATABASE)
 
     args = argparse.Namespace(**server_config)
     api_server = api_v2.APIServer()
