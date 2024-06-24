@@ -317,17 +317,20 @@ def api_server_v2(request, cp_server):
     args = argparse.Namespace(**server_config)
     api_server = api_v2.APIServer()
     api_server.start(args)
-    # TODO: wait for server to be ready
 
+    # wait for server to be ready
     while True:
         try:
             result = requests.get("http://localhost:10009/v2/", timeout=30)
             if result.status_code != 200:
                 raise requests.exceptions.RequestException
+            result = result.json()
+            if result["result"]["counterparty_height"] < 310500:
+                raise requests.exceptions.RequestException
             break
         except requests.exceptions.RequestException:
             print("TimeoutError: waiting for API server to be ready")
-            time.sleep(1.5)
+            time.sleep(1)
             pass
 
     request.addfinalizer(lambda: api_server.stop())

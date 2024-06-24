@@ -57,12 +57,6 @@ def test_alice_bob(server_db, cp_server, api_server):
         == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a9322f30ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
-    # print(config.API_DATABASE)
-    # if os.path.exists(config.API_DATABASE):
-    #    os.unlink(config.API_DATABASE)
-    # watcher = api_watcher.APIWatcher()
-    # watcher.start()
-
     # insert send, this automatically also creates a block
     tx1hash, tx1 = util_test.insert_raw_transaction(send1hex, server_db)
 
