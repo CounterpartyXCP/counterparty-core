@@ -1519,7 +1519,7 @@ def get_valid_assets(
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"status": "valid"}
+    where = {}
     if named is not None:
         if named:
             where["asset__notlike"] = "A%"
@@ -1528,12 +1528,8 @@ def get_valid_assets(
 
     return select_rows(
         db,
-        "issuances",
+        "assets_info",
         where=where,
-        group_by="asset",
-        select="""asset, asset_longname, description, issuer, divisible, locked, 
-                  MIN(block_index) AS first_issuance_block_index, MAX(rowid) AS rowid,
-                  block_index AS last_issuance_block_index""",
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1545,15 +1541,11 @@ def get_asset(db, asset: str):
     Returns an asset by its name
     :param str asset: The name of the asset to return (e.g. PEPECASH)
     """
-    where = [{"status": "valid", "asset": asset}, {"status": "valid", "asset_longname": asset}]
+    where = [{"asset": asset}, {"asset_longname": asset}]
     return select_row(
         db,
-        "issuances",
+        "assets_info",
         where=where,
-        group_by="asset",
-        select="""asset, asset_longname, description, issuer, divisible, locked, 
-                  MIN(block_index) AS first_issuance_block_index, MAX(rowid) AS rowid,
-                  block_index AS last_issuance_block_index""",
     )
 
 
@@ -1568,7 +1560,7 @@ def get_valid_assets_by_issuer(
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"status": "valid", "issuer": address}
+    where = {"issuer": address}
     if named is not None:
         if named:
             where["asset__notlike"] = "A%"
@@ -1577,12 +1569,8 @@ def get_valid_assets_by_issuer(
 
     return select_rows(
         db,
-        "issuances",
+        "assets_info",
         where=where,
-        group_by="asset",
-        select="""asset, asset_longname, description, issuer, divisible, locked, 
-                  MIN(block_index) AS first_issuance_block_index, MAX(rowid) AS rowid,
-                  block_index AS last_issuance_block_index""",
         last_cursor=cursor,
         limit=limit,
         offset=offset,

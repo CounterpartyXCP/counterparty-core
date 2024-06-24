@@ -574,27 +574,8 @@ CREATE VIEW IF NOT EXISTS asset_holders AS
             FROM dispensers WHERE status = 0;
 
 
-CREATE VIEW  IF NOT EXISTS xcp_holders AS 
-            SELECT asset, address, quantity, NULL AS escrow,
-                CONCAT('balances_', CAST(rowid AS VARCAHR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
-            FROM balances
-         UNION ALL
+CREATE VIEW  IF NOT EXISTS xcp_holders AS
             SELECT * FROM asset_holders
-         UNION ALL 
-            SELECT give_asset AS asset, source AS address, give_remaining AS quantity, tx_hash AS escrow,
-                CONCAT('open_order_', CAST(rowid AS VARCAHR)) AS cursor_id,
-                'open_order' AS holding_type, status
-            FROM orders WHERE status = 'open'
-         UNION ALL 
-            SELECT forward_asset AS asset, tx0_address AS address, forward_quantity AS quantity,
-                id AS escrow, CONCAT('order_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
-                'pending_order_match' AS holding_type, status
-            FROM order_matches WHERE status = 'pending'
-         UNION ALL 
-            SELECT backward_asset AS asset, tx1_address AS address, backward_quantity AS quantity,
-                id AS escrow, CONCAT('order_match_', CAST(rowid AS VARCAHR)) AS cursor_id,
-                'pending_order_match' AS holding_type, status
-            FROM order_matches WHERE status = 'pending'
          UNION ALL 
             SELECT 'XCP' AS asset, source AS address, wager_remaining AS quantity,
             tx_hash AS escrow, CONCAT('open_bet_', CAST(rowid AS VARCAHR)) AS cursor_id,
@@ -630,23 +611,3 @@ CREATE VIEW  IF NOT EXISTS xcp_holders AS
             tx_hash AS escrow, CONCAT('open_dispenser_', CAST(rowid AS VARCAHR)) AS cursor_id,
             'open_dispenser' AS holding_type, status
             FROM dispensers WHERE status = 0;
-
-
-CREATE TABLE IF NOT EXISTS assets_info(
-                      asset TEXT UNIQUE,
-                      asset_id TEXT UNIQUE,
-                      asset_longname TEXT,
-                      issuer TEXT,
-                      owner TEXT,
-                      divisible BOOL,
-                      locked BOOL DEFAULT 0,
-                      supply INTEGER DEFAULT 0,
-                      description TEXT,
-                      first_issuance_block_index INTEGER,
-                      last_issuance_block_index INTEGER
-                      );
-
-CREATE INDEX IF NOT EXISTS assets_info_asset_idx ON assets_info (asset);
-CREATE INDEX IF NOT EXISTS assets_info_asset_longname_idx ON assets_info (asset_longname);
-CREATE INDEX IF NOT EXISTS assets_info_issuer_idx ON assets_info (issuer);
-CREATE INDEX IF NOT EXISTS assets_info_owner_idx ON assets_info (owner);

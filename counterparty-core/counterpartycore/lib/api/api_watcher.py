@@ -11,7 +11,7 @@ from counterpartycore.lib.util import format_duration
 logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-MIGRATIONS_FILE = os.path.join(CURRENT_DIR, "migrations", "0001.create-api-database.sql")
+MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "migrations")
 
 UPDATE_EVENTS_ID_FIELDS = {
     "BLOCK_PARSED": ["block_index"],
@@ -35,6 +35,14 @@ EXPIRATION_EVENTS_OBJECT_ID = {
     "BET_EXPIRATION": "bet_hash",
     "BET_MATCH_EXPIRATION": "bet_match_id",
 }
+
+ASSET_EVENTS = [
+    "ASSET_CREATION",
+    "ASSET_ISSUANCE",
+    "ASSET_DESTRUCTION",
+    "RESET_ISSUANCE",
+    "ASSET_TRANSFER",
+]
 
 
 def fetch_all(db, query, bindings=None):
@@ -271,17 +279,11 @@ def update_expiration(api_db, event):
 
 
 def update_assets_info(api_db, event):
-    if event["event"] not in [
-        "ASSET_CREATION",
-        "ASSET_ISSUANCE",
-        "ASSET_DESTRUCTION",
-        "RESET_ISSUANCE",
-        "ASSET_TRANSFER",
-    ]:
+    if event["event"] not in ASSET_EVENTS:
         return
+    event_bindings = json.loads(event["bindings"])
 
     if event["event"] == "ASSET_CREATION":
-        event_bindings = json.loads(event["bindings"])
         sql = """
             INSERT INTO assets_info 
                 (asset, asset_id, asset_longname, first_issuance_block_index) 
@@ -293,7 +295,6 @@ def update_assets_info(api_db, event):
         return
 
     if event["event"] in ["ASSET_ISSUANCE", "RESET_ISSUANCE"]:
-        event_bindings = json.loads(event["bindings"])
         if event_bindings["status"] != "valid":
             return
         existing_asset = fetch_one(
@@ -320,7 +321,6 @@ def update_assets_info(api_db, event):
         return
 
     if event["event"] == "ASSET_DESTRUCTION":
-        event_bindings = json.loads(event["bindings"])
         if event_bindings["status"] != "valid":
             return
         sql = """
@@ -333,7 +333,6 @@ def update_assets_info(api_db, event):
         return
 
     if event["event"] == "ASSET_TRANSFER":
-        event_bindings = json.loads(event["bindings"])
         if event_bindings["status"] != "valid":
             return
         sql = """
@@ -394,10 +393,13 @@ def initialize_api_db(api_db, ledger_db):
 
     cursor = api_db.cursor()
 
-    # TODO: use migrations library
-    with open(MIGRATIONS_FILE, "r") as f:
-        sql = f.read()
-        cursor.execute(sql)
+    # Apply migrations
+    """ backend = get_backend(f'sqlite:///{config.API_DATABASE}')
+    migrations = read_migrations(MIGRATIONS_DIR)
+    with backend.lock():
+        # Apply any outstanding migrations
+        backend.apply_migrations(backend.to_apply(migrations))
+    backend.connection.close() """
 
     # Create XCP and BTC assets if they don't exist
     cursor.execute("""SELECT * FROM assets WHERE asset_name = ?""", ("BTC",))
@@ -436,7 +438,6 @@ class APIWatcher(Thread):
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )
-
         try:
             initialize_api_db(self.api_db, self.ledger_db)
         except KeyboardInterrupt:
