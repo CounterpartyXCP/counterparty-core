@@ -249,7 +249,6 @@ def update_balances(api_db, event):
         "asset": event_bindings["asset"],
         "quantity": quantity,
     }
-    print("update_balances", insert_bindings, event["block_index"])
     cursor.execute(sql, insert_bindings)
 
 

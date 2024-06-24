@@ -1146,22 +1146,6 @@
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-<<<<<<< HEAD
-=======
-                "asset": "XCP",
-                "quantity": 91875000000,
-                "asset_info": {
-                    "divisible": true,
-                    "asset_longname": "Counterparty",
-                    "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
-                },
-                "quantity_normalized": "918.75000000"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
->>>>>>> develop
                 "asset": "PARENT",
                 "quantity": 100000000,
                 "asset_info": {
@@ -1175,22 +1159,6 @@
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-<<<<<<< HEAD
-=======
-                "asset": "DIVISIBLE",
-                "quantity": 98800000000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "988.00000000"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
->>>>>>> develop
                 "asset": "MAXI",
                 "quantity": 9223372036854775807,
                 "asset_info": {
@@ -1226,8 +1194,7 @@
                     "divisible": true,
                     "locked": false
                 },
-<<<<<<< HEAD
-                "quantity_normalized": "0.00001"
+                "quantity_normalized": "0.00001000"
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -1253,7 +1220,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "988"
+                "quantity_normalized": "988.00000000"
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -1266,10 +1233,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "918.75"
-=======
-                "quantity_normalized": "0.00001000"
->>>>>>> develop
+                "quantity_normalized": "918.75000000"
             }
         ],
         "next_cursor": null,
@@ -4000,13 +3964,8 @@
             "expire_index": 310119,
             "fee_fraction_int": 5000000,
             "status": "filled",
-<<<<<<< HEAD
             "block_time": 310019000,
-            "fee_fraction_int_normalized": "0.05"
-=======
-            "block_time": 310020000,
             "fee_fraction_int_normalized": "0.05000000"
->>>>>>> develop
         }
     },
     "http://localhost:10009/v2/bets/2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1/matches?verbose=true": {
