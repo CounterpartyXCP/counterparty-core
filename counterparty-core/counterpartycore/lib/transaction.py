@@ -203,13 +203,13 @@ def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
     return unspent
 
 
-def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
+def address_to_pubkey(pubkeyhash, provided_pubkeys=None):
     # Search provided pubkeys.
     if provided_pubkeys:
         if type(provided_pubkeys) != list:  # noqa: E721
             provided_pubkeys = [provided_pubkeys]
         for pubkey in provided_pubkeys:
-            if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+            if pubkeyhash == script.pubkey_to_p2pkhash(util.unhexlify(pubkey)):
                 return pubkey
             elif pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
                 return pubkey
@@ -247,7 +247,7 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
 
 def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
     signatures_required, pubkeyhashes, signatures_possible = script.extract_array(address)
-    pubkeys = [pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
+    pubkeys = [address_to_pubkey(pubkeyhash, provided_pubkeys) for pubkeyhash in pubkeyhashes]
     return script.construct_array(signatures_required, pubkeys, signatures_possible)
 
 
@@ -311,7 +311,7 @@ class TransactionService:
             a, self_pubkeys, b = script.extract_array(source)
             dust_return_pubkey_hex = self_pubkeys[0]
         else:
-            dust_return_pubkey_hex = pubkeyhash_to_pubkey(source, provided_pubkeys)
+            dust_return_pubkey_hex = address_to_pubkey(source, provided_pubkeys)
 
         # Convert hex public key into the (binary) dust return pubkey.
         try:
@@ -1018,7 +1018,7 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
         )
         dust_return_pubkey_hex = self_pubkeys[0]
     else:
-        dust_return_pubkey_hex = pubkeyhash_to_pubkey(source, provided_pubkeys)
+        dust_return_pubkey_hex = address_to_pubkey(source, provided_pubkeys)
 
     # Convert hex public key into the (binary) dust return pubkey.
     try:

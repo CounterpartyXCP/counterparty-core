@@ -293,13 +293,13 @@ def hash160(x):
     return m.digest()
 
 
-def pubkey_to_pubkeyhash(pubkey):
+def pubkey_to_p2pkhash(pubkey):
     """Convert public key to PubKeyHash."""
     pubkeyhash = hash160(pubkey)
-    pubkey = base58_check_encode(
+    p2pkh = base58_check_encode(
         binascii.hexlify(pubkeyhash).decode("utf-8"), config.ADDRESSVERSION
     )
-    return pubkey
+    return p2pkh 
 
 
 def pubkey_to_p2whash(pubkey):
