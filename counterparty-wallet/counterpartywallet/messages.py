@@ -131,7 +131,7 @@ def get_pubkey_monosig(pubkeyhash, pubkey_resolver=input_pubkey):
                 pubkey = script.private_key_to_public_key(private_key)
             except script.AltcoinSupportError:
                 raise InputError("invalid private key")  # noqa: B904
-        if pubkeyhash != script.pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pubkey, "utf-8"))):
+        if pubkeyhash != script.pubkey_to_p2pkhash(binascii.unhexlify(bytes(pubkey, "utf-8"))):
             raise InputError("provided public or private key does not match the source address")
 
         return pubkey
