@@ -253,6 +253,8 @@ def test_array(signatures_required, pubs, signatures_possible):
             raise MultiSigAddressError("Invalid characters in pubkeys/pubkeyhashes.")
     if signatures_possible != len(pubs):
         raise InputError("Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.")
+    if signatures_required > signatures_possible:
+        raise MultiSigAddressError("Number of required cannot exceed number of of possible signatures")
 
 
 def construct_array(signatures_required, pubs, signatures_possible):
@@ -331,9 +333,7 @@ def get_asm(scriptpubkey):
 
 def script_to_asm(scriptpubkey):
     try:
-        if isinstance(scriptpubkey, bitcoinlib.core.script.CScript):
-            scriptpubkey = bytes(scriptpubkey)
-        elif isinstance(scriptpubkey, str):
+        if isinstance(scriptpubkey, str):
             scriptpubkey = binascii.unhexlify(scriptpubkey)
         asm = utils.script_to_asm(scriptpubkey)
         if asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
@@ -349,8 +349,7 @@ def script_to_address(scriptpubkey):
         scriptpubkey = binascii.unhexlify(scriptpubkey)
     try:
         network = "mainnet" if config.TESTNET == False else "testnet"  # noqa: E712
-        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
-        return utils.script_to_address(script, network)
+        return utils.script_to_address(scriptpubkey, network)
     except BaseException as e:  # noqa: F841
         raise exceptions.DecodeError("scriptpubkey decoding error")  # noqa: B904
 

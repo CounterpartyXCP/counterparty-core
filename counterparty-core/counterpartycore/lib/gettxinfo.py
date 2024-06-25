@@ -24,9 +24,9 @@ def arc4_decrypt(cyphertext, decoded_tx):
 
 def get_opreturn(asm):
     if len(asm) == 2 and asm[0] == OP_RETURN:  # noqa: F405
-        pubkeyhash = asm[1]
-        if type(pubkeyhash) == bytes:  # noqa: E721
-            return pubkeyhash
+        data = asm[1]
+        if type(data) == bytes:  # noqa: E721
+            return data
     raise DecodeError("invalid OP_RETURN")
 
 
@@ -50,7 +50,6 @@ def decode_checksig(asm, decoded_tx):
         chunk = chunk[1 : chunk_length + 1]
         destination, data = None, chunk[len(config.PREFIX) :]
     else:  # Destination
-        pubkeyhash = binascii.hexlify(pubkeyhash).decode("utf-8")
         destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
     return destination, data
 
@@ -132,7 +131,6 @@ def get_address(scriptpubkey, block_index):
         pubkeyhash, address_version = get_pubkeyhash(scriptpubkey, block_index)
         if not pubkeyhash:
             return False
-        pubkeyhash = binascii.hexlify(pubkeyhash).decode("utf-8")
         address = script.base58_check_encode(pubkeyhash, address_version)
         # Test decoding of address.
         if address != config.UNSPENDABLE and binascii.unhexlify(
