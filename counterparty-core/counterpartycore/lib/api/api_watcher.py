@@ -7,6 +7,7 @@ from threading import Thread
 from counterpartycore.lib import config, database, exceptions
 from counterpartycore.lib.api import queries, util
 from counterpartycore.lib.util import format_duration
+from yoyo import get_backend, read_migrations
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -388,18 +389,21 @@ def catch_up(api_db, ledger_db):
         logger.info(f"API Watcher - {event_parsed} events parsed in {format_duration(duration)}")
 
 
-def initialize_api_db(api_db, ledger_db):
-    logger.info("API Watcher - Initializing API Database...")
-
-    cursor = api_db.cursor()
-
+def apply_migration():
+    logger.debug("API Watcher - Applying migrations...")
     # Apply migrations
-    """ backend = get_backend(f'sqlite:///{config.API_DATABASE}')
+    backend = get_backend(f"sqlite:///{config.API_DATABASE}")
     migrations = read_migrations(MIGRATIONS_DIR)
     with backend.lock():
         # Apply any outstanding migrations
         backend.apply_migrations(backend.to_apply(migrations))
-    backend.connection.close() """
+    backend.connection.close()
+
+
+def initialize_api_db(api_db, ledger_db):
+    logger.info("API Watcher - Initializing API Database...")
+
+    cursor = api_db.cursor()
 
     # Create XCP and BTC assets if they don't exist
     cursor.execute("""SELECT * FROM assets WHERE asset_name = ?""", ("BTC",))
@@ -430,6 +434,7 @@ class APIWatcher(Thread):
     def __init__(self):
         Thread.__init__(self)
         logger.debug("Initializing API Watcher...")
+        apply_migration()
         self.stopping = False
         self.stopped = False
         self.api_db = database.get_db_connection(
