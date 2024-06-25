@@ -14,7 +14,17 @@ PREFETCH_QUEUE_SIZE = 5
 
 
 class RSFetcher(metaclass=util.SingletonMeta):
-    def __init__(self, start_height=0):
+    def __init__(self, start_height=0, config=None):
+        if config is None:
+            config = {
+                "rpc_address": f"http://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}",
+                "rpc_user": config.BACKEND_USER,
+                "rpc_password": config.BACKEND_PASSWORD,
+                "db_dir": config.FETCHER_DB,
+                "log_file": config.FETCHER_LOG,
+                "log_level": config.LOG_LEVEL_STRING,
+            }
+        self.config = config | {"start_height": start_height}
         self.start_height = start_height
         self.next_height = start_height
         self.fetcher = None
@@ -29,17 +39,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
     def start(self):
         try:
-            self.fetcher = indexer.Indexer(
-                {
-                    "rpc_address": f"http://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}",
-                    "rpc_user": config.BACKEND_USER,
-                    "rpc_password": config.BACKEND_PASSWORD,
-                    "db_dir": config.FETCHER_DB,
-                    "start_height": self.start_height,
-                    "log_file": config.FETCHER_LOG,
-                    "log_level": config.LOG_LEVEL_STRING,
-                }
-            )
+            self.fetcher = indexer.Indexer(self.config)
             # check fetcher version
             fetcher_version = self.fetcher.get_version()
             logger.debug("Current Fetcher version: %s", fetcher_version)
