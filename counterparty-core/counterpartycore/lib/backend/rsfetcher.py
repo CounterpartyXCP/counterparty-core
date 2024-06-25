@@ -36,8 +36,8 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.stopped = False
         self.prefetch_queue = {}
         self.prefetch_queue_size = 0
-        executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
-        self.prefetch_task = executor.submit(self.prefetch_blocks)
+        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
+        self.prefetch_task = self.executor.submit(self.prefetch_blocks)
 
     def start(self):
         try:
@@ -71,29 +71,12 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
         return block
 
-    def get_prefetched_block(self, height):
-        try:
-            if height in self.prefetch_queue:
-                block = self.prefetch_queue.pop(height)
-                self.prefetch_queue_size -= 1
-                logger.debug(
-                    f"Block retrieved from queue. New queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
-                )
-                return block
-            else:
-                logger.debug("Block not found in prefetch queue. Retrying in 0.5 second.")
-                time.sleep(0.5)
-                return self.get_prefetched_block(height)
-        except asyncio.QueueEmpty:
-            logger.warning("Prefetch queue is empty. Fetching block directly.")
-            return self.fetcher.get_block()
-
     def prefetch_blocks(self):
         logger.debug("Starting prefetching blocks...")
         while True and not self.stopped:
             try:
                 # block = self.fetcher.get_block_non_blocking()
-                block = self.fetcher.get_block()
+                block = self.fetcher.get_block_non_blocking()
                 if block is not None:
                     self.prefetch_queue[block["height"]] = block
                     self.prefetch_queue_size += 1
@@ -112,14 +95,35 @@ class RSFetcher(metaclass=util.SingletonMeta):
             except Exception as e:
                 logger.error(f"Error prefetching block: {e}")
 
+    def get_prefetched_block(self, height):
+        try:
+            if height in self.prefetch_queue:
+                block = self.prefetch_queue.pop(height)
+                self.prefetch_queue_size -= 1
+                logger.debug(
+                    f"Block retrieved from queue. New queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
+                )
+                return block
+            else:
+                logger.debug("Block not found in prefetch queue. Retrying in 0.5 second.")
+                time.sleep(0.5)
+                return self.get_prefetched_block(height)
+        except asyncio.QueueEmpty:
+            logger.warning("Prefetch queue is empty. Fetching block directly.")
+            return self.fetcher.get_block()
+
     def stop(self):
         logger.debug("Stopping fetcher...")
         try:
             self.stopped = True
+            if self.prefetch_task:
+                self.executor.shutdown(wait=False, cancel_futures=True)
+                self.prefetch_task.cancel()
+                while not self.prefetch_task.done():
+                    time.sleep(0.1)
             if self.fetcher:
                 self.fetcher.stop()
-            if self.prefetch_task:
-                self.prefetch_task.cancel()
+
         except Exception as e:
             if str(e) == "Stopped error":
                 pass
