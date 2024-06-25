@@ -298,6 +298,7 @@ class TransactionService:
         self.op_return_max_size = op_return_max_size
         self.ps2h_dust_return_pubkey = ps2h_dust_return_pubkey
 
+
     def get_dust_return_pubkey(self, source, provided_pubkeys, encoding):
         """Return the pubkey to which dust from data outputs will be sent.
 
@@ -306,11 +307,8 @@ class TransactionService:
         that the dust is spendable by the creator of the transaction.
         """
         # Get hex dust return pubkey.
-        # inject `script`
         if script.is_multisig(source):
-            a, self_pubkeys, b = script.extract_array(
-                multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
-            )
+            a, self_pubkeys, b = script.extract_array(source)
             dust_return_pubkey_hex = self_pubkeys[0]
         else:
             dust_return_pubkey_hex = pubkeyhash_to_pubkey(source, provided_pubkeys)
@@ -319,9 +317,10 @@ class TransactionService:
         try:
             dust_return_pubkey = binascii.unhexlify(dust_return_pubkey_hex)
         except binascii.Error:
-            raise script.InputError("Invalid private key.")  # noqa: B904
+            raise script.InputError("Invalid public key.")  # noqa: B904
 
         return dust_return_pubkey
+
 
     def make_outkey_vin_txid(self, txid, vout):
         if (txid, vout) not in self.utxo_p2sh_encoding_locks_cache:
