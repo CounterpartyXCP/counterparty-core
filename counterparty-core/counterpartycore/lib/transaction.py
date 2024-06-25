@@ -235,7 +235,7 @@ def address_to_pubkey(address, provided_pubkeys=None):
                     # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
                     try:
                         pubkey = asm[1]
-                        if pubkeyhash == script.pubkey_to_p2pkhash(util.unhexlify(pubkey)):
+                        if address == script.pubkey_to_p2pkhash(util.unhexlify(pubkey)):
                             return pubkey
                     except binascii.Error:
                         pass
