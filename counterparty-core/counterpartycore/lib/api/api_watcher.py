@@ -45,6 +45,16 @@ ASSET_EVENTS = [
     "ASSET_TRANSFER",
 ]
 
+ESCROW_REASONS = {
+    "bet": "open_bet",
+    "open order": "open_order",
+    "open RPS": "open_rps",
+    "reopen RPS after matching expiration": "open_rps",
+    "open dispenser": "open_dispenser",
+    "open dispenser empty addr": "open_dispenser",
+    "refill dispenser": "open_dispenser",
+}
+
 
 def fetch_all(db, query, bindings=None):
     cursor = db.cursor()
@@ -253,12 +263,30 @@ def update_balances(api_db, event):
             INSERT INTO balances (address, asset, quantity)
             VALUES (:address, :asset, :quantity)
             """
-    insert_bindings = {
+    bindings = {
         "address": event_bindings["address"],
         "asset": event_bindings["asset"],
         "quantity": quantity,
     }
-    cursor.execute(sql, insert_bindings)
+    cursor.execute(sql, bindings)
+
+    if quantity > 0:
+        update_holder_sql = """
+            INSERT OR REPLACE INTO holders (asset, address, quantity, escrow, holding_type)
+            VALUES (:asset, :address, :quantity, :escrow, :holding_type)
+        """
+        holder_bindings = bindings | {
+            "escrow": None,
+            "holding_type": "balance",
+        }
+        cursor.execute(update_holder_sql, holder_bindings)
+    else:
+        sql = "DELETE FROM holders WHERE asset = :asset AND address = :address AND holding_type = 'balance'"
+        cursor.execute(sql, event_bindings)
+
+
+def update_holders(api_db, event):
+    pass
 
 
 def update_expiration(api_db, event):
