@@ -203,15 +203,15 @@ def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
     return unspent
 
 
-def address_to_pubkey(pubkeyhash, provided_pubkeys=None):
+def address_to_pubkey(address, provided_pubkeys=None):
     # Search provided pubkeys.
     if provided_pubkeys:
         if type(provided_pubkeys) != list:  # noqa: E721
             provided_pubkeys = [provided_pubkeys]
         for pubkey in provided_pubkeys:
-            if pubkeyhash == script.pubkey_to_p2pkhash(util.unhexlify(pubkey)):
+            if address == script.pubkey_to_p2pkhash(util.unhexlify(pubkey)):
                 return pubkey
-            elif pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+            elif address == script.pubkey_to_p2wpkhash(util.unhexlify(pubkey)):
                 return pubkey
 
     # Search blockchain.
@@ -224,7 +224,7 @@ def address_to_pubkey(pubkeyhash, provided_pubkeys=None):
                     # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
                     try:
                         pubkey = vin["txinwitness"][1]
-                        if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                        if address == script.pubkey_to_p2wpkhash(util.unhexlify(pubkey)):
                             return pubkey
                     except binascii.Error:
                         pass
@@ -235,7 +235,7 @@ def address_to_pubkey(pubkeyhash, provided_pubkeys=None):
                     # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
                     try:
                         pubkey = asm[1]
-                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                        if pubkeyhash == script.pubkey_to_p2pkhash(util.unhexlify(pubkey)):
                             return pubkey
                     except binascii.Error:
                         pass

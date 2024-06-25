@@ -132,9 +132,9 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
         # - OP_DROP [push] [33-byte pubkey] OP_CHECKSIGVERIFY [n] OP_DROP OP_DEPTH 0 OP_EQUAL
         pubkey = redeem_script[2:35]
         if p2sh_is_segwit:
-            source = script.pubkey_to_p2whash(pubkey)
+            source = script.pubkey_to_p2wpkhash(pubkey)
         else:
-            source = script.pubkey_to_pubkeyhash(pubkey)
+            source = script.pubkey_to_p2pkhash(pubkey)
         redeem_script_is_valid = True
     elif (
         script_len > 41
@@ -198,9 +198,9 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                             pos, pubkey = decode_data_push(redeem_script, pos)
 
                             if p2sh_is_segwit:
-                                source = script.pubkey_to_p2whash(pubkey)
+                                source = script.pubkey_to_p2wpkhash(pubkey)
                             else:
-                                source = script.pubkey_to_pubkeyhash(pubkey)
+                                source = script.pubkey_to_p2pkhash(pubkey)
 
                             valid_sig = (
                                 redeem_script[pos] == bitcoinlib.core.script.OP_CHECKSIGVERIFY

@@ -294,7 +294,7 @@ def hash160(x):
 
 
 def pubkey_to_p2pkhash(pubkey):
-    """Convert public key to PubKeyHash."""
+    """Convert public key to P2PKH Address."""
     pubkeyhash = hash160(pubkey)
     p2pkh = base58_check_encode(
         binascii.hexlify(pubkeyhash).decode("utf-8"), config.ADDRESSVERSION
@@ -302,8 +302,8 @@ def pubkey_to_p2pkhash(pubkey):
     return p2pkh 
 
 
-def pubkey_to_p2whash(pubkey):
-    """Convert public key to PayToWitness."""
+def pubkey_to_p2wpkhash(pubkey):
+    """Convert public key to P2WPKH address."""
     pubkeyhash = hash160(pubkey)
     pubkey = CBech32Data.from_bytes(0, pubkeyhash)
     return str(pubkey)
@@ -403,7 +403,7 @@ def scriptpubkey_to_address(scriptpubkey):
 
     elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = get_checkmultisig(asm)
-        pubkeyhashes = [pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+        pubkeyhashes = [pubkey_to_p2pkhash(pubkey) for pubkey in pubkeys]
         return construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
 
     elif len(asm) == 3 and asm[0] == OP_HASH160 and asm[2] == OP_EQUAL:  # noqa: F405
@@ -486,7 +486,7 @@ def make_pubkeyhash(address):
             if is_pubkeyhash(pub):
                 pubkeyhash = pub
             else:
-                pubkeyhash = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(pub, "utf-8")))
+                pubkeyhash = pubkey_to_p2pkhash(binascii.unhexlify(bytes(pub, "utf-8")))
             pubkeyhashes.append(pubkeyhash)
         pubkeyhash_address = construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
@@ -497,7 +497,7 @@ def make_pubkeyhash(address):
         elif is_p2sh(address):
             pubkeyhash_address = address
         else:
-            pubkeyhash_address = pubkey_to_pubkeyhash(binascii.unhexlify(bytes(address, "utf-8")))
+            pubkeyhash_address = pubkey_to_p2pkhash(binascii.unhexlify(bytes(address, "utf-8")))
     return pubkeyhash_address
 
 

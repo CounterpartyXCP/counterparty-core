@@ -74,7 +74,7 @@ def decode_checkmultisig(asm, decoded_tx):
         chunk = chunk[1 : chunk_length + 1]
         destination, data = None, chunk[len(config.PREFIX) :]
     else:  # Destination
-        pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+        pubkeyhashes = [script.pubkey_to_p2pkhash(pubkey) for pubkey in pubkeys]
         destination, data = (
             script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)),
             None,
