@@ -254,7 +254,9 @@ def test_array(signatures_required, pubs, signatures_possible):
     if signatures_possible != len(pubs):
         raise InputError("Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.")
     if signatures_required > signatures_possible:
-        raise MultiSigAddressError("Number of required cannot exceed number of of possible signatures")
+        raise MultiSigAddressError(
+            "Number of required cannot exceed number of of possible signatures"
+        )
 
 
 def construct_array(signatures_required, pubs, signatures_possible):
