@@ -31,7 +31,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1
-from counterpartycore.lib.backend import fetcher
+from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
 from counterpartycore.lib.telemetry.collectors.influxdb import (
@@ -749,7 +749,7 @@ def start_all(args):
             database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
-        fetcher.stop()
+        rsfetcher.RSFetcher().stop()
         try:
             database.check_wal_file()
         except exceptions.WALFileFoundError:

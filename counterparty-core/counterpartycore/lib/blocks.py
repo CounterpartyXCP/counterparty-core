@@ -24,7 +24,7 @@ from counterpartycore.lib import (  # noqa: E402
     message_type,
     util,
 )
-from counterpartycore.lib.backend import fetcher
+from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
 
 from .messages import (  # noqa: E402
@@ -1183,7 +1183,8 @@ def catch_up(db, check_asset_conservation=True):
 
     # initialize blocks fetcher
     # block_fetcher = backend.bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
-    fetcher.initialize(util.CURRENT_BLOCK_INDEX + 1)
+
+    fetcher = rsfetcher.RSFetcher(util.CURRENT_BLOCK_INDEX + 1)
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
