@@ -606,9 +606,8 @@ class TransactionService:
         """Determine encoding method"""
 
         if data:
-            desired_encoding = encoding
             # Data encoding methods (choose and validate).
-            if desired_encoding == "auto":
+            if encoding == "auto":
                 if len(data) + len(self.prefix) <= self.op_return_max_size:
                     encoding = "opreturn"
                 else:
@@ -618,7 +617,7 @@ class TransactionService:
                         else "multisig"
                     )  # p2sh is not possible with old_style_api
 
-            elif desired_encoding == "p2sh" and not util.enabled("p2sh_encoding"):
+            elif encoding == "p2sh" and not util.enabled("p2sh_encoding"):
                 raise exceptions.TransactionError("P2SH encoding not enabled yet")
 
             elif encoding not in ("pubkeyhash", "multisig", "opreturn", "p2sh"):
