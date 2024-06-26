@@ -55,28 +55,27 @@ def validate(address, allow_p2sh=True):
 
     May throw `AddressError`.
     """
-    # Get array of pubkeyhashes to check.
+    # Get array of pubkeys to check.
     if is_multisig(address):
-        pubkeyhashes = pubkeyhash_array(address)
+        _, pubkeys, _ = extract_array(address)  # Extract public keys
+        # Validate each public key using CPubKey.is_fullyvalid
+        for pubkey in pubkeys:
+            pubkey_bytes = binascii.unhexlify(pubkey)
+            if not is_fullyvalid(pubkey_bytes):
+                raise exceptions.AddressError(f"Invalid public key: {pubkey}")
     else:
-        pubkeyhashes = [address]
-
-    # Check validity by attempting to decode.
-    for pubkeyhash in pubkeyhashes:
-        try:
-            if util.enabled("segwit_support"):
-                if not is_bech32(pubkeyhash):
-                    base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
-            else:
-                base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
-        except VersionByteError as e:
-            if not allow_p2sh:
+        # Check validity by attempting to decode.
+        # NOTE: we do not perform validation, but the implementation this
+        # replaces didn't, either!
+        if not is_bech32(address):
+            try:
+                base58_check_decode(address, config.ADDRESSVERSION)
+            except VersionByteError as e:
+                if not allow_p2sh:
+                    raise e
+                base58_check_decode(address, config.P2SH_ADDRESSVERSION)
+            except Base58Error as e:
                 raise e
-            base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
-        except Base58Error as e:
-            if not util.enabled("segwit_support") or not is_bech32(pubkeyhash):
-                raise e
-
 
 def base58_encode(binary):
     """Encode the address in base58."""
@@ -275,6 +274,7 @@ def extract_array(address):
     return int(signatures_required), pubs, int(signatures_possible)
 
 
+'''
 def pubkeyhash_array(address):
     """Return PubKeyHashes from an address."""
     signatures_required, pubs, signatures_possible = extract_array(address)
@@ -284,6 +284,7 @@ def pubkeyhash_array(address):
         )
     pubkeyhashes = pubs
     return pubkeyhashes
+'''
 
 
 def hash160(x):
