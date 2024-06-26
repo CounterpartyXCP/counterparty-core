@@ -19,7 +19,7 @@ UPDATE_EVENTS_ID_FIELDS = {
     "TRANSACTION_PARSED": ["tx_index"],
     "BET_MATCH_UPDATE": ["id"],
     "BET_UPDATE": ["tx_hash"],
-    "DISPENSER_UPDATE": ["source", "asset"],
+    "DISPENSER_UPDATE": ["tx_hash"],
     "ORDER_FILLED": ["tx_hash"],
     "ORDER_MATCH_UPDATE": ["id"],
     "ORDER_UPDATE": ["tx_hash"],
