@@ -243,6 +243,14 @@ def has_fk_on(cursor, table, foreign_key):
     return False
 
 
+def index_exists(cursor, table, index):
+    cursor.execute(f"PRAGMA index_list({table})")
+    for row in cursor:
+        if row["name"] == index:
+            return True
+    return False
+
+
 def create_indexes(cursor, table, indexes, unique=False):
     for index in indexes:
         field_names = [field.split(" ")[0] for field in index]

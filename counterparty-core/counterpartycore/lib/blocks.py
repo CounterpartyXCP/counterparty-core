@@ -585,11 +585,18 @@ def initialise(db):
 
     # Addresses
     # Leaving this here because in the future this could work for other things besides broadcast
-    cursor.execute("""CREATE TABLE IF NOT EXISTS addresses(
-                      address TEXT UNIQUE,
-                      options INTEGER,
-                      block_index INTEGER)
-                   """)
+    create_addresses_query = """
+        CREATE TABLE IF NOT EXISTS addresses(
+            address TEXT,
+            options INTEGER,
+            block_index INTEGER
+        )
+    """
+    cursor.execute(create_addresses_query)
+
+    # migrate old table
+    if database.index_exists(cursor, "addresses", "sqlite_autoindex_addresses_1"):
+        database.copy_old_table(cursor, "addresses", create_addresses_query)
 
     database.create_indexes(
         cursor,
