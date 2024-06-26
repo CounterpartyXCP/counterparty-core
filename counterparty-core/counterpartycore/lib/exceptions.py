@@ -117,3 +117,7 @@ class BitcoindZMQError(Exception):
 
 class APIWatcherError(Exception):
     pass
+
+
+class SerializationError(Exception):
+    pass

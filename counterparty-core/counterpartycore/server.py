@@ -28,7 +28,6 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
-from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.backend import fetcher
@@ -781,15 +780,6 @@ def rollback(block_index=None):
     finally:
         database.optimize(db)
         db.close()
-
-
-def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
-    kickstarter.run(
-        bitcoind_dir=bitcoind_dir,
-        force=force,
-        max_queue_size=max_queue_size,
-        debug_block=debug_block,
-    )
 
 
 def vacuum():

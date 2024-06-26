@@ -3,8 +3,7 @@ import time
 
 import bitcoin as bitcoinlib
 
-from counterpartycore.lib import deserialize
-from counterpartycore.lib.kickstart import utils
+from counterpartycore.lib import deserialize, util
 
 
 def deserialize_bitcoinlib(tx_hex):
@@ -75,7 +74,7 @@ def test_deserialize():
         assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx_parser["vtxinwit"]) > 0)
         assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx_parser["coinbase"]
 
-        assert utils.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx_parser["tx_hash"]
+        assert util.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx_parser["tx_hash"]
 
     iterations = 25
 

@@ -832,21 +832,12 @@ def create_views(db):
     cursor.close()
 
 
-def list_tx(
-    db,
-    block_hash,
-    block_index,
-    block_time,
-    tx_hash,
-    tx_index,
-    decoded_tx,
-    block_parser=None,
-):
+def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
     assert type(tx_hash) == str  # noqa: E721
     cursor = db.cursor()
 
     source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
-        db, decoded_tx, block_index, block_parser=block_parser
+        db, decoded_tx, block_index
     )
 
     # For mempool
@@ -1062,7 +1053,7 @@ def get_next_tx_index(db):
     return tx_index
 
 
-def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
+def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
     # increment block index
@@ -1113,10 +1104,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
 
         # save transactions
         for transaction in decoded_block["transactions"]:
-            # for kickstart
-            if block_parser is not None:
-                # Cache transaction. We do that here because the block is fetched by another process.
-                block_parser.put_in_cache(transaction)
             tx_index = list_tx(
                 db,
                 decoded_block["block_hash"],
@@ -1125,7 +1112,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
                 transaction["tx_hash"],
                 tx_index,
                 decoded_tx=transaction,
-                block_parser=block_parser,
             )
         # Parse the transactions in the block.
         new_ledger_hash, new_txlist_hash, new_messages_hash = parse_block(
@@ -1203,7 +1189,7 @@ def catch_up(db, check_asset_conservation=True):
         decoded_block = fetcher.get_block()
         # decoded_block = block_fetcher.get_block()
         # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
-        tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
+        tx_index = parse_new_block(db, decoded_block, tx_index=tx_index)
 
         parsed_blocks += 1
         formatted_duration = util.format_duration(time.time() - start_time)

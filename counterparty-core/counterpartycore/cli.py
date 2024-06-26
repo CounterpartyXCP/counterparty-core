@@ -404,18 +404,6 @@ def main():
     )
     setup.add_config_arguments(parser_rollback, CONFIG_ARGS, configfile)
 
-    parser_kickstart = subparsers.add_parser(
-        "kickstart", help="rapidly build database by reading from Bitcoin Core blockchain"
-    )
-    parser_kickstart.add_argument("--bitcoind-dir", help="Bitcoin Core data directory")
-    parser_kickstart.add_argument(
-        "--max-queue-size", type=int, help="Size of the multiprocessing.Queue for parsing blocks"
-    )
-    parser_kickstart.add_argument(
-        "--debug-block", type=int, help="Rollback and run kickstart for a single block;"
-    )
-    setup.add_config_arguments(parser_kickstart, CONFIG_ARGS, configfile)
-
     parser_bootstrap = subparsers.add_parser(
         "bootstrap", help="bootstrap database with hosted snapshot"
     )
@@ -451,14 +439,6 @@ def main():
 
     elif args.action == "rollback":
         server.rollback(block_index=args.block_index)
-
-    elif args.action == "kickstart":
-        server.kickstart(
-            bitcoind_dir=args.bitcoind_dir,
-            force=args.force,
-            max_queue_size=args.max_queue_size,
-            debug_block=args.debug_block,
-        )
 
     elif args.action == "start":
         server.start_all(args)
