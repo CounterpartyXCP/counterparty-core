@@ -1059,7 +1059,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
     start_time = time.time()
 
     # Use 'height' instead of 'block_index'
-    block_height = decoded_block.get('height') or decoded_block.get('block_index')
+    block_height = decoded_block.get('height')
     if block_height is None:
         raise ValueError(f"Unable to determine block height from decoded block: {decoded_block}")
 
@@ -1206,6 +1206,10 @@ def catch_up(db, check_asset_conservation=True):
         # Get block information and transactions
         decoded_block = fetcher.get_block()
         
+        block_height = decoded_block.get('height')
+        if block_height is None:
+            raise ValueError(f"Unable to determine block height from decoded block: {decoded_block}")
+
         # Check for reorg
         if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
             previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX)
@@ -1213,8 +1217,8 @@ def catch_up(db, check_asset_conservation=True):
                 raise exceptions.DatabaseError(f"Blockchain reorganization detected at block {util.CURRENT_BLOCK_INDEX + 1}. Manual intervention required.")
         
         # Check for gaps in the blockchain
-        if decoded_block['block_index'] > util.CURRENT_BLOCK_INDEX + 1:
-            raise exceptions.DatabaseError(f"Gap detected in blockchain. Current block: {util.CURRENT_BLOCK_INDEX}, Next block: {decoded_block['block_index']}")
+        if block_height > util.CURRENT_BLOCK_INDEX + 1:
+            raise exceptions.DatabaseError(f"Gap detected in blockchain. Current block: {util.CURRENT_BLOCK_INDEX}, Next block: {block_height}")
         
         # Parse the current block
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
