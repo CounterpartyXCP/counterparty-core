@@ -84,7 +84,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                         f"Block prefetched. Queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
                     )
                     if self.prefetch_queue_size > PREFETCH_QUEUE_SIZE:
-                        logger.warning("Prefetch queue is full. Waiting before next fetch.")
+                        logger.debug("Prefetch queue is full. Waiting before next fetch.")
                         time.sleep(1)
                 else:
                     logger.debug("No block fetched. Waiting before next fetch.")
