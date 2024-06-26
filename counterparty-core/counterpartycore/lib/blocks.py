@@ -1058,6 +1058,15 @@ def get_next_tx_index(db):
 def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
     start_time = time.time()
 
+    # Use 'height' instead of 'block_index'
+    block_height = decoded_block.get('height') or decoded_block.get('block_index')
+    if block_height is None:
+        raise ValueError(f"Unable to determine block height from decoded block: {decoded_block}")
+
+    # Check if the new block is consecutive
+    if block_height != util.CURRENT_BLOCK_INDEX + 1:
+        raise exceptions.DatabaseError(f"Attempting to insert non-consecutive block. Expected block index: {util.CURRENT_BLOCK_INDEX + 1}, got: {block_height}")
+
     # increment block index
     util.CURRENT_BLOCK_INDEX += 1
 
@@ -1087,6 +1096,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
             "messages_hash": None,
         }
 
+        
     if "height" not in decoded_block:
         decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
     else:
@@ -1195,8 +1205,18 @@ def catch_up(db, check_asset_conservation=True):
     while util.CURRENT_BLOCK_INDEX < block_count:
         # Get block information and transactions
         decoded_block = fetcher.get_block()
-        # decoded_block = block_fetcher.get_block()
-        # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
+        
+        # Check for reorg
+        if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+            previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX)
+            if decoded_block["hash_prev"] != previous_block["block_hash"]:
+                raise exceptions.DatabaseError(f"Blockchain reorganization detected at block {util.CURRENT_BLOCK_INDEX + 1}. Manual intervention required.")
+        
+        # Check for gaps in the blockchain
+        if decoded_block['block_index'] > util.CURRENT_BLOCK_INDEX + 1:
+            raise exceptions.DatabaseError(f"Gap detected in blockchain. Current block: {util.CURRENT_BLOCK_INDEX}, Next block: {decoded_block['block_index']}")
+        
+        # Parse the current block
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
         parsed_blocks += 1
