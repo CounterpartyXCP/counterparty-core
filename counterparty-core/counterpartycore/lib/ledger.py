@@ -3,8 +3,8 @@ import fractions
 import json
 import logging
 import time
-from decimal import Decimal as D
 from contextlib import contextmanager
+from decimal import Decimal as D
 
 from counterpartycore.lib import backend, config, exceptions, log, util
 
@@ -27,14 +27,15 @@ def get_cursor(db):
     finally:
         cursor.close()
 
-def insert_record(db, table_name, record, event, event_info={}): # noqa: B006
+
+def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
     fields = list(record.keys())
-    placeholders = ', '.join(['?' for _ in fields])
-    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"
-    
+    placeholders = ", ".join(["?" for _ in fields])
+    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608
+
     with get_cursor(db) as cursor:
         cursor.execute(query, list(record.values()))
-    
+
     add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
 
 
@@ -143,16 +144,16 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         message_index = 0
 
     items = {
-        key: binascii.hexlify(value).decode('ascii') if isinstance(value, bytes) else value
+        key: binascii.hexlify(value).decode("ascii") if isinstance(value, bytes) else value
         for key, value in bindings.items()
     }
 
     current_time = curr_time()
-    bindings_string = json.dumps(items, sort_keys=True, separators=(',', ':'))
-    
+    bindings_string = json.dumps(items, sort_keys=True, separators=(",", ":"))
+
     query = """INSERT INTO messages VALUES (
                     ?, ?, ?, ?, ?, ?, ?, ?)"""
-    
+
     message_bindings = (
         message_index,
         block_index,
