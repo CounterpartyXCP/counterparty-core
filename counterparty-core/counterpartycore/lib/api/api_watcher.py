@@ -95,8 +95,6 @@ def get_event_bindings(event):
     event_bindings = json.loads(event["bindings"])
     if "order_match_id" in event_bindings:
         del event_bindings["order_match_id"]
-    elif event["category"] == "dispenses" and "btc_amount" in event_bindings:
-        del event_bindings["btc_amount"]
     return event_bindings
 
 
