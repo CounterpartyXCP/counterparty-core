@@ -267,7 +267,7 @@ def get_transactions_by_address(
     """
     Returns the transactions of an address
     :param str address: The address to return (e.g. 1PHnxfHgojebxzW6muz8zfbE4bkDtbEudx)
-    :param int cursor: The last transaction index to return (e.g. 10665092)
+    :param int cursor: The last transaction index to return (e.g. 2736469)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """

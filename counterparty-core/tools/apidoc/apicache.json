@@ -556,26 +556,6 @@
         "next_cursor": null,
         "result_count": 1
     },
-    "/v2/blocks/<int:block_index>/expirations": {
-        "result": [
-            {
-                "type": "order",
-                "object_id": "b048661afeee3f266792481168024abc0d7648fe0e019e4a1e0fd9867c2c0ffc",
-                "block_index": 840356,
-                "cursor_id": "840356_order_195954",
-                "block_time": 1713797719
-            },
-            {
-                "type": "order",
-                "object_id": "533d5c0ecd8ca9c2946d3298cc5e570eee55b62b887dd85c95de6de4fdc7f441",
-                "block_index": 840356,
-                "cursor_id": "840356_order_195953",
-                "block_time": 1713797719
-            }
-        ],
-        "next_cursor": null,
-        "result_count": 2
-    },
     "/v2/blocks/<int:block_index>/cancels": {
         "result": [
             {
@@ -1061,24 +1041,6 @@
         ],
         "next_cursor": null,
         "result_count": 1
-    },
-    "/v2/addresses/<address>/balances/<asset>": {
-        "result": {
-            "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
-            "asset": "XCP",
-            "quantity": 104200000000,
-            "block_index": 830981,
-            "tx_index": 2677412,
-            "block_time": 1708253880,
-            "asset_info": {
-                "divisible": true,
-                "asset_longname": "Counterparty",
-                "description": "The Counterparty protocol native currency",
-                "locked": true,
-                "issuer": null
-            },
-            "quantity_normalized": "1042"
-        }
     },
     "/v2/addresses/<address>/credits": {
         "result": [
@@ -2569,24 +2531,6 @@
         ],
         "next_cursor": "1NzqwpLpAG7nGXPah9azAKarGsR9myCRUU",
         "result_count": 7
-    },
-    "/v2/assets/<asset>/balances/<address>": {
-        "result": {
-            "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
-            "asset": "XCP",
-            "quantity": 104200000000,
-            "block_index": 830981,
-            "tx_index": 2677412,
-            "block_time": 1708253880,
-            "asset_info": {
-                "divisible": true,
-                "asset_longname": "Counterparty",
-                "description": "The Counterparty protocol native currency",
-                "locked": true,
-                "issuer": null
-            },
-            "quantity_normalized": "1042"
-        }
     },
     "/v2/assets/<asset>/orders": {
         "result": [
@@ -7199,6 +7143,136 @@
             "fee_fraction_int_normalized": "0"
         }
     },
+    "/v2/orders/<order_hash>/matches": {
+        "result": [
+            {
+                "id": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776_5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947",
+                "tx0_index": 2724132,
+                "tx0_hash": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776",
+                "tx0_address": "15L7U55PAsHLEpQkZqz62e3eqWd9AHb2DH",
+                "tx1_index": 2726591,
+                "tx1_hash": "5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947",
+                "tx1_address": "15e15ua6A3FJqjMevtrWcFSzKn9k6bMQeA",
+                "forward_asset": "PEPECASH",
+                "forward_quantity": 6066600000000,
+                "backward_asset": "XCP",
+                "backward_quantity": 9645894000,
+                "tx0_block_index": 838055,
+                "tx1_block_index": 840381,
+                "block_index": 840381,
+                "tx0_expiration": 5000,
+                "tx1_expiration": 8064,
+                "match_expire_index": 840401,
+                "fee_paid": 0,
+                "status": "completed",
+                "block_time": 1713811499,
+                "forward_asset_info": {
+                    "asset_longname": null,
+                    "description": "http://rarepepedirectory.com/json/pc.json",
+                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                    "divisible": true,
+                    "locked": true
+                },
+                "backward_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "forward_quantity_normalized": "60666.00000000",
+                "backward_quantity_normalized": "96.45894000",
+                "fee_paid_normalized": "0.00000000"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 1
+    },
+    "/v2/bets/<bet_hash>/matches": {
+        "result": [
+            {
+                "id": "5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed_cb5f888c299a50967d523513daed71636d927e6ef3dbda85feb11ff112ae4330",
+                "tx0_index": 15106,
+                "tx0_hash": "5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed",
+                "tx0_address": "18ZNyaAcH4HugeofwbrpLoUNiayxJRH65c",
+                "tx1_index": 15108,
+                "tx1_hash": "cb5f888c299a50967d523513daed71636d927e6ef3dbda85feb11ff112ae4330",
+                "tx1_address": "1PTqJmRCMGs4qBEh2APAFSrBv95Uf1hfiD",
+                "tx0_bet_type": 3,
+                "tx1_bet_type": 2,
+                "feed_address": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
+                "initial_value": -1,
+                "deadline": 1401828300,
+                "target_value": 1.0,
+                "leverage": 5040,
+                "forward_quantity": 50000000,
+                "backward_quantity": 50000000,
+                "tx0_block_index": 304062,
+                "tx1_block_index": 304063,
+                "block_index": 306379,
+                "tx0_expiration": 11,
+                "tx1_expiration": 1459,
+                "match_expire_index": 304073,
+                "fee_fraction_int": 1000000,
+                "status": "expired",
+                "block_time": 1403037987,
+                "fee_fraction_int_normalized": "0.01000000"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 1
+    },
+    "/v2/assets/<asset>/info": {
+        "result": {
+            "asset": "UNNEGOTIABLE",
+            "asset_longname": null,
+            "owner": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "divisible": false,
+            "locked": true,
+            "supply": 1776,
+            "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+            "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "holder_count": 8,
+            "first_issuance_block_index": 840464,
+            "last_issuance_block_index": 840756,
+            "first_issuance_block_time": 1713852783,
+            "last_issuance_block_time": 1714013031,
+            "supply_normalized": "1776"
+        }
+    },
+    "/v2/blocks/<int:block_index>/expirations": {
+        "result": [
+            {
+                "type": "order",
+                "object_id": "b048661afeee3f266792481168024abc0d7648fe0e019e4a1e0fd9867c2c0ffc",
+                "block_index": 840356,
+                "block_time": 1713797719
+            },
+            {
+                "type": "order",
+                "object_id": "533d5c0ecd8ca9c2946d3298cc5e570eee55b62b887dd85c95de6de4fdc7f441",
+                "block_index": 840356,
+                "block_time": 1713797719
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 2
+    },
+    "/v2/addresses/<address>/balances/<asset>": {
+        "result": {
+            "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
+            "asset": "XCP",
+            "quantity": 104200000000,
+            "asset_info": {
+                "divisible": true,
+                "asset_longname": "Counterparty",
+                "description": "The Counterparty protocol native currency",
+                "locked": true,
+                "issuer": null
+            },
+            "quantity_normalized": "1042.00000000"
+        }
+    },
     "/v2/addresses/<address>/transactions": {
         "result": [
             {
@@ -7377,103 +7451,21 @@
             }
         ],
         "next_cursor": 2735423,
-        "result_count": 382
+        "result_count": 388
     },
-    "/v2/orders/<order_hash>/matches": {
-        "result": [
-            {
-                "id": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776_5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947",
-                "tx0_index": 2724132,
-                "tx0_hash": "23f68fdf934e81144cca31ce8ef69062d553c521321a039166e7ba99aede0776",
-                "tx0_address": "15L7U55PAsHLEpQkZqz62e3eqWd9AHb2DH",
-                "tx1_index": 2726591,
-                "tx1_hash": "5461e6f99a37a7167428b4a720a52052cd9afed43905f818f5d7d4f56abd0947",
-                "tx1_address": "15e15ua6A3FJqjMevtrWcFSzKn9k6bMQeA",
-                "forward_asset": "PEPECASH",
-                "forward_quantity": 6066600000000,
-                "backward_asset": "XCP",
-                "backward_quantity": 9645894000,
-                "tx0_block_index": 838055,
-                "tx1_block_index": 840381,
-                "block_index": 840381,
-                "tx0_expiration": 5000,
-                "tx1_expiration": 8064,
-                "match_expire_index": 840401,
-                "fee_paid": 0,
-                "status": "completed",
-                "block_time": 1713811499,
-                "forward_asset_info": {
-                    "asset_longname": null,
-                    "description": "http://rarepepedirectory.com/json/pc.json",
-                    "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
-                    "divisible": true,
-                    "locked": true
-                },
-                "backward_asset_info": {
-                    "divisible": true,
-                    "asset_longname": "Counterparty",
-                    "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
-                },
-                "forward_quantity_normalized": "60666.00000000",
-                "backward_quantity_normalized": "96.45894000",
-                "fee_paid_normalized": "0.00000000"
-            }
-        ],
-        "next_cursor": null,
-        "result_count": 1
-    },
-    "/v2/bets/<bet_hash>/matches": {
-        "result": [
-            {
-                "id": "5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed_cb5f888c299a50967d523513daed71636d927e6ef3dbda85feb11ff112ae4330",
-                "tx0_index": 15106,
-                "tx0_hash": "5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed",
-                "tx0_address": "18ZNyaAcH4HugeofwbrpLoUNiayxJRH65c",
-                "tx1_index": 15108,
-                "tx1_hash": "cb5f888c299a50967d523513daed71636d927e6ef3dbda85feb11ff112ae4330",
-                "tx1_address": "1PTqJmRCMGs4qBEh2APAFSrBv95Uf1hfiD",
-                "tx0_bet_type": 3,
-                "tx1_bet_type": 2,
-                "feed_address": "1QKEpuxEmdp428KEBSDZAKL46noSXWJBkk",
-                "initial_value": -1,
-                "deadline": 1401828300,
-                "target_value": 1.0,
-                "leverage": 5040,
-                "forward_quantity": 50000000,
-                "backward_quantity": 50000000,
-                "tx0_block_index": 304062,
-                "tx1_block_index": 304063,
-                "block_index": 306379,
-                "tx0_expiration": 11,
-                "tx1_expiration": 1459,
-                "match_expire_index": 304073,
-                "fee_fraction_int": 1000000,
-                "status": "expired",
-                "block_time": 1403037987,
-                "fee_fraction_int_normalized": "0.01000000"
-            }
-        ],
-        "next_cursor": null,
-        "result_count": 1
-    },
-    "/v2/assets/<asset>/info": {
+    "/v2/assets/<asset>/balances/<address>": {
         "result": {
-            "asset": "UNNEGOTIABLE",
-            "asset_longname": null,
-            "owner": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "divisible": false,
-            "locked": true,
-            "supply": 1776,
-            "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-            "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "holder_count": 8,
-            "first_issuance_block_index": 840464,
-            "last_issuance_block_index": 840756,
-            "first_issuance_block_time": 1713852783,
-            "last_issuance_block_time": 1714013031,
-            "supply_normalized": "1776"
+            "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
+            "asset": "XCP",
+            "quantity": 104200000000,
+            "asset_info": {
+                "divisible": true,
+                "asset_longname": "Counterparty",
+                "description": "The Counterparty protocol native currency",
+                "locked": true,
+                "issuer": null
+            },
+            "quantity_normalized": "1042.00000000"
         }
     }
 }
