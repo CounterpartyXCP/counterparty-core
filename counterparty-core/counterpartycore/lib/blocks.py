@@ -646,6 +646,7 @@ def initialise(db):
         [
             ["block_index"],
             ["block_index", "message_index"],
+            ["block_index", "event"],
             ["event"],
             ["tx_hash"],
         ],
