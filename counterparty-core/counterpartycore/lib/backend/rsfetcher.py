@@ -2,7 +2,8 @@ import asyncio
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
-from threading import Semaphore
+from threading import Lock
+import random
 
 from counterparty_rs import indexer
 
@@ -38,7 +39,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_queue = {}
         self.prefetch_queue_size = 0
         self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
-        self.prefetch_semaphore = Semaphore(PREFETCH_QUEUE_SIZE)
+        self.queue_lock = Lock()
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
 
     def start(self):
@@ -78,36 +79,41 @@ class RSFetcher(metaclass=util.SingletonMeta):
         expected_height = self.next_height
         while True and not self.stopped:
             try:
-                with self.prefetch_semaphore:
-                    block = self.fetcher.get_block_non_blocking()
-                    if block is not None:
-                        self.prefetch_queue[block["height"]] = block
-                        self.prefetch_queue_size += 1
-                        expected_height += 1
-                        logger.debug(
-                            f"Block {block['height']} prefetched. Queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
-                        )
+                with self.queue_lock:
+                    if self.prefetch_queue_size < PREFETCH_QUEUE_SIZE:
+                        block = self.fetcher.get_block_non_blocking()
+                        if block is not None:
+                            self.prefetch_queue[block["height"]] = block
+                            self.prefetch_queue_size += 1
+                            expected_height += 1
+                            logger.debug(
+                                f"Block {block['height']} prefetched. Queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
+                            )
+                        else:
+                            logger.debug("No block fetched. Waiting before next fetch.")
+                            time.sleep(random.uniform(0.5, 1.5))
                     else:
-                        logger.debug("No block fetched. Waiting before next fetch.")
-                        time.sleep(1)
+                        logger.debug("Prefetch queue full. Waiting before next fetch.")
+                        time.sleep(random.uniform(0.5, 1.5))
             except Exception as e:
                 logger.error(f"Error prefetching block: {e}")
+                time.sleep(random.uniform(1, 3))  # Longer wait on error
 
     def get_prefetched_block(self, height):
         try:
-            if height in self.prefetch_queue:
-                block = self.prefetch_queue.pop(height)
-                self.prefetch_queue_size -= 1
-                self.prefetch_semaphore.release()
-                logger.debug(
-                    f"Block {height} retrieved from queue. New queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
-                )
-                return block
-            else:
-                logger.warning(f"Block {height} not found in prefetch queue. Fetching directly.")
-                return self.fetcher.get_block()
-        except asyncio.QueueEmpty:
-            logger.warning(f"Prefetch queue is empty. Fetching block {height} directly.")
+            with self.queue_lock:
+                if height in self.prefetch_queue:
+                    block = self.prefetch_queue.pop(height)
+                    self.prefetch_queue_size -= 1
+                    logger.debug(
+                        f"Block {height} retrieved from queue. New queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
+                    )
+                    return block
+                else:
+                    logger.warning(f"Block {height} not found in prefetch queue. Fetching directly.")
+                    return self.fetcher.get_block()
+        except Exception as e:
+            logger.error(f"Error getting prefetched block: {e}")
             return self.fetcher.get_block()
 
     def stop(self):
