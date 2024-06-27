@@ -373,7 +373,7 @@ def run_api_server(args, interruped_value):
     if watcher.stopped:
         return
 
-    logger.info("Starting API Server.")
+    logger.info("Starting API Server...")
     app = Flask(config.APP_NAME)
     transaction.initialise()
     with app.app_context():

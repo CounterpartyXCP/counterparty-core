@@ -108,7 +108,7 @@ docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
 docker compose --profile mainnet up -d counterparty-core
 
 # wait for counterparty-core to be ready
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Starting API Server.')" = "" ]; do
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'API Watcher - Catch up completed.')" = "" ]; do
     echo "Waiting for counterparty-core mainnet to be ready"
     sleep 1
 done
