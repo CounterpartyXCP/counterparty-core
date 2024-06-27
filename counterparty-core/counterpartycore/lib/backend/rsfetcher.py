@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
-from threading import Lock, current_thread
+from threading import Lock, Condition, current_thread
 import random
 
 from counterparty_rs import indexer
@@ -44,6 +44,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_queue_size = 0
         self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
         self.queue_lock = Lock()
+        self.queue_condition = Condition(self.queue_lock)  # Add a condition variable
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
 
     def start(self):
@@ -91,6 +92,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 if height in self.prefetch_queue:
                     block = self.prefetch_queue.pop(height)
                     self.prefetch_queue_size -= 1
+                    self.queue_condition.notify()  # Notify the prefetching thread
                     logger.debug(
                         "[Thread %s] Block %s retrieved from queue. New queue size: %s/%s",
                         self.thread_index,
@@ -112,24 +114,22 @@ class RSFetcher(metaclass=util.SingletonMeta):
         while True and not self.stopped:
             try:
                 with self.queue_lock:
-                    if self.prefetch_queue_size < PREFETCH_QUEUE_SIZE:
-                        block = self.fetcher.get_block_non_blocking()
-                        if block is not None:
-                            self.prefetch_queue[block["height"]] = block
-                            self.prefetch_queue_size += 1
-                            expected_height += 1
-                            logger.debug(
-                                "[Thread %s] Block %s prefetched. Queue size: %s/%s",
-                                self.thread_index,
-                                block['height'],
-                                self.prefetch_queue_size,
-                                PREFETCH_QUEUE_SIZE
-                            )
-                        else:
-                            logger.debug("[Thread %s] No block fetched. Waiting before next fetch.", self.thread_index)
-                            time.sleep(random.uniform(0.5, 1.5))
+                    while self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE:
+                        self.queue_condition.wait()  # Wait until there is space in the queue
+                    block = self.fetcher.get_block_non_blocking()
+                    if block is not None:
+                        self.prefetch_queue[block["height"]] = block
+                        self.prefetch_queue_size += 1
+                        expected_height += 1
+                        logger.debug(
+                            "[Thread %s] Block %s prefetched. Queue size: %s/%s",
+                            self.thread_index,
+                            block['height'],
+                            self.prefetch_queue_size,
+                            PREFETCH_QUEUE_SIZE
+                        )
                     else:
-                        logger.debug("[Thread %s] Prefetch queue full. Waiting before next fetch.", self.thread_index)
+                        logger.debug("[Thread %s] No block fetched. Waiting before next fetch.", self.thread_index)
                         time.sleep(random.uniform(0.5, 1.5))
             except Exception as e:
                 logger.error(f"[Thread {self.thread_index}] Error prefetching block: {e}")
