@@ -952,7 +952,7 @@ def check_change(protocol_change, change_name):
 def software_version():
     if config.FORCE:
         return
-    logger.debug("Checking Counterparty version.")
+    logger.debug("Checking Counterparty version...")
 
     try:
         response = requests.get(
