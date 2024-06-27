@@ -116,16 +116,12 @@ done
 # Run dredd test
 dredd
 
-previous_counterparty_rs_hash=$(cat ../counterparty_rs_hash)
-current_counterparty_rs_hash=$(find counterparty-rs/ -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum | awk '{print $1}')
-
 
 # Run compare hashes test
 . "$HOME/.profile"
 cd counterparty-core
 
 if [ "$COUNTERPARTY_RS_CACHED" != "CACHED" ]; then
-    echo $current_counterparty_rs_hash > ../counterparty_rs_hash
     hatch env prune
 fi
 
