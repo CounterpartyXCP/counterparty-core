@@ -14,6 +14,10 @@
 
 ## Codebase
 
+* Add prefetcher thread for moving blocks between the Rust and Python processes
+* Add sanity checks to block parsing
+* Add miscellaneous block parsing performance optimizations
+
 
 ## API
 

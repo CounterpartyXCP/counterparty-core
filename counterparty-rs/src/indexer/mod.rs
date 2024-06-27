@@ -67,8 +67,10 @@ impl Indexer {
         )?)
     }
 
-    pub fn get_block(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let block = get_block::new(self.stopper.clone(), self.chan.1.clone())?;
+    pub fn get_block<'py>(&self, py: Python<'py>) -> PyResult<PyObject> {
+        let block = py.allow_threads(|| {
+            get_block::new(self.stopper.clone(), self.chan.1.clone())
+        })?;
         Ok(block.into_py(py))
     }
 

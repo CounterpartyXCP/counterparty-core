@@ -1,7 +1,7 @@
 use std::thread::JoinHandle;
 
 use crossbeam_channel::unbounded;
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::indexer::{
     config::Config,

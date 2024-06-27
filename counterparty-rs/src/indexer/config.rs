@@ -46,6 +46,64 @@ impl<'source> FromPyObject<'source> for LogLevel {
 }
 
 #[derive(Debug, Clone)]
+pub enum Network {
+    Mainnet,
+    Testnet,
+}
+
+impl<'source> FromPyObject<'source> for Network {
+    fn extract(obj: &'source PyAny) -> PyResult<Self> {
+        let network_str: String = obj.extract()?;
+        match network_str.as_str() {
+            "mainnet" => Ok(Network::Mainnet),
+            "testnet" => Ok(Network::Testnet),
+            _ => Err(PyErr::new::<PyValueError, _>(
+                "'network' must be either 'mainnet' or 'testnet'",
+            )),
+        }
+    }
+}
+
+impl ToString for Network {
+    fn to_string(&self) -> String {
+        match self {
+            Network::Mainnet => "mainnet".to_string(),
+            Network::Testnet => "testnet".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Heights {
+    pub segwit: u32,
+    pub p2sh_addresses: u32,
+    pub p2sh_dispensers: u32,
+    pub correct_segwit_txids: u32,
+    pub multisig_addresses: u32,
+}
+
+impl Heights {
+    pub fn new(network: Network) -> Self {
+        match network {
+            Network::Mainnet => Heights {
+                segwit: 557236,
+                p2sh_addresses: 423888,
+                p2sh_dispensers: 724000,
+                correct_segwit_txids: 662000,
+                multisig_addresses: 333500,
+            },
+            Network::Testnet => Heights {
+                segwit: 1440200,
+                p2sh_addresses: 0,
+                p2sh_dispensers: 2163328,
+                correct_segwit_txids: 1666625,
+                multisig_addresses: 0,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Config {
     pub rpc_address: String,
     pub rpc_user: String,
@@ -56,6 +114,41 @@ pub struct Config {
     pub consume_blocks: bool,
     pub start_height: Option<u32>,
     pub mode: Mode,
+    pub prefix: Vec<u8>,
+    pub address_version: Vec<u8>,
+    pub p2sh_address_version: Vec<u8>,
+    pub network: Network,
+    pub heights: Heights,
+}
+
+impl Config {
+    pub fn segwit_supported(&self, height: u32) -> bool {
+        height >= self.heights.segwit
+    }
+
+    pub fn p2sh_address_supported(&self, height: u32) -> bool {
+        height >= self.heights.p2sh_addresses
+    }
+
+    pub fn p2sh_dispensers_supported(&self, height: u32) -> bool {
+        height >= self.heights.p2sh_dispensers
+    }
+
+    pub fn correct_segwit_txids_enabled(&self, height: u32) -> bool {
+        height >= self.heights.correct_segwit_txids
+    }
+
+    pub fn multisig_addresses_enabled(&self, height: u32) -> bool {
+        height >= self.heights.multisig_addresses
+    }
+
+    pub fn unspendable(&self) -> String {
+        match self.network {
+            Network::Mainnet => "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+            Network::Testnet => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+        }
+        .into()
+    }
 }
 
 impl<'source> FromPyObject<'source> for Config {
@@ -94,12 +187,40 @@ impl<'source> FromPyObject<'source> for Config {
 
         let mode = match dict.get_item("mode") {
             Ok(Some(item)) => item.extract()?,
-            _ => Mode::Fetcher, // Default to Fetcher if not provided or in case of an error
+            _ => Mode::Fetcher,
         };
 
         let log_level = match dict.get_item("log_level") {
             Ok(Some(item)) => item.extract()?,
-            _ => LogLevel(Level::INFO), // Default to INFO if not provided or in case of an error
+            _ => LogLevel(Level::INFO),
+        };
+
+        let prefix = match dict.get_item("prefix") {
+            Ok(Some(item)) => item.extract::<Vec<u8>>()?,
+            _ => b"CNTRPRTY".to_vec(),
+        };
+
+        let network = match dict.get_item("network") {
+            Ok(Some(item)) => item.extract()?,
+            _ => Network::Mainnet, // Default to Mainnet if not provided or in case of an error
+        };
+
+        let heights = Heights::new(network.clone());
+
+        let address_version = match dict.get_item("address_version") {
+            Ok(Some(item)) => item.extract::<Vec<u8>>()?,
+            _ => match network {
+                Network::Mainnet => vec![0x00],
+                Network::Testnet => vec![0x6F],
+            },
+        };
+
+        let p2sh_address_version = match dict.get_item("p2sh_address_version") {
+            Ok(Some(item)) => item.extract::<Vec<u8>>()?,
+            _ => match network {
+                Network::Mainnet => vec![0x05],
+                Network::Testnet => vec![0xC4],
+            },
         };
 
         Ok(Config {
@@ -112,6 +233,11 @@ impl<'source> FromPyObject<'source> for Config {
             consume_blocks,
             start_height,
             mode,
+            prefix,
+            address_version,
+            p2sh_address_version,
+            network,
+            heights,
         })
     }
 }

@@ -1,18 +1,31 @@
 use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
+use std::iter::repeat;
+use std::cmp::min;
 
+use crate::b58::b58_encode;
+use crate::utils::script_to_address;
 use bitcoin::hashes::hex::ToHex;
 use bitcoincore_rpc::{
     bitcoin::{
         consensus::serialize,
-        hashes::{sha256d::Hash as Sha256dHash, Hash},
-        Block, BlockHash,
+        hashes::{ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
+        opcodes::all::{
+            OP_CHECKMULTISIG, OP_CHECKSIG, OP_DUP, OP_EQUAL, OP_EQUALVERIFY, OP_HASH160, OP_RETURN,
+            OP_PUSHNUM_1, OP_PUSHNUM_2, OP_PUSHNUM_3,
+        },
+        script::Instruction::{Op, PushBytes},
+        Block, BlockHash, Script, TxOut,
     },
     Auth, Client, RpcApi,
 };
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
+use crypto::rc4::Rc4;
+use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use super::{
-    block::{Block as CrateBlock, ToBlock, Transaction, Vin, Vout},
+    block::{
+        Block as CrateBlock, ParsedVouts, PotentialDispenser, ToBlock, Transaction, Vin, Vout,
+    },
     config::{Config, Mode},
     stopper::Stopper,
     types::{
@@ -68,15 +81,258 @@ impl BlockHasEntries for Block {
     }
 }
 
+fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
+    let mut rc4 = Rc4::new(key);
+    let mut result: Vec<u8> = repeat(0).take(data.len()).collect();
+    rc4.process(data, &mut result);
+    result
+}
+
+fn is_valid_segwit_script(script: &Script) -> bool {
+    if let Some(Ok(PushBytes(pb))) = script.instructions().next() {
+        return pb.is_empty();
+    }
+    false
+}
+
+enum ParseOutput {
+    Destination(String),
+    Data(Vec<u8>),
+}
+
+impl ParseOutput {
+    pub fn is_destination(&self) -> bool {
+        matches!(self, ParseOutput::Destination(_))
+    }
+}
+
+fn parse_vout(
+    config: &Config,
+    key: Vec<u8>,
+    height: u32,
+    txid: String,
+    vi: usize,
+    vout: &TxOut,
+) -> Result<(ParseOutput, Option<PotentialDispenser>), Error> {
+    let value = vout.value.to_sat();
+    if vout.script_pubkey.is_op_return() {
+        if let [Ok(Op(OP_RETURN)), Ok(PushBytes(pb))] = vout
+            .script_pubkey
+            .instructions()
+            .collect::<Vec<_>>()
+            .as_slice()
+        {
+            let bytes = arc4_decrypt(&key, pb.as_bytes());
+            if bytes.starts_with(&config.prefix) {
+                return Ok((
+                    ParseOutput::Data(bytes[config.prefix.len()..].to_vec()),
+                    Some(PotentialDispenser { destination: None, value: None }),
+                ));
+            }
+        }
+        Err(Error::ParseVout(format!(
+            "Encountered invalid OP_RETURN script | tx: {}, vout: {}",
+            txid, vi
+        )))
+    } else if vout.script_pubkey.is_p2pkh() {
+        if let [Ok(Op(OP_DUP)), Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUALVERIFY)), Ok(Op(OP_CHECKSIG))] =
+            vout.script_pubkey
+                .instructions()
+                .collect::<Vec<_>>()
+                .as_slice()
+        {
+            let bytes = arc4_decrypt(&key, pb.as_bytes());
+            if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
+                let data_len = bytes[0] as usize;
+                let data = bytes[1..=data_len].to_vec();
+                return Ok((
+                    ParseOutput::Data(data[config.prefix.len()..].to_vec()),
+                    Some(PotentialDispenser { destination: None, value: Some(value) }),
+                ));
+            } else {
+                let destination = b58_encode(
+                    config
+                        .address_version
+                        .clone()
+                        .into_iter()
+                        .chain(pb.as_bytes().to_vec())
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                );
+                return Ok((
+                    ParseOutput::Destination(destination.clone()),
+                    Some(PotentialDispenser { destination: Some(destination), value: Some(value) }),
+                ));
+            }
+        }
+        return Err(Error::ParseVout(format!(
+            "Encountered invalid OP_CHECKSIG script | tx: {}, vout: {}",
+            txid, vi
+        )));
+    } else if vout.script_pubkey.is_multisig() {
+        let mut chunks = Vec::new();
+        #[allow(unused_assignments)]
+        let mut signatures_required = 0;
+        match vout
+            .script_pubkey
+            .instructions()
+            .collect::<Vec<_>>()
+            .as_slice()
+        {
+            [Ok(Op(OP_PUSHNUM_1)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(Op(OP_PUSHNUM_2)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 1;
+                for pb in [pk1_pb, pk2_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
+            [Ok(Op(OP_PUSHNUM_2)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(Op(OP_PUSHNUM_2)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 2;
+                for pb in [pk1_pb, pk2_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
+            [Ok(Op(OP_PUSHNUM_1)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_PUSHNUM_3)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 1;
+                for pb in [pk1_pb, pk2_pb, pk3_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
+            [Ok(Op(OP_PUSHNUM_2)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_PUSHNUM_3)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 2;
+                for pb in [pk1_pb, pk2_pb, pk3_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
+            [Ok(Op(OP_PUSHNUM_3)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_PUSHNUM_3)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 3;
+                for pb in [pk1_pb, pk2_pb, pk3_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
+            _ => {
+                return Err(Error::ParseVout(format!(
+                    "Encountered invalid OP_MULTISIG script | tx: {}, vout: {}",
+                    txid, vi
+                )));
+            }
+        }
+        let mut enc_bytes = Vec::new();
+        for chunk in chunks.iter().take(chunks.len() - 1) { // (No data in last pubkey.)
+            enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec()); // Skip sign byte and nonce byte.
+        }
+        let bytes = arc4_decrypt(&key, &enc_bytes);
+        if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
+            let chunk_len = min(bytes[0] as usize, bytes.len() - 1);
+            let chunk = bytes[1..=chunk_len].to_vec();
+            return Ok((
+                ParseOutput::Data(chunk[config.prefix.len()..].to_vec()),
+                Some(PotentialDispenser { destination: None, value: Some(value) }),
+            ));
+        } else {
+            let mut pub_key_hashes = chunks
+                .into_iter()
+                .map(|chunk| {
+                    b58_encode(
+                        &config
+                            .address_version
+                            .clone()
+                            .into_iter()
+                            .chain(
+                                ripemd160::Hash::hash(sha256::Hash::hash(&chunk).as_byte_array())
+                                    .as_byte_array()
+                                    .to_vec(),
+                            )
+                            .collect::<Vec<_>>(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            pub_key_hashes.sort();
+            let pub_key_hashes_n_s = pub_key_hashes.len().to_string();
+            let destination = [signatures_required.to_string()]
+                .into_iter()
+                .chain(pub_key_hashes.into_iter().chain([pub_key_hashes_n_s]))
+                .collect::<Vec<_>>()
+                .join("_");
+            return Ok((
+                ParseOutput::Destination(destination.clone()),
+                Some(PotentialDispenser { destination: Some(destination), value: Some(value) }),
+            ));
+        }
+    } else if config.p2sh_address_supported(height) && vout.script_pubkey.is_p2sh() {
+        if let [Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUAL))] = vout
+            .script_pubkey
+            .instructions()
+            .collect::<Vec<_>>()
+            .as_slice()
+        {
+            let destination = b58_encode(
+                &config
+                    .p2sh_address_version
+                    .clone()
+                    .into_iter()
+                    .chain(pb.as_bytes().to_vec())
+                    .collect::<Vec<_>>(),
+            );
+            let mut potential_dispenser = Some(PotentialDispenser {
+                destination: None,
+                value: None,
+            });
+            if config.p2sh_dispensers_supported(height) {
+                potential_dispenser = Some(PotentialDispenser {
+                    destination: Some(destination.clone()),
+                    value: Some(value),
+                });
+            }
+            return Ok((ParseOutput::Destination(destination), potential_dispenser));
+        };
+        return Err(Error::ParseVout(format!(
+            "Encountered invalid P2SH script | tx: {}, vout: {}",
+            txid, vi
+        )));
+    } else if config.segwit_supported(height) && is_valid_segwit_script(&vout.script_pubkey) {
+        let destination = script_to_address(
+            vout.script_pubkey.as_bytes().to_vec(),
+            config.network.to_string().as_str(),
+        )
+        .map_err(|e| Error::ParseVout(format!("Segwit script to address failed: {}", e)))?;
+        let mut potential_dispenser = Some(PotentialDispenser {
+            destination: None,
+            value: None,
+        });
+        if config.correct_segwit_txids_enabled(height) {
+            potential_dispenser = Some(PotentialDispenser {
+                destination: Some(destination.clone()),
+                value: Some(value),
+            });
+        }
+        return Ok((ParseOutput::Destination(destination), potential_dispenser));
+    } else {
+        return Err(Error::ParseVout(format!(
+            "Unrecognized output type | tx: {}, vout: {}",
+            txid, vi
+        )));
+    }
+}
+
 impl ToBlock for Block {
-    fn to_block(&self, height: u32) -> CrateBlock {
+    fn to_block(&self, config: Config, height: u32) -> CrateBlock {
         let mut transactions = Vec::new();
         for tx in self.txdata.iter() {
             let tx_bytes = serialize(tx);
             let mut vins = Vec::new();
             let mut segwit = false;
             let mut vtxinwit = Vec::new();
+            let mut key = Vec::new();
             for vin in tx.input.iter() {
+                if key.is_empty() {
+                    key = vin.previous_output.txid.to_byte_array().to_vec();
+                    key.reverse();
+                }
                 let hash = vin.previous_output.txid.to_hex();
                 if !vin.witness.is_empty() {
                     vtxinwit
@@ -90,13 +346,64 @@ impl ToBlock for Block {
                     script_sig: vin.script_sig.to_bytes(),
                 })
             }
+
             let mut vouts = Vec::new();
-            for vout in tx.output.iter() {
+            let mut destinations = Vec::new();
+            let mut fee = 0;
+            let mut btc_amount = 0;
+            let mut data = Vec::new();
+            let mut potential_dispensers = Vec::new();
+            let mut err = None;
+            for (vi, vout) in tx.output.iter().enumerate() {
                 vouts.push(Vout {
                     value: vout.value.to_sat(),
                     script_pub_key: vout.script_pubkey.to_bytes(),
-                })
+                });
+                if config.multisig_addresses_enabled(height) == false {
+                    continue;
+                }
+                let output_value = vout.value.to_sat() as i64;
+                fee -= output_value;
+                let result = parse_vout(&config, key.clone(), height, tx.txid().to_hex(), vi, vout);
+                match result {
+                    Err(e) => {
+                        err = Some(e);
+                        break;
+                    }
+                    Ok((parse_output, potential_dispenser)) => {
+                        potential_dispensers.push(potential_dispenser);
+                        if data.is_empty()
+                            && parse_output.is_destination()
+                            && destinations != vec![config.unspendable()]
+                        {
+                            if let ParseOutput::Destination(destination) = parse_output {
+                                destinations.push(destination);
+                            }
+                            btc_amount += output_value;
+                        } else if parse_output.is_destination() {
+                            break;
+                        } else if let ParseOutput::Data(mut new_data) = parse_output {
+                            data.append(&mut new_data)
+                        }
+                    }
+                }
             }
+            if config.multisig_addresses_enabled(height) == false {
+                err = Some(Error::ParseVout(
+                    "Multisig addresses are not enabled".to_string(),
+                ));
+            }
+            let parsed_vouts = if let Some(e) = err {
+                Err(e.to_string())
+            } else {
+                Ok(ParsedVouts {
+                    destinations,
+                    btc_amount,
+                    fee,
+                    data,
+                    potential_dispensers,
+                })
+            };
             transactions.push(Transaction {
                 version: tx.version.0,
                 segwit,
@@ -107,6 +414,7 @@ impl ToBlock for Block {
                 vtxinwit,
                 vin: vins,
                 vout: vouts,
+                parsed_vouts,
             })
         }
         CrateBlock {

@@ -4,7 +4,7 @@ from time import sleep
 import pytest
 from counterparty_rs import indexer
 
-from counterpartycore.lib.backend import fetcher
+from counterpartycore.lib.backend import rsfetcher
 
 TEST_DB_PATH = "/tmp/counterparty_test_db"  # noqa: S108
 
@@ -21,24 +21,24 @@ TEST_CONFIG = {
 
 @pytest.mark.skip()
 def test_fetcher_singleton():
-    fetcher.initialize(TEST_CONFIG)
-    with pytest.raises(Exception) as e:
-        fetcher.initialize(TEST_CONFIG)
+    fetcher = rsfetcher.RSFetcher(config=TEST_CONFIG)
+    fetcher.is_me = "Coucou"
 
-    assert "already been initialized" in str(e)
+    fetcher2 = rsfetcher.RSFetcher(config=TEST_CONFIG)
+    assert fetcher2.is_me == "Coucou"
 
-    assert fetcher.instance() is fetcher.instance()
+    assert fetcher.instance() is fetcher2.instance()
     fetcher.stop()
     shutil.rmtree(TEST_DB_PATH)
 
 
 @pytest.mark.skip()
 def test_fetcher_interrupt():
-    fetcher.initialize_with_config(TEST_CONFIG)
+    fetcher = rsfetcher.RSFetcher(config=TEST_CONFIG)
     interrupted = False
     try:
         for _ in range(500):
-            block = fetcher.get_block_simple()
+            block = fetcher.get_block()
             assert isinstance(block, dict)
             assert "height" in block
             for t in block["transactions"]:
