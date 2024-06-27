@@ -69,12 +69,12 @@ class RSFetcher(metaclass=util.SingletonMeta):
     def get_block(self):
         logger.trace("Fetching block with Rust backend.")
         block = self.get_prefetched_block(self.next_height)
-        
+
         # Handle potentially out-of-order blocks
-        if block['height'] != self.next_height:
+        if block["height"] != self.next_height:
             logger.warning(f"Received block {block['height']} when expecting {self.next_height}")
-            self.next_height = block['height']
-        
+            self.next_height = block["height"]
+
         self.next_height += 1
 
         if util.enabled("correct_segwit_txids", block_index=block["height"]):
@@ -91,7 +91,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     if not self.prefetch_queue and self.prefetch_queue_initalized:
                         logger.warning("Prefetch queue is empty.")
                     logger.debug(f"Block {height} not found in prefetch queue. Waiting...")
-                    self.queue_condition.wait(timeout=.1)  # Wait for the block to be prefetched
+                    self.queue_condition.wait(timeout=0.1)  # Wait for the block to be prefetched
                 block = self.prefetch_queue.pop(height)
                 self.prefetch_queue_size -= 1
                 self.queue_condition.notify()
@@ -99,7 +99,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     "Block %s retrieved from queue. (Queue: %s/%s)",
                     height,
                     self.prefetch_queue_size,
-                    PREFETCH_QUEUE_SIZE
+                    PREFETCH_QUEUE_SIZE,
                 )
                 return block
         except Exception as e:
@@ -112,11 +112,16 @@ class RSFetcher(metaclass=util.SingletonMeta):
             try:
                 with self.queue_lock:
                     while self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE and not self.stopped:
-                        self.queue_condition.wait(timeout=0.1)  # Wait until there is space in the queue
+                        self.queue_condition.wait(
+                            timeout=0.1
+                        )  # Wait until there is space in the queue
                     if self.stopped:
                         break
-                    while len(self.prefetch_queue) >= PREFETCH_QUEUE_SIZE / 2 and not self.prefetch_queue_initalized:
-                        self.prefetch_queue_initalized = True 
+                    while (
+                        len(self.prefetch_queue) >= PREFETCH_QUEUE_SIZE / 2
+                        and not self.prefetch_queue_initalized
+                    ):
+                        self.prefetch_queue_initalized = True
                     block = self.fetcher.get_block_non_blocking()
                     if block is not None:
                         self.prefetch_queue[block["height"]] = block
@@ -125,16 +130,16 @@ class RSFetcher(metaclass=util.SingletonMeta):
                         self.queue_condition.notify_all()
                         logger.debug(
                             "Block %s prefetched. (Queue: %s/%s)",
-                            block['height'],
+                            block["height"],
                             self.prefetch_queue_size,
-                            PREFETCH_QUEUE_SIZE
+                            PREFETCH_QUEUE_SIZE,
                         )
                     else:
                         logger.debug("No block fetched. Waiting before next fetch.")
-                        time.sleep(random.uniform(0.2, 0.7))     # noqa: S311
+                        time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
             except Exception as e:
                 logger.error(f"Error prefetching block: {e}")
-                time.sleep(random.uniform(0.8, 2.0))       # noqa: S311; longer wait on error
+                time.sleep(random.uniform(0.8, 2.0))  # noqa: S311; longer wait on error
         logger.debug("Prefetching blocks stopped.")
 
     def stop(self):

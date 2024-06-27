@@ -1059,13 +1059,15 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
     start_time = time.time()
 
     # Use 'height' instead of 'block_index'
-    block_height = decoded_block.get('height')
+    block_height = decoded_block.get("height")
     if block_height is None:
         raise ValueError(f"Unable to determine block height from decoded block: {decoded_block}")
 
     # Check if the new block is consecutive
     if block_height != util.CURRENT_BLOCK_INDEX + 1:
-        raise exceptions.DatabaseError(f"Attempting to insert non-consecutive block. Expected block index: {util.CURRENT_BLOCK_INDEX + 1}, got: {block_height}")
+        raise exceptions.DatabaseError(
+            f"Attempting to insert non-consecutive block. Expected block index: {util.CURRENT_BLOCK_INDEX + 1}, got: {block_height}"
+        )
 
     # increment block index
     util.CURRENT_BLOCK_INDEX += 1
@@ -1096,7 +1098,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
             "messages_hash": None,
         }
 
-        
     if "height" not in decoded_block:
         decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
     else:
@@ -1140,9 +1141,9 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
             previous_messages_hash=previous_block["messages_hash"],
         )
         ledger.LAST_BLOCK = block_bindings
-        ledger.LAST_BLOCK['ledger_hash'] = new_ledger_hash
-        ledger.LAST_BLOCK['txlist_hash'] = new_txlist_hash
-        ledger.LAST_BLOCK['messages_hash'] = new_messages_hash
+        ledger.LAST_BLOCK["ledger_hash"] = new_ledger_hash
+        ledger.LAST_BLOCK["txlist_hash"] = new_txlist_hash
+        ledger.LAST_BLOCK["messages_hash"] = new_messages_hash
 
         duration = time.time() - start_time
 
@@ -1210,20 +1211,22 @@ def catch_up(db, check_asset_conservation=True):
         # Get block information and transactions
         fetch_time_start = time.time()
         decoded_block = fetcher.get_block()
-        block_height = decoded_block.get('height')
+        block_height = decoded_block.get("height")
         fetch_time_end = time.time()
         fetch_duration = fetch_time_end - fetch_time_start
         logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
-        
+
         # Check for reorg
         if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
             previous_block = ledger.LAST_BLOCK
             if decoded_block["hash_prev"] != previous_block["block_hash"]:
-                raise exceptions.DatabaseError(f"Blockchain reorganization detected at block {util.CURRENT_BLOCK_INDEX + 1}. Manual intervention required.")
-        
+                raise exceptions.DatabaseError(
+                    f"Blockchain reorganization detected at block {util.CURRENT_BLOCK_INDEX + 1}. Manual intervention required."
+                )
+
         # Check for gaps in the blockchain
         assert block_height <= util.CURRENT_BLOCK_INDEX + 1
-        
+
         # Parse the current block
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
 
