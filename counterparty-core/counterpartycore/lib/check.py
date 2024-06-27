@@ -959,8 +959,8 @@ def software_version():
             config.PROTOCOL_CHANGES_URL, headers={"cache-control": "no-cache"}, timeout=10
         )
         versions = json.loads(response.text)
-    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError) as e:  # noqa: F841
-        logger.warning("Unable to check version! " + str(sys.exc_info()[1]))
+    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError, requests.exceptions.ReadTimeout) as e:  # noqa: F841
+        logger.warning("Unable to check Counterparty version. " + str(sys.exc_info()[1]))
         return
 
     for change_name in versions:

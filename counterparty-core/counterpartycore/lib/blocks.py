@@ -1191,9 +1191,6 @@ def catch_up(db, check_asset_conservation=True):
         backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
         block_count = backend.bitcoind.getblockcount()
 
-    # initialize blocks fetcher
-    # block_fetcher = backend.bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
-
     fetcher = rsfetcher.RSFetcher(util.CURRENT_BLOCK_INDEX + 1)
 
     # Get index of last transaction.
@@ -1204,21 +1201,20 @@ def catch_up(db, check_asset_conservation=True):
 
     while util.CURRENT_BLOCK_INDEX < block_count:
         # Get block information and transactions
+        fetch_time_start = time.time()
         decoded_block = fetcher.get_block()
-        
         block_height = decoded_block.get('height')
-        if block_height is None:
-            raise ValueError(f"Unable to determine block height from decoded block: {decoded_block}")
-
+        logger.debug(f"Block {block_height} fetched. ({time.time() - fetch_time_start}s)")
+        
         # Check for reorg
         if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+            # TODO: This is slow.
             previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX)
             if decoded_block["hash_prev"] != previous_block["block_hash"]:
                 raise exceptions.DatabaseError(f"Blockchain reorganization detected at block {util.CURRENT_BLOCK_INDEX + 1}. Manual intervention required.")
         
         # Check for gaps in the blockchain
-        if block_height > util.CURRENT_BLOCK_INDEX + 1:
-            raise exceptions.DatabaseError(f"Gap detected in blockchain. Current block: {util.CURRENT_BLOCK_INDEX}, Next block: {block_height}")
+        assert block_height <= util.CURRENT_BLOCK_INDEX + 1
         
         # Parse the current block
         tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)

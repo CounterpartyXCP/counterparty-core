@@ -43,9 +43,10 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_queue = {}
         self.prefetch_queue_size = 0
         self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
-        self.queue_lock = Lock()
-        self.queue_condition = Condition(self.queue_lock)  # Add a condition variable
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
+        self.prefetch_queue_initalized = False
+        self.queue_lock = Lock()
+        self.queue_condition = Condition(self.queue_lock)
 
     def start(self):
         try:
@@ -65,8 +66,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 self.fetcher.start()
         except Exception as e:
             logger.error(f"Failed to initialize fetcher: {e}. Retrying in 5 seconds...")
-            time.sleep(5)
-            self.start()
+            raise e
 
     def get_block(self):
         logger.trace("Fetching block with Rust backend.")
@@ -88,14 +88,17 @@ class RSFetcher(metaclass=util.SingletonMeta):
     def get_prefetched_block(self, height):
         try:
             with self.queue_lock:
+                logger.debug(f"Looking for Block {height} in prefetch queue...")
                 while height not in self.prefetch_queue:
-                    logger.warning(f"Block {height} not found in prefetch queue. Waiting for prefetch.")
+                    if not self.prefetch_queue and self.prefetch_queue_initalized:
+                        logger.warning("Prefetch queue is empty.")
+                    logger.debug(f"Block {height} not found in prefetch queue. Waiting...")
                     self.queue_condition.wait(timeout=.1)  # Wait for the block to be prefetched
                 block = self.prefetch_queue.pop(height)
                 self.prefetch_queue_size -= 1
-                self.queue_condition.notify()  # Notify the prefetching thread
+                self.queue_condition.notify()
                 logger.debug(
-                    "Block %s retrieved from queue. New queue size: %s/%s",
+                    "Block %s retrieved from queue. (Queue: %s/%s)",
                     height,
                     self.prefetch_queue_size,
                     PREFETCH_QUEUE_SIZE
@@ -103,29 +106,27 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 return block
         except Exception as e:
             logger.error(f"Error getting prefetched block: {e}")
-            return self.fetcher.get_block()
 
     def prefetch_blocks(self):
-        # Set the thread name
         logger.debug("Starting prefetching blocks...")
         expected_height = self.next_height
         while not self.stopped:
             try:
                 with self.queue_lock:
                     while self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE and not self.stopped:
-                        self.queue_condition.wait(timeout=0.1)  # Wait until there is space in the queue
+                    self.queue_condition.wait(timeout=0.1)  # Wait until there is space in the queue
                     if self.stopped:
                         break
+                    while len(self.prefetch_queue) >= PREFETCH_QUEUE_SIZE / 2 and not self.prefetch_queue_initalized:
+                        self.prefetch_queue_initalized = True 
                     block = self.fetcher.get_block_non_blocking()
                     if block is not None:
                         self.prefetch_queue[block["height"]] = block
-                        self.prefetch_queue_size += 1
                         expected_height += 1
-                        self.queue_condition.notify_all()  # Notify all waiting threads
                         logger.debug(
-                            "Block %s prefetched. Queue size: %s/%s",
+                            "Block %s prefetched. (Queue: %s/%s)",
                             block['height'],
-                            self.prefetch_queue_size,
+                            len(self.prefetch_queue),
                             PREFETCH_QUEUE_SIZE
                         )
                     else:
