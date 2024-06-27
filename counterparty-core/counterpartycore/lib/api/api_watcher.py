@@ -4,7 +4,7 @@ import os
 import time
 from threading import Thread
 
-from counterpartycore.lib import config, database, exceptions
+from counterpartycore.lib import config, database
 from counterpartycore.lib.api import queries, util
 from counterpartycore.lib.util import format_duration
 from yoyo import get_backend, read_migrations
@@ -161,9 +161,9 @@ def get_event_previous_state(api_db, event):
 
 def delete_event(api_db, event):
     sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
-    deleted = delete_all(api_db, sql, (event["insert_rowid"],))
-    if deleted == 0:
-        raise exceptions.APIWatcherError(f"Event not found: {event}")
+    _deleted = delete_all(api_db, sql, (event["insert_rowid"],))
+    # if deleted == 0:
+    #    raise exceptions.APIWatcherError(f"Event not found: {event}")
 
 
 def insert_event(api_db, event):
