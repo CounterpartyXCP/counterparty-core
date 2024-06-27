@@ -211,6 +211,15 @@ def rollback_event(api_db, event):
         revert_event["event"] = "DEBIT" if event["event"] == "CREDIT" else "CREDIT"
         update_balances(api_db, revert_event)
 
+    elif event["event"] == "ASSET_CREATION":
+        sql = """
+            DELETE FROM assets_info WHERE asset_id = ?
+            """
+        cursor = api_db.cursor()
+        event_bindings = json.loads(event["bindings"])
+        cursor.execute(sql, event_bindings["asset_id"])
+        return
+
     sql = "DELETE FROM messages WHERE message_index = ?"
     cursor.execute(sql, (event["message_index"],))
 
@@ -287,7 +296,7 @@ def update_assets_info(api_db, event):
 
     if event["event"] == "ASSET_CREATION":
         sql = """
-            INSERT INTO assets_info 
+            INSERT OR REPLACE INTO assets_info 
                 (asset, asset_id, asset_longname, first_issuance_block_index) 
             VALUES 
                 (:asset_name, :asset_id, :asset_longname, :block_index)
