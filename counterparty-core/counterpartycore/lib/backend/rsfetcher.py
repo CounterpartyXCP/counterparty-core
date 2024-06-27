@@ -47,6 +47,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_queue_initalized = False
 
     def start(self):
+        logger.debug("Starting Prefetcher...")
         try:
             self.fetcher = indexer.Indexer(self.config)
             # check fetcher version

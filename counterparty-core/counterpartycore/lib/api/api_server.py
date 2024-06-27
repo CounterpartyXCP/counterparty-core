@@ -364,7 +364,7 @@ def run_api_server(args, interruped_value):
     sentry.init()
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
-    logger.info("Starting API Server.")
+    logger.info("Starting API Server...")
     app = Flask(config.APP_NAME)
     transaction.initialise()
     with app.app_context():
