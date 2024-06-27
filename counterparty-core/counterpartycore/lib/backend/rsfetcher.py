@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
+from threading import Semaphore
 
 from counterparty_rs import indexer
 
@@ -9,8 +10,8 @@ from counterpartycore.lib import config, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-WORKER_THREADS = 3
-PREFETCH_QUEUE_SIZE = 50
+WORKER_THREADS = 20
+PREFETCH_QUEUE_SIZE = 100
 
 
 class RSFetcher(metaclass=util.SingletonMeta):
@@ -37,6 +38,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_queue = {}
         self.prefetch_queue_size = 0
         self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
+        self.prefetch_semaphore = Semaphore(PREFETCH_QUEUE_SIZE)
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
 
     def start(self):
@@ -73,25 +75,21 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
     def prefetch_blocks(self):
         logger.debug("Starting prefetching blocks...")
+        expected_height = self.next_height
         while True and not self.stopped:
             try:
-                # block = self.fetcher.get_block_non_blocking()
-                block = self.fetcher.get_block_non_blocking()
-                if block is not None:
-                    self.prefetch_queue[block["height"]] = block
-                    self.prefetch_queue_size += 1
-                    logger.debug(
-                        f"Block prefetched. Queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
-                    )
-                    if self.prefetch_queue_size > PREFETCH_QUEUE_SIZE:
-                        logger.debug("Prefetch queue is full. Waiting before next fetch.")
+                with self.prefetch_semaphore:
+                    block = self.fetcher.get_block_non_blocking()
+                    if block is not None:
+                        self.prefetch_queue[block["height"]] = block
+                        self.prefetch_queue_size += 1
+                        expected_height += 1
+                        logger.debug(
+                            f"Block {block['height']} prefetched. Queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
+                        )
+                    else:
+                        logger.debug("No block fetched. Waiting before next fetch.")
                         time.sleep(1)
-                else:
-                    logger.debug("No block fetched. Waiting before next fetch.")
-                    time.sleep(1)
-            except asyncio.QueueFull:
-                logger.debug("Prefetch queue is full. Waiting before next fetch.")
-                time.sleep(1)  # Wait a bit before trying again
             except Exception as e:
                 logger.error(f"Error prefetching block: {e}")
 
@@ -100,16 +98,16 @@ class RSFetcher(metaclass=util.SingletonMeta):
             if height in self.prefetch_queue:
                 block = self.prefetch_queue.pop(height)
                 self.prefetch_queue_size -= 1
+                self.prefetch_semaphore.release()
                 logger.debug(
-                    f"Block retrieved from queue. New queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
+                    f"Block {height} retrieved from queue. New queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
                 )
                 return block
             else:
-                logger.debug("Block not found in prefetch queue. Retrying in 0.5 second.")
-                time.sleep(0.5)
-                return self.get_prefetched_block(height)
+                logger.warning(f"Block {height} not found in prefetch queue. Fetching directly.")
+                return self.fetcher.get_block()
         except asyncio.QueueEmpty:
-            logger.warning("Prefetch queue is empty. Fetching block directly.")
+            logger.warning(f"Prefetch queue is empty. Fetching block {height} directly.")
             return self.fetcher.get_block()
 
     def stop(self):
