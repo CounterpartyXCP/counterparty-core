@@ -1,10 +1,8 @@
-import asyncio
 import logging
+import random
 import time
 from concurrent.futures import ThreadPoolExecutor
-from threading import Lock, Condition, current_thread
-import random
-import threading
+from threading import Condition, Lock
 
 from counterparty_rs import indexer
 
@@ -133,10 +131,10 @@ class RSFetcher(metaclass=util.SingletonMeta):
                         )
                     else:
                         logger.debug("No block fetched. Waiting before next fetch.")
-                        time.sleep(random.uniform(0.2, 0.7))
+                        time.sleep(random.uniform(0.2, 0.7))     # noqa: S311
             except Exception as e:
                 logger.error(f"Error prefetching block: {e}")
-                time.sleep(random.uniform(0.8, 2.0))  # Longer wait on error
+                time.sleep(random.uniform(0.8, 2.0))       # noqa: S311; longer wait on error
         logger.debug("Prefetching blocks stopped.")
 
     def stop(self):
