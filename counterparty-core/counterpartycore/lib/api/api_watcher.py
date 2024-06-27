@@ -234,6 +234,9 @@ def update_balances(api_db, event):
 
     event_bindings = get_event_bindings(event)
     quantity = event_bindings["quantity"]
+    if quantity == 0:
+        return
+
     if event["event"] == "DEBIT":
         quantity = -quantity
 

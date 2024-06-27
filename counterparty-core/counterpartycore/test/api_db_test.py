@@ -97,8 +97,8 @@ def test_api_database():
         assert ledger_asset_info["asset_name"] == api_asset_info["asset"]
 
 
-# MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty-docker-data/counterparty/"
-MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
+MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty-docker-data/counterparty/"
+# MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
 
 
 def test_mainnet_api_db(skip):
