@@ -104,6 +104,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 return block
         except Exception as e:
             logger.error(f"Error getting prefetched block: {e}")
+            raise e
 
     def prefetch_blocks(self):
         logger.debug("Starting prefetching blocks...")
