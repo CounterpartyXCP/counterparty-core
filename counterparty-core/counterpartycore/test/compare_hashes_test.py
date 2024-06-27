@@ -55,7 +55,7 @@ def get_block_hashes_api_v2(api_url, block_index):
 
 def test_compare_hashes(skip):
     if skip:
-        pytest.skip("Skipping test book")
+        pytest.skip("Skipping compare hashes test.")
         return
 
     # get last blocks

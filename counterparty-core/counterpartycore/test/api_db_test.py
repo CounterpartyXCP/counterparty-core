@@ -9,11 +9,7 @@ FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
-@pytest.mark.usefixtures("api_server_v2")
-def test_api_database():
-    ledger_db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
-    api_db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
-
+def compare_balances(api_db, ledger_db):
     # balances
     sql_ledger = (
         "SELECT count(*) AS count FROM (SELECT *, MAX(rowid) FROM balances GROUP BY address, asset)"
@@ -33,6 +29,14 @@ def test_api_database():
         assert ledger_balance["address"] == api_balance["address"]
         assert ledger_balance["asset"] == api_balance["asset"]
         assert ledger_balance["quantity"] == api_balance["quantity"]
+
+
+@pytest.mark.usefixtures("api_server_v2")
+def test_api_database():
+    ledger_db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
+    api_db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+
+    compare_balances(api_db, ledger_db)
 
     # orders
     sql_ledger = "SELECT count(*) AS count FROM (SELECT *, MAX(rowid) FROM orders GROUP BY tx_hash)"
@@ -91,3 +95,22 @@ def test_api_database():
     assert len(ledger_assets_info) == len(api_assets_info)
     for ledger_asset_info, api_asset_info in zip(ledger_assets_info, api_assets_info):
         assert ledger_asset_info["asset_name"] == api_asset_info["asset"]
+
+
+MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty-docker-data/counterparty/"
+# MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
+
+
+def test_mainnet_api_db(skip):
+    if skip:
+        pytest.skip("Skipping mainnet API database test.")
+        return
+
+    ledger_db = database.get_db_connection(
+        f"{MAINNET_DB_DIR}counterparty.db", read_only=True, check_wal=False
+    )
+    api_db = database.get_db_connection(
+        f"{MAINNET_DB_DIR}counterparty.api.db", read_only=True, check_wal=False
+    )
+
+    compare_balances(api_db, ledger_db)

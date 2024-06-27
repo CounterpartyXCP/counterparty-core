@@ -161,6 +161,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("skip", [not metafunc.config.getoption("testbook")])
     elif metafunc.function.__name__ == "test_compare_hashes":
         metafunc.parametrize("skip", [not metafunc.config.getoption("comparehashes")])
+    elif metafunc.function.__name__ == "test_mainnet_api_db":
+        metafunc.parametrize("skip", [not metafunc.config.getoption("testapidb")])
 
 
 def pytest_addoption(parser):
@@ -194,6 +196,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Compare last block hashes with v9 version",
+    )
+    parser.addoption(
+        "--testapidb",
+        action="store_true",
+        default=False,
+        help="Compare balances from Ledger DB and API DB",
     )
 
 
