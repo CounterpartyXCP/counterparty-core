@@ -1,7 +1,7 @@
 import json
 from typing import Literal
 
-OrderStatus = Literal["open", "expired", "filled", "cancelled"]
+OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
 BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
 BetMatchesStatus = Literal[
@@ -1691,7 +1691,7 @@ def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100, off
 
 
 def get_orders(
-    db, status: OrderStatus = "open", cursor: int = None, limit: int = 100, offset: int = None
+    db, status: OrderStatus = "all", cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns all the orders
@@ -1700,10 +1700,13 @@ def get_orders(
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {}
+    if status != "all":
+        where = {"status": status}
     return select_rows(
         db,
         "orders",
-        where={"status": status},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1713,7 +1716,7 @@ def get_orders(
 def get_orders_by_asset(
     db,
     asset: str,
-    status: OrderStatus = "open",
+    status: OrderStatus = "all",
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -1726,10 +1729,13 @@ def get_orders_by_asset(
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = [{"give_asset": asset}, {"get_asset": asset}]
+    if status != "all":
+        where = [{"give_asset": asset, "status": status}, {"get_asset": asset, "status": status}]
     return select_rows(
         db,
         "orders",
-        where=[{"give_asset": asset, "status": status}, {"get_asset": asset, "status": status}],
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1739,7 +1745,7 @@ def get_orders_by_asset(
 def get_orders_by_address(
     db,
     address: str,
-    status: OrderStatus = "open",
+    status: OrderStatus = "all",
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -1752,10 +1758,13 @@ def get_orders_by_address(
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"source": address}
+    if status != "all":
+        where = {"source": address, "status": status}
     return select_rows(
         db,
         "orders",
-        where={"source": address, "status": status},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1766,7 +1775,7 @@ def get_orders_by_two_assets(
     db,
     asset1: str,
     asset2: str,
-    status: OrderStatus = "open",
+    status: OrderStatus = "all",
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -1780,13 +1789,19 @@ def get_orders_by_two_assets(
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = [
+        {"give_asset": asset1, "get_asset": asset2},
+        {"give_asset": asset2, "get_asset": asset1},
+    ]
+    if status != "all":
+        where = [
+            {"give_asset": asset1, "get_asset": asset2, "status": status},
+            {"give_asset": asset2, "get_asset": asset1, "status": status},
+        ]
     query_result = select_rows(
         db,
         "orders",
-        where=[
-            {"give_asset": asset1, "get_asset": asset2, "status": status},
-            {"give_asset": asset2, "get_asset": asset1, "status": status},
-        ],
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
