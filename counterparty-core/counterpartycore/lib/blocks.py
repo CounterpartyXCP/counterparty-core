@@ -1204,7 +1204,9 @@ def catch_up(db, check_asset_conservation=True):
         fetch_time_start = time.time()
         decoded_block = fetcher.get_block()
         block_height = decoded_block.get('height')
-        logger.debug(f"Block {block_height} fetched. ({time.time() - fetch_time_start}s)")
+        fetch_time_end = time.time()
+        fetch_duration = fetch_time_end - fetch_time_start
+        logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
         
         # Check for reorg
         if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
