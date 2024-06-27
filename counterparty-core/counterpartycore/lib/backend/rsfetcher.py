@@ -6,151 +6,122 @@ from threading import Lock, Condition, current_thread
 import random
 
 from counterparty_rs import indexer
-
 from counterpartycore.lib import config, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-WORKER_THREADS = 20
-PREFETCH_QUEUE_SIZE = 100
-
+WORKER_THREADS = 3
+PREFETCH_QUEUE_SIZE = 20
 
 class RSFetcher(metaclass=util.SingletonMeta):
-    thread_index_counter = 0  # Add a thread index counter
+    thread_index_counter = 0
 
     def __init__(self, start_height=0, indexer_config=None):
         self.thread_index = RSFetcher.thread_index_counter
         RSFetcher.thread_index_counter += 1
-        if indexer_config is None:
-            self.config = {
-                "rpc_address": f"http://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}",
-                "rpc_user": config.BACKEND_USER,
-                "rpc_password": config.BACKEND_PASSWORD,
-                "db_dir": config.FETCHER_DB,
-                "log_file": config.FETCHER_LOG,
-                "log_level": config.LOG_LEVEL_STRING,
-                "start_height": start_height,
-            }
-        else:
-            self.config = indexer_config | {"start_height": start_height}
+        self.config = indexer_config or {
+            "rpc_address": f"http://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}",
+            "rpc_user": config.BACKEND_USER,
+            "rpc_password": config.BACKEND_PASSWORD,
+            "db_dir": config.FETCHER_DB,
+            "log_file": config.FETCHER_LOG,
+            "log_level": config.LOG_LEVEL_STRING,
+            "start_height": start_height,
+        }
+        self.config["start_height"] = start_height
         self.start_height = start_height
         self.next_height = start_height
         self.fetcher = None
         self.prefetch_task = None
-        self.start()
-        # prefetching
         self.stopped = False
         self.prefetch_queue = {}
         self.prefetch_queue_size = 0
         self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
         self.queue_lock = Lock()
-        self.queue_condition = Condition(self.queue_lock)  # Add a condition variable
+        self.queue_condition = Condition(self.queue_lock)
+        self.start()
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
 
     def start(self):
         try:
             self.fetcher = indexer.Indexer(self.config)
-            # check fetcher version
             fetcher_version = self.fetcher.get_version()
-            logger.debug("[Thread %s] Current Fetcher version: %s", self.thread_index, fetcher_version)
+            logger.debug(f"[Thread {self.thread_index}] Current Fetcher version: {fetcher_version}")
             if fetcher_version != config.__version__:
                 logger.error(
-                    "[Thread %s] Fetcher version mismatch. Expected: %s, Got: %s. Please re-compile `counterparty-rs`.",
-                    self.thread_index,
-                    config.__version__,
-                    fetcher_version,
+                    f"[Thread {self.thread_index}] Fetcher version mismatch. Expected: {config.__version__}, Got: {fetcher_version}. Please re-compile `counterparty-rs`."
                 )
                 raise Exception("Fetcher version mismatch.")
-            else:
-                # start fetcher
-                self.fetcher.start()
+            self.fetcher.start()
         except Exception as e:
             logger.error(f"[Thread {self.thread_index}] Failed to initialize fetcher: {e}. Retrying in 5 seconds...")
             time.sleep(5)
             self.start()
 
     def get_block(self):
-        logger.trace("[Thread %s] Fetching block with Rust backend.", self.thread_index)
+        logger.trace(f"[Thread {self.thread_index}] Fetching block with Rust backend.")
         block = self.get_prefetched_block(self.next_height)
-        
-        # Handle potentially out-of-order blocks
         if block['height'] != self.next_height:
             logger.warning(f"Received block {block['height']} when expecting {self.next_height}")
             self.next_height = block['height']
-        
         self.next_height += 1
-
         if util.enabled("correct_segwit_txids", block_index=block["height"]):
             for tx in block["transactions"]:
                 tx["tx_hash"] = tx["tx_id"]
-
         return block
 
     def get_prefetched_block(self, height):
         try:
             with self.queue_lock:
-                if height in self.prefetch_queue:
-                    block = self.prefetch_queue.pop(height)
-                    self.prefetch_queue_size -= 1
-                    self.queue_condition.notify()  # Notify the prefetching thread
-                    logger.debug(
-                        "[Thread %s] Block %s retrieved from queue. New queue size: %s/%s",
-                        self.thread_index,
-                        height,
-                        self.prefetch_queue_size,
-                        PREFETCH_QUEUE_SIZE
-                    )
-                    return block
-                else:
-                    logger.warning(f"[Thread {self.thread_index}] Block {height} not found in prefetch queue. Fetching directly.")
-                    return self.fetcher.get_block()
+                while height not in self.prefetch_queue:
+                    logger.warning(f"[Thread {self.thread_index}] Block {height} not found in prefetch queue. Waiting for prefetch.")
+                    self.queue_condition.wait(timeout=.1)
+                block = self.prefetch_queue.pop(height)
+                self.prefetch_queue_size -= 1
+                self.queue_condition.notify()
+                logger.debug(
+                    f"[Thread {self.thread_index}] Block {height} retrieved from queue. New queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
+                )
+                return block
         except Exception as e:
             logger.error(f"[Thread {self.thread_index}] Error getting prefetched block: {e}")
             return self.fetcher.get_block()
 
     def prefetch_blocks(self):
-        logger.debug("[Thread %s] Starting prefetching blocks...", self.thread_index)
+        logger.debug(f"[Thread {self.thread_index}] Starting prefetching blocks...")
         expected_height = self.next_height
-        while True and not self.stopped:
+        while not self.stopped:
             try:
                 with self.queue_lock:
                     while self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE:
-                        self.queue_condition.wait()  # Wait until there is space in the queue
+                        self.queue_condition.wait()
                     block = self.fetcher.get_block_non_blocking()
-                    if block is not None:
+                    if block:
                         self.prefetch_queue[block["height"]] = block
                         self.prefetch_queue_size += 1
                         expected_height += 1
+                        self.queue_condition.notify_all()
                         logger.debug(
-                            "[Thread %s] Block %s prefetched. Queue size: %s/%s",
-                            self.thread_index,
-                            block['height'],
-                            self.prefetch_queue_size,
-                            PREFETCH_QUEUE_SIZE
+                            f"[Thread {self.thread_index}] Block {block['height']} prefetched. Queue size: {self.prefetch_queue_size}/{PREFETCH_QUEUE_SIZE}"
                         )
                     else:
-                        logger.debug("[Thread %s] No block fetched. Waiting before next fetch.", self.thread_index)
-                        time.sleep(random.uniform(0.5, 1.5))
+                        logger.debug(f"[Thread {self.thread_index}] No block fetched. Waiting before next fetch.")
+                        time.sleep(random.uniform(0.2, 0.7))
             except Exception as e:
                 logger.error(f"[Thread {self.thread_index}] Error prefetching block: {e}")
-                time.sleep(random.uniform(1, 3))  # Longer wait on error
+                time.sleep(random.uniform(0.8, 2.0))
 
     def stop(self):
-        logger.debug("[Thread %s] Stopping fetcher...", self.thread_index)
+        logger.debug(f"[Thread {self.thread_index}] Stopping fetcher...")
         try:
             self.stopped = True
             if self.prefetch_task:
-                self.executor.shutdown(wait=False, cancel_futures=True)
                 self.prefetch_task.cancel()
-                while not self.prefetch_task.done():
-                    time.sleep(0.1)
+                self.executor.shutdown(wait=True)
             if self.fetcher:
                 self.fetcher.stop()
-
         except Exception as e:
-            if str(e) == "Stopped error":
-                pass
-            else:
+            if str(e) != "Stopped error":
                 raise e
         self.fetcher = None
         self.prefetch_task = None
