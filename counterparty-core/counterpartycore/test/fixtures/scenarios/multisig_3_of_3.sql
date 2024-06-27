@@ -846,6 +846,8 @@ CREATE TRIGGER block_update_messages
                            BEFORE UPDATE ON messages BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
+CREATE INDEX messages_block_index_event_idx ON messages (block_index, event)
+        ;
 CREATE INDEX messages_block_index_idx ON messages (block_index)
         ;
 CREATE INDEX messages_block_index_message_index_idx ON messages (block_index, message_index)
@@ -1745,9 +1747,10 @@ BEGIN TRANSACTION;
 -- Table  addresses
 DROP TABLE IF EXISTS addresses;
 CREATE TABLE addresses(
-                      address TEXT UNIQUE,
-                      options INTEGER,
-                      block_index INTEGER);
+            address TEXT,
+            options INTEGER,
+            block_index INTEGER
+        );
 -- Triggers and indices on  addresses
 CREATE INDEX addresses_address_idx ON addresses (address)
         ;
