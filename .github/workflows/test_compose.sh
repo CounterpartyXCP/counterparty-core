@@ -126,7 +126,7 @@ if [ "$COUNTERPARTY_RS_CACHED" != "CACHED" ]; then
 fi
 
 hatch run pytest counterpartycore/test/compare_hashes_test.py --comparehashes
-hatch run pytest counterpartycore/test/api_db_test.py --testapidb
+sudo python3 -m pytest counterpartycore/test/api_db_test.py --testapidb
 cd ..
 
 

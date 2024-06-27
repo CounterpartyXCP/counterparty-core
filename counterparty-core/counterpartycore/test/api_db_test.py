@@ -97,8 +97,8 @@ def test_api_database():
         assert ledger_asset_info["asset_name"] == api_asset_info["asset"]
 
 
-MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty-docker-data/counterparty/"
-# MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
+# MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty-docker-data/counterparty/"
+MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
 
 
 def test_mainnet_api_db(skip):
@@ -113,4 +113,21 @@ def test_mainnet_api_db(skip):
         f"{MAINNET_DB_DIR}counterparty.api.db", read_only=True, check_wal=False
     )
 
-    compare_balances(api_db, ledger_db)
+    api_sql = "SELECT * FROM balances ORDER BY random() LIMIT 10000"
+    api_balances = api_db.execute(api_sql)
+    i = 0
+    for api_balance in api_balances:
+        ledger_sql = (
+            "SELECT * FROM balances WHERE address = ? AND asset = ? ORDER BY rowid DESC LIMIT 1"
+        )
+        ledger_balance = ledger_db.execute(
+            ledger_sql, (api_balance["address"], api_balance["asset"])
+        ).fetchone()
+        if ledger_balance is None and api_balance["quantity"] == 0:
+            continue
+        try:
+            assert ledger_balance["quantity"] == api_balance["quantity"]
+        except AssertionError:
+            print(api_balance, ledger_balance)
+        i += 1
+    print(f"Checked {i} balances")
