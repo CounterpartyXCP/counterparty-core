@@ -42,11 +42,11 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.stopped = False
         self.prefetch_queue = {}
         self.prefetch_queue_size = 0
+        self.queue_lock = Lock()
+        self.queue_condition = Condition(self.queue_lock)
         self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
         self.prefetch_queue_initalized = False
-        self.queue_lock = Lock()
-        self.queue_condition = Condition(self.queue_lock)
 
     def start(self):
         try:

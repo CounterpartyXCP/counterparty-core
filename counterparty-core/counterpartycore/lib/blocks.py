@@ -1076,7 +1076,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
 
     if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
         # get previous block
-        previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
+        previous_block = ledger.LAST_BLOCK
 
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
@@ -1139,6 +1139,11 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
             previous_txlist_hash=previous_block["txlist_hash"],
             previous_messages_hash=previous_block["messages_hash"],
         )
+        ledger.LAST_BLOCK = block_bindings
+        ledger.LAST_BLOCK['ledger_hash'] = new_ledger_hash
+        ledger.LAST_BLOCK['txlist_hash'] = new_txlist_hash
+        ledger.LAST_BLOCK['messages_hash'] = new_messages_hash
+
         duration = time.time() - start_time
 
         log_message = "Block %(block_index)s - Parsing complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
@@ -1182,6 +1187,8 @@ def catch_up(db, check_asset_conservation=True):
     if util.CURRENT_BLOCK_INDEX == 0:
         logger.info("New database.")
         util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
+    else:
+        ledger.LAST_BLOCK = ledger.get_block(db, util.CURRENT_BLOCK_INDEX)
 
     # Get block count.
     block_count = backend.bitcoind.getblockcount()
@@ -1210,8 +1217,7 @@ def catch_up(db, check_asset_conservation=True):
         
         # Check for reorg
         if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
-            # TODO: This is slow.
-            previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX)
+            previous_block = ledger.LAST_BLOCK
             if decoded_block["hash_prev"] != previous_block["block_hash"]:
                 raise exceptions.DatabaseError(f"Blockchain reorganization detected at block {util.CURRENT_BLOCK_INDEX + 1}. Manual intervention required.")
         

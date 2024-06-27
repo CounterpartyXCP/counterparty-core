@@ -12,6 +12,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 BLOCK_LEDGER = []
 BLOCK_JOURNAL = []
+LAST_BLOCK = None
 
 
 ###############################
