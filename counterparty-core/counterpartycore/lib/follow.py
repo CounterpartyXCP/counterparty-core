@@ -195,8 +195,9 @@ class BlockchainWatcher:
         try:
             # sequence topic
             await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
-            # check every 10 seconds rawblock topic
-            if time.time() - self.last_block_check_time > 10:
+            # check rawblock topic
+            check_block_delay = 0.5 if config.TESTNET else 10
+            if time.time() - self.last_block_check_time > check_block_delay:
                 await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
                 self.last_block_check_time = time.time()
         except Exception as e:
