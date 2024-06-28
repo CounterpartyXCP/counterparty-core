@@ -219,6 +219,7 @@ def rollback_events(api_db, block_index):
             rollback_event(api_db, event)
         cursor.execute("DELETE FROM messages WHERE block_index >= ?", (block_index,))
     api_db.execute("""PRAGMA foreign_keys=ON""")
+    logger.info(f"API Watcher - Events rolled back to block {block_index}")
 
 
 def update_balances(api_db, event):
@@ -305,9 +306,6 @@ def update_assets_info(api_db, event):
         return
     event_bindings = json.loads(event["bindings"])
 
-    if event_bindings["status"] != "valid":
-        return
-
     if event["event"] == "ASSET_CREATION":
         sql = """
             INSERT OR REPLACE INTO assets_info 
@@ -317,6 +315,9 @@ def update_assets_info(api_db, event):
             """
         cursor = api_db.cursor()
         cursor.execute(sql, event_bindings)
+        return
+
+    if event_bindings["status"] != "valid":
         return
 
     if event["event"] in ["ASSET_ISSUANCE", "RESET_ISSUANCE"]:
@@ -365,7 +366,13 @@ def update_assets_info(api_db, event):
 
 
 def refresh_assets_info(api_db, asset_name):
-    issuances = fetch_all("SELECT * FROM issuances WHERE asset = :asset", {"asset": asset_name})
+    issuances = fetch_all(
+        api_db, "SELECT * FROM issuances WHERE asset = :asset", {"asset": asset_name}
+    )
+
+    if len(issuances) == 0:
+        # will be delete by the ASSET_CREATION event rollback
+        return
 
     set_fields = [
         "divisible",
@@ -399,16 +406,15 @@ def rollback_assets_info(api_db, event):
         return
     event_bindings = json.loads(event["bindings"])
 
-    if event_bindings["status"] != "valid":
-        return
-
     if event["event"] == "ASSET_CREATION":
         sql = """
             DELETE FROM assets_info WHERE asset_id = ?
             """
         cursor = api_db.cursor()
-        event_bindings = json.loads(event["bindings"])
-        cursor.execute(sql, event_bindings["asset_id"])
+        cursor.execute(sql, (event_bindings["asset_id"],))
+        return
+
+    if event_bindings["status"] != "valid":
         return
 
     if event["event"] == "ASSET_DESTRUCTION":
