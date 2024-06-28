@@ -256,30 +256,31 @@ def parse_block(
     )
     txlist = []
     transactions = cursor.fetchall()
+    # Add manual event to journal because transaction already exists
+    if reparsing:
+        for tx in transactions:
+            transaction_bindings = {
+                "tx_index": tx["tx_index"],
+                "tx_hash": tx["tx_hash"],
+                "block_index": tx["block_index"],
+                "block_hash": tx["block_hash"],
+                "block_time": tx["block_time"],
+                "source": tx["source"],
+                "destination": tx["destination"],
+                "btc_amount": tx["btc_amount"],
+                "fee": tx["fee"],
+                "data": tx["data"],
+            }
+            ledger.add_to_journal(
+                db,
+                block_index,
+                "insert",
+                "transactions",
+                "NEW_TRANSACTION",
+                transaction_bindings,
+            )
     for tx in transactions:
         try:
-            # Add manual event to journal because transaction already exists
-            if reparsing:
-                transaction_bindings = {
-                    "tx_index": tx["tx_index"],
-                    "tx_hash": tx["tx_hash"],
-                    "block_index": tx["block_index"],
-                    "block_hash": tx["block_hash"],
-                    "block_time": tx["block_time"],
-                    "source": tx["source"],
-                    "destination": tx["destination"],
-                    "btc_amount": tx["btc_amount"],
-                    "fee": tx["fee"],
-                    "data": tx["data"],
-                }
-                ledger.add_to_journal(
-                    db,
-                    block_index,
-                    "insert",
-                    "transactions",
-                    "NEW_TRANSACTION",
-                    transaction_bindings,
-                )
             parse_tx(db, tx)
             data = binascii.hexlify(tx["data"]).decode("UTF-8") if tx["data"] else ""
             txlist.append(
