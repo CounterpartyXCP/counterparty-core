@@ -158,7 +158,9 @@ def get_event_previous_state(api_db, event):
 
 def delete_event(api_db, event):
     sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
-    delete_all(api_db, sql, (event["insert_rowid"],))
+    deleted = delete_all(api_db, sql, (event["insert_rowid"],))
+    if deleted == 0:
+        raise Exception(f"Failed to delete event: {event['message_index']} ({event['event']})")
     sql = "DELETE FROM messages WHERE message_index = ?"
     delete_all(api_db, sql, (event["message_index"],))
 
@@ -222,6 +224,7 @@ def rollback_event(api_db, event):
 
 def rollback_events(api_db, block_index):
     logger.info(f"API Watcher - Rolling back events to block {block_index}...")
+    api_db.execute("""PRAGMA foreign_keys=OFF""")
     with api_db:
         cursor = api_db.cursor()
         sql = "SELECT * FROM messages WHERE block_index >= ? ORDER BY message_index DESC"
@@ -229,6 +232,7 @@ def rollback_events(api_db, block_index):
         for event in cursor:
             rollback_event(api_db, event)
         cursor.execute("DELETE FROM messages WHERE block_index >= ?", (block_index,))
+    api_db.execute("""PRAGMA foreign_keys=ON""")
 
 
 def update_balances(api_db, event):
