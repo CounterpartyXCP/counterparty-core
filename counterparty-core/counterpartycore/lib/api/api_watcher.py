@@ -4,7 +4,7 @@ import os
 import time
 from threading import Thread
 
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config, database, ledger
 from counterpartycore.lib.api import queries, util
 from counterpartycore.lib.util import format_duration
 from yoyo import get_backend, read_migrations
@@ -156,15 +156,6 @@ def get_event_previous_state(api_db, event):
     return previous_state
 
 
-def delete_event(api_db, event):
-    sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
-    deleted = delete_all(api_db, sql, (event["insert_rowid"],))
-    if deleted == 0:
-        raise Exception(f"Failed to delete event: {event['message_index']} ({event['event']})")
-    sql = "DELETE FROM messages WHERE message_index = ?"
-    delete_all(api_db, sql, (event["message_index"],))
-
-
 def insert_event(api_db, event):
     previous_state = get_event_previous_state(api_db, event)
     if previous_state is not None:
@@ -182,44 +173,39 @@ def insert_event(api_db, event):
 
 def rollback_event(api_db, event):
     logger.info(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
+
     if event["previous_state"] is None or event["previous_state"] == "null":
-        delete_event(api_db, event)
-        return
-    previous_state = json.loads(event["previous_state"])
+        sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
+        deleted = delete_all(api_db, sql, (event["insert_rowid"],))
+        if deleted == 0:
+            raise Exception(f"Failed to delete event: {event['message_index']} ({event['event']})")
+    else:
+        previous_state = json.loads(event["previous_state"])
 
-    id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
+        id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
 
-    sets = []
-    for key in previous_state.keys():
-        if key in id_field_names:
-            continue
-        sets.append(f"{key} = :{key}")
-    set_clause = ", ".join(sets)
+        sets = []
+        for key in previous_state.keys():
+            if key in id_field_names:
+                continue
+            sets.append(f"{key} = :{key}")
+        set_clause = ", ".join(sets)
 
-    where = []
-    for id_field_name in id_field_names:
-        where.append(f"{id_field_name} = :{id_field_name}")
-    where_clause = " AND ".join(where)
+        where = []
+        for id_field_name in id_field_names:
+            where.append(f"{id_field_name} = :{id_field_name}")
+        where_clause = " AND ".join(where)
 
-    sql = f"UPDATE {event['category']} SET {set_clause} WHERE {where_clause}"  # noqa: S608
-    cursor = api_db.cursor()
-    cursor.execute(sql, previous_state)
-
-    if event["event"] in ["CREDIT", "DEBIT"]:
-        revert_event = event.copy()
-        revert_event["event"] = "DEBIT" if event["event"] == "CREDIT" else "CREDIT"
-        update_balances(api_db, revert_event)
-
-    elif event["event"] == "ASSET_CREATION":
-        sql = """
-            DELETE FROM assets_info WHERE asset_id = ?
-            """
+        sql = f"UPDATE {event['category']} SET {set_clause} WHERE {where_clause}"  # noqa: S608
         cursor = api_db.cursor()
-        event_bindings = json.loads(event["bindings"])
-        cursor.execute(sql, event_bindings["asset_id"])
+        cursor.execute(sql, previous_state)
+
+    rollback_balances(api_db, event)
+    rollback_expiration(api_db, event)
+    rollback_assets_info(api_db, event)
 
     sql = "DELETE FROM messages WHERE message_index = ?"
-    cursor.execute(sql, (event["message_index"],))
+    delete_all(api_db, sql, (event["message_index"],))
 
 
 def rollback_events(api_db, block_index):
@@ -271,6 +257,14 @@ def update_balances(api_db, event):
     cursor.execute(sql, insert_bindings)
 
 
+def rollback_balances(api_db, event):
+    if event["event"] not in ["CREDIT", "DEBIT"]:
+        return
+    revert_event = event.copy()
+    revert_event["event"] = "DEBIT" if event["event"] == "CREDIT" else "CREDIT"
+    update_balances(api_db, revert_event)
+
+
 def update_expiration(api_db, event):
     if event["event"] not in EXPIRATION_EVENTS_OBJECT_ID:
         return
@@ -289,10 +283,30 @@ def update_expiration(api_db, event):
     cursor.execute(sql, bindings)
 
 
+def rollback_expiration(api_db, event):
+    if event["event"] not in EXPIRATION_EVENTS_OBJECT_ID:
+        return
+    event_bindings = json.loads(event["bindings"])
+
+    cursor = api_db.cursor()
+    sql = """
+        DELETE FROM all_expirations WHERE object_id = :object_id AND block_index = :block_index AND type = :type
+        """
+    bindings = {
+        "object_id": event_bindings[EXPIRATION_EVENTS_OBJECT_ID[event["event"]]],
+        "block_index": event_bindings["block_index"],
+        "type": event["event"].replace("_EXPIRATION", "").lower(),
+    }
+    cursor.execute(sql, bindings)
+
+
 def update_assets_info(api_db, event):
     if event["event"] not in ASSET_EVENTS:
         return
     event_bindings = json.loads(event["bindings"])
+
+    if event_bindings["status"] != "valid":
+        return
 
     if event["event"] == "ASSET_CREATION":
         sql = """
@@ -306,8 +320,6 @@ def update_assets_info(api_db, event):
         return
 
     if event["event"] in ["ASSET_ISSUANCE", "RESET_ISSUANCE"]:
-        if event_bindings["status"] != "valid":
-            return
         existing_asset = fetch_one(
             api_db,
             "SELECT * FROM assets_info WHERE asset = :asset",
@@ -332,8 +344,6 @@ def update_assets_info(api_db, event):
         return
 
     if event["event"] == "ASSET_DESTRUCTION":
-        if event_bindings["status"] != "valid":
-            return
         sql = """
             UPDATE assets_info 
             SET supply = supply - :quantity
@@ -344,8 +354,6 @@ def update_assets_info(api_db, event):
         return
 
     if event["event"] == "ASSET_TRANSFER":
-        if event_bindings["status"] != "valid":
-            return
         sql = """
             UPDATE assets_info 
             SET owner = :issuer
@@ -354,6 +362,66 @@ def update_assets_info(api_db, event):
         cursor = api_db.cursor()
         cursor.execute(sql, event_bindings)
         return
+
+
+def refresh_assets_info(api_db, asset_name):
+    issuances = fetch_all("SELECT * FROM issuances WHERE asset = :asset", {"asset": asset_name})
+
+    set_fields = [
+        "divisible",
+        "description",
+        "owner",
+        "supply",
+        "last_issuance_block_index",
+        "asset_longname",
+        "locked",
+    ]
+    set_data = ", ".join([f"{field} = :{field}" for field in set_fields])
+
+    bindings = {
+        "asset": asset_name,
+        "divisible": issuances[-1]["divisible"],
+        "description": issuances[-1]["description"],
+        "owner": issuances[-1]["issuer"],
+        "supply": ledger.asset_supply(api_db, asset_name),
+        "last_issuance_block_index": issuances[-1]["block_index"],
+        "asset_longname": issuances[-1]["asset_longname"],
+        "locked": any(issuance["locked"] for issuance in issuances),
+    }
+
+    sql = f"UPDATE assets_info SET {set_data} WHERE asset = :asset"  # noqa: S608
+    cursor = api_db.cursor()
+    cursor.execute(sql, bindings)
+
+
+def rollback_assets_info(api_db, event):
+    if event["event"] not in ASSET_EVENTS:
+        return
+    event_bindings = json.loads(event["bindings"])
+
+    if event_bindings["status"] != "valid":
+        return
+
+    if event["event"] == "ASSET_CREATION":
+        sql = """
+            DELETE FROM assets_info WHERE asset_id = ?
+            """
+        cursor = api_db.cursor()
+        event_bindings = json.loads(event["bindings"])
+        cursor.execute(sql, event_bindings["asset_id"])
+        return
+
+    if event["event"] == "ASSET_DESTRUCTION":
+        sql = """
+            UPDATE assets_info 
+            SET supply = supply + :quantity
+            WHERE asset = :asset
+            """
+        cursor = api_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+    # else
+    refresh_assets_info(api_db, event_bindings["asset"])
 
 
 def execute_event(api_db, event):
@@ -458,6 +526,11 @@ def initialize_api_db(api_db, ledger_db):
         rollback_events(api_db, last_ledger_block["block_index"])
 
     sanity_check(api_db, ledger_db)
+
+
+def rollback(block_index):
+    api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
+    rollback_events(api_db, block_index)
 
 
 class APIWatcher(Thread):
