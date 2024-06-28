@@ -77,10 +77,7 @@ def get_last_parsed_message_index(api_db):
 def get_next_event_to_parse(api_db, ledger_db):
     last_parsed_message_index = get_last_parsed_message_index(api_db)
     sql = "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
-    # logger.warning(f"last_parsed_message_index: {last_parsed_message_index}")
     next_event = fetch_one(ledger_db, sql, (last_parsed_message_index,))
-    # logger.warning(api_db.cursor().execute("SELECT * FROM messages ORDER BY message_index DESC LIMIT 1").fetchone())
-    # logger.warning(ledger_db.cursor().execute("SELECT * FROM messages ORDER BY message_index DESC LIMIT 1").fetchone())
     return next_event
 
 
@@ -182,7 +179,7 @@ def insert_event(api_db, event):
 
 
 def rollback_event(api_db, event):
-    logger.debug(f"Rolling back event: {event}")
+    logger.info(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
     if event["previous_state"] is None or event["previous_state"] == "null":
         delete_event(api_db, event)
         return
@@ -224,7 +221,7 @@ def rollback_event(api_db, event):
 
 
 def rollback_events(api_db, block_index):
-    logger.info(f"Rolling back events to block {block_index}...")
+    logger.info(f"API Watcher - Rolling back events to block {block_index}...")
     with api_db:
         cursor = api_db.cursor()
         sql = "SELECT * FROM messages WHERE block_index >= ? ORDER BY message_index DESC"
