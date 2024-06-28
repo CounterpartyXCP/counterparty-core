@@ -161,9 +161,9 @@ def get_event_previous_state(api_db, event):
 
 def delete_event(api_db, event):
     sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
-    _deleted = delete_all(api_db, sql, (event["insert_rowid"],))
-    # if deleted == 0:
-    #    raise exceptions.APIWatcherError(f"Event not found: {event}")
+    delete_all(api_db, sql, (event["insert_rowid"],))
+    sql = "DELETE FROM messages WHERE message_index = ?"
+    delete_all(api_db, sql, (event["message_index"],))
 
 
 def insert_event(api_db, event):
@@ -218,7 +218,6 @@ def rollback_event(api_db, event):
         cursor = api_db.cursor()
         event_bindings = json.loads(event["bindings"])
         cursor.execute(sql, event_bindings["asset_id"])
-        return
 
     sql = "DELETE FROM messages WHERE message_index = ?"
     cursor.execute(sql, (event["message_index"],))
@@ -423,7 +422,7 @@ def sanity_check(api_db, ledger_db):
             f"API Watcher - Event mismatch: {last_api_event['event']} != {ledger_event['event']}"
         )
         logger.warning(f"API Watcher - Rolling back event: {last_api_event['message_index']}")
-        rollback_event(api_db, last_api_event["message_index"])
+        rollback_event(api_db, last_api_event)
         last_api_event = fetch_one(api_db, last_api_event_sql)
         ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
 
