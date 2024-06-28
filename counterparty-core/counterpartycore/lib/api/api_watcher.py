@@ -173,52 +173,52 @@ def insert_event(api_db, event):
 
 def rollback_event(api_db, event):
     logger.info(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
+    with api_db:  # all or nothing
+        if event["previous_state"] is None or event["previous_state"] == "null":
+            sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
+            deleted = delete_all(api_db, sql, (event["insert_rowid"],))
+            if deleted == 0:
+                raise Exception(
+                    f"Failed to delete event: {event['message_index']} ({event['event']})"
+                )
+        else:
+            previous_state = json.loads(event["previous_state"])
 
-    if event["previous_state"] is None or event["previous_state"] == "null":
-        sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
-        deleted = delete_all(api_db, sql, (event["insert_rowid"],))
-        if deleted == 0:
-            raise Exception(f"Failed to delete event: {event['message_index']} ({event['event']})")
-    else:
-        previous_state = json.loads(event["previous_state"])
+            id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
 
-        id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
+            sets = []
+            for key in previous_state.keys():
+                if key in id_field_names:
+                    continue
+                sets.append(f"{key} = :{key}")
+            set_clause = ", ".join(sets)
 
-        sets = []
-        for key in previous_state.keys():
-            if key in id_field_names:
-                continue
-            sets.append(f"{key} = :{key}")
-        set_clause = ", ".join(sets)
+            where = []
+            for id_field_name in id_field_names:
+                where.append(f"{id_field_name} = :{id_field_name}")
+            where_clause = " AND ".join(where)
 
-        where = []
-        for id_field_name in id_field_names:
-            where.append(f"{id_field_name} = :{id_field_name}")
-        where_clause = " AND ".join(where)
+            sql = f"UPDATE {event['category']} SET {set_clause} WHERE {where_clause}"  # noqa: S608
+            cursor = api_db.cursor()
+            cursor.execute(sql, previous_state)
 
-        sql = f"UPDATE {event['category']} SET {set_clause} WHERE {where_clause}"  # noqa: S608
-        cursor = api_db.cursor()
-        cursor.execute(sql, previous_state)
+        rollback_balances(api_db, event)
+        rollback_expiration(api_db, event)
+        rollback_assets_info(api_db, event)
 
-    rollback_balances(api_db, event)
-    rollback_expiration(api_db, event)
-    rollback_assets_info(api_db, event)
-
-    sql = "DELETE FROM messages WHERE message_index = ?"
-    delete_all(api_db, sql, (event["message_index"],))
+        sql = "DELETE FROM messages WHERE message_index = ?"
+        delete_all(api_db, sql, (event["message_index"],))
 
 
 def rollback_events(api_db, block_index):
     logger.info(f"API Watcher - Rolling back events to block {block_index}...")
-    api_db.execute("""PRAGMA foreign_keys=OFF""")
-    with api_db:
-        cursor = api_db.cursor()
-        sql = "SELECT * FROM messages WHERE block_index >= ? ORDER BY message_index DESC"
-        cursor.execute(sql, (block_index,))
-        for event in cursor:
-            rollback_event(api_db, event)
-        cursor.execute("DELETE FROM messages WHERE block_index >= ?", (block_index,))
-    api_db.execute("""PRAGMA foreign_keys=ON""")
+    # api_db.execute("""PRAGMA foreign_keys=OFF""")
+    cursor = api_db.cursor()
+    sql = "SELECT * FROM messages WHERE block_index >= ? ORDER BY message_index DESC"
+    cursor.execute(sql, (block_index,))
+    for event in cursor:
+        rollback_event(api_db, event)
+    # api_db.execute("""PRAGMA foreign_keys=ON""")
     logger.info(f"API Watcher - Events rolled back to block {block_index}")
 
 
