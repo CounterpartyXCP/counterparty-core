@@ -7,7 +7,7 @@ from urllib.parse import quote_plus as urlencode
 from termcolor import cprint
 
 from counterpartycore import server
-from counterpartycore.lib import config, setup
+from counterpartycore.lib import config, sentry, setup
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -346,6 +346,7 @@ class VersionError(Exception):
 
 
 def main():
+    sentry.init()
     # Post installation tasks
     server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
 
