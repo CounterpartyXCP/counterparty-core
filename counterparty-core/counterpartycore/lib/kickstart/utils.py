@@ -6,7 +6,7 @@ from multiprocessing import resource_tracker
 
 from counterparty_rs import utils as pycoin_rs_utils
 
-bytes_from_int = chr if bytes == str else lambda x: bytes([x])
+bytes_from_int = chr if bytes is str else lambda x: bytes([x])
 
 
 def b2h(b):
