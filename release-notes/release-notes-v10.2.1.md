@@ -11,6 +11,7 @@
 
 * Add `quantity_normalized` in Issuances endpoints
 * Fix verbose mode for order matches
+* Check ZMQ `rawblock` topic twice per second on testnet
 
 ## Codebase
 
