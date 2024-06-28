@@ -42,6 +42,8 @@
 ## CLI
 
 * Tweak RPS logging
+* Fix erroneous Rust Fetcher errors on shutdown 
+
 
 # Credits
 * Ouziel Slama
