@@ -184,7 +184,6 @@ def log_event(db, block_index, event_index, event_name, bindings):
         log_message,
         extra={"event": {"name": event_name, "block_index": block_index, **bindings}},
     )
-    print(log_message)
     # Publish event to ZMQ
     if config.ENABLE_ZMQ_PUBLISHER:
         zmq_publisher = ZmqPublisher()
