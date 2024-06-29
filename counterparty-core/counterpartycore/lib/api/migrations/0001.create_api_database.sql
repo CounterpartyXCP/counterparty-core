@@ -486,6 +486,7 @@ CREATE TABLE IF NOT EXISTS dispenses (
                                 asset TEXT,
                                 dispense_quantity INTEGER,
                                 dispenser_tx_hash TEXT,
+                                btc_amount INTEGER DEFAULT 0,
                                 PRIMARY KEY (tx_index, dispense_index, source, destination),
                                 FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 CREATE INDEX IF NOT EXISTS dispenses_tx_hash_idx ON dispenses (tx_hash);
@@ -515,11 +516,14 @@ CREATE TABLE IF NOT EXISTS messages(
                       event TEXT,
                       tx_hash TEXT,
                       previous_state TEXT,
-                      insert_rowid INTEGER);
+                      insert_rowid INTEGER,
+                      event_hash TEXT);
 CREATE INDEX IF NOT EXISTS messages_block_index_idx ON messages (block_index);
 CREATE INDEX IF NOT EXISTS messages_block_index_message_index_idx ON messages (block_index, message_index);
 CREATE INDEX IF NOT EXISTS messages_event_idx ON messages (event);
 CREATE INDEX IF NOT EXISTS messages_tx_hash_idx ON messages (tx_hash);
+CREATE INDEX IF NOT EXISTS messages_block_index_event_idx ON messages (block_index, event);
+CREATE INDEX IF NOT EXISTS messages_event_hash_idx ON messages (event_hash, event);
 CREATE INDEX IF NOT EXISTS dispenses_asset_idx ON dispenses (asset);
 CREATE INDEX IF NOT EXISTS dispenses_source_idx ON dispenses (source);
 CREATE INDEX IF NOT EXISTS dispenses_destination_idx ON dispenses (destination);
@@ -611,3 +615,21 @@ CREATE VIEW  IF NOT EXISTS xcp_holders AS
             tx_hash AS escrow, CONCAT('open_dispenser_', CAST(rowid AS VARCAHR)) AS cursor_id,
             'open_dispenser' AS holding_type, status
             FROM dispensers WHERE status = 0;
+
+CREATE TABLE IF NOT EXISTS assets_info(
+                        asset TEXT UNIQUE,
+                        asset_id TEXT UNIQUE,
+                        asset_longname TEXT,
+                        issuer TEXT,
+                        owner TEXT,
+                        divisible BOOL,
+                        locked BOOL DEFAULT 0,
+                        supply INTEGER DEFAULT 0,
+                        description TEXT,
+                        first_issuance_block_index INTEGER,
+                        last_issuance_block_index INTEGER
+                        );
+CREATE INDEX IF NOT EXISTS assets_info_asset_idx ON assets_info (asset);
+CREATE INDEX IF NOT EXISTS assets_info_asset_longname_idx ON assets_info (asset_longname);
+CREATE INDEX IF NOT EXISTS assets_info_issuer_idx ON assets_info (issuer);
+CREATE INDEX IF NOT EXISTS assets_info_owner_idx ON assets_info (owner);
