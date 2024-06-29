@@ -591,11 +591,7 @@ class TransactionService:
 
         source_is_p2sh = script.is_p2sh(source)
 
-        # Normalize source
-        if script.is_multisig(source):
-            source_address = multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
-        else:
-            source_address = source
+        source_address = source
 
         # Sanity checks.
         if exact_fee and not isinstance(exact_fee, int):
