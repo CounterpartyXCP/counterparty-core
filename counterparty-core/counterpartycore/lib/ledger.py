@@ -131,7 +131,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
     try:
         previous_message = last_message(db)
         message_index = previous_message["message_index"] + 1
-        previous_event_hash = previous_message["event_hash"]
+        previous_event_hash = previous_message["event_hash"] or ""
     except exceptions.DatabaseError:
         message_index = 0
         previous_event_hash = ""
@@ -154,7 +154,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
             category,
             bindings_string,
             event,
-            util.CURRENT_TX_HASH,
+            util.CURRENT_TX_HASH or "",
             previous_event_hash,
         ]
     )
