@@ -491,6 +491,8 @@ def sanity_check(api_db, ledger_db):
     last_api_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
     ledger_event_sql = "SELECT * FROM messages WHERE message_index = ?"
     last_api_event = fetch_one(api_db, last_api_event_sql)
+    if last_api_event is None:
+        return
     ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
     while last_api_event and ledger_event and last_api_event["event"] != ledger_event["event"]:
         logger.warning(
