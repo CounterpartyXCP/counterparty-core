@@ -632,13 +632,16 @@ def initialise(db):
                       bindings TEXT,
                       timestamp INTEGER,
                       event TEXT,
-                      tx_hash TEXT)
+                      tx_hash TEXT,
+                      event_hash TEXT)
                   """)
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(messages)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN event TEXT""")
     if "tx_hash" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN tx_hash TEXT""")
+    if "event_hash" not in columns:
+        cursor.execute("""ALTER TABLE messages ADD COLUMN event_hash TEXT""")
 
     # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     database.create_indexes(
@@ -650,6 +653,7 @@ def initialise(db):
             ["block_index", "event"],
             ["event"],
             ["tx_hash"],
+            ["event_hash"],
         ],
     )
 

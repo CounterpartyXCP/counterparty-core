@@ -164,8 +164,8 @@ def insert_event(api_db, event):
         event["previous_state"] = None
     sql = """
         INSERT INTO messages 
-            (message_index, block_index, event, category, command, bindings, tx_hash, previous_state, insert_rowid)
-        VALUES (:message_index, :block_index, :event, :category, :command, :bindings, :tx_hash, :previous_state, :insert_rowid)
+            (message_index, block_index, event, category, command, bindings, tx_hash, previous_state, insert_rowid, event_hash)
+        VALUES (:message_index, :block_index, :event, :category, :command, :bindings, :tx_hash, :previous_state, :insert_rowid, :event_hash)
     """
     cursor = api_db.cursor()
     cursor.execute(sql, event)

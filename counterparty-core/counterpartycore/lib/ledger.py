@@ -129,10 +129,12 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
     # Get last message index.
     try:
-        message = last_message(db)
-        message_index = message["message_index"] + 1
+        previous_message = last_message(db)
+        message_index = previous_message["message_index"] + 1
+        previous_event_hash = previous_message["event_hash"]
     except exceptions.DatabaseError:
         message_index = 0
+        previous_event_hash = ""
 
     # Handle binary data.
     items = {}
@@ -144,6 +146,19 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
     current_time = curr_time()
     bindings_string = json.dumps(items, sort_keys=True, separators=(",", ":"))
+    event_hash_content = "".join(
+        [
+            str(message_index),
+            str(block_index),
+            command,
+            category,
+            bindings_string,
+            event,
+            util.CURRENT_TX_HASH,
+            previous_event_hash,
+        ]
+    )
+    event_hash = util.dhash(event_hash_content)
     message_bindings = {
         "message_index": message_index,
         "block_index": block_index,
@@ -153,6 +168,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         "timestamp": current_time,
         "event": event,
         "tx_hash": util.CURRENT_TX_HASH,
+        "event_hash": event_hash,
     }
     query = """INSERT INTO messages (
                 message_index, block_index, command, category, bindings, timestamp, event, tx_hash
