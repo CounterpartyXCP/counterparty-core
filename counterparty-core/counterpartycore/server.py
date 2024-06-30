@@ -867,23 +867,26 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     sig_filename = os.path.basename(bootstrap_sig_url)
     tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
     sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
-    database_path = os.path.join(data_dir, config.APP_NAME)
+    ledger_database_path = os.path.join(data_dir, config.APP_NAME)
     if config.TESTNET:
-        database_path += ".testnet"
-    database_path += ".db"
+        ledger_database_path += ".testnet"
+    ledger_database_path += ".db"
+    api_database_path = ledger_database_path.replace(".db", ".api.db")
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
         os.makedirs(data_dir, mode=0o755)
-    if os.path.exists(database_path):
-        os.remove(database_path)
-    # Delete SQLite Write-Ahead-Log
-    wal_path = database_path + "-wal"
-    shm_path = database_path + "-shm"
-    if os.path.exists(wal_path):
-        os.remove(wal_path)
-    if os.path.exists(shm_path):
-        os.remove(shm_path)
+
+    for database_path in [ledger_database_path, api_database_path]:
+        if os.path.exists(database_path):
+            os.remove(database_path)
+        # Delete SQLite Write-Ahead-Log
+        wal_path = database_path + "-wal"
+        shm_path = database_path + "-shm"
+        if os.path.exists(wal_path):
+            os.remove(wal_path)
+        if os.path.exists(shm_path):
+            os.remove(shm_path)
 
     # Define Progress Bar.
     spinner = log.Spinner(f"Downloading database from {bootstrap_url}...")
@@ -911,11 +914,16 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         with tarfile.open(tarball_path, "r:gz") as tar_file:
             tar_file.extractall(path=data_dir)  # nosec B202  # noqa: S202
 
-    assert os.path.exists(database_path)
+    assert os.path.exists(ledger_database_path)
+    assert os.path.exists(api_database_path)
     # user and group have "rw" access
-    os.chmod(database_path, 0o660)  # nosec B103
+    os.chmod(ledger_database_path, 0o660)  # nosec B103
+    os.chmod(api_database_path, 0o660)  # nosec B103
 
     with log.Spinner("Cleaning up..."):
         os.remove(tarball_path)
 
-    cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")
+    cprint(
+        f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
+        "green",
+    )
