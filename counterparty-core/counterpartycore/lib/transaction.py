@@ -215,7 +215,7 @@ def address_to_pubkey(address, provided_pubkeys=None):
                 return pubkey
 
     # Search blockchain.
-    raw_transactions = addrindexrs.search_raw_transactions(pubkeyhash, unconfirmed=True)
+    raw_transactions = addrindexrs.search_raw_transactions(address, unconfirmed=True)
     for tx_id in raw_transactions:
         tx = raw_transactions[tx_id]
         for vin in tx["vin"]:
