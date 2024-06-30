@@ -159,7 +159,6 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         ]
     )
     event_hash = binascii.hexlify(util.dhash(event_hash_content)).decode("ascii")
-    logger.warning(f"event_hash: {event_hash}")
     message_bindings = {
         "message_index": message_index,
         "block_index": block_index,

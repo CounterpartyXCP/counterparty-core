@@ -8568,7 +8568,7 @@ UNITTEST_VECTOR = {
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": None,
+                    "event_hash": "273aec8452f62fbbbcdf33e91fe3a2d03f113fac4adfc457b85af13c0fd06ba2",
                 },
             }
         ],
