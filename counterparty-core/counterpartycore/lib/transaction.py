@@ -299,11 +299,11 @@ class TransactionService:
         self.ps2h_dust_return_pubkey = ps2h_dust_return_pubkey
 
 
-    def get_dust_return_pubkey(self, source, provided_pubkeys, encoding):
+    def get_dust_return_pubkey(self, source, provided_pubkeys):
         """Return the pubkey to which dust from data outputs will be sent.
 
         This pubkey is used in multi-sig data outputs (as the only real pubkey) to
-        make those the outputs spendable. It is derived from the source address, so
+        make those outputs spendable. It is derived from the source address, so
         that the dust is spendable by the creator of the transaction.
         """
         # Get hex dust return pubkey.
@@ -650,11 +650,8 @@ class TransactionService:
                 script.validate(address)
                 if script.is_multisig(address):
                     destination_outputs_new.append(
-                        (
-                            multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys),
-                            value,
+                            (script.extract_array(address), value)
                         )
-                    )
                 else:
                     destination_outputs_new.append((address, value))
 
@@ -679,9 +676,7 @@ class TransactionService:
 
             if not dust_return_pubkey:
                 if encoding == "multisig" or encoding == "p2sh" and not source_is_p2sh:
-                    dust_return_pubkey = self.get_dust_return_pubkey(
-                        source, provided_pubkeys, encoding
-                    )
+                    dust_return_pubkey = self.get_dust_return_pubkey(source, provided_pubkeys)
                 else:
                     dust_return_pubkey = None
 
@@ -999,7 +994,7 @@ def return_result(tx_hexes, old_style_api):
 
 
 # TODO: this should be lifted
-def get_dust_return_pubkey(source, provided_pubkeys, encoding):
+def get_dust_return_pubkey(source, provided_pubkeys):
     """Return the pubkey to which dust from data outputs will be sent.
 
     This pubkey is used in multi-sig data outputs (as the only real pubkey) to
@@ -1008,10 +1003,8 @@ def get_dust_return_pubkey(source, provided_pubkeys, encoding):
     """
     # Get hex dust return pubkey.
     if script.is_multisig(source):
-        a, self_pubkeys, b = script.extract_array(
-            multisig_pubkeyhashes_to_pubkeys(source, provided_pubkeys)
-        )
-        dust_return_pubkey_hex = self_pubkeys[0]
+        _, pubkeys, _ = script.extract_array(source)
+        dust_return_pubkey_hex = pubkeys[0]
     else:
         dust_return_pubkey_hex = address_to_pubkey(source, provided_pubkeys)
 
