@@ -4,8 +4,8 @@ import os
 import time
 from threading import Thread
 
-from counterpartycore.lib import config, database, ledger
-from counterpartycore.lib.api import queries, util
+from counterpartycore.lib import config, database, exceptions, ledger
+from counterpartycore.lib.api import util
 from counterpartycore.lib.util import format_duration
 from yoyo import get_backend, read_migrations
 
@@ -76,8 +76,8 @@ def get_last_parsed_message_index(api_db):
 
 def get_next_event_to_parse(api_db, ledger_db):
     last_parsed_message_index = get_last_parsed_message_index(api_db)
-    sql = "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
-    next_event = fetch_one(ledger_db, sql, (last_parsed_message_index,))
+    sql = "SELECT * FROM messages WHERE message_index = ?"
+    next_event = fetch_one(ledger_db, sql, (last_parsed_message_index + 1,))
     return next_event
 
 
@@ -443,15 +443,17 @@ def execute_event(api_db, event):
 
 def parse_event(api_db, event):
     with api_db:
+        logger.trace(f"API Watcher - Parsing event: {event}")
         event["insert_rowid"] = execute_event(api_db, event)
         update_balances(api_db, event)
         update_expiration(api_db, event)
         update_assets_info(api_db, event)
         insert_event(api_db, event)
-        logger.trace(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
+        logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 
 def catch_up(api_db, ledger_db):
+    check_event_hashes(api_db, ledger_db)
     event_to_parse_count = get_event_to_parse_count(api_db, ledger_db)
     if event_to_parse_count > 0:
         logger.info(f"API Watcher - {event_to_parse_count} events to catch up...")
@@ -459,7 +461,6 @@ def catch_up(api_db, ledger_db):
         event_parsed = 0
         next_event = get_next_event_to_parse(api_db, ledger_db)
         while next_event:
-            logger.trace(f"API Watcher - Parsing event: {next_event}")
             parse_event(api_db, next_event)
             event_parsed += 1
             if event_parsed % 10000 == 0:
@@ -485,18 +486,22 @@ def apply_migration():
     backend.connection.close()
 
 
-# checks that there is no divergence between the event indexes in the API and ledger databases
-def sanity_check(api_db, ledger_db):
-    logger.info("API Watcher - Running sanity check...")
+# checks that there is no divergence between the event in the API and ledger databases
+def check_event_hashes(api_db, ledger_db):
+    logger.debug("API Watcher - Check event hashes...")
     last_api_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
     ledger_event_sql = "SELECT * FROM messages WHERE message_index = ?"
     last_api_event = fetch_one(api_db, last_api_event_sql)
     if last_api_event is None:
         return
     ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
-    while last_api_event and ledger_event and last_api_event["event"] != ledger_event["event"]:
+    while (
+        last_api_event
+        and ledger_event
+        and last_api_event["event_hash"] != ledger_event["event_hash"]
+    ):
         logger.warning(
-            f"API Watcher - Event mismatch: {last_api_event['event']} != {ledger_event['event']}"
+            f"API Watcher - Event hash mismatch: {last_api_event['event_hash']} != {ledger_event['event_hash']}"
         )
         logger.warning(f"API Watcher - Rolling back event: {last_api_event['message_index']}")
         rollback_event(api_db, last_api_event)
@@ -504,41 +509,36 @@ def sanity_check(api_db, ledger_db):
         ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
 
 
-def initialize_api_db(api_db, ledger_db):
-    logger.info("API Watcher - Initializing API Database...")
-
-    cursor = api_db.cursor()
-
-    # Create XCP and BTC assets if they don't exist
-    cursor.execute("""SELECT * FROM assets WHERE asset_name = ?""", ("BTC",))
-    if not list(cursor):
-        cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None))
-        cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
-    cursor.close()
-
-    # check if rollback is needed
-    last_ledger_block = queries.get_last_block(ledger_db)
-    if last_ledger_block is not None:
-        last_ledger_block = last_ledger_block.result
-    last_api_block = queries.get_last_block(api_db)
-    if last_api_block is not None:
-        last_api_block = last_api_block.result
-
-    if last_ledger_block is None and last_api_block is not None:
-        rollback_events(api_db, 0)
-    elif (
-        last_api_block
-        and last_ledger_block
-        and last_api_block["block_index"] > last_ledger_block["block_index"]
-    ):
-        rollback_events(api_db, last_ledger_block["block_index"])
-
-    sanity_check(api_db, ledger_db)
-
-
 def rollback(block_index):
     api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
     rollback_events(api_db, block_index)
+
+
+def parse_next_event(api_db, ledger_db):
+    check_event_hashes(api_db, ledger_db)
+
+    last_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
+    last_ledger_event = fetch_one(ledger_db, last_event_sql)
+    last_api_event = fetch_one(api_db, last_event_sql)
+
+    if last_ledger_event is None:
+        raise exceptions.NoEventToParse("No event to parse")
+
+    if last_api_event is None:
+        next_event_sql = "SELECT * FROM messages ORDER BY message_index ASC LIMIT 1"
+        next_event = fetch_one(ledger_db, next_event_sql)
+        parse_event(api_db, next_event)
+        return
+
+    if last_ledger_event["message_index"] > last_api_event["message_index"]:
+        next_event_sql = (
+            "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
+        )
+        next_event = fetch_one(ledger_db, next_event_sql, (last_api_event["message_index"],))
+        parse_event(api_db, next_event)
+        return
+
+    raise exceptions.NoEventToParse("No event to parse")
 
 
 class APIWatcher(Thread):
@@ -554,31 +554,20 @@ class APIWatcher(Thread):
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )
-        try:
-            initialize_api_db(self.api_db, self.ledger_db)
-        except KeyboardInterrupt:
-            logger.debug("API Watcher - Keyboard interrupt")
-            self.stopped = True
-            self.api_db.close()
-            self.ledger_db.close()
+        # Create XCP and BTC assets if they don't exist
+        cursor = self.api_db.cursor()
+        cursor.execute("""SELECT * FROM assets WHERE asset_name = ?""", ("BTC",))
+        if not list(cursor):
+            cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None))
+            cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
+        cursor.close()
 
-    def run(self):
-        logger.info("Starting API Watcher...")
-        catch_up(self.api_db, self.ledger_db)
+    def follow(self):
         try:
             while True and not self.stopping and not self.stopped:
-                next_event = get_next_event_to_parse(self.api_db, self.ledger_db)
-                if next_event:
-                    last_block = queries.get_last_block(self.api_db).result
-                    if last_block and last_block["block_index"] > next_event["block_index"]:
-                        logger.warning(
-                            "API Watcher - Reorg detected, rolling back events to block %s...",
-                            next_event["block_index"],
-                        )
-                        rollback_events(self.api_db, next_event["block_index"])
-                    logger.debug(f"API Watcher - Parsing event: {next_event['event']}")
-                    parse_event(self.api_db, next_event)
-                else:
+                try:
+                    parse_next_event(self.api_db, self.ledger_db)
+                except exceptions.NoEventToParse:
                     logger.trace("API Watcher - No new events to parse")
                     time.sleep(1)
         except KeyboardInterrupt:
@@ -586,6 +575,11 @@ class APIWatcher(Thread):
             pass
         self.stopped = True
         return
+
+    def run(self):
+        logger.info("Starting API Watcher...")
+        catch_up(self.api_db, self.ledger_db)
+        self.follow()
 
     def stop(self):
         logger.info("Stopping API Watcher...")

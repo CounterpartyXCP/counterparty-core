@@ -121,3 +121,7 @@ class APIWatcherError(Exception):
 
 class SerializationError(Exception):
     pass
+
+
+class NoEventToParse(Exception):
+    pass
