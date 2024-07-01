@@ -4801,157 +4801,6 @@
         "next_cursor": null,
         "result_count": 0
     },
-    "/v2/events": {
-        "result": [
-            {
-                "event_index": 10665090,
-                "event": "DEBIT",
-                "params": {
-                    "action": "open dispenser",
-                    "address": "12eVsMrMdFyvTnvPAZAmtpDj7dDo9s8wLi",
-                    "asset": "CORNSNACK",
-                    "block_index": 700853,
-                    "event": "eae4f53b1d77fa9a8f96b30f12b1272bfe5a7a5813953e98fc0ee00379c3fc22",
-                    "quantity": 6,
-                    "tx_index": 1668919,
-                    "block_time": 1631830009,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "corn snack",
-                        "issuer": "17Xw41Zg2zxNV5DcCPQ28TdSVaAwk1SpdA",
-                        "divisible": false,
-                        "locked": true
-                    },
-                    "quantity_normalized": "6"
-                },
-                "tx_hash": "eae4f53b1d77fa9a8f96b30f12b1272bfe5a7a5813953e98fc0ee00379c3fc22",
-                "block_index": 700853,
-                "timestamp": 1715466250,
-                "block_time": 1631830009
-            },
-            {
-                "event_index": 10665086,
-                "event": "DEBIT",
-                "params": {
-                    "action": "open dispenser",
-                    "address": "18EXyZXLuGSs2Zaafo1s4URSujkdS3TgnH",
-                    "asset": "INDIANAFROGS",
-                    "block_index": 700853,
-                    "event": "350620b94ae578fb5f966a0ece07b5f5ac0a3e4670c87b976acbbc6a32657c4a",
-                    "quantity": 8,
-                    "tx_index": 1668918,
-                    "block_time": 1631830009,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "archaeologist frog",
-                        "issuer": "17Xw41Zg2zxNV5DcCPQ28TdSVaAwk1SpdA",
-                        "divisible": false,
-                        "locked": true
-                    },
-                    "quantity_normalized": "8"
-                },
-                "tx_hash": "350620b94ae578fb5f966a0ece07b5f5ac0a3e4670c87b976acbbc6a32657c4a",
-                "block_index": 700853,
-                "timestamp": 1715466250,
-                "block_time": 1631830009
-            },
-            {
-                "event_index": 10665081,
-                "event": "CREDIT",
-                "params": {
-                    "address": "1DXCZqXhVUfNADX56ifLQjSepPYvTBPgg4",
-                    "asset": "XCP",
-                    "block_index": 700853,
-                    "calling_function": "filled",
-                    "event": "db4c8bb8705ed6c9422b2686335d008a518d90f85a3667c730ff0a5a491adbef",
-                    "quantity": 0,
-                    "tx_index": 700853,
-                    "block_time": 1631830009,
-                    "asset_info": {
-                        "divisible": true,
-                        "asset_longname": "Counterparty",
-                        "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
-                    },
-                    "quantity_normalized": "0"
-                },
-                "tx_hash": "5705532f6fea853313ec72084c43d59d7cb417c700a2dece4e20eeee944e7567",
-                "block_index": 700853,
-                "timestamp": 1715466250,
-                "block_time": 1631830009
-            },
-            {
-                "event_index": 10665079,
-                "event": "CREDIT",
-                "params": {
-                    "address": "13Mpz1EoP2wi1nGGwZt4kQ7hfxRmBRToKc",
-                    "asset": "XCP",
-                    "block_index": 700853,
-                    "calling_function": "order match",
-                    "event": "db4c8bb8705ed6c9422b2686335d008a518d90f85a3667c730ff0a5a491adbef_5705532f6fea853313ec72084c43d59d7cb417c700a2dece4e20eeee944e7567",
-                    "quantity": 199800000,
-                    "tx_index": 700853,
-                    "block_time": 1631830009,
-                    "asset_info": {
-                        "divisible": true,
-                        "asset_longname": "Counterparty",
-                        "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
-                    },
-                    "quantity_normalized": "1.998"
-                },
-                "tx_hash": "5705532f6fea853313ec72084c43d59d7cb417c700a2dece4e20eeee944e7567",
-                "block_index": 700853,
-                "timestamp": 1715466250,
-                "block_time": 1631830009
-            },
-            {
-                "event_index": 10665078,
-                "event": "CREDIT",
-                "params": {
-                    "address": "1DXCZqXhVUfNADX56ifLQjSepPYvTBPgg4",
-                    "asset": "PEPETRADERS",
-                    "block_index": 700853,
-                    "calling_function": "order match",
-                    "event": "db4c8bb8705ed6c9422b2686335d008a518d90f85a3667c730ff0a5a491adbef_5705532f6fea853313ec72084c43d59d7cb417c700a2dece4e20eeee944e7567",
-                    "quantity": 3,
-                    "tx_index": 700853,
-                    "block_time": 1631830009,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "B6881F48E9CBEB2CF096F277A937BF0D",
-                        "issuer": "13Mpz1EoP2wi1nGGwZt4kQ7hfxRmBRToKc",
-                        "divisible": false,
-                        "locked": true
-                    },
-                    "quantity_normalized": "3"
-                },
-                "tx_hash": "5705532f6fea853313ec72084c43d59d7cb417c700a2dece4e20eeee944e7567",
-                "block_index": 700853,
-                "timestamp": 1715466250,
-                "block_time": 1631830009
-            }
-        ],
-        "next_cursor": 10665076,
-        "result_count": 6311094
-    },
-    "/v2/events/<int:event_index>": {
-        "result": {
-            "event_index": 10665092,
-            "event": "TRANSACTION_PARSED",
-            "params": {
-                "supported": true,
-                "tx_hash": "eae4f53b1d77fa9a8f96b30f12b1272bfe5a7a5813953e98fc0ee00379c3fc22",
-                "tx_index": 1668919
-            },
-            "tx_hash": "eae4f53b1d77fa9a8f96b30f12b1272bfe5a7a5813953e98fc0ee00379c3fc22",
-            "block_index": 700853,
-            "timestamp": 1715466250,
-            "block_time": 1631830009
-        }
-    },
     "/v2/events/counts": {
         "result": [
             {
@@ -7466,6 +7315,194 @@
                 "issuer": null
             },
             "quantity_normalized": "1042.00000000"
+        }
+    },
+    "/v2/events": {
+        "result": [
+            {
+                "event_index": 10665091,
+                "event": "DEBIT",
+                "params": {
+                    "action": "open order",
+                    "address": "1DXCZqXhVUfNADX56ifLQjSepPYvTBPgg4",
+                    "asset": "XCP",
+                    "block_index": 700853,
+                    "event": "5705532f6fea853313ec72084c43d59d7cb417c700a2dece4e20eeee944e7567",
+                    "quantity": 199800000,
+                    "tx_index": 1668917,
+                    "block_time": 1631830009,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "1.99800000"
+                },
+                "tx_hash": "5705532f6fea853313ec72084c43d59d7cb417c700a2dece4e20eeee944e7567",
+                "block_index": 700853,
+                "timestamp": null,
+                "block_time": 1631830009
+            },
+            {
+                "event_index": 10665087,
+                "event": "CREDIT",
+                "params": {
+                    "address": "1CLNBqmvi6edGPphF5RceKDbM6zgWMRM7Q",
+                    "asset": "PEPECASH",
+                    "block_index": 700853,
+                    "calling_function": "filled",
+                    "event": "e3c4f9d8b173d84582e9635c41fa9c13ec9b7ea03b19c2e8e4f427dd0a414259",
+                    "quantity": 0,
+                    "tx_index": 700853,
+                    "block_time": 1631830009,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "http://rarepepedirectory.com/json/pc.json",
+                        "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                        "divisible": true,
+                        "locked": true
+                    },
+                    "quantity_normalized": "0.00000000"
+                },
+                "tx_hash": "4e661cf8a14562ad0b724479894cad95186565de74d9462dbb64951ee6db60f5",
+                "block_index": 700853,
+                "timestamp": null,
+                "block_time": 1631830009
+            },
+            {
+                "event_index": 10665085,
+                "event": "CREDIT",
+                "params": {
+                    "address": "17hxupddtL5z3RusNNgUUmK1EQiCXUhe6z",
+                    "asset": "PEPECASH",
+                    "block_index": 700853,
+                    "calling_function": "order match",
+                    "event": "e3c4f9d8b173d84582e9635c41fa9c13ec9b7ea03b19c2e8e4f427dd0a414259_4e661cf8a14562ad0b724479894cad95186565de74d9462dbb64951ee6db60f5",
+                    "quantity": 33300000000,
+                    "tx_index": 700853,
+                    "block_time": 1631830009,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "http://rarepepedirectory.com/json/pc.json",
+                        "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                        "divisible": true,
+                        "locked": true
+                    },
+                    "quantity_normalized": "333.00000000"
+                },
+                "tx_hash": "4e661cf8a14562ad0b724479894cad95186565de74d9462dbb64951ee6db60f5",
+                "block_index": 700853,
+                "timestamp": null,
+                "block_time": 1631830009
+            },
+            {
+                "event_index": 10665084,
+                "event": "CREDIT",
+                "params": {
+                    "address": "1CLNBqmvi6edGPphF5RceKDbM6zgWMRM7Q",
+                    "asset": "PACPEPE",
+                    "block_index": 700853,
+                    "calling_function": "order match",
+                    "event": "e3c4f9d8b173d84582e9635c41fa9c13ec9b7ea03b19c2e8e4f427dd0a414259_4e661cf8a14562ad0b724479894cad95186565de74d9462dbb64951ee6db60f5",
+                    "quantity": 1,
+                    "tx_index": 700853,
+                    "block_time": 1631830009,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "",
+                        "issuer": "1MX2kfSP5qspDcWiDg15M95PQrYityYG52",
+                        "divisible": false,
+                        "locked": true
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": "4e661cf8a14562ad0b724479894cad95186565de74d9462dbb64951ee6db60f5",
+                "block_index": 700853,
+                "timestamp": null,
+                "block_time": 1631830009
+            },
+            {
+                "event_index": 10665082,
+                "event": "DEBIT",
+                "params": {
+                    "action": "open order",
+                    "address": "1CLNBqmvi6edGPphF5RceKDbM6zgWMRM7Q",
+                    "asset": "PEPECASH",
+                    "block_index": 700853,
+                    "event": "4e661cf8a14562ad0b724479894cad95186565de74d9462dbb64951ee6db60f5",
+                    "quantity": 33300000000,
+                    "tx_index": 1668916,
+                    "block_time": 1631830009,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "http://rarepepedirectory.com/json/pc.json",
+                        "issuer": "1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD",
+                        "divisible": true,
+                        "locked": true
+                    },
+                    "quantity_normalized": "333.00000000"
+                },
+                "tx_hash": "4e661cf8a14562ad0b724479894cad95186565de74d9462dbb64951ee6db60f5",
+                "block_index": 700853,
+                "timestamp": null,
+                "block_time": 1631830009
+            }
+        ],
+        "next_cursor": 10665079,
+        "result_count": 6317615
+    },
+    "/v2/events/<int:event_index>": {
+        "result": {
+            "event_index": 10665092,
+            "event": "OPEN_ORDER",
+            "params": {
+                "block_index": 700853,
+                "expiration": 5000,
+                "expire_index": 705853,
+                "fee_provided": 1056,
+                "fee_provided_remaining": 1056,
+                "fee_required": 0,
+                "fee_required_remaining": 0,
+                "get_asset": "PEPETRADERS",
+                "get_quantity": 3,
+                "get_remaining": 3,
+                "give_asset": "XCP",
+                "give_quantity": 199800000,
+                "give_remaining": 199800000,
+                "source": "1DXCZqXhVUfNADX56ifLQjSepPYvTBPgg4",
+                "status": "open",
+                "tx_hash": "5705532f6fea853313ec72084c43d59d7cb417c700a2dece4e20eeee944e7567",
+                "tx_index": 1668917,
+                "block_time": 1631830009,
+                "give_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "get_asset_info": {
+                    "asset_longname": null,
+                    "description": "B6881F48E9CBEB2CF096F277A937BF0D",
+                    "issuer": "13Mpz1EoP2wi1nGGwZt4kQ7hfxRmBRToKc",
+                    "divisible": false,
+                    "locked": true
+                },
+                "give_quantity_normalized": "1.99800000",
+                "get_quantity_normalized": "3",
+                "get_remaining_normalized": "3",
+                "give_remaining_normalized": "1.99800000",
+                "fee_provided_normalized": "0.00001056",
+                "fee_required_normalized": "0.00000000",
+                "fee_required_remaining_normalized": "0.00000000",
+                "fee_provided_remaining_normalized": "0.00001056"
+            },
+            "tx_hash": "5705532f6fea853313ec72084c43d59d7cb417c700a2dece4e20eeee944e7567",
+            "block_index": 700853,
+            "timestamp": null,
+            "block_time": 1631830009
         }
     }
 }
