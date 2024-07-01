@@ -129,3 +129,19 @@ def test_mainnet_api_db(skip):
             print(api_balance, ledger_balance)
         i += 1
     print(f"Checked {i} balances")
+
+    api_sql = "SELECT * FROM orders ORDER BY random() LIMIT 10000"
+    api_orders = api_db.execute(api_sql)
+    i = 0
+    for api_order in api_orders:
+        ledger_sql = "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1"
+        ledger_order = ledger_db.execute(ledger_sql, (api_order["tx_hash"],)).fetchone()
+        try:
+            assert ledger_order["give_asset"] == api_order["give_asset"]
+            assert ledger_order["get_asset"] == api_order["get_asset"]
+            assert ledger_order["give_quantity"] == api_order["give_quantity"]
+            assert ledger_order["get_quantity"] == api_order["get_quantity"]
+        except AssertionError:
+            print(api_order, ledger_order)
+        i += 1
+    print(f"Checked {i} balances")
