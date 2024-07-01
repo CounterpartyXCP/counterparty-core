@@ -13,6 +13,7 @@ This update requires a full reparse automatically launched.
 * Add `quantity_normalized` in Issuances endpoints
 * Fix verbose mode for order matches
 * Fix `NEW_TRANSACTION` events order on reparse
+* Check ZMQ `rawblock` topic twice per second on testnet
 
 ## Codebase
 

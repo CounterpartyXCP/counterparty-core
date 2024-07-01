@@ -252,6 +252,19 @@ def get_transaction_name(rule):
     return "".join([part.capitalize() for part in ROUTES[rule]["function"].__name__.split("_")])
 
 
+def refresh_current_block():
+    # update the current block index
+    global CURRENT_BLOCK_TIME  # noqa F811
+    with APIDBConnectionPool().connection() as db:
+        last_block = ledger.get_last_block(db)
+    if last_block:
+        util.CURRENT_BLOCK_INDEX = last_block["block_index"]
+        CURRENT_BLOCK_TIME = last_block["block_time"]
+    else:
+        util.CURRENT_BLOCK_INDEX = 0
+        CURRENT_BLOCK_TIME = 0
+
+
 @auth.login_required
 def handle_route(**kwargs):
     start_time = time.time()
@@ -267,17 +280,6 @@ def handle_route(**kwargs):
             start_time=start_time,
             query_args=query_args,
         )
-
-    # update the current block index
-    global CURRENT_BLOCK_TIME  # noqa F811
-    with APIDBConnectionPool().connection() as db:
-        last_block = ledger.get_last_block(db)
-    if last_block:
-        util.CURRENT_BLOCK_INDEX = last_block["block_index"]
-        CURRENT_BLOCK_TIME = last_block["block_time"]
-    else:
-        util.CURRENT_BLOCK_INDEX = 0
-        CURRENT_BLOCK_TIME = 0
 
     rule = str(request.url_rule.rule)
 
@@ -424,6 +426,11 @@ def refresh_backend_height(start=False):
     global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
     if not start:
         BACKEND_HEIGHT = get_backend_height()
+        refresh_current_block()
+        if not is_server_ready():
+            logger.warning(
+                f"Counterparty falls behind. {util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT}"
+            )
     else:
         # starting the timer is not blocking in case of Addrindexrs is not ready
         BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height)
