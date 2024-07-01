@@ -81,8 +81,11 @@ def api_root():
 
 def is_server_ready():
     # TODO: find a way to mock this function for testing
-    if request.url_root == "http://localhost:10009/":
-        return True
+    try:
+        if request.url_root == "http://localhost:10009/":
+            return True
+    except RuntimeError:
+        pass
     if BACKEND_HEIGHT is None:
         return False
     if util.CURRENT_BLOCK_INDEX in [BACKEND_HEIGHT, BACKEND_HEIGHT - 1]:
