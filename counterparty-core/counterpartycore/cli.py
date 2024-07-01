@@ -408,6 +408,9 @@ def main():
     parser_bootstrap = subparsers.add_parser(
         "bootstrap", help="bootstrap database with hosted snapshot"
     )
+    parser_bootstrap.add_argument(
+        "--bootstrap-url", help="the URL of the bootstrap snapshot to use"
+    )
     setup.add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
 
     parser_checkdb = subparsers.add_parser("check-db", help="do an integrity check on the database")
@@ -432,7 +435,7 @@ def main():
 
     # Bootstrapping
     if args.action == "bootstrap":
-        server.bootstrap(no_confirm=args.no_confirm)
+        server.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
 
     # PARSING
     elif args.action == "reparse":

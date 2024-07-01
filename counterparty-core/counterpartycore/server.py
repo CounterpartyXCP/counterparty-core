@@ -841,7 +841,7 @@ def configure_rpc(rpc_password=None):
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
 
 
-def bootstrap(no_confirm=False):
+def bootstrap(no_confirm=False, snapshot_url=None):
     warning_message = """WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
 from a centralized server maintained by the Counterparty Core development team.
 Because this method does not involve verifying the history of Counterparty transactions yourself,
@@ -859,10 +859,17 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     )
 
     # Set Constants.
-    bootstrap_url = config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
-    bootstrap_sig_url = (
-        config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
-    )
+    if snapshot_url is None:
+        bootstrap_url = (
+            config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
+        )
+        bootstrap_sig_url = (
+            config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
+        )
+    else:
+        bootstrap_url = snapshot_url
+        bootstrap_sig_url = snapshot_url.replace(".tar.gz", ".sig")
+
     tar_filename = os.path.basename(bootstrap_url)
     sig_filename = os.path.basename(bootstrap_sig_url)
     tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
