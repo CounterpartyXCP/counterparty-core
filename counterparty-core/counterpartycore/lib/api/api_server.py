@@ -417,8 +417,8 @@ def refresh_backend_height(start=False):
         BACKEND_HEIGHT = get_backend_height()
         refresh_current_block()
         if not is_server_ready():
-            logger.warning(
-                f"Counterparty falls behind. {util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT}"
+            logger.debug(
+                f"Counterparty is behind Bitcoin Core. {util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT}"
             )
     else:
         # starting the timer is not blocking in case of Addrindexrs is not ready
