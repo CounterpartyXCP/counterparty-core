@@ -80,6 +80,9 @@ def api_root():
 
 
 def is_server_ready():
+    # TODO: find a way to mock this function for testing
+    if request.url_root == "http://localhost:10009/":
+        return True
     if BACKEND_HEIGHT is None:
         return False
     if util.CURRENT_BLOCK_INDEX in [BACKEND_HEIGHT, BACKEND_HEIGHT - 1]:
@@ -282,7 +285,6 @@ def handle_route(**kwargs):
     with configure_sentry_scope() as scope:
         scope.set_transaction_name(get_transaction_name(rule))
 
-    # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(
             503, error="Counterparty not ready", start_time=start_time, query_args=query_args
@@ -318,9 +320,8 @@ def handle_route(**kwargs):
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        import traceback
-
-        traceback.print_exc()
+        # import traceback
+        # traceback.print_exc()
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )

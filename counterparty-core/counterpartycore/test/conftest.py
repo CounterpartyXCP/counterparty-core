@@ -324,7 +324,10 @@ def api_server_v2(request, cp_server):
         os.unlink(config.API_DATABASE + "-shm")
         os.unlink(config.API_DATABASE + "-wal")
 
-    print(config.API_DATABASE)
+    def is_server_ready():
+        return True
+
+    api_v2.is_server_ready = is_server_ready
 
     args = argparse.Namespace(**server_config)
     api_server = api_v2.APIServer()
@@ -334,6 +337,8 @@ def api_server_v2(request, cp_server):
     while True:
         try:
             result = requests.get("http://localhost:10009/v2/", timeout=30)
+            print(result.text)
+            print(result.status_code)
             if result.status_code != 200:
                 raise requests.exceptions.RequestException
             result = result.json()
