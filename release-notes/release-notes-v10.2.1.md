@@ -49,6 +49,7 @@ This update requires a full reparse automatically launched.
 * Add `supply_normalized` in asset info
 * Add `btc_amount` in `dispenses`
 * Use `all` for default status when getting orders
+* In the `/v2` result the list of routes is replaced by links to the Apiary documentation and to the blueprint
 
 ## CLI
 

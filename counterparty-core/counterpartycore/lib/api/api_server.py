@@ -1,6 +1,7 @@
 import argparse
 import logging
 import multiprocessing
+import os
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
@@ -46,6 +47,9 @@ BACKEND_HEIGHT_TIMER = None
 BLOCK_CACHE = OrderedDict()
 MAX_BLOCK_CACHE_SIZE = 1000
 
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+BLUEPRINT_FILEPATH = os.path.join(CURR_DIR, "..", "..", "..", "..", "apiary.apib")
+
 
 @auth.verify_password
 def verify_password(username, password):
@@ -57,15 +61,6 @@ def verify_password(username, password):
 def api_root():
     with APIDBConnectionPool().connection() as db:
         counterparty_height = ledger.last_db_index(db)
-    routes = []
-    for path, route in ROUTES.items():
-        routes.append(
-            {
-                "path": path,
-                "args": route.get("args", []),
-                "description": route.get("description", ""),
-            }
-        )
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
@@ -79,7 +74,8 @@ def api_root():
         "version": config.VERSION_STRING,
         "backend_height": BACKEND_HEIGHT,
         "counterparty_height": counterparty_height,
-        "routes": routes,
+        "documentation": "https://counterpartycore.docs.apiary.io/",
+        "blueprint": f"{request.url_root}v2/blueprint",
     }
 
 
@@ -364,6 +360,10 @@ def handle_not_found(error):
     return return_result(404, error="Not found")
 
 
+def handle_doc():
+    return flask.send_file(BLUEPRINT_FILEPATH)
+
+
 def run_api_server(args, interruped_value):
     sentry.init()
     # Initialise log and config
@@ -386,6 +386,10 @@ def run_api_server(args, interruped_value):
             util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         # Add routes
         app.add_url_rule("/v2/", view_func=handle_route, strict_slashes=False)
+        app.add_url_rule(
+            "/v2/blueprint", view_func=handle_doc, methods=["GET"], strict_slashes=False
+        )
+
         for path in ROUTES:
             methods = ["GET"]
             if path == "/v2/bitcoin/transactions":
@@ -393,6 +397,7 @@ def run_api_server(args, interruped_value):
             if not path.startswith("/v2/"):
                 methods = ["GET", "POST"]
             app.add_url_rule(path, view_func=handle_route, methods=methods, strict_slashes=False)
+
         app.register_error_handler(404, handle_not_found)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
