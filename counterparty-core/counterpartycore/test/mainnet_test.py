@@ -3,6 +3,7 @@ import json
 import pytest
 import requests
 
+from counterpartycore.lib import database
 from counterpartycore.test import (
     conftest,  # noqa: F401
 )
@@ -92,3 +93,39 @@ def test_compare_hashes(skip):
         # compare hashes
         assert check_ledger_hash == local_ledger_hash
         assert check_txlist_hash == local_txlist_hash
+
+
+MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty-docker-data/counterparty/"
+# MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
+
+
+def test_mainnet_api_db(skip):
+    if skip:
+        pytest.skip("Skipping mainnet API database test.")
+        return
+
+    ledger_db = database.get_db_connection(
+        f"{MAINNET_DB_DIR}counterparty.db", read_only=True, check_wal=False
+    )
+    api_db = database.get_db_connection(
+        f"{MAINNET_DB_DIR}counterparty.api.db", read_only=True, check_wal=False
+    )
+
+    api_sql = "SELECT * FROM balances ORDER BY random() LIMIT 10000"
+    api_balances = api_db.execute(api_sql)
+    i = 0
+    for api_balance in api_balances:
+        ledger_sql = (
+            "SELECT * FROM balances WHERE address = ? AND asset = ? ORDER BY rowid DESC LIMIT 1"
+        )
+        ledger_balance = ledger_db.execute(
+            ledger_sql, (api_balance["address"], api_balance["asset"])
+        ).fetchone()
+        if ledger_balance is None and api_balance["quantity"] == 0:
+            continue
+        try:
+            assert ledger_balance["quantity"] == api_balance["quantity"]
+        except AssertionError:
+            print(api_balance, ledger_balance)
+        i += 1
+    print(f"Checked {i} balances")

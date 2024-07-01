@@ -12,7 +12,7 @@ touch "./DOCKER_COMPOSE_TEST_LOCK"
 GIT_BRANCH="$1"
 
 # pull the latest code
-rm -rf counterparty-core
+sudo rm -rf counterparty-core
 git clone --branch "$GIT_BRANCH" https://github.com/CounterpartyXCP/counterparty-core.git
 cd counterparty-core
 
@@ -125,8 +125,7 @@ if [ "$COUNTERPARTY_RS_CACHED" != "CACHED" ]; then
     hatch env prune
 fi
 
-hatch run pytest counterpartycore/test/compare_hashes_test.py --comparehashes
-sudo python3 -m pytest counterpartycore/test/api_db_test.py --testapidb
+sudo python3 -m pytest counterpartycore/test/mainnet_test.py --testapidb --comparehashes
 cd ..
 
 

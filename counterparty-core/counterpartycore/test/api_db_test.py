@@ -95,39 +95,3 @@ def test_api_database():
     assert len(ledger_assets_info) == len(api_assets_info)
     for ledger_asset_info, api_asset_info in zip(ledger_assets_info, api_assets_info):
         assert ledger_asset_info["asset_name"] == api_asset_info["asset"]
-
-
-MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty-docker-data/counterparty/"
-# MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
-
-
-def test_mainnet_api_db(skip):
-    if skip:
-        pytest.skip("Skipping mainnet API database test.")
-        return
-
-    ledger_db = database.get_db_connection(
-        f"{MAINNET_DB_DIR}counterparty.db", read_only=True, check_wal=False
-    )
-    api_db = database.get_db_connection(
-        f"{MAINNET_DB_DIR}counterparty.api.db", read_only=True, check_wal=False
-    )
-
-    api_sql = "SELECT * FROM balances ORDER BY random() LIMIT 10000"
-    api_balances = api_db.execute(api_sql)
-    i = 0
-    for api_balance in api_balances:
-        ledger_sql = (
-            "SELECT * FROM balances WHERE address = ? AND asset = ? ORDER BY rowid DESC LIMIT 1"
-        )
-        ledger_balance = ledger_db.execute(
-            ledger_sql, (api_balance["address"], api_balance["asset"])
-        ).fetchone()
-        if ledger_balance is None and api_balance["quantity"] == 0:
-            continue
-        try:
-            assert ledger_balance["quantity"] == api_balance["quantity"]
-        except AssertionError:
-            print(api_balance, ledger_balance)
-        i += 1
-    print(f"Checked {i} balances")
