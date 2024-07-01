@@ -82,7 +82,7 @@ def api_root():
 def is_server_ready():
     if BACKEND_HEIGHT is None:
         return False
-    if util.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1:
+    if util.CURRENT_BLOCK_INDEX in [BACKEND_HEIGHT, BACKEND_HEIGHT - 1]:
         return True
     if time.time() - CURRENT_BLOCK_TIME < 60:
         return True
@@ -433,9 +433,14 @@ def refresh_backend_height(start=False):
         BACKEND_HEIGHT = get_backend_height()
         refresh_current_block()
         if not is_server_ready():
-            logger.warning(
-                f"Counterparty falls behind. {util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT}"
-            )
+            if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
+                logger.error(
+                    f"Counterparty falls behind. {util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT}"
+                )
+            else:
+                logger.warning(
+                    f"Bitcoind falls behind. {util.CURRENT_BLOCK_INDEX} > {BACKEND_HEIGHT}"
+                )
     else:
         # starting the timer is not blocking in case of Addrindexrs is not ready
         BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height)

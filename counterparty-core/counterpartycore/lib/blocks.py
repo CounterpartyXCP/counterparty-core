@@ -1079,7 +1079,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
                 previous_block_index = decoded_block["height"] - 1
             else:
                 previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
-            logger.info("Blockchain reorganization detected at Block %s.", previous_block_index)
+            logger.warning("Blockchain reorganization detected at Block %s.", previous_block_index)
             # rollback to the previous block
             rollback(db, block_index=previous_block_index + 1)
             util.CURRENT_BLOCK_INDEX = previous_block_index + 1
