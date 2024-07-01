@@ -2,10 +2,10 @@ import asyncio
 import logging
 import struct
 import time
-import traceback
 
 import zmq
 import zmq.asyncio
+from sentry_sdk import capture_exception
 
 from counterpartycore.lib import (
     backend,
@@ -16,6 +16,7 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
     mempool,
+    sentry,
 )
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -74,6 +75,7 @@ def start_blockchain_watcher(db):
 class BlockchainWatcher:
     def __init__(self, db):
         logger.debug("Initializing blockchain watcher...")
+        sentry.init()
         self.zmq_sequence_address, self.zmq_rawblock_address = get_zmq_notifications_addresses()
         self.db = db
         self.loop = asyncio.get_event_loop()
@@ -188,21 +190,24 @@ class BlockchainWatcher:
                 logger.trace("No message available in topic `%s`", topic_name)
                 return
             raise e
+        except Exception as e:
+            logger.error("Error receiving message: %s. Reconnecting...", e)
+            capture_exception(e)
+            self.connect_to_zmq()
+            return
         self.receive_message(topic, body, seq)
 
     async def handle(self):
         self.check_software_version_if_needed()
-        try:
-            # sequence topic
-            await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
-            # check every 10 seconds rawblock topic
-            if time.time() - self.last_block_check_time > 10:
-                await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
-                self.last_block_check_time = time.time()
-        except Exception as e:
-            logger.error(traceback.format_exc())
-            self.stop()
-            raise e
+
+        # sequence topic
+        await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
+        # check rawblock topic
+        check_block_delay = 0.5 if config.TESTNET else 10
+        if time.time() - self.last_block_check_time > check_block_delay:
+            await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
+            self.last_block_check_time = time.time()
+
         # schedule ourselves to receive the next message
         asyncio.ensure_future(self.handle())
 
