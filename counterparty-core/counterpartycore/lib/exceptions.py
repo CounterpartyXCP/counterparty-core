@@ -113,3 +113,15 @@ class JSONRPCInvalidRequest(Exception):
 
 class BitcoindZMQError(Exception):
     pass
+
+
+class APIWatcherError(Exception):
+    pass
+
+
+class SerializationError(Exception):
+    pass
+
+
+class NoEventToParse(Exception):
+    pass

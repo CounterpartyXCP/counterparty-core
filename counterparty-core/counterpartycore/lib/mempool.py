@@ -27,9 +27,13 @@ def parse_mempool_transactions(db, raw_tx_list):
             cursor.execute("SELECT tx_index FROM transactions ORDER BY tx_index DESC LIMIT 1")
             mempool_tx_index = cursor.fetchone()["tx_index"] + 1
             # list_tx
+            decoded_tx_count = 0
             for raw_tx in raw_tx_list:
                 decoded_tx = deserialize.deserialize_tx(raw_tx, use_txid=True)
-                logger.trace(f"Decoded transaction: {decoded_tx['tx_hash']}")
+                existing_tx = ledger.get_transaction(db, decoded_tx["tx_hash"])
+                if existing_tx:
+                    logger.trace(f"Transaction {decoded_tx['tx_hash']} already in the database")
+                    continue
                 mempool_tx_index = blocks.list_tx(
                     db,
                     config.MEMPOOL_BLOCK_HASH,
@@ -39,6 +43,8 @@ def parse_mempool_transactions(db, raw_tx_list):
                     tx_index=mempool_tx_index,
                     decoded_tx=decoded_tx,
                 )
+                decoded_tx_count += 1
+            logger.trace(f"{decoded_tx_count} transactions inserted from the mempool")
             # get message index before parsing the block
             cursor.execute("SELECT MAX(message_index) as message_index FROM messages")
             message_index_before = cursor.fetchone()["message_index"]

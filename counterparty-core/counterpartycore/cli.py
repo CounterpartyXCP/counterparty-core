@@ -405,20 +405,11 @@ def main():
     )
     setup.add_config_arguments(parser_rollback, CONFIG_ARGS, configfile)
 
-    parser_kickstart = subparsers.add_parser(
-        "kickstart", help="rapidly build database by reading from Bitcoin Core blockchain"
-    )
-    parser_kickstart.add_argument("--bitcoind-dir", help="Bitcoin Core data directory")
-    parser_kickstart.add_argument(
-        "--max-queue-size", type=int, help="Size of the multiprocessing.Queue for parsing blocks"
-    )
-    parser_kickstart.add_argument(
-        "--debug-block", type=int, help="Rollback and run kickstart for a single block;"
-    )
-    setup.add_config_arguments(parser_kickstart, CONFIG_ARGS, configfile)
-
     parser_bootstrap = subparsers.add_parser(
         "bootstrap", help="bootstrap database with hosted snapshot"
+    )
+    parser_bootstrap.add_argument(
+        "--bootstrap-url", help="the URL of the bootstrap snapshot to use"
     )
     setup.add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
 
@@ -444,7 +435,7 @@ def main():
 
     # Bootstrapping
     if args.action == "bootstrap":
-        server.bootstrap(no_confirm=args.no_confirm)
+        server.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
 
     # PARSING
     elif args.action == "reparse":
@@ -452,14 +443,6 @@ def main():
 
     elif args.action == "rollback":
         server.rollback(block_index=args.block_index)
-
-    elif args.action == "kickstart":
-        server.kickstart(
-            bitcoind_dir=args.bitcoind_dir,
-            force=args.force,
-            max_queue_size=args.max_queue_size,
-            debug_block=args.debug_block,
-        )
 
     elif args.action == "start":
         server.start_all(args)

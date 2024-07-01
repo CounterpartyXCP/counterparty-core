@@ -12,7 +12,7 @@ touch "./DOCKER_COMPOSE_TEST_LOCK"
 GIT_BRANCH="$1"
 
 # pull the latest code
-rm -rf counterparty-core
+sudo rm -rf counterparty-core
 git clone --branch "$GIT_BRANCH" https://github.com/CounterpartyXCP/counterparty-core.git
 cd counterparty-core
 
@@ -39,12 +39,12 @@ docker compose --profile mainnet up -d
 docker compose --profile testnet up -d
 
 # wait for counterparty-core to be ready
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Catch up complete.')" = "" ]; do
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'API Watcher - Catch up completed.')" = "" ]; do
     echo "Waiting for counterparty-core mainnet to be ready"
     sleep 1
 done
 
-while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Catch up complete.')" = "" ]; do
+while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'API Watcher - Catch up completed.')" = "" ]; do
     echo "Waiting for counterparty-core testnet to be ready"
     sleep 1
 done
@@ -108,7 +108,7 @@ docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
 docker compose --profile mainnet up -d counterparty-core
 
 # wait for counterparty-core to be ready
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Catch up complete.')" = "" ]; do
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'API Watcher - Catch up completed.')" = "" ]; do
     echo "Waiting for counterparty-core mainnet to be ready"
     sleep 1
 done
@@ -116,20 +116,16 @@ done
 # Run dredd test
 dredd
 
-previous_counterparty_rs_hash=$(cat ../counterparty_rs_hash)
-current_counterparty_rs_hash=$(find counterparty-rs/ -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum | awk '{print $1}')
-
 
 # Run compare hashes test
 . "$HOME/.profile"
 cd counterparty-core
 
 if [ "$COUNTERPARTY_RS_CACHED" != "CACHED" ]; then
-    echo $current_counterparty_rs_hash > ../counterparty_rs_hash
     hatch env prune
 fi
 
-hatch run pytest counterpartycore/test/compare_hashes_test.py --comparehashes
+sudo python3 -m pytest counterpartycore/test/mainnet_test.py --testapidb --comparehashes
 cd ..
 
 

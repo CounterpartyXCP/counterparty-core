@@ -8,7 +8,7 @@ import requests
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
 from counterpartycore.lib import config, deserialize, exceptions, util
-from counterpartycore.lib.kickstart.utils import ib2h
+from counterpartycore.lib.util import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

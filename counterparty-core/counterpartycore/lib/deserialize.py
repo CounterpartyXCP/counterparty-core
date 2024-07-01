@@ -1,5 +1,5 @@
-from counterpartycore.lib.kickstart.bc_data_stream import BCDataStream
-from counterpartycore.lib.kickstart.utils import (
+from counterpartycore.lib.bc_data_stream import BCDataStream
+from counterpartycore.lib.util import (
     b2h,
     double_hash,
     ib2h,

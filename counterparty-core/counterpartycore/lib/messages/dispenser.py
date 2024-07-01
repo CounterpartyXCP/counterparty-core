@@ -682,7 +682,12 @@ def parse(db, tx, message):
                                     db,
                                     existing[0]["rowid"],
                                     set_data,
-                                    {"source": tx["source"], "asset": asset, "status": STATUS_OPEN},
+                                    {
+                                        "source": tx["source"],
+                                        "asset": asset,
+                                        "status": STATUS_OPEN,
+                                        "tx_hash": existing[0]["tx_hash"],
+                                    },
                                 )
 
                                 dispenser_tx_hash = ledger.get_dispensers(
@@ -760,7 +765,10 @@ def parse(db, tx, message):
                         }
 
                     ledger.update_dispenser(
-                        db, existing[0]["rowid"], set_data, {"source": tx["source"], "asset": asset}
+                        db,
+                        existing[0]["rowid"],
+                        set_data,
+                        {"source": tx["source"], "asset": asset, "tx_hash": existing[0]["tx_hash"]},
                     )
 
                     log_data = {
@@ -947,7 +955,11 @@ def dispense(db, tx):
                     db,
                     dispenser["rowid"],
                     set_data,
-                    {"source": dispenser["source"], "asset": dispenser["asset"]},
+                    {
+                        "source": dispenser["source"],
+                        "asset": dispenser["asset"],
+                        "tx_hash": dispenser["tx_hash"],
+                    },
                 )
 
                 bindings = {
@@ -1006,7 +1018,11 @@ def close_pending(db, block_index):
                 db,
                 dispenser["rowid"],
                 set_data,
-                {"source": dispenser["source"], "asset": dispenser["asset"]},
+                {
+                    "source": dispenser["source"],
+                    "asset": dispenser["asset"],
+                    "tx_hash": dispenser["tx_hash"],
+                },
             )  # use tx_index=0 for block actions
 
             logger.info("Closed dispenser for %(asset)s at %(source)s", dispenser)

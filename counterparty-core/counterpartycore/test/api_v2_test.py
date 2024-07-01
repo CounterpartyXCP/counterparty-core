@@ -23,7 +23,7 @@ API_ROOT = "http://localhost:10009"
 @pytest.mark.usefixtures("api_server_v2")
 def test_api_v2(request):
     block_index = 310491
-    address = ADDR[0]
+    address = "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"
     asset = "NODIVISIBLE"
     asset1 = asset
     asset2 = "XCP"
@@ -92,6 +92,7 @@ def test_api_v2(request):
             url += "?verbose=true"
         print(url)
         result = requests.get(url)  # noqa: S113
+        print(result)
         results[url] = result.json()
         print(result.json())
         assert result.status_code == 200
@@ -127,21 +128,21 @@ def test_new_get_balances_by_address():
             "asset": "A95428956661682277",
             "quantity": 100000000,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91875000000},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "PARENT", "quantity": 100000000},
-        {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "DIVISIBLE",
-            "quantity": 98800000000,
-        },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "MAXI",
             "quantity": 9223372036854775807,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "NODIVISIBLE", "quantity": 985},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "LOCKED", "quantity": 1000},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "CALLABLE", "quantity": 1000},
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "NODIVISIBLE", "quantity": 985},
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "DIVISIBLE",
+            "quantity": 98800000000,
+        },
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91875000000},
     ]
 
 
@@ -212,6 +213,9 @@ def test_new_get_asset_info():
         "locked": False,
         "first_issuance_block_index": 310002,
         "last_issuance_block_index": 310002,
+        "asset_id": "1911882621324134",
+        "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        "supply": 1000,
     }
 
 

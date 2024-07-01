@@ -17,6 +17,7 @@ from operator import itemgetter
 
 import gnupg
 import requests
+from counterparty_rs import utils as pycoin_rs_utils
 
 from counterpartycore.lib import config, exceptions
 
@@ -550,3 +551,30 @@ class SingletonMeta(type):
             instance = super().__call__(*args, **kwargs)
             cls._instances[cls] = instance
         return cls._instances[cls]
+
+
+def format_duration(seconds):
+    duration_seconds = int(seconds)
+    hours, remainder = divmod(duration_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours}h {minutes}m {seconds}s"
+
+
+def b2h(b):
+    return binascii.hexlify(b).decode("utf-8")
+
+
+def random_hex(length):
+    return binascii.b2a_hex(os.urandom(length))
+
+
+def double_hash(b):
+    return hashlib.sha256(hashlib.sha256(b).digest()).digest()
+
+
+def inverse_hash(hashstring):
+    return pycoin_rs_utils.inverse_hash(hashstring)
+
+
+def ib2h(b):
+    return inverse_hash(b2h(b))

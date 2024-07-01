@@ -260,9 +260,13 @@ def parse(db, tx, message):
                 "address": tx["source"],
                 "options": options,
             }
-            sql = "insert or replace into addresses(address, options, block_index) values(:address, :options, :block_index)"
-            cursor = db.cursor()
-            cursor.execute(sql, op_bindings)
+            existing_address = ledger.get_addresses(db, address=tx["source"])
+            if len(existing_address) == 0:
+                ledger.insert_record(db, "addresses", op_bindings, "NEW_ADDRESS_OPTIONS")
+            else:
+                ledger.insert_update(
+                    db, "addresses", "address", tx["source"], op_bindings, "ADDRESS_OPTIONS_UPDATE"
+                )
 
     # Negative values (default to ignore).
     if value is None or value < 0:

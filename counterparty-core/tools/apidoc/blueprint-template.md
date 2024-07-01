@@ -155,14 +155,15 @@ Returns server information and the list of documented routes in JSON format.
 
     ```
     {
-        "server_ready": true,
-        "network": "mainnet",
-        "version": "10.2.0",
-        "backend_height": 840796,
-        "counterparty_height": 840796,
-        "routes": [
-            <API Documentation in JSON>
-        ]
+        "result": {
+            "server_ready": true,
+            "network": "mainnet",
+            "version": "10.2.0",
+            "backend_height": 850214,
+            "counterparty_height": 850214,
+            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "blueprint": "http://localhost:4000/v2/blueprint"
+        }
     }
     ```
 
