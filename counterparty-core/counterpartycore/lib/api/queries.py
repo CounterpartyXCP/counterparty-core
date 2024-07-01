@@ -1219,8 +1219,7 @@ def get_address_balances(
     return select_rows(
         db,
         "balances",
-        where={"address": address},
-        # wrap_where={"quantity__gt": 0},
+        where={"address": address, "quantity__gt": 0},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
