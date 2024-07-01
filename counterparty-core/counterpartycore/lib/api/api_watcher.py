@@ -488,7 +488,7 @@ def apply_migration():
 
 # checks that there is no divergence between the event in the API and ledger databases
 def check_event_hashes(api_db, ledger_db):
-    logger.debug("API Watcher - Check event hashes...")
+    logger.trace("API Watcher - Check event hashes...")
     last_api_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
     ledger_event_sql = "SELECT * FROM messages WHERE message_index = ?"
     last_api_event = fetch_one(api_db, last_api_event_sql)
