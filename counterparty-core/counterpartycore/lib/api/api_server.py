@@ -1,6 +1,7 @@
 import argparse
 import logging
 import multiprocessing
+import os
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
@@ -17,7 +18,7 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
-from counterpartycore.lib.api import queries
+from counterpartycore.lib.api import api_watcher, queries
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
     function_needs_db,
@@ -27,7 +28,7 @@ from counterpartycore.lib.api.util import (
     remove_rowids,
     to_json,
 )
-from counterpartycore.lib.database import DBConnectionPool
+from counterpartycore.lib.database import APIDBConnectionPool
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
@@ -46,6 +47,9 @@ BACKEND_HEIGHT_TIMER = None
 BLOCK_CACHE = OrderedDict()
 MAX_BLOCK_CACHE_SIZE = 1000
 
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+BLUEPRINT_FILEPATH = os.path.join(CURR_DIR, "..", "..", "..", "..", "apiary.apib")
+
 
 @auth.verify_password
 def verify_password(username, password):
@@ -55,17 +59,8 @@ def verify_password(username, password):
 
 
 def api_root():
-    with DBConnectionPool().connection() as db:
+    with APIDBConnectionPool().connection() as db:
         counterparty_height = ledger.last_db_index(db)
-    routes = []
-    for path, route in ROUTES.items():
-        routes.append(
-            {
-                "path": path,
-                "args": route.get("args", []),
-                "description": route.get("description", ""),
-            }
-        )
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
@@ -79,14 +74,21 @@ def api_root():
         "version": config.VERSION_STRING,
         "backend_height": BACKEND_HEIGHT,
         "counterparty_height": counterparty_height,
-        "routes": routes,
+        "documentation": "https://counterpartycore.docs.apiary.io/",
+        "blueprint": f"{request.url_root}v2/blueprint",
     }
 
 
 def is_server_ready():
+    # TODO: find a way to mock this function for testing
+    try:
+        if request.url_root == "http://localhost:10009/":
+            return True
+    except RuntimeError:
+        pass
     if BACKEND_HEIGHT is None:
         return False
-    if util.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1:
+    if util.CURRENT_BLOCK_INDEX in [BACKEND_HEIGHT, BACKEND_HEIGHT - 1]:
         return True
     if time.time() - CURRENT_BLOCK_TIME < 60:
         return True
@@ -255,7 +257,7 @@ def get_transaction_name(rule):
 def refresh_current_block():
     # update the current block index
     global CURRENT_BLOCK_TIME  # noqa F811
-    with DBConnectionPool().connection() as db:
+    with APIDBConnectionPool().connection() as db:
         last_block = ledger.get_last_block(db)
     if last_block:
         util.CURRENT_BLOCK_INDEX = last_block["block_index"]
@@ -286,7 +288,6 @@ def handle_route(**kwargs):
     with configure_sentry_scope() as scope:
         scope.set_transaction_name(get_transaction_name(rule))
 
-    # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(
             503, error="Counterparty not ready", start_time=start_time, query_args=query_args
@@ -307,7 +308,7 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        with DBConnectionPool().connection() as db:
+        with APIDBConnectionPool().connection() as db:
             result = execute_api_function(db, rule, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e), start_time=start_time, query_args=query_args)
@@ -322,6 +323,7 @@ def handle_route(**kwargs):
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
+        # import traceback
         # traceback.print_exc()
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
@@ -362,21 +364,36 @@ def handle_not_found(error):
     return return_result(404, error="Not found")
 
 
+def handle_doc():
+    return flask.send_file(BLUEPRINT_FILEPATH)
+
+
 def run_api_server(args, interruped_value):
     sentry.init()
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
-    logger.info("Starting API Server.")
+
+    watcher = api_watcher.APIWatcher()
+    watcher.start()
+
+    if watcher.stopped:
+        return
+
+    logger.info("Starting API Server...")
     app = Flask(config.APP_NAME)
     transaction.initialise()
     with app.app_context():
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        with DBConnectionPool().connection() as db:
+        with APIDBConnectionPool().connection() as db:
             util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         # Add routes
         app.add_url_rule("/v2/", view_func=handle_route, strict_slashes=False)
+        app.add_url_rule(
+            "/v2/blueprint", view_func=handle_doc, methods=["GET"], strict_slashes=False
+        )
+
         for path in ROUTES:
             methods = ["GET"]
             if path == "/v2/bitcoin/transactions":
@@ -384,6 +401,7 @@ def run_api_server(args, interruped_value):
             if not path.startswith("/v2/"):
                 methods = ["GET", "POST"]
             app.add_url_rule(path, view_func=handle_route, methods=methods, strict_slashes=False)
+
         app.register_error_handler(404, handle_not_found)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
@@ -403,11 +421,13 @@ def run_api_server(args, interruped_value):
         logger.trace("Keyboard Interrupt!")
     finally:
         logger.trace("Shutting down API Server...")
+        watcher.stop()
+        watcher.join()
         werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
-        DBConnectionPool().close()
+        APIDBConnectionPool().close()
         exit()
 
 
@@ -417,9 +437,14 @@ def refresh_backend_height(start=False):
         BACKEND_HEIGHT = get_backend_height()
         refresh_current_block()
         if not is_server_ready():
-            logger.debug(
-                f"Counterparty is behind Bitcoin Core. {util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT}"
-            )
+            if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
+                logger.error(
+                    f"Counterparty falls behind. {util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT}"
+                )
+            else:
+                logger.warning(
+                    f"Bitcoind falls behind. {util.CURRENT_BLOCK_INDEX} > {BACKEND_HEIGHT}"
+                )
     else:
         # starting the timer is not blocking in case of Addrindexrs is not ready
         BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height)

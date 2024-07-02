@@ -1,20 +1,28 @@
-# Release Notes - Counterparty Core v10.2.1 (2024-06-??)
+# Release Notes - Counterparty Core v10.3.0 (2024-07-??)
 
 
 # Upgrading
 
+This update introduces a new database dedicated and optimized for the API. This database is reconstructed only from events by the `API Watcher`. A new field `messages.event_hash` ensures the correspondence between the two databases in the event of a Blockchain reorg for example.
+This update requires a full reparse automatically launched.
 
 # ChangeLog
-
 
 ## Bugfixes
 
 * Add `quantity_normalized` in Issuances endpoints
 * Fix verbose mode for order matches
+* Fix `NEW_TRANSACTION` events order on reparse
 * Check ZMQ `rawblock` topic twice per second on testnet
 
 ## Codebase
 
+* Remove Kickstart
+* Remove `UPDATE` query for `addresses` table
+* Add `NEW_ADDRESS_OPTIONS` and `ADDRESS_OPTIONS_UPDATE` events
+* Add tx_hash in `DISPENSE_UPDATE` event
+* Add `event_hash` field in `messages` table
+* New database dedicated and optimized for the API
 
 ## API
 
@@ -39,6 +47,9 @@
 * Supports `dispense` message type
 * Add `/assets/<asset>/info` route
 * Add `supply_normalized` in asset info
+* Add `btc_amount` in `dispenses`
+* Use `all` for default status when getting orders
+* In the `/v2` result the list of routes is replaced by links to the Apiary documentation and to the blueprint
 
 ## CLI
 

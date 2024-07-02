@@ -122,7 +122,7 @@ Note: This update requires a reparse from Block 819250, which will proceed autom
 * Use `-v` for the `DEBUG` level, `-vv` for the `EVENT` level, and `-vvv` for the `TRACE` level (it is also possible to repeat the `--verbose` flag)
 * Clean up and refactor CLI outputs for all commands
 * Clean up log messages and add numerous additional logging statements
-
+* Add `--bootstrap-url` argument for `bootstrap` command
 
 # Credits
 * Ouziel Slama

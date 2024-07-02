@@ -256,30 +256,31 @@ def parse_block(
     )
     txlist = []
     transactions = cursor.fetchall()
+    # Add manual event to journal because transaction already exists
+    if reparsing:
+        for tx in transactions:
+            transaction_bindings = {
+                "tx_index": tx["tx_index"],
+                "tx_hash": tx["tx_hash"],
+                "block_index": tx["block_index"],
+                "block_hash": tx["block_hash"],
+                "block_time": tx["block_time"],
+                "source": tx["source"],
+                "destination": tx["destination"],
+                "btc_amount": tx["btc_amount"],
+                "fee": tx["fee"],
+                "data": tx["data"],
+            }
+            ledger.add_to_journal(
+                db,
+                block_index,
+                "insert",
+                "transactions",
+                "NEW_TRANSACTION",
+                transaction_bindings,
+            )
     for tx in transactions:
         try:
-            # Add manual event to journal because transaction already exists
-            if reparsing:
-                transaction_bindings = {
-                    "tx_index": tx["tx_index"],
-                    "tx_hash": tx["tx_hash"],
-                    "block_index": tx["block_index"],
-                    "block_hash": tx["block_hash"],
-                    "block_time": tx["block_time"],
-                    "source": tx["source"],
-                    "destination": tx["destination"],
-                    "btc_amount": tx["btc_amount"],
-                    "fee": tx["fee"],
-                    "data": tx["data"],
-                }
-                ledger.add_to_journal(
-                    db,
-                    block_index,
-                    "insert",
-                    "transactions",
-                    "NEW_TRANSACTION",
-                    transaction_bindings,
-                )
             parse_tx(db, tx)
             data = binascii.hexlify(tx["data"]).decode("UTF-8") if tx["data"] else ""
             txlist.append(
@@ -585,11 +586,18 @@ def initialise(db):
 
     # Addresses
     # Leaving this here because in the future this could work for other things besides broadcast
-    cursor.execute("""CREATE TABLE IF NOT EXISTS addresses(
-                      address TEXT UNIQUE,
-                      options INTEGER,
-                      block_index INTEGER)
-                   """)
+    create_addresses_query = """
+        CREATE TABLE IF NOT EXISTS addresses(
+            address TEXT,
+            options INTEGER,
+            block_index INTEGER
+        )
+    """
+    cursor.execute(create_addresses_query)
+
+    # migrate old table
+    if database.index_exists(cursor, "addresses", "sqlite_autoindex_addresses_1"):
+        database.copy_old_table(cursor, "addresses", create_addresses_query)
 
     database.create_indexes(
         cursor,
@@ -624,13 +632,16 @@ def initialise(db):
                       bindings TEXT,
                       timestamp INTEGER,
                       event TEXT,
-                      tx_hash TEXT)
+                      tx_hash TEXT,
+                      event_hash TEXT)
                   """)
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(messages)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN event TEXT""")
     if "tx_hash" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN tx_hash TEXT""")
+    if "event_hash" not in columns:
+        cursor.execute("""ALTER TABLE messages ADD COLUMN event_hash TEXT""")
 
     # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     database.create_indexes(
@@ -639,8 +650,10 @@ def initialise(db):
         [
             ["block_index"],
             ["block_index", "message_index"],
+            ["block_index", "event"],
             ["event"],
             ["tx_hash"],
+            ["event_hash"],
         ],
     )
 
@@ -825,21 +838,12 @@ def create_views(db):
     cursor.close()
 
 
-def list_tx(
-    db,
-    block_hash,
-    block_index,
-    block_time,
-    tx_hash,
-    tx_index,
-    decoded_tx,
-    block_parser=None,
-):
+def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
     assert type(tx_hash) == str  # noqa: E721
     cursor = db.cursor()
 
     source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
-        db, decoded_tx, block_index, block_parser=block_parser
+        db, decoded_tx, block_index
     )
 
     # For mempool
@@ -1055,7 +1059,7 @@ def get_next_tx_index(db):
     return tx_index
 
 
-def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
+def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
     # increment block index
@@ -1075,7 +1079,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
                 previous_block_index = decoded_block["height"] - 1
             else:
                 previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
-            logger.info("Blockchain reorganization detected at Block %s.", previous_block_index)
+            logger.warning("Blockchain reorganization detected at Block %s.", previous_block_index)
             # rollback to the previous block
             rollback(db, block_index=previous_block_index + 1)
             util.CURRENT_BLOCK_INDEX = previous_block_index + 1
@@ -1106,10 +1110,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
 
         # save transactions
         for transaction in decoded_block["transactions"]:
-            # for kickstart
-            if block_parser is not None:
-                # Cache transaction. We do that here because the block is fetched by another process.
-                block_parser.put_in_cache(transaction)
             tx_index = list_tx(
                 db,
                 decoded_block["block_hash"],
@@ -1118,7 +1118,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
                 transaction["tx_hash"],
                 tx_index,
                 decoded_tx=transaction,
-                block_parser=block_parser,
             )
         # Parse the transactions in the block.
         new_ledger_hash, new_txlist_hash, new_messages_hash = parse_block(
@@ -1196,13 +1195,10 @@ def catch_up(db, check_asset_conservation=True):
         decoded_block = fetcher.get_block()
         # decoded_block = block_fetcher.get_block()
         # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
-        tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
+        tx_index = parse_new_block(db, decoded_block, tx_index=tx_index)
 
         parsed_blocks += 1
-        duration_seconds = int(time.time() - start_time)
-        hours, remainder = divmod(duration_seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        formatted_duration = f"{hours}h {minutes}m {seconds}s"
+        formatted_duration = util.format_duration(time.time() - start_time)
         logger.debug(
             f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
         )
