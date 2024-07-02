@@ -95,6 +95,7 @@ def test_compare_hashes(skip):
         assert check_txlist_hash == local_txlist_hash
 
 
+# TODO: find a way to find the database path
 MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty-docker-data/counterparty/"
 # MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
 
