@@ -1203,9 +1203,7 @@ def catch_up(db, check_asset_conservation=True):
         hours, remainder = divmod(duration_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         formatted_duration = f"{hours}h {minutes}m {seconds}s"
-        logger.debug(
-            f"Parsed {parsed_blocks} blocks in {formatted_duration}."
-        )
+        logger.debug(f"Parsed {parsed_blocks} blocks in {formatted_duration}.")
 
         # Refresh block count.
         if util.CURRENT_BLOCK_INDEX == block_count:
