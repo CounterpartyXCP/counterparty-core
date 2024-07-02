@@ -751,7 +751,7 @@ def start_all(args):
         log.shutdown()
         fetcher.stop()
         try:
-            database.check_wal_file()
+            database.check_wal_file(config.DATABASE)
         except exceptions.WALFileFoundError:
             logger.error(
                 "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
