@@ -2,7 +2,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 #[pyfunction]
-fn b58_encode(decoded: &[u8]) -> String {
+pub fn b58_encode(decoded: &[u8]) -> String {
     bs58::encode(decoded).with_check().into_string()
 }
 
