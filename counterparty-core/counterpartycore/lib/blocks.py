@@ -279,6 +279,27 @@ def parse_block(
                 "NEW_TRANSACTION",
                 transaction_bindings,
             )
+            dispensers_outs = cursor.execute(
+                "SELECT * FROM transaction_outputs WHERE tx_index = ? ORDER BY rowid",
+                (tx["tx_index"],),
+            ).fetchall()
+            for next_out in dispensers_outs:
+                transaction_outputs_bindings = {
+                    "tx_index": tx["tx_index"],
+                    "tx_hash": tx["tx_hash"],
+                    "block_index": tx["block_index"],
+                    "out_index": next_out["out_index"],
+                    "destination": next_out["destination"],
+                    "btc_amount": next_out["btc_amount"],
+                }
+                ledger.add_to_journal(
+                    db,
+                    block_index,
+                    "insert",
+                    "transaction_outputs",
+                    "NEW_TRANSACTION_OUTPUT",
+                    transaction_outputs_bindings,
+                )
     for tx in transactions:
         try:
             parse_tx(db, tx)
