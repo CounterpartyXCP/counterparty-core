@@ -172,7 +172,7 @@ def insert_event(api_db, event):
 
 
 def rollback_event(api_db, event):
-    logger.info(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
+    logger.debug(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
     with api_db:  # all or nothing
         if event["previous_state"] is None or event["previous_state"] == "null":
             sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
@@ -211,7 +211,7 @@ def rollback_event(api_db, event):
 
 
 def rollback_events(api_db, block_index):
-    logger.info(f"API Watcher - Rolling back events to block {block_index}...")
+    logger.debug(f"API Watcher - Rolling back events to block {block_index}...")
     # api_db.execute("""PRAGMA foreign_keys=OFF""")
     cursor = api_db.cursor()
     sql = "SELECT * FROM messages WHERE block_index >= ? ORDER BY message_index DESC"
@@ -219,7 +219,7 @@ def rollback_events(api_db, block_index):
     for event in cursor:
         rollback_event(api_db, event)
     # api_db.execute("""PRAGMA foreign_keys=ON""")
-    logger.info(f"API Watcher - Events rolled back to block {block_index}")
+    logger.debug(f"API Watcher - Events rolled back to block {block_index}")
 
 
 def update_balances(api_db, event):
@@ -456,7 +456,7 @@ def catch_up(api_db, ledger_db):
     check_event_hashes(api_db, ledger_db)
     event_to_parse_count = get_event_to_parse_count(api_db, ledger_db)
     if event_to_parse_count > 0:
-        logger.info(f"API Watcher - {event_to_parse_count} events to catch up...")
+        logger.debug(f"API Watcher - {event_to_parse_count} events to catch up...")
         start_time = time.time()
         event_parsed = 0
         next_event = get_next_event_to_parse(api_db, ledger_db)
@@ -466,13 +466,13 @@ def catch_up(api_db, ledger_db):
             if event_parsed % 10000 == 0:
                 duration = time.time() - start_time
                 expected_duration = duration / event_parsed * event_to_parse_count
-                logger.info(
-                    f"API Watcher - {event_parsed}/{event_to_parse_count} events parsed in {format_duration(duration)} (expected {format_duration(expected_duration)})"
+                logger.debug(
+                    f"API Watcher - {event_parsed}/{event_to_parse_count} events parsed"
                 )
             next_event = get_next_event_to_parse(api_db, ledger_db)
         duration = time.time() - start_time
         logger.debug(f"API Watcher - {event_parsed} events parsed in {format_duration(duration)}")
-    logger.info("API Watcher - Catch up completed.")
+    logger.debug("API Watcher - Catch up completed.")
 
 
 def apply_migration():
@@ -488,7 +488,7 @@ def apply_migration():
 
 # checks that there is no divergence between the event in the API and ledger databases
 def check_event_hashes(api_db, ledger_db):
-    logger.trace("API Watcher - Check event hashes...")
+    logger.trace("API Watcher - Checking event hashes...")
     last_api_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
     ledger_event_sql = "SELECT * FROM messages WHERE message_index = ?"
     last_api_event = fetch_one(api_db, last_api_event_sql)
