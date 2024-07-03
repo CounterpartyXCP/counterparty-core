@@ -24,7 +24,7 @@ from counterpartycore.lib import (  # noqa: E402
     message_type,
     util,
 )
-from counterpartycore.lib.backend import fetcher
+from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
 
 from .messages import (  # noqa: E402
@@ -279,6 +279,27 @@ def parse_block(
                 "NEW_TRANSACTION",
                 transaction_bindings,
             )
+            dispensers_outs = cursor.execute(
+                "SELECT * FROM transaction_outputs WHERE tx_index = ? ORDER BY rowid",
+                (tx["tx_index"],),
+            ).fetchall()
+            for next_out in dispensers_outs:
+                transaction_outputs_bindings = {
+                    "tx_index": tx["tx_index"],
+                    "tx_hash": tx["tx_hash"],
+                    "block_index": tx["block_index"],
+                    "out_index": next_out["out_index"],
+                    "destination": next_out["destination"],
+                    "btc_amount": next_out["btc_amount"],
+                }
+                ledger.add_to_journal(
+                    db,
+                    block_index,
+                    "insert",
+                    "transaction_outputs",
+                    "NEW_TRANSACTION_OUTPUT",
+                    transaction_outputs_bindings,
+                )
     for tx in transactions:
         try:
             parse_tx(db, tx)
@@ -1062,6 +1083,17 @@ def get_next_tx_index(db):
 def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
+    # Use 'height' instead of 'block_index'
+    block_height = decoded_block.get("height")
+    if block_height is None:
+        raise ValueError(f"Unable to determine block height from decoded block: {decoded_block}")
+
+    # Check if the new block is consecutive
+    if block_height != util.CURRENT_BLOCK_INDEX + 1:
+        raise exceptions.DatabaseError(
+            f"Attempting to insert non-consecutive block. Expected block index: {util.CURRENT_BLOCK_INDEX + 1}, got: {block_height}"
+        )
+
     # increment block index
     util.CURRENT_BLOCK_INDEX += 1
 
@@ -1071,7 +1103,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
 
     if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
         # get previous block
-        previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
+        previous_block = ledger.LAST_BLOCK
 
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
@@ -1128,6 +1160,11 @@ def parse_new_block(db, decoded_block, tx_index=None):
             previous_txlist_hash=previous_block["txlist_hash"],
             previous_messages_hash=previous_block["messages_hash"],
         )
+        ledger.LAST_BLOCK = block_bindings
+        ledger.LAST_BLOCK["ledger_hash"] = new_ledger_hash
+        ledger.LAST_BLOCK["txlist_hash"] = new_txlist_hash
+        ledger.LAST_BLOCK["messages_hash"] = new_messages_hash
+
         duration = time.time() - start_time
 
         log_message = "Block %(block_index)s - Parsing complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
@@ -1171,6 +1208,8 @@ def catch_up(db, check_asset_conservation=True):
     if util.CURRENT_BLOCK_INDEX == 0:
         logger.info("New database.")
         util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
+    else:
+        ledger.LAST_BLOCK = ledger.get_block(db, util.CURRENT_BLOCK_INDEX)
 
     # Get block count.
     block_count = backend.bitcoind.getblockcount()
@@ -1180,9 +1219,7 @@ def catch_up(db, check_asset_conservation=True):
         backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
         block_count = backend.bitcoind.getblockcount()
 
-    # initialize blocks fetcher
-    # block_fetcher = backend.bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
-    fetcher.initialize(util.CURRENT_BLOCK_INDEX + 1)
+    fetcher = rsfetcher.RSFetcher(util.CURRENT_BLOCK_INDEX + 1)
 
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
@@ -1192,9 +1229,25 @@ def catch_up(db, check_asset_conservation=True):
 
     while util.CURRENT_BLOCK_INDEX < block_count:
         # Get block information and transactions
+        fetch_time_start = time.time()
         decoded_block = fetcher.get_block()
-        # decoded_block = block_fetcher.get_block()
-        # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
+        block_height = decoded_block.get("height")
+        fetch_time_end = time.time()
+        fetch_duration = fetch_time_end - fetch_time_start
+        logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
+
+        # Check for reorg
+        if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+            previous_block = ledger.LAST_BLOCK
+            if decoded_block["hash_prev"] != previous_block["block_hash"]:
+                raise exceptions.DatabaseError(
+                    f"Blockchain reorganization detected at block {util.CURRENT_BLOCK_INDEX + 1}. Manual intervention required."
+                )
+
+        # Check for gaps in the blockchain
+        assert block_height <= util.CURRENT_BLOCK_INDEX + 1
+
+        # Parse the current block
         tx_index = parse_new_block(db, decoded_block, tx_index=tx_index)
 
         parsed_blocks += 1

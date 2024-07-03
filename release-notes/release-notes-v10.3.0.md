@@ -15,6 +15,7 @@ This update requires an automatic full reparse of the Counterparty transactions 
 * Fix verbose logging of order matches
 * Fix the order of `NEW_TRANSACTION` events on reparse
 * Check the ZMQ `rawblock` topic more frequently on testnet
+* Trigger `NEW_TRANSACTION_OUTPUT` events during a reparse
 
 ## Codebase
 
@@ -23,6 +24,7 @@ This update requires an automatic full reparse of the Counterparty transactions 
 * Add `tx_hash` to `DISPENSE_UPDATE` event
 * Add `event_hash` field to the `messages` table
 * Add a new database optimized for the API. This new database is reconstructed only from events by the `API Watcher`, and a new field `messages.event_hash` ensures the correspondence between the two databases in the event of a blockchain reorganization. 
+* Parse transactions vouts with Rust
 
 ## API
 

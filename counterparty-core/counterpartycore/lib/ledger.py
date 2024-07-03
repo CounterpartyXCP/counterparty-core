@@ -3,6 +3,7 @@ import fractions
 import json
 import logging
 import time
+from contextlib import contextmanager
 from decimal import Decimal as D
 
 from counterpartycore.lib import backend, config, exceptions, log, util
@@ -11,6 +12,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 BLOCK_LEDGER = []
 BLOCK_JOURNAL = []
+LAST_BLOCK = None
 
 
 ###############################
@@ -18,15 +20,23 @@ BLOCK_JOURNAL = []
 ###############################
 
 
-def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
+@contextmanager
+def get_cursor(db):
     cursor = db.cursor()
-    fields_name = ", ".join(record.keys())
-    fields_values = ", ".join([f":{key}" for key in record.keys()])
-    # no sql injection here
-    query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, record)
-    cursor.close()
-    # Add event to journal
+    try:
+        yield cursor
+    finally:
+        cursor.close()
+
+
+def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
+    fields = list(record.keys())
+    placeholders = ", ".join(["?" for _ in fields])
+    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608
+
+    with get_cursor(db) as cursor:
+        cursor.execute(query, list(record.values()))
+
     add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
 
 
@@ -125,8 +135,6 @@ def curr_time():
 
 
 def add_to_journal(db, block_index, command, category, event, bindings):
-    cursor = db.cursor()
-
     # Get last message index.
     try:
         previous_message = last_message(db)
@@ -136,13 +144,10 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         message_index = 0
         previous_event_hash = ""
 
-    # Handle binary data.
-    items = {}
-    for key, value in bindings.items():
-        if isinstance(value, bytes):
-            items[key] = binascii.hexlify(value).decode("ascii")
-        else:
-            items[key] = value
+    items = {
+        key: binascii.hexlify(value).decode("ascii") if isinstance(value, bytes) else value
+        for key, value in bindings.items()
+    }
 
     current_time = curr_time()
     bindings_string = json.dumps(items, sort_keys=True, separators=(",", ":"))
@@ -183,6 +188,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
                 :tx_hash,
                 :event_hash
             )"""
+    cursor = db.cursor()
     cursor.execute(query, message_bindings)
     cursor.close()
 

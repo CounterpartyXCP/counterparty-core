@@ -956,22 +956,27 @@ def check_change(protocol_change, change_name):
 def software_version():
     if config.FORCE:
         return
-    logger.debug("Checking Counterparty version.")
+    logger.debug("Checking Counterparty version...")
 
     try:
         response = requests.get(
             config.PROTOCOL_CHANGES_URL, headers={"cache-control": "no-cache"}, timeout=10
         )
         versions = json.loads(response.text)
-    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError) as e:  # noqa: F841
-        logger.warning("Unable to check version! " + str(sys.exc_info()[1]))
+    except (
+        requests.exceptions.ConnectionError,
+        ConnectionRefusedError,
+        ValueError,
+        requests.exceptions.ReadTimeout,
+    ):
+        logger.warning("Unable to check Counterparty version.", exc_info=sys.exc_info())
         return
 
     for change_name in versions:
         protocol_change = versions[change_name]
         try:
             check_change(protocol_change, change_name)
-        except VersionUpdateRequiredError as e:  # noqa: F841
+        except VersionUpdateRequiredError:  # noqa: F841
             logger.error("Version Update Required", exc_info=sys.exc_info())
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
