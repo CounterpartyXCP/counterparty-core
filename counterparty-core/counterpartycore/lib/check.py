@@ -1005,7 +1005,7 @@ def database_version(db):
         )
     elif version_minor != config.VERSION_MINOR:
         # Reparse transactions from the vesion block if minor version has changed.
-        message = f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}."
+        message = f"Client minor version number mismatch. Triggering a reparse... ({version_minor} ≠ {config.VERSION_MINOR})"
         need_reparse_from = (
             config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
             if config.TESTNET
