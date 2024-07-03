@@ -28,7 +28,7 @@ from counterpartycore.lib.api.util import (
     remove_rowids,
     to_json,
 )
-from counterpartycore.lib.database import APIDBConnectionPool
+from counterpartycore.lib.database import APIDBConnectionPool, get_db_connection
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
@@ -254,11 +254,10 @@ def get_transaction_name(rule):
     return "".join([part.capitalize() for part in ROUTES[rule]["function"].__name__.split("_")])
 
 
-def refresh_current_block():
+def refresh_current_block(db):
     # update the current block index
     global CURRENT_BLOCK_TIME  # noqa F811
-    with APIDBConnectionPool().connection() as db:
-        last_block = ledger.get_last_block(db)
+    last_block = ledger.get_last_block(db)
     if last_block:
         util.CURRENT_BLOCK_INDEX = last_block["block_index"]
         CURRENT_BLOCK_TIME = last_block["block_time"]
@@ -405,8 +404,10 @@ def run_api_server(args, interruped_value):
         app.register_error_handler(404, handle_not_found)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
+        timer_db = None
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
-            refresh_backend_height(start=True)
+            timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+            refresh_backend_height(timer_db, start=True)
         else:
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
@@ -427,15 +428,17 @@ def run_api_server(args, interruped_value):
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
+        if timer_db:
+            timer_db.close()
         APIDBConnectionPool().close()
         exit()
 
 
-def refresh_backend_height(start=False):
+def refresh_backend_height(db, start=False):
     global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
     if not start:
         BACKEND_HEIGHT = get_backend_height()
-        refresh_current_block()
+        refresh_current_block(db)
         if not is_server_ready():
             if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
                 logger.error(
@@ -447,12 +450,12 @@ def refresh_backend_height(start=False):
                 )
     else:
         # starting the timer is not blocking in case of Addrindexrs is not ready
-        BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height)
+        BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height, (db,))
         BACKEND_HEIGHT_TIMER.start()
         return
     if BACKEND_HEIGHT_TIMER:
         BACKEND_HEIGHT_TIMER.cancel()
-    BACKEND_HEIGHT_TIMER = Timer(REFRESH_BACKEND_HEIGHT_INTERVAL, refresh_backend_height)
+    BACKEND_HEIGHT_TIMER = Timer(REFRESH_BACKEND_HEIGHT_INTERVAL, refresh_backend_height, (db,))
     BACKEND_HEIGHT_TIMER.start()
 
 
