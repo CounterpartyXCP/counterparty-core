@@ -33,7 +33,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import util as api_util
-from counterpartycore.lib.database import DBConnectionPool
+from counterpartycore.lib.database import APIDBConnectionPool
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -105,48 +105,6 @@ API_TABLES = [
     "transactions",
 ]
 
-VIEW_QUERIES = {
-    "balances": """
-        SELECT *, MAX(rowid) AS rowid
-        FROM balances
-        GROUP BY address, asset
-    """,
-    "orders": """
-        SELECT *, MAX(rowid) AS rowid
-        FROM orders
-        GROUP BY tx_hash
-    """,
-    "order_matches": """
-        SELECT *, MAX(rowid) AS rowid
-        FROM order_matches
-        GROUP BY id
-    """,
-    "bets": """
-        SELECT *, MAX(rowid) AS rowid
-        FROM bets
-        GROUP BY tx_hash
-    """,
-    "bets_matches": """
-        SELECT *, MAX(rowid) AS rowid
-        FROM bet_matches
-        GROUP BY id
-    """,
-    "rps": """
-        SELECT *, MAX(rowid) AS rowid
-        FROM rps
-        GROUP BY tx_hash
-    """,
-    "rps_matches": """
-        SELECT *, MAX(rowid) AS rowid
-        FROM rps_matches
-        GROUP BY id
-    """,
-    "dispensers": """
-        SELECT *, MAX(rowid) AS rowid
-        FROM dispensers
-        GROUP BY tx_hash
-    """,
-}
 
 JSON_RPC_ERROR_API_COMPOSE = -32001  # code to use for error composing transaction result
 
@@ -306,9 +264,8 @@ def get_rows(
         adjust_get_sends_memo_filters(filters)
 
     # SELECT
-    source = VIEW_QUERIES[table] if table in VIEW_QUERIES else table
     # no sql injection here
-    statement = f"""SELECT * FROM ({source})"""  # nosec B608  # noqa: S608
+    statement = f"""SELECT * FROM ({table})"""  # nosec B608  # noqa: S608
     # WHERE
     bindings = []
     conditions = []
@@ -551,7 +508,7 @@ class APIServer(threading.Thread):
         self.is_ready = False
         self.server = None
         self.ctx = None
-        self.connection_pool = DBConnectionPool()
+        self.connection_pool = APIDBConnectionPool()
         threading.Thread.__init__(self)
         sentry.init()
 

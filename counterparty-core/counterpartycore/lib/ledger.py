@@ -81,9 +81,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     event_paylod = update_data | {id_name: id_value} | event_info
     if "rowid" in event_paylod:
         del event_paylod["rowid"]
-    add_to_journal(
-        db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod
-    )
+    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, event_paylod)
 
 
 ###########################
@@ -139,10 +137,12 @@ def curr_time():
 def add_to_journal(db, block_index, command, category, event, bindings):
     # Get last message index.
     try:
-        message = last_message(db)
-        message_index = message["message_index"] + 1
+        previous_message = last_message(db)
+        message_index = previous_message["message_index"] + 1
+        previous_event_hash = previous_message["event_hash"] or ""
     except exceptions.DatabaseError:
         message_index = 0
+        previous_event_hash = ""
 
     items = {
         key: binascii.hexlify(value).decode("ascii") if isinstance(value, bytes) else value
@@ -151,23 +151,46 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
     current_time = curr_time()
     bindings_string = json.dumps(items, sort_keys=True, separators=(",", ":"))
-
-    query = """INSERT INTO messages VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?)"""
-
-    message_bindings = (
-        message_index,
-        block_index,
-        command,
-        category,
-        bindings_string,
-        current_time,
-        event,
-        util.CURRENT_TX_HASH,
+    event_hash_content = "".join(
+        [
+            str(message_index),
+            str(block_index),
+            command,
+            category,
+            bindings_string,
+            event,
+            util.CURRENT_TX_HASH or "",
+            previous_event_hash,
+        ]
     )
-
-    with get_cursor(db) as cursor:
-        cursor.execute(query, message_bindings)
+    event_hash = binascii.hexlify(util.dhash(event_hash_content)).decode("ascii")
+    message_bindings = {
+        "message_index": message_index,
+        "block_index": block_index,
+        "command": command,
+        "category": category,
+        "bindings": bindings_string,
+        "timestamp": current_time,
+        "event": event,
+        "tx_hash": util.CURRENT_TX_HASH,
+        "event_hash": event_hash,
+    }
+    query = """INSERT INTO messages (
+                message_index, block_index, command, category, bindings, timestamp, event, tx_hash, event_hash
+            ) VALUES (
+                :message_index,
+                :block_index,
+                :command,
+                :category,
+                :bindings,
+                :timestamp,
+                :event,
+                :tx_hash,
+                :event_hash
+            )"""
+    cursor = db.cursor()
+    cursor.execute(query, message_bindings)
+    cursor.close()
 
     BLOCK_JOURNAL.append(f"{command}{category}{bindings_string}")
 
@@ -1083,7 +1106,7 @@ def get_addresses(db, address=None):
         where.append("address = ?")
         bindings.append(address)
     # no sql injection here
-    query = f"""SELECT * FROM addresses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    query = f"""SELECT *, MAX(rowid) AS rowid FROM addresses WHERE ({" AND ".join(where)}) GROUP BY address"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

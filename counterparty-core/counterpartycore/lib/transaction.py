@@ -1835,8 +1835,8 @@ def unpack(db, datahex: str, block_index: int = None):
                         "asset": asset_name,
                         "destination": send_info[0][0],
                         "quantity": send_info[0][1],
-                        "memo": send_info[0][2],
-                        "memo_is_hex": send_info[0][3],
+                        "memo": send_info[0][2] if len(send_info[0]) > 2 else None,
+                        "memo_is_hex": send_info[0][3] if len(send_info[0]) > 3 else None,
                     }
                 )
         # RPS

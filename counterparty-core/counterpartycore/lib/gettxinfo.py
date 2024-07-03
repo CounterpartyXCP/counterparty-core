@@ -4,10 +4,10 @@ import struct
 
 from counterpartycore.lib import arc4, backend, config, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
-from counterpartycore.lib.kickstart.utils import ib2h, inverse_hash
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
 from counterpartycore.lib.transaction_helper import p2sh_encoding
+from counterpartycore.lib.util import inverse_hash
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -142,14 +142,12 @@ def get_address(scriptpubkey, block_index):
         return address
 
 
-def get_vin_info(vin, block_parser=None):
+def get_vin_info(vin):
     if "value" in vin:
         return vin["value"], vin["script_pub_key"], vin["is_segwit"]
-    if block_parser:
-        vin_ctx = block_parser.read_raw_transaction(ib2h(vin["hash"]))
-    else:
-        # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
-        vin_ctx = backend.bitcoind.get_decoded_transaction(vin["hash"])
+
+    # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
+    vin_ctx = backend.bitcoind.get_decoded_transaction(vin["hash"])
 
     is_segwit = len(vin_ctx["vtxinwit"]) > 0
     vout = vin_ctx["vout"][vin["n"]]
@@ -157,12 +155,12 @@ def get_vin_info(vin, block_parser=None):
     return vout["value"], vout["script_pub_key"], is_segwit
 
 
-def get_transaction_sources(decoded_tx, block_parser=None):
+def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
 
     for vin in decoded_tx["vin"][:]:  # Loop through inputs.
-        vout_value, script_pubkey, _is_segwit = get_vin_info(vin, block_parser=block_parser)
+        vout_value, script_pubkey, _is_segwit = get_vin_info(vin)
 
         outputs_value += vout_value
 
@@ -197,13 +195,13 @@ def get_transaction_sources(decoded_tx, block_parser=None):
     return "-".join(sources), outputs_value
 
 
-def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_parser=None):
+def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
     p2sh_encoding_source = None
     data = b""
     outputs_value = 0
 
     for vin in decoded_tx["vin"]:
-        vout_value, _script_pubkey, is_segwit = get_vin_info(vin, block_parser=block_parser)
+        vout_value, _script_pubkey, is_segwit = get_vin_info(vin)
 
         if util.enabled("prevout_segwit_fix"):
             prevout_is_segwit = is_segwit
@@ -342,9 +340,7 @@ def parse_transaction_vouts(decoded_tx):
     return destinations, btc_amount, fee, data, potential_dispensers
 
 
-def get_tx_info_new(
-    db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=False, composing=False
-):
+def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -375,7 +371,7 @@ def get_tx_info_new(
     p2sh_encoding_source = None
     if util.enabled("p2sh_encoding") and data == b"P2SH":
         p2sh_encoding_source, data, outputs_value = get_transaction_source_from_p2sh(
-            decoded_tx, p2sh_is_segwit, block_parser=block_parser
+            decoded_tx, p2sh_is_segwit
         )
         fee += outputs_value
         fee_added = True
@@ -396,7 +392,7 @@ def get_tx_info_new(
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
     if p2sh_encoding_source is None:
-        sources, outputs_value = get_transaction_sources(decoded_tx, block_parser=block_parser)
+        sources, outputs_value = get_transaction_sources(decoded_tx)
         if not fee_added:
             fee += outputs_value
     else:  # use the source from the p2sh data source
@@ -415,7 +411,7 @@ def get_tx_info_new(
     return sources, destinations, btc_amount, round(fee), data, []
 
 
-def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
+def get_tx_info_legacy(decoded_tx, block_index):
     """Get singlesig transaction info.
     The destination, if it exists, always comes before the data output; the
     change, if it exists, always comes after.
@@ -511,7 +507,7 @@ def get_tx_info_legacy(decoded_tx, block_index, block_parser=None):
     return source, destination, btc_amount, fee, data, []
 
 
-def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=False):
+def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
@@ -521,7 +517,6 @@ def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=
             db,
             decoded_tx,
             block_index,
-            block_parser=block_parser,
             p2sh_is_segwit=p2sh_is_segwit,
         )
     elif util.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
@@ -529,16 +524,15 @@ def _get_tx_info(db, decoded_tx, block_index, block_parser=None, p2sh_is_segwit=
             db,
             decoded_tx,
             block_index,
-            block_parser=block_parser,
         )
     else:
-        return get_tx_info_legacy(decoded_tx, block_index, block_parser=block_parser)
+        return get_tx_info_legacy(decoded_tx, block_index)
 
 
-def get_tx_info(db, decoded_tx, block_index, block_parser=None):
+def get_tx_info(db, decoded_tx, block_index):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     try:
-        return _get_tx_info(db, decoded_tx, block_index, block_parser)
+        return _get_tx_info(db, decoded_tx, block_index)
     except DecodeError as e:  # noqa: F841
         return b"", None, None, None, None, None
     except BTCOnlyError as e:  # noqa: F841

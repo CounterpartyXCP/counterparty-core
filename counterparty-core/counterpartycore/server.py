@@ -28,9 +28,8 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
-from counterpartycore.lib import kickstart as kickstarter
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1
+from counterpartycore.lib.api import api_v1, api_watcher
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
@@ -226,7 +225,7 @@ def initialise_config(
         config.DATABASE = os.path.join(data_dir, filename)
 
     config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
-
+    config.API_DATABASE = config.DATABASE.replace(".db", ".api.db")
     config.API_LIMIT_ROWS = api_limit_rows
 
     ##############
@@ -778,18 +777,10 @@ def rollback(block_index=None):
     db = database.initialise_db()
     try:
         blocks.rollback(db, block_index=block_index)
+        api_watcher.rollback(block_index or 0)
     finally:
         database.optimize(db)
         db.close()
-
-
-def kickstart(bitcoind_dir, force=False, max_queue_size=None, debug_block=None):
-    kickstarter.run(
-        bitcoind_dir=bitcoind_dir,
-        force=force,
-        max_queue_size=max_queue_size,
-        debug_block=debug_block,
-    )
 
 
 def vacuum():
@@ -850,7 +841,7 @@ def configure_rpc(rpc_password=None):
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
 
 
-def bootstrap(no_confirm=False):
+def bootstrap(no_confirm=False, snapshot_url=None):
     warning_message = """WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
 from a centralized server maintained by the Counterparty Core development team.
 Because this method does not involve verifying the history of Counterparty transactions yourself,
@@ -868,31 +859,41 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     )
 
     # Set Constants.
-    bootstrap_url = config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
-    bootstrap_sig_url = (
-        config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
-    )
+    if snapshot_url is None:
+        bootstrap_url = (
+            config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
+        )
+        bootstrap_sig_url = (
+            config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
+        )
+    else:
+        bootstrap_url = snapshot_url
+        bootstrap_sig_url = snapshot_url.replace(".tar.gz", ".sig")
+
     tar_filename = os.path.basename(bootstrap_url)
     sig_filename = os.path.basename(bootstrap_sig_url)
     tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
     sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
-    database_path = os.path.join(data_dir, config.APP_NAME)
+    ledger_database_path = os.path.join(data_dir, config.APP_NAME)
     if config.TESTNET:
-        database_path += ".testnet"
-    database_path += ".db"
+        ledger_database_path += ".testnet"
+    ledger_database_path += ".db"
+    api_database_path = ledger_database_path.replace(".db", ".api.db")
 
     # Prepare Directory.
     if not os.path.exists(data_dir):
         os.makedirs(data_dir, mode=0o755)
-    if os.path.exists(database_path):
-        os.remove(database_path)
-    # Delete SQLite Write-Ahead-Log
-    wal_path = database_path + "-wal"
-    shm_path = database_path + "-shm"
-    if os.path.exists(wal_path):
-        os.remove(wal_path)
-    if os.path.exists(shm_path):
-        os.remove(shm_path)
+
+    for database_path in [ledger_database_path, api_database_path]:
+        if os.path.exists(database_path):
+            os.remove(database_path)
+        # Delete SQLite Write-Ahead-Log
+        wal_path = database_path + "-wal"
+        shm_path = database_path + "-shm"
+        if os.path.exists(wal_path):
+            os.remove(wal_path)
+        if os.path.exists(shm_path):
+            os.remove(shm_path)
 
     # Define Progress Bar.
     spinner = log.Spinner(f"Downloading database from {bootstrap_url}...")
@@ -920,11 +921,16 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         with tarfile.open(tarball_path, "r:gz") as tar_file:
             tar_file.extractall(path=data_dir)  # nosec B202  # noqa: S202
 
-    assert os.path.exists(database_path)
+    assert os.path.exists(ledger_database_path)
+    assert os.path.exists(api_database_path)
     # user and group have "rw" access
-    os.chmod(database_path, 0o660)  # nosec B103
+    os.chmod(ledger_database_path, 0o660)  # nosec B103
+    os.chmod(api_database_path, 0o660)  # nosec B103
 
     with log.Spinner("Cleaning up..."):
         os.remove(tarball_path)
 
-    cprint(f"Database has been successfully bootstrapped to {database_path}.", "green")
+    cprint(
+        f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
+        "green",
+    )

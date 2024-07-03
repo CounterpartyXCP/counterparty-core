@@ -260,7 +260,14 @@ def divide(value1, value2):
 
 
 def inject_issuances_and_block_times(db, result_list):
-    asset_fields = ["asset", "give_asset", "get_asset", "dividend_asset"]
+    asset_fields = [
+        "asset",
+        "give_asset",
+        "get_asset",
+        "dividend_asset",
+        "forward_asset",
+        "backward_asset",
+    ]
 
     # gather asset list and block indexes
     asset_list = []
@@ -366,9 +373,12 @@ def inject_normalized_quantities(result_list):
         "get_quantity": {"asset_field": "get_asset_info", "divisible": None},
         "get_remaining": {"asset_field": "get_asset_info", "divisible": None},
         "give_remaining": {"asset_field": "give_asset_info", "divisible": None},
+        "forward_quantity": {"asset_field": "forward_asset_info", "divisible": None},
+        "backward_quantity": {"asset_field": "backward_asset_info", "divisible": None},
         "escrow_quantity": {"asset_field": "asset_info", "divisible": None},
         "dispense_quantity": {"asset_field": "asset_info", "divisible": None},
         "quantity_per_unit": {"asset_field": "dividend_asset_info", "divisible": None},
+        "supply": {"asset_field": "asset_info", "divisible": None},
         "satoshirate": {"asset_field": None, "divisible": True},
         "burned": {"asset_field": None, "divisible": True},
         "earned": {"asset_field": None, "divisible": True},
@@ -412,6 +422,12 @@ def inject_normalized_quantities(result_list):
                     item["dispenser"] = inject_normalized_quantity(
                         item["dispenser"], field_name, {"divisible": field_info["divisible"]}
                     )
+                continue
+
+            if field_name == "supply" and field_name in item:
+                item = inject_normalized_quantity(
+                    item, field_name, {"divisible": item["divisible"]}
+                )
                 continue
 
             if "unpacked_data" in item and isinstance(
