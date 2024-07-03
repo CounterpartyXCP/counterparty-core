@@ -1,28 +1,28 @@
-# Release Notes - Counterparty Core v10.3.0 (2024-07-??)
+# Release Notes - Counterparty Core v10.3.0 (2024-07-03)
+
+This version most notably introduces a major performance optimization for node API access: an additional SQLite3 database has been added which tracks the current state of all Counterparty objects (in addition to the primary database that is purely log-structured). Other major changes for this version include the removal of the `kickstart` functionality, which is possible now that `start` is performant, and numerous tweaks and improvements to the v2 API.
 
 
 # Upgrading
 
-This update introduces a new database dedicated and optimized for the API. This database is reconstructed only from events by the `API Watcher`. A new field `messages.event_hash` ensures the correspondence between the two databases in the event of a Blockchain reorg for example.
-This update requires a full reparse automatically launched.
+This update requires an automatic full reparse of the Counterparty transactions to populate the new database file.
+
 
 # ChangeLog
 
 ## Bugfixes
 
-* Add `quantity_normalized` in Issuances endpoints
-* Fix verbose mode for order matches
-* Fix `NEW_TRANSACTION` events order on reparse
-* Check ZMQ `rawblock` topic twice per second on testnet
+* Fix verbose logging of order matches
+* Fix the order of `NEW_TRANSACTION` events on reparse
+* Check the ZMQ `rawblock` topic more frequently on testnet
 
 ## Codebase
 
-* Remove Kickstart
-* Remove `UPDATE` query for `addresses` table
+* Remove `UPDATE` query for the `addresses` table
 * Add `NEW_ADDRESS_OPTIONS` and `ADDRESS_OPTIONS_UPDATE` events
-* Add tx_hash in `DISPENSE_UPDATE` event
-* Add `event_hash` field in `messages` table
-* New database dedicated and optimized for the API
+* Add `tx_hash` to `DISPENSE_UPDATE` event
+* Add `event_hash` field to the `messages` table
+* Add a new database optimized for the API. This new database is reconstructed only from events by the `API Watcher`, and a new field `messages.event_hash` ensures the correspondence between the two databases in the event of a blockchain reorganization. 
 
 ## API
 
@@ -37,27 +37,30 @@ This update requires a full reparse automatically launched.
     - `/v2/sweeps/<tx_hash>`
     - `/v2/broadcasts`
     - `/v2/broadcasts/<tx_hash>`
-* More Detailed InsufficientBTC Error
-* When `verbose=true`, inject `unpacked_data` into all results containing a `data` field
-* Remove `asset_info` from ASSET_ISSUANCE event
-* Trailing zeros for divisible quantities
+    - `/v2/assets/<asset>/info`
+* Add `quantity_normalized` to issuances endpoints
+* Increase the detail for the `InsufficientBTC` error
+* Inject `unpacked_data` into all results containing a `data` field when `verbose=true`
+* Remove `asset_info` from the `ASSET_ISSUANCE` event
+* Standardize on trailing zeros for divisible quantities
 * `/v2/orders/<order_hash>/matches` returns all order matches by default
 * Fix cache for `/v2/blocks/last` route
 * Clean and enrich `message_data` for MPMA sends
-* Supports `dispense` message type
-* Add `/assets/<asset>/info` route
-* Add `supply_normalized` in asset info
-* Add `btc_amount` in `dispenses`
-* Use `all` for default status when getting orders
-* In the `/v2` result the list of routes is replaced by links to the Apiary documentation and to the blueprint
+* Support `dispense` message type
+* Add `supply_normalized` to asset info object in API responses
+* Add `btc_amount` to API responses returning `dispenses` objects
+* Use `all` as the default status when returning `orders` objects
+* Provide link to Apiary documentation in the root route  for the v2 API
 
 ## CLI
 
+* Remove all `kickstart` functionality; `start` is now recommended for the initial catchup.
 * Tweak RPS logging
 * Fix erroneous Rust Fetcher errors on shutdown 
 
 
 # Credits
+
 * Ouziel Slama
 * Adam Krellenstein
 * Warren Puffett
