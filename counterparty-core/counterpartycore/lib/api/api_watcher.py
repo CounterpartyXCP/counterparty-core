@@ -463,14 +463,14 @@ def catch_up(api_db, ledger_db):
         while next_event:
             parse_event(api_db, next_event)
             event_parsed += 1
-            if event_parsed % 10000 == 0:
+            if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
-                expected_duration = duration / event_parsed * event_to_parse_count
-                logger.debug(f"API Watcher - {event_parsed}/{event_to_parse_count} events parsed")
+                logger.debug(
+                    f"API Watcher - {event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
+                )
             next_event = get_next_event_to_parse(api_db, ledger_db)
         duration = time.time() - start_time
-        logger.debug(f"API Watcher - {event_parsed} events parsed in {format_duration(duration)}")
-    logger.debug("API Watcher - Catch up completed.")
+    logger.info("API Watcher - Catch up completed. ({format_duration(duration)})")
 
 
 def apply_migration():
