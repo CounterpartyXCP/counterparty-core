@@ -466,9 +466,7 @@ def catch_up(api_db, ledger_db):
             if event_parsed % 10000 == 0:
                 duration = time.time() - start_time
                 expected_duration = duration / event_parsed * event_to_parse_count
-                logger.debug(
-                    f"API Watcher - {event_parsed}/{event_to_parse_count} events parsed"
-                )
+                logger.debug(f"API Watcher - {event_parsed}/{event_to_parse_count} events parsed")
             next_event = get_next_event_to_parse(api_db, ledger_db)
         duration = time.time() - start_time
         logger.debug(f"API Watcher - {event_parsed} events parsed in {format_duration(duration)}")
