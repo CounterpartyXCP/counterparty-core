@@ -91,9 +91,7 @@ def rpc_call(payload):
         # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)
         return rpc_call(payload)
-    raise exceptions.BitcoindRPCError(
-        f"Error connecting to {util.clean_url_for_log(url)}: {response_json['error']}"
-    )
+    raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
 
 def rpc(method, params):

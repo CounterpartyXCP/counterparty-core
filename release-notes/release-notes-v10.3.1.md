@@ -8,7 +8,8 @@
 
 ## Bugfixes
 
-* Catch `TimeoutError` on version checking; re-check on error
+* Catch `TimeoutError` during version check; re-check on error
+* Correctly catch bitcoind errors from an API call
 
 ## Codebase
 
