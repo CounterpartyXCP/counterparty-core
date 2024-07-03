@@ -1248,7 +1248,7 @@ def catch_up(db, check_asset_conservation=True):
         assert block_height <= util.CURRENT_BLOCK_INDEX + 1
 
         # Parse the current block
-        tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
+        tx_index = parse_new_block(db, decoded_block, tx_index=tx_index)
 
         parsed_blocks += 1
         formatted_duration = util.format_duration(time.time() - start_time)
