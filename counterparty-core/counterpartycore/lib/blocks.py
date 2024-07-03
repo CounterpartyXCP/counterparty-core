@@ -374,6 +374,7 @@ def parse_block(
 
 def initialise(db):
     """Initialise data, create and populate the database."""
+    logger.info("Initializing database...")
     cursor = db.cursor()
 
     # Drop views that are going to be recreated
