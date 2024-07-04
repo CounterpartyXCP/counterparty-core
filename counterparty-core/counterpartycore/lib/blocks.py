@@ -1083,17 +1083,6 @@ def get_next_tx_index(db):
 def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
-    # Use 'height' instead of 'block_index'
-    block_height = decoded_block.get("height")
-    if block_height is None:
-        raise ValueError(f"Unable to determine block height from decoded block: {decoded_block}")
-
-    # Check if the new block is consecutive
-    if block_height != util.CURRENT_BLOCK_INDEX + 1:
-        raise exceptions.DatabaseError(
-            f"Attempting to insert non-consecutive block. Expected block index: {util.CURRENT_BLOCK_INDEX + 1}, got: {block_height}"
-        )
-
     # increment block index
     util.CURRENT_BLOCK_INDEX += 1
 
