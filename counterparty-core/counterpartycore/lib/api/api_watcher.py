@@ -8,6 +8,7 @@ from counterpartycore.lib import config, database, exceptions, ledger
 from counterpartycore.lib.api import util
 from counterpartycore.lib.util import format_duration
 from yoyo import get_backend, read_migrations
+from yoyo.exceptions import LockTimeout
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -482,7 +483,12 @@ def apply_migration():
     migrations = read_migrations(MIGRATIONS_DIR)
     with backend.lock():
         # Apply any outstanding migrations
-        backend.apply_migrations(backend.to_apply(migrations))
+        try:
+            backend.apply_migrations(backend.to_apply(migrations))
+        except LockTimeout:
+            logger.error("API Watcher - Migration lock timeout. Breaking lock and retrying...")
+            backend.break_lock()
+            backend.apply_migrations(backend.to_apply(migrations))
     backend.connection.close()
 
 
