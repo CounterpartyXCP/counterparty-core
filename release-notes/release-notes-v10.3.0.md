@@ -16,6 +16,8 @@ This update requires an automatic full reparse of the Counterparty transactions 
 * Fix the order of `NEW_TRANSACTION` events on reparse
 * Check the ZMQ `rawblock` topic more frequently on testnet
 * Trigger `NEW_TRANSACTION_OUTPUT` events during a reparse
+* Fix incorrect `messages_hash` after a reparse
+* Fix silent errors in ZMQ follower
 
 ## Codebase
 
