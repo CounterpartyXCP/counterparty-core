@@ -29,7 +29,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1, api_watcher
+from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
@@ -777,7 +777,6 @@ def rollback(block_index=None):
     db = database.initialise_db()
     try:
         blocks.rollback(db, block_index=block_index)
-        api_watcher.rollback(block_index or 0)
     finally:
         database.optimize(db)
         db.close()
