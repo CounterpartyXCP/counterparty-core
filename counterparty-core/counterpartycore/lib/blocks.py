@@ -219,6 +219,52 @@ def parse_tx(db, tx):
         util.CURRENT_TX_HASH = None
 
 
+def replay_transactions_events(db, transactions):
+    cursor = db.cursor()
+    for tx in transactions:
+        transaction_bindings = {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "block_index": tx["block_index"],
+            "block_hash": tx["block_hash"],
+            "block_time": tx["block_time"],
+            "source": tx["source"],
+            "destination": tx["destination"],
+            "btc_amount": tx["btc_amount"],
+            "fee": tx["fee"],
+            "data": tx["data"],
+        }
+        ledger.add_to_journal(
+            db,
+            tx["block_index"],
+            "insert",
+            "transactions",
+            "NEW_TRANSACTION",
+            transaction_bindings,
+        )
+        dispensers_outs = cursor.execute(
+            "SELECT * FROM transaction_outputs WHERE tx_index = ? ORDER BY rowid",
+            (tx["tx_index"],),
+        ).fetchall()
+        for next_out in dispensers_outs:
+            transaction_outputs_bindings = {
+                "tx_index": tx["tx_index"],
+                "tx_hash": tx["tx_hash"],
+                "block_index": tx["block_index"],
+                "out_index": next_out["out_index"],
+                "destination": next_out["destination"],
+                "btc_amount": next_out["btc_amount"],
+            }
+            ledger.add_to_journal(
+                db,
+                tx["block_index"],
+                "insert",
+                "transaction_outputs",
+                "NEW_TRANSACTION_OUTPUT",
+                transaction_outputs_bindings,
+            )
+
+
 def parse_block(
     db,
     block_index,
@@ -232,6 +278,19 @@ def parse_block(
 
     The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
+
+    # Get block transactions
+    cursor = db.cursor()
+    cursor.execute(
+        """SELECT * FROM transactions \
+                      WHERE block_index=$block_index ORDER BY tx_index""",
+        {"block_index": block_index},
+    )
+    transactions = cursor.fetchall()
+
+    # Add manual event to journal because transaction already exists
+    if reparsing:
+        replay_transactions_events(db, transactions)
 
     ledger.BLOCK_LEDGER = []
     ledger.BLOCK_JOURNAL = []
@@ -247,59 +306,7 @@ def parse_block(
     # Close dispensers
     dispenser.close_pending(db, block_index)
 
-    # Parse transactions, sorting them by type.
-    cursor = db.cursor()
-    cursor.execute(
-        """SELECT * FROM transactions \
-                      WHERE block_index=$block_index ORDER BY tx_index""",
-        {"block_index": block_index},
-    )
     txlist = []
-    transactions = cursor.fetchall()
-    # Add manual event to journal because transaction already exists
-    if reparsing:
-        for tx in transactions:
-            transaction_bindings = {
-                "tx_index": tx["tx_index"],
-                "tx_hash": tx["tx_hash"],
-                "block_index": tx["block_index"],
-                "block_hash": tx["block_hash"],
-                "block_time": tx["block_time"],
-                "source": tx["source"],
-                "destination": tx["destination"],
-                "btc_amount": tx["btc_amount"],
-                "fee": tx["fee"],
-                "data": tx["data"],
-            }
-            ledger.add_to_journal(
-                db,
-                block_index,
-                "insert",
-                "transactions",
-                "NEW_TRANSACTION",
-                transaction_bindings,
-            )
-            dispensers_outs = cursor.execute(
-                "SELECT * FROM transaction_outputs WHERE tx_index = ? ORDER BY rowid",
-                (tx["tx_index"],),
-            ).fetchall()
-            for next_out in dispensers_outs:
-                transaction_outputs_bindings = {
-                    "tx_index": tx["tx_index"],
-                    "tx_hash": tx["tx_hash"],
-                    "block_index": tx["block_index"],
-                    "out_index": next_out["out_index"],
-                    "destination": next_out["destination"],
-                    "btc_amount": next_out["btc_amount"],
-                }
-                ledger.add_to_journal(
-                    db,
-                    block_index,
-                    "insert",
-                    "transaction_outputs",
-                    "NEW_TRANSACTION_OUTPUT",
-                    transaction_outputs_bindings,
-                )
     for tx in transactions:
         try:
             parse_tx(db, tx)
@@ -323,6 +330,7 @@ def parse_block(
         new_messages_hash, found_messages_hash = check.consensus_hash(
             db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
         )
+
         update_block_query = """
             UPDATE blocks
             SET 
