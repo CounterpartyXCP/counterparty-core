@@ -427,7 +427,7 @@ def initialise(db):
     if "difficulty" not in block_columns:
         cursor.execute("""ALTER TABLE blocks ADD COLUMN difficulty TEXT""")
     if "transaction_count" not in block_columns:
-        logger.info("Adding transaction_count column to blocks table...")
+        logger.info("Adding `transaction_count` column to `blocks` table...")
         cursor.execute("""ALTER TABLE blocks ADD COLUMN transaction_count INTEGER""")
         cursor.execute("""
             UPDATE blocks SET 
