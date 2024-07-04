@@ -2,7 +2,6 @@ import logging
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
-from threading import Condition, Lock
 
 from counterparty_rs import indexer
 
@@ -40,8 +39,6 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.stopped = False
         self.prefetch_queue = {}
         self.prefetch_queue_size = 0
-        self.queue_lock = Lock()
-        self.queue_condition = Condition(self.queue_lock)
         self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
         self.prefetch_queue_initalized = False
@@ -84,23 +81,21 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
     def get_prefetched_block(self, height):
         try:
-            with self.queue_lock:
-                logger.debug(f"Looking for Block {height} in prefetch queue...")
-                while height not in self.prefetch_queue:
-                    if not self.prefetch_queue and self.prefetch_queue_initalized:
-                        logger.warning("Prefetch queue is empty.")
-                    logger.debug(f"Block {height} not found in prefetch queue. Waiting...")
-                    self.queue_condition.wait(timeout=0.1)  # Wait for the block to be prefetched
-                block = self.prefetch_queue.pop(height)
-                self.prefetch_queue_size -= 1
-                self.queue_condition.notify()
-                logger.debug(
-                    "Block %s retrieved from queue. (Queue: %s/%s)",
-                    height,
-                    self.prefetch_queue_size,
-                    PREFETCH_QUEUE_SIZE,
-                )
-                return block
+            logger.debug(f"Looking for Block {height} in prefetch queue...")
+            while height not in self.prefetch_queue:
+                if self.prefetch_queue_size == 0:
+                    logger.warning("Prefetch queue is empty.")
+                logger.debug(f"Block {height} not found in prefetch queue. Waiting...")
+                time.sleep(0.1)
+            block = self.prefetch_queue.pop(height)
+            self.prefetch_queue_size -= 1
+            logger.debug(
+                "Block %s retrieved from queue. (Queue: %s/%s)",
+                height,
+                self.prefetch_queue_size,
+                PREFETCH_QUEUE_SIZE,
+            )
+            return block
         except Exception as e:
             logger.error(f"Error getting prefetched block: {e}")
             raise e
@@ -110,33 +105,24 @@ class RSFetcher(metaclass=util.SingletonMeta):
         expected_height = self.next_height
         while not self.stopped:
             try:
-                with self.queue_lock:
-                    while self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE and not self.stopped:
-                        self.queue_condition.wait(
-                            timeout=0.1
-                        )  # Wait until there is space in the queue
-                    if self.stopped:
-                        break
-                    while (
-                        len(self.prefetch_queue) >= PREFETCH_QUEUE_SIZE / 2
-                        and not self.prefetch_queue_initalized
-                    ):
-                        self.prefetch_queue_initalized = True
-                    block = self.fetcher.get_block_non_blocking()
-                    if block is not None:
-                        self.prefetch_queue[block["height"]] = block
-                        self.prefetch_queue_size += 1
-                        expected_height += 1
-                        self.queue_condition.notify_all()
-                        logger.debug(
-                            "Block %s prefetched. (Queue: %s/%s)",
-                            block["height"],
-                            self.prefetch_queue_size,
-                            PREFETCH_QUEUE_SIZE,
-                        )
-                    else:
-                        logger.debug("No block fetched. Waiting before next fetch.")
-                        time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
+                while self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE and not self.stopped:
+                    time.sleep(0.1)  # Wait until there is space in the queue
+                if self.stopped:
+                    break
+                block = self.fetcher.get_block_non_blocking()
+                if block is not None:
+                    self.prefetch_queue[block["height"]] = block
+                    self.prefetch_queue_size += 1
+                    expected_height += 1
+                    logger.debug(
+                        "Block %s prefetched. (Queue: %s/%s)",
+                        block["height"],
+                        self.prefetch_queue_size,
+                        PREFETCH_QUEUE_SIZE,
+                    )
+                else:
+                    logger.debug("No block fetched. Waiting before next fetch.")
+                    time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
             except Exception as e:
                 logger.error(f"Error prefetching block: {e}")
                 time.sleep(random.uniform(0.8, 2.0))  # noqa: S311; longer wait on error

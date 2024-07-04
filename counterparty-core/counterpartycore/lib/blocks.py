@@ -219,6 +219,52 @@ def parse_tx(db, tx):
         util.CURRENT_TX_HASH = None
 
 
+def replay_transactions_events(db, transactions):
+    cursor = db.cursor()
+    for tx in transactions:
+        transaction_bindings = {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "block_index": tx["block_index"],
+            "block_hash": tx["block_hash"],
+            "block_time": tx["block_time"],
+            "source": tx["source"],
+            "destination": tx["destination"],
+            "btc_amount": tx["btc_amount"],
+            "fee": tx["fee"],
+            "data": tx["data"],
+        }
+        ledger.add_to_journal(
+            db,
+            tx["block_index"],
+            "insert",
+            "transactions",
+            "NEW_TRANSACTION",
+            transaction_bindings,
+        )
+        dispensers_outs = cursor.execute(
+            "SELECT * FROM transaction_outputs WHERE tx_index = ? ORDER BY rowid",
+            (tx["tx_index"],),
+        ).fetchall()
+        for next_out in dispensers_outs:
+            transaction_outputs_bindings = {
+                "tx_index": tx["tx_index"],
+                "tx_hash": tx["tx_hash"],
+                "block_index": tx["block_index"],
+                "out_index": next_out["out_index"],
+                "destination": next_out["destination"],
+                "btc_amount": next_out["btc_amount"],
+            }
+            ledger.add_to_journal(
+                db,
+                tx["block_index"],
+                "insert",
+                "transaction_outputs",
+                "NEW_TRANSACTION_OUTPUT",
+                transaction_outputs_bindings,
+            )
+
+
 def parse_block(
     db,
     block_index,
@@ -232,6 +278,19 @@ def parse_block(
 
     The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
+
+    # Get block transactions
+    cursor = db.cursor()
+    cursor.execute(
+        """SELECT * FROM transactions \
+                      WHERE block_index=$block_index ORDER BY tx_index""",
+        {"block_index": block_index},
+    )
+    transactions = cursor.fetchall()
+
+    # Add manual event to journal because transaction already exists
+    if reparsing:
+        replay_transactions_events(db, transactions)
 
     ledger.BLOCK_LEDGER = []
     ledger.BLOCK_JOURNAL = []
@@ -247,59 +306,7 @@ def parse_block(
     # Close dispensers
     dispenser.close_pending(db, block_index)
 
-    # Parse transactions, sorting them by type.
-    cursor = db.cursor()
-    cursor.execute(
-        """SELECT * FROM transactions \
-                      WHERE block_index=$block_index ORDER BY tx_index""",
-        {"block_index": block_index},
-    )
     txlist = []
-    transactions = cursor.fetchall()
-    # Add manual event to journal because transaction already exists
-    if reparsing:
-        for tx in transactions:
-            transaction_bindings = {
-                "tx_index": tx["tx_index"],
-                "tx_hash": tx["tx_hash"],
-                "block_index": tx["block_index"],
-                "block_hash": tx["block_hash"],
-                "block_time": tx["block_time"],
-                "source": tx["source"],
-                "destination": tx["destination"],
-                "btc_amount": tx["btc_amount"],
-                "fee": tx["fee"],
-                "data": tx["data"],
-            }
-            ledger.add_to_journal(
-                db,
-                block_index,
-                "insert",
-                "transactions",
-                "NEW_TRANSACTION",
-                transaction_bindings,
-            )
-            dispensers_outs = cursor.execute(
-                "SELECT * FROM transaction_outputs WHERE tx_index = ? ORDER BY rowid",
-                (tx["tx_index"],),
-            ).fetchall()
-            for next_out in dispensers_outs:
-                transaction_outputs_bindings = {
-                    "tx_index": tx["tx_index"],
-                    "tx_hash": tx["tx_hash"],
-                    "block_index": tx["block_index"],
-                    "out_index": next_out["out_index"],
-                    "destination": next_out["destination"],
-                    "btc_amount": next_out["btc_amount"],
-                }
-                ledger.add_to_journal(
-                    db,
-                    block_index,
-                    "insert",
-                    "transaction_outputs",
-                    "NEW_TRANSACTION_OUTPUT",
-                    transaction_outputs_bindings,
-                )
     for tx in transactions:
         try:
             parse_tx(db, tx)
@@ -323,6 +330,7 @@ def parse_block(
         new_messages_hash, found_messages_hash = check.consensus_hash(
             db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
         )
+
         update_block_query = """
             UPDATE blocks
             SET 
@@ -419,7 +427,7 @@ def initialise(db):
     if "difficulty" not in block_columns:
         cursor.execute("""ALTER TABLE blocks ADD COLUMN difficulty TEXT""")
     if "transaction_count" not in block_columns:
-        logger.info("Adding transaction_count column to blocks table...")
+        logger.info("Adding `transaction_count` column to `blocks` table...")
         cursor.execute("""ALTER TABLE blocks ADD COLUMN transaction_count INTEGER""")
         cursor.execute("""
             UPDATE blocks SET 
@@ -1083,17 +1091,6 @@ def get_next_tx_index(db):
 def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
-    # Use 'height' instead of 'block_index'
-    block_height = decoded_block.get("height")
-    if block_height is None:
-        raise ValueError(f"Unable to determine block height from decoded block: {decoded_block}")
-
-    # Check if the new block is consecutive
-    if block_height != util.CURRENT_BLOCK_INDEX + 1:
-        raise exceptions.DatabaseError(
-            f"Attempting to insert non-consecutive block. Expected block index: {util.CURRENT_BLOCK_INDEX + 1}, got: {block_height}"
-        )
-
     # increment block index
     util.CURRENT_BLOCK_INDEX += 1
 
@@ -1103,7 +1100,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
 
     if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
         # get previous block
-        previous_block = ledger.LAST_BLOCK
+        previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
 
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
@@ -1160,10 +1157,6 @@ def parse_new_block(db, decoded_block, tx_index=None):
             previous_txlist_hash=previous_block["txlist_hash"],
             previous_messages_hash=previous_block["messages_hash"],
         )
-        ledger.LAST_BLOCK = block_bindings
-        ledger.LAST_BLOCK["ledger_hash"] = new_ledger_hash
-        ledger.LAST_BLOCK["txlist_hash"] = new_txlist_hash
-        ledger.LAST_BLOCK["messages_hash"] = new_messages_hash
 
         duration = time.time() - start_time
 
@@ -1208,8 +1201,6 @@ def catch_up(db, check_asset_conservation=True):
     if util.CURRENT_BLOCK_INDEX == 0:
         logger.info("New database.")
         util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
-    else:
-        ledger.LAST_BLOCK = ledger.get_block(db, util.CURRENT_BLOCK_INDEX)
 
     # Get block count.
     block_count = backend.bitcoind.getblockcount()
@@ -1235,14 +1226,6 @@ def catch_up(db, check_asset_conservation=True):
         fetch_time_end = time.time()
         fetch_duration = fetch_time_end - fetch_time_start
         logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
-
-        # Check for reorg
-        if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
-            previous_block = ledger.LAST_BLOCK
-            if decoded_block["hash_prev"] != previous_block["block_hash"]:
-                raise exceptions.DatabaseError(
-                    f"Blockchain reorganization detected at block {util.CURRENT_BLOCK_INDEX + 1}. Manual intervention required."
-                )
 
         # Check for gaps in the blockchain
         assert block_height <= util.CURRENT_BLOCK_INDEX + 1

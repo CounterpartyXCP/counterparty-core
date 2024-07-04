@@ -471,7 +471,7 @@ def catch_up(api_db, ledger_db):
                 )
             next_event = get_next_event_to_parse(api_db, ledger_db)
         duration = time.time() - start_time
-    logger.info("API Watcher - Catch up completed. ({format_duration(duration)})")
+        logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
 
 
 def apply_migration():
