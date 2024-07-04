@@ -195,7 +195,12 @@ class BlockchainWatcher:
             capture_exception(e)
             self.connect_to_zmq()
             return
-        self.receive_message(topic, body, seq)
+        try:
+            self.receive_message(topic, body, seq)
+        except Exception as e:
+            logger.error("Error processing message: %s", e)
+            capture_exception(e)
+            raise e
 
     async def handle(self):
         self.check_software_version_if_needed()
