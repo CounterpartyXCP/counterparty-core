@@ -734,7 +734,7 @@ def start_all(args):
         logger.warning("Keyboard interrupt!")
         pass
     except Exception as e:
-        logger.error(f"Exception caught!", exc_info=e)
+        logger.error("Exception caught!", exc_info=e)
         pass
     finally:
         if api_server_v2:
