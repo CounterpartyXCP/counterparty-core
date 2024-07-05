@@ -579,12 +579,8 @@ class APIWatcher(Thread):
 
     def run(self):
         logger.info("Starting API Watcher...")
-        try:
-            catch_up(self.api_db, self.ledger_db, self)
-            self.follow()
-        except KeyboardInterrupt:
-            logger.warning("API Watcher - Keyboard interrupt")
-            self.stopped = True
+        catch_up(self.api_db, self.ledger_db, self)
+        self.follow()
 
     def stop(self):
         logger.info("Stopping API Watcher...")

@@ -1210,17 +1210,19 @@ def catch_up(db, check_asset_conservation=True):
         backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
         block_count = backend.bitcoind.getblockcount()
 
-    fetcher = rsfetcher.RSFetcher(util.CURRENT_BLOCK_INDEX + 1)
-
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
 
     start_time = time.time()
     parsed_blocks = 0
+    fetcher = None
 
     while util.CURRENT_BLOCK_INDEX < block_count:
         # Get block information and transactions
         fetch_time_start = time.time()
+        if fetcher is None:
+            fetcher = rsfetcher.RSFetcher(util.CURRENT_BLOCK_INDEX + 1)
+
         decoded_block = fetcher.get_block()
         block_height = decoded_block.get("height")
         fetch_time_end = time.time()
@@ -1246,7 +1248,8 @@ def catch_up(db, check_asset_conservation=True):
                 backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
             block_count = backend.bitcoind.getblockcount()
 
-    fetcher.stop()
+    if fetcher is not None:
+        fetcher.stop()
 
     if config.CHECK_ASSET_CONSERVATION and check_asset_conservation:
         # TODO: timer to check asset conservation every N hours

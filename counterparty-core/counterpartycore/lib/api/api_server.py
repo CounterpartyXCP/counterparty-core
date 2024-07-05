@@ -375,9 +375,6 @@ def run_api_server(args, interruped_value):
     watcher = api_watcher.APIWatcher()
     watcher.start()
 
-    if watcher.stopped:
-        return
-
     logger.info("Starting API Server...")
     app = Flask(config.APP_NAME)
     transaction.initialise()
@@ -431,7 +428,6 @@ def run_api_server(args, interruped_value):
         if timer_db:
             timer_db.close()
         APIDBConnectionPool().close()
-        exit()
 
 
 def refresh_backend_height(db, start=False):
