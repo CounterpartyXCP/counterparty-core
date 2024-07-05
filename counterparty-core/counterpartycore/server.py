@@ -751,7 +751,8 @@ def start_all(args):
             database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
-        rsfetcher.RSFetcher().stop()
+        if rsfetcher.RSFetcher._instances[rsfetcher.RSFetcher] is not None:
+            rsfetcher.RSFetcher().stop()
         try:
             database.check_wal_file()
         except exceptions.WALFileFoundError:
