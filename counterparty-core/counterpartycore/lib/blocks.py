@@ -1068,7 +1068,7 @@ def reparse(db, block_index=0):
                 block_count,
             )
             spinner.set_messsage(message)
-            spinner.done_message = block_parsed_count + " blocks reparsed in {:.2f}s."
+            spinner.done_message = str(block_parsed_count) + " blocks reparsed in {:.2f}s."
 
 
 def get_next_tx_index(db):
