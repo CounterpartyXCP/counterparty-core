@@ -41,7 +41,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_queue_size = 0
         self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
-        self.prefetch_queue_initalized = False
+        self.prefetch_queue_initialized = False
 
     def start(self):
         logger.debug("Starting Prefetcher...")
@@ -83,7 +83,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         try:
             logger.debug(f"Looking for Block {height} in prefetch queue...")
             while height not in self.prefetch_queue:
-                if self.prefetch_queue_size == 0 and self.prefetch_queue_initalized:
+                if self.prefetch_queue_size == 0 and self.prefetch_queue_initialized:
                     logger.warning("Prefetch queue is empty.")
                 logger.debug(f"Block {height} not found in prefetch queue. Waiting...")
                 time.sleep(0.1)
@@ -120,6 +120,15 @@ class RSFetcher(metaclass=util.SingletonMeta):
                         self.prefetch_queue_size,
                         PREFETCH_QUEUE_SIZE,
                     )
+
+                    # Mark the queue as "initialized" after it has been half-full at least once.
+                    if (
+                        not self.prefetch_queue_initialized
+                        and self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE // 2
+                    ):
+                        self.prefetch_queue_initialized = True
+                        logger.debug("Prefetch queue initialized.")
+
                 else:
                     logger.debug("No block fetched. Waiting before next fetch.")
                     time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
