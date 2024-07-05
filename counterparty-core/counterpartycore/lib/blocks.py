@@ -1019,9 +1019,8 @@ def reparse(db, block_index=0):
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
     step = f"Reparsing blocks from Block {block_index}..."
-    done_message = "All blocks reparsed in {:.2f}s."  # TODO: this is logged even if the operation is interrupted
     message = ""
-    with log.Spinner(step, done_message) as spinner:
+    with log.Spinner(step) as spinner:
         cursor.execute(
             """SELECT * FROM blocks WHERE block_index >= ? ORDER BY block_index""", (block_index,)
         )
@@ -1069,6 +1068,7 @@ def reparse(db, block_index=0):
                 block_count,
             )
             spinner.set_messsage(message)
+            spinner.done_message = str(block_parsed_count) + " blocks reparsed in {:.2f}s."
 
 
 def get_next_tx_index(db):

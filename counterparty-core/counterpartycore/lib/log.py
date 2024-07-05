@@ -42,7 +42,7 @@ def debug(self, msg, *args, **kwargs):
 
 def formatTime(record, datefmt=None):
     date = datetime.fromtimestamp(record.created, tzlocal())
-    date_string = date.strftime("%Y-%m-%dT%H:%M:%S.%f000%z")
+    date_string = date.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + date.strftime("%z")
     # same as Rust log format
     date_string = date_string[0:-2] + ":" + date_string[-2:]
     return date_string

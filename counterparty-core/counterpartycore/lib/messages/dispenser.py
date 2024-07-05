@@ -806,7 +806,7 @@ def parse(db, tx, message):
 
 class DispensableCache(metaclass=util.SingletonMeta):
     def __init__(self, db):
-        logger.debug("Initialising dispensable cache...")
+        logger.debug("Initialising Dispensable Cache...")
         self.dispensable = ledger.get_all_dispensables(db)
 
     def could_be_dispensable(self, source):

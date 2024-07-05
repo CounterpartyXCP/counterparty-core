@@ -453,7 +453,7 @@ def parse_event(api_db, event):
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 
-def catch_up(api_db, ledger_db):
+def catch_up(api_db, ledger_db, watcher):
     check_event_hashes(api_db, ledger_db)
     event_to_parse_count = get_event_to_parse_count(api_db, ledger_db)
     if event_to_parse_count > 0:
@@ -461,7 +461,7 @@ def catch_up(api_db, ledger_db):
         start_time = time.time()
         event_parsed = 0
         next_event = get_next_event_to_parse(api_db, ledger_db)
-        while next_event:
+        while next_event and not watcher.stopping and not watcher.stopped:
             parse_event(api_db, next_event)
             event_parsed += 1
             if event_parsed % 50000 == 0:
@@ -470,8 +470,9 @@ def catch_up(api_db, ledger_db):
                     f"API Watcher - {event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
                 )
             next_event = get_next_event_to_parse(api_db, ledger_db)
-        duration = time.time() - start_time
-        logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
+        if not watcher.stopping and not watcher.stopped:
+            duration = time.time() - start_time
+            logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
 
 
 def apply_migration():
@@ -516,6 +517,7 @@ def check_event_hashes(api_db, ledger_db):
 def rollback(block_index):
     api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
     rollback_events(api_db, block_index)
+    api_db.close()
 
 
 def parse_next_event(api_db, ledger_db):
@@ -567,23 +569,22 @@ class APIWatcher(Thread):
         cursor.close()
 
     def follow(self):
-        try:
-            while True and not self.stopping and not self.stopped:
-                try:
-                    parse_next_event(self.api_db, self.ledger_db)
-                except exceptions.NoEventToParse:
-                    logger.trace("API Watcher - No new events to parse")
-                    time.sleep(1)
-        except KeyboardInterrupt:
-            logger.debug("API Watcher - Keyboard interrupt")
-            pass
+        while not self.stopping and not self.stopped:
+            try:
+                parse_next_event(self.api_db, self.ledger_db)
+            except exceptions.NoEventToParse:
+                logger.debug("API Watcher - No new events to parse")
+                time.sleep(1)
         self.stopped = True
-        return
 
     def run(self):
         logger.info("Starting API Watcher...")
-        catch_up(self.api_db, self.ledger_db)
-        self.follow()
+        try:
+            catch_up(self.api_db, self.ledger_db, self)
+            self.follow()
+        except KeyboardInterrupt:
+            logger.warning("API Watcher - Keyboard interrupt")
+            self.stopped = True
 
     def stop(self):
         logger.info("Stopping API Watcher...")

@@ -733,6 +733,9 @@ def start_all(args):
     except KeyboardInterrupt:
         logger.warning("Keyboard interrupt!")
         pass
+    except Exception as e:
+        logger.error("Exception caught!", exc_info=e)
+        pass
     finally:
         if api_server_v2:
             api_server_v2.stop()
@@ -748,7 +751,8 @@ def start_all(args):
             database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
-        rsfetcher.RSFetcher().stop()
+        if rsfetcher.RSFetcher._instances[rsfetcher.RSFetcher] is not None:
+            rsfetcher.RSFetcher().stop()
         try:
             database.check_wal_file()
         except exceptions.WALFileFoundError:

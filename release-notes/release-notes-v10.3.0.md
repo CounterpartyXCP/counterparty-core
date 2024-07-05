@@ -61,7 +61,7 @@ This update requires an automatic full reparse of the Counterparty transactions 
 * Remove all `kickstart` functionality; `start` is now recommended for the initial catchup.
 * Tweak RPS logging
 * Fix erroneous Rust Fetcher errors on shutdown 
-
+* Use millisecond precision for logging
 
 # Credits
 
