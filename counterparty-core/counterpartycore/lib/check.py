@@ -968,7 +968,7 @@ def software_version():
         ConnectionRefusedError,
         ValueError,
         requests.exceptions.ReadTimeout,
-        TimeoutError
+        TimeoutError,
     ):
         logger.warning("Unable to check Counterparty version.", exc_info=sys.exc_info())
         return False
