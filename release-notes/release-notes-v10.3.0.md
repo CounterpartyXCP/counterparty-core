@@ -18,6 +18,8 @@ This update requires an automatic full reparse of the Counterparty transactions 
 * Trigger `NEW_TRANSACTION_OUTPUT` events during a reparse
 * Fix incorrect `messages_hash` after a reparse
 * Fix silent errors in ZMQ follower
+* Catch `TimeoutError` during version check; re-check on error
+* Catch Bitcoin Core API errors correctly
 
 ## Codebase
 

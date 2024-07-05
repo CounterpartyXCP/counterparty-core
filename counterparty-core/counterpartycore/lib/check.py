@@ -968,9 +968,10 @@ def software_version():
         ConnectionRefusedError,
         ValueError,
         requests.exceptions.ReadTimeout,
+        TimeoutError,
     ):
         logger.warning("Unable to check Counterparty version.", exc_info=sys.exc_info())
-        return
+        return False
 
     for change_name in versions:
         protocol_change = versions[change_name]
@@ -981,6 +982,7 @@ def software_version():
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     logger.debug("Version check passed.")
+    return True
 
 
 class DatabaseVersionError(Exception):

@@ -482,14 +482,14 @@ def apply_migration():
     # Apply migrations
     backend = get_backend(f"sqlite:///{config.API_DATABASE}")
     migrations = read_migrations(MIGRATIONS_DIR)
-    with backend.lock():
-        # Apply any outstanding migrations
-        try:
+    try:
+        with backend.lock():
+            # Apply any outstanding migrations
             backend.apply_migrations(backend.to_apply(migrations))
-        except LockTimeout:
-            logger.error("API Watcher - Migration lock timeout. Breaking lock and retrying...")
-            backend.break_lock()
-            backend.apply_migrations(backend.to_apply(migrations))
+    except LockTimeout:
+        logger.error("API Watcher - Migration lock timeout. Breaking lock and retrying...")
+        backend.break_lock()
+        backend.apply_migrations(backend.to_apply(migrations))
     backend.connection.close()
 
 

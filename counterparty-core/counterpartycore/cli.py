@@ -325,9 +325,12 @@ def welcome_message(action, server_configfile):
         cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
         cprint(f"Bitcoin Core: {cleaned_backend_url}", "light_grey")
         cprint(f"AddrIndexRs: {config.INDEXD_URL}", "light_grey")
-        pass_str = f":{urlencode(config.RPC_PASSWORD)}@"
-        cleaned_rpc_url = config.RPC.replace(pass_str, ":*****@")
-        cprint(f"Counterparty RPC Server: {cleaned_rpc_url}", "light_grey")
+
+        api_url = "http://"
+        if config.API_USER and config.API_PASSWORD:
+            api_url += f"{config.API_USER}:*****@"
+        api_url += f"{config.API_HOST}:{config.API_PORT}/v2/"
+        cprint(f"Counterparty API Server: {api_url}", "light_grey")
 
     if config.LOG:
         cprint(f"Server Log: {config.LOG}", "light_grey")

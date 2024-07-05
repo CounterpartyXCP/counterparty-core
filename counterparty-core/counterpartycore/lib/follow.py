@@ -106,8 +106,9 @@ class BlockchainWatcher:
 
     def check_software_version_if_needed(self):
         if time.time() - self.last_software_version_check_time > 60 * 60 * 24:
-            check.software_version()
-            self.last_software_version_check_time = time.time()
+            checked = check.software_version()
+            if checked:
+                self.last_software_version_check_time = time.time()
 
     def receive_rawblock(self, body):
         # parse blocks as they come in
