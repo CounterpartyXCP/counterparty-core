@@ -158,3 +158,8 @@ class RSFetcher(metaclass=util.SingletonMeta):
             self.fetcher = None
             self.prefetch_task = None
             logger.debug("Prefetcher shutdown complete.")
+
+
+def stop():
+    if RSFetcher in RSFetcher._instances and RSFetcher._instances[RSFetcher] is not None:
+        RSFetcher().stop()

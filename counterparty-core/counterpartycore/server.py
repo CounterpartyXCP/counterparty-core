@@ -702,6 +702,9 @@ def start_all(args):
         # API Server v2.
         api_server_v2 = api_v2.APIServer()
         api_server_v2.start(args)
+        while not api_server_v2.is_ready():
+            logger.trace("Waiting for API server to start...")
+            time.sleep(0.1)
 
         # Backend.
         connect_to_backend()
@@ -732,10 +735,8 @@ def start_all(args):
 
     except KeyboardInterrupt:
         logger.warning("Keyboard interrupt!")
-        pass
     except Exception as e:
         logger.error("Exception caught!", exc_info=e)
-        pass
     finally:
         if api_server_v2:
             api_server_v2.stop()
@@ -751,8 +752,7 @@ def start_all(args):
             database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
-        if rsfetcher.RSFetcher._instances[rsfetcher.RSFetcher] is not None:
-            rsfetcher.RSFetcher().stop()
+        rsfetcher.stop()
         try:
             database.check_wal_file()
         except exceptions.WALFileFoundError:

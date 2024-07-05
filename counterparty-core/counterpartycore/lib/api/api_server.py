@@ -367,16 +367,13 @@ def handle_doc():
     return flask.send_file(BLUEPRINT_FILEPATH)
 
 
-def run_api_server(args, interruped_value):
+def run_api_server(args, interruped_value, server_ready_value):
     sentry.init()
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
 
     watcher = api_watcher.APIWatcher()
     watcher.start()
-
-    if watcher.stopped:
-        return
 
     logger.info("Starting API Server...")
     app = Flask(config.APP_NAME)
@@ -417,6 +414,7 @@ def run_api_server(args, interruped_value):
         ParentProcessChecker(interruped_value, werkzeug_server).start()
         app.app_context().push()
         # Run app server (blocking)
+        server_ready_value.value = 1
         werkzeug_server.serve_forever()
     except KeyboardInterrupt:
         logger.trace("Keyboard Interrupt!")
@@ -431,7 +429,6 @@ def run_api_server(args, interruped_value):
         if timer_db:
             timer_db.close()
         APIDBConnectionPool().close()
-        exit()
 
 
 def refresh_backend_height(db, start=False):
@@ -485,13 +482,19 @@ class APIServer(object):
     def __init__(self):
         self.process = None
         self.interrupted = Value("I", 0)
+        self.server_ready_value = Value("I", 0)
 
     def start(self, args):
         if self.process is not None:
             raise Exception("API Server is already running")
-        self.process = Process(target=run_api_server, args=(vars(args), self.interrupted))
+        self.process = Process(
+            target=run_api_server, args=(vars(args), self.interrupted, self.server_ready_value)
+        )
         self.process.start()
         return self.process
+
+    def is_ready(self):
+        return self.server_ready_value.value == 1
 
     def stop(self):
         logger.info("Stopping API Server...")
