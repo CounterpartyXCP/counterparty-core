@@ -702,6 +702,9 @@ def start_all(args):
         # API Server v2.
         api_server_v2 = api_v2.APIServer()
         api_server_v2.start(args)
+        while not api_server_v2.is_ready():
+            logger.trace("Waiting for API server to start...")
+            time.sleep(0.1)
 
         # Backend.
         connect_to_backend()

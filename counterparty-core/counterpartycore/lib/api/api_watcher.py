@@ -86,6 +86,8 @@ def get_event_to_parse_count(api_db, ledger_db):
     last_parsed_message_index = get_last_parsed_message_index(api_db)
     sql = "SELECT message_index FROM messages ORDER BY message_index DESC LIMIT 1"
     last_event = fetch_one(ledger_db, sql)
+    if last_event is None:
+        return 0
     return last_event["message_index"] - last_parsed_message_index
 
 

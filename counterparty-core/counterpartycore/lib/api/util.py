@@ -20,6 +20,8 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def check_last_parsed_block(db, blockcount):
     """Checks database to see if is caught up with backend."""
     last_block = ledger.get_last_block(db)
+    if not last_block:
+        return
     if time.time() - last_block["block_time"] < 60:
         return
     if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
