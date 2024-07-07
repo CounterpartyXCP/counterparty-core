@@ -763,6 +763,10 @@ def start_all(args):
             logger.error(
                 "Database is in use by another process and was unable to be closed correctly."
             )
+        # Fix zero size WAL file not being deleted
+        # TODO: find why this is happening
+        api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
+        api_db.close()
         logger.info("Shutdown complete.")
 
 
