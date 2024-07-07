@@ -575,7 +575,7 @@ class APIWatcher(Thread):
             try:
                 parse_next_event(self.api_db, self.ledger_db)
             except exceptions.NoEventToParse:
-                logger.debug("API Watcher - No new events to parse")
+                logger.trace("API Watcher - No new events to parse")
                 time.sleep(1)
         self.stopped = True
 
