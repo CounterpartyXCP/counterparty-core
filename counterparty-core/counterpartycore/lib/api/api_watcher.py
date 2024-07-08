@@ -549,6 +549,26 @@ def parse_next_event(api_db, ledger_db):
     raise exceptions.NoEventToParse("No event to parse")
 
 
+def synchronize_mempool(api_db, ledger_db):
+    logger.trace("API Watcher - Synchronizing mempool...")
+    mempool_events = fetch_all(ledger_db, "SELECT * FROM mempool")
+    delete_all(api_db, "DELETE FROM mempool")
+    sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event) VALUES (?, ?, ?, ?, ?)"""
+    with api_db:
+        cursor = api_db.cursor()
+        for event in mempool_events:
+            bindings = [
+                event["tx_hash"],
+                event["command"],
+                event["category"],
+                event["bindings"],
+                event["event"],
+            ]
+            cursor.execute(sql_insert, bindings)
+        if len(mempool_events) > 0:
+            logger.debug("API Watcher - %s mempool events synchronized", len(mempool_events))
+
+
 class APIWatcher(Thread):
     def __init__(self):
         Thread.__init__(self)
@@ -569,11 +589,15 @@ class APIWatcher(Thread):
             cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None))
             cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
         cursor.close()
+        self.last_mempool_sync = 0
 
     def follow(self):
         while not self.stopping and not self.stopped:
             try:
                 parse_next_event(self.api_db, self.ledger_db)
+                if time.time() - self.last_mempool_sync > 10:
+                    synchronize_mempool(self.api_db, self.ledger_db)
+                    self.last_mempool_sync = time.time()
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
                 time.sleep(1)
@@ -581,6 +605,7 @@ class APIWatcher(Thread):
 
     def run(self):
         logger.info("Starting API Watcher...")
+        synchronize_mempool(self.api_db, self.ledger_db)
         catch_up(self.api_db, self.ledger_db, self)
         self.follow()
 
