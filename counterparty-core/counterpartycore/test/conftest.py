@@ -19,7 +19,7 @@ from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import arc4, config, database, log, script, util
+from counterpartycore.lib import arc4, config, database, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.test import util_test
@@ -609,3 +609,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     )
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
     monkeypatch.setattr("counterpartycore.lib.messages.rps.expire", rps_expire)
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
+    )

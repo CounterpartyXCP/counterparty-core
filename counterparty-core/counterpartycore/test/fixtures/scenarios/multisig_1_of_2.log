@@ -12,12 +12,6 @@ Order opened for 50000000 BTC at 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfW
 TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.
 TX Construct - Transaction constructed.
 Order opened for 105000000 XCP at 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (f093b6c00e1bbe85106db6874b1ab4e3f4378d0bf0bcffbd8b51835285dfbf3f) [open]
-Considering: 332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367
-Tx0 Price: 2.0; Tx1 Inverse Price: 2.1
-Potential forward quantities: 50000000, 52500000
-Forward Quantity: 50000000
-Backward Quantity: 100000000
-Tx0 fee provided remaining: 0.01; required fee: 0.00857142
 Order match for 50000000 BTC against 100000000 XCP (332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367_f093b6c00e1bbe85106db6874b1ab4e3f4378d0bf0bcffbd8b51835285dfbf3f) [pending]
 Order match has only -10 confirmation(s).
 TX Construct - Constructing `MULTISIG` transaction from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2.

@@ -1659,8 +1659,7 @@ class OrdersCache(metaclass=util.SingletonMeta):
         return cursor.fetchall()
 
 
-def get_matching_orders(db, tx_hash, give_asset, get_asset):
-    return OrdersCache(db).get_matching_orders(tx_hash, give_asset, get_asset)
+def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
     cursor = db.cursor()
     query = """
         SELECT * FROM (
@@ -1674,6 +1673,10 @@ def get_matching_orders(db, tx_hash, give_asset, get_asset):
     bindings = (tx_hash, get_asset, give_asset, "open")
     cursor.execute(query, bindings)
     return cursor.fetchall()
+
+
+def get_matching_orders(db, tx_hash, give_asset, get_asset):
+    return OrdersCache(db).get_matching_orders(tx_hash, give_asset, get_asset)
 
 
 def insert_order(db, order):
