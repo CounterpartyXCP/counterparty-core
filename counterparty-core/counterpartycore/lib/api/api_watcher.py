@@ -554,7 +554,7 @@ def synchronize_mempool(api_db, ledger_db):
     logger.trace("API Watcher - Synchronizing mempool...")
     try:
         mempool_events = fetch_all(ledger_db, "SELECT * FROM mempool")
-        sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event) VALUES (?, ?, ?, ?, ?)"""
+        sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event, timestamp) VALUES (?, ?, ?, ?, ?, ?)"""
         with api_db:
             delete_all(api_db, "DELETE FROM mempool")
             cursor = api_db.cursor()
@@ -565,6 +565,7 @@ def synchronize_mempool(api_db, ledger_db):
                     event["category"],
                     event["bindings"],
                     event["event"],
+                    event["timestamp"],
                 ]
                 cursor.execute(sql_insert, bindings)
             if len(mempool_events) > 0:
