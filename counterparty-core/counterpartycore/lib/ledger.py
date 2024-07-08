@@ -1636,6 +1636,9 @@ class OrdersCache(metaclass=util.SingletonMeta):
         for key, value in order.items():
             set_data.append(f"{key} = :{key}")
             bindings[key] = value
+        if "block_index" not in bindings:
+            set_data.append("block_index = :block_index")
+        bindings["block_index"] = util.CURRENT_BLOCK_INDEX
         set_data = ", ".join(set_data)
         sql = f"""UPDATE orders SET {set_data} WHERE tx_hash = :tx_hash"""  # noqa S608
         cursor = self.cache_db.cursor()
