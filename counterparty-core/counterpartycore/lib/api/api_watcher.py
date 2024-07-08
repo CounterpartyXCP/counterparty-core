@@ -552,9 +552,9 @@ def parse_next_event(api_db, ledger_db):
 def synchronize_mempool(api_db, ledger_db):
     logger.trace("API Watcher - Synchronizing mempool...")
     mempool_events = fetch_all(ledger_db, "SELECT * FROM mempool")
-    delete_all(api_db, "DELETE FROM mempool")
     sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event) VALUES (?, ?, ?, ?, ?)"""
     with api_db:
+        delete_all(api_db, "DELETE FROM mempool")
         cursor = api_db.cursor()
         for event in mempool_events:
             bindings = [
