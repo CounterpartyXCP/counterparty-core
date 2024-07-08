@@ -57,7 +57,7 @@ def rpc_call(payload):
             logger.warning("Interrupted by user")
             exit(0)
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
-            logger.debug(
+            logger.warning(
                 f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Attempt: {tries})"
             )
             time.sleep(5)
