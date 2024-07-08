@@ -100,9 +100,14 @@ def select_rows(
                 where_field.append(f"{key[:-6]} LIKE ?")
             elif key.endswith("__notlike"):
                 where_field.append(f"{key[:-9]} NOT LIKE ?")
+            elif key.endswith("__in"):
+                where_field.append(f"{key[:-4]} IN ({','.join(['?'] * len(value))})")
             else:
                 where_field.append(f"{key} = ?")
-            bindings.append(value)
+            if key.endswith("__in"):
+                bindings += value
+            else:
+                bindings.append(value)
         and_where_clause = ""
         if where_field:
             and_where_clause = " AND ".join(where_field)
@@ -1225,6 +1230,63 @@ def get_address_balances(
         offset=offset,
         select="address, asset, quantity",
     )
+
+
+def get_balances_by_addresses(
+    db, addresses: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the balances of several addresses
+    :param str addresses: Comma separated list of addresses (e.g. 1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz,1fUcHBfCgVqNwFmECZ2SSjKBvnFfWbKbr)
+    :param int cursor: The last index of the balances to return
+    :param int limit: The maximum number of balances to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    assets_result = select_rows(
+        db,
+        "balances",
+        select="DISTINCT asset AS asset",
+        where={"address__in": addresses.split(","), "quantity__gt": 0},
+        order="ASC",
+        cursor_field="asset",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+    assets = [asset["asset"] for asset in assets_result.result]
+
+    balances = select_rows(
+        db,
+        "balances",
+        where={"address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
+        select="address, asset, quantity",
+        order="ASC",
+        cursor_field="asset",
+    ).result
+
+    result = []
+    current_balances = {
+        "asset": balances[0]["asset"],
+        "total": 0,
+        "addresses": [],
+    }
+    for balance in balances:
+        if balance["asset"] != current_balances["asset"]:
+            result.append(current_balances)
+            current_balances = {
+                "asset": balance["asset"],
+                "total": 0,
+                "addresses": [],
+            }
+        current_balances["total"] += balance["quantity"]
+        current_balances["addresses"].append(
+            {
+                "address": balance["address"],
+                "quantity": balance["quantity"],
+            }
+        )
+
+    return QueryResult(result, assets_result.next_cursor, assets_result.result_count)
 
 
 def get_balance_by_address_and_asset(db, address: str, asset: str):

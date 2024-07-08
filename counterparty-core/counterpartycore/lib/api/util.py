@@ -398,6 +398,16 @@ def inject_normalized_quantities(result_list):
     enriched_result_list = []
     for result_item in result_list:
         item = result_item.copy()
+        if "addresses" in item:
+            for i, address in enumerate(item["addresses"]):
+                item["addresses"][i] = inject_normalized_quantity(
+                    address, "quantity", {"divisible": item["asset_info"]["divisible"]}
+                )
+            item = inject_normalized_quantity(
+                item, "total", {"divisible": item["asset_info"]["divisible"]}
+            )
+            enriched_result_list.append(item)
+            continue
         for field_name, field_info in quantity_fields.items():
             if field_info["divisible"] is not None:
                 if field_name in item:
