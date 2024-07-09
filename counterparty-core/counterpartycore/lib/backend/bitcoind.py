@@ -44,7 +44,7 @@ def rpc_call(payload):
                 else:
                     network = "mainnet"
                 raise exceptions.BitcoindRPCError(
-                    f"Cannot communicate with backend at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
+                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
                 )
             if response.status_code in (401,):
                 raise exceptions.BitcoindRPCError(
