@@ -1578,6 +1578,7 @@ def get_open_btc_orders(db, address):
 class OrdersCache(metaclass=util.SingletonMeta):
     def __init__(self, db):
         logger.debug("Initialising orders cache...")
+        self.last_cleaning_block_index = 0
         self.cache_db = database.get_db_connection(":memory:", read_only=False, check_wal=False)
         cache_cursor = self.cache_db.cursor()
         create_orders_query = """
@@ -1619,6 +1620,17 @@ class OrdersCache(metaclass=util.SingletonMeta):
             db_cursor.execute(select_orders_query)
             for order in db_cursor:
                 self.insert_order(order)
+        self.clean_filled_orders()
+
+    def clean_filled_orders(self):
+        if util.CURRENT_BLOCK_INDEX - self.last_cleaning_block_index < 50:
+            return
+        self.last_cleaning_block_index = util.CURRENT_BLOCK_INDEX
+        cursor = self.cache_db.cursor()
+        cursor.execute(
+            "DELETE FROM orders WHERE status = 'filled' AND block_index < ?",
+            (util.CURRENT_BLOCK_INDEX - 50,),
+        )
 
     def insert_order(self, order):
         sql = """
@@ -1631,6 +1643,7 @@ class OrdersCache(metaclass=util.SingletonMeta):
         """
         cursor = self.cache_db.cursor()
         cursor.execute(sql, order)
+        self.clean_filled_orders()
 
     def update_order(self, tx_hash, order):
         if order["status"] == "expired":
@@ -1648,6 +1661,7 @@ class OrdersCache(metaclass=util.SingletonMeta):
         sql = f"""UPDATE orders SET {set_data} WHERE tx_hash = :tx_hash"""  # noqa S608
         cursor = self.cache_db.cursor()
         cursor.execute(sql, bindings)
+        self.clean_filled_orders()
 
     def get_matching_orders(self, tx_hash, give_asset, get_asset):
         cursor = self.cache_db.cursor()
