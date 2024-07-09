@@ -1609,7 +1609,7 @@ class OrdersCache(metaclass=util.SingletonMeta):
             ],
         )
         select_orders_query = """
-            SELECT *, MAX(rowid) FROM orders GROUP BY tx_hash
+            SELECT *, MAX(rowid) FROM orders WHERE status != 'expired' GROUP BY tx_hash
         """
 
         with db:
@@ -1631,6 +1631,9 @@ class OrdersCache(metaclass=util.SingletonMeta):
         cursor.execute(sql, order)
 
     def update_order(self, tx_hash, order):
+        if order["status"] == "expired":
+            self.cache_db.cursor().execute("DELETE FROM orders WHERE tx_hash = ?", (tx_hash,))
+            return
         set_data = []
         bindings = {"tx_hash": tx_hash}
         for key, value in order.items():
@@ -1679,6 +1682,7 @@ def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
 
 
 def get_matching_orders(db, tx_hash, give_asset, get_asset):
+    # return get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset)
     return OrdersCache(db).get_matching_orders(tx_hash, give_asset, get_asset)
 
 
