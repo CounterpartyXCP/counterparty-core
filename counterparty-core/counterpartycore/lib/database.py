@@ -274,3 +274,10 @@ def copy_old_table(cursor, table_name, new_create_query):
     cursor.execute(new_create_query)
     cursor.execute(f"""INSERT INTO {table_name} SELECT * FROM old_{table_name}""")  # nosec B608  # noqa: S608
     cursor.execute(f"""DROP TABLE old_{table_name}""")
+
+
+def table_exists(cursor, table):
+    table_name = cursor.execute(
+        f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"  # nosec B608  # noqa: S608
+    ).fetchone()
+    return table_name is not None

@@ -623,11 +623,12 @@ def initialise(db):
             block_index INTEGER
         )
     """
-    cursor.execute(create_addresses_query)
-
-    # migrate old table
-    if database.index_exists(cursor, "addresses", "sqlite_autoindex_addresses_1"):
-        database.copy_old_table(cursor, "addresses", create_addresses_query)
+    if database.table_exists(cursor, "addresses"):
+        # migrate old table
+        if database.index_exists(cursor, "addresses", "sqlite_autoindex_addresses_1"):
+            database.copy_old_table(cursor, "addresses", create_addresses_query)
+    else:
+        cursor.execute(create_addresses_query)
 
     database.create_indexes(
         cursor,
