@@ -1609,7 +1609,9 @@ class OrdersCache(metaclass=util.SingletonMeta):
             ],
         )
         select_orders_query = """
-            SELECT *, MAX(rowid) FROM orders WHERE status != 'expired' GROUP BY tx_hash
+            SELECT * FROM (
+                SELECT *, MAX(rowid) FROM orders GROUP BY tx_hash
+            ) WHERE status != 'expired' 
         """
 
         with db:
