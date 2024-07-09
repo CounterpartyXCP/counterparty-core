@@ -1606,7 +1606,8 @@ class OrdersCache(metaclass=util.SingletonMeta):
             cache_cursor,
             "orders",
             [
-                ["tx_hash", "get_asset", "give_asset", "status"],
+                ["tx_hash"],
+                ["get_asset", "give_asset", "status"],
             ],
         )
         select_orders_query = """
