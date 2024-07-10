@@ -554,7 +554,7 @@ def synchronize_mempool(api_db, ledger_db):
     logger.trace("API Watcher - Synchronizing mempool...")
     try:
         mempool_events = fetch_all(ledger_db, "SELECT * FROM mempool")
-        sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event) VALUES (?, ?, ?, ?, ?)"""
+        sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event, timestamp) VALUES (?, ?, ?, ?, ?, ?)"""
         with api_db:
             delete_all(api_db, "DELETE FROM mempool")
             cursor = api_db.cursor()
@@ -565,6 +565,7 @@ def synchronize_mempool(api_db, ledger_db):
                     event["category"],
                     event["bindings"],
                     event["event"],
+                    event["timestamp"],
                 ]
                 cursor.execute(sql_insert, bindings)
             if len(mempool_events) > 0:
@@ -578,9 +579,11 @@ class APIWatcher(Thread):
     def __init__(self):
         Thread.__init__(self)
         logger.debug("Initializing API Watcher...")
+        self.api_db = None
+        self.ledger_db = None
         apply_migration()
         self.stopping = False
-        self.stopped = False
+        self.stopped = True
         self.api_db = database.get_db_connection(
             config.API_DATABASE, read_only=False, check_wal=False
         )
@@ -610,6 +613,7 @@ class APIWatcher(Thread):
 
     def run(self):
         logger.info("Starting API Watcher...")
+        self.stopped = False
         synchronize_mempool(self.api_db, self.ledger_db)
         catch_up(self.api_db, self.ledger_db, self)
         self.follow()
@@ -619,6 +623,8 @@ class APIWatcher(Thread):
         self.stopping = True
         while not self.stopped:
             time.sleep(0.1)
-        self.api_db.close()
-        self.ledger_db.close()
+        if self.api_db is not None:
+            self.api_db.close()
+        if self.ledger_db is not None:
+            self.ledger_db.close()
         logger.trace("API Watcher stopped")

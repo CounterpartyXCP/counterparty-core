@@ -20,6 +20,7 @@ This update requires an automatic full reparse of the Counterparty transactions 
 * Fix silent errors in ZMQ follower
 * Catch `TimeoutError` during version check; re-check on error
 * Catch Bitcoin Core API errors correctly
+* Show warning to user when Bitcoin Core cannot be reached
 
 ## Codebase
 
@@ -27,7 +28,7 @@ This update requires an automatic full reparse of the Counterparty transactions 
 * Add `NEW_ADDRESS_OPTIONS` and `ADDRESS_OPTIONS_UPDATE` events
 * Add `tx_hash` to `DISPENSE_UPDATE` event
 * Add `event_hash` field to the `messages` table
-* Add a new database optimized for the API. This new database is reconstructed only from events by the `API Watcher`, and a new field `messages.event_hash` ensures the correspondence between the two databases in the event of a blockchain reorganization. 
+* Add a new database optimized for the API. This new database is reconstructed only from events by the `API Watcher`, and a new field `messages.event_hash` ensures the correspondence between the two databases in the event of a blockchain reorganization.
 * Parse transactions vouts with Rust
 
 ## API
@@ -62,7 +63,7 @@ This update requires an automatic full reparse of the Counterparty transactions 
 
 * Remove all `kickstart` functionality; `start` is now recommended for the initial catchup.
 * Tweak RPS logging
-* Fix erroneous Rust Fetcher errors on shutdown 
+* Fix erroneous Rust Fetcher errors on shutdown
 * Use millisecond precision for logging
 
 # Credits
