@@ -138,7 +138,7 @@ fn parse_vout(
             "Encountered invalid OP_RETURN script | tx: {}, vout: {}",
             txid, vi
         )))
-    } else if vout.script_pubkey.is_p2pkh() {
+    } else if vout.script_pubkey.instructions().last() == Some(Ok(Op(OP_CHECKSIG))) {
         if let [Ok(Op(OP_DUP)), Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUALVERIFY)), Ok(Op(OP_CHECKSIG))] =
             vout.script_pubkey
                 .instructions()
