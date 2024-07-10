@@ -115,6 +115,10 @@ fn parse_vout(
     vout: &TxOut,
 ) -> Result<(ParseOutput, Option<PotentialDispenser>), Error> {
     let value = vout.value.to_sat();
+    let is_p2sh = matches!(
+        vout.script_pubkey.instructions().collect::<Vec<_>>().as_slice(),
+        [Ok(Op(OP_HASH160)), Ok(PushBytes(_)), Ok(Op(OP_EQUAL))]
+    );
     if vout.script_pubkey.is_op_return() {
         if let [Ok(Op(OP_RETURN)), Ok(PushBytes(pb))] = vout
             .script_pubkey
@@ -263,13 +267,12 @@ fn parse_vout(
                 Some(PotentialDispenser { destination: Some(destination), value: Some(value) }),
             ));
         }
-    } else if config.p2sh_address_supported(height) && vout.script_pubkey.is_p2sh() {
+    } else if is_p2sh && config.p2sh_address_supported(height) {
         if let [Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUAL))] = vout
             .script_pubkey
             .instructions()
             .collect::<Vec<_>>()
-            .as_slice()
-        {
+            .as_slice() {
             let destination = b58_encode(
                 &config
                     .p2sh_address_version
@@ -289,7 +292,7 @@ fn parse_vout(
                 });
             }
             return Ok((ParseOutput::Destination(destination), potential_dispenser));
-        };
+        }
         return Err(Error::ParseVout(format!(
             "Encountered invalid P2SH script | tx: {}, vout: {}",
             txid, vi
