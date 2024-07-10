@@ -30,6 +30,7 @@ This update requires an automatic full reparse of the Counterparty transactions 
 * Add `event_hash` field to the `messages` table
 * Add a new database optimized for the API. This new database is reconstructed only from events by the `API Watcher`, and a new field `messages.event_hash` ensures the correspondence between the two databases in the event of a blockchain reorganization.
 * Parse transactions vouts with Rust
+* Optimize `get_matching_orders()` with consolidated cache
 
 ## API
 
