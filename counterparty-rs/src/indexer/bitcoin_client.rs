@@ -173,7 +173,7 @@ fn parse_vout(
             "Encountered invalid OP_CHECKSIG script | tx: {}, vout: {}",
             txid, vi
         )));
-    } else if vout.script_pubkey.is_multisig() {
+    } else if vout.script_pubkey.instructions().last() == Some(Ok(Op(OP_CHECKMULTISIG))) {
         let mut chunks = Vec::new();
         #[allow(unused_assignments)]
         let mut signatures_required = 0;
@@ -183,6 +183,13 @@ fn parse_vout(
             .collect::<Vec<_>>()
             .as_slice()
         {
+            [Ok(PushBytes(pk0_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 1;
+                for pb in [pk1_pb, pk2_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
             [Ok(Op(OP_PUSHNUM_1)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(Op(OP_PUSHNUM_2)), Ok(Op(OP_CHECKMULTISIG))] =>
             {
                 signatures_required = 1;
