@@ -963,7 +963,7 @@ def get_issuances_by_asset(
     return select_rows(
         db,
         "issuances",
-        where={"asset": asset.upper()},
+        where=[{"asset": asset.upper()}, {"asset_longname": asset.upper()}],
         last_cursor=cursor,
         limit=limit,
         offset=offset,
