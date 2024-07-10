@@ -822,35 +822,6 @@
         "next_cursor": 2736155,
         "result_count": 2736205
     },
-    "/v2/transactions/info": {
-        "result": {
-            "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "destination": null,
-            "btc_amount": 0,
-            "fee": 56565,
-            "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
-            "unpacked_data": {
-                "message_type": "issuance",
-                "message_type_id": 22,
-                "message_data": {
-                    "asset_id": 75313533584419238,
-                    "asset": "UNNEGOTIABLE",
-                    "subasset_longname": null,
-                    "quantity": 1,
-                    "divisible": false,
-                    "lock": false,
-                    "reset": false,
-                    "callable": false,
-                    "call_date": 0,
-                    "call_price": 0.0,
-                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
-                    "status": "valid",
-                    "quantity_normalized": "1"
-                }
-            },
-            "btc_amount_normalized": "0"
-        }
-    },
     "/v2/transactions/unpack": {
         "result": {
             "message_type": "issuance",

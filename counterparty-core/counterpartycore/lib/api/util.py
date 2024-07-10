@@ -591,7 +591,7 @@ def inject_unpacked_data(db, result_list):
     return enriched_result_list
 
 
-def inject_details(db, result):
+def inject_details(db, result, rule=None):
     # let's work with a list
     result_list = result
     result_is_dict = False
@@ -605,8 +605,13 @@ def inject_details(db, result):
     result_list = inject_normalized_quantities(result_list)
 
     if result_is_dict:
-        return result_list[0]
-    return result_list
+        result = result_list[0]
+    result = result_list
+
+    if rule == "/v2/assets/<asset>":
+        result["holder_count"] = ledger.get_asset_holder_count(db, result["asset"])
+
+    return result
 
 
 def redirect_to_rpc_v1():
