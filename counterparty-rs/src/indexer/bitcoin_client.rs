@@ -138,41 +138,52 @@ fn parse_vout(
             "Encountered invalid OP_RETURN script | tx: {}, vout: {}",
             txid, vi
         )))
-    } else if vout.script_pubkey.instructions().last() == Some(Ok(Op(OP_CHECKSIG))) {
-        if let [Ok(Op(OP_DUP)), Ok(Op(OP_HASH160)), Ok(PushBytes(pb)), Ok(Op(OP_EQUALVERIFY)), Ok(Op(OP_CHECKSIG))] =
-            vout.script_pubkey
-                .instructions()
-                .collect::<Vec<_>>()
-                .as_slice()
-        {
-            let bytes = arc4_decrypt(&key, pb.as_bytes());
-            if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
-                let data_len = bytes[0] as usize;
-                let data = bytes[1..=data_len].to_vec();
-                return Ok((
-                    ParseOutput::Data(data[config.prefix.len()..].to_vec()),
-                    Some(PotentialDispenser { destination: None, value: Some(value) }),
-                ));
-            } else {
-                let destination = b58_encode(
-                    config
-                        .address_version
-                        .clone()
-                        .into_iter()
-                        .chain(pb.as_bytes().to_vec())
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                );
-                return Ok((
-                    ParseOutput::Destination(destination.clone()),
-                    Some(PotentialDispenser { destination: Some(destination), value: Some(value) }),
-                ));
-            }
+
+    } else if vout.script_pubkey.as_bytes().last() == Some(&0xac) { // const OP_CHECKSIG: u8 = 0xac;
+
+        let instructions: Vec<_> = vout.script_pubkey.instructions().collect();
+        if instructions.len() < 3 {
+            return Err(Error::ParseVout(format!(
+                "Encountered invalid OP_CHECKSIG script | tx: {}, vout: {}",
+                txid, vi
+            )));
         }
-        return Err(Error::ParseVout(format!(
-            "Encountered invalid OP_CHECKSIG script | tx: {}, vout: {}",
-            txid, vi
-        )));
+        let pb = match instructions[2].as_ref() {
+            Ok(instruction) => instruction.push_bytes().ok_or_else(|| {
+                Error::ParseVout(format!(
+                    "Third instruction is not push bytes | tx: {}, vout: {}",
+                    txid, vi
+                ))
+            })?,
+            Err(e) => return Err(Error::ParseVout(format!(
+                "Error parsing third instruction: {} | tx: {}, vout: {}",
+                e, txid, vi
+            ))),
+        };
+        let bytes = arc4_decrypt(&key, pb.as_bytes());
+        if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
+            let data_len = bytes[0] as usize;
+            let data = bytes[1..=data_len].to_vec();
+            return Ok((
+                ParseOutput::Data(data[config.prefix.len()..].to_vec()),
+                Some(PotentialDispenser { destination: None, value: Some(value) }),
+            ));
+        } else {
+            let destination = b58_encode(
+                config
+                    .address_version
+                    .clone()
+                    .into_iter()
+                    .chain(pb.as_bytes().to_vec())
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+            );
+            return Ok((
+                ParseOutput::Destination(destination.clone()),
+                Some(PotentialDispenser { destination: Some(destination), value: Some(value) }),
+            ));
+        }
+
     } else if vout.script_pubkey.instructions().last() == Some(Ok(Op(OP_CHECKMULTISIG))) {
         let mut chunks = Vec::new();
         #[allow(unused_assignments)]
