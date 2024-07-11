@@ -139,7 +139,7 @@ fn parse_vout(
             txid, vi
         )))
 
-    } else if vout.script_pubkey.as_bytes().last() == Some(&0xac) { // const OP_CHECKSIG: u8 = 0xac;
+    } else if vout.script_pubkey.instructions().last() == Some(Ok(Op(OP_CHECKSIG))) {
 
         let instructions: Vec<_> = vout.script_pubkey.instructions().collect();
         if instructions.len() < 3 {
@@ -218,6 +218,13 @@ fn parse_vout(
             [Ok(Op(OP_PUSHNUM_1)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(Op(OP_PUSHNUM_3)), Ok(Op(OP_CHECKMULTISIG))] =>
             {
                 signatures_required = 1;
+                for pb in [pk1_pb, pk2_pb, pk3_pb] {
+                    chunks.push(pb.as_bytes().to_vec());
+                }
+            }
+            [Ok(PushBytes(pk0_pb)), Ok(PushBytes(pk1_pb)), Ok(PushBytes(pk2_pb)), Ok(PushBytes(pk3_pb)), Ok(PushBytes(pk4_pb)), Ok(Op(OP_CHECKMULTISIG))] =>
+            {
+                signatures_required = 2;
                 for pb in [pk1_pb, pk2_pb, pk3_pb] {
                     chunks.push(pb.as_bytes().to_vec());
                 }
