@@ -151,6 +151,7 @@ fn parse_vout(
         }
         let pb = match instructions.get(2) {
             Some(Ok(instruction)) => match instruction {
+                Instruction::Op(OP_PUSHNUM_1) => vec![1],
                 Instruction::PushBytes(bytes) => bytes.as_bytes().to_vec(),
                 Instruction::Op(op) => vec![op.to_u8()],
                 _ => vec![],
