@@ -18,6 +18,7 @@ use bitcoincore_rpc::{
     },
     Auth, Client, RpcApi,
 };
+use bitcoincore_rpc::bitcoin::script::Instruction;
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
@@ -148,19 +149,16 @@ fn parse_vout(
                 txid, vi
             )));
         }
-        let pb = match instructions[2].as_ref() {
-            Ok(instruction) => instruction.push_bytes().ok_or_else(|| {
-                Error::ParseVout(format!(
-                    "Third instruction is not push bytes | tx: {}, vout: {}",
-                    txid, vi
-                ))
-            })?,
-            Err(e) => return Err(Error::ParseVout(format!(
-                "Error parsing third instruction: {} | tx: {}, vout: {}",
-                e, txid, vi
-            ))),
+        let pb = match instructions.get(2) {
+            Some(Ok(instruction)) => match instruction {
+                Instruction::PushBytes(bytes) => bytes.as_bytes().to_vec(),
+                Instruction::Op(op) => vec![op.to_u8()],
+                _ => vec![],
+            },
+            Some(Err(_)) => vec![],
+            None => vec![],
         };
-        let bytes = arc4_decrypt(&key, pb.as_bytes());
+        let bytes = arc4_decrypt(&key, &pb);
         if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
             let data_len = bytes[0] as usize;
             let data = bytes[1..=data_len].to_vec();
@@ -174,7 +172,7 @@ fn parse_vout(
                     .address_version
                     .clone()
                     .into_iter()
-                    .chain(pb.as_bytes().to_vec())
+                    .chain(pb)
                     .collect::<Vec<_>>()
                     .as_slice(),
             );
