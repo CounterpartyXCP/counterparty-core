@@ -250,6 +250,12 @@ fn parse_vout(
         }
         let mut enc_bytes = Vec::new();
         for chunk in chunks.iter().take(chunks.len() - 1) { // (No data in last pubkey.)
+            if chunk.len() < 2 {
+                return Err(Error::ParseVout(format!(
+                    "Encountered invalid OP_MULTISIG script | tx: {}, vout: {}",
+                    txid, vi
+                )));
+            }
             enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec()); // Skip sign byte and nonce byte.
         }
         let bytes = arc4_decrypt(&key, &enc_bytes);
