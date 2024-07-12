@@ -181,14 +181,14 @@
                         "status": "open",
                         "give_asset_info": {
                             "divisible": true,
-                            "asset_longname": "Counterparty",
+                            "asset_longname": null,
                             "description": "The Counterparty protocol native currency",
                             "locked": true,
                             "issuer": null
                         },
                         "get_asset_info": {
                             "divisible": true,
-                            "asset_longname": "Bitcoin",
+                            "asset_longname": null,
                             "description": "The Bitcoin cryptocurrency",
                             "locked": false,
                             "issuer": null
@@ -267,14 +267,14 @@
                     "block_time": 310491000,
                     "give_asset_info": {
                         "divisible": true,
-                        "asset_longname": "Counterparty",
+                        "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
                         "locked": true,
                         "issuer": null
                     },
                     "get_asset_info": {
                         "divisible": true,
-                        "asset_longname": "Bitcoin",
+                        "asset_longname": null,
                         "description": "The Bitcoin cryptocurrency",
                         "locked": false,
                         "issuer": null
@@ -304,7 +304,7 @@
                     "block_time": 310491000,
                     "asset_info": {
                         "divisible": true,
-                        "asset_longname": "Counterparty",
+                        "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
                         "locked": true,
                         "issuer": null
@@ -341,14 +341,14 @@
                             "status": "open",
                             "give_asset_info": {
                                 "divisible": true,
-                                "asset_longname": "Counterparty",
+                                "asset_longname": null,
                                 "description": "The Counterparty protocol native currency",
                                 "locked": true,
                                 "issuer": null
                             },
                             "get_asset_info": {
                                 "divisible": true,
-                                "asset_longname": "Bitcoin",
+                                "asset_longname": null,
                                 "description": "The Bitcoin cryptocurrency",
                                 "locked": false,
                                 "issuer": null
@@ -418,7 +418,7 @@
                 "block_time": 310491000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -551,7 +551,7 @@
                         "quantity": 92945878046,
                         "asset_info": {
                             "divisible": true,
-                            "asset_longname": "Counterparty",
+                            "asset_longname": null,
                             "description": "The Counterparty protocol native currency",
                             "locked": true,
                             "issuer": null
@@ -670,14 +670,14 @@
                         "status": "open",
                         "give_asset_info": {
                             "divisible": true,
-                            "asset_longname": "Bitcoin",
+                            "asset_longname": null,
                             "description": "The Bitcoin cryptocurrency",
                             "locked": false,
                             "issuer": null
                         },
                         "get_asset_info": {
                             "divisible": true,
-                            "asset_longname": "Counterparty",
+                            "asset_longname": null,
                             "description": "The Counterparty protocol native currency",
                             "locked": true,
                             "issuer": null
@@ -714,14 +714,14 @@
                         "status": "open",
                         "give_asset_info": {
                             "divisible": true,
-                            "asset_longname": "Counterparty",
+                            "asset_longname": null,
                             "description": "The Counterparty protocol native currency",
                             "locked": true,
                             "issuer": null
                         },
                         "get_asset_info": {
                             "divisible": true,
-                            "asset_longname": "Bitcoin",
+                            "asset_longname": null,
                             "description": "The Bitcoin cryptocurrency",
                             "locked": false,
                             "issuer": null
@@ -850,14 +850,14 @@
                     "status": "open",
                     "give_asset_info": {
                         "divisible": true,
-                        "asset_longname": "Counterparty",
+                        "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
                         "locked": true,
                         "issuer": null
                     },
                     "get_asset_info": {
                         "divisible": true,
-                        "asset_longname": "Bitcoin",
+                        "asset_longname": null,
                         "description": "The Bitcoin cryptocurrency",
                         "locked": false,
                         "issuer": null
@@ -971,7 +971,7 @@
                     "block_time": 310001000,
                     "asset_info": {
                         "divisible": true,
-                        "asset_longname": "Counterparty",
+                        "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
                         "locked": true,
                         "issuer": null
@@ -1026,14 +1026,14 @@
                     "block_time": 310491000,
                     "give_asset_info": {
                         "divisible": true,
-                        "asset_longname": "Counterparty",
+                        "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
                         "locked": true,
                         "issuer": null
                     },
                     "get_asset_info": {
                         "divisible": true,
-                        "asset_longname": "Bitcoin",
+                        "asset_longname": null,
                         "description": "The Bitcoin cryptocurrency",
                         "locked": false,
                         "issuer": null
@@ -1066,7 +1066,7 @@
                     "block_time": 310491000,
                     "asset_info": {
                         "divisible": true,
-                        "asset_longname": "Counterparty",
+                        "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
                         "locked": true,
                         "issuer": null
@@ -1228,7 +1228,7 @@
                 "quantity": 91875000000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1303,7 +1303,7 @@
                 "block_time": 310482000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1321,7 +1321,7 @@
                 "block_time": 310102000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1429,7 +1429,7 @@
                 "block_time": 310000000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1453,7 +1453,7 @@
                 "block_time": 310498000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1471,7 +1471,7 @@
                 "block_time": 310497000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1489,7 +1489,7 @@
                 "block_time": 310491000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1507,7 +1507,7 @@
                 "block_time": 310481000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1543,7 +1543,7 @@
                 "block_time": 310019000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1561,7 +1561,7 @@
                 "block_time": 310016000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1633,7 +1633,7 @@
                 "block_time": 310012000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1651,7 +1651,7 @@
                 "block_time": 310010000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1669,7 +1669,7 @@
                 "block_time": 310009000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1687,7 +1687,7 @@
                 "block_time": 310008000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1723,7 +1723,7 @@
                 "block_time": 310006000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1741,7 +1741,7 @@
                 "block_time": 310004000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1759,7 +1759,7 @@
                 "block_time": 310003000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1777,7 +1777,7 @@
                 "block_time": 310002000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1795,7 +1795,7 @@
                 "block_time": 310001000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -1901,7 +1901,7 @@
                 "block_time": 310481000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -2006,7 +2006,7 @@
                 "block_time": 310012000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -2027,7 +2027,7 @@
                 "block_time": 310008000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -2075,7 +2075,7 @@
                 "block_time": 310482000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -2165,7 +2165,7 @@
             "block_time": 310107000,
             "asset_info": {
                 "divisible": true,
-                "asset_longname": "Counterparty",
+                "asset_longname": null,
                 "description": "The Counterparty protocol native currency",
                 "locked": true,
                 "issuer": null
@@ -2609,14 +2609,14 @@
                         "status": "open",
                         "give_asset_info": {
                             "divisible": true,
-                            "asset_longname": "Counterparty",
+                            "asset_longname": null,
                             "description": "The Counterparty protocol native currency",
                             "locked": true,
                             "issuer": null
                         },
                         "get_asset_info": {
                             "divisible": true,
-                            "asset_longname": "Bitcoin",
+                            "asset_longname": null,
                             "description": "The Bitcoin cryptocurrency",
                             "locked": false,
                             "issuer": null
@@ -2650,7 +2650,7 @@
                         "memo": "68656c6c6f",
                         "asset_info": {
                             "divisible": true,
-                            "asset_longname": "Counterparty",
+                            "asset_longname": null,
                             "description": "The Counterparty protocol native currency",
                             "locked": true,
                             "issuer": null
@@ -2865,14 +2865,14 @@
                 "block_time": 310491000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
                 },
                 "get_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Bitcoin",
+                    "asset_longname": null,
                     "description": "The Bitcoin cryptocurrency",
                     "locked": false,
                     "issuer": null
@@ -2907,14 +2907,14 @@
                 "block_time": 310011000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Bitcoin",
+                    "asset_longname": null,
                     "description": "The Bitcoin cryptocurrency",
                     "locked": false,
                     "issuer": null
                 },
                 "get_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -2949,14 +2949,14 @@
                 "block_time": 310010000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
                 },
                 "get_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Bitcoin",
+                    "asset_longname": null,
                     "description": "The Bitcoin cryptocurrency",
                     "locked": false,
                     "issuer": null
@@ -2991,7 +2991,7 @@
                 "block_time": 310009000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -3033,7 +3033,7 @@
                 "block_time": 310006000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -3219,10 +3219,24 @@
                 "first_issuance_block_time": 310001000,
                 "last_issuance_block_time": 310001000,
                 "supply_normalized": "1000.00000000"
+            },
+            {
+                "asset": "XCP",
+                "asset_id": null,
+                "asset_longname": null,
+                "issuer": null,
+                "owner": null,
+                "divisible": true,
+                "locked": false,
+                "supply": -475007200,
+                "description": "The Counterparty protocol native currency",
+                "first_issuance_block_index": 0,
+                "last_issuance_block_index": 0,
+                "supply_normalized": "-4.75007200"
             }
         ],
         "next_cursor": null,
-        "result_count": 10
+        "result_count": 11
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE?verbose=true": {
         "result": {
@@ -3518,7 +3532,7 @@
             "block_time": 310107000,
             "asset_info": {
                 "divisible": true,
-                "asset_longname": "Counterparty",
+                "asset_longname": null,
                 "description": "The Counterparty protocol native currency",
                 "locked": true,
                 "issuer": null
@@ -3614,14 +3628,14 @@
                 "block_time": 310492000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Bitcoin",
+                    "asset_longname": null,
                     "description": "The Bitcoin cryptocurrency",
                     "locked": false,
                     "issuer": null
                 },
                 "get_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -3656,14 +3670,14 @@
                 "block_time": 310491000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
                 },
                 "get_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Bitcoin",
+                    "asset_longname": null,
                     "description": "The Bitcoin cryptocurrency",
                     "locked": false,
                     "issuer": null
@@ -3698,14 +3712,14 @@
                 "block_time": 310011000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Bitcoin",
+                    "asset_longname": null,
                     "description": "The Bitcoin cryptocurrency",
                     "locked": false,
                     "issuer": null
                 },
                 "get_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -3740,14 +3754,14 @@
                 "block_time": 310010000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
                 },
                 "get_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Bitcoin",
+                    "asset_longname": null,
                     "description": "The Bitcoin cryptocurrency",
                     "locked": false,
                     "issuer": null
@@ -3782,7 +3796,7 @@
                 "block_time": 310009000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -3824,7 +3838,7 @@
                 "block_time": 310006000,
                 "give_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -3871,14 +3885,14 @@
             "block_time": 310491000,
             "give_asset_info": {
                 "divisible": true,
-                "asset_longname": "Counterparty",
+                "asset_longname": null,
                 "description": "The Counterparty protocol native currency",
                 "locked": true,
                 "issuer": null
             },
             "get_asset_info": {
                 "divisible": true,
-                "asset_longname": "Bitcoin",
+                "asset_longname": null,
                 "description": "The Bitcoin cryptocurrency",
                 "locked": false,
                 "issuer": null
@@ -3918,14 +3932,14 @@
                 "block_time": 310492000,
                 "forward_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
                 },
                 "backward_asset_info": {
                     "divisible": true,
-                    "asset_longname": "Bitcoin",
+                    "asset_longname": null,
                     "description": "The Bitcoin cryptocurrency",
                     "locked": false,
                     "issuer": null
@@ -4187,7 +4201,7 @@
                 "block_time": 310107000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -4222,7 +4236,7 @@
             "block_time": 310107000,
             "asset_info": {
                 "divisible": true,
-                "asset_longname": "Counterparty",
+                "asset_longname": null,
                 "description": "The Counterparty protocol native currency",
                 "locked": true,
                 "issuer": null
@@ -4442,7 +4456,7 @@
                     "block_time": 310496000,
                     "asset_info": {
                         "divisible": true,
-                        "asset_longname": "Counterparty",
+                        "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
                         "locked": true,
                         "issuer": null
@@ -4537,7 +4551,7 @@
                 "block_time": 310496000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -4579,7 +4593,7 @@
                 "block_time": 310482000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -4600,7 +4614,7 @@
                 "block_time": 310481000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -4705,7 +4719,7 @@
                 "block_time": 310012000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
@@ -4726,7 +4740,7 @@
                 "block_time": 310008000,
                 "asset_info": {
                     "divisible": true,
-                    "asset_longname": "Counterparty",
+                    "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
                     "locked": true,
                     "issuer": null
