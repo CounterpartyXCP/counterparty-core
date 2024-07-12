@@ -209,6 +209,7 @@ def rollback_event(api_db, event):
         rollback_balances(api_db, event)
         rollback_expiration(api_db, event)
         rollback_assets_info(api_db, event)
+        rollback_xcp_supply(api_db, event)
 
         sql = "DELETE FROM messages WHERE message_index = ?"
         delete_all(api_db, sql, (event["message_index"],))
@@ -368,6 +369,16 @@ def update_assets_info(api_db, event):
         cursor.execute(sql, event_bindings)
         return
 
+    if event["event"] == "BURN":
+        sql = """
+            UPDATE assets_info 
+            SET supply = supply + :earned
+            WHERE asset = 'XCP'
+            """
+        cursor = api_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
 
 def refresh_assets_info(api_db, asset_name):
     issuances = fetch_all(
@@ -430,6 +441,17 @@ def rollback_assets_info(api_db, event):
         cursor = api_db.cursor()
         cursor.execute(sql, event_bindings)
         return
+
+    if event["event"] == "BURN":
+        sql = """
+            UPDATE assets_info 
+            SET supply = supply - :earned
+            WHERE asset = 'XCP'
+            """
+        cursor = api_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
     # else
     refresh_assets_info(api_db, event_bindings["asset"])
 
@@ -445,6 +467,36 @@ def execute_event(api_db, event):
     return None
 
 
+def update_xcp_supply(api_db, event):
+    event_bindings = json.loads(event["bindings"])
+    if "fee_paid" not in event_bindings:
+        return
+    if event_bindings["fee_paid"] == 0:
+        return
+    sql = """
+        UPDATE assets_info 
+        SET supply = supply - :fee_paid
+        WHERE asset = 'XCP'
+    """
+    cursor = api_db.cursor()
+    cursor.execute(sql, event_bindings)
+
+
+def rollback_xcp_supply(api_db, event):
+    event_bindings = json.loads(event["bindings"])
+    if "fee_paid" not in event_bindings:
+        return
+    if event_bindings["fee_paid"] == 0:
+        return
+    sql = """
+        UPDATE assets_info 
+        SET supply = supply + :fee_paid
+        WHERE asset = 'XCP'
+    """
+    cursor = api_db.cursor()
+    cursor.execute(sql, event_bindings)
+
+
 def parse_event(api_db, event):
     with api_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
@@ -452,6 +504,7 @@ def parse_event(api_db, event):
         update_balances(api_db, event)
         update_expiration(api_db, event)
         update_assets_info(api_db, event)
+        update_xcp_supply(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
@@ -596,6 +649,27 @@ class APIWatcher(Thread):
         if not list(cursor):
             cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None))
             cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
+            insert_asset_info_sql = """
+                INSERT INTO assets_info (
+                    asset, divisible, locked, supply, description,
+                    first_issuance_block_index, last_issuance_block_index
+                ) VALUES (
+                    :asset, :divisible, :locked, :supply, :description,
+                    :first_issuance_block_index, :last_issuance_block_index
+                )
+            """
+            cursor.execute(
+                insert_asset_info_sql,
+                {
+                    "asset": "XCP",
+                    "divisible": True,
+                    "locked": False,
+                    "supply": 0,
+                    "description": "The Counterparty protocol native currency",
+                    "first_issuance_block_index": 0,
+                    "last_issuance_block_index": 0,
+                },
+            )
         cursor.close()
         self.last_mempool_sync = 0
 

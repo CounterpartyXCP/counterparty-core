@@ -819,14 +819,14 @@ def get_assets_last_issuance(db, asset_list):
     result = {
         "BTC": {
             "divisible": True,
-            "asset_longname": "Bitcoin",
+            "asset_longname": None,
             "description": "The Bitcoin cryptocurrency",
             "locked": False,
             "issuer": None,
         },
         "XCP": {
             "divisible": True,
-            "asset_longname": "Counterparty",
+            "asset_longname": None,
             "description": "The Counterparty protocol native currency",
             "locked": True,
             "issuer": None,
