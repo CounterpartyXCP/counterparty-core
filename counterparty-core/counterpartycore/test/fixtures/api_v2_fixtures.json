@@ -3228,11 +3228,11 @@
                 "owner": null,
                 "divisible": true,
                 "locked": false,
-                "supply": -475007200,
+                "supply": 604031847920,
                 "description": "The Counterparty protocol native currency",
                 "first_issuance_block_index": 0,
                 "last_issuance_block_index": 0,
-                "supply_normalized": "-4.75007200"
+                "supply_normalized": "6040.31850000"
             }
         ],
         "next_cursor": null,
