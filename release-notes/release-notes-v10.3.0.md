@@ -5,7 +5,7 @@ This version most notably introduces a major performance optimization for node A
 
 # Upgrading
 
-This update requires an automatic full reparse of the Counterparty transactions to populate the new database file.
+This update requires an automatic full reparse of the Counterparty transactions to populate the new database file. This process may take a number of hours to complete.
 
 
 # ChangeLog
@@ -72,4 +72,3 @@ This update requires an automatic full reparse of the Counterparty transactions 
 * Ouziel Slama
 * Adam Krellenstein
 * Warren Puffett
-* Matt Marcello
