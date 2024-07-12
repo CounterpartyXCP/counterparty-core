@@ -606,7 +606,8 @@ def inject_details(db, result, rule=None):
 
     if result_is_dict:
         result = result_list[0]
-    result = result_list
+    else:
+        result = result_list
 
     if rule == "/v2/assets/<asset>":
         result["holder_count"] = ledger.get_asset_holder_count(db, result["asset"])
