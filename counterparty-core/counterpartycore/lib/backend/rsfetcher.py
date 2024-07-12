@@ -30,6 +30,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
             }
         else:
             self.config = indexer_config | {"start_height": start_height}
+        self.config["network"] = "testnet" if config.TESTNET else "mainnet"
         self.start_height = start_height
         self.next_height = start_height
         self.fetcher = None
