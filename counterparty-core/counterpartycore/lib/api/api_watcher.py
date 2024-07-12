@@ -45,6 +45,14 @@ ASSET_EVENTS = [
     "ASSET_DESTRUCTION",
     "RESET_ISSUANCE",
     "ASSET_TRANSFER",
+    "BURN",
+]
+
+XCP_DESTROY_EVENTS = [
+    "ASSET_ISSUANCE",
+    "ASSET_DESTRUCTION",
+    "SWEEP",
+    "ASSET_DIVIDEND",
 ]
 
 
@@ -468,6 +476,8 @@ def execute_event(api_db, event):
 
 
 def update_xcp_supply(api_db, event):
+    if event["event"] not in XCP_DESTROY_EVENTS:
+        return
     event_bindings = json.loads(event["bindings"])
     if "fee_paid" not in event_bindings:
         return
@@ -483,6 +493,8 @@ def update_xcp_supply(api_db, event):
 
 
 def rollback_xcp_supply(api_db, event):
+    if event["event"] not in XCP_DESTROY_EVENTS:
+        return
     event_bindings = json.loads(event["bindings"])
     if "fee_paid" not in event_bindings:
         return
