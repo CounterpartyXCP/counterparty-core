@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.3.0 (2024-07-07)
+# Release Notes - Counterparty Core v10.3.0 (2024-07-12)
 
 This version most notably introduces a major performance optimization for node API access: an additional SQLite3 database has been added which tracks the current state of all Counterparty objects (in addition to the primary database that is purely log-structured). Other major changes for this version include the removal of the `kickstart` functionality, which is possible now that `start` is performant, and numerous tweaks and improvements to the v2 API.
 
