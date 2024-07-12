@@ -38,7 +38,7 @@ pub fn setup_logging(config: &Config) {
 
         let stderr_layer = layer()
             .event_format(CustomFormatter {
-                timer: ChronoLocal::rfc_3339(),
+                timer: ChronoLocal::new("%Y-%m-%dT%H:%M:%S%.3f%:z".to_string()),
             })
             .with_writer(stderr_writer)
             .with_filter(LevelFilter::from_level(Level::from(config.log_level)));

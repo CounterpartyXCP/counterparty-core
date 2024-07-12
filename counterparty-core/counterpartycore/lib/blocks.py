@@ -24,7 +24,7 @@ from counterpartycore.lib import (  # noqa: E402
     message_type,
     util,
 )
-from counterpartycore.lib.backend import fetcher
+from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
 
 from .messages import (  # noqa: E402
@@ -219,6 +219,52 @@ def parse_tx(db, tx):
         util.CURRENT_TX_HASH = None
 
 
+def replay_transactions_events(db, transactions):
+    cursor = db.cursor()
+    for tx in transactions:
+        transaction_bindings = {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "block_index": tx["block_index"],
+            "block_hash": tx["block_hash"],
+            "block_time": tx["block_time"],
+            "source": tx["source"],
+            "destination": tx["destination"],
+            "btc_amount": tx["btc_amount"],
+            "fee": tx["fee"],
+            "data": tx["data"],
+        }
+        ledger.add_to_journal(
+            db,
+            tx["block_index"],
+            "insert",
+            "transactions",
+            "NEW_TRANSACTION",
+            transaction_bindings,
+        )
+        dispensers_outs = cursor.execute(
+            "SELECT * FROM transaction_outputs WHERE tx_index = ? ORDER BY rowid",
+            (tx["tx_index"],),
+        ).fetchall()
+        for next_out in dispensers_outs:
+            transaction_outputs_bindings = {
+                "tx_index": tx["tx_index"],
+                "tx_hash": tx["tx_hash"],
+                "block_index": tx["block_index"],
+                "out_index": next_out["out_index"],
+                "destination": next_out["destination"],
+                "btc_amount": next_out["btc_amount"],
+            }
+            ledger.add_to_journal(
+                db,
+                tx["block_index"],
+                "insert",
+                "transaction_outputs",
+                "NEW_TRANSACTION_OUTPUT",
+                transaction_outputs_bindings,
+            )
+
+
 def parse_block(
     db,
     block_index,
@@ -232,6 +278,19 @@ def parse_block(
 
     The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
+
+    # Get block transactions
+    cursor = db.cursor()
+    cursor.execute(
+        """SELECT * FROM transactions \
+                      WHERE block_index=$block_index ORDER BY tx_index""",
+        {"block_index": block_index},
+    )
+    transactions = cursor.fetchall()
+
+    # Add manual event to journal because transaction already exists
+    if reparsing:
+        replay_transactions_events(db, transactions)
 
     ledger.BLOCK_LEDGER = []
     ledger.BLOCK_JOURNAL = []
@@ -247,39 +306,9 @@ def parse_block(
     # Close dispensers
     dispenser.close_pending(db, block_index)
 
-    # Parse transactions, sorting them by type.
-    cursor = db.cursor()
-    cursor.execute(
-        """SELECT * FROM transactions \
-                      WHERE block_index=$block_index ORDER BY tx_index""",
-        {"block_index": block_index},
-    )
     txlist = []
-    transactions = cursor.fetchall()
     for tx in transactions:
         try:
-            # Add manual event to journal because transaction already exists
-            if reparsing:
-                transaction_bindings = {
-                    "tx_index": tx["tx_index"],
-                    "tx_hash": tx["tx_hash"],
-                    "block_index": tx["block_index"],
-                    "block_hash": tx["block_hash"],
-                    "block_time": tx["block_time"],
-                    "source": tx["source"],
-                    "destination": tx["destination"],
-                    "btc_amount": tx["btc_amount"],
-                    "fee": tx["fee"],
-                    "data": tx["data"],
-                }
-                ledger.add_to_journal(
-                    db,
-                    block_index,
-                    "insert",
-                    "transactions",
-                    "NEW_TRANSACTION",
-                    transaction_bindings,
-                )
             parse_tx(db, tx)
             data = binascii.hexlify(tx["data"]).decode("UTF-8") if tx["data"] else ""
             txlist.append(
@@ -301,6 +330,7 @@ def parse_block(
         new_messages_hash, found_messages_hash = check.consensus_hash(
             db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
         )
+
         update_block_query = """
             UPDATE blocks
             SET 
@@ -344,6 +374,7 @@ def parse_block(
 
 def initialise(db):
     """Initialise data, create and populate the database."""
+    logger.info("Initializing database...")
     cursor = db.cursor()
 
     # Drop views that are going to be recreated
@@ -397,7 +428,7 @@ def initialise(db):
     if "difficulty" not in block_columns:
         cursor.execute("""ALTER TABLE blocks ADD COLUMN difficulty TEXT""")
     if "transaction_count" not in block_columns:
-        logger.info("Adding transaction_count column to blocks table...")
+        logger.info("Adding `transaction_count` column to `blocks` table...")
         cursor.execute("""ALTER TABLE blocks ADD COLUMN transaction_count INTEGER""")
         cursor.execute("""
             UPDATE blocks SET 
@@ -585,11 +616,19 @@ def initialise(db):
 
     # Addresses
     # Leaving this here because in the future this could work for other things besides broadcast
-    cursor.execute("""CREATE TABLE IF NOT EXISTS addresses(
-                      address TEXT UNIQUE,
-                      options INTEGER,
-                      block_index INTEGER)
-                   """)
+    create_addresses_query = """
+        CREATE TABLE IF NOT EXISTS addresses(
+            address TEXT,
+            options INTEGER,
+            block_index INTEGER
+        )
+    """
+    if database.table_exists(cursor, "addresses"):
+        # migrate old table
+        if database.index_exists(cursor, "addresses", "sqlite_autoindex_addresses_1"):
+            database.copy_old_table(cursor, "addresses", create_addresses_query)
+    else:
+        cursor.execute(create_addresses_query)
 
     database.create_indexes(
         cursor,
@@ -624,13 +663,16 @@ def initialise(db):
                       bindings TEXT,
                       timestamp INTEGER,
                       event TEXT,
-                      tx_hash TEXT)
+                      tx_hash TEXT,
+                      event_hash TEXT)
                   """)
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(messages)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN event TEXT""")
     if "tx_hash" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN tx_hash TEXT""")
+    if "event_hash" not in columns:
+        cursor.execute("""ALTER TABLE messages ADD COLUMN event_hash TEXT""")
 
     # TODO: FOREIGN KEY (block_index) REFERENCES blocks(block_index) DEFERRABLE INITIALLY DEFERRED)
     database.create_indexes(
@@ -639,8 +681,10 @@ def initialise(db):
         [
             ["block_index"],
             ["block_index", "message_index"],
+            ["block_index", "event"],
             ["event"],
             ["tx_hash"],
+            ["event_hash"],
         ],
     )
 
@@ -825,21 +869,12 @@ def create_views(db):
     cursor.close()
 
 
-def list_tx(
-    db,
-    block_hash,
-    block_index,
-    block_time,
-    tx_hash,
-    tx_index,
-    decoded_tx,
-    block_parser=None,
-):
+def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
     assert type(tx_hash) == str  # noqa: E721
     cursor = db.cursor()
 
     source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
-        db, decoded_tx, block_index, block_parser=block_parser
+        db, decoded_tx, block_index
     )
 
     # For mempool
@@ -986,9 +1021,8 @@ def reparse(db, block_index=0):
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
     step = f"Reparsing blocks from Block {block_index}..."
-    done_message = "All blocks reparsed in {:.2f}s."  # TODO: this is logged even if the operation is interrupted
     message = ""
-    with log.Spinner(step, done_message) as spinner:
+    with log.Spinner(step) as spinner:
         cursor.execute(
             """SELECT * FROM blocks WHERE block_index >= ? ORDER BY block_index""", (block_index,)
         )
@@ -1036,6 +1070,7 @@ def reparse(db, block_index=0):
                 block_count,
             )
             spinner.set_messsage(message)
+            spinner.done_message = str(block_parsed_count) + " blocks reparsed in {:.2f}s."
 
 
 def get_next_tx_index(db):
@@ -1055,7 +1090,7 @@ def get_next_tx_index(db):
     return tx_index
 
 
-def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
+def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
     # increment block index
@@ -1075,7 +1110,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
                 previous_block_index = decoded_block["height"] - 1
             else:
                 previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
-            logger.info("Blockchain reorganization detected at Block %s.", previous_block_index)
+            logger.warning("Blockchain reorganization detected at Block %s.", previous_block_index)
             # rollback to the previous block
             rollback(db, block_index=previous_block_index + 1)
             util.CURRENT_BLOCK_INDEX = previous_block_index + 1
@@ -1106,10 +1141,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
 
         # save transactions
         for transaction in decoded_block["transactions"]:
-            # for kickstart
-            if block_parser is not None:
-                # Cache transaction. We do that here because the block is fetched by another process.
-                block_parser.put_in_cache(transaction)
             tx_index = list_tx(
                 db,
                 decoded_block["block_hash"],
@@ -1118,7 +1149,6 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
                 transaction["tx_hash"],
                 tx_index,
                 decoded_tx=transaction,
-                block_parser=block_parser,
             )
         # Parse the transactions in the block.
         new_ledger_hash, new_txlist_hash, new_messages_hash = parse_block(
@@ -1129,6 +1159,7 @@ def parse_new_block(db, decoded_block, block_parser=None, tx_index=None):
             previous_txlist_hash=previous_block["txlist_hash"],
             previous_messages_hash=previous_block["messages_hash"],
         )
+
         duration = time.time() - start_time
 
         log_message = "Block %(block_index)s - Parsing complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
@@ -1181,29 +1212,36 @@ def catch_up(db, check_asset_conservation=True):
         backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
         block_count = backend.bitcoind.getblockcount()
 
-    # initialize blocks fetcher
-    # block_fetcher = backend.bitcoind.BlockFetcher(util.CURRENT_BLOCK_INDEX + 1)
-    fetcher.initialize(util.CURRENT_BLOCK_INDEX + 1)
-
     # Get index of last transaction.
     tx_index = get_next_tx_index(db)
 
     start_time = time.time()
     parsed_blocks = 0
+    fetcher = None
 
     while util.CURRENT_BLOCK_INDEX < block_count:
         # Get block information and transactions
+        fetch_time_start = time.time()
+        if fetcher is None:
+            fetcher = rsfetcher.RSFetcher(util.CURRENT_BLOCK_INDEX + 1)
+
         decoded_block = fetcher.get_block()
-        # decoded_block = block_fetcher.get_block()
-        # util.CURRENT_BLOCK_INDEX is incremented in parse_new_block
-        tx_index = parse_new_block(db, decoded_block, block_parser=None, tx_index=tx_index)
+        block_height = decoded_block.get("height")
+        fetch_time_end = time.time()
+        fetch_duration = fetch_time_end - fetch_time_start
+        logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
+
+        # Check for gaps in the blockchain
+        assert block_height <= util.CURRENT_BLOCK_INDEX + 1
+
+        # Parse the current block
+        tx_index = parse_new_block(db, decoded_block, tx_index=tx_index)
 
         parsed_blocks += 1
-        duration_seconds = int(time.time() - start_time)
-        hours, remainder = divmod(duration_seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        formatted_duration = f"{hours}h {minutes}m {seconds}s"
-        logger.debug(f"Parsed {parsed_blocks} blocks in {formatted_duration}.")
+        formatted_duration = util.format_duration(time.time() - start_time)
+        logger.debug(
+            f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
+        )
 
         # Refresh block count.
         if util.CURRENT_BLOCK_INDEX == block_count:
@@ -1212,7 +1250,8 @@ def catch_up(db, check_asset_conservation=True):
                 backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
             block_count = backend.bitcoind.getblockcount()
 
-    fetcher.stop()
+    if fetcher is not None:
+        fetcher.stop()
 
     if config.CHECK_ASSET_CONSERVATION and check_asset_conservation:
         # TODO: timer to check asset conservation every N hours

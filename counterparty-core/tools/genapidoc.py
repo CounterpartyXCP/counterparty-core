@@ -7,7 +7,6 @@ import yaml
 from counterpartycore.lib.api import routes
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-API_DOC_FILE = os.path.join(CURR_DIR, "../../../Documentation/docs/advanced/api-v2/node-api.md")
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
 DREDD_FILE = os.path.join(CURR_DIR, "../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apidoc", "apicache.json")
@@ -156,17 +155,14 @@ def include_in_dredd(group, path):
     return True
 
 
-def gen_groups_toc(target):
+def gen_groups_toc():
     toc = ""
     for group in GROUPS:
-        if target == "docusaurus":
-            toc += f"- [`{group}`](#group-{group[1:]})\n"
-        else:
-            toc += f"- [`{group}`](#/reference{group})\n"
+        toc += f"- [`{group}`](#/reference{group})\n"
     return toc
 
 
-def gen_blueprint(target):
+def gen_blueprint():
     md = ""
     dredd = DREDD_CONFIG.copy()
     current_group = None
@@ -188,6 +184,8 @@ def gen_blueprint(target):
             if os.path.exists(group_doc_path):
                 with open(group_doc_path, "r") as f:
                     md += f.read()
+            if current_group == "transactions":
+                md += gen_unpack_doc()
 
         blueprint_path = (
             path.replace("<", "{").replace(">", "}").replace("int:", "").replace("path:", "")
@@ -203,18 +201,16 @@ def gen_blueprint(target):
             dredd["only"].append(dredd_name)
 
         md += f"\n### {title} "
-        if target == "docusaurus":
-            md += f"[GET `{blueprint_path}`]\n\n"
-        else:
-            first_query_arg = True
-            for arg in route["args"]:
-                if f"{{{arg['name']}}}" in blueprint_path:
-                    continue
-                else:
-                    prefix = "?" if first_query_arg else "&"
-                    first_query_arg = False
-                    blueprint_path += f"{{{prefix}{arg['name']}}}"
-            md += f"[GET {blueprint_path}]\n\n"
+
+        first_query_arg = True
+        for arg in route["args"]:
+            if f"{{{arg['name']}}}" in blueprint_path:
+                continue
+            else:
+                prefix = "?" if first_query_arg else "&"
+                first_query_arg = False
+                blueprint_path += f"{{{prefix}{arg['name']}}}"
+        md += f"[GET {blueprint_path}]\n\n"
 
         md += route["description"].strip()
 
@@ -257,32 +253,15 @@ def gen_blueprint(target):
     return md, dredd
 
 
-def get_route_path(target):
-    if target == "docusaurus":
-        return "`/v2/`"
-    return "/v2/"
-
-
-def get_header(target):
-    if target == "docusaurus":
-        return """---
-title: API v2
----
-
-"""
-    return ""
-
-
-def update_blueprint(target, save_dredd=False):
-    md = get_header(target)
+def update_blueprint():
+    md = ""
     with open(os.path.join(CURR_DIR, "apidoc", "blueprint-template.md"), "r") as f:
         md += f.read()
 
-    blueprint, dredd = gen_blueprint(target)
+    blueprint, dredd = gen_blueprint()
 
-    md = md.replace("<GROUP_TOC>", gen_groups_toc(target))
+    md = md.replace("<GROUP_TOC>", gen_groups_toc())
     md = md.replace("<EVENTS_DOC>", gen_events_doc())
-    md = md.replace("<ROOT_PATH>", get_route_path(target))
     md = md.replace("<API_BLUEPRINT>", blueprint)
 
     md = (
@@ -290,17 +269,13 @@ def update_blueprint(target, save_dredd=False):
         + md
     )
 
-    target_file = API_DOC_FILE
-    if target == "apiary":
-        target_file = API_BLUEPRINT_FILE
-    with open(target_file, "w") as f:
+    with open(API_BLUEPRINT_FILE, "w") as f:
         f.write(md)
-        print(f"API documentation written to {target_file}")
+        print(f"API documentation written to {API_BLUEPRINT_FILE}")
 
-    if save_dredd:
-        with open(DREDD_FILE, "w") as f:
-            yaml.dump(dredd, f)
-            print(f"Dredd file written to {DREDD_FILE}")
+    with open(DREDD_FILE, "w") as f:
+        yaml.dump(dredd, f)
+        print(f"Dredd file written to {DREDD_FILE}")
 
 
 def gen_events_doc():
@@ -323,9 +298,59 @@ def gen_events_doc():
     return md
 
 
+def gen_unpack_doc():
+    message_type_names = [
+        "bet",
+        "broadcast",
+        "btcpay",
+        "cancel",
+        "destroy",
+        "dispenser",
+        "dispense",
+        "dividend",
+        "issuance",
+        "order",
+        "send",
+        "enhanced_send",
+        "mpma_send",
+        "sweep",
+    ]
+    message_type_tx_hash = {
+        "cancel": "849ef3d0e16e5ebed4fd9a993dec006c30f9dc29e3cb4ae7e1250b3c1181b946",
+        "dispenser": "7f7c862b7cee2fcd9f87006a93ec71c80fe61175dfd634c6241f6f04d4007b8d",
+        "enhanced_send": "278636eefa95ab79a2a529c72e15844b54c34882b316434244cabc69bbc1fa72",
+        "destroy": "379d40c067f8ecfbbdc59e030a383d746b7f94e8a1a7e2cd8f66cd2bd3523d4b",
+        "dispense": "0fbe9c14868ba246ad4ca57cf198e567e7febbbac163b1f94f11c222734ac697",
+        "issuance": "6317d1aaad7475da9b371009a2294f89865f399cc5b7757767ca439c2e5c5d34",
+        "order": "9fb644511d310b97d674d5698a8ae5723321d7862340edf7bb44af10c6a698dc",
+        "mpma_send": "17d98afaf691218ecdf3f1ddca9eb91e75c8a91238c979c8a8a1179796ee35e1",
+        "broadcast": "ac53a9c1a209b3d697ba818d5dce34b83622e44c64d7127187472604d845d33a",
+        "dividend": "24d1085df0c76f1360a0d9673cd526bc7ab1da0d3c35b76089376be45bd9ba79",
+        "sweep": "b906e6c45713ee9c5de3a692772e459211ba40bf2149e41922ff41e5be70a5b6",
+        "btcpay": "907ce0bf1cc9c24297900478cd387922817373acd208d1b8fd0aa91c0bf198b6",
+        "send": "4f9e6c847d414599adee5ea7ac46ddb337088da3669b7b4d0ebdd4979184b541",
+        "bet": "6f2deeab17f2559edcdd952e8d942ac7adf2679df382bfdbf2a554beb32729cf",
+    }
+
+    md = "\nThere are 14 types of transactions:\n\n"
+    md += "\n".join([f"- `{message_name}`" for message_name in message_type_names])
+    md += "\n\nHere is sample API output for each of these transactions:\n"
+
+    for message_name in message_type_names:
+        url = f"{API_ROOT}/v2/transactions/{message_type_tx_hash[message_name]}"
+        args = {"verbose": "true"}
+        response = requests.get(url, params=args)  # noqa S113
+        result = response.json()
+        md += f"\n**{message_name.capitalize()}**\n\n"
+        md += "```\n"
+        md += json.dumps(result, indent=4)
+        md += "\n```\n"
+
+    return md
+
+
 def update_doc():
-    update_blueprint("apiary")
-    update_blueprint("docusaurus", save_dredd=True)
+    update_blueprint()
 
     with open(CACHE_FILE, "w") as f:
         json.dump(API_CACHE, f, indent=4)
@@ -333,3 +358,5 @@ def update_doc():
 
 
 update_doc()
+
+# gen_unpack_doc()

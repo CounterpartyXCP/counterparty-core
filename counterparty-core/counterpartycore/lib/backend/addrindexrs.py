@@ -668,10 +668,15 @@ class AddrindexrsSocket:
             return self.get_oldest_tx(address, block_index, timeout=timeout)
 
 
-# We hardcoded certain addresses to reproduce an `addrindexrs` bug.
-# In comments the real result that `addrindexrs` should have returned.
+# We hardcoded certain addresses to reproduce or fix `addrindexrs` bug.
 GET_OLDEST_TX_HARDCODED = {
-    "825096-bc1q66u8n4q0ld3furqugr0xzakpedrc00wv8fagmf": {}  # {'block_index': 820886, 'tx_hash': 'e5d130a583983e5d9a9a9175703300f7597eadb6b54fe775055110907b4079ed'}
+    # In comments the real result that `addrindexrs` should have returned.
+    "825096-bc1q66u8n4q0ld3furqugr0xzakpedrc00wv8fagmf": {},  # {'block_index': 820886, 'tx_hash': 'e5d130a583983e5d9a9a9175703300f7597eadb6b54fe775055110907b4079ed'}
+    # In comments the buggy result that `addrindexrs` returned.
+    "820326-1GsjsKKT4nH4GPmDnaxaZEDWgoBpmexwMA": {
+        "block_index": 820321,
+        "tx_hash": "b61ac3ab1ba9d63d484e8f83e8b9607bd932c8f4b742095445c3527ab575d972",
+    },  # {}
 }
 ADDRINDEXRS_CLIENT = None
 

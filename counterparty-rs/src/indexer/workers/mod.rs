@@ -1,7 +1,7 @@
 use std::thread::{self, JoinHandle};
 
 use crossbeam_channel::{Receiver, Sender};
-use tracing::{error, info, debug};
+use tracing::{debug, error};
 
 use super::{stopper::Stopper, types::error::Error};
 
@@ -37,12 +37,14 @@ where
 
         handles.push(thread::spawn(move || {
             if let Err(e) = f(rx, tx, stopper_clone) {
-                error!("{}-{} worker exited with error: {}", name, i, e);
-                stopper_clone_1.stop()?;
-                return Err(e);
+                if !stopper_clone_1.stopped()? {
+                    error!("{}-{} worker exited with error: {}", name, i, e);
+                    stopper_clone_1.stop()?;
+                    return Err(e);
+                }
             }
 
-            info!("{}-{} worker exited", name, i);
+            debug!("{}-{} worker exited.", name, i);
             Ok(())
         }));
     }

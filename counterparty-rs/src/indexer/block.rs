@@ -1,7 +1,10 @@
 use pyo3::{
-    types::{PyAnyMethods, PyBytes, PyDict},
+    exceptions::PyException,
+    types::{PyAnyMethods, PyBytes, PyDict, PyTuple},
     IntoPy, PyObject, Python,
 };
+
+use super::config::Config;
 
 #[derive(Clone)]
 pub struct Vin {
@@ -45,6 +48,48 @@ impl IntoPy<PyObject> for Vout {
 }
 
 #[derive(Clone)]
+pub struct PotentialDispenser {
+    pub destination: Option<String>,
+    pub value: Option<u64>,
+}
+
+impl IntoPy<PyObject> for PotentialDispenser {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        PyTuple::new_bound(py, &[self.destination.into_py(py), self.value.into_py(py)]).into_py(py)
+    }
+}
+
+#[derive(Clone)]
+pub struct ParsedVouts {
+    pub destinations: Vec<String>,
+    pub btc_amount: i64,
+    pub fee: i64,
+    pub data: Vec<u8>,
+    pub potential_dispensers: Vec<Option<PotentialDispenser>>,
+}
+
+impl IntoPy<PyObject> for ParsedVouts {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        let dispensers: Vec<PyObject> = self
+            .potential_dispensers
+            .into_iter()
+            .map(|pd| pd.into_py(py))
+            .collect();
+        PyTuple::new_bound(
+            py,
+            &[
+                self.destinations.into_py(py),
+                self.btc_amount.into_py(py),
+                self.fee.into_py(py),
+                PyBytes::new_bound(py, &self.data).into_py(py),
+                dispensers.into_py(py),
+            ],
+        )
+        .into_py(py)
+    }
+}
+
+#[derive(Clone)]
 pub struct Transaction {
     pub version: i32,
     pub segwit: bool,
@@ -53,6 +98,7 @@ pub struct Transaction {
     pub tx_id: String,
     pub tx_hash: String,
     pub vtxinwit: Vec<String>,
+    pub parsed_vouts: Result<ParsedVouts, String>,
     pub vin: Vec<Vin>,
     pub vout: Vec<Vout>,
 }
@@ -68,6 +114,18 @@ impl IntoPy<PyObject> for Transaction {
         dict.set_item("tx_id", self.tx_id).unwrap();
         dict.set_item("tx_hash", self.tx_hash).unwrap();
         dict.set_item("vtxinwit", self.vtxinwit).unwrap();
+
+        match self.parsed_vouts {
+            Ok(parsed_vouts) => {
+                dict.set_item("parsed_vouts", parsed_vouts.into_py(py))
+                    .unwrap();
+            }
+            Err(error) => {
+                let exception = PyException::new_err(error);
+                dict.set_item("parsed_vouts", exception.into_py(py))
+                    .unwrap();
+            }
+        }
 
         let vin_list: Vec<PyObject> = self.vin.into_iter().map(|vin| vin.into_py(py)).collect();
         dict.set_item("vin", vin_list).unwrap();
@@ -121,5 +179,5 @@ impl IntoPy<PyObject> for Block {
 }
 
 pub trait ToBlock {
-    fn to_block(&self, height: u32) -> Block;
+    fn to_block(&self, config: Config, height: u32) -> Block;
 }

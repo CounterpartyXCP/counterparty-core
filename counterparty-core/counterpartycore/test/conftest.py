@@ -6,6 +6,7 @@ import argparse
 import binascii
 import json
 import logging
+import os
 import time
 from datetime import datetime
 
@@ -13,11 +14,12 @@ import apsw
 import bitcoin as bitcoinlib
 import pycoin
 import pytest
+import requests
 from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import arc4, config, database, log, script, util
+from counterpartycore.lib import arc4, config, database, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.test import util_test
@@ -159,6 +161,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("skip", [not metafunc.config.getoption("testbook")])
     elif metafunc.function.__name__ == "test_compare_hashes":
         metafunc.parametrize("skip", [not metafunc.config.getoption("comparehashes")])
+    elif metafunc.function.__name__ == "test_mainnet_api_db":
+        metafunc.parametrize("skip", [not metafunc.config.getoption("testapidb")])
 
 
 def pytest_addoption(parser):
@@ -192,6 +196,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Compare last block hashes with v9 version",
+    )
+    parser.addoption(
+        "--testapidb",
+        action="store_true",
+        default=False,
+        help="Compare balances from Ledger DB and API DB",
     )
 
 
@@ -229,6 +239,8 @@ def api_server(request, cp_server):
 
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
+
+    # print(config.DATABASE, config.API_DATABASE)
 
     # start RPC server and wait for server to be ready
     api_server = api.APIServer()
@@ -306,11 +318,37 @@ def api_server_v2(request, cp_server):
             "api_port": TEST_RPC_PORT + 10,
         }
     )
+
+    if os.path.exists(config.API_DATABASE):
+        os.unlink(config.API_DATABASE)
+        os.unlink(config.API_DATABASE + "-shm")
+        os.unlink(config.API_DATABASE + "-wal")
+
+    def is_server_ready():
+        return True
+
+    api_v2.is_server_ready = is_server_ready
+
     args = argparse.Namespace(**server_config)
     api_server = api_v2.APIServer()
     api_server.start(args)
-    # TODO: wait for server to be ready
-    time.sleep(1.5)
+
+    # wait for server to be ready
+    while True:
+        try:
+            result = requests.get("http://localhost:10009/v2/", timeout=30)
+            print(result.text)
+            print(result.status_code)
+            if result.status_code != 200:
+                raise requests.exceptions.RequestException
+            result = result.json()
+            if result["result"]["counterparty_height"] < 310500:
+                raise requests.exceptions.RequestException
+            break
+        except requests.exceptions.RequestException:
+            print("TimeoutError: waiting for API server to be ready")
+            time.sleep(1)
+            pass
 
     request.addfinalizer(lambda: api_server.stop())
 
@@ -535,7 +573,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         else:
             return ARC4.new(binascii.unhexlify("00" * 32))
 
-    def check_wal_file():
+    def check_wal_file(dbfile):
         pass
 
     def rps_expire(db, block_index):
@@ -571,3 +609,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     )
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
     monkeypatch.setattr("counterpartycore.lib.messages.rps.expire", rps_expire)
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
+    )

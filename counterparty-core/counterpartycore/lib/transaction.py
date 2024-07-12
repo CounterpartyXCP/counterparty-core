@@ -24,7 +24,6 @@ from counterpartycore.lib import (
     deserialize,
     exceptions,
     gettxinfo,
-    ledger,
     message_type,
     messages,
     script,
@@ -466,9 +465,15 @@ class TransactionService:
             btc_out = destination_btc_out + data_btc_out
             total_btc_out = btc_out + max(change_quantity, 0) + final_fee
 
-            error_message = f"Insufficient {config.BTC} at address {source}. (Need approximately {total_btc_out / config.UNIT} {config.BTC}.)"
+            need = f"{D(total_btc_out) / D(config.UNIT)} {config.BTC}"
+            include_fee = f"{D(final_fee) / D(config.UNIT)} {config.BTC}"
+            available = f"{D(btc_in) / D(config.UNIT)} {config.BTC}"
+            error_message = f"Insufficient {config.BTC} at address {source}. Need: {need} (Including fee: {include_fee}), available: {available}."
+            error_message += f" These fees are estimated for a confirmation target of {estimate_fee_per_kb_nblocks} blocks, you can reduce them by using the `confirmation_target` parameter with a higher value or by manually setting the fees with the `fee` parameter."
+
             if not allow_unconfirmed_inputs:
                 error_message += " To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)"
+
             raise exceptions.BalanceError(error_message)
 
         # Lock the source's inputs (UTXOs) chosen for this transaction
@@ -1723,33 +1728,6 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
     }
 
 
-def inject_unpacked_data(db, tx):
-    if tx and tx["data"]:
-        tx["unpacked_data"] = unpack(db, binascii.hexlify(tx["data"]), tx["block_index"])
-    return tx
-
-
-def get_transaction_by_hash(db, tx_hash: str):
-    """
-    Returns a transaction by its hash.
-    :param tx_hash: The hash of the transaction (e.g. 876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5)
-    """
-    tx = ledger.get_transaction(db, tx_hash)
-    return inject_unpacked_data(db, tx)
-
-
-def get_transaction_by_tx_index(db, tx_index: int):
-    """
-    Returns a transaction by its index.
-    :param tx_index: The index of the transaction (e.g. 10000)
-    """
-    txs = ledger.get_transactions(db, tx_index=tx_index)
-    if txs:
-        tx = txs[0]
-        return inject_unpacked_data(db, tx)
-    return None
-
-
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
@@ -1821,6 +1799,9 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.dispenser.ID:
             message_type_name = "dispenser"
             message_data = messages.dispenser.unpack(message, return_dict=True)
+        elif message_type_id == messages.dispenser.DISPENSE_ID:
+            message_type_name = "dispense"
+            message_data = {}
         # Dividend
         elif message_type_id == messages.dividend.ID:
             message_type_name = "dividend"
@@ -1846,7 +1827,18 @@ def unpack(db, datahex: str, block_index: int = None):
         # MPMA send
         elif message_type_id == messages.versions.mpma.ID:
             message_type_name = "mpma_send"
-            message_data = messages.versions.mpma.unpack(message, block_index)
+            mpma_message_data = messages.versions.mpma.unpack(message, block_index)
+            message_data = []
+            for asset_name, send_info in mpma_message_data.items():
+                message_data.append(
+                    {
+                        "asset": asset_name,
+                        "destination": send_info[0][0],
+                        "quantity": send_info[0][1],
+                        "memo": send_info[0][2] if len(send_info[0]) > 2 else None,
+                        "memo_is_hex": send_info[0][3] if len(send_info[0]) > 3 else None,
+                    }
+                )
         # RPS
         elif message_type_id == messages.rps.ID:
             message_type_name = "rps"

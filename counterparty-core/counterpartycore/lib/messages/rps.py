@@ -199,7 +199,7 @@ def expire(db, block_index):
     logger.trace(
         "Replay RPS events for block %(block_index)s",
         {
-            "block_index": block_index,
+            "block_index": block_index if block_index != config.MEMPOOL_BLOCK_INDEX else "mempool",
         },
     )
     replay_events(db, str(block_index))

@@ -23,7 +23,7 @@ API_ROOT = "http://localhost:10009"
 @pytest.mark.usefixtures("api_server_v2")
 def test_api_v2(request):
     block_index = 310491
-    address = ADDR[0]
+    address = "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"
     asset = "NODIVISIBLE"
     asset1 = asset
     asset2 = "XCP"
@@ -33,6 +33,8 @@ def test_api_v2(request):
     dispenser_hash = "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec"
     block_hash = "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b"
     dividend_hash = "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518"
+    issuance_hash = "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf"
+    broadcast_hash = "7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af"
     event = "CREDIT"
     event_index = 10
     tx_index = 2
@@ -77,6 +79,10 @@ def test_api_v2(request):
         url = url.replace("<order_hash>", order_hash)
         url = url.replace("<bet_hash>", bet_hash)
         url = url.replace("<dispenser_hash>", dispenser_hash)
+        if "issuances" in url:
+            url = url.replace("<tx_hash>", issuance_hash)
+        if "broadcasts" in url:
+            url = url.replace("<tx_hash>", broadcast_hash)
         url = url.replace("<tx_hash>", tx_hash)
         url = url.replace("<block_hash>", block_hash)
         url = url.replace("<dividend_hash>", dividend_hash)
@@ -86,6 +92,7 @@ def test_api_v2(request):
             url += "?verbose=true"
         print(url)
         result = requests.get(url)  # noqa: S113
+        print(result)
         results[url] = result.json()
         print(result.json())
         assert result.status_code == 200
@@ -121,21 +128,21 @@ def test_new_get_balances_by_address():
             "asset": "A95428956661682277",
             "quantity": 100000000,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91875000000},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "PARENT", "quantity": 100000000},
-        {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "DIVISIBLE",
-            "quantity": 98800000000,
-        },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "MAXI",
             "quantity": 9223372036854775807,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "NODIVISIBLE", "quantity": 985},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "LOCKED", "quantity": 1000},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "CALLABLE", "quantity": 1000},
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "NODIVISIBLE", "quantity": 985},
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "DIVISIBLE",
+            "quantity": 98800000000,
+        },
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91875000000},
     ]
 
 
@@ -204,11 +211,11 @@ def test_new_get_asset_info():
         "divisible": False,
         "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "locked": False,
-        "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-        "supply": 1000,
-        "holder_count": 3,
         "first_issuance_block_index": 310002,
         "last_issuance_block_index": 310002,
+        "asset_id": "1911882621324134",
+        "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        "supply": 1000,
     }
 
 

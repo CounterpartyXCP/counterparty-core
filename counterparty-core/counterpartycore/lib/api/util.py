@@ -1,3 +1,4 @@
+import binascii
 import decimal
 import inspect
 import json
@@ -19,6 +20,10 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def check_last_parsed_block(db, blockcount):
     """Checks database to see if is caught up with backend."""
     last_block = ledger.get_last_block(db)
+    if last_block is None:
+        raise exceptions.DatabaseError(
+            f"{config.XCP_NAME} database is behind backend."
+        )  # No blocks in the database
     if time.time() - last_block["block_time"] < 60:
         return
     if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
@@ -243,7 +248,7 @@ def prepare_routes(routes):
 class ApiJsonEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
-            return "{0:f}".format(o)
+            return "{0:.8f}".format(o)
         if isinstance(o, bytes):
             return o.hex()
         return super().default(o)
@@ -258,15 +263,15 @@ def divide(value1, value2):
     return D(value1) / D(value2)
 
 
-def inject_issuances_and_block_times(db, result):
-    # let's work with a list
-    result_list = result
-    result_is_dict = False
-    if isinstance(result, dict):
-        result_list = [result]
-        result_is_dict = True
-
-    asset_fields = ["asset", "give_asset", "get_asset", "dividend_asset"]
+def inject_issuances_and_block_times(db, result_list):
+    asset_fields = [
+        "asset",
+        "give_asset",
+        "get_asset",
+        "dividend_asset",
+        "forward_asset",
+        "backward_asset",
+    ]
 
     # gather asset list and block indexes
     asset_list = []
@@ -295,8 +300,17 @@ def inject_issuances_and_block_times(db, result):
         item = result_item
         if "params" in item:
             item = item["params"]
+            if "unpacked_data" in item:
+                item = item["unpacked_data"]["message_data"]
+        elif "unpacked_data" in item:
+            item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
-            if field_name in item:
+            if isinstance(item, list):
+                for sub_item in item:
+                    if field_name in sub_item:
+                        if sub_item[field_name] not in asset_list:
+                            asset_list.append(sub_item[field_name])
+            elif field_name in item:
                 if item[field_name] not in asset_list:
                     asset_list.append(item[field_name])
 
@@ -321,13 +335,27 @@ def inject_issuances_and_block_times(db, result):
                 item["params"][field_name_time] = block_times[item["params"][field_name]]
         if "params" in item:
             item = item["params"]
+            if "unpacked_data" in item:
+                item = item["unpacked_data"]["message_data"]
+        elif "unpacked_data" in item:
+            item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
-            if field_name in item and item[field_name] in issuance_by_asset:
+            if isinstance(item, list):
+                for sub_item in item:
+                    if (
+                        field_name in sub_item
+                        and "divisible" not in sub_item
+                        and sub_item[field_name] in issuance_by_asset
+                    ):
+                        sub_item[field_name + "_info"] = issuance_by_asset[sub_item[field_name]]
+            elif (
+                field_name in item
+                and "divisible" not in item
+                and item[field_name] in issuance_by_asset
+            ):
                 item[field_name + "_info"] = issuance_by_asset[item[field_name]]
 
-    if result_is_dict:
-        return result_list[0]
-    return result
+    return result_list
 
 
 def inject_normalized_quantity(item, field_name, asset_info):
@@ -342,23 +370,19 @@ def inject_normalized_quantity(item, field_name, asset_info):
     return item
 
 
-def inject_normalized_quantities(result):
-    # let's work with a list
-    result_list = result
-    result_is_dict = False
-    if isinstance(result, dict):
-        result_list = [result]
-        result_is_dict = True
-
+def inject_normalized_quantities(result_list):
     quantity_fields = {
         "quantity": {"asset_field": "asset_info", "divisible": None},
         "give_quantity": {"asset_field": "give_asset_info", "divisible": None},
         "get_quantity": {"asset_field": "get_asset_info", "divisible": None},
         "get_remaining": {"asset_field": "get_asset_info", "divisible": None},
         "give_remaining": {"asset_field": "give_asset_info", "divisible": None},
+        "forward_quantity": {"asset_field": "forward_asset_info", "divisible": None},
+        "backward_quantity": {"asset_field": "backward_asset_info", "divisible": None},
         "escrow_quantity": {"asset_field": "asset_info", "divisible": None},
         "dispense_quantity": {"asset_field": "asset_info", "divisible": None},
         "quantity_per_unit": {"asset_field": "dividend_asset_info", "divisible": None},
+        "supply": {"asset_field": "asset_info", "divisible": None},
         "satoshirate": {"asset_field": None, "divisible": True},
         "burned": {"asset_field": None, "divisible": True},
         "earned": {"asset_field": None, "divisible": True},
@@ -384,23 +408,97 @@ def inject_normalized_quantities(result):
                     item["params"] = inject_normalized_quantity(
                         item["params"], field_name, {"divisible": field_info["divisible"]}
                     )
+                    if "unpacked_data" in item["params"]:
+                        item["params"]["unpacked_data"]["message_data"] = (
+                            inject_normalized_quantity(
+                                item["params"]["unpacked_data"]["message_data"],
+                                field_name,
+                                {"divisible": field_info["divisible"]},
+                            )
+                        )
+                if "unpacked_data" in item:
+                    item["unpacked_data"]["message_data"] = inject_normalized_quantity(
+                        item["unpacked_data"]["message_data"],
+                        field_name,
+                        {"divisible": field_info["divisible"]},
+                    )
                 if "dispenser" in item and field_name in item["dispenser"]:
                     item["dispenser"] = inject_normalized_quantity(
                         item["dispenser"], field_name, {"divisible": field_info["divisible"]}
                     )
                 continue
 
+            if field_name == "supply" and field_name in item:
+                item = inject_normalized_quantity(
+                    item, field_name, {"divisible": item["divisible"]}
+                )
+                continue
+
+            if "unpacked_data" in item and isinstance(
+                item["unpacked_data"]["message_data"], list
+            ):  # mpma send
+                for pos, sub_item in enumerate(item["unpacked_data"]["message_data"]):
+                    if field_info["asset_field"] in sub_item:
+                        asset_info = sub_item["asset_info"]
+                        item["unpacked_data"]["message_data"][pos] = inject_normalized_quantity(
+                            sub_item, field_name, asset_info
+                        )
+                continue
+            if (
+                "params" in item
+                and "unpacked_data" in item["params"]
+                and isinstance(item["params"]["unpacked_data"]["message_data"], list)
+            ):  # mpma send
+                for pos, sub_item in enumerate(item["params"]["unpacked_data"]["message_data"]):
+                    if field_info["asset_field"] in sub_item:
+                        asset_info = sub_item["asset_info"]
+                        item["params"]["unpacked_data"]["message_data"][pos] = (
+                            inject_normalized_quantity(sub_item, field_name, asset_info)
+                        )
+
             asset_info = None
             if field_info["asset_field"] in item:
                 asset_info = item[field_info["asset_field"]]
             elif "params" in item and field_info["asset_field"] in item["params"]:
                 asset_info = item["params"][field_info["asset_field"]]
+            elif (
+                "params" in item
+                and "unpacked_data" in item["params"]
+                and field_info["asset_field"] in item["params"]["unpacked_data"]["message_data"]
+            ):
+                asset_info = item["params"]["unpacked_data"]["message_data"][
+                    field_info["asset_field"]
+                ]
+            elif (
+                "unpacked_data" in item
+                and field_info["asset_field"] in item["unpacked_data"]["message_data"]
+            ):
+                asset_info = item["unpacked_data"]["message_data"][field_info["asset_field"]]
+            elif "divisible" in item and field_name in item:
+                asset_info = {"divisible": item["divisible"]}
+            elif (
+                "params" in item and "divisible" in item["params"] and field_name in item["params"]
+            ):
+                asset_info = {"divisible": item["params"]["divisible"]}
+            elif "unpacked_data" in item and "divisible" in item["unpacked_data"]["message_data"]:
+                asset_info = {"divisible": item["unpacked_data"]["message_data"]["divisible"]}
 
             if asset_info is None:
                 if "asset_info" in item:
                     asset_info = item["asset_info"]
                 elif "params" in item and "asset_info" in item["params"]:
                     asset_info = item["params"]["asset_info"]
+                elif (
+                    "params" in item
+                    and "unpacked_data" in item["params"]
+                    and "asset_info" in item["params"]["unpacked_data"]["message_data"]
+                ):
+                    asset_info = item["params"]["unpacked_data"]["message_data"]["asset_info"]
+                elif (
+                    "unpacked_data" in item
+                    and "asset_info" in item["unpacked_data"]["message_data"]
+                ):
+                    asset_info = item["unpacked_data"]["message_data"]["asset_info"]
                 else:
                     continue
 
@@ -410,10 +508,23 @@ def inject_normalized_quantities(result):
                 item["params"] = inject_normalized_quantity(  # noqa
                     item["params"], field_name, asset_info
                 )
+            if (
+                "params" in item
+                and "unpacked_data" in item["params"]
+                and field_name in item["params"]["unpacked_data"]["message_data"]
+            ):
+                item["params"]["unpacked_data"]["message_data"] = inject_normalized_quantity(  # noqa
+                    item["params"]["unpacked_data"]["message_data"], field_name, asset_info
+                )
+            if "unpacked_data" in item and field_name in item["unpacked_data"]["message_data"]:
+                item["unpacked_data"]["message_data"] = inject_normalized_quantity(  # noqa
+                    item["unpacked_data"]["message_data"], field_name, asset_info
+                )
             if "dispenser" in item and field_name in item["dispenser"]:
                 item["dispenser"] = inject_normalized_quantity(  # noqa
                     item["dispenser"], field_name, asset_info
                 )
+
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
                 item["market_price"] = divide(
@@ -426,19 +537,10 @@ def inject_normalized_quantities(result):
 
         enriched_result_list.append(item)
 
-    if result_is_dict:
-        return enriched_result_list[0]
     return enriched_result_list
 
 
-def inject_dispensers(db, result):
-    # let's work with a list
-    result_list = result
-    result_is_dict = False
-    if isinstance(result, dict):
-        result_list = [result]
-        result_is_dict = True
-
+def inject_dispensers(db, result_list):
     # gather dispenser list
     dispenser_list = []
     for result_item in result_list:
@@ -450,23 +552,51 @@ def inject_dispensers(db, result):
     dispenser_info = ledger.get_dispensers_info(db, dispenser_list)
 
     # inject dispenser info
+    enriched_result_list = []
     for result_item in result_list:
         if (
             "dispenser_tx_hash" in result_item
             and result_item["dispenser_tx_hash"] in dispenser_info
         ):
             result_item["dispenser"] = dispenser_info[result_item["dispenser_tx_hash"]]
+        enriched_result_list.append(result_item)
+    return enriched_result_list
 
-    if result_is_dict:
-        return result_list[0]
-    return result
+
+def inject_unpacked_data_in_dict(db, item):
+    if "data" in item:
+        data = binascii.hexlify(item["data"]) if isinstance(item["data"], bytes) else item["data"]
+        block_index = item.get("block_index")
+        item["unpacked_data"] = transaction.unpack(db, data, block_index=block_index)
+    return item
+
+
+def inject_unpacked_data(db, result_list):
+    enriched_result_list = []
+    for result_item in result_list:
+        result_item = inject_unpacked_data_in_dict(db, result_item)  # noqa PLW2901
+        if "params" in result_item:
+            result_item["params"] = inject_unpacked_data_in_dict(db, result_item["params"])
+        enriched_result_list.append(result_item)
+    return enriched_result_list
 
 
 def inject_details(db, result):
-    result = inject_dispensers(db, result)
-    result = inject_issuances_and_block_times(db, result)
-    result = inject_normalized_quantities(result)
-    return result
+    # let's work with a list
+    result_list = result
+    result_is_dict = False
+    if isinstance(result, dict):
+        result_list = [result]
+        result_is_dict = True
+
+    result_list = inject_dispensers(db, result_list)
+    result_list = inject_unpacked_data(db, result_list)
+    result_list = inject_issuances_and_block_times(db, result_list)
+    result_list = inject_normalized_quantities(result_list)
+
+    if result_is_dict:
+        return result_list[0]
+    return result_list
 
 
 def redirect_to_rpc_v1():

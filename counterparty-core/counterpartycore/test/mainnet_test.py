@@ -3,6 +3,7 @@ import json
 import pytest
 import requests
 
+from counterpartycore.lib import database
 from counterpartycore.test import (
     conftest,  # noqa: F401
 )
@@ -55,7 +56,7 @@ def get_block_hashes_api_v2(api_url, block_index):
 
 def test_compare_hashes(skip):
     if skip:
-        pytest.skip("Skipping test book")
+        pytest.skip("Skipping compare hashes test.")
         return
 
     # get last blocks
@@ -92,3 +93,56 @@ def test_compare_hashes(skip):
         # compare hashes
         assert check_ledger_hash == local_ledger_hash
         assert check_txlist_hash == local_txlist_hash
+
+
+# TODO: find a way to find the database path
+MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty-docker-data/counterparty/"
+# MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
+
+
+def test_mainnet_api_db(skip):
+    if skip:
+        pytest.skip("Skipping mainnet API database test.")
+        return
+
+    ledger_db = database.get_db_connection(
+        f"{MAINNET_DB_DIR}counterparty.db", read_only=True, check_wal=False
+    )
+    api_db = database.get_db_connection(
+        f"{MAINNET_DB_DIR}counterparty.api.db", read_only=True, check_wal=False
+    )
+
+    api_sql = "SELECT * FROM balances ORDER BY random() LIMIT 10000"
+    api_balances = api_db.execute(api_sql)
+    i = 0
+    for api_balance in api_balances:
+        ledger_sql = (
+            "SELECT * FROM balances WHERE address = ? AND asset = ? ORDER BY rowid DESC LIMIT 1"
+        )
+        ledger_balance = ledger_db.execute(
+            ledger_sql, (api_balance["address"], api_balance["asset"])
+        ).fetchone()
+        if ledger_balance is None and api_balance["quantity"] == 0:
+            continue
+        try:
+            assert ledger_balance["quantity"] == api_balance["quantity"]
+        except AssertionError:
+            print(api_balance, ledger_balance)
+        i += 1
+    print(f"Checked {i} balances")
+
+    api_sql = "SELECT * FROM orders ORDER BY random() LIMIT 10000"
+    api_orders = api_db.execute(api_sql)
+    i = 0
+    for api_order in api_orders:
+        ledger_sql = "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1"
+        ledger_order = ledger_db.execute(ledger_sql, (api_order["tx_hash"],)).fetchone()
+        try:
+            assert ledger_order["give_asset"] == api_order["give_asset"]
+            assert ledger_order["get_asset"] == api_order["get_asset"]
+            assert ledger_order["give_quantity"] == api_order["give_quantity"]
+            assert ledger_order["get_quantity"] == api_order["get_quantity"]
+        except AssertionError:
+            print(api_order, ledger_order)
+        i += 1
+    print(f"Checked {i} balances")

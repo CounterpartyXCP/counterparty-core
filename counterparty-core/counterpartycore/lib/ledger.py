@@ -3,14 +3,16 @@ import fractions
 import json
 import logging
 import time
+from contextlib import contextmanager
 from decimal import Decimal as D
 
-from counterpartycore.lib import backend, config, exceptions, log, util
+from counterpartycore.lib import backend, config, database, exceptions, log, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 BLOCK_LEDGER = []
 BLOCK_JOURNAL = []
+LAST_BLOCK = None
 
 
 ###############################
@@ -18,15 +20,23 @@ BLOCK_JOURNAL = []
 ###############################
 
 
-def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
+@contextmanager
+def get_cursor(db):
     cursor = db.cursor()
-    fields_name = ", ".join(record.keys())
-    fields_values = ", ".join([f":{key}" for key in record.keys()])
-    # no sql injection here
-    query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
-    cursor.execute(query, record)
-    cursor.close()
-    # Add event to journal
+    try:
+        yield cursor
+    finally:
+        cursor.close()
+
+
+def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
+    fields = list(record.keys())
+    placeholders = ", ".join(["?" for _ in fields])
+    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608
+
+    with get_cursor(db) as cursor:
+        cursor.execute(query, list(record.values()))
+
     add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
 
 
@@ -71,9 +81,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     event_paylod = update_data | {id_name: id_value} | event_info
     if "rowid" in event_paylod:
         del event_paylod["rowid"]
-    add_to_journal(
-        db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, update_data | event_paylod
-    )
+    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, event_paylod)
 
 
 ###########################
@@ -127,25 +135,35 @@ def curr_time():
 
 
 def add_to_journal(db, block_index, command, category, event, bindings):
-    cursor = db.cursor()
-
     # Get last message index.
     try:
-        message = last_message(db)
-        message_index = message["message_index"] + 1
+        previous_message = last_message(db)
+        message_index = previous_message["message_index"] + 1
+        previous_event_hash = previous_message["event_hash"] or ""
     except exceptions.DatabaseError:
         message_index = 0
+        previous_event_hash = ""
 
-    # Handle binary data.
-    items = {}
-    for key, value in bindings.items():
-        if isinstance(value, bytes):
-            items[key] = binascii.hexlify(value).decode("ascii")
-        else:
-            items[key] = value
+    items = {
+        key: binascii.hexlify(value).decode("ascii") if isinstance(value, bytes) else value
+        for key, value in bindings.items()
+    }
 
     current_time = curr_time()
     bindings_string = json.dumps(items, sort_keys=True, separators=(",", ":"))
+    event_hash_content = "".join(
+        [
+            str(message_index),
+            str(block_index),
+            command,
+            category,
+            bindings_string,
+            event,
+            util.CURRENT_TX_HASH or "",
+            previous_event_hash,
+        ]
+    )
+    event_hash = binascii.hexlify(util.dhash(event_hash_content)).decode("ascii")
     message_bindings = {
         "message_index": message_index,
         "block_index": block_index,
@@ -155,16 +173,22 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         "timestamp": current_time,
         "event": event,
         "tx_hash": util.CURRENT_TX_HASH,
+        "event_hash": event_hash,
     }
-    query = """INSERT INTO messages VALUES (
-                    :message_index,
-                    :block_index,
-                    :command,
-                    :category,
-                    :bindings,
-                    :timestamp,
-                    :event,
-                    :tx_hash)"""
+    query = """INSERT INTO messages (
+                message_index, block_index, command, category, bindings, timestamp, event, tx_hash, event_hash
+            ) VALUES (
+                :message_index,
+                :block_index,
+                :command,
+                :category,
+                :bindings,
+                :timestamp,
+                :event,
+                :tx_hash,
+                :event_hash
+            )"""
+    cursor = db.cursor()
     cursor.execute(query, message_bindings)
     cursor.close()
 
@@ -1082,7 +1106,7 @@ def get_addresses(db, address=None):
         where.append("address = ?")
         bindings.append(address)
     # no sql injection here
-    query = f"""SELECT * FROM addresses WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    query = f"""SELECT *, MAX(rowid) AS rowid FROM addresses WHERE ({" AND ".join(where)}) GROUP BY address"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -1551,7 +1575,114 @@ def get_open_btc_orders(db, address):
     return cursor.fetchall()
 
 
-def get_matching_orders(db, tx_hash, give_asset, get_asset):
+class OrdersCache(metaclass=util.SingletonMeta):
+    def __init__(self, db):
+        logger.debug("Initialising orders cache...")
+        self.last_cleaning_block_index = 0
+        self.cache_db = database.get_db_connection(":memory:", read_only=False, check_wal=False)
+        cache_cursor = self.cache_db.cursor()
+        create_orders_query = """
+            CREATE TABLE IF NOT EXISTS orders(
+            tx_index INTEGER,
+            tx_hash TEXT,
+            block_index INTEGER,
+            source TEXT,
+            give_asset TEXT,
+            give_quantity INTEGER,
+            give_remaining INTEGER,
+            get_asset TEXT,
+            get_quantity INTEGER,
+            get_remaining INTEGER,
+            expiration INTEGER,
+            expire_index INTEGER,
+            fee_required INTEGER,
+            fee_required_remaining INTEGER,
+            fee_provided INTEGER,
+            fee_provided_remaining INTEGER,
+            status TEXT)
+        """
+        cache_cursor.execute(create_orders_query)
+        database.create_indexes(
+            cache_cursor,
+            "orders",
+            [
+                ["tx_hash"],
+                ["get_asset", "give_asset", "status"],
+            ],
+        )
+        select_orders_query = """
+            SELECT * FROM (
+                SELECT *, MAX(rowid) FROM orders GROUP BY tx_hash
+            ) WHERE status != 'expired' 
+        """
+
+        with db:
+            db_cursor = db.cursor()
+            db_cursor.execute(select_orders_query)
+            for order in db_cursor:
+                self.insert_order(order)
+        self.clean_filled_orders()
+
+    def clean_filled_orders(self):
+        if util.CURRENT_BLOCK_INDEX - self.last_cleaning_block_index < 50:
+            return
+        self.last_cleaning_block_index = util.CURRENT_BLOCK_INDEX
+        cursor = self.cache_db.cursor()
+        cursor.execute(
+            "DELETE FROM orders WHERE status = 'filled' AND block_index < ?",
+            (util.CURRENT_BLOCK_INDEX - 50,),
+        )
+
+    def insert_order(self, order):
+        sql = """
+            INSERT INTO orders VALUES (
+                :tx_index, :tx_hash, :block_index, :source, :give_asset, :give_quantity,
+                :give_remaining, :get_asset, :get_quantity, :get_remaining, :expiration,
+                :expire_index, :fee_required, :fee_required_remaining, :fee_provided,
+                :fee_provided_remaining, :status
+            )
+        """
+        cursor = self.cache_db.cursor()
+        cursor.execute(sql, order)
+        self.clean_filled_orders()
+
+    def update_order(self, tx_hash, order):
+        if order["status"] == "expired":
+            self.cache_db.cursor().execute("DELETE FROM orders WHERE tx_hash = ?", (tx_hash,))
+            return
+        set_data = []
+        bindings = {"tx_hash": tx_hash}
+        for key, value in order.items():
+            set_data.append(f"{key} = :{key}")
+            bindings[key] = value
+        if "block_index" not in bindings:
+            set_data.append("block_index = :block_index")
+        bindings["block_index"] = util.CURRENT_BLOCK_INDEX
+        set_data = ", ".join(set_data)
+        sql = f"""UPDATE orders SET {set_data} WHERE tx_hash = :tx_hash"""  # noqa S608
+        cursor = self.cache_db.cursor()
+        cursor.execute(sql, bindings)
+        self.clean_filled_orders()
+
+    def get_matching_orders(self, tx_hash, give_asset, get_asset):
+        cursor = self.cache_db.cursor()
+        query = """
+            SELECT *
+            FROM orders
+            WHERE (tx_hash != :tx_hash AND give_asset = :give_asset AND get_asset = :get_asset AND status = :status)
+            ORDER BY tx_index, tx_hash
+        """
+        bindings = {
+            "tx_hash": tx_hash,
+            "give_asset": get_asset,
+            "get_asset": give_asset,
+            "status": "open",
+        }
+        cursor.execute(query, bindings)
+        return cursor.fetchall()
+
+
+def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
     cursor = db.cursor()
     query = """
         SELECT * FROM (
@@ -1567,11 +1698,22 @@ def get_matching_orders(db, tx_hash, give_asset, get_asset):
     return cursor.fetchall()
 
 
+def get_matching_orders(db, tx_hash, give_asset, get_asset):
+    # return get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset)
+    return OrdersCache(db).get_matching_orders(tx_hash, give_asset, get_asset)
+
+
+def insert_order(db, order):
+    insert_record(db, "orders", order, "OPEN_ORDER")
+    OrdersCache(db).insert_order(order)
+
+
 ### UPDATES ###
 
 
 def update_order(db, tx_hash, update_data):
     insert_update(db, "orders", "tx_hash", tx_hash, update_data, "ORDER_UPDATE")
+    OrdersCache(db).update_order(tx_hash, update_data)
 
 
 def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):

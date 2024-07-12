@@ -639,6 +639,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "60dad3b667c237ef4430e703863048b949ba1f62a13e895a64b4ba9381b959f9",
         "txlist_hash": "b59af166c3300e2e0f53951fa2663d6d717c69610bc0fa86b8d7b4675398870d",
     },
+    850500: {
+        "ledger_hash": "0e594ca2b3b36b66475b1c53d9b02d9fe4726e28f6f61db8fdf8103a787e6c3e",
+        "txlist_hash": "993c980296307d38656b4458a9b3913a8028adc02630fb6a8c55bea009008dd7",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET = 7
@@ -952,26 +956,33 @@ def check_change(protocol_change, change_name):
 def software_version():
     if config.FORCE:
         return
-    logger.debug("Checking Counterparty version.")
+    logger.debug("Checking Counterparty version...")
 
     try:
         response = requests.get(
             config.PROTOCOL_CHANGES_URL, headers={"cache-control": "no-cache"}, timeout=10
         )
         versions = json.loads(response.text)
-    except (requests.exceptions.ConnectionError, ConnectionRefusedError, ValueError) as e:  # noqa: F841
-        logger.warning("Unable to check version! " + str(sys.exc_info()[1]))
-        return
+    except (
+        requests.exceptions.ConnectionError,
+        ConnectionRefusedError,
+        ValueError,
+        requests.exceptions.ReadTimeout,
+        TimeoutError,
+    ):
+        logger.warning("Unable to check Counterparty version.", exc_info=sys.exc_info())
+        return False
 
     for change_name in versions:
         protocol_change = versions[change_name]
         try:
             check_change(protocol_change, change_name)
-        except VersionUpdateRequiredError as e:  # noqa: F841
+        except VersionUpdateRequiredError:  # noqa: F841
             logger.error("Version Update Required", exc_info=sys.exc_info())
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     logger.debug("Version check passed.")
+    return True
 
 
 class DatabaseVersionError(Exception):
@@ -996,7 +1007,7 @@ def database_version(db):
         )
     elif version_minor != config.VERSION_MINOR:
         # Reparse transactions from the vesion block if minor version has changed.
-        message = f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}."
+        message = f"Client minor version number mismatch. Triggering a reparse... ({version_minor} ≠ {config.VERSION_MINOR})"
         need_reparse_from = (
             config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
             if config.TESTNET

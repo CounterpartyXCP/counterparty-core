@@ -42,8 +42,8 @@ def get_file_openers(filename):
     return pids
 
 
-def check_wal_file():
-    wal_file = f"{config.DATABASE}-wal"
+def check_wal_file(db_file):
+    wal_file = f"{db_file}-wal"
     if os.path.exists(wal_file):
         pids = get_file_openers(wal_file)
         if len(pids) > 0:
@@ -51,22 +51,22 @@ def check_wal_file():
         raise exceptions.WALFileFoundError("Found WAL file. Database may be corrupted.")
 
 
-def get_connection(read_only=True, check_wal=True):
+def get_db_connection(db_file, read_only=True, check_wal=False):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug(f"Creating connection to `{config.DATABASE}`...")
+    logger.debug(f"Creating connection to `{db_file}`...")
 
     if not read_only and check_wal:
         try:
-            check_wal_file()
+            check_wal_file(db_file)
         except exceptions.WALFileFoundError:
             logger.warning(
                 "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
             )
 
     if read_only:
-        db = apsw.Connection(config.DATABASE, flags=apsw.SQLITE_OPEN_READONLY)
+        db = apsw.Connection(db_file, flags=apsw.SQLITE_OPEN_READONLY)
     else:
-        db = apsw.Connection(config.DATABASE)
+        db = apsw.Connection(db_file)
     cursor = db.cursor()
 
     # Make case sensitive the `LIKE` operator.
@@ -84,11 +84,17 @@ def get_connection(read_only=True, check_wal=True):
     return db
 
 
+def get_connection(read_only=True, check_wal=True):
+    return get_db_connection(config.DATABASE, read_only=read_only, check_wal=check_wal)
+
+
 # Minimalistic but sufficient connection pool
-class DBConnectionPool(metaclass=util.SingletonMeta):
-    def __init__(self):
+class APSWConnectionPool:
+    def __init__(self, db_file, name):
         self.connections = []
+        self.db_file = db_file
         self.closed = False
+        self.name = name
 
     @contextmanager
     def connection(self):
@@ -97,27 +103,39 @@ class DBConnectionPool(metaclass=util.SingletonMeta):
             db = self.connections.pop(0)
         else:
             # New db connection
-            db = get_connection(read_only=True)
+            db = get_db_connection(self.db_file, read_only=True, check_wal=False)
         try:
             yield db
         finally:
             if self.closed:
-                logger.trace("Connection pool is closed. Closing connection.")
+                logger.trace("Connection pool is closed. Closing connection (%s).", self.name)
                 db.close()
             elif len(self.connections) < config.DB_CONNECTION_POOL_SIZE:
                 # Add connection to pool
                 self.connections.append(db)
             else:
                 # Too much connections in the pool: closing connection
-                logger.warning("Closing connection due to pool size limit.")
+                logger.warning("Closing connection due to pool size limit (%s).", self.name)
                 db.close()
 
     def close(self):
-        logger.trace("Closing all connections in pool... (%s)", len(self.connections))
+        logger.trace(
+            "Closing all connections in pool (%s)... (%s)", self.name, len(self.connections)
+        )
         self.closed = True
         while len(self.connections) > 0:
             db = self.connections.pop()
             db.close()
+
+
+class DBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+    def __init__(self):
+        super().__init__(config.DATABASE, "Ledger DB")
+
+
+class APIDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+    def __init__(self):
+        super().__init__(config.API_DATABASE, "API DB")
 
 
 def initialise_db():
@@ -225,6 +243,14 @@ def has_fk_on(cursor, table, foreign_key):
     return False
 
 
+def index_exists(cursor, table, index):
+    cursor.execute(f"PRAGMA index_list({table})")
+    for row in cursor:
+        if row["name"] == index:
+            return True
+    return False
+
+
 def create_indexes(cursor, table, indexes, unique=False):
     for index in indexes:
         field_names = [field.split(" ")[0] for field in index]
@@ -248,3 +274,10 @@ def copy_old_table(cursor, table_name, new_create_query):
     cursor.execute(new_create_query)
     cursor.execute(f"""INSERT INTO {table_name} SELECT * FROM old_{table_name}""")  # nosec B608  # noqa: S608
     cursor.execute(f"""DROP TABLE old_{table_name}""")
+
+
+def table_exists(cursor, table):
+    table_name = cursor.execute(
+        f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"  # nosec B608  # noqa: S608
+    ).fetchone()
+    return table_name is not None

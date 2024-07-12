@@ -1,6 +1,7 @@
 import argparse
 import logging
 import multiprocessing
+import os
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
@@ -17,7 +18,7 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
-from counterpartycore.lib.api import queries
+from counterpartycore.lib.api import api_watcher, queries
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
     function_needs_db,
@@ -27,7 +28,7 @@ from counterpartycore.lib.api.util import (
     remove_rowids,
     to_json,
 )
-from counterpartycore.lib.database import DBConnectionPool
+from counterpartycore.lib.database import APIDBConnectionPool, get_db_connection
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
@@ -46,6 +47,9 @@ BACKEND_HEIGHT_TIMER = None
 BLOCK_CACHE = OrderedDict()
 MAX_BLOCK_CACHE_SIZE = 1000
 
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+BLUEPRINT_FILEPATH = os.path.join(CURR_DIR, "..", "..", "..", "..", "apiary.apib")
+
 
 @auth.verify_password
 def verify_password(username, password):
@@ -55,17 +59,8 @@ def verify_password(username, password):
 
 
 def api_root():
-    with DBConnectionPool().connection() as db:
+    with APIDBConnectionPool().connection() as db:
         counterparty_height = ledger.last_db_index(db)
-    routes = []
-    for path, route in ROUTES.items():
-        routes.append(
-            {
-                "path": path,
-                "args": route.get("args", []),
-                "description": route.get("description", ""),
-            }
-        )
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
@@ -79,14 +74,21 @@ def api_root():
         "version": config.VERSION_STRING,
         "backend_height": BACKEND_HEIGHT,
         "counterparty_height": counterparty_height,
-        "routes": routes,
+        "documentation": "https://counterpartycore.docs.apiary.io/",
+        "blueprint": f"{request.url_root}v2/blueprint",
     }
 
 
 def is_server_ready():
+    # TODO: find a way to mock this function for testing
+    try:
+        if request.url_root == "http://localhost:10009/":
+            return True
+    except RuntimeError:
+        pass
     if BACKEND_HEIGHT is None:
         return False
-    if util.CURRENT_BLOCK_INDEX >= BACKEND_HEIGHT - 1:
+    if util.CURRENT_BLOCK_INDEX in [BACKEND_HEIGHT, BACKEND_HEIGHT - 1]:
         return True
     if time.time() - CURRENT_BLOCK_TIME < 60:
         return True
@@ -219,7 +221,9 @@ def execute_api_function(db, rule, route, function_args):
     # cache everything for one block
     cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
     # except for blocks and transactions cached forever
-    if request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/"):
+    if (
+        request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/")
+    ) and not request.path.startswith("/v2/blocks/last"):
         cache_key = request.url
 
     if cache_key in BLOCK_CACHE:
@@ -250,6 +254,18 @@ def get_transaction_name(rule):
     return "".join([part.capitalize() for part in ROUTES[rule]["function"].__name__.split("_")])
 
 
+def refresh_current_block(db):
+    # update the current block index
+    global CURRENT_BLOCK_TIME  # noqa F811
+    last_block = ledger.get_last_block(db)
+    if last_block:
+        util.CURRENT_BLOCK_INDEX = last_block["block_index"]
+        CURRENT_BLOCK_TIME = last_block["block_time"]
+    else:
+        util.CURRENT_BLOCK_INDEX = 0
+        CURRENT_BLOCK_TIME = 0
+
+
 @auth.login_required
 def handle_route(**kwargs):
     start_time = time.time()
@@ -266,23 +282,11 @@ def handle_route(**kwargs):
             query_args=query_args,
         )
 
-    # update the current block index
-    global CURRENT_BLOCK_TIME  # noqa F811
-    with DBConnectionPool().connection() as db:
-        last_block = ledger.get_last_block(db)
-    if last_block:
-        util.CURRENT_BLOCK_INDEX = last_block["block_index"]
-        CURRENT_BLOCK_TIME = last_block["block_time"]
-    else:
-        util.CURRENT_BLOCK_INDEX = 0
-        CURRENT_BLOCK_TIME = 0
-
     rule = str(request.url_rule.rule)
 
     with configure_sentry_scope() as scope:
         scope.set_transaction_name(get_transaction_name(rule))
 
-    # check if server must be ready
     if not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(
             503, error="Counterparty not ready", start_time=start_time, query_args=query_args
@@ -303,7 +307,7 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        with DBConnectionPool().connection() as db:
+        with APIDBConnectionPool().connection() as db:
             result = execute_api_function(db, rule, route, function_args)
     except (exceptions.ComposeError, exceptions.UnpackError) as e:
         return return_result(503, error=str(e), start_time=start_time, query_args=query_args)
@@ -313,11 +317,13 @@ def handle_route(**kwargs):
         exceptions.BalanceError,
         exceptions.UnknownPubKeyError,
         exceptions.AssetNameError,
+        exceptions.BitcoindRPCError,
     ) as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
+        # import traceback
         # traceback.print_exc()
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
@@ -358,21 +364,33 @@ def handle_not_found(error):
     return return_result(404, error="Not found")
 
 
-def run_api_server(args, interruped_value):
+def handle_doc():
+    return flask.send_file(BLUEPRINT_FILEPATH)
+
+
+def run_api_server(args, interruped_value, server_ready_value):
     sentry.init()
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
-    logger.info("Starting API Server.")
+
+    watcher = api_watcher.APIWatcher()
+    watcher.start()
+
+    logger.info("Starting API Server...")
     app = Flask(config.APP_NAME)
     transaction.initialise()
     with app.app_context():
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        with DBConnectionPool().connection() as db:
+        with APIDBConnectionPool().connection() as db:
             util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         # Add routes
         app.add_url_rule("/v2/", view_func=handle_route, strict_slashes=False)
+        app.add_url_rule(
+            "/v2/blueprint", view_func=handle_doc, methods=["GET"], strict_slashes=False
+        )
+
         for path in ROUTES:
             methods = ["GET"]
             if path == "/v2/bitcoin/transactions":
@@ -380,11 +398,14 @@ def run_api_server(args, interruped_value):
             if not path.startswith("/v2/"):
                 methods = ["GET", "POST"]
             app.add_url_rule(path, view_func=handle_route, methods=methods, strict_slashes=False)
+
         app.register_error_handler(404, handle_not_found)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
+        timer_db = None
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
-            refresh_backend_height(start=True)
+            timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+            refresh_backend_height(timer_db, start=True)
         else:
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
@@ -394,31 +415,45 @@ def run_api_server(args, interruped_value):
         ParentProcessChecker(interruped_value, werkzeug_server).start()
         app.app_context().push()
         # Run app server (blocking)
+        server_ready_value.value = 1
         werkzeug_server.serve_forever()
     except KeyboardInterrupt:
         logger.trace("Keyboard Interrupt!")
     finally:
         logger.trace("Shutting down API Server...")
+        watcher.stop()
+        watcher.join()
         werkzeug_server.shutdown()
         # ensure timer is cancelled
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
-        DBConnectionPool().close()
-        exit()
+        if timer_db:
+            timer_db.close()
+        APIDBConnectionPool().close()
 
 
-def refresh_backend_height(start=False):
+def refresh_backend_height(db, start=False):
     global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
     if not start:
         BACKEND_HEIGHT = get_backend_height()
+        refresh_current_block(db)
+        if not is_server_ready():
+            if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
+                logger.debug(
+                    f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT})"
+                )
+            else:
+                logger.debug(
+                    f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {BACKEND_HEIGHT})"
+                )
     else:
         # starting the timer is not blocking in case of Addrindexrs is not ready
-        BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height)
+        BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height, (db,))
         BACKEND_HEIGHT_TIMER.start()
         return
     if BACKEND_HEIGHT_TIMER:
         BACKEND_HEIGHT_TIMER.cancel()
-    BACKEND_HEIGHT_TIMER = Timer(REFRESH_BACKEND_HEIGHT_INTERVAL, refresh_backend_height)
+    BACKEND_HEIGHT_TIMER = Timer(REFRESH_BACKEND_HEIGHT_INTERVAL, refresh_backend_height, (db,))
     BACKEND_HEIGHT_TIMER.start()
 
 
@@ -448,13 +483,19 @@ class APIServer(object):
     def __init__(self):
         self.process = None
         self.interrupted = Value("I", 0)
+        self.server_ready_value = Value("I", 0)
 
     def start(self, args):
         if self.process is not None:
             raise Exception("API Server is already running")
-        self.process = Process(target=run_api_server, args=(vars(args), self.interrupted))
+        self.process = Process(
+            target=run_api_server, args=(vars(args), self.interrupted, self.server_ready_value)
+        )
         self.process.start()
         return self.process
+
+    def is_ready(self):
+        return self.server_ready_value.value == 1
 
     def stop(self):
         logger.info("Stopping API Server...")

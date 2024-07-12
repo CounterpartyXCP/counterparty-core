@@ -5,110 +5,110 @@
                 "block_index": 310500,
                 "block_hash": "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b",
                 "block_time": 310500000,
-                "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
-                "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
-                "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
+                "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
+                "messages_hash": "4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96",
                 "transaction_count": 0
             },
             {
                 "block_index": 310499,
                 "block_hash": "1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764",
                 "block_time": 310499000,
-                "ledger_hash": "b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9",
-                "txlist_hash": "032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5",
-                "messages_hash": "d6aedacd4f81520d86ae47c9c776d17a213c706a5cf7c91203a4299261d1648c",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9",
+                "txlist_hash": "032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5",
+                "messages_hash": "dc4258fd460745fe443598c0119627362b7bceea1892f32243221551f45db0c9",
                 "transaction_count": 0
             },
             {
                 "block_index": 310498,
                 "block_hash": "b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e",
                 "block_time": 310498000,
-                "ledger_hash": "5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414",
-                "txlist_hash": "b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7",
-                "messages_hash": "113207bd13dda56b5e5edf305f70a56e62cc861184e1e95a64e79ce100462c98",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414",
+                "txlist_hash": "b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7",
+                "messages_hash": "31fb849548f5054c3f49f5ba1fc015a6169db27f00e90ea2baa6fe453e2744a5",
                 "transaction_count": 1
             },
             {
                 "block_index": 310497,
                 "block_hash": "f1118591fe79b8bf52ccf0c5de9826bfd266b1fdc24b44676cf22bbcc76d464e",
                 "block_time": 310497000,
-                "ledger_hash": "28c6e92b2299b9cbbb5953f8b7ff3de0fe962d15642ba27e43faa64e1935e819",
-                "txlist_hash": "ff8136601b9e0138a999d1f0467af6e8535a2bcdd2b622af7be0178a083b9519",
-                "messages_hash": "ac8d8759fbddc8f92ad8b5d8b4637a63b8d21a04ba1a4126baf2b42a87edfce3",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "28c6e92b2299b9cbbb5953f8b7ff3de0fe962d15642ba27e43faa64e1935e819",
+                "txlist_hash": "ff8136601b9e0138a999d1f0467af6e8535a2bcdd2b622af7be0178a083b9519",
+                "messages_hash": "ad86d199894b3c4e8a2d05332b58b81350bfaf9686b5a0896fdc286cd5d95833",
                 "transaction_count": 1
             },
             {
                 "block_index": 310496,
                 "block_hash": "65884816927e8c566655e85c07bc2bc2c7ee26e625742f219939d43238fb31f8",
                 "block_time": 310496000,
-                "ledger_hash": "7ac6121c624b634f44695172761830926afe76bb18c4cc9195773f3a26966941",
-                "txlist_hash": "9eda85cce745579122ba9c6e24b63cd83f2e5161031a34e6ee9bf08b80823cb4",
-                "messages_hash": "1b1ed76f99d39b36f4d0737299ce15b21fed9e077d0476658c023b09819853a7",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "7ac6121c624b634f44695172761830926afe76bb18c4cc9195773f3a26966941",
+                "txlist_hash": "9eda85cce745579122ba9c6e24b63cd83f2e5161031a34e6ee9bf08b80823cb4",
+                "messages_hash": "1417fc5280cab90a898e1b89baf5e8ebafcf666e43ecc2042bae44519c54794e",
                 "transaction_count": 1
             },
             {
                 "block_index": 310495,
                 "block_hash": "4769aa7030f28a05a137a85ef4ee0c1765c37013773212b93ec90f1227168b67",
                 "block_time": 310495000,
-                "ledger_hash": "5a7e5a36882466373d576bb5f4ccd1bc72ecaf548b9589baa803a7275a7a24cd",
-                "txlist_hash": "09e9db121649cacd979fd18bbaa35e519361e727e7e072e2f2f86291160cdb29",
-                "messages_hash": "56518bc9abc11bf108188834058bb9c51c9b8dc3b6276116c5b786b07c797fab",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "5a7e5a36882466373d576bb5f4ccd1bc72ecaf548b9589baa803a7275a7a24cd",
+                "txlist_hash": "09e9db121649cacd979fd18bbaa35e519361e727e7e072e2f2f86291160cdb29",
+                "messages_hash": "c426ad40e2d4e6e3e6301c9122fdb9ef7f28fad2ef6135985046a4a9b2acdedb",
                 "transaction_count": 1
             },
             {
                 "block_index": 310494,
                 "block_hash": "7dda1d3e12785313d5651ee5314d0aecf17588196f9150b10c55695dbaebee5d",
                 "block_time": 310494000,
-                "ledger_hash": "72d71bd72263699ea9f2b097ad141be5bc394f49d8b0b0a6b2ff6a87b0ee3919",
-                "txlist_hash": "9350c3ba33d0546d1194c5fa767ced28834b26246aedc56d89b1d48ec4f26014",
-                "messages_hash": "0d3c87692d49dc033eed975eb8b8ee17ff2f0f877c8ed5a5866f73ce63bf8715",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "72d71bd72263699ea9f2b097ad141be5bc394f49d8b0b0a6b2ff6a87b0ee3919",
+                "txlist_hash": "9350c3ba33d0546d1194c5fa767ced28834b26246aedc56d89b1d48ec4f26014",
+                "messages_hash": "ab785cd4356200a496f5b85e7f824d03bb32b81cafa403176a6ded65e0aa8a0a",
                 "transaction_count": 1
             },
             {
                 "block_index": 310493,
                 "block_hash": "c19e2915b750279b2be4b52e57e5ce29f63dffb4e14d9aad30c9e820affc0cbf",
                 "block_time": 310493000,
-                "ledger_hash": "29119cd30a4733916fbfd0551506eaa16f7bb1bdfbdf8d17ac4e5bb20d1cb09c",
-                "txlist_hash": "7ec4cfa94544900c8e8732ad51be7cee6452aa1884ea940cd5c98862fb4aaba6",
-                "messages_hash": "53a339feb73df3a98bc4acc84af77e111d4780533c8f5a26cf250594d9613cf2",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "29119cd30a4733916fbfd0551506eaa16f7bb1bdfbdf8d17ac4e5bb20d1cb09c",
+                "txlist_hash": "7ec4cfa94544900c8e8732ad51be7cee6452aa1884ea940cd5c98862fb4aaba6",
+                "messages_hash": "2a51d45368d39a8ed09a7c24aab6271397a8a6dbabc960b4b26d051547f15f3e",
                 "transaction_count": 1
             },
             {
                 "block_index": 310492,
                 "block_hash": "8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607",
                 "block_time": 310492000,
-                "ledger_hash": "98af18583618fdeed545347c013763d068e8294405d265911cc5e1bc420bc740",
-                "txlist_hash": "daf4d2c1a1ad5206abcf7744bdd06fae99c442fb2607a843dcabb5727d02916e",
-                "messages_hash": "0d34fbc26126add5a57b7e8f6f71bad150d7232abf046f3fa9b1fc72b10d61b2",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "98af18583618fdeed545347c013763d068e8294405d265911cc5e1bc420bc740",
+                "txlist_hash": "daf4d2c1a1ad5206abcf7744bdd06fae99c442fb2607a843dcabb5727d02916e",
+                "messages_hash": "fc77802662487506752caa901851d67dee6b960606286e180c6e9cd5a5f6cba0",
                 "transaction_count": 1
             },
             {
                 "block_index": 310491,
                 "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
                 "block_time": 310491000,
-                "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
-                "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
-                "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
                 "previous_block_hash": null,
                 "difficulty": null,
+                "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
+                "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
+                "messages_hash": "fa5278b9c27ee7e35fb9b13329e4146133c9219897aaa6fde667e2eda5ac015f",
                 "transaction_count": 1
             }
         ],
@@ -120,11 +120,11 @@
             "block_index": 310500,
             "block_hash": "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b",
             "block_time": 310500000,
-            "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
-            "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
-            "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
             "previous_block_hash": null,
             "difficulty": null,
+            "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
+            "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
+            "messages_hash": "4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96",
             "transaction_count": 0
         }
     },
@@ -133,11 +133,11 @@
             "block_index": 310491,
             "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
             "block_time": 310491000,
-            "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
-            "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
-            "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
             "previous_block_hash": null,
             "difficulty": null,
+            "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
+            "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
+            "messages_hash": "fa5278b9c27ee7e35fb9b13329e4146133c9219897aaa6fde667e2eda5ac015f",
             "transaction_count": 1
         }
     },
@@ -146,11 +146,11 @@
             "block_index": 310500,
             "block_hash": "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b",
             "block_time": 310500000,
-            "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
-            "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
-            "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
             "previous_block_hash": null,
             "difficulty": null,
+            "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
+            "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
+            "messages_hash": "4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96",
             "transaction_count": 0
         }
     },
@@ -168,7 +168,37 @@
                 "fee": 6800,
                 "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "order",
+                    "message_type_id": 10,
+                    "message_data": {
+                        "give_asset": "XCP",
+                        "give_quantity": 100000000,
+                        "get_asset": "BTC",
+                        "get_quantity": 800000,
+                        "expiration": 2000,
+                        "fee_required": 900000,
+                        "status": "open",
+                        "give_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Bitcoin",
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "1.00000000",
+                        "get_quantity_normalized": "0.00800000",
+                        "fee_required_normalized": "0.00900000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             }
         ],
         "next_cursor": null,
@@ -177,7 +207,7 @@
     "http://localhost:10009/v2/blocks/310491/events?verbose=true": {
         "result": [
             {
-                "event_index": 1183,
+                "event_index": 1185,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "8a09b2faf0a7ad67eb4ab5c948b9769fc87eb2ec5e16108f2cde8bd9e6cf7607",
@@ -191,12 +221,12 @@
                 "tx_hash": null
             },
             {
-                "event_index": 1182,
+                "event_index": 1184,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310491,
                     "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
-                    "messages_hash": "9671cfedb3124b67ed996c547cb26a32e95490009ad56065c79be54a28c45994",
+                    "messages_hash": "fa5278b9c27ee7e35fb9b13329e4146133c9219897aaa6fde667e2eda5ac015f",
                     "transaction_count": 1,
                     "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
                     "block_time": 310491000
@@ -204,7 +234,7 @@
                 "tx_hash": null
             },
             {
-                "event_index": 1181,
+                "event_index": 1183,
                 "event": "TRANSACTION_PARSED",
                 "params": {
                     "supported": true,
@@ -214,7 +244,7 @@
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
-                "event_index": 1180,
+                "event_index": 1182,
                 "event": "OPEN_ORDER",
                 "params": {
                     "block_index": 310491,
@@ -249,19 +279,19 @@
                         "locked": false,
                         "issuer": null
                     },
-                    "give_quantity_normalized": "1",
-                    "get_quantity_normalized": "0.008",
-                    "get_remaining_normalized": "0.008",
-                    "give_remaining_normalized": "1",
-                    "fee_provided_normalized": "0.000068",
-                    "fee_required_normalized": "0.009",
-                    "fee_required_remaining_normalized": "0.009",
-                    "fee_provided_remaining_normalized": "0.000068"
+                    "give_quantity_normalized": "1.00000000",
+                    "get_quantity_normalized": "0.00800000",
+                    "get_remaining_normalized": "0.00800000",
+                    "give_remaining_normalized": "1.00000000",
+                    "fee_provided_normalized": "0.00006800",
+                    "fee_required_normalized": "0.00900000",
+                    "fee_required_remaining_normalized": "0.00900000",
+                    "fee_provided_remaining_normalized": "0.00006800"
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
-                "event_index": 1179,
+                "event_index": 1181,
                 "event": "DEBIT",
                 "params": {
                     "action": "open order",
@@ -279,12 +309,12 @@
                         "locked": true,
                         "issuer": null
                     },
-                    "quantity_normalized": "1"
+                    "quantity_normalized": "1.00000000"
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
-                "event_index": 1178,
+                "event_index": 1180,
                 "event": "NEW_TRANSACTION",
                 "params": {
                     "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
@@ -298,7 +328,36 @@
                     "supported": true,
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492,
-                    "btc_amount_normalized": "0"
+                    "unpacked_data": {
+                        "message_type": "order",
+                        "message_type_id": 10,
+                        "message_data": {
+                            "give_asset": "XCP",
+                            "give_quantity": 100000000,
+                            "get_asset": "BTC",
+                            "get_quantity": 800000,
+                            "expiration": 2000,
+                            "fee_required": 900000,
+                            "status": "open",
+                            "give_asset_info": {
+                                "divisible": true,
+                                "asset_longname": "Counterparty",
+                                "description": "The Counterparty protocol native currency",
+                                "locked": true,
+                                "issuer": null
+                            },
+                            "get_asset_info": {
+                                "divisible": true,
+                                "asset_longname": "Bitcoin",
+                                "description": "The Bitcoin cryptocurrency",
+                                "locked": false,
+                                "issuer": null
+                            },
+                            "give_quantity_normalized": "1.00000000",
+                            "get_quantity_normalized": "0.00800000"
+                        }
+                    },
+                    "btc_amount_normalized": "0.00000000"
                 },
                 "tx_hash": null
             }
@@ -364,7 +423,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             }
         ],
         "next_cursor": null,
@@ -419,7 +478,25 @@
                 "fee": 6550,
                 "data": "0000001501530821671b10650000000005f5e10001108e90a57dba9967c422e83080f22f0c684368696c64206f6620706172656e74",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "issuance",
+                    "message_type_id": 21,
+                    "message_data": {
+                        "asset_id": null,
+                        "asset": null,
+                        "subasset_longname": null,
+                        "quantity": null,
+                        "divisible": null,
+                        "lock": null,
+                        "reset": null,
+                        "callable": null,
+                        "call_date": null,
+                        "call_price": null,
+                        "description": null,
+                        "status": "invalid: could not unpack"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 498,
@@ -433,7 +510,26 @@
                 "fee": 6300,
                 "data": "00000014000000000aa4097d0000000005f5e100010000000000000000000c506172656e74206173736574",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "issuance",
+                    "message_type_id": 20,
+                    "message_data": {
+                        "asset_id": 178522493,
+                        "asset": "PARENT",
+                        "subasset_longname": null,
+                        "quantity": 100000000,
+                        "divisible": true,
+                        "lock": null,
+                        "reset": null,
+                        "callable": false,
+                        "call_date": 0,
+                        "call_price": 0.0,
+                        "description": "Parent asset",
+                        "status": "valid",
+                        "quantity_normalized": "1.00000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 497,
@@ -447,7 +543,23 @@
                 "fee": 7650,
                 "data": "00000000000000000000000100000015a4018c1e",
                 "supported": true,
-                "btc_amount_normalized": "0.0000543"
+                "unpacked_data": {
+                    "message_type": "send",
+                    "message_type_id": 0,
+                    "message_data": {
+                        "asset": "XCP",
+                        "quantity": 92945878046,
+                        "asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "quantity_normalized": "929.45878000"
+                    }
+                },
+                "btc_amount_normalized": "0.00005430"
             },
             {
                 "tx_index": 496,
@@ -461,7 +573,23 @@
                 "fee": 7650,
                 "data": "00000000000000063e985ffd000000000000000a",
                 "supported": true,
-                "btc_amount_normalized": "0.0000543"
+                "unpacked_data": {
+                    "message_type": "send",
+                    "message_type_id": 0,
+                    "message_data": {
+                        "asset": "DIVIDEND",
+                        "quantity": 10,
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "",
+                            "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                            "divisible": true,
+                            "locked": false
+                        },
+                        "quantity_normalized": "0.00000010"
+                    }
+                },
+                "btc_amount_normalized": "0.00005430"
             },
             {
                 "tx_index": 495,
@@ -475,7 +603,26 @@
                 "fee": 6800,
                 "data": "00000014000000063e985ffd00000000000000640100000000000000000000",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "issuance",
+                    "message_type_id": 20,
+                    "message_data": {
+                        "asset_id": 26819977213,
+                        "asset": "DIVIDEND",
+                        "subasset_longname": null,
+                        "quantity": 100,
+                        "divisible": true,
+                        "lock": null,
+                        "reset": null,
+                        "callable": false,
+                        "call_date": 0,
+                        "call_price": 0.0,
+                        "description": "",
+                        "status": "valid",
+                        "quantity_normalized": "0.00000100"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 494,
@@ -489,7 +636,14 @@
                 "fee": 5625,
                 "data": "",
                 "supported": true,
-                "btc_amount_normalized": "0.62"
+                "unpacked_data": {
+                    "message_type": "unknown",
+                    "message_type_id": null,
+                    "message_data": {
+                        "error": "Unknown message type"
+                    }
+                },
+                "btc_amount_normalized": "0.62000000"
             },
             {
                 "tx_index": 493,
@@ -503,7 +657,37 @@
                 "fee": 1000000,
                 "data": "0000000a000000000000000000000000000c350000000000000000010000000005f5e10007d00000000000000000",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "order",
+                    "message_type_id": 10,
+                    "message_data": {
+                        "give_asset": "BTC",
+                        "give_quantity": 800000,
+                        "get_asset": "XCP",
+                        "get_quantity": 100000000,
+                        "expiration": 2000,
+                        "fee_required": 0,
+                        "status": "open",
+                        "give_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Bitcoin",
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "0.00800000",
+                        "get_quantity_normalized": "1.00000000",
+                        "fee_required_normalized": "0.00000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 492,
@@ -517,7 +701,37 @@
                 "fee": 6800,
                 "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "order",
+                    "message_type_id": 10,
+                    "message_data": {
+                        "give_asset": "XCP",
+                        "give_quantity": 100000000,
+                        "get_asset": "BTC",
+                        "get_quantity": 800000,
+                        "expiration": 2000,
+                        "fee_required": 900000,
+                        "status": "open",
+                        "give_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Bitcoin",
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "1.00000000",
+                        "get_quantity_normalized": "0.00800000",
+                        "fee_required_normalized": "0.00900000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 491,
@@ -531,7 +745,19 @@
                 "fee": 6800,
                 "data": "0000001e52bb33043ff000000000000000000000096f7074696f6e732031",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "broadcast",
+                    "message_type_id": 30,
+                    "message_data": {
+                        "timestamp": 1388000004,
+                        "value": 1.0,
+                        "fee_fraction_int": 0,
+                        "text": "options 1",
+                        "status": "valid",
+                        "fee_fraction_int_normalized": "0.00000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 490,
@@ -545,7 +771,19 @@
                 "fee": 6800,
                 "data": "0000001e52bb33033ff000000000000000000000046c6f636b",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "broadcast",
+                    "message_type_id": 30,
+                    "message_data": {
+                        "timestamp": 1388000003,
+                        "value": 1.0,
+                        "fee_fraction_int": 0,
+                        "text": "lock",
+                        "status": "valid",
+                        "fee_fraction_int_normalized": "0.00000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             }
         ],
         "next_cursor": 489,
@@ -579,10 +817,11 @@
                     "call_date": 0,
                     "call_price": 0.0,
                     "description": "Divisible asset",
-                    "status": "valid"
+                    "status": "valid",
+                    "quantity_normalized": "1000.00000000"
                 }
             },
-            "btc_amount_normalized": "0"
+            "btc_amount_normalized": "0.00000000"
         }
     },
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498?verbose=true": {
@@ -608,10 +847,27 @@
                     "get_quantity": 800000,
                     "expiration": 2000,
                     "fee_required": 900000,
-                    "status": "open"
+                    "status": "open",
+                    "give_asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Counterparty",
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "get_asset_info": {
+                        "divisible": true,
+                        "asset_longname": "Bitcoin",
+                        "description": "The Bitcoin cryptocurrency",
+                        "locked": false,
+                        "issuer": null
+                    },
+                    "give_quantity_normalized": "1.00000000",
+                    "get_quantity_normalized": "0.00800000",
+                    "fee_required_normalized": "0.00900000"
                 }
             },
-            "btc_amount_normalized": "0"
+            "btc_amount_normalized": "0.00000000"
         }
     },
     "http://localhost:10009/v2/transactions/2/events?verbose=true": {
@@ -626,7 +882,7 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310001000
             },
             {
@@ -648,11 +904,11 @@
                         "divisible": true,
                         "locked": false
                     },
-                    "quantity_normalized": "1000"
+                    "quantity_normalized": "1000.00000000"
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310001000
             },
             {
@@ -678,19 +934,12 @@
                     "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                     "tx_index": 2,
                     "block_time": 310001000,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "Divisible asset",
-                        "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                        "divisible": true,
-                        "locked": false
-                    },
-                    "quantity_normalized": "1000",
-                    "fee_paid_normalized": "0.5"
+                    "quantity_normalized": "1000.00000000",
+                    "fee_paid_normalized": "0.50000000"
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310001000
             },
             {
@@ -705,7 +954,7 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310001000
             },
             {
@@ -727,11 +976,11 @@
                         "locked": true,
                         "issuer": null
                     },
-                    "quantity_normalized": "0.5"
+                    "quantity_normalized": "0.50000000"
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310001000
             }
         ],
@@ -741,7 +990,7 @@
     "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/events?verbose=true": {
         "result": [
             {
-                "event_index": 1181,
+                "event_index": 1183,
                 "event": "TRANSACTION_PARSED",
                 "params": {
                     "supported": true,
@@ -750,11 +999,11 @@
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310491000
             },
             {
-                "event_index": 1180,
+                "event_index": 1182,
                 "event": "OPEN_ORDER",
                 "params": {
                     "block_index": 310491,
@@ -789,22 +1038,22 @@
                         "locked": false,
                         "issuer": null
                     },
-                    "give_quantity_normalized": "1",
-                    "get_quantity_normalized": "0.008",
-                    "get_remaining_normalized": "0.008",
-                    "give_remaining_normalized": "1",
-                    "fee_provided_normalized": "0.000068",
-                    "fee_required_normalized": "0.009",
-                    "fee_required_remaining_normalized": "0.009",
-                    "fee_provided_remaining_normalized": "0.000068"
+                    "give_quantity_normalized": "1.00000000",
+                    "get_quantity_normalized": "0.00800000",
+                    "get_remaining_normalized": "0.00800000",
+                    "give_remaining_normalized": "1.00000000",
+                    "fee_provided_normalized": "0.00006800",
+                    "fee_required_normalized": "0.00900000",
+                    "fee_required_remaining_normalized": "0.00900000",
+                    "fee_provided_remaining_normalized": "0.00006800"
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310491000
             },
             {
-                "event_index": 1179,
+                "event_index": 1181,
                 "event": "DEBIT",
                 "params": {
                     "action": "open order",
@@ -822,16 +1071,26 @@
                         "locked": true,
                         "issuer": null
                     },
-                    "quantity_normalized": "1"
+                    "quantity_normalized": "1.00000000"
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310491000
             }
         ],
         "next_cursor": null,
         "result_count": 3
+    },
+    "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/sends?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
+    "http://localhost:10009/v2/transactions/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/dispenses?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/transactions/2/events/CREDIT?verbose=true": {
         "result": [
@@ -854,11 +1113,11 @@
                         "divisible": true,
                         "locked": false
                     },
-                    "quantity_normalized": "1000"
+                    "quantity_normalized": "1000.00000000"
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310001000
             }
         ],
@@ -883,20 +1142,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "XCP",
-                "quantity": 91875000000,
-                "asset_info": {
-                    "divisible": true,
-                    "asset_longname": "Counterparty",
-                    "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
-                },
-                "quantity_normalized": "918.75"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -909,20 +1155,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "DIVISIBLE",
-                "quantity": 98800000000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "988"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -935,7 +1168,33 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "92233720000"
+                "quantity_normalized": "92233720000.00000000"
+            },
+            {
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "LOCKED",
+                "quantity": 1000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Locked asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": true
+                },
+                "quantity_normalized": "0.00001000"
+            },
+            {
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "CALLABLE",
+                "quantity": 1000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Callable asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "0.00001000"
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -952,29 +1211,29 @@
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "LOCKED",
-                "quantity": 1000,
+                "asset": "DIVISIBLE",
+                "quantity": 98800000000,
                 "asset_info": {
                     "asset_longname": null,
-                    "description": "Locked asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": true
-                },
-                "quantity_normalized": "0.00001"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "CALLABLE",
-                "quantity": 1000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Callable asset",
+                    "description": "Divisible asset",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "0.00001"
+                "quantity_normalized": "988.00000000"
+            },
+            {
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "XCP",
+                "quantity": 91875000000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "918.75000000"
             }
         ],
         "next_cursor": null,
@@ -985,9 +1244,6 @@
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "NODIVISIBLE",
             "quantity": 985,
-            "block_index": 310015,
-            "tx_index": 16,
-            "block_time": 310015000,
             "asset_info": {
                 "asset_longname": null,
                 "description": "No divisible asset",
@@ -1016,7 +1272,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310497,
@@ -1034,7 +1290,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310482,
@@ -1052,7 +1308,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310102,
@@ -1088,7 +1344,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "92233720000"
+                "quantity_normalized": "92233720000.00000000"
             },
             {
                 "block_index": 310004,
@@ -1106,7 +1362,7 @@
                     "divisible": true,
                     "locked": true
                 },
-                "quantity_normalized": "0.00001"
+                "quantity_normalized": "0.00001000"
             },
             {
                 "block_index": 310003,
@@ -1124,7 +1380,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "0.00001"
+                "quantity_normalized": "0.00001000"
             },
             {
                 "block_index": 310002,
@@ -1160,7 +1416,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1000"
+                "quantity_normalized": "1000.00000000"
             },
             {
                 "block_index": 310000,
@@ -1178,7 +1434,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "930"
+                "quantity_normalized": "930.00000000"
             }
         ],
         "next_cursor": null,
@@ -1202,7 +1458,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "0.25"
+                "quantity_normalized": "0.25000000"
             },
             {
                 "block_index": 310497,
@@ -1220,7 +1476,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "0.5"
+                "quantity_normalized": "0.50000000"
             },
             {
                 "block_index": 310491,
@@ -1238,7 +1494,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310481,
@@ -1256,7 +1512,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310110,
@@ -1274,7 +1530,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310019,
@@ -1310,7 +1566,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "0.5"
+                "quantity_normalized": "0.50000000"
             },
             {
                 "block_index": 310015,
@@ -1364,7 +1620,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "10"
+                "quantity_normalized": "10.00000000"
             },
             {
                 "block_index": 310012,
@@ -1382,7 +1638,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "3"
+                "quantity_normalized": "3.00000000"
             },
             {
                 "block_index": 310010,
@@ -1400,7 +1656,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310009,
@@ -1418,7 +1674,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310008,
@@ -1436,7 +1692,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310007,
@@ -1454,7 +1710,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310006,
@@ -1472,7 +1728,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "block_index": 310004,
@@ -1490,7 +1746,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "0.5"
+                "quantity_normalized": "0.50000000"
             },
             {
                 "block_index": 310003,
@@ -1508,7 +1764,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "0.5"
+                "quantity_normalized": "0.50000000"
             },
             {
                 "block_index": 310002,
@@ -1526,7 +1782,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "0.5"
+                "quantity_normalized": "0.50000000"
             },
             {
                 "block_index": 310001,
@@ -1544,7 +1800,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "0.5"
+                "quantity_normalized": "0.50000000"
             }
         ],
         "next_cursor": null,
@@ -1571,7 +1827,7 @@
                 "fee_fraction_int": 5000000,
                 "status": "open",
                 "block_time": 310101000,
-                "fee_fraction_int_normalized": "0.05"
+                "fee_fraction_int_normalized": "0.05000000"
             }
         ],
         "next_cursor": null,
@@ -1591,7 +1847,7 @@
                 "locked": false,
                 "status": "valid",
                 "block_time": 310102000,
-                "fee_fraction_int_normalized": "0.05"
+                "fee_fraction_int_normalized": "0.05000000"
             },
             {
                 "tx_index": 18,
@@ -1605,7 +1861,7 @@
                 "locked": false,
                 "status": "valid",
                 "block_time": 310017000,
-                "fee_fraction_int_normalized": "0.05"
+                "fee_fraction_int_normalized": "0.05000000"
             }
         ],
         "next_cursor": null,
@@ -1622,8 +1878,8 @@
                 "earned": 93000000000,
                 "status": "valid",
                 "block_time": 310000000,
-                "burned_normalized": "0.62",
-                "earned_normalized": "930"
+                "burned_normalized": "0.62000000",
+                "earned_normalized": "930.00000000"
             }
         ],
         "next_cursor": null,
@@ -1650,7 +1906,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "tx_index": 111,
@@ -1671,7 +1927,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "tx_index": 16,
@@ -1734,7 +1990,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "10"
+                "quantity_normalized": "10.00000000"
             },
             {
                 "tx_index": 13,
@@ -1755,7 +2011,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "3"
+                "quantity_normalized": "3.00000000"
             },
             {
                 "tx_index": 9,
@@ -1776,7 +2032,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             },
             {
                 "tx_index": 8,
@@ -1797,7 +2053,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             }
         ],
         "next_cursor": null,
@@ -1824,7 +2080,7 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1"
+                "quantity_normalized": "1.00000000"
             }
         ],
         "next_cursor": null,
@@ -1914,10 +2170,10 @@
                 "locked": true,
                 "issuer": null
             },
-            "give_quantity_normalized": "0.000001",
-            "give_remaining_normalized": "0.000001",
-            "escrow_quantity_normalized": "0.000001",
-            "satoshirate_normalized": "0.000001"
+            "give_quantity_normalized": "0.00000100",
+            "give_remaining_normalized": "0.00000100",
+            "escrow_quantity_normalized": "0.00000100",
+            "satoshirate_normalized": "0.00000100"
         }
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends?verbose=true": {
@@ -1968,7 +2224,8 @@
                 "asset_longname": "PARENT.already.issued",
                 "reset": false,
                 "block_time": 310498000,
-                "fee_paid_normalized": "0.25"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.25000000"
             },
             {
                 "tx_index": 498,
@@ -1991,7 +2248,8 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310497000,
-                "fee_paid_normalized": "0.5"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.50000000"
             },
             {
                 "tx_index": 17,
@@ -2014,7 +2272,8 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310016000,
-                "fee_paid_normalized": "0.5"
+                "quantity_normalized": "92233720000.00000000",
+                "fee_paid_normalized": "0.50000000"
             },
             {
                 "tx_index": 6,
@@ -2037,7 +2296,8 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310005000,
-                "fee_paid_normalized": "0"
+                "quantity_normalized": "0.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 5,
@@ -2060,7 +2320,8 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310004000,
-                "fee_paid_normalized": "0.5"
+                "quantity_normalized": "0.00001000",
+                "fee_paid_normalized": "0.50000000"
             },
             {
                 "tx_index": 4,
@@ -2083,7 +2344,8 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310003000,
-                "fee_paid_normalized": "0.5"
+                "quantity_normalized": "0.00001000",
+                "fee_paid_normalized": "0.50000000"
             },
             {
                 "tx_index": 3,
@@ -2106,7 +2368,8 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310002000,
-                "fee_paid_normalized": "0.5"
+                "quantity_normalized": "1000",
+                "fee_paid_normalized": "0.50000000"
             },
             {
                 "tx_index": 2,
@@ -2129,7 +2392,8 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310001000,
-                "fee_paid_normalized": "0.5"
+                "quantity_normalized": "1000.00000000",
+                "fee_paid_normalized": "0.50000000"
             }
         ],
         "next_cursor": null,
@@ -2139,87 +2403,115 @@
         "result": [
             {
                 "asset": "A95428956661682277",
+                "asset_id": "95428956661682277",
                 "asset_longname": "PARENT.already.issued",
-                "description": "Child of parent",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 100000000,
+                "description": "Child of parent",
                 "first_issuance_block_index": 310498,
                 "last_issuance_block_index": 310498,
                 "first_issuance_block_time": 310498000,
-                "last_issuance_block_time": 310498000
+                "last_issuance_block_time": 310498000,
+                "supply_normalized": "1.00000000"
             },
             {
                 "asset": "PARENT",
+                "asset_id": "178522493",
                 "asset_longname": null,
-                "description": "Parent asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 100000000,
+                "description": "Parent asset",
                 "first_issuance_block_index": 310497,
                 "last_issuance_block_index": 310497,
                 "first_issuance_block_time": 310497000,
-                "last_issuance_block_time": 310497000
+                "last_issuance_block_time": 310497000,
+                "supply_normalized": "1.00000000"
             },
             {
                 "asset": "MAXI",
+                "asset_id": "211518",
                 "asset_longname": null,
-                "description": "Maximum quantity",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 9223372036854775807,
+                "description": "Maximum quantity",
                 "first_issuance_block_index": 310016,
                 "last_issuance_block_index": 310016,
                 "first_issuance_block_time": 310016000,
-                "last_issuance_block_time": 310016000
+                "last_issuance_block_time": 310016000,
+                "supply_normalized": "92233720000.00000000"
             },
             {
                 "asset": "LOCKED",
+                "asset_id": "137134819",
                 "asset_longname": null,
-                "description": "Locked asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": true,
+                "supply": 1000,
+                "description": "Locked asset",
                 "first_issuance_block_index": 310004,
                 "last_issuance_block_index": 310005,
                 "first_issuance_block_time": 310004000,
-                "last_issuance_block_time": 310005000
+                "last_issuance_block_time": 310005000,
+                "supply_normalized": "0.00001000"
             },
             {
                 "asset": "CALLABLE",
+                "asset_id": "16199343190",
                 "asset_longname": null,
-                "description": "Callable asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 1000,
+                "description": "Callable asset",
                 "first_issuance_block_index": 310003,
                 "last_issuance_block_index": 310003,
                 "first_issuance_block_time": 310003000,
-                "last_issuance_block_time": 310003000
+                "last_issuance_block_time": 310003000,
+                "supply_normalized": "0.00001000"
             },
             {
                 "asset": "NODIVISIBLE",
+                "asset_id": "1911882621324134",
                 "asset_longname": null,
-                "description": "No divisible asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": false,
                 "locked": false,
+                "supply": 1000,
+                "description": "No divisible asset",
                 "first_issuance_block_index": 310002,
                 "last_issuance_block_index": 310002,
                 "first_issuance_block_time": 310002000,
-                "last_issuance_block_time": 310002000
+                "last_issuance_block_time": 310002000,
+                "supply_normalized": "1000"
             },
             {
                 "asset": "DIVISIBLE",
+                "asset_id": "697326324582",
                 "asset_longname": null,
-                "description": "Divisible asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 100000000000,
+                "description": "Divisible asset",
                 "first_issuance_block_index": 310001,
                 "last_issuance_block_index": 310001,
                 "first_issuance_block_time": 310001000,
-                "last_issuance_block_time": 310001000
+                "last_issuance_block_time": 310001000,
+                "supply_normalized": "1000.00000000"
             }
         ],
         "next_cursor": null,
@@ -2239,7 +2531,25 @@
                 "fee": 6550,
                 "data": "0000001501530821671b10650000000005f5e10001108e90a57dba9967c422e83080f22f0c684368696c64206f6620706172656e74",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "issuance",
+                    "message_type_id": 21,
+                    "message_data": {
+                        "asset_id": null,
+                        "asset": null,
+                        "subasset_longname": null,
+                        "quantity": null,
+                        "divisible": null,
+                        "lock": null,
+                        "reset": null,
+                        "callable": null,
+                        "call_date": null,
+                        "call_price": null,
+                        "description": null,
+                        "status": "invalid: could not unpack"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 498,
@@ -2253,7 +2563,26 @@
                 "fee": 6300,
                 "data": "00000014000000000aa4097d0000000005f5e100010000000000000000000c506172656e74206173736574",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "issuance",
+                    "message_type_id": 20,
+                    "message_data": {
+                        "asset_id": 178522493,
+                        "asset": "PARENT",
+                        "subasset_longname": null,
+                        "quantity": 100000000,
+                        "divisible": true,
+                        "lock": null,
+                        "reset": null,
+                        "callable": false,
+                        "call_date": 0,
+                        "call_price": 0.0,
+                        "description": "Parent asset",
+                        "status": "valid",
+                        "quantity_normalized": "1.00000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 492,
@@ -2267,7 +2596,37 @@
                 "fee": 6800,
                 "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "order",
+                    "message_type_id": 10,
+                    "message_data": {
+                        "give_asset": "XCP",
+                        "give_quantity": 100000000,
+                        "get_asset": "BTC",
+                        "get_quantity": 800000,
+                        "expiration": 2000,
+                        "fee_required": 900000,
+                        "status": "open",
+                        "give_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Bitcoin",
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "1.00000000",
+                        "get_quantity_normalized": "0.00800000",
+                        "fee_required_normalized": "0.00900000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 482,
@@ -2281,7 +2640,25 @@
                 "fee": 6375,
                 "data": "0000000200000000000000010000000005f5e1006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec68656c6c6f",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "enhanced_send",
+                    "message_type_id": 2,
+                    "message_data": {
+                        "asset": "XCP",
+                        "quantity": 100000000,
+                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                        "memo": "68656c6c6f",
+                        "asset_info": {
+                            "divisible": true,
+                            "asset_longname": "Counterparty",
+                            "description": "The Counterparty protocol native currency",
+                            "locked": true,
+                            "issuer": null
+                        },
+                        "quantity_normalized": "1.00000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 111,
@@ -2295,7 +2672,23 @@
                 "fee": 7650,
                 "data": "00000000000000a25be34b660000000005f5e100",
                 "supported": true,
-                "btc_amount_normalized": "0.0000543"
+                "unpacked_data": {
+                    "message_type": "send",
+                    "message_type_id": 0,
+                    "message_data": {
+                        "asset": "DIVISIBLE",
+                        "quantity": 100000000,
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "Divisible asset",
+                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "divisible": true,
+                            "locked": false
+                        },
+                        "quantity_normalized": "1.00000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00005430"
             },
             {
                 "tx_index": 103,
@@ -2309,7 +2702,19 @@
                 "fee": 6800,
                 "data": "0000001e52bb33023ff0000000000000004c4b4009556e69742054657374",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "broadcast",
+                    "message_type_id": 30,
+                    "message_data": {
+                        "timestamp": 1388000002,
+                        "value": 1.0,
+                        "fee_fraction_int": 5000000,
+                        "text": "Unit Test",
+                        "status": "valid",
+                        "fee_fraction_int_normalized": "0.05000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 20,
@@ -2323,7 +2728,21 @@
                 "fee": 7650,
                 "data": "00000028000152bb3301000000000000000900000000000000090000000000000000000013b000000064",
                 "supported": true,
-                "btc_amount_normalized": "0.0000543"
+                "unpacked_data": {
+                    "message_type": "bet",
+                    "message_type_id": 40,
+                    "message_data": {
+                        "bet_type": 1,
+                        "deadline": 1388000001,
+                        "wager_quantity": 9,
+                        "counterwager_quantity": 9,
+                        "target_value": 0.0,
+                        "leverage": 5040,
+                        "expiration": 100,
+                        "status": "open"
+                    }
+                },
+                "btc_amount_normalized": "0.00005430"
             },
             {
                 "tx_index": 18,
@@ -2337,7 +2756,19 @@
                 "fee": 6800,
                 "data": "0000001e52bb33003ff0000000000000004c4b4009556e69742054657374",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "broadcast",
+                    "message_type_id": 30,
+                    "message_data": {
+                        "timestamp": 1388000000,
+                        "value": 1.0,
+                        "fee_fraction_int": 5000000,
+                        "text": "Unit Test",
+                        "status": "valid",
+                        "fee_fraction_int_normalized": "0.05000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 17,
@@ -2351,7 +2782,26 @@
                 "fee": 6800,
                 "data": "000000140000000000033a3e7fffffffffffffff01000000000000000000104d6178696d756d207175616e74697479",
                 "supported": true,
-                "btc_amount_normalized": "0"
+                "unpacked_data": {
+                    "message_type": "issuance",
+                    "message_type_id": 20,
+                    "message_data": {
+                        "asset_id": 211518,
+                        "asset": "MAXI",
+                        "subasset_longname": null,
+                        "quantity": 9223372036854775807,
+                        "divisible": true,
+                        "lock": null,
+                        "reset": null,
+                        "callable": false,
+                        "call_date": 0,
+                        "call_price": 0.0,
+                        "description": "Maximum quantity",
+                        "status": "valid",
+                        "quantity_normalized": "92233720000.00000000"
+                    }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 16,
@@ -2365,7 +2815,23 @@
                 "fee": 7650,
                 "data": "000000000006cad8dc7f0b66000000000000000a",
                 "supported": true,
-                "btc_amount_normalized": "0.00001"
+                "unpacked_data": {
+                    "message_type": "send",
+                    "message_type_id": 0,
+                    "message_data": {
+                        "asset": "NODIVISIBLE",
+                        "quantity": 10,
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "No divisible asset",
+                            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "divisible": false,
+                            "locked": false
+                        },
+                        "quantity_normalized": "10"
+                    }
+                },
+                "btc_amount_normalized": "0.00001000"
             }
         ],
         "next_cursor": 15,
@@ -2381,7 +2847,7 @@
             {
                 "tx_index": 492,
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
-                "block_index": 310492,
+                "block_index": 310491,
                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "give_asset": "XCP",
                 "give_quantity": 100000000,
@@ -2396,7 +2862,7 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
-                "block_time": 310492000,
+                "block_time": 310491000,
                 "give_asset_info": {
                     "divisible": true,
                     "asset_longname": "Counterparty",
@@ -2411,14 +2877,14 @@
                     "locked": false,
                     "issuer": null
                 },
-                "give_quantity_normalized": "1",
-                "get_quantity_normalized": "0.008",
-                "get_remaining_normalized": "0",
-                "give_remaining_normalized": "0",
-                "fee_provided_normalized": "0.000068",
-                "fee_required_normalized": "0.009",
-                "fee_required_remaining_normalized": "0.008928",
-                "fee_provided_remaining_normalized": "0.000068"
+                "give_quantity_normalized": "1.00000000",
+                "get_quantity_normalized": "0.00800000",
+                "get_remaining_normalized": "0.00000000",
+                "give_remaining_normalized": "0.00000000",
+                "fee_provided_normalized": "0.00006800",
+                "fee_required_normalized": "0.00900000",
+                "fee_required_remaining_normalized": "0.00892800",
+                "fee_provided_remaining_normalized": "0.00006800"
             },
             {
                 "tx_index": 12,
@@ -2454,13 +2920,13 @@
                     "issuer": null
                 },
                 "give_quantity_normalized": "0.00666667",
-                "get_quantity_normalized": "1",
-                "get_remaining_normalized": "1",
+                "get_quantity_normalized": "1.00000000",
+                "get_remaining_normalized": "1.00000000",
                 "give_remaining_normalized": "0.00666667",
-                "fee_provided_normalized": "0.01",
-                "fee_required_normalized": "0",
-                "fee_required_remaining_normalized": "0",
-                "fee_provided_remaining_normalized": "0.01"
+                "fee_provided_normalized": "0.01000000",
+                "fee_required_normalized": "0.00000000",
+                "fee_required_remaining_normalized": "0.00000000",
+                "fee_provided_remaining_normalized": "0.01000000"
             },
             {
                 "tx_index": 11,
@@ -2495,14 +2961,14 @@
                     "locked": false,
                     "issuer": null
                 },
-                "give_quantity_normalized": "1",
-                "get_quantity_normalized": "0.01",
-                "get_remaining_normalized": "0.01",
-                "give_remaining_normalized": "1",
-                "fee_provided_normalized": "0.000068",
-                "fee_required_normalized": "0.009",
-                "fee_required_remaining_normalized": "0.009",
-                "fee_provided_remaining_normalized": "0.000068"
+                "give_quantity_normalized": "1.00000000",
+                "get_quantity_normalized": "0.01000000",
+                "get_remaining_normalized": "0.01000000",
+                "give_remaining_normalized": "1.00000000",
+                "fee_provided_normalized": "0.00006800",
+                "fee_required_normalized": "0.00900000",
+                "fee_required_remaining_normalized": "0.00900000",
+                "fee_provided_remaining_normalized": "0.00006800"
             },
             {
                 "tx_index": 10,
@@ -2537,14 +3003,14 @@
                     "divisible": true,
                     "locked": false
                 },
-                "give_quantity_normalized": "1",
-                "get_quantity_normalized": "1",
-                "get_remaining_normalized": "1",
-                "give_remaining_normalized": "1",
-                "fee_provided_normalized": "0.000068",
-                "fee_required_normalized": "0",
-                "fee_required_remaining_normalized": "0",
-                "fee_provided_remaining_normalized": "0.000068"
+                "give_quantity_normalized": "1.00000000",
+                "get_quantity_normalized": "1.00000000",
+                "get_remaining_normalized": "1.00000000",
+                "give_remaining_normalized": "1.00000000",
+                "fee_provided_normalized": "0.00006800",
+                "fee_required_normalized": "0.00000000",
+                "fee_required_remaining_normalized": "0.00000000",
+                "fee_provided_remaining_normalized": "0.00006800"
             },
             {
                 "tx_index": 7,
@@ -2579,14 +3045,14 @@
                     "divisible": true,
                     "locked": false
                 },
-                "give_quantity_normalized": "1",
-                "get_quantity_normalized": "1",
-                "get_remaining_normalized": "1",
-                "give_remaining_normalized": "1",
-                "fee_provided_normalized": "0.000068",
-                "fee_required_normalized": "0",
-                "fee_required_remaining_normalized": "0",
-                "fee_provided_remaining_normalized": "0.000068"
+                "give_quantity_normalized": "1.00000000",
+                "get_quantity_normalized": "1.00000000",
+                "get_remaining_normalized": "1.00000000",
+                "give_remaining_normalized": "1.00000000",
+                "fee_provided_normalized": "0.00006800",
+                "fee_required_normalized": "0.00000000",
+                "fee_required_remaining_normalized": "0.00000000",
+                "fee_provided_remaining_normalized": "0.00006800"
             }
         ],
         "next_cursor": null,
@@ -2596,123 +3062,163 @@
         "result": [
             {
                 "asset": "A95428956661682277",
+                "asset_id": "95428956661682277",
                 "asset_longname": "PARENT.already.issued",
-                "description": "Child of parent",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 100000000,
+                "description": "Child of parent",
                 "first_issuance_block_index": 310498,
                 "last_issuance_block_index": 310498,
                 "first_issuance_block_time": 310498000,
-                "last_issuance_block_time": 310498000
+                "last_issuance_block_time": 310498000,
+                "supply_normalized": "1.00000000"
             },
             {
                 "asset": "PARENT",
+                "asset_id": "178522493",
                 "asset_longname": null,
-                "description": "Parent asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 100000000,
+                "description": "Parent asset",
                 "first_issuance_block_index": 310497,
                 "last_issuance_block_index": 310497,
                 "first_issuance_block_time": 310497000,
-                "last_issuance_block_time": 310497000
+                "last_issuance_block_time": 310497000,
+                "supply_normalized": "1.00000000"
             },
             {
                 "asset": "DIVIDEND",
+                "asset_id": "26819977213",
                 "asset_longname": null,
-                "description": "",
                 "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "owner": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
                 "divisible": true,
                 "locked": false,
+                "supply": 100,
+                "description": "",
                 "first_issuance_block_index": 310494,
                 "last_issuance_block_index": 310494,
                 "first_issuance_block_time": 310494000,
-                "last_issuance_block_time": 310494000
+                "last_issuance_block_time": 310494000,
+                "supply_normalized": "0.00000100"
             },
             {
                 "asset": "LOCKEDPREV",
+                "asset_id": "62667321322601",
                 "asset_longname": null,
-                "description": "changed",
                 "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "owner": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
                 "divisible": true,
-                "locked": false,
+                "locked": true,
+                "supply": 1000,
+                "description": "changed",
                 "first_issuance_block_index": 310113,
                 "last_issuance_block_index": 310115,
                 "first_issuance_block_time": 310113000,
-                "last_issuance_block_time": 310115000
+                "last_issuance_block_time": 310115000,
+                "supply_normalized": "0.00001000"
             },
             {
                 "asset": "PAYTOSCRIPT",
+                "asset_id": "2122675428648001",
                 "asset_longname": null,
-                "description": "PSH issued asset",
                 "issuer": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "owner": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
                 "divisible": false,
                 "locked": false,
+                "supply": 1000,
+                "description": "PSH issued asset",
                 "first_issuance_block_index": 310109,
                 "last_issuance_block_index": 310109,
                 "first_issuance_block_time": 310109000,
-                "last_issuance_block_time": 310109000
+                "last_issuance_block_time": 310109000,
+                "supply_normalized": "1000"
             },
             {
                 "asset": "MAXI",
+                "asset_id": "211518",
                 "asset_longname": null,
-                "description": "Maximum quantity",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 9223372036854775807,
+                "description": "Maximum quantity",
                 "first_issuance_block_index": 310016,
                 "last_issuance_block_index": 310016,
                 "first_issuance_block_time": 310016000,
-                "last_issuance_block_time": 310016000
+                "last_issuance_block_time": 310016000,
+                "supply_normalized": "92233720000.00000000"
             },
             {
                 "asset": "LOCKED",
+                "asset_id": "137134819",
                 "asset_longname": null,
-                "description": "Locked asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": true,
+                "supply": 1000,
+                "description": "Locked asset",
                 "first_issuance_block_index": 310004,
                 "last_issuance_block_index": 310005,
                 "first_issuance_block_time": 310004000,
-                "last_issuance_block_time": 310005000
+                "last_issuance_block_time": 310005000,
+                "supply_normalized": "0.00001000"
             },
             {
                 "asset": "CALLABLE",
+                "asset_id": "16199343190",
                 "asset_longname": null,
-                "description": "Callable asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 1000,
+                "description": "Callable asset",
                 "first_issuance_block_index": 310003,
                 "last_issuance_block_index": 310003,
                 "first_issuance_block_time": 310003000,
-                "last_issuance_block_time": 310003000
+                "last_issuance_block_time": 310003000,
+                "supply_normalized": "0.00001000"
             },
             {
                 "asset": "NODIVISIBLE",
+                "asset_id": "1911882621324134",
                 "asset_longname": null,
-                "description": "No divisible asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": false,
                 "locked": false,
+                "supply": 1000,
+                "description": "No divisible asset",
                 "first_issuance_block_index": 310002,
                 "last_issuance_block_index": 310002,
                 "first_issuance_block_time": 310002000,
-                "last_issuance_block_time": 310002000
+                "last_issuance_block_time": 310002000,
+                "supply_normalized": "1000"
             },
             {
                 "asset": "DIVISIBLE",
+                "asset_id": "697326324582",
                 "asset_longname": null,
-                "description": "Divisible asset",
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
                 "locked": false,
+                "supply": 100000000000,
+                "description": "Divisible asset",
                 "first_issuance_block_index": 310001,
                 "last_issuance_block_index": 310001,
                 "first_issuance_block_time": 310001000,
-                "last_issuance_block_time": 310001000
+                "last_issuance_block_time": 310001000,
+                "supply_normalized": "1000.00000000"
             }
         ],
         "next_cursor": null,
@@ -2721,18 +3227,19 @@
     "http://localhost:10009/v2/assets/NODIVISIBLE?verbose=true": {
         "result": {
             "asset": "NODIVISIBLE",
+            "asset_id": "1911882621324134",
             "asset_longname": null,
+            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "divisible": false,
             "locked": false,
             "supply": 1000,
             "description": "No divisible asset",
-            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "holder_count": 3,
             "first_issuance_block_index": 310002,
             "last_issuance_block_index": 310002,
             "first_issuance_block_time": 310002000,
-            "last_issuance_block_time": 310002000
+            "last_issuance_block_time": 310002000,
+            "supply_normalized": "1000"
         }
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/balances?verbose=true": {
@@ -2785,9 +3292,6 @@
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "NODIVISIBLE",
             "quantity": 985,
-            "block_index": 310015,
-            "tx_index": 16,
-            "block_time": 310015000,
             "asset_info": {
                 "asset_longname": null,
                 "description": "No divisible asset",
@@ -2933,7 +3437,8 @@
                 "asset_longname": null,
                 "reset": false,
                 "block_time": 310002000,
-                "fee_paid_normalized": "0.5"
+                "quantity_normalized": "1000",
+                "fee_paid_normalized": "0.50000000"
             }
         ],
         "next_cursor": null,
@@ -3018,10 +3523,10 @@
                 "locked": true,
                 "issuer": null
             },
-            "give_quantity_normalized": "0.000001",
-            "give_remaining_normalized": "0.000001",
-            "escrow_quantity_normalized": "0.000001",
-            "satoshirate_normalized": "0.000001"
+            "give_quantity_normalized": "0.00000100",
+            "give_remaining_normalized": "0.00000100",
+            "escrow_quantity_normalized": "0.00000100",
+            "satoshirate_normalized": "0.00000100"
         }
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/holders?verbose=true": {
@@ -3031,7 +3536,7 @@
                 "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                 "quantity": 5,
                 "escrow": null,
-                "cursor_id": "balances_23",
+                "cursor_id": "balances_10",
                 "holding_type": "balances",
                 "status": null,
                 "asset_info": {
@@ -3045,27 +3550,10 @@
             },
             {
                 "asset": "NODIVISIBLE",
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "quantity": 985,
-                "escrow": null,
-                "cursor_id": "balances_24",
-                "holding_type": "balances",
-                "status": null,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "985"
-            },
-            {
-                "asset": "NODIVISIBLE",
                 "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
                 "quantity": 10,
                 "escrow": null,
-                "cursor_id": "balances_25",
+                "cursor_id": "balances_11",
                 "holding_type": "balances",
                 "status": null,
                 "asset_info": {
@@ -3076,6 +3564,23 @@
                     "locked": false
                 },
                 "quantity_normalized": "10"
+            },
+            {
+                "asset": "NODIVISIBLE",
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "quantity": 985,
+                "escrow": null,
+                "cursor_id": "balances_3",
+                "holding_type": "balances",
+                "status": null,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "No divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": false,
+                    "locked": false
+                },
+                "quantity_normalized": "985"
             }
         ],
         "next_cursor": null,
@@ -3121,19 +3626,19 @@
                     "locked": true,
                     "issuer": null
                 },
-                "give_quantity_normalized": "0.008",
-                "get_quantity_normalized": "1",
-                "get_remaining_normalized": "0",
-                "give_remaining_normalized": "0",
-                "fee_provided_normalized": "0.01",
-                "fee_required_normalized": "0",
-                "fee_required_remaining_normalized": "0",
-                "fee_provided_remaining_normalized": "0.009928"
+                "give_quantity_normalized": "0.00800000",
+                "get_quantity_normalized": "1.00000000",
+                "get_remaining_normalized": "0.00000000",
+                "give_remaining_normalized": "0.00000000",
+                "fee_provided_normalized": "0.01000000",
+                "fee_required_normalized": "0.00000000",
+                "fee_required_remaining_normalized": "0.00000000",
+                "fee_provided_remaining_normalized": "0.00992800"
             },
             {
                 "tx_index": 492,
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
-                "block_index": 310492,
+                "block_index": 310491,
                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "give_asset": "XCP",
                 "give_quantity": 100000000,
@@ -3148,7 +3653,7 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
-                "block_time": 310492000,
+                "block_time": 310491000,
                 "give_asset_info": {
                     "divisible": true,
                     "asset_longname": "Counterparty",
@@ -3163,14 +3668,14 @@
                     "locked": false,
                     "issuer": null
                 },
-                "give_quantity_normalized": "1",
-                "get_quantity_normalized": "0.008",
-                "get_remaining_normalized": "0",
-                "give_remaining_normalized": "0",
-                "fee_provided_normalized": "0.000068",
-                "fee_required_normalized": "0.009",
-                "fee_required_remaining_normalized": "0.008928",
-                "fee_provided_remaining_normalized": "0.000068"
+                "give_quantity_normalized": "1.00000000",
+                "get_quantity_normalized": "0.00800000",
+                "get_remaining_normalized": "0.00000000",
+                "give_remaining_normalized": "0.00000000",
+                "fee_provided_normalized": "0.00006800",
+                "fee_required_normalized": "0.00900000",
+                "fee_required_remaining_normalized": "0.00892800",
+                "fee_provided_remaining_normalized": "0.00006800"
             },
             {
                 "tx_index": 12,
@@ -3206,13 +3711,13 @@
                     "issuer": null
                 },
                 "give_quantity_normalized": "0.00666667",
-                "get_quantity_normalized": "1",
-                "get_remaining_normalized": "1",
+                "get_quantity_normalized": "1.00000000",
+                "get_remaining_normalized": "1.00000000",
                 "give_remaining_normalized": "0.00666667",
-                "fee_provided_normalized": "0.01",
-                "fee_required_normalized": "0",
-                "fee_required_remaining_normalized": "0",
-                "fee_provided_remaining_normalized": "0.01"
+                "fee_provided_normalized": "0.01000000",
+                "fee_required_normalized": "0.00000000",
+                "fee_required_remaining_normalized": "0.00000000",
+                "fee_provided_remaining_normalized": "0.01000000"
             },
             {
                 "tx_index": 11,
@@ -3247,14 +3752,14 @@
                     "locked": false,
                     "issuer": null
                 },
-                "give_quantity_normalized": "1",
-                "get_quantity_normalized": "0.01",
-                "get_remaining_normalized": "0.01",
-                "give_remaining_normalized": "1",
-                "fee_provided_normalized": "0.000068",
-                "fee_required_normalized": "0.009",
-                "fee_required_remaining_normalized": "0.009",
-                "fee_provided_remaining_normalized": "0.000068"
+                "give_quantity_normalized": "1.00000000",
+                "get_quantity_normalized": "0.01000000",
+                "get_remaining_normalized": "0.01000000",
+                "give_remaining_normalized": "1.00000000",
+                "fee_provided_normalized": "0.00006800",
+                "fee_required_normalized": "0.00900000",
+                "fee_required_remaining_normalized": "0.00900000",
+                "fee_provided_remaining_normalized": "0.00006800"
             },
             {
                 "tx_index": 10,
@@ -3289,14 +3794,14 @@
                     "divisible": true,
                     "locked": false
                 },
-                "give_quantity_normalized": "1",
-                "get_quantity_normalized": "1",
-                "get_remaining_normalized": "1",
-                "give_remaining_normalized": "1",
-                "fee_provided_normalized": "0.000068",
-                "fee_required_normalized": "0",
-                "fee_required_remaining_normalized": "0",
-                "fee_provided_remaining_normalized": "0.000068"
+                "give_quantity_normalized": "1.00000000",
+                "get_quantity_normalized": "1.00000000",
+                "get_remaining_normalized": "1.00000000",
+                "give_remaining_normalized": "1.00000000",
+                "fee_provided_normalized": "0.00006800",
+                "fee_required_normalized": "0.00000000",
+                "fee_required_remaining_normalized": "0.00000000",
+                "fee_provided_remaining_normalized": "0.00006800"
             },
             {
                 "tx_index": 7,
@@ -3331,14 +3836,14 @@
                     "divisible": true,
                     "locked": false
                 },
-                "give_quantity_normalized": "1",
-                "get_quantity_normalized": "1",
-                "get_remaining_normalized": "1",
-                "give_remaining_normalized": "1",
-                "fee_provided_normalized": "0.000068",
-                "fee_required_normalized": "0",
-                "fee_required_remaining_normalized": "0",
-                "fee_provided_remaining_normalized": "0.000068"
+                "give_quantity_normalized": "1.00000000",
+                "get_quantity_normalized": "1.00000000",
+                "get_remaining_normalized": "1.00000000",
+                "give_remaining_normalized": "1.00000000",
+                "fee_provided_normalized": "0.00006800",
+                "fee_required_normalized": "0.00000000",
+                "fee_required_remaining_normalized": "0.00000000",
+                "fee_provided_remaining_normalized": "0.00006800"
             }
         ],
         "next_cursor": null,
@@ -3348,7 +3853,7 @@
         "result": {
             "tx_index": 492,
             "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
-            "block_index": 310492,
+            "block_index": 310491,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "give_asset": "XCP",
             "give_quantity": 100000000,
@@ -3363,7 +3868,7 @@
             "fee_provided": 6800,
             "fee_provided_remaining": 6800,
             "status": "open",
-            "block_time": 310492000,
+            "block_time": 310491000,
             "give_asset_info": {
                 "divisible": true,
                 "asset_longname": "Counterparty",
@@ -3378,14 +3883,14 @@
                 "locked": false,
                 "issuer": null
             },
-            "give_quantity_normalized": "1",
-            "get_quantity_normalized": "0.008",
-            "get_remaining_normalized": "0",
-            "give_remaining_normalized": "0",
-            "fee_provided_normalized": "0.000068",
-            "fee_required_normalized": "0.009",
-            "fee_required_remaining_normalized": "0.008928",
-            "fee_provided_remaining_normalized": "0.000068"
+            "give_quantity_normalized": "1.00000000",
+            "get_quantity_normalized": "0.00800000",
+            "get_remaining_normalized": "0.00000000",
+            "give_remaining_normalized": "0.00000000",
+            "fee_provided_normalized": "0.00006800",
+            "fee_required_normalized": "0.00900000",
+            "fee_required_remaining_normalized": "0.00892800",
+            "fee_provided_remaining_normalized": "0.00006800"
         }
     },
     "http://localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/matches?verbose=true": {
@@ -3411,7 +3916,23 @@
                 "fee_paid": 7200,
                 "status": "pending",
                 "block_time": 310492000,
-                "fee_paid_normalized": "0.000072"
+                "forward_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "backward_asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Bitcoin",
+                    "description": "The Bitcoin cryptocurrency",
+                    "locked": false,
+                    "issuer": null
+                },
+                "forward_quantity_normalized": "1.00000000",
+                "backward_quantity_normalized": "0.00800000",
+                "fee_paid_normalized": "0.00007200"
             }
         ],
         "next_cursor": null,
@@ -3448,7 +3969,7 @@
                 "fee_fraction_int": 5000000,
                 "status": "open",
                 "block_time": 310487000,
-                "fee_fraction_int_normalized": "0.05"
+                "fee_fraction_int_normalized": "0.05000000"
             },
             {
                 "tx_index": 113,
@@ -3469,7 +3990,7 @@
                 "fee_fraction_int": 5000000,
                 "status": "open",
                 "block_time": 310112000,
-                "fee_fraction_int_normalized": "0.05"
+                "fee_fraction_int_normalized": "0.05000000"
             },
             {
                 "tx_index": 102,
@@ -3490,7 +4011,7 @@
                 "fee_fraction_int": 5000000,
                 "status": "open",
                 "block_time": 310101000,
-                "fee_fraction_int_normalized": "0.05"
+                "fee_fraction_int_normalized": "0.05000000"
             }
         ],
         "next_cursor": null,
@@ -3500,7 +4021,7 @@
         "result": {
             "tx_index": 20,
             "tx_hash": "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1",
-            "block_index": 310020,
+            "block_index": 310019,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "bet_type": 1,
@@ -3515,8 +4036,8 @@
             "expire_index": 310119,
             "fee_fraction_int": 5000000,
             "status": "filled",
-            "block_time": 310020000,
-            "fee_fraction_int_normalized": "0.05"
+            "block_time": 310019000,
+            "fee_fraction_int_normalized": "0.05000000"
         }
     },
     "http://localhost:10009/v2/bets/2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1/matches?verbose=true": {
@@ -3553,8 +4074,8 @@
                 "earned": 92995878046,
                 "status": "valid",
                 "block_time": 310493000,
-                "burned_normalized": "0.62",
-                "earned_normalized": "929.95878"
+                "burned_normalized": "0.62000000",
+                "earned_normalized": "929.95878000"
             },
             {
                 "tx_index": 117,
@@ -3565,8 +4086,8 @@
                 "earned": 92999030129,
                 "status": "valid",
                 "block_time": 310116000,
-                "burned_normalized": "0.62",
-                "earned_normalized": "929.99030"
+                "burned_normalized": "0.62000000",
+                "earned_normalized": "929.99030000"
             },
             {
                 "tx_index": 109,
@@ -3577,8 +4098,8 @@
                 "earned": 46499548508,
                 "status": "valid",
                 "block_time": 310108000,
-                "burned_normalized": "0.31",
-                "earned_normalized": "464.99549"
+                "burned_normalized": "0.31000000",
+                "earned_normalized": "464.99549000"
             },
             {
                 "tx_index": 107,
@@ -3589,7 +4110,7 @@
                 "earned": 14999857,
                 "status": "valid",
                 "block_time": 310106000,
-                "burned_normalized": "0.0001",
+                "burned_normalized": "0.00010000",
                 "earned_normalized": "0.14999857"
             },
             {
@@ -3601,8 +4122,8 @@
                 "earned": 92999122099,
                 "status": "valid",
                 "block_time": 310105000,
-                "burned_normalized": "0.62",
-                "earned_normalized": "929.99122"
+                "burned_normalized": "0.62000000",
+                "earned_normalized": "929.99122000"
             },
             {
                 "tx_index": 105,
@@ -3613,8 +4134,8 @@
                 "earned": 92999130460,
                 "status": "valid",
                 "block_time": 310104000,
-                "burned_normalized": "0.62",
-                "earned_normalized": "929.99130"
+                "burned_normalized": "0.62000000",
+                "earned_normalized": "929.99130000"
             },
             {
                 "tx_index": 104,
@@ -3625,8 +4146,8 @@
                 "earned": 92999138821,
                 "status": "valid",
                 "block_time": 310103000,
-                "burned_normalized": "0.62",
-                "earned_normalized": "929.99139"
+                "burned_normalized": "0.62000000",
+                "earned_normalized": "929.99139000"
             },
             {
                 "tx_index": 1,
@@ -3637,8 +4158,8 @@
                 "earned": 93000000000,
                 "status": "valid",
                 "block_time": 310000000,
-                "burned_normalized": "0.62",
-                "earned_normalized": "930"
+                "burned_normalized": "0.62000000",
+                "earned_normalized": "930.00000000"
             }
         ],
         "next_cursor": null,
@@ -3671,10 +4192,10 @@
                     "locked": true,
                     "issuer": null
                 },
-                "give_quantity_normalized": "0.000001",
-                "give_remaining_normalized": "0.000001",
-                "escrow_quantity_normalized": "0.000001",
-                "satoshirate_normalized": "0.000001"
+                "give_quantity_normalized": "0.00000100",
+                "give_remaining_normalized": "0.00000100",
+                "escrow_quantity_normalized": "0.00000100",
+                "satoshirate_normalized": "0.00000100"
             }
         ],
         "next_cursor": null,
@@ -3706,10 +4227,10 @@
                 "locked": true,
                 "issuer": null
             },
-            "give_quantity_normalized": "0.000001",
-            "give_remaining_normalized": "0.000001",
-            "escrow_quantity_normalized": "0.000001",
-            "satoshirate_normalized": "0.000001"
+            "give_quantity_normalized": "0.00000100",
+            "give_remaining_normalized": "0.00000100",
+            "escrow_quantity_normalized": "0.00000100",
+            "satoshirate_normalized": "0.00000100"
         }
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec/dispenses?verbose=true": {
@@ -3725,23 +4246,23 @@
     "http://localhost:10009/v2/events?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1237,
+                "event_index": 1239,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310500,
                     "ledger_hash": "5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d",
-                    "messages_hash": "45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f",
+                    "messages_hash": "4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96",
                     "transaction_count": 0,
                     "txlist_hash": "35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1",
                     "block_time": 310500000
                 },
                 "tx_hash": null,
                 "block_index": 310500,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310500000
             },
             {
-                "event_index": 1236,
+                "event_index": 1238,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b",
@@ -3754,27 +4275,27 @@
                 },
                 "tx_hash": null,
                 "block_index": 310499,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310499000
             },
             {
-                "event_index": 1235,
+                "event_index": 1237,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310499,
                     "ledger_hash": "b9fcbdafddd46fdda061f6e9f8744b426b6ca37e32b315df1098cbc7899ae9b9",
-                    "messages_hash": "d6aedacd4f81520d86ae47c9c776d17a213c706a5cf7c91203a4299261d1648c",
+                    "messages_hash": "dc4258fd460745fe443598c0119627362b7bceea1892f32243221551f45db0c9",
                     "transaction_count": 0,
                     "txlist_hash": "032166892f568bb97f4f69ef5bdf49cc1b15cc9f8c7f6c1f3e1f9d54816ad7e5",
                     "block_time": 310499000
                 },
                 "tx_hash": null,
                 "block_index": 310499,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310499000
             },
             {
-                "event_index": 1234,
+                "event_index": 1236,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764",
@@ -3787,28 +4308,28 @@
                 },
                 "tx_hash": null,
                 "block_index": 310498,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310498000
             },
             {
-                "event_index": 1233,
+                "event_index": 1235,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310498,
                     "ledger_hash": "5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414",
-                    "messages_hash": "113207bd13dda56b5e5edf305f70a56e62cc861184e1e95a64e79ce100462c98",
+                    "messages_hash": "31fb849548f5054c3f49f5ba1fc015a6169db27f00e90ea2baa6fe453e2744a5",
                     "transaction_count": 1,
                     "txlist_hash": "b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7",
                     "block_time": 310498000
                 },
                 "tx_hash": null,
                 "block_index": 310498,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310498000
             }
         ],
-        "next_cursor": 1232,
-        "result_count": 1238
+        "next_cursor": 1234,
+        "result_count": 1240
     },
     "http://localhost:10009/v2/events/10?limit=5&verbose=true": {
         "result": {
@@ -3823,7 +4344,7 @@
             },
             "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
             "block_index": 310001,
-            "timestamp": 0,
+            "timestamp": null,
             "block_time": 310001000
         }
     },
@@ -3851,12 +4372,12 @@
             }
         ],
         "next_cursor": "OPEN_DISPENSER",
-        "result_count": 21
+        "result_count": 22
     },
     "http://localhost:10009/v2/events/CREDIT?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1231,
+                "event_index": 1233,
                 "event": "CREDIT",
                 "params": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -3874,15 +4395,15 @@
                         "divisible": true,
                         "locked": false
                     },
-                    "quantity_normalized": "1"
+                    "quantity_normalized": "1.00000000"
                 },
                 "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
                 "block_index": 310498,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310498000
             },
             {
-                "event_index": 1223,
+                "event_index": 1225,
                 "event": "CREDIT",
                 "params": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -3900,15 +4421,15 @@
                         "divisible": true,
                         "locked": false
                     },
-                    "quantity_normalized": "1"
+                    "quantity_normalized": "1.00000000"
                 },
                 "tx_hash": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
                 "block_index": 310497,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310497000
             },
             {
-                "event_index": 1214,
+                "event_index": 1216,
                 "event": "CREDIT",
                 "params": {
                     "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
@@ -3926,15 +4447,15 @@
                         "locked": true,
                         "issuer": null
                     },
-                    "quantity_normalized": "929.45878"
+                    "quantity_normalized": "929.45878000"
                 },
                 "tx_hash": "a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba",
                 "block_index": 310496,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310496000
             },
             {
-                "event_index": 1207,
+                "event_index": 1209,
                 "event": "CREDIT",
                 "params": {
                     "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
@@ -3952,15 +4473,15 @@
                         "divisible": true,
                         "locked": false
                     },
-                    "quantity_normalized": "0.0000001"
+                    "quantity_normalized": "0.00000010"
                 },
                 "tx_hash": "02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e",
                 "block_index": 310495,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310495000
             },
             {
-                "event_index": 1201,
+                "event_index": 1203,
                 "event": "CREDIT",
                 "params": {
                     "address": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
@@ -3978,21 +4499,749 @@
                         "divisible": true,
                         "locked": false
                     },
-                    "quantity_normalized": "0.000001"
+                    "quantity_normalized": "0.00000100"
                 },
                 "tx_hash": "321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503",
                 "block_index": 310494,
-                "timestamp": 0,
+                "timestamp": null,
                 "block_time": 310494000
             }
         ],
-        "next_cursor": 1193,
+        "next_cursor": 1195,
         "result_count": 34
     },
     "http://localhost:10009/v2/events/CREDIT/count?limit=5&verbose=true": {
         "result": {
             "event": "CREDIT",
             "event_count": 34
+        }
+    },
+    "http://localhost:10009/v2/dispenses?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
+    "http://localhost:10009/v2/sends?verbose=true": {
+        "result": [
+            {
+                "tx_index": 497,
+                "tx_hash": "a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba",
+                "block_index": 310496,
+                "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
+                "asset": "XCP",
+                "quantity": 92945878046,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310496000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "929.45878000"
+            },
+            {
+                "tx_index": 496,
+                "tx_hash": "02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e",
+                "block_index": 310495,
+                "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
+                "asset": "DIVIDEND",
+                "quantity": 10,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310495000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "0.00000010"
+            },
+            {
+                "tx_index": 483,
+                "tx_hash": "c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34",
+                "block_index": 310482,
+                "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "XCP",
+                "quantity": 100000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": "fade0001",
+                "block_time": 310482000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "1.00000000"
+            },
+            {
+                "tx_index": 482,
+                "tx_hash": "b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5",
+                "block_index": 310481,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "asset": "XCP",
+                "quantity": 100000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": "68656c6c6f",
+                "block_time": 310481000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "1.00000000"
+            },
+            {
+                "tx_index": 111,
+                "tx_hash": "f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7",
+                "block_index": 310110,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310110000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "1.00000000"
+            },
+            {
+                "tx_index": 16,
+                "tx_hash": "e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c",
+                "block_index": 310015,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                "asset": "NODIVISIBLE",
+                "quantity": 10,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310015000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "No divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": false,
+                    "locked": false
+                },
+                "quantity_normalized": "10"
+            },
+            {
+                "tx_index": 15,
+                "tx_hash": "1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a",
+                "block_index": 310014,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "asset": "NODIVISIBLE",
+                "quantity": 5,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310014000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "No divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": false,
+                    "locked": false
+                },
+                "quantity_normalized": "5"
+            },
+            {
+                "tx_index": 14,
+                "tx_hash": "0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132",
+                "block_index": 310013,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                "asset": "DIVISIBLE",
+                "quantity": 1000000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310013000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "10.00000000"
+            },
+            {
+                "tx_index": 13,
+                "tx_hash": "698e97e507da8623cf38ab42701853443c8f7fe0d93b4674aabb42f9800ee9d6",
+                "block_index": 310012,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                "asset": "XCP",
+                "quantity": 300000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310012000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "3.00000000"
+            },
+            {
+                "tx_index": 9,
+                "tx_hash": "4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43",
+                "block_index": 310008,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "asset": "XCP",
+                "quantity": 100000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310008000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": "Counterparty",
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "1.00000000"
+            },
+            {
+                "tx_index": 8,
+                "tx_hash": "6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753",
+                "block_index": 310007,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "asset": "DIVISIBLE",
+                "quantity": 100000000,
+                "status": "valid",
+                "msg_index": 0,
+                "memo": null,
+                "block_time": 310007000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "1.00000000"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 11
+    },
+    "http://localhost:10009/v2/issuances?verbose=true": {
+        "result": [
+            {
+                "tx_index": 499,
+                "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+                "msg_index": 0,
+                "block_index": 310498,
+                "asset": "A95428956661682277",
+                "quantity": 100000000,
+                "divisible": true,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Child of parent",
+                "fee_paid": 25000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": "PARENT.already.issued",
+                "reset": false,
+                "block_time": 310498000,
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.25000000"
+            },
+            {
+                "tx_index": 498,
+                "tx_hash": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
+                "msg_index": 0,
+                "block_index": 310497,
+                "asset": "PARENT",
+                "quantity": 100000000,
+                "divisible": true,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Parent asset",
+                "fee_paid": 50000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310497000,
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.50000000"
+            },
+            {
+                "tx_index": 495,
+                "tx_hash": "321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503",
+                "msg_index": 0,
+                "block_index": 310494,
+                "asset": "DIVIDEND",
+                "quantity": 100,
+                "divisible": true,
+                "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "issuer": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "",
+                "fee_paid": 50000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310494000,
+                "quantity_normalized": "0.00000100",
+                "fee_paid_normalized": "0.50000000"
+            },
+            {
+                "tx_index": 116,
+                "tx_hash": "4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb",
+                "msg_index": 0,
+                "block_index": 310115,
+                "asset": "LOCKEDPREV",
+                "quantity": 0,
+                "divisible": true,
+                "source": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "changed",
+                "fee_paid": 0,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310115000,
+                "quantity_normalized": "0.00000000",
+                "fee_paid_normalized": "0.00000000"
+            },
+            {
+                "tx_index": 115,
+                "tx_hash": "025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2",
+                "msg_index": 0,
+                "block_index": 310114,
+                "asset": "LOCKEDPREV",
+                "quantity": 0,
+                "divisible": true,
+                "source": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Locked asset",
+                "fee_paid": 0,
+                "locked": true,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310114000,
+                "quantity_normalized": "0.00000000",
+                "fee_paid_normalized": "0.00000000"
+            },
+            {
+                "tx_index": 114,
+                "tx_hash": "34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63",
+                "msg_index": 0,
+                "block_index": 310113,
+                "asset": "LOCKEDPREV",
+                "quantity": 1000,
+                "divisible": true,
+                "source": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Locked asset",
+                "fee_paid": 50000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310113000,
+                "quantity_normalized": "0.00001000",
+                "fee_paid_normalized": "0.50000000"
+            },
+            {
+                "tx_index": 110,
+                "tx_hash": "e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e",
+                "msg_index": 0,
+                "block_index": 310109,
+                "asset": "PAYTOSCRIPT",
+                "quantity": 1000,
+                "divisible": false,
+                "source": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "issuer": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "PSH issued asset",
+                "fee_paid": 50000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310109000,
+                "quantity_normalized": "1000",
+                "fee_paid_normalized": "0.50000000"
+            },
+            {
+                "tx_index": 17,
+                "tx_hash": "bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39",
+                "msg_index": 0,
+                "block_index": 310016,
+                "asset": "MAXI",
+                "quantity": 9223372036854775807,
+                "divisible": true,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Maximum quantity",
+                "fee_paid": 50000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310016000,
+                "quantity_normalized": "92233720000.00000000",
+                "fee_paid_normalized": "0.50000000"
+            },
+            {
+                "tx_index": 6,
+                "tx_hash": "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc",
+                "msg_index": 0,
+                "block_index": 310005,
+                "asset": "LOCKED",
+                "quantity": 0,
+                "divisible": true,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Locked asset",
+                "fee_paid": 0,
+                "locked": true,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310005000,
+                "quantity_normalized": "0.00000000",
+                "fee_paid_normalized": "0.00000000"
+            },
+            {
+                "tx_index": 5,
+                "tx_hash": "90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da",
+                "msg_index": 0,
+                "block_index": 310004,
+                "asset": "LOCKED",
+                "quantity": 1000,
+                "divisible": true,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Locked asset",
+                "fee_paid": 50000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310004000,
+                "quantity_normalized": "0.00001000",
+                "fee_paid_normalized": "0.50000000"
+            },
+            {
+                "tx_index": 4,
+                "tx_hash": "c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140",
+                "msg_index": 0,
+                "block_index": 310003,
+                "asset": "CALLABLE",
+                "quantity": 1000,
+                "divisible": true,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Callable asset",
+                "fee_paid": 50000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310003000,
+                "quantity_normalized": "0.00001000",
+                "fee_paid_normalized": "0.50000000"
+            },
+            {
+                "tx_index": 3,
+                "tx_hash": "7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584",
+                "msg_index": 0,
+                "block_index": 310002,
+                "asset": "NODIVISIBLE",
+                "quantity": 1000,
+                "divisible": false,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "No divisible asset",
+                "fee_paid": 50000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310002000,
+                "quantity_normalized": "1000",
+                "fee_paid_normalized": "0.50000000"
+            },
+            {
+                "tx_index": 2,
+                "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                "msg_index": 0,
+                "block_index": 310001,
+                "asset": "DIVISIBLE",
+                "quantity": 100000000000,
+                "divisible": true,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "transfer": false,
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Divisible asset",
+                "fee_paid": 50000000,
+                "locked": false,
+                "status": "valid",
+                "asset_longname": null,
+                "reset": false,
+                "block_time": 310001000,
+                "quantity_normalized": "1000.00000000",
+                "fee_paid_normalized": "0.50000000"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 13
+    },
+    "http://localhost:10009/v2/issuances/0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf?verbose=true": {
+        "result": {
+            "tx_index": 499,
+            "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+            "msg_index": 0,
+            "block_index": 310498,
+            "asset": "A95428956661682277",
+            "quantity": 100000000,
+            "divisible": true,
+            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "transfer": false,
+            "callable": false,
+            "call_date": 0,
+            "call_price": 0.0,
+            "description": "Child of parent",
+            "fee_paid": 25000000,
+            "locked": false,
+            "status": "valid",
+            "asset_longname": "PARENT.already.issued",
+            "reset": false,
+            "block_time": 310498000,
+            "quantity_normalized": "1.00000000",
+            "fee_paid_normalized": "0.25000000"
+        }
+    },
+    "http://localhost:10009/v2/sweeps?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
+    "http://localhost:10009/v2/sweeps/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
+    "http://localhost:10009/v2/broadcasts?verbose=true": {
+        "result": [
+            {
+                "tx_index": 491,
+                "tx_hash": "7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af",
+                "block_index": 310490,
+                "source": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+                "timestamp": 1388000004,
+                "value": 1.0,
+                "fee_fraction_int": 0,
+                "text": "options 1",
+                "locked": false,
+                "status": "valid",
+                "block_time": 310490000,
+                "fee_fraction_int_normalized": "0.00000000"
+            },
+            {
+                "tx_index": 490,
+                "tx_hash": "685d7f99fa76a05201c3239a4e0d9060ea53307b171f6ad7d482a26c73e9c0d1",
+                "block_index": 310489,
+                "source": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
+                "timestamp": 0,
+                "value": null,
+                "fee_fraction_int": null,
+                "text": null,
+                "locked": true,
+                "status": "valid",
+                "block_time": 310489000
+            },
+            {
+                "tx_index": 489,
+                "tx_hash": "870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638",
+                "block_index": 310488,
+                "source": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
+                "timestamp": 1388000002,
+                "value": 1.0,
+                "fee_fraction_int": 0,
+                "text": "options 0",
+                "locked": false,
+                "status": "valid",
+                "block_time": 310488000,
+                "fee_fraction_int_normalized": "0.00000000"
+            },
+            {
+                "tx_index": 487,
+                "tx_hash": "3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14",
+                "block_index": 310486,
+                "source": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
+                "timestamp": 1388000000,
+                "value": 1.0,
+                "fee_fraction_int": 5000000,
+                "text": "Unit Test",
+                "locked": false,
+                "status": "valid",
+                "block_time": 310486000,
+                "fee_fraction_int_normalized": "0.05000000"
+            },
+            {
+                "tx_index": 112,
+                "tx_hash": "510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186",
+                "block_index": 310111,
+                "source": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+                "timestamp": 1388000002,
+                "value": 1.0,
+                "fee_fraction_int": 5000000,
+                "text": "Unit Test",
+                "locked": false,
+                "status": "valid",
+                "block_time": 310111000,
+                "fee_fraction_int_normalized": "0.05000000"
+            },
+            {
+                "tx_index": 103,
+                "tx_hash": "16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae",
+                "block_index": 310102,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "timestamp": 1388000002,
+                "value": 1.0,
+                "fee_fraction_int": 5000000,
+                "text": "Unit Test",
+                "locked": false,
+                "status": "valid",
+                "block_time": 310102000,
+                "fee_fraction_int_normalized": "0.05000000"
+            },
+            {
+                "tx_index": 19,
+                "tx_hash": "f9e0527c85a9084d7eda91fc30a49993370d029efea031a8ccccdf846146a660",
+                "block_index": 310018,
+                "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
+                "timestamp": 0,
+                "value": null,
+                "fee_fraction_int": null,
+                "text": null,
+                "locked": true,
+                "status": "valid",
+                "block_time": 310018000
+            },
+            {
+                "tx_index": 18,
+                "tx_hash": "d14388b74b63d93e4477b1fe8426028bb8ab20656703e3ce8deeb23c2fe0b8af",
+                "block_index": 310017,
+                "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "timestamp": 1388000000,
+                "value": 1.0,
+                "fee_fraction_int": 5000000,
+                "text": "Unit Test",
+                "locked": false,
+                "status": "valid",
+                "block_time": 310017000,
+                "fee_fraction_int_normalized": "0.05000000"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 8
+    },
+    "http://localhost:10009/v2/broadcasts/7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af?verbose=true": {
+        "result": {
+            "tx_index": 491,
+            "tx_hash": "7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af",
+            "block_index": 310490,
+            "source": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+            "timestamp": 1388000004,
+            "value": 1.0,
+            "fee_fraction_int": 0,
+            "text": "options 1",
+            "locked": false,
+            "status": "valid",
+            "block_time": 310490000,
+            "fee_fraction_int_normalized": "0.00000000"
         }
     }
 }

@@ -7216,7 +7216,7 @@ UNITTEST_VECTOR = {
                 ),
                 "error": (
                     exceptions.BalanceError,
-                    "Insufficient BTC at address mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns. (Need approximately 10.73754999 BTC.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)",
+                    "Insufficient BTC at address mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns. Need: 10.73754999 BTC (Including fee: 0.00012175 BTC), available: 1.11121663 BTC. These fees are estimated for a confirmation target of 3 blocks, you can reduce them by using the `confirmation_target` parameter with a higher value or by manually setting the fees with the `fee` parameter. To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)",
                 ),
             },
             {
@@ -7302,7 +7302,7 @@ UNITTEST_VECTOR = {
                 ),
                 "error": (
                     exceptions.BalanceError,
-                    "Insufficient BTC at address mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc. (Need approximately 0.0001408 BTC.) To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)",
+                    "Insufficient BTC at address mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc. Need: 0.0001408 BTC (Including fee: 0.0000765 BTC), available: 0.00001 BTC. These fees are estimated for a confirmation target of 3 blocks, you can reduce them by using the `confirmation_target` parameter with a higher value or by manually setting the fees with the `fee` parameter. To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)",
                 ),
             },
             {
@@ -8560,14 +8560,15 @@ UNITTEST_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1237,
+                    "message_index": 1239,
                     "block_index": 310500,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310500,"ledger_hash":"5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d","messages_hash":"45f296a535c13129cb1aaeb4e28a03e04ad902917891c39ae59ea2894e9f868f","transaction_count":0,"txlist_hash":"35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"}',
+                    "bindings": '{"block_index":310500,"ledger_hash":"5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d","messages_hash":"4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96","transaction_count":0,"txlist_hash":"35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
+                    "event_hash": "273aec8452f62fbbbcdf33e91fe3a2d03f113fac4adfc457b85af13c0fd06ba2",
                 },
             }
         ],

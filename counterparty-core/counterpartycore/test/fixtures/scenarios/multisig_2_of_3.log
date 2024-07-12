@@ -1,4 +1,5 @@
 Creating connection to `:memory:`...
+Initializing database...
 TX Construct - Constructing transaction from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 TX Construct - Transaction constructed.
 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 burned 62000000 BTC for 93000000000 XCP (15b35d5497f454c43576f21a1b61d99bde25dfc5aae1a4796dcf55e739d6a399) [valid]
@@ -11,12 +12,6 @@ Order opened for 50000000 BTC at 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVi
 TX Construct - Constructing `MULTISIG` transaction from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.
 TX Construct - Transaction constructed.
 Order opened for 105000000 XCP at 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3 (89a44a3314b298a83d5d14c8646900a5122b8a1e8f6e0528e73ea82044d1726a) [open]
-Considering: c953eb18873ce8aed42456df0ece8e4678e13282d9917916e7a4aec10e828375
-Tx0 Price: 2.0; Tx1 Inverse Price: 2.1
-Potential forward quantities: 50000000, 52500000
-Forward Quantity: 50000000
-Backward Quantity: 100000000
-Tx0 fee provided remaining: 0.01; required fee: 0.00857142
 Order match for 50000000 BTC against 100000000 XCP (c953eb18873ce8aed42456df0ece8e4678e13282d9917916e7a4aec10e828375_89a44a3314b298a83d5d14c8646900a5122b8a1e8f6e0528e73ea82044d1726a) [pending]
 Order match has only -10 confirmation(s).
 TX Construct - Constructing `MULTISIG` transaction from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3.

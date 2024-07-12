@@ -1,4 +1,5 @@
 Creating connection to `:memory:`...
+Initializing database...
 TX Construct - Constructing transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 62000000 BTC for 93000000000 XCP (6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597) [valid]
@@ -19,6 +20,8 @@ TX Construct - Transaction constructed.
 Issuance of 0 LOCKED by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc] (valid)
 TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
+Initialising orders cache...
+Creating connection to `:memory:`...
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8) [open]
 TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
@@ -36,9 +39,6 @@ Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (1899b2e6ec
 TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Order opened for 666667 BTC at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6) [open]
-Considering: 1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a
-Tx0 Price: 0.01; Tx1 Inverse Price: 0.00666667
-Skipping: price mismatch.
 TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Send XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (698e97e507da8623cf38ab42701853443c8f7fe0d93b4674aabb42f9800ee9d6) [valid]
@@ -96,7 +96,7 @@ TX Construct - Transaction constructed.
 mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK burned 10000 BTC for 14999857 XCP (bbf0b9f6992755a3e371fb0c0b72f6828831e81c6f7ada6f95ba1104fb901ac3) [valid]
 TX Construct - Constructing `OPRETURN` transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
 TX Construct - Transaction constructed.
-Initialising dispensable cache...
+Initialising Dispensable Cache...
 Dispenser opened for XCP at munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b (9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec) [valid]
 TX Construct - Constructing transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 TX Construct - Transaction constructed.
@@ -149,21 +149,10 @@ Broadcast from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 (7c437705c315212315c85c0b8ba09
 TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498) [open]
-Considering: a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6
-Tx0 Price: 149.9999250000375; Tx1 Inverse Price: 125.0
-Skipping: price mismatch.
 TX Construct - Constructing `MULTISIG` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 TX Construct - Transaction constructed.
 Order opened for 800000 BTC at mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81) [open]
-Considering: 74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498
-Tx0 Price: 0.008; Tx1 Inverse Price: 0.008
-Potential forward quantities: 100000000, 100000000
-Forward Quantity: 100000000
-Backward Quantity: 800000
-Tx1 fee provided remaining: 0.01; required fee: 7.2e-05
 Order match for 100000000 XCP against 800000 BTC (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81) [pending]
-Considering: 1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a
-Skipping: negative give quantity remaining
 TX Construct - Constructing transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 TX Construct - Transaction constructed.
 mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH burned 62000000 BTC for 92995878046 XCP (c0733e1287afb1bb3d2fdacd1db7c74ea84f14362f3a8d1c038e662e1d0b1b1a) [valid]

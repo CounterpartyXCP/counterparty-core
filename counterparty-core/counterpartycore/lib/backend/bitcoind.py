@@ -8,7 +8,7 @@ import requests
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
 from counterpartycore.lib import config, deserialize, exceptions, util
-from counterpartycore.lib.kickstart.utils import ib2h
+from counterpartycore.lib.util import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -44,7 +44,7 @@ def rpc_call(payload):
                 else:
                     network = "mainnet"
                 raise exceptions.BitcoindRPCError(
-                    f"Cannot communicate with backend at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
+                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
                 )
             if response.status_code in (401,):
                 raise exceptions.BitcoindRPCError(
@@ -57,7 +57,7 @@ def rpc_call(payload):
             logger.warning("Interrupted by user")
             exit(0)
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
-            logger.debug(
+            logger.warning(
                 f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Attempt: {tries})"
             )
             time.sleep(5)
@@ -91,9 +91,7 @@ def rpc_call(payload):
         # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)
         return rpc_call(payload)
-    raise exceptions.BitcoindRPCError(
-        f"Error connecting to {util.clean_url_for_log(url)}: {response_json['error']}"
-    )
+    raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
 
 def rpc(method, params):

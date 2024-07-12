@@ -5,8 +5,6 @@ HOST: https://api.counterparty.io:4000
 
 The Counterparty Core API is the recommended way to query the state of a Counterparty node. All other methods have no official support.
 
-Please see [Apiary](https://counterpartycore.docs.apiary.io/) for interactive documentation.
-
 API routes are divided into 11 groups:
 
 <GROUP_TOC>
@@ -147,7 +145,7 @@ Here is a list of events classified by theme and for each an example response:
 
 <EVENTS_DOC>
 
-# Counterparty API Root [<ROOT_PATH>]
+# Counterparty API Root [/v2/]
 
 ### Get Server Info [GET /v2/]
 
@@ -157,14 +155,15 @@ Returns server information and the list of documented routes in JSON format.
 
     ```
     {
-        "server_ready": true,
-        "network": "mainnet",
-        "version": "10.2.0",
-        "backend_height": 840796,
-        "counterparty_height": 840796,
-        "routes": [
-            <API Documentation in JSON>
-        ]
+        "result": {
+            "server_ready": true,
+            "network": "mainnet",
+            "version": "10.3.0",
+            "backend_height": 850214,
+            "counterparty_height": 850214,
+            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "blueprint": "http://localhost:4000/v2/blueprint"
+        }
     }
     ```
 
