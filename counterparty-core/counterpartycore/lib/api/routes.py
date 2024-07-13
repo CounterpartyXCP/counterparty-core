@@ -37,6 +37,7 @@ ROUTES = util.prepare_routes(
         "/v2/transactions/<tx_hash>/events/<event>": queries.get_events_by_transaction_hash_and_event,
         ### /addresses ###
         "/v2/addresses/balances": queries.get_balances_by_addresses,
+        "/v2/addresses/transactions": queries.get_transactions_by_addresses,
         "/v2/addresses/<address>/balances": queries.get_address_balances,
         "/v2/addresses/<address>/balances/<asset>": queries.get_balance_by_address_and_asset,
         "/v2/addresses/<address>/credits": queries.get_credits_by_address,

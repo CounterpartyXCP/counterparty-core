@@ -88,7 +88,9 @@ def test_api_v2(request):
         url = url.replace("<dividend_hash>", dividend_hash)
         if route.startswith("/v2/events"):
             url += "?limit=5&verbose=true"
-        elif route.startswith("/v2/addresses/balances"):
+        elif route.startswith("/v2/addresses/balances") or route.startswith(
+            "/v2/addresses/transactions"
+        ):
             url += "?verbose=true&limit=6&addresses=" + ADDR[0] + "," + ADDR[1]
         else:
             url += "?verbose=true"

@@ -287,6 +287,27 @@ def get_transactions_by_address(
     )
 
 
+def get_transactions_by_addresses(
+    db, addresses: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the transactions of a list of addresses
+    :param str addresses: Comma separated list of addresses to return (e.g. 1PHnxfHgojebxzW6muz8zfbE4bkDtbEudx,1PHnxfHgojebxzW6muz8zfbE4bkDtbEudx)
+    :param int cursor: The last transaction index to return (e.g. 2736469)
+    :param int limit: The maximum number of transactions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "transactions",
+        where=[{"source__in": addresses.split(",")}],
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
 def get_transaction_by_hash(db, tx_hash: str):
     """
     Returns a transaction by its hash.
