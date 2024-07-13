@@ -984,7 +984,7 @@ def get_issuances_by_asset(
     return select_rows(
         db,
         "issuances",
-        where=[{"asset": asset.upper()}, {"asset_longname": asset.upper()}],
+        where=[{"asset": asset.upper()}, {"UPPER(asset_longname)": asset.upper()}],
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1633,7 +1633,7 @@ def get_asset(db, asset: str):
     Returns an asset by its name
     :param str asset: The name of the asset to return (e.g. PEPECASH)
     """
-    where = [{"asset": asset.upper()}, {"asset_longname": asset.upper()}]
+    where = [{"asset": asset.upper()}, {"UPPER(asset_longname)": asset.upper()}]
     return select_row(
         db,
         "assets_info",

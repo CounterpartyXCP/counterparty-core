@@ -210,10 +210,6 @@ def prepare_args(route, **kwargs):
         else:
             function_args[arg_name] = str_arg
 
-    for key in function_args:
-        if key in ["asset", "assets", "get_asset", "give_asset"]:
-            function_args[key] = function_args[key].upper()
-
     return function_args
 
 
