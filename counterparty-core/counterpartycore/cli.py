@@ -310,17 +310,18 @@ def welcome_message(action, server_configfile):
     # print some info
     cprint(f"Verbosity: {config.VERBOSE}", "light_grey")
     cprint(f"Quiet: {config.QUIET}", "light_grey")
+
+    if config.TESTNET:
+        cprint("Network: `testnet`", "light_grey")
+    elif config.REGTEST:
+        cprint("Network: `regtest`", "light_grey")
+    else:
+        cprint("Network: `mainnet`", "light_grey")
+
     cprint(f"Configuration File: {server_configfile}", "light_grey")
     cprint(f"Counterparty Database: {config.DATABASE}", "light_grey")
 
     if config.VERBOSE:
-        if config.TESTNET:
-            cprint("Network: `testnet`", "light_grey")
-        elif config.REGTEST:
-            cprint("Network: `regtest`", "light_grey")
-        else:
-            cprint("Network: `mainnet`", "light_grey")
-
         pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
         cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
         cprint(f"Bitcoin Core: {cleaned_backend_url}", "light_grey")
