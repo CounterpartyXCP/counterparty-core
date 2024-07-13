@@ -25,6 +25,8 @@ def apply(db):
 
     cursor = db.cursor()
     sqls = [
+        "DROP VIEW IF EXISTS xcp_holders",
+        "DROP VIEW IF EXISTS asset_holders",
         # locked field
         "ALTER TABLE issuances RENAME COLUMN locked TO locked_old",
         "ALTER TABLE issuances ADD COLUMN locked BOOL DEFAULT FALSE",
