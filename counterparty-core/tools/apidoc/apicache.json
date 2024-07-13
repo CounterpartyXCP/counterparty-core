@@ -822,35 +822,6 @@
         "next_cursor": 2736155,
         "result_count": 2736205
     },
-    "/v2/transactions/info": {
-        "result": {
-            "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "destination": null,
-            "btc_amount": 0,
-            "fee": 56565,
-            "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
-            "unpacked_data": {
-                "message_type": "issuance",
-                "message_type_id": 22,
-                "message_data": {
-                    "asset_id": 75313533584419238,
-                    "asset": "UNNEGOTIABLE",
-                    "subasset_longname": null,
-                    "quantity": 1,
-                    "divisible": false,
-                    "lock": false,
-                    "reset": false,
-                    "callable": false,
-                    "call_date": 0,
-                    "call_price": 0.0,
-                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
-                    "status": "valid",
-                    "quantity_normalized": "1"
-                }
-            },
-            "btc_amount_normalized": "0"
-        }
-    },
     "/v2/transactions/unpack": {
         "result": {
             "message_type": "issuance",
@@ -7504,5 +7475,87 @@
             "timestamp": null,
             "block_time": 1631830009
         }
+    },
+    "/v2/addresses/balances": {
+        "result": [
+            {
+                "asset": "A10404755902319931000",
+                "total": 1,
+                "addresses": [
+                    {
+                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
+                        "quantity": 1,
+                        "quantity_normalized": "1"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYBAMAAAASWSDLAAAAGFBMVEX/zaX2rYq99v+QGQfZAgD2oZf+yKH/0aylFGxhAAAAbElEQVQY05XMuw2AMAxF0RcBonWCRA1MgMQCKTxAVmD/JXjOBzoQN0lxFMtAd9TApr10COAENU8sDesv9DwZntCokRAEgxq2gl4VDTZXAAfbwCS/mrN7N+MESwlMys+AL6wPwhukwRG+YvThAmg/DEoX0UsaAAAAAElFTkSuQmCC",
+                    "issuer": "18FASLc9fenxqwKpc3VL2FrMKR5ehYAohc",
+                    "divisible": false,
+                    "locked": true
+                },
+                "total_normalized": "1"
+            },
+            {
+                "asset": "A10974884985443904336",
+                "total": 1,
+                "addresses": [
+                    {
+                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
+                        "quantity": 1,
+                        "quantity_normalized": "1"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "stamp:iVBORw0KGgoAAAANSUhEUgAAABkAAAAZAgMAAAC5h23wAAAADFBMVEXtHCQisUwAAAD///80x4U1AAAAVElEQVQI12MgDFZxLQBRTGGaGSCaK27pDRCt+nf+LRCtvr7qWwOE/gqiuddWXQXRqqGhoSB6adZSMD0lQQWFVk1QDQPRmkAabO7U0AiIfasWMJAMAEJOHJuDKtoMAAAAAElFTkSuQmCC",
+                    "issuer": "14VhF5JGExMn4qkN2RiMqNvCwpqmFvbQaz",
+                    "divisible": false,
+                    "locked": true
+                },
+                "total_normalized": "1"
+            },
+            {
+                "asset": "A12387679857740888409",
+                "total": 1,
+                "addresses": [
+                    {
+                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
+                        "quantity": 1,
+                        "quantity_normalized": "1"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": "SPAMART.OOAK-SPAM-NYC-MMXXIII",
+                    "description": "imgur/mXiENoK.jpg;spamart nyc 2023",
+                    "issuer": "1F6Vyig9kBGc5Buvy9JyuV8d3jEiPKxWUX",
+                    "divisible": false,
+                    "locked": false
+                },
+                "total_normalized": "1"
+            },
+            {
+                "asset": "A13424117675318910066",
+                "total": 1,
+                "addresses": [
+                    {
+                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
+                        "quantity": 1,
+                        "quantity_normalized": "1"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": "PEPERINCESS.FIRSTANNIV",
+                    "description": "https://easyasset.art/j/qk8iyw/FIRST.json",
+                    "issuer": "1GYRneYXFqddDtnVo6oToZzkAhoTwqmrjC",
+                    "divisible": false,
+                    "locked": false
+                },
+                "total_normalized": "1"
+            }
+        ],
+        "next_cursor": "A404599869049893064",
+        "result_count": 180
     }
 }

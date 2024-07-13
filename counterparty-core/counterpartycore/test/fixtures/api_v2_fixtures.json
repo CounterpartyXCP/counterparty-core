@@ -1129,6 +1129,112 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/addresses/balances?verbose=true&limit=6&addresses=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc,mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns": {
+        "result": [
+            {
+                "asset": "A95428956661682277",
+                "total": 100000000,
+                "addresses": [
+                    {
+                        "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "quantity": 100000000,
+                        "quantity_normalized": "1.00000000"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": "PARENT.already.issued",
+                    "description": "Child of parent",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "total_normalized": "1.00000000"
+            },
+            {
+                "asset": "CALLABLE",
+                "total": 1000,
+                "addresses": [
+                    {
+                        "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "quantity": 1000,
+                        "quantity_normalized": "0.00001000"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Callable asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "total_normalized": "0.00001000"
+            },
+            {
+                "asset": "DIVISIBLE",
+                "total": 98900000000,
+                "addresses": [
+                    {
+                        "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "quantity": 98800000000,
+                        "quantity_normalized": "988.00000000"
+                    },
+                    {
+                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                        "quantity": 100000000,
+                        "quantity_normalized": "1.00000000"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "total_normalized": "989.00000000"
+            },
+            {
+                "asset": "LOCKED",
+                "total": 1000,
+                "addresses": [
+                    {
+                        "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "quantity": 1000,
+                        "quantity_normalized": "0.00001000"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Locked asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": true
+                },
+                "total_normalized": "0.00001000"
+            },
+            {
+                "asset": "MAXI",
+                "total": 9223372036854775807,
+                "addresses": [
+                    {
+                        "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "quantity": 9223372036854775807,
+                        "quantity_normalized": "92233720000.00000000"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Maximum quantity",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "total_normalized": "92233720000.00000000"
+            }
+        ],
+        "next_cursor": "PARENT",
+        "result_count": 8
+    },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
             {
