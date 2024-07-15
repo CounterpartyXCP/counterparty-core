@@ -210,10 +210,6 @@ def prepare_args(route, **kwargs):
         else:
             function_args[arg_name] = str_arg
 
-    for key in function_args:
-        if key in ["asset", "assets", "get_asset", "give_asset"]:
-            function_args[key] = function_args[key].upper()
-
     return function_args
 
 
@@ -323,8 +319,9 @@ def handle_route(**kwargs):
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        # import traceback
-        # traceback.print_exc()
+        import traceback
+
+        traceback.print_exc()
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )

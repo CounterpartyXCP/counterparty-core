@@ -1,4 +1,4 @@
-from counterpartycore.lib import ledger, transaction
+from counterpartycore.lib import transaction
 from counterpartycore.lib.api import queries, util
 from counterpartycore.lib.backend import addrindexrs, bitcoind
 
@@ -36,6 +36,10 @@ ROUTES = util.prepare_routes(
         "/v2/transactions/<int:tx_index>/events/<event>": queries.get_events_by_transaction_index_and_event,
         "/v2/transactions/<tx_hash>/events/<event>": queries.get_events_by_transaction_hash_and_event,
         ### /addresses ###
+        "/v2/addresses/balances": queries.get_balances_by_addresses,
+        "/v2/addresses/transactions": queries.get_transactions_by_addresses,
+        "/v2/addresses/events": queries.get_events_by_addresses,
+        "/v2/addresses/mempool": queries.get_mempool_events_by_addresses,
         "/v2/addresses/<address>/balances": queries.get_address_balances,
         "/v2/addresses/<address>/balances/<asset>": queries.get_balance_by_address_and_asset,
         "/v2/addresses/<address>/credits": queries.get_credits_by_address,
@@ -76,7 +80,6 @@ ROUTES = util.prepare_routes(
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
         "/v2/assets/<asset>": queries.get_asset,
-        "/v2/assets/<asset>/info": ledger.get_asset_info,
         "/v2/assets/<asset>/balances": queries.get_asset_balances,
         "/v2/assets/<asset>/balances/<address>": queries.get_balance_by_address_and_asset,
         "/v2/assets/<asset>/orders": queries.get_orders_by_asset,

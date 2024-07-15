@@ -321,7 +321,9 @@ def api_server_v2(request, cp_server):
 
     if os.path.exists(config.API_DATABASE):
         os.unlink(config.API_DATABASE)
+    if os.path.exists(config.API_DATABASE + "-shm"):
         os.unlink(config.API_DATABASE + "-shm")
+    if os.path.exists(config.API_DATABASE + "-wal"):
         os.unlink(config.API_DATABASE + "-wal")
 
     def is_server_ready():

@@ -329,9 +329,13 @@ def inject_issuances_and_block_times(db, result_list):
             "last_issuance_block_index",
         ]:
             field_name_time = field_name.replace("index", "time")
+            if field_name in item and item[field_name] in [0, config.MEMPOOL_BLOCK_INDEX]:
+                continue
             if field_name in item:
                 item[field_name_time] = block_times[item[field_name]]
             if "params" in item and field_name in item["params"]:
+                if item["params"][field_name] in [0, config.MEMPOOL_BLOCK_INDEX]:
+                    continue
                 item["params"][field_name_time] = block_times[item["params"][field_name]]
         if "params" in item:
             item = item["params"]
@@ -398,6 +402,16 @@ def inject_normalized_quantities(result_list):
     enriched_result_list = []
     for result_item in result_list:
         item = result_item.copy()
+        if "addresses" in item:
+            for i, address in enumerate(item["addresses"]):
+                item["addresses"][i] = inject_normalized_quantity(
+                    address, "quantity", {"divisible": item["asset_info"]["divisible"]}
+                )
+            item = inject_normalized_quantity(
+                item, "total", {"divisible": item["asset_info"]["divisible"]}
+            )
+            enriched_result_list.append(item)
+            continue
         for field_name, field_info in quantity_fields.items():
             if field_info["divisible"] is not None:
                 if field_name in item:
@@ -581,7 +595,7 @@ def inject_unpacked_data(db, result_list):
     return enriched_result_list
 
 
-def inject_details(db, result):
+def inject_details(db, result, rule=None):
     # let's work with a list
     result_list = result
     result_is_dict = False
@@ -595,8 +609,14 @@ def inject_details(db, result):
     result_list = inject_normalized_quantities(result_list)
 
     if result_is_dict:
-        return result_list[0]
-    return result_list
+        result = result_list[0]
+    else:
+        result = result_list
+
+    if rule == "/v2/assets/<asset>":
+        result["holder_count"] = ledger.get_asset_holder_count(db, result["asset"])
+
+    return result
 
 
 def redirect_to_rpc_v1():

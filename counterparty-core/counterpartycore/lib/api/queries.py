@@ -100,9 +100,14 @@ def select_rows(
                 where_field.append(f"{key[:-6]} LIKE ?")
             elif key.endswith("__notlike"):
                 where_field.append(f"{key[:-9]} NOT LIKE ?")
+            elif key.endswith("__in"):
+                where_field.append(f"{key[:-4]} IN ({','.join(['?'] * len(value))})")
             else:
                 where_field.append(f"{key} = ?")
-            bindings.append(value)
+            if key.endswith("__in"):
+                bindings += value
+            else:
+                bindings.append(value)
         and_where_clause = ""
         if where_field:
             and_where_clause = " AND ".join(where_field)
@@ -177,7 +182,7 @@ def select_rows(
     else:
         next_cursor = None
 
-    if table == "messages":
+    if table in ["messages", "mempool"]:
         for row in result:
             if "params" not in row:
                 break
@@ -282,6 +287,27 @@ def get_transactions_by_address(
     )
 
 
+def get_transactions_by_addresses(
+    db, addresses: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the transactions of a list of addresses
+    :param str addresses: Comma separated list of addresses to return (e.g. 1PHnxfHgojebxzW6muz8zfbE4bkDtbEudx,1PHnxfHgojebxzW6muz8zfbE4bkDtbEudx)
+    :param int cursor: The last transaction index to return (e.g. 2736469)
+    :param int limit: The maximum number of transactions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "transactions",
+        where=[{"source__in": addresses.split(",")}],
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
 def get_transaction_by_hash(db, tx_hash: str):
     """
     Returns a transaction by its hash.
@@ -327,7 +353,7 @@ def get_all_events(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
 
 
@@ -389,7 +415,7 @@ def get_events_by_transaction_hash(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
 
 
@@ -412,7 +438,7 @@ def get_events_by_transaction_hash_and_event(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
 
 
@@ -498,7 +524,7 @@ def get_event_by_index(db, event_index: int):
         db,
         "messages",
         where={"message_index": event_index},
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp, rowid AS rowid",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, rowid AS rowid",
     )
 
 
@@ -518,8 +544,41 @@ def get_events_by_name(db, event: str, cursor: int = None, limit: int = 100, off
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
+
+
+def get_events_by_addresses(
+    db, addresses: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the events of a list of addresses
+    :param str addresses: Comma separated list of addresses to return (e.g. 1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V,bc1q5mqesdy0gaj0suzxg4jx7ycmpw66kygdyn80mg)
+    :param int cursor: The last event index to return
+    :param int limit: The maximum number of events to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    events = select_rows(
+        db,
+        "address_events",
+        where=[{"address__in": addresses.split(",")}],
+        cursor_field="event_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+    events_indexes = [event["event_index"] for event in events.result]
+    result = select_rows(
+        db,
+        "messages",
+        where=[{"message_index__in": events_indexes}],
+        cursor_field="event_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
+    )
+    return QueryResult(result.result, events.next_cursor, events.result_count)
 
 
 def get_all_mempool_events(
@@ -535,7 +594,10 @@ def get_all_mempool_events(
     where = None
     if event_name:
         where = [{"event": event} for event in event_name.split(",")]
-    return select_rows(db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset)
+    select = "tx_hash, event, bindings AS params"
+    return select_rows(
+        db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset, select=select
+    )
 
 
 def get_mempool_events_by_name(
@@ -548,8 +610,15 @@ def get_mempool_events_by_name(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    select = "tx_hash, event, bindings AS params"
     return select_rows(
-        db, "mempool", where={"event": event}, last_cursor=cursor, limit=limit, offset=offset
+        db,
+        "mempool",
+        where={"event": event},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        select=select,
     )
 
 
@@ -572,7 +641,32 @@ def get_mempool_events_by_tx_hash(
     where = {"tx_hash": tx_hash}
     if event_name:
         where = [{"event": event, "tx_hash": tx_hash} for event in event_name.split(",")]
-    return select_rows(db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset)
+    select = "tx_hash, event, bindings AS params"
+    return select_rows(
+        db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset, select=select
+    )
+
+
+def get_mempool_events_by_addresses(db, addresses: str, cursor: int = None, limit: int = 100):
+    """
+    Returns the mempool events of a list of addresses
+    :param str addresses: Comma separated list of addresses to return (e.g. 1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V,bc1q5mqesdy0gaj0suzxg4jx7ycmpw66kygdyn80mg)
+    :param int cursor: The last event index to return
+    :param int limit: The maximum number of events to return (e.g. 5)
+    """
+    where = []
+    for address in addresses.split(","):
+        where.append({"addresses__like": f"%{address}%"})
+    select = "tx_hash, event, bindings AS params"
+    result = select_rows(
+        db,
+        "mempool",
+        where=where,
+        last_cursor=cursor,
+        limit=limit,
+        select=select,
+    )
+    return result
 
 
 def get_event_counts_by_block(
@@ -697,7 +791,7 @@ def get_credits_by_asset(
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"asset": asset, "quantity__gt": 0}
+    where = {"asset": asset.upper(), "quantity__gt": 0}
     if action:
         where["calling_function"] = action
     return select_rows(db, "credits", where=where, last_cursor=cursor, limit=limit, offset=offset)
@@ -770,7 +864,7 @@ def get_debits_by_asset(
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"asset": asset, "quantity__gt": 0}
+    where = {"asset": asset.upper(), "quantity__gt": 0}
     if action:
         where["action"] = action
     return select_rows(db, "debits", where=where, last_cursor=cursor, limit=limit, offset=offset)
@@ -841,7 +935,7 @@ def get_sends_by_asset(db, asset: str, cursor: int = None, limit: int = 100, off
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        db, "sends", where={"asset": asset}, last_cursor=cursor, limit=limit, offset=offset
+        db, "sends", where={"asset": asset.upper()}, last_cursor=cursor, limit=limit, offset=offset
     )
 
 
@@ -956,7 +1050,12 @@ def get_issuances_by_asset(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        db, "issuances", where={"asset": asset}, last_cursor=cursor, limit=limit, offset=offset
+        db,
+        "issuances",
+        where=[{"asset": asset.upper()}, {"UPPER(asset_longname)": asset.upper()}],
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -1097,7 +1196,12 @@ def get_dispenses_by_asset(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        db, "dispenses", where={"asset": asset}, last_cursor=cursor, limit=limit, offset=offset
+        db,
+        "dispenses",
+        where={"asset": asset.upper()},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -1115,7 +1219,7 @@ def get_dispenses_by_source_and_asset(
     return select_rows(
         db,
         "dispenses",
-        where={"source": address, "asset": asset},
+        where={"source": address, "asset": asset.upper()},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1136,7 +1240,7 @@ def get_dispenses_by_destination_and_asset(
     return select_rows(
         db,
         "dispenses",
-        where={"destination": address, "asset": asset},
+        where={"destination": address, "asset": asset.upper()},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1227,6 +1331,63 @@ def get_address_balances(
     )
 
 
+def get_balances_by_addresses(
+    db, addresses: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the balances of several addresses
+    :param str addresses: Comma separated list of addresses (e.g. 1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz,1fUcHBfCgVqNwFmECZ2SSjKBvnFfWbKbr)
+    :param int cursor: The last index of the balances to return
+    :param int limit: The maximum number of balances to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    assets_result = select_rows(
+        db,
+        "balances",
+        select="DISTINCT asset AS asset",
+        where={"address__in": addresses.split(","), "quantity__gt": 0},
+        order="ASC",
+        cursor_field="asset",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+    assets = [asset["asset"] for asset in assets_result.result]
+
+    balances = select_rows(
+        db,
+        "balances",
+        where={"address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
+        select="address, asset, quantity",
+        order="ASC",
+        cursor_field="asset",
+    ).result
+
+    result = []
+    current_balances = {
+        "asset": balances[0]["asset"],
+        "total": 0,
+        "addresses": [],
+    }
+    for balance in balances:
+        if balance["asset"] != current_balances["asset"]:
+            result.append(current_balances)
+            current_balances = {
+                "asset": balance["asset"],
+                "total": 0,
+                "addresses": [],
+            }
+        current_balances["total"] += balance["quantity"]
+        current_balances["addresses"].append(
+            {
+                "address": balance["address"],
+                "quantity": balance["quantity"],
+            }
+        )
+
+    return QueryResult(result, assets_result.next_cursor, assets_result.result_count)
+
+
 def get_balance_by_address_and_asset(db, address: str, asset: str):
     """
     Returns the balance of an address and asset
@@ -1237,7 +1398,7 @@ def get_balance_by_address_and_asset(db, address: str, asset: str):
         db,
         "balances",
         select="address, asset, quantity",
-        where={"address": address, "asset": asset},
+        where={"address": address, "asset": asset.upper()},
     )
 
 
@@ -1391,7 +1552,7 @@ def get_sends_by_address_and_asset(
     return select_rows(
         db,
         "sends",
-        where={"source": address, "asset": asset},
+        where={"source": address, "asset": asset.upper()},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1427,7 +1588,7 @@ def get_receive_by_address_and_asset(
     return select_rows(
         db,
         "sends",
-        where={"destination": address, "asset": asset},
+        where={"destination": address, "asset": asset.upper()},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1487,7 +1648,7 @@ def get_dispensers_by_asset(
     return select_rows(
         db,
         "dispensers",
-        where={"asset": asset, "status": status},
+        where={"asset": asset.upper(), "status": status},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1504,7 +1665,7 @@ def get_dispenser_by_address_and_asset(db, address: str, asset: str):
     return select_row(
         db,
         "dispensers",
-        where={"source": address, "asset": asset},
+        where={"source": address, "asset": asset.upper()},
     )
 
 
@@ -1540,7 +1701,7 @@ def get_asset(db, asset: str):
     Returns an asset by its name
     :param str asset: The name of the asset to return (e.g. PEPECASH)
     """
-    where = [{"asset": asset}, {"asset_longname": asset}]
+    where = [{"asset": asset.upper()}, {"UPPER(asset_longname)": asset.upper()}]
     return select_row(
         db,
         "assets_info",
@@ -1621,7 +1782,7 @@ def get_dividends_by_asset(
     return select_rows(
         db,
         "dividends",
-        where={"asset": asset, "status": "valid"},
+        where={"asset": asset.upper(), "status": "valid"},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1679,7 +1840,7 @@ def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100, off
     return select_rows(
         db,
         "balances",
-        where={"asset": asset, "quantity__gt": 0},
+        where={"asset": asset.upper(), "quantity__gt": 0},
         cursor_field="address",
         select="address, asset, quantity",
         order="ASC",
@@ -1728,9 +1889,12 @@ def get_orders_by_asset(
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = [{"give_asset": asset}, {"get_asset": asset}]
+    where = [{"give_asset": asset.upper()}, {"get_asset": asset.upper()}]
     if status != "all":
-        where = [{"give_asset": asset, "status": status}, {"get_asset": asset, "status": status}]
+        where = [
+            {"give_asset": asset.upper(), "status": status},
+            {"get_asset": asset.upper(), "status": status},
+        ]
     return select_rows(
         db,
         "orders",
@@ -1826,7 +1990,7 @@ def get_asset_holders(db, asset: str, cursor: str = None, limit: int = 100, offs
     return select_rows(
         db,
         table_name,
-        where={"asset": asset},
+        where={"asset": asset.upper()},
         order="ASC",
         cursor_field="cursor_id",
         last_cursor=cursor,

@@ -33,6 +33,9 @@ only:
   Index And Event
 - Transactions > Get Events By Transaction Hash And Event > Get Events By Transaction
   Hash And Event
+- Addresses > Get Balances By Addresses > Get Balances By Addresses
+- Addresses > Get Transactions By Addresses > Get Transactions By Addresses
+- Addresses > Get Events By Addresses > Get Events By Addresses
 - Addresses > Get Address Balances > Get Address Balances
 - Addresses > Get Balance By Address And Asset > Get Balance By Address And Asset
 - Addresses > Get Credits By Address > Get Credits By Address
@@ -60,7 +63,6 @@ only:
 - Addresses > Get Orders By Address > Get Orders By Address
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset > Get Asset
-- Assets > Get Asset Info > Get Asset Info
 - Assets > Get Asset Balances > Get Asset Balances
 - Assets > Get Balance By Address And Asset > Get Balance By Address And Asset
 - Assets > Get Orders By Asset > Get Orders By Asset

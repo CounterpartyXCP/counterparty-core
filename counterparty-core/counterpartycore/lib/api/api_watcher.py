@@ -45,7 +45,42 @@ ASSET_EVENTS = [
     "ASSET_DESTRUCTION",
     "RESET_ISSUANCE",
     "ASSET_TRANSFER",
+    "BURN",
 ]
+
+XCP_DESTROY_EVENTS = [
+    "ASSET_ISSUANCE",
+    "ASSET_DESTRUCTION",
+    "SWEEP",
+    "ASSET_DIVIDEND",
+]
+
+EVENTS_ADDRESS_FIELDS = {
+    "NEW_TRANSACTION": ["source", "destination"],
+    "DEBIT": ["address"],
+    "CREDIT": ["address"],
+    "ENHANCED_SEND": ["source", "destination"],
+    "MPMA_SEND": ["source", "destination"],
+    "SEND": ["source", "destination"],
+    "ASSET_TRANSFER": ["source", "issuer"],
+    "SWEEP": ["source", "destination"],
+    "ASSET_DIVIDEND": ["source"],
+    "RESET_ISSUANCE": ["source", "issuer"],
+    "ASSET_ISSUANCE": ["source", "issuer"],
+    "ASSET_DESTRUCTION": ["source"],
+    "OPEN_ORDER": ["source"],
+    "ORDER_MATCH": ["tx0_address", "tx1_address"],
+    "BTC_PAY": ["source", "destination"],
+    "CANCEL_ORDER": ["source"],
+    "ORDER_EXPIRATION": ["source"],
+    "ORDER_MATCH_EXPIRATION": ["tx0_address", "tx1_address"],
+    "OPEN_DISPENSER": ["source", "origin", "oracle_address"],
+    "DISPENSER_UPDATE": ["source"],
+    "REFILL_DISPENSER": ["source", "destination"],
+    "DISPENSE": ["source", "destination"],
+    "BROADCAST": ["source"],
+    "BURN": ["source"],
+}
 
 
 def fetch_all(db, query, bindings=None):
@@ -209,6 +244,8 @@ def rollback_event(api_db, event):
         rollback_balances(api_db, event)
         rollback_expiration(api_db, event)
         rollback_assets_info(api_db, event)
+        rollback_xcp_supply(api_db, event)
+        rollback_address_events(api_db, event)
 
         sql = "DELETE FROM messages WHERE message_index = ?"
         delete_all(api_db, sql, (event["message_index"],))
@@ -368,6 +405,16 @@ def update_assets_info(api_db, event):
         cursor.execute(sql, event_bindings)
         return
 
+    if event["event"] == "BURN":
+        sql = """
+            UPDATE assets_info 
+            SET supply = supply + :earned
+            WHERE asset = 'XCP'
+            """
+        cursor = api_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
 
 def refresh_assets_info(api_db, asset_name):
     issuances = fetch_all(
@@ -430,6 +477,17 @@ def rollback_assets_info(api_db, event):
         cursor = api_db.cursor()
         cursor.execute(sql, event_bindings)
         return
+
+    if event["event"] == "BURN":
+        sql = """
+            UPDATE assets_info 
+            SET supply = supply - :earned
+            WHERE asset = 'XCP'
+            """
+        cursor = api_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
     # else
     refresh_assets_info(api_db, event_bindings["asset"])
 
@@ -445,6 +503,63 @@ def execute_event(api_db, event):
     return None
 
 
+def update_xcp_supply(api_db, event):
+    if event["event"] not in XCP_DESTROY_EVENTS:
+        return
+    event_bindings = json.loads(event["bindings"])
+    if "fee_paid" not in event_bindings:
+        return
+    if event_bindings["fee_paid"] == 0:
+        return
+    sql = """
+        UPDATE assets_info 
+        SET supply = supply - :fee_paid
+        WHERE asset = 'XCP'
+    """
+    cursor = api_db.cursor()
+    cursor.execute(sql, event_bindings)
+
+
+def rollback_xcp_supply(api_db, event):
+    if event["event"] not in XCP_DESTROY_EVENTS:
+        return
+    event_bindings = json.loads(event["bindings"])
+    if "fee_paid" not in event_bindings:
+        return
+    if event_bindings["fee_paid"] == 0:
+        return
+    sql = """
+        UPDATE assets_info 
+        SET supply = supply + :fee_paid
+        WHERE asset = 'XCP'
+    """
+    cursor = api_db.cursor()
+    cursor.execute(sql, event_bindings)
+
+
+def update_address_events(api_db, event):
+    if event["event"] not in EVENTS_ADDRESS_FIELDS:
+        return
+    event_bindings = json.loads(event["bindings"])
+    cursor = api_db.cursor()
+    for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
+        sql = """
+            INSERT INTO address_events (address, event_index)
+            VALUES (:address, :event_index)
+            """
+        cursor.execute(
+            sql, {"address": event_bindings[field], "event_index": event["message_index"]}
+        )
+
+
+def rollback_address_events(api_db, event):
+    if event["event"] not in EVENTS_ADDRESS_FIELDS:
+        return
+    cursor = api_db.cursor()
+    sql = "DELETE FROM address_events WHERE address = event_index = :message_index"
+    cursor.execute(sql, event)
+
+
 def parse_event(api_db, event):
     with api_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
@@ -452,6 +567,8 @@ def parse_event(api_db, event):
         update_balances(api_db, event)
         update_expiration(api_db, event)
         update_assets_info(api_db, event)
+        update_xcp_supply(api_db, event)
+        update_address_events(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
@@ -508,10 +625,10 @@ def check_event_hashes(api_db, ledger_db):
         and ledger_event
         and last_api_event["event_hash"] != ledger_event["event_hash"]
     ):
-        logger.warning(
+        logger.debug(
             f"API Watcher - Event hash mismatch: {last_api_event['event_hash']} != {ledger_event['event_hash']}"
         )
-        logger.warning(f"API Watcher - Rolling back event: {last_api_event['message_index']}")
+        logger.debug(f"API Watcher - Rolling back event: {last_api_event['message_index']}")
         rollback_event(api_db, last_api_event)
         last_api_event = fetch_one(api_db, last_api_event_sql)
         ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
@@ -554,11 +671,20 @@ def synchronize_mempool(api_db, ledger_db):
     logger.trace("API Watcher - Synchronizing mempool...")
     try:
         mempool_events = fetch_all(ledger_db, "SELECT * FROM mempool")
-        sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event, timestamp) VALUES (?, ?, ?, ?, ?, ?)"""
+        sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event, timestamp, addresses) VALUES (?, ?, ?, ?, ?, ?, ?)"""
         with api_db:
             delete_all(api_db, "DELETE FROM mempool")
             cursor = api_db.cursor()
             for event in mempool_events:
+                addresses = []
+                if event["event"] in EVENTS_ADDRESS_FIELDS:
+                    event_bindings = json.loads(event["bindings"])
+                    for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
+                        if field in event_bindings and event_bindings[field] is not None:
+                            addresses.append(event_bindings[field])
+                addresses = list(set(addresses))
+                addresses = " ".join(addresses)
+
                 bindings = [
                     event["tx_hash"],
                     event["command"],
@@ -566,6 +692,7 @@ def synchronize_mempool(api_db, ledger_db):
                     event["bindings"],
                     event["event"],
                     event["timestamp"],
+                    addresses,
                 ]
                 cursor.execute(sql_insert, bindings)
             if len(mempool_events) > 0:
@@ -596,6 +723,27 @@ class APIWatcher(Thread):
         if not list(cursor):
             cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None))
             cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
+            insert_asset_info_sql = """
+                INSERT INTO assets_info (
+                    asset, divisible, locked, supply, description,
+                    first_issuance_block_index, last_issuance_block_index
+                ) VALUES (
+                    :asset, :divisible, :locked, :supply, :description,
+                    :first_issuance_block_index, :last_issuance_block_index
+                )
+            """
+            cursor.execute(
+                insert_asset_info_sql,
+                {
+                    "asset": "XCP",
+                    "divisible": True,
+                    "locked": False,
+                    "supply": 0,
+                    "description": "The Counterparty protocol native currency",
+                    "first_issuance_block_index": 0,
+                    "last_issuance_block_index": 0,
+                },
+            )
         cursor.close()
         self.last_mempool_sync = 0
 

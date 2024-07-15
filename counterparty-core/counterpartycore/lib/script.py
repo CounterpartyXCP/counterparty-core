@@ -316,7 +316,7 @@ def get_asm(scriptpubkey):
         asm = []
         # TODO: This should be `for element in scriptpubkey`.
         for op in scriptpubkey:
-            if type(op) == bitcoinlib.core.script.CScriptOp:
+            if type(op) == bitcoinlib.core.script.CScriptOp:  # noqa: E721
                 # TODO: `op = element`
                 asm.append(getattr(opcodes, str(op)))
             else:
