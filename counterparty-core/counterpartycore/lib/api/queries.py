@@ -182,7 +182,7 @@ def select_rows(
     else:
         next_cursor = None
 
-    if table == "messages":
+    if table in ["messages", "mempool"]:
         for row in result:
             if "params" not in row:
                 break
@@ -594,7 +594,10 @@ def get_all_mempool_events(
     where = None
     if event_name:
         where = [{"event": event} for event in event_name.split(",")]
-    return select_rows(db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset)
+    select = "tx_hash, event, bindings AS params"
+    return select_rows(
+        db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset, select=select
+    )
 
 
 def get_mempool_events_by_name(
@@ -607,8 +610,15 @@ def get_mempool_events_by_name(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    select = "tx_hash, event, bindings AS params"
     return select_rows(
-        db, "mempool", where={"event": event}, last_cursor=cursor, limit=limit, offset=offset
+        db,
+        "mempool",
+        where={"event": event},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        select=select,
     )
 
 
@@ -631,7 +641,32 @@ def get_mempool_events_by_tx_hash(
     where = {"tx_hash": tx_hash}
     if event_name:
         where = [{"event": event, "tx_hash": tx_hash} for event in event_name.split(",")]
-    return select_rows(db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset)
+    select = "tx_hash, event, bindings AS params"
+    return select_rows(
+        db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset, select=select
+    )
+
+
+def get_mempool_events_by_addresses(db, addresses: str, cursor: int = None, limit: int = 100):
+    """
+    Returns the mempool events of a list of addresses
+    :param str addresses: Comma separated list of addresses to return (e.g. 1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V,bc1q5mqesdy0gaj0suzxg4jx7ycmpw66kygdyn80mg)
+    :param int cursor: The last event index to return
+    :param int limit: The maximum number of events to return (e.g. 5)
+    """
+    where = []
+    for address in addresses.split(","):
+        where.append({"addresses__like": f"%{address}%"})
+    select = "tx_hash, event, bindings AS params"
+    result = select_rows(
+        db,
+        "mempool",
+        where=where,
+        last_cursor=cursor,
+        limit=limit,
+        select=select,
+    )
+    return result
 
 
 def get_event_counts_by_block(
