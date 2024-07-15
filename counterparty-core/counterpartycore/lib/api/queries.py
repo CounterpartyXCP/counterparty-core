@@ -548,6 +548,39 @@ def get_events_by_name(db, event: str, cursor: int = None, limit: int = 100, off
     )
 
 
+def get_events_by_addresses(
+    db, addresses: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the events of a list of addresses
+    :param str addresses: Comma separated list of addresses to return (e.g. 1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V,bc1q5mqesdy0gaj0suzxg4jx7ycmpw66kygdyn80mg)
+    :param int cursor: The last event index to return (e.g. 17629282)
+    :param int limit: The maximum number of events to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    events = select_rows(
+        db,
+        "address_events",
+        where=[{"address__in": addresses.split(",")}],
+        cursor_field="event_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+    events_indexes = [event["event_index"] for event in events.result]
+    result = select_rows(
+        db,
+        "messages",
+        where=[{"message_index__in": events_indexes}],
+        cursor_field="event_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+    )
+    return QueryResult(result.result, events.next_cursor, events.result_count)
+
+
 def get_all_mempool_events(
     db, event_name: str = None, cursor: int = None, limit: int = 100, offset: int = None
 ):

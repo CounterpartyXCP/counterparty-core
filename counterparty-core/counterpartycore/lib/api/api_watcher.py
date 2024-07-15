@@ -55,6 +55,33 @@ XCP_DESTROY_EVENTS = [
     "ASSET_DIVIDEND",
 ]
 
+EVENTS_ADDRESS_FIELDS = {
+    "NEW_TRANSACTION": ["source", "destination"],
+    "DEBIT": ["address"],
+    "CREDIT": ["address"],
+    "ENHANCED_SEND": ["source", "destination"],
+    "MPMA_SEND": ["source", "destination"],
+    "SEND": ["source", "destination"],
+    "ASSET_TRANSFER": ["source", "issuer"],
+    "SWEEP": ["source", "destination"],
+    "ASSET_DIVIDEND": ["source"],
+    "RESET_ISSUANCE": ["source", "issuer"],
+    "ASSET_ISSUANCE": ["source", "issuer"],
+    "ASSET_DESTRUCTION": ["source"],
+    "OPEN_ORDER": ["source"],
+    "ORDER_MATCH": ["tx0_address", "tx1_address"],
+    "BTC_PAY": ["source", "destination"],
+    "CANCEL_ORDER": ["source"],
+    "ORDER_EXPIRATION": ["source"],
+    "ORDER_MATCH_EXPIRATION": ["tx0_address", "tx1_address"],
+    "OPEN_DISPENSER": ["source", "origin", "oracle_address"],
+    "DISPENSER_UPDATE": ["source"],
+    "REFILL_DISPENSER": ["source", "destination"],
+    "DISPENSE": ["source", "destination"],
+    "BROADCAST": ["source"],
+    "BURN": ["source"],
+}
+
 
 def fetch_all(db, query, bindings=None):
     cursor = db.cursor()
@@ -218,6 +245,7 @@ def rollback_event(api_db, event):
         rollback_expiration(api_db, event)
         rollback_assets_info(api_db, event)
         rollback_xcp_supply(api_db, event)
+        rollback_address_events(api_db, event)
 
         sql = "DELETE FROM messages WHERE message_index = ?"
         delete_all(api_db, sql, (event["message_index"],))
@@ -509,6 +537,29 @@ def rollback_xcp_supply(api_db, event):
     cursor.execute(sql, event_bindings)
 
 
+def update_address_events(api_db, event):
+    if event["event"] not in EVENTS_ADDRESS_FIELDS:
+        return
+    event_bindings = json.loads(event["bindings"])
+    cursor = api_db.cursor()
+    for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
+        sql = """
+            INSERT INTO address_events (address, event_index)
+            VALUES (:address, :event_index)
+            """
+        cursor.execute(
+            sql, {"address": event_bindings[field], "event_index": event["message_index"]}
+        )
+
+
+def rollback_address_events(api_db, event):
+    if event["event"] not in EVENTS_ADDRESS_FIELDS:
+        return
+    cursor = api_db.cursor()
+    sql = "DELETE FROM address_events WHERE address = event_index = :message_index"
+    cursor.execute(sql, event)
+
+
 def parse_event(api_db, event):
     with api_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
@@ -517,6 +568,7 @@ def parse_event(api_db, event):
         update_expiration(api_db, event)
         update_assets_info(api_db, event)
         update_xcp_supply(api_db, event)
+        update_address_events(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
