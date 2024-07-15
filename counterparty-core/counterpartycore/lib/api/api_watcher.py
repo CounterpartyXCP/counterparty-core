@@ -694,7 +694,6 @@ def synchronize_mempool(api_db, ledger_db):
                     event["timestamp"],
                     addresses,
                 ]
-                print("addresses", addresses, event["event"])
                 cursor.execute(sql_insert, bindings)
             if len(mempool_events) > 0:
                 logger.debug("API Watcher - %s mempool events synchronized", len(mempool_events))

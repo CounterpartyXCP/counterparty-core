@@ -152,6 +152,8 @@ def include_in_dredd(group, path):
         return False
     if path in ["/events/counts"]:
         return False
+    if "mempool" in path:
+        return False
     return True
 
 

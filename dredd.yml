@@ -34,6 +34,8 @@ only:
 - Transactions > Get Events By Transaction Hash And Event > Get Events By Transaction
   Hash And Event
 - Addresses > Get Balances By Addresses > Get Balances By Addresses
+- Addresses > Get Transactions By Addresses > Get Transactions By Addresses
+- Addresses > Get Events By Addresses > Get Events By Addresses
 - Addresses > Get Address Balances > Get Address Balances
 - Addresses > Get Balance By Address And Asset > Get Balance By Address And Asset
 - Addresses > Get Credits By Address > Get Credits By Address
