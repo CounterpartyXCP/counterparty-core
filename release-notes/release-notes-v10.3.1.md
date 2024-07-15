@@ -25,7 +25,7 @@
 * Remove `timestamp` from events in API results
 * Standardize the format of Mempool events and confirmed events
 * Use string instead of integers to query `dispensers` by status
-* Accepts several statuses to query dispensers
+* Accepts several statuses to query `dispensers`, `orders` and `order_matches`
 
 ## CLI
 
