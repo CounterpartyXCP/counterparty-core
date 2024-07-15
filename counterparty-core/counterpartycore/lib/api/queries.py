@@ -353,7 +353,7 @@ def get_all_events(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
 
 
@@ -415,7 +415,7 @@ def get_events_by_transaction_hash(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
 
 
@@ -438,7 +438,7 @@ def get_events_by_transaction_hash_and_event(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
 
 
@@ -524,7 +524,7 @@ def get_event_by_index(db, event_index: int):
         db,
         "messages",
         where={"message_index": event_index},
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp, rowid AS rowid",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, rowid AS rowid",
     )
 
 
@@ -544,7 +544,7 @@ def get_events_by_name(db, event: str, cursor: int = None, limit: int = 100, off
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
 
 
@@ -576,7 +576,7 @@ def get_events_by_addresses(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index, timestamp",
+        select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
     return QueryResult(result.result, events.next_cursor, events.result_count)
 
