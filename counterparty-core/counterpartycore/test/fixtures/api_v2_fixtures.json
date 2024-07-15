@@ -882,7 +882,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": null,
                 "block_time": 310001000
             },
             {
@@ -908,7 +907,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": null,
                 "block_time": 310001000
             },
             {
@@ -939,7 +937,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": null,
                 "block_time": 310001000
             },
             {
@@ -954,7 +951,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": null,
                 "block_time": 310001000
             },
             {
@@ -980,7 +976,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": null,
                 "block_time": 310001000
             }
         ],
@@ -999,7 +994,6 @@
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
-                "timestamp": null,
                 "block_time": 310491000
             },
             {
@@ -1049,7 +1043,6 @@
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
-                "timestamp": null,
                 "block_time": 310491000
             },
             {
@@ -1075,7 +1068,6 @@
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
-                "timestamp": null,
                 "block_time": 310491000
             }
         ],
@@ -1117,7 +1109,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "timestamp": null,
                 "block_time": 310001000
             }
         ],
@@ -1457,6 +1448,156 @@
         ],
         "next_cursor": 111,
         "result_count": 29
+    },
+    "http://localhost:10009/v2/addresses/events?verbose=true&limit=6&addresses=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc,mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns": {
+        "result": [
+            {
+                "event_index": 1233,
+                "event": "CREDIT",
+                "params": {
+                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "asset": "A95428956661682277",
+                    "block_index": 310498,
+                    "calling_function": "issuance",
+                    "event": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+                    "quantity": 100000000,
+                    "tx_index": 499,
+                    "block_time": 310498000,
+                    "asset_info": {
+                        "asset_longname": "PARENT.already.issued",
+                        "description": "Child of parent",
+                        "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "divisible": true,
+                        "locked": false
+                    },
+                    "quantity_normalized": "1.00000000"
+                },
+                "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+                "block_index": 310498,
+                "block_time": 310498000
+            },
+            {
+                "event_index": 1232,
+                "event": "ASSET_ISSUANCE",
+                "params": {
+                    "asset": "A95428956661682277",
+                    "asset_longname": "PARENT.already.issued",
+                    "block_index": 310498,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "callable": false,
+                    "description": "Child of parent",
+                    "divisible": true,
+                    "fee_paid": 25000000,
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "locked": false,
+                    "quantity": 100000000,
+                    "reset": false,
+                    "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "status": "valid",
+                    "transfer": false,
+                    "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+                    "tx_index": 499,
+                    "block_time": 310498000,
+                    "quantity_normalized": "1.00000000",
+                    "fee_paid_normalized": "0.25000000"
+                },
+                "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+                "block_index": 310498,
+                "block_time": 310498000
+            },
+            {
+                "event_index": 1230,
+                "event": "DEBIT",
+                "params": {
+                    "action": "issuance fee",
+                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "asset": "XCP",
+                    "block_index": 310498,
+                    "event": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+                    "quantity": 25000000,
+                    "tx_index": 499,
+                    "block_time": 310498000,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.25000000"
+                },
+                "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+                "block_index": 310498,
+                "block_time": 310498000
+            },
+            {
+                "event_index": 1229,
+                "event": "NEW_TRANSACTION",
+                "params": {
+                    "block_hash": "b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e",
+                    "block_index": 310498,
+                    "block_time": 310498000,
+                    "btc_amount": 0,
+                    "data": "0000001501530821671b10650000000005f5e10001108e90a57dba9967c422e83080f22f0c684368696c64206f6620706172656e74",
+                    "destination": "",
+                    "fee": 6550,
+                    "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "supported": true,
+                    "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
+                    "tx_index": 499,
+                    "unpacked_data": {
+                        "message_type": "issuance",
+                        "message_type_id": 21,
+                        "message_data": {
+                            "asset_id": null,
+                            "asset": null,
+                            "subasset_longname": null,
+                            "quantity": null,
+                            "divisible": null,
+                            "lock": null,
+                            "reset": null,
+                            "callable": null,
+                            "call_date": null,
+                            "call_price": null,
+                            "description": null,
+                            "status": "invalid: could not unpack"
+                        }
+                    },
+                    "btc_amount_normalized": "0.00000000"
+                },
+                "tx_hash": null,
+                "block_index": 310498,
+                "block_time": 310498000
+            },
+            {
+                "event_index": 1225,
+                "event": "CREDIT",
+                "params": {
+                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "asset": "PARENT",
+                    "block_index": 310497,
+                    "calling_function": "issuance",
+                    "event": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
+                    "quantity": 100000000,
+                    "tx_index": 498,
+                    "block_time": 310497000,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "Parent asset",
+                        "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "divisible": true,
+                        "locked": false
+                    },
+                    "quantity_normalized": "1.00000000"
+                },
+                "tx_hash": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
+                "block_index": 310497,
+                "block_time": 310497000
+            }
+        ],
+        "next_cursor": 1224,
+        "result_count": 118
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
@@ -4601,7 +4742,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310500,
-                "timestamp": null,
                 "block_time": 310500000
             },
             {
@@ -4618,7 +4758,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310499,
-                "timestamp": null,
                 "block_time": 310499000
             },
             {
@@ -4634,7 +4773,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310499,
-                "timestamp": null,
                 "block_time": 310499000
             },
             {
@@ -4651,7 +4789,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310498,
-                "timestamp": null,
                 "block_time": 310498000
             },
             {
@@ -4667,7 +4804,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310498,
-                "timestamp": null,
                 "block_time": 310498000
             }
         ],
@@ -4687,7 +4823,6 @@
             },
             "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
             "block_index": 310001,
-            "timestamp": null,
             "block_time": 310001000
         }
     },
@@ -4742,7 +4877,6 @@
                 },
                 "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
                 "block_index": 310498,
-                "timestamp": null,
                 "block_time": 310498000
             },
             {
@@ -4768,7 +4902,6 @@
                 },
                 "tx_hash": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
                 "block_index": 310497,
-                "timestamp": null,
                 "block_time": 310497000
             },
             {
@@ -4794,7 +4927,6 @@
                 },
                 "tx_hash": "a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba",
                 "block_index": 310496,
-                "timestamp": null,
                 "block_time": 310496000
             },
             {
@@ -4820,7 +4952,6 @@
                 },
                 "tx_hash": "02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e",
                 "block_index": 310495,
-                "timestamp": null,
                 "block_time": 310495000
             },
             {
@@ -4846,7 +4977,6 @@
                 },
                 "tx_hash": "321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503",
                 "block_index": 310494,
-                "timestamp": null,
                 "block_time": 310494000
             }
         ],
