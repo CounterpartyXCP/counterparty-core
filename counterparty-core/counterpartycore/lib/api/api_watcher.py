@@ -625,10 +625,10 @@ def check_event_hashes(api_db, ledger_db):
         and ledger_event
         and last_api_event["event_hash"] != ledger_event["event_hash"]
     ):
-        logger.warning(
+        logger.debug(
             f"API Watcher - Event hash mismatch: {last_api_event['event_hash']} != {ledger_event['event_hash']}"
         )
-        logger.warning(f"API Watcher - Rolling back event: {last_api_event['message_index']}")
+        logger.debug(f"API Watcher - Rolling back event: {last_api_event['message_index']}")
         rollback_event(api_db, last_api_event)
         last_api_event = fetch_one(api_db, last_api_event_sql)
         ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
