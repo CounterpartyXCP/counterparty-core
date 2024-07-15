@@ -8,6 +8,9 @@
 
 ## Bugfixes
 
+* Fix cache for `/v2/bitcoin/*` routes
+* Fix queries by `asset_longname`
+
 ## Codebase
 
 ## API
@@ -20,8 +23,9 @@
 * Add defaul value for `locked` and `reset` fields in `issuances` table
 * Add XCP in `assets_info` table
 * Remove `timestamp` from events in API results
-* Fix queries by `asset_longname`
 * Standardize the format of Mempool events and confirmed events
+* Use string instead of integers to query `dispensers` by status
+* Accepts several statuses to query `dispensers`, `orders` and `order_matches`
 
 ## CLI
 

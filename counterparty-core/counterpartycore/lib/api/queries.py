@@ -1,9 +1,18 @@
 import json
+import typing
 from typing import Literal
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
 BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
+DispenserStatus = Literal["all", "open", "closed", "closing", "open_empty_address"]
+DispenserStatusNumber = {
+    "open": 0,
+    "closed": 10,
+    "closing": 11,
+    "open_empty_address": 1,
+}
+
 BetMatchesStatus = Literal[
     "dropped",
     "expired",
@@ -1595,18 +1604,36 @@ def get_receive_by_address_and_asset(
     )
 
 
-def get_dispensers(db, status: int = 0, cursor: int = None, limit: int = 100, offset: int = None):
+def preprare_dispenser_where(status, other_conditions=None):
+    where = []
+    statuses = status.split(",")
+    for status in statuses:
+        if status == "all":
+            where = other_conditions or {}
+            break
+        if status in DispenserStatusNumber:
+            where_status = {"status": DispenserStatusNumber[status]}
+            if other_conditions:
+                where_status.update(other_conditions)
+            where.append(where_status)
+    return where
+
+
+def get_dispensers(
+    db, status: DispenserStatus = "all", cursor: int = None, limit: int = 100, offset: int = None
+):
     """
     Returns the dispensers of an address
-    :param int status: The status of the dispensers to return (e.g. 0)
+    :param str status: The status of the dispensers to return (e.g. open)
     :param int cursor: The last index of the dispensers to return (e.g. 319619)
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+
     return select_rows(
         db,
         "dispensers",
-        where={"status": status},
+        where=preprare_dispenser_where(status),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1614,12 +1641,17 @@ def get_dispensers(db, status: int = 0, cursor: int = None, limit: int = 100, of
 
 
 def get_dispensers_by_address(
-    db, address: str, status: int = 0, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    address: str,
+    status: DispenserStatus = "all",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the dispensers of an address
     :param str address: The address to return (e.g. bc1qlzkcy8c5fa6y6xvd8zn4axnvmhndfhku3hmdpz)
-    :param int status: The status of the dispensers to return (e.g. 0)
+    :param str status: The status of the dispensers to return (e.g. open)
     :param int cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1627,7 +1659,7 @@ def get_dispensers_by_address(
     return select_rows(
         db,
         "dispensers",
-        where={"source": address, "status": status},
+        where=preprare_dispenser_where(status, {"source": address}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1635,12 +1667,17 @@ def get_dispensers_by_address(
 
 
 def get_dispensers_by_asset(
-    db, asset: str, status: int = 0, cursor: int = None, limit: int = 100, offset: int = None
+    db,
+    asset: str,
+    status: DispenserStatus = "all",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the dispensers of an asset
     :param str asset: The asset to return (e.g. ERYKAHPEPU)
-    :param int status: The status of the dispensers to return (e.g. 0)
+    :param str status: The status of the dispensers to return (e.g. open)
     :param int cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1648,7 +1685,7 @@ def get_dispensers_by_asset(
     return select_rows(
         db,
         "dispensers",
-        where={"asset": asset.upper(), "status": status},
+        where=preprare_dispenser_where(status, {"asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1850,6 +1887,29 @@ def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100, off
     )
 
 
+def prepare_order_where_status(status, arg_type, other_conditions=None):
+    where = []
+    statuses = status.split(",")
+    for status in statuses:
+        if status == "all":
+            where = [other_conditions] if other_conditions else []
+            break
+        if status in typing.get_args(arg_type):
+            where_status = {"status": status}
+            if other_conditions:
+                where_status.update(other_conditions)
+            where.append(where_status)
+    return where
+
+
+def prepare_order_where(status, other_conditions=None):
+    return prepare_order_where_status(status, OrderStatus, other_conditions=other_conditions)
+
+
+def prepare_order_matches_where(status, other_conditions=None):
+    return prepare_order_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
+
+
 def get_orders(
     db, status: OrderStatus = "all", cursor: int = None, limit: int = 100, offset: int = None
 ):
@@ -1860,13 +1920,10 @@ def get_orders(
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {}
-    if status != "all":
-        where = {"status": status}
     return select_rows(
         db,
         "orders",
-        where=where,
+        where=prepare_order_where(status),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1889,12 +1946,10 @@ def get_orders_by_asset(
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = [{"give_asset": asset.upper()}, {"get_asset": asset.upper()}]
-    if status != "all":
-        where = [
-            {"give_asset": asset.upper(), "status": status},
-            {"get_asset": asset.upper(), "status": status},
-        ]
+    where = prepare_order_where(status, {"give_asset": asset.upper()}) + prepare_order_where(
+        status, {"get_asset": asset.upper()}
+    )
+
     return select_rows(
         db,
         "orders",
@@ -1921,13 +1976,10 @@ def get_orders_by_address(
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"source": address}
-    if status != "all":
-        where = {"source": address, "status": status}
     return select_rows(
         db,
         "orders",
-        where=where,
+        where=prepare_order_where(status, {"source": address}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1952,15 +2004,9 @@ def get_orders_by_two_assets(
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = [
-        {"give_asset": asset1, "get_asset": asset2},
-        {"give_asset": asset2, "get_asset": asset1},
-    ]
-    if status != "all":
-        where = [
-            {"give_asset": asset1, "get_asset": asset2, "status": status},
-            {"give_asset": asset2, "get_asset": asset1, "status": status},
-        ]
+    where = prepare_order_where(
+        status, {"give_asset": asset1, "get_asset": asset2}
+    ) + prepare_order_where(status, {"give_asset": asset2, "get_asset": asset1})
     query_result = select_rows(
         db,
         "orders",
@@ -2027,12 +2073,9 @@ def get_order_matches_by_order(
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = [{"tx0_hash": order_hash}, {"tx1_hash": order_hash}]  # tx0_hash = ? OR tx1_hash = ?
-    if status != "all":
-        where = [
-            {"tx0_hash": order_hash, "status": status},
-            {"tx1_hash": order_hash, "status": status},
-        ]
+    where = prepare_order_matches_where(
+        status, {"tx0_hash": order_hash}
+    ) + prepare_order_matches_where(status, {"tx1_hash": order_hash})
     return select_rows(
         db,
         "order_matches",
