@@ -100,7 +100,7 @@ def is_cachable(rule):
         return True
     if rule.startswith("/v2/transactions"):
         return True
-    if rule.startswith("/v2/backend"):
+    if rule.startswith("/v2/bitcoin"):
         return True
     return False
 
