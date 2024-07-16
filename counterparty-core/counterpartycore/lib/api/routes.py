@@ -83,6 +83,7 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/balances": queries.get_asset_balances,
         "/v2/assets/<asset>/balances/<address>": queries.get_balance_by_address_and_asset,
         "/v2/assets/<asset>/orders": queries.get_orders_by_asset,
+        "/v2/assets/<asset>/matches": queries.get_order_matches_by_asset,
         "/v2/assets/<asset>/credits": queries.get_credits_by_asset,
         "/v2/assets/<asset>/debits": queries.get_debits_by_asset,
         "/v2/assets/<asset>/dividends": queries.get_dividends_by_asset,
@@ -98,6 +99,7 @@ ROUTES = util.prepare_routes(
         "/v2/orders/<order_hash>/matches": queries.get_order_matches_by_order,
         "/v2/orders/<order_hash>/btcpays": queries.get_btcpays_by_order,
         "/v2/orders/<asset1>/<asset2>": queries.get_orders_by_two_assets,
+        "/v2/orders/<asset1>/<asset2>/matches": queries.get_order_matches_by_two_assets,
         ### /bets ###
         "/v2/bets": queries.get_bets,
         "/v2/bets/<bet_hash>": queries.get_bet,

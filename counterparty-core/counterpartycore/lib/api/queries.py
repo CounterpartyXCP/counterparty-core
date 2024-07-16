@@ -1353,7 +1353,7 @@ def get_address_balances(
     :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: The sort order of the balances to return (e.g. quantity:desc)
+    :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         db,
@@ -1376,7 +1376,7 @@ def get_balances_by_addresses(
     :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: The sort order of the balances to return (e.g. quantity:desc)
+    :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     assets_result = select_rows(
         db,
@@ -1904,7 +1904,7 @@ def get_asset_balances(
     :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: The sort order of the balances to return (e.g. quantity:desc)
+    :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         db,
@@ -2121,6 +2121,74 @@ def get_order_matches_by_order(
         limit=limit,
         offset=offset,
     )
+
+
+def get_order_matches_by_asset(
+    db,
+    asset: str,
+    status: OrderMatchesStatus = "all",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns the orders of an asset
+    :param str asset: The asset to return (e.g. NEEDPEPE)
+    :param str status: The status of the order matches to return (e.g. filled)
+    :param int cursor: The last index of the order matches to return
+    :param int limit: The maximum number of order matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    where = prepare_order_matches_where(
+        status, {"forward_asset": asset.upper()}
+    ) + prepare_order_matches_where(status, {"backward_asset": asset.upper()})
+
+    return select_rows(
+        db,
+        "order_matches",
+        where=where,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_order_matches_by_two_assets(
+    db,
+    asset1: str,
+    asset2: str,
+    status: OrderMatchesStatus = "all",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns the orders to exchange two assets
+    :param str asset1: The first asset to return (e.g. NEEDPEPE)
+    :param str asset2: The second asset to return (e.g. XCP)
+    :param str status: The status of the order matches to return (e.g. filled)
+    :param int cursor: The last index of the order matches to return
+    :param int limit: The maximum number of order matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    where = prepare_order_matches_where(
+        status, {"forward_asset": asset1, "backward_asset": asset2}
+    ) + prepare_order_matches_where(status, {"forward_asset": asset2, "backward_asset": asset1})
+    query_result = select_rows(
+        db,
+        "order_matches",
+        where=where,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+    for order in query_result.result:
+        order["market_pair"] = f"{asset1}/{asset2}"
+        if order["forward_asset"] == asset1:
+            order["market_dir"] = "SELL"
+        else:
+            order["market_dir"] = "BUY"
+    return QueryResult(query_result.result, query_result.next_cursor, query_result.result_count)
 
 
 def get_btcpays_by_order(

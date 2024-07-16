@@ -3791,6 +3791,11 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/assets/NODIVISIBLE/matches?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
     "http://localhost:10009/v2/assets/NODIVISIBLE/credits?verbose=true": {
         "result": [
             {
@@ -4428,6 +4433,11 @@
         "result_count": 0
     },
     "http://localhost:10009/v2/orders/NODIVISIBLE/XCP?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
+    "http://localhost:10009/v2/orders/NODIVISIBLE/XCP/matches?verbose=true": {
         "result": [],
         "next_cursor": null,
         "result_count": 0
