@@ -66,6 +66,7 @@ only:
 - Assets > Get Asset Balances > Get Asset Balances
 - Assets > Get Balance By Address And Asset > Get Balance By Address And Asset
 - Assets > Get Orders By Asset > Get Orders By Asset
+- Assets > Get Order Matches By Asset > Get Order Matches By Asset
 - Assets > Get Credits By Asset > Get Credits By Asset
 - Assets > Get Debits By Asset > Get Debits By Asset
 - Assets > Get Dividends By Asset > Get Dividends By Asset
@@ -75,11 +76,13 @@ only:
 - Assets > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
 - Assets > Get Asset Holders > Get Asset Holders
 - Assets > Get Dispenses By Asset > Get Dispenses By Asset
+- Assets > Get Subassets By Asset > Get Subassets By Asset
 - Orders > Get Orders > Get Orders
 - Orders > Get Order > Get Order
 - Orders > Get Order Matches By Order > Get Order Matches By Order
 - Orders > Get BTCPays By Order > Get BTCPays By Order
 - Orders > Get Orders By Two Assets > Get Orders By Two Assets
+- Orders > Get Order Matches By Two Assets > Get Order Matches By Two Assets
 - Bets > Get Bets > Get Bets
 - Bets > Get Bet > Get Bet
 - Bets > Get Bet Matches By Bet > Get Bet Matches By Bet

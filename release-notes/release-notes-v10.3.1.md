@@ -15,9 +15,13 @@
 
 ## API
 
-* Add Get Balances By Addresses route
-* Add Get Events Bt Addresses route
-* Add Get Mempool Events By Addresses route
+* Add the following routes:
+    - Get Balances By Addresses
+    - Get Events Bt Addresses
+    - Get Mempool Events By Addresses
+    - Get Order Matches By Asset
+    - Get Order Matches By Two Assets
+    - Get Subassets By Asset
 * Always capitalize `<asset>` in routes
 * `/v2/assets/<asset>/issuances` accepts `asset_longname`
 * Add defaul value for `locked` and `reset` fields in `issuances` table
@@ -26,6 +30,11 @@
 * Standardize the format of Mempool events and confirmed events
 * Use string instead of integers to query `dispensers` by status
 * Accepts several statuses to query `dispensers`, `orders` and `order_matches`
+* Add `sort` argument for the following routes:
+    - `/v2/assets/<asset>/balances`
+    - `/v2/addresses/<address>/balances`
+    - `/v2/addresses/balances`
+* Sort `orders` by `tx_index DESC`
 
 ## CLI
 
