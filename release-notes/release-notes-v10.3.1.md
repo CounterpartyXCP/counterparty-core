@@ -22,6 +22,7 @@
     - Get Order Matches By Asset
     - Get Order Matches By Two Assets
     - Get Subassets By Asset
+    - Get Unspent Txouts By Addresses
 * Always capitalize `<asset>` in routes
 * `/v2/assets/<asset>/issuances` accepts `asset_longname`
 * Add defaul value for `locked` and `reset` fields in `issuances` table
