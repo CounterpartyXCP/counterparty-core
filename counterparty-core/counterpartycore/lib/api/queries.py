@@ -2134,7 +2134,7 @@ def get_order_matches_by_asset(
     """
     Returns the orders of an asset
     :param str asset: The asset to return (e.g. NEEDPEPE)
-    :param str status: The status of the order matches to return (e.g. filled)
+    :param str status: The status of the order matches to return (e.g. completed)
     :param int cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2166,7 +2166,7 @@ def get_order_matches_by_two_assets(
     Returns the orders to exchange two assets
     :param str asset1: The first asset to return (e.g. NEEDPEPE)
     :param str asset2: The second asset to return (e.g. XCP)
-    :param str status: The status of the order matches to return (e.g. filled)
+    :param str status: The status of the order matches to return (e.g. completed)
     :param int cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
