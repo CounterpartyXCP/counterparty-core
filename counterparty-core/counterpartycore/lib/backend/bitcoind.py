@@ -122,7 +122,7 @@ def get_block_height(block_hash):
 
 
 def convert_to_psbt(rawtx):
-    return rpc("converttopsbt", [rawtx])
+    return rpc("converttopsbt", [rawtx, True])
 
 
 @functools.lru_cache(maxsize=10000)

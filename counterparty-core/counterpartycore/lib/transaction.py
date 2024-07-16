@@ -1253,7 +1253,8 @@ def compose_transaction(
         estimate_fee_per_kb_nblocks=confirmation_target,
     )
     if return_psbt:
-        return backend.bitcoind.convert_to_psbt(raw_transaction)
+        psbt = backend.bitcoind.convert_to_psbt(raw_transaction)
+        return psbt
     return raw_transaction
 
 
