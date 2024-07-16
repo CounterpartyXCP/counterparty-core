@@ -4080,6 +4080,11 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/assets/NODIVISIBLE/subassets?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
     "http://localhost:10009/v2/orders?verbose=true": {
         "result": [
             {

@@ -93,6 +93,7 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/dispensers/<address>": queries.get_dispenser_by_address_and_asset,
         "/v2/assets/<asset>/holders": queries.get_asset_holders,
         "/v2/assets/<asset>/dispenses": queries.get_dispenses_by_asset,
+        "/v2/assets/<asset>/subassets": queries.get_subassets_by_asset,
         ### /orders ###
         "/v2/orders": queries.get_orders,
         "/v2/orders/<order_hash>": queries.get_order,

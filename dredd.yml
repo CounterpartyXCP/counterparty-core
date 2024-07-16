@@ -76,6 +76,7 @@ only:
 - Assets > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
 - Assets > Get Asset Holders > Get Asset Holders
 - Assets > Get Dispenses By Asset > Get Dispenses By Asset
+- Assets > Get Subassets By Asset > Get Subassets By Asset
 - Orders > Get Orders > Get Orders
 - Orders > Get Order > Get Order
 - Orders > Get Order Matches By Order > Get Order Matches By Order

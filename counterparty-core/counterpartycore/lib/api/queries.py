@@ -1775,6 +1775,27 @@ def get_asset(db, asset: str):
     )
 
 
+def get_subassets_by_asset(
+    db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns asset subassets
+    :param str asset: The name of the asset to return (e.g. XCPTORCH)
+    :param int cursor: The last index of the assets to return
+    :param int limit: The maximum number of assets to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    where = [{"asset_longname__like": f"{asset.upper()}.%"}]
+    return select_rows(
+        db,
+        "assets_info",
+        where=where,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
 def get_valid_assets_by_issuer(
     db, address: str, named: bool = None, cursor: str = None, limit: int = 100, offset: int = None
 ):
