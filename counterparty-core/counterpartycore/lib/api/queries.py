@@ -1956,6 +1956,7 @@ def get_orders(
     return select_rows(
         db,
         "orders",
+        cursor_field="tx_index",
         where=prepare_order_where(status),
         last_cursor=cursor,
         limit=limit,
@@ -1986,6 +1987,7 @@ def get_orders_by_asset(
     return select_rows(
         db,
         "orders",
+        cursor_field="tx_index",
         where=where,
         last_cursor=cursor,
         limit=limit,
@@ -2012,6 +2014,7 @@ def get_orders_by_address(
     return select_rows(
         db,
         "orders",
+        cursor_field="tx_index",
         where=prepare_order_where(status, {"source": address}),
         last_cursor=cursor,
         limit=limit,
@@ -2043,6 +2046,7 @@ def get_orders_by_two_assets(
     query_result = select_rows(
         db,
         "orders",
+        cursor_field="tx_index",
         where=where,
         last_cursor=cursor,
         limit=limit,

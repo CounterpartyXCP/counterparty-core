@@ -30,6 +30,7 @@
     - `/v2/assets/<asset>/balances`
     - `/v2/addresses/<address>/balances`
     - `/v2/addresses/balances`
+* Sort `orders` by `tx_index DESC`
 
 ## CLI
 
