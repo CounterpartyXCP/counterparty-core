@@ -69,6 +69,10 @@ CreditAction = Literal[
     "wins",
 ]
 
+SUPPORTED_SORT_FIELDS = {
+    "balances": ["address", "asset", "quantity"],
+}
+
 
 class QueryResult:
     def __init__(self, result, next_cursor, result_count=None):
@@ -89,7 +93,11 @@ def select_rows(
     group_by="",
     order="DESC",
     wrap_where=None,
+    sort=None,
 ):
+    if offset is not None or sort is not None:
+        last_cursor = None
+
     cursor = db.cursor()
 
     if where is None:
@@ -173,7 +181,24 @@ def select_rows(
     else:
         query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608
 
-    query = f"{query} ORDER BY {cursor_field} {order} LIMIT ?"  # nosec B608  # noqa: S608
+    order_by = []
+    if sort is not None:
+        sort_fields = sort.split(",")
+        for sort_field in sort_fields:
+            if ":" in sort_field:
+                sort_name, sort_order = sort_field.split(":")[0:2]
+            else:
+                sort_name = sort_field
+                sort_order = "ASC"
+            if sort_order.upper() not in ["ASC", "DESC"]:
+                sort_order = "ASC"
+            if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
+                order_by.append(f"{sort_name} {sort_order.upper()}")
+    if len(order_by) == 0:
+        order_by.append(f"{cursor_field} {order}")
+    order_by_clause = f"ORDER BY {','.join(order_by)}"
+
+    query = f"{query} {order_by_clause} LIMIT ?"  # nosec B608  # noqa: S608
     bindings.append(limit + 1)
     if offset is not None:
         query = f"{query} OFFSET ?"
@@ -1320,7 +1345,7 @@ def get_sweeps_by_address(
 
 
 def get_address_balances(
-    db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+    db, address: str, cursor: int = None, limit: int = 100, offset: int = None, sort: str = None
 ):
     """
     Returns the balances of an address
@@ -1328,6 +1353,7 @@ def get_address_balances(
     :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the balances to return (e.g. quantity:desc)
     """
     return select_rows(
         db,
@@ -1337,11 +1363,12 @@ def get_address_balances(
         limit=limit,
         offset=offset,
         select="address, asset, quantity",
+        sort=sort,
     )
 
 
 def get_balances_by_addresses(
-    db, addresses: str, cursor: int = None, limit: int = 100, offset: int = None
+    db, addresses: str, cursor: int = None, limit: int = 100, offset: int = None, sort: str = None
 ):
     """
     Returns the balances of several addresses
@@ -1349,6 +1376,7 @@ def get_balances_by_addresses(
     :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the balances to return (e.g. quantity:desc)
     """
     assets_result = select_rows(
         db,
@@ -1370,6 +1398,7 @@ def get_balances_by_addresses(
         select="address, asset, quantity",
         order="ASC",
         cursor_field="asset",
+        sort=sort,
     ).result
 
     result = []
@@ -1866,13 +1895,16 @@ def get_dividend_disribution(
     )
 
 
-def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100, offset: int = None):
+def get_asset_balances(
+    db, asset: str, cursor: str = None, limit: int = 100, offset: int = None, sort: str = None
+):
     """
     Returns the asset balances
     :param str asset: The asset to return (e.g. UNNEGOTIABLE)
     :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the balances to return (e.g. quantity:desc)
     """
     return select_rows(
         db,
@@ -1884,6 +1916,7 @@ def get_asset_balances(db, asset: str, cursor: str = None, limit: int = 100, off
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 

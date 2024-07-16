@@ -26,6 +26,10 @@
 * Standardize the format of Mempool events and confirmed events
 * Use string instead of integers to query `dispensers` by status
 * Accepts several statuses to query `dispensers`, `orders` and `order_matches`
+* Add `sort` argument for the following routes:
+    - `/v2/assets/<asset>/balances`
+    - `/v2/addresses/<address>/balances`
+    - `/v2/addresses/balances`
 
 ## CLI
 

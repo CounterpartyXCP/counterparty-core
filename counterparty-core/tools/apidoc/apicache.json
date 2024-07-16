@@ -1139,88 +1139,6 @@
         "next_cursor": null,
         "result_count": 1
     },
-    "/v2/addresses/balances": {
-        "result": [
-            {
-                "asset": "A10404755902319931000",
-                "total": 1,
-                "addresses": [
-                    {
-                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
-                        "quantity": 1,
-                        "quantity_normalized": "1"
-                    }
-                ],
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYBAMAAAASWSDLAAAAGFBMVEX/zaX2rYq99v+QGQfZAgD2oZf+yKH/0aylFGxhAAAAbElEQVQY05XMuw2AMAxF0RcBonWCRA1MgMQCKTxAVmD/JXjOBzoQN0lxFMtAd9TApr10COAENU8sDesv9DwZntCokRAEgxq2gl4VDTZXAAfbwCS/mrN7N+MESwlMys+AL6wPwhukwRG+YvThAmg/DEoX0UsaAAAAAElFTkSuQmCC",
-                    "issuer": "18FASLc9fenxqwKpc3VL2FrMKR5ehYAohc",
-                    "divisible": false,
-                    "locked": true
-                },
-                "total_normalized": "1"
-            },
-            {
-                "asset": "A10974884985443904336",
-                "total": 1,
-                "addresses": [
-                    {
-                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
-                        "quantity": 1,
-                        "quantity_normalized": "1"
-                    }
-                ],
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "stamp:iVBORw0KGgoAAAANSUhEUgAAABkAAAAZAgMAAAC5h23wAAAADFBMVEXtHCQisUwAAAD///80x4U1AAAAVElEQVQI12MgDFZxLQBRTGGaGSCaK27pDRCt+nf+LRCtvr7qWwOE/gqiuddWXQXRqqGhoSB6adZSMD0lQQWFVk1QDQPRmkAabO7U0AiIfasWMJAMAEJOHJuDKtoMAAAAAElFTkSuQmCC",
-                    "issuer": "14VhF5JGExMn4qkN2RiMqNvCwpqmFvbQaz",
-                    "divisible": false,
-                    "locked": true
-                },
-                "total_normalized": "1"
-            },
-            {
-                "asset": "A12387679857740888409",
-                "total": 1,
-                "addresses": [
-                    {
-                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
-                        "quantity": 1,
-                        "quantity_normalized": "1"
-                    }
-                ],
-                "asset_info": {
-                    "asset_longname": "SPAMART.OOAK-SPAM-NYC-MMXXIII",
-                    "description": "imgur/mXiENoK.jpg;spamart nyc 2023",
-                    "issuer": "1F6Vyig9kBGc5Buvy9JyuV8d3jEiPKxWUX",
-                    "divisible": false,
-                    "locked": false
-                },
-                "total_normalized": "1"
-            },
-            {
-                "asset": "A13424117675318910066",
-                "total": 1,
-                "addresses": [
-                    {
-                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
-                        "quantity": 1,
-                        "quantity_normalized": "1"
-                    }
-                ],
-                "asset_info": {
-                    "asset_longname": "PEPERINCESS.FIRSTANNIV",
-                    "description": "https://easyasset.art/j/qk8iyw/FIRST.json",
-                    "issuer": "1GYRneYXFqddDtnVo6oToZzkAhoTwqmrjC",
-                    "divisible": false,
-                    "locked": false
-                },
-                "total_normalized": "1"
-            }
-        ],
-        "next_cursor": "A404599869049893064",
-        "result_count": 182
-    },
     "/v2/addresses/transactions": {
         "result": [
             {
@@ -1405,25 +1323,6 @@
         "result": [],
         "next_cursor": null,
         "result_count": 0
-    },
-    "/v2/addresses/<address>/balances": {
-        "result": [
-            {
-                "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
-                "asset": "XCP",
-                "quantity": 104200000000,
-                "asset_info": {
-                    "divisible": true,
-                    "asset_longname": null,
-                    "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
-                },
-                "quantity_normalized": "1042.00000000"
-            }
-        ],
-        "next_cursor": null,
-        "result_count": 1
     },
     "/v2/addresses/<address>/balances/<asset>": {
         "result": {
@@ -3084,77 +2983,6 @@
             "last_issuance_block_time": 1474991545,
             "supply_normalized": "995450240.00000000"
         }
-    },
-    "/v2/assets/<asset>/balances": {
-        "result": [
-            {
-                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                "asset": "UNNEGOTIABLE",
-                "quantity": 1700,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "divisible": false,
-                    "locked": true
-                },
-                "quantity_normalized": "1700"
-            },
-            {
-                "address": "17LV3y5KhExPdVcqS81zXuVUfNV9pmaGA",
-                "asset": "UNNEGOTIABLE",
-                "quantity": 1,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "divisible": false,
-                    "locked": true
-                },
-                "quantity_normalized": "1"
-            },
-            {
-                "address": "1ADca8k8XRY278QfQ3f9ynWaNYFzUDhkrk",
-                "asset": "UNNEGOTIABLE",
-                "quantity": 2,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "divisible": false,
-                    "locked": true
-                },
-                "quantity_normalized": "2"
-            },
-            {
-                "address": "1AnhxE3qcBU9zyyZzkYs4TY7AMj5spqEK9",
-                "asset": "UNNEGOTIABLE",
-                "quantity": 1,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "divisible": false,
-                    "locked": true
-                },
-                "quantity_normalized": "1"
-            },
-            {
-                "address": "1Epp8huZPjiDZnJixzdDFoWmx7FZoxNVK6",
-                "asset": "UNNEGOTIABLE",
-                "quantity": 2,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
-                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-                    "divisible": false,
-                    "locked": true
-                },
-                "quantity_normalized": "2"
-            }
-        ],
-        "next_cursor": "1FmEBHzkZGqQZ7kprf53xU8XijUiv2SDYW",
-        "result_count": 9
     },
     "/v2/assets/<asset>/balances/<address>": {
         "result": {
@@ -7965,5 +7793,177 @@
         ],
         "next_cursor": 89850,
         "result_count": 24292
+    },
+    "/v2/addresses/balances": {
+        "result": [
+            {
+                "asset": "A10404755902319931000",
+                "total": 1,
+                "addresses": [
+                    {
+                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
+                        "quantity": 1,
+                        "quantity_normalized": "1"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYBAMAAAASWSDLAAAAGFBMVEX/zaX2rYq99v+QGQfZAgD2oZf+yKH/0aylFGxhAAAAbElEQVQY05XMuw2AMAxF0RcBonWCRA1MgMQCKTxAVmD/JXjOBzoQN0lxFMtAd9TApr10COAENU8sDesv9DwZntCokRAEgxq2gl4VDTZXAAfbwCS/mrN7N+MESwlMys+AL6wPwhukwRG+YvThAmg/DEoX0UsaAAAAAElFTkSuQmCC",
+                    "issuer": "18FASLc9fenxqwKpc3VL2FrMKR5ehYAohc",
+                    "divisible": false,
+                    "locked": true
+                },
+                "total_normalized": "1"
+            },
+            {
+                "asset": "A10974884985443904336",
+                "total": 1,
+                "addresses": [
+                    {
+                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
+                        "quantity": 1,
+                        "quantity_normalized": "1"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "stamp:iVBORw0KGgoAAAANSUhEUgAAABkAAAAZAgMAAAC5h23wAAAADFBMVEXtHCQisUwAAAD///80x4U1AAAAVElEQVQI12MgDFZxLQBRTGGaGSCaK27pDRCt+nf+LRCtvr7qWwOE/gqiuddWXQXRqqGhoSB6adZSMD0lQQWFVk1QDQPRmkAabO7U0AiIfasWMJAMAEJOHJuDKtoMAAAAAElFTkSuQmCC",
+                    "issuer": "14VhF5JGExMn4qkN2RiMqNvCwpqmFvbQaz",
+                    "divisible": false,
+                    "locked": true
+                },
+                "total_normalized": "1"
+            },
+            {
+                "asset": "A12387679857740888409",
+                "total": 1,
+                "addresses": [
+                    {
+                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
+                        "quantity": 1,
+                        "quantity_normalized": "1"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": "SPAMART.OOAK-SPAM-NYC-MMXXIII",
+                    "description": "imgur/mXiENoK.jpg;spamart nyc 2023",
+                    "issuer": "1F6Vyig9kBGc5Buvy9JyuV8d3jEiPKxWUX",
+                    "divisible": false,
+                    "locked": false
+                },
+                "total_normalized": "1"
+            },
+            {
+                "asset": "A13424117675318910066",
+                "total": 1,
+                "addresses": [
+                    {
+                        "address": "1m8vd7FPHtS8fu6NQduCibfjCt3T8UPoz",
+                        "quantity": 1,
+                        "quantity_normalized": "1"
+                    }
+                ],
+                "asset_info": {
+                    "asset_longname": "PEPERINCESS.FIRSTANNIV",
+                    "description": "https://easyasset.art/j/qk8iyw/FIRST.json",
+                    "issuer": "1GYRneYXFqddDtnVo6oToZzkAhoTwqmrjC",
+                    "divisible": false,
+                    "locked": false
+                },
+                "total_normalized": "1"
+            }
+        ],
+        "next_cursor": "A404599869049893064",
+        "result_count": 182
+    },
+    "/v2/addresses/<address>/balances": {
+        "result": [
+            {
+                "address": "1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs",
+                "asset": "XCP",
+                "quantity": 104200000000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "1042.00000000"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 1
+    },
+    "/v2/assets/<asset>/balances": {
+        "result": [
+            {
+                "address": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 1700,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": false,
+                    "locked": true
+                },
+                "quantity_normalized": "1700"
+            },
+            {
+                "address": "1NzqwpLpAG7nGXPah9azAKarGsR9myCRUU",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 4,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": false,
+                    "locked": true
+                },
+                "quantity_normalized": "4"
+            },
+            {
+                "address": "1PHnxfHgojebxzW6muz8zfbE4bkDtbEudx",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 3,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": false,
+                    "locked": true
+                },
+                "quantity_normalized": "3"
+            },
+            {
+                "address": "1ADca8k8XRY278QfQ3f9ynWaNYFzUDhkrk",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 2,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": false,
+                    "locked": true
+                },
+                "quantity_normalized": "2"
+            },
+            {
+                "address": "1Epp8huZPjiDZnJixzdDFoWmx7FZoxNVK6",
+                "asset": "UNNEGOTIABLE",
+                "quantity": 2,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "https://zawqddvy75sz6dwqllsrupumldqwi26kk3amlz4fqci7hrsuqcfq.arweave.net/yC0Bjrj_ZZ8O0FrlGj6MWOFka8pWwMXnhYCR88ZUgIs/UNNEG.json",
+                    "issuer": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+                    "divisible": false,
+                    "locked": true
+                },
+                "quantity_normalized": "2"
+            }
+        ],
+        "next_cursor": "17LV3y5KhExPdVcqS81zXuVUfNV9pmaGA",
+        "result_count": 9
     }
 }
