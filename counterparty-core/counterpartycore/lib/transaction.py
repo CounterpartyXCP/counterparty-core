@@ -1098,6 +1098,11 @@ COMPOSE_COMMONS_ARGS = {
         config.ESTIMATE_FEE_CONF_TARGET,
         "The number of blocks to target for confirmation",
     ),
+    "return_psbt": (
+        bool,
+        False,
+        "Construct a PSBT instead of a raw transaction hex",
+    ),
 }
 
 
@@ -1150,6 +1155,7 @@ def compose_transaction(
     old_style_api=True,
     segwit=False,
     api_v1=False,
+    return_psbt=False,
 ):
     """Create and return a transaction."""
 
@@ -1221,7 +1227,7 @@ def compose_transaction(
 
     tx_info = compose_method(db, **params)
 
-    return construct(
+    raw_transaction = construct(
         db,
         tx_info,
         encoding=encoding,
@@ -1246,6 +1252,9 @@ def compose_transaction(
         segwit=segwit,
         estimate_fee_per_kb_nblocks=confirmation_target,
     )
+    if return_psbt:
+        return backend.bitcoind.convert_to_psbt(raw_transaction)
+    return raw_transaction
 
 
 COMPOSABLE_TRANSACTIONS = [
