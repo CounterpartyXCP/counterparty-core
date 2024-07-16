@@ -2,6 +2,8 @@ import json
 import typing
 from typing import Literal
 
+from counterpartycore.lib.api.util import divide
+
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
 BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
@@ -2062,8 +2064,8 @@ def get_orders_by_two_assets(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = prepare_order_where(
-        status, {"give_asset": asset1, "get_asset": asset2}
-    ) + prepare_order_where(status, {"give_asset": asset2, "get_asset": asset1})
+        status, {"give_asset": asset1.upper(), "get_asset": asset2.upper()}
+    ) + prepare_order_where(status, {"give_asset": asset2.upper(), "get_asset": asset1.upper()})
     query_result = select_rows(
         db,
         "orders",
@@ -2077,8 +2079,10 @@ def get_orders_by_two_assets(
         order["market_pair"] = f"{asset1}/{asset2}"
         if order["give_asset"] == asset1:
             order["market_dir"] = "SELL"
+            order["market_price"] = divide(order["give_quantity"], order["get_quantity"])
         else:
             order["market_dir"] = "BUY"
+            order["market_price"] = divide(order["get_quantity"], order["give_quantity"])
     return QueryResult(query_result.result, query_result.next_cursor, query_result.result_count)
 
 
@@ -2193,8 +2197,10 @@ def get_order_matches_by_two_assets(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = prepare_order_matches_where(
-        status, {"forward_asset": asset1, "backward_asset": asset2}
-    ) + prepare_order_matches_where(status, {"forward_asset": asset2, "backward_asset": asset1})
+        status, {"forward_asset": asset1.upper(), "backward_asset": asset2.upper()}
+    ) + prepare_order_matches_where(
+        status, {"forward_asset": asset2.upper(), "backward_asset": asset1.upper()}
+    )
     query_result = select_rows(
         db,
         "order_matches",
@@ -2207,8 +2213,10 @@ def get_order_matches_by_two_assets(
         order["market_pair"] = f"{asset1}/{asset2}"
         if order["forward_asset"] == asset1:
             order["market_dir"] = "SELL"
+            order["market_price"] = divide(order["forward_quantity"], order["backward_quantity"])
         else:
             order["market_dir"] = "BUY"
+            order["market_price"] = divide(order["backward_quantity"], order["forward_quantity"])
     return QueryResult(query_result.result, query_result.next_cursor, query_result.result_count)
 
 
