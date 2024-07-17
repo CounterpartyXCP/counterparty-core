@@ -2,10 +2,11 @@ import json
 import logging
 import os
 import time
+from random import randrange
 from threading import Thread
 
 import apsw
-from counterpartycore.lib import config, database, exceptions, ledger
+from counterpartycore.lib import blocks, config, database, exceptions, ledger
 from counterpartycore.lib.api import util
 from counterpartycore.lib.util import format_duration
 from yoyo import get_backend, read_migrations
@@ -18,7 +19,7 @@ MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "migrations")
 
 UPDATE_EVENTS_ID_FIELDS = {
     "BLOCK_PARSED": ["block_index"],
-    "TRANSACTION_PARSED": ["tx_index"],
+    "TRANSACTION_PARSED": ["tx_hash"],
     "BET_MATCH_UPDATE": ["id"],
     "BET_UPDATE": ["tx_hash"],
     "DISPENSER_UPDATE": ["tx_hash"],
@@ -136,6 +137,7 @@ def get_event_bindings(event):
 
 def insert_event_to_sql(event):
     event_bindings = get_event_bindings(event)
+    event_bindings["block_index"] = event["block_index"]
     sql_bindings = []
     sql = f"INSERT INTO {event['category']} "
     names = []
@@ -146,11 +148,28 @@ def insert_event_to_sql(event):
     return sql, sql_bindings
 
 
-def update_event_to_sql(event):
+def update_event_to_sql(api_db, event):
     event_bindings = get_event_bindings(event)
-    sql_bindings = []
+    event_bindings["block_index"] = event["block_index"]
 
     id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
+
+    where = []
+    sql_bindings = []
+    where_bindings = []
+    for id_field_name in id_field_names:
+        where.append(f"{id_field_name} = ?")
+        sql_bindings.append(event_bindings[id_field_name])
+        where_bindings.append(event_bindings[id_field_name])
+    where_clause = " AND ".join(where)
+
+    if event["block_index"] == config.MEMPOOL_BLOCK_INDEX:
+        select_sql = f"SELECT * FROM {event['category']} WHERE {where_clause}"  # noqa: S608
+        print(select_sql, where_bindings)
+        existing_row = fetch_one(api_db, select_sql, where_bindings)
+        new_row = existing_row | event_bindings
+        event["bindings"] = json.dumps(new_row)
+        return insert_event_to_sql(event)
 
     sets = []
     for key, value in event_bindings.items():
@@ -160,22 +179,16 @@ def update_event_to_sql(event):
         sql_bindings.append(value)
     sets_clause = ", ".join(sets)
 
-    where = []
-    for id_field_name in id_field_names:
-        where.append(f"{id_field_name} = ?")
-        sql_bindings.append(event_bindings[id_field_name])
-    where_clause = " AND ".join(where)
-
     sql = f"UPDATE {event['category']} SET {sets_clause} WHERE {where_clause}"  # noqa: S608
 
     return sql, sql_bindings
 
 
-def event_to_sql(event):
+def event_to_sql(api_db, event):
     if event["command"] == "insert":
         return insert_event_to_sql(event)
     if event["command"] in ["update", "parse"]:
-        return update_event_to_sql(event)
+        return update_event_to_sql(api_db, event)
     return None, []
 
 
@@ -493,7 +506,7 @@ def rollback_assets_info(api_db, event):
 
 
 def execute_event(api_db, event):
-    sql, sql_bindings = event_to_sql(event)
+    sql, sql_bindings = event_to_sql(api_db, event)
     if sql is not None:
         cursor = api_db.cursor()
         cursor.execute(sql, sql_bindings)
@@ -556,7 +569,7 @@ def rollback_address_events(api_db, event):
     if event["event"] not in EVENTS_ADDRESS_FIELDS:
         return
     cursor = api_db.cursor()
-    sql = "DELETE FROM address_events WHERE address = event_index = :message_index"
+    sql = "DELETE FROM address_events WHERE event_index = :message_index"
     cursor.execute(sql, event)
 
 
@@ -674,11 +687,17 @@ def synchronize_mempool(api_db, ledger_db):
         sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event, timestamp, addresses) VALUES (?, ?, ?, ?, ?, ?, ?)"""
         with api_db:
             delete_all(api_db, "DELETE FROM mempool")
+            for table in blocks.TABLES:
+                delete_all(
+                    api_db,
+                    f"DELETE FROM {table} WHERE block_index = ?",  # noqa: S608
+                    (config.MEMPOOL_BLOCK_INDEX,),
+                )
             cursor = api_db.cursor()
             for event in mempool_events:
                 addresses = []
+                event_bindings = json.loads(event["bindings"])
                 if event["event"] in EVENTS_ADDRESS_FIELDS:
-                    event_bindings = json.loads(event["bindings"])
                     for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
                         if field in event_bindings and event_bindings[field] is not None:
                             addresses.append(event_bindings[field])
@@ -696,6 +715,13 @@ def synchronize_mempool(api_db, ledger_db):
                 ]
                 cursor.execute(sql_insert, bindings)
                 event["block_index"] = config.MEMPOOL_BLOCK_INDEX
+                if "tx_index" in event_bindings:
+                    event_bindings["tx_index"] = event_bindings["tx_index"] * 1000 + randrange(  # noqa: S311
+                        100000
+                    )
+                    event["bindings"] = json.dumps(event_bindings)
+                    print(event)
+                execute_event(api_db, event)
 
             if len(mempool_events) > 0:
                 logger.debug("API Watcher - %s mempool events synchronized", len(mempool_events))
@@ -719,6 +745,8 @@ class APIWatcher(Thread):
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )
+        # Temporarily disable foreign keys for mempool transactions
+        self.api_db.execute("PRAGMA foreign_keys=OFF")
         # Create XCP and BTC assets if they don't exist
         cursor = self.api_db.cursor()
         cursor.execute("""SELECT * FROM assets WHERE asset_name = ?""", ("BTC",))
@@ -746,6 +774,16 @@ class APIWatcher(Thread):
                     "last_issuance_block_index": 0,
                 },
             )
+        # insert fake block for foreign key constraints
+        cursor.execute(
+            """SELECT * FROM blocks WHERE block_index = ?""", (config.MEMPOOL_BLOCK_INDEX,)
+        )
+        if not list(cursor):
+            cursor.execute(
+                """INSERT INTO blocks (block_index, block_hash, block_time) VALUES (?,?,?)""",
+                (config.MEMPOOL_BLOCK_INDEX, config.MEMPOOL_BLOCK_HASH, time.time()),
+            )
+
         cursor.close()
         self.last_mempool_sync = 0
 
