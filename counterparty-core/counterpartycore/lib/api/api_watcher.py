@@ -163,14 +163,6 @@ def update_event_to_sql(api_db, event):
         where_bindings.append(event_bindings[id_field_name])
     where_clause = " AND ".join(where)
 
-    if event["block_index"] == config.MEMPOOL_BLOCK_INDEX:
-        select_sql = f"SELECT * FROM {event['category']} WHERE {where_clause}"  # noqa: S608
-        print(select_sql, where_bindings)
-        existing_row = fetch_one(api_db, select_sql, where_bindings)
-        new_row = existing_row | event_bindings
-        event["bindings"] = json.dumps(new_row)
-        return insert_event_to_sql(event)
-
     sets = []
     for key, value in event_bindings.items():
         if key in id_field_names:
@@ -576,6 +568,8 @@ def rollback_address_events(api_db, event):
 def parse_event(api_db, event):
     with api_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
+        if event["event"] == "NEW_BLOCK":
+            clean_mempool(api_db)
         event["insert_rowid"] = execute_event(api_db, event)
         update_balances(api_db, event)
         update_expiration(api_db, event)
@@ -584,6 +578,8 @@ def parse_event(api_db, event):
         update_address_events(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
+        if event["event"] == "BLOCK_PARSED":
+            synchronize_mempool(api_db, api_db)
 
 
 def catch_up(api_db, ledger_db, watcher):
@@ -680,19 +676,23 @@ def parse_next_event(api_db, ledger_db):
     raise exceptions.NoEventToParse("No event to parse")
 
 
+def clean_mempool(api_db):
+    delete_all(api_db, "DELETE FROM mempool")
+    for table in blocks.TABLES:
+        delete_all(
+            api_db,
+            f"DELETE FROM {table} WHERE block_index = ?",  # noqa: S608
+            (config.MEMPOOL_BLOCK_INDEX,),
+        )
+
+
 def synchronize_mempool(api_db, ledger_db):
     logger.trace("API Watcher - Synchronizing mempool...")
     try:
         mempool_events = fetch_all(ledger_db, "SELECT * FROM mempool")
         sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event, timestamp, addresses) VALUES (?, ?, ?, ?, ?, ?, ?)"""
         with api_db:
-            delete_all(api_db, "DELETE FROM mempool")
-            for table in blocks.TABLES:
-                delete_all(
-                    api_db,
-                    f"DELETE FROM {table} WHERE block_index = ?",  # noqa: S608
-                    (config.MEMPOOL_BLOCK_INDEX,),
-                )
+            clean_mempool(api_db)
             cursor = api_db.cursor()
             for event in mempool_events:
                 addresses = []
@@ -802,8 +802,8 @@ class APIWatcher(Thread):
     def run(self):
         logger.info("Starting API Watcher...")
         self.stopped = False
-        synchronize_mempool(self.api_db, self.ledger_db)
         catch_up(self.api_db, self.ledger_db, self)
+        synchronize_mempool(self.api_db, self.ledger_db)
         self.follow()
 
     def stop(self):
