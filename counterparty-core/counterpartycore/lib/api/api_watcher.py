@@ -695,6 +695,8 @@ def synchronize_mempool(api_db, ledger_db):
                     addresses,
                 ]
                 cursor.execute(sql_insert, bindings)
+                event["block_index"] = config.MEMPOOL_BLOCK_INDEX
+
             if len(mempool_events) > 0:
                 logger.debug("API Watcher - %s mempool events synchronized", len(mempool_events))
     except apsw.SQLError:
