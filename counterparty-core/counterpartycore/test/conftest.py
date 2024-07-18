@@ -344,7 +344,7 @@ def api_server_v2(request, cp_server):
             if result.status_code != 200:
                 raise requests.exceptions.RequestException
             result = result.json()
-            if result["result"]["counterparty_height"] < 310499:
+            if result["result"]["counterparty_height"] < 310500:
                 raise requests.exceptions.RequestException
             break
         except requests.exceptions.RequestException:
