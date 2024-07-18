@@ -381,19 +381,6 @@
         "next_cursor": 839998,
         "result_count": 574024
     },
-    "/v2/blocks/last": {
-        "result": {
-            "block_index": 852293,
-            "block_hash": "0000000000000000000339c6ab00f6555027c412c765653d1a23d7165221c3b6",
-            "block_time": 1721040354,
-            "previous_block_hash": "00000000000000000003216497b00a24d109c2dd72746364494328dc659af1f7",
-            "difficulty": 386108013,
-            "ledger_hash": "787dc34df0bdd1ef4f9281b18070f79ef138c2aa084bd2f1ff3635b648a18e3d",
-            "txlist_hash": "ab6263b924db4ec90dab3ff4d90cd431ec576ee9c5eb57369f7a449d1ec0dab7",
-            "messages_hash": "8390334c4efa1fec2977e7c198ccd1597d3b5b370b5b432509ea9e74e5425e07",
-            "transaction_count": 0
-        }
-    },
     "/v2/blocks/<int:block_index>": {
         "result": {
             "block_index": 840464,

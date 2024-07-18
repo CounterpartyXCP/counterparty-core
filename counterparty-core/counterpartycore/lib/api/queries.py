@@ -2,7 +2,9 @@ import json
 import typing
 from typing import Literal
 
+from counterpartycore.lib import config
 from counterpartycore.lib.api.util import divide
+from flask import request
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
@@ -137,10 +139,17 @@ def select_rows(
     if or_where:
         where_clause = " OR ".join(or_where)
 
+    last_block = config.MEMPOOL_BLOCK_INDEX
+    include_unconfirmed = request is not None and request.args.get(
+        "unconfirmed", "false"
+    ).lower() in ["true", "1"]
+    if include_unconfirmed:
+        last_block += 1
+
     if where_clause:
-        where_clause_count = f"WHERE {where_clause}"
+        where_clause_count = f"WHERE {where_clause} AND block_index < {last_block}"
     else:
-        where_clause_count = ""
+        where_clause_count = f"WHERE block_index < {last_block}"
     bindings_count = list(bindings)
 
     if offset is None and last_cursor is not None:
@@ -153,7 +162,9 @@ def select_rows(
         bindings.append(last_cursor)
 
     if where_clause:
-        where_clause = f"WHERE {where_clause}"
+        where_clause = f"WHERE {where_clause} AND block_index < {last_block}"
+    else:
+        where_clause = f"WHERE block_index < {last_block}"
 
     group_by_clause = ""
     if group_by:
@@ -163,6 +174,7 @@ def select_rows(
         select = f"*, {cursor_field} AS {cursor_field}"
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
+    select = f"{select}, CASE WHEN block_index = {config.MEMPOOL_BLOCK_INDEX} THEN FALSE ELSE TRUE END AS confirmed"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
     query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
