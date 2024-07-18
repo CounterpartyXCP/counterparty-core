@@ -147,9 +147,13 @@ def select_rows(
         last_block += 1
 
     if where_clause:
-        where_clause_count = f"WHERE {where_clause} AND block_index < {last_block}"
-    else:
+        where_clause_count = f"WHERE {where_clause} "
+        if table != "mempool":
+            where_clause_count += f"AND block_index < {last_block}"
+    elif table != "mempool":
         where_clause_count = f"WHERE block_index < {last_block}"
+    else:
+        where_clause_count = ""
     bindings_count = list(bindings)
 
     if offset is None and last_cursor is not None:
@@ -162,9 +166,13 @@ def select_rows(
         bindings.append(last_cursor)
 
     if where_clause:
-        where_clause = f"WHERE {where_clause} AND block_index < {last_block}"
-    else:
+        where_clause = f"WHERE {where_clause} "
+        if table != "mempool":
+            where_clause += f"AND block_index < {last_block}"
+    elif table != "mempool":
         where_clause = f"WHERE block_index < {last_block}"
+    else:
+        where_clause = ""
 
     group_by_clause = ""
     if group_by:
@@ -174,7 +182,8 @@ def select_rows(
         select = f"*, {cursor_field} AS {cursor_field}"
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
-    select = f"{select}, CASE WHEN block_index = {config.MEMPOOL_BLOCK_INDEX} THEN FALSE ELSE TRUE END AS confirmed"
+    if table != "mempool":
+        select = f"{select}, CASE WHEN block_index = {config.MEMPOOL_BLOCK_INDEX} THEN FALSE ELSE TRUE END AS confirmed"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
     query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
