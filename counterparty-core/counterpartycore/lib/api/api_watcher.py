@@ -152,6 +152,9 @@ def update_event_to_sql(api_db, event):
     event_bindings = get_event_bindings(event)
     event_bindings["block_index"] = event["block_index"]
 
+    if event_bindings["block_index"] == config.MEMPOOL_BLOCK_INDEX:
+        return None, []
+
     id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
 
     where = []
@@ -499,6 +502,7 @@ def rollback_assets_info(api_db, event):
 
 def execute_event(api_db, event):
     sql, sql_bindings = event_to_sql(api_db, event)
+    # print(sql, sql_bindings)
     if sql is not None:
         cursor = api_db.cursor()
         cursor.execute(sql, sql_bindings)
@@ -678,7 +682,7 @@ def parse_next_event(api_db, ledger_db):
 
 def clean_mempool(api_db):
     delete_all(api_db, "DELETE FROM mempool")
-    for table in blocks.TABLES:
+    for table in blocks.TABLES + ["transactions"]:
         delete_all(
             api_db,
             f"DELETE FROM {table} WHERE block_index = ?",  # noqa: S608
