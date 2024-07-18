@@ -102,6 +102,8 @@ def clean_rowids_and_confirmed_fields(query_result):
                 row["confirmed"] = bool(row["confirmed"])
             if "block_index" in row and row["block_index"] in [0, config.MEMPOOL_BLOCK_INDEX]:
                 row["block_index"] = None
+                if "tx_index" in row:
+                    row["tx_index"] = None
             filtered_results.append(row)
         return filtered_results
     if isinstance(query_result, dict):
@@ -117,6 +119,8 @@ def clean_rowids_and_confirmed_fields(query_result):
             config.MEMPOOL_BLOCK_INDEX,
         ]:
             filtered_results["block_index"] = None
+            if "tx_index" in filtered_results:
+                filtered_results["tx_index"] = None
         return filtered_results
     return query_result
 
