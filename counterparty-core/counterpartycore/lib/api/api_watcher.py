@@ -720,7 +720,7 @@ def synchronize_mempool(api_db, ledger_db):
                         100000
                     )
                     event["bindings"] = json.dumps(event_bindings)
-                    print(event)
+                    # print(event)
                 execute_event(api_db, event)
 
             if len(mempool_events) > 0:
@@ -773,15 +773,6 @@ class APIWatcher(Thread):
                     "first_issuance_block_index": 0,
                     "last_issuance_block_index": 0,
                 },
-            )
-        # insert fake block for foreign key constraints
-        cursor.execute(
-            """SELECT * FROM blocks WHERE block_index = ?""", (config.MEMPOOL_BLOCK_INDEX,)
-        )
-        if not list(cursor):
-            cursor.execute(
-                """INSERT INTO blocks (block_index, block_hash, block_time) VALUES (?,?,?)""",
-                (config.MEMPOOL_BLOCK_INDEX, config.MEMPOOL_BLOCK_HASH, time.time()),
             )
 
         cursor.close()

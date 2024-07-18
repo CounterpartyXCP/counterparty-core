@@ -85,7 +85,6 @@ def clean_mempool(db):
     cursor.execute("SELECT * FROM mempool")
     mempool_events = cursor.fetchall()
     for event in mempool_events:
-        print(event)
         tx = ledger.get_transaction(db, event["tx_hash"])
         if tx:
             clean_transaction_events(db, event["tx_hash"])
