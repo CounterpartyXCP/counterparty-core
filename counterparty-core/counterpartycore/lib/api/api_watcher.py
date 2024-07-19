@@ -147,10 +147,11 @@ def insert_event_to_sql(event):
         names.append(key)
         sql_bindings.append(value)
     sql += f"({', '.join(names)}) VALUES ({', '.join(['?' for _ in names])})"
+    print(sql, sql_bindings)
     return sql, sql_bindings
 
 
-def update_event_to_sql(api_db, event):
+def update_event_to_sql(event):
     event_bindings = get_event_bindings(event)
     event_bindings["block_index"] = event["block_index"]
 
@@ -159,15 +160,7 @@ def update_event_to_sql(api_db, event):
 
     id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
 
-    where = []
     sql_bindings = []
-    where_bindings = []
-    for id_field_name in id_field_names:
-        where.append(f"{id_field_name} = ?")
-        sql_bindings.append(event_bindings[id_field_name])
-        where_bindings.append(event_bindings[id_field_name])
-    where_clause = " AND ".join(where)
-
     sets = []
     for key, value in event_bindings.items():
         if key in id_field_names:
@@ -176,16 +169,24 @@ def update_event_to_sql(api_db, event):
         sql_bindings.append(value)
     sets_clause = ", ".join(sets)
 
+    where = []
+    where_bindings = []
+    for id_field_name in id_field_names:
+        where.append(f"{id_field_name} = ?")
+        sql_bindings.append(event_bindings[id_field_name])
+        where_bindings.append(event_bindings[id_field_name])
+    where_clause = " AND ".join(where)
+
     sql = f"UPDATE {event['category']} SET {sets_clause} WHERE {where_clause}"  # noqa: S608
 
     return sql, sql_bindings
 
 
-def event_to_sql(api_db, event):
+def event_to_sql(event):
     if event["command"] == "insert":
         return insert_event_to_sql(event)
     if event["command"] in ["update", "parse"]:
-        return update_event_to_sql(api_db, event)
+        return update_event_to_sql(event)
     return None, []
 
 
@@ -503,8 +504,7 @@ def rollback_assets_info(api_db, event):
 
 
 def execute_event(api_db, event):
-    sql, sql_bindings = event_to_sql(api_db, event)
-    # print(sql, sql_bindings)
+    sql, sql_bindings = event_to_sql(event)
     if sql is not None:
         cursor = api_db.cursor()
         cursor.execute(sql, sql_bindings)
@@ -735,7 +735,12 @@ def synchronize_mempool(api_db, ledger_db):
                     )
                     event["bindings"] = json.dumps(event_bindings)
                 # print(event)
-                execute_event(api_db, event)
+                try:
+                    execute_event(api_db, event)
+                except Exception as e:
+                    logger.error(f"API Watcher - Error executing mempool event: {e}")
+                    print(event)
+                    raise e
 
             if len(mempool_events) > 0:
                 logger.debug("API Watcher - %s mempool events synchronized", len(mempool_events))

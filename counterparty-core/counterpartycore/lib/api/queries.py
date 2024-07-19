@@ -146,11 +146,13 @@ def select_rows(
     if include_unconfirmed:
         last_block += 1
 
+    no_block_index_tables = ["mempool", "assets_info", "balances"]
+
     if where_clause:
         where_clause_count = f"WHERE {where_clause} "
-        if table not in ["mempool", "assets_info"]:
+        if table not in no_block_index_tables:
             where_clause_count += f"AND block_index < {last_block}"
-    elif table not in ["mempool", "assets_info"]:
+    elif table not in no_block_index_tables:
         where_clause_count = f"WHERE block_index < {last_block}"
     else:
         where_clause_count = ""
@@ -167,9 +169,9 @@ def select_rows(
 
     if where_clause:
         where_clause = f"WHERE {where_clause} "
-        if table not in ["mempool", "assets_info"]:
+        if table not in no_block_index_tables:
             where_clause += f"AND block_index < {last_block}"
-    elif table not in ["mempool", "assets_info"]:
+    elif table not in no_block_index_tables:
         where_clause = f"WHERE block_index < {last_block}"
     else:
         where_clause = ""
@@ -182,7 +184,7 @@ def select_rows(
         select = f"*, {cursor_field} AS {cursor_field}"
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
-    if table not in ["mempool", "assets_info"]:
+    if table not in no_block_index_tables:
         select = f"{select}, CASE WHEN block_index = {config.MEMPOOL_BLOCK_INDEX} THEN FALSE ELSE TRUE END AS confirmed"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
