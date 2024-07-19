@@ -83,6 +83,8 @@ EVENTS_ADDRESS_FIELDS = {
     "BURN": ["source"],
 }
 
+SKIP_EVENTS = ["NEW_TRANSACTION_OUTPUT"]
+
 
 def fetch_all(db, query, bindings=None):
     cursor = db.cursor()
@@ -569,10 +571,14 @@ def rollback_address_events(api_db, event):
     cursor.execute(sql, event)
 
 
-def parse_event(api_db, event):
+def parse_event(api_db, event, catching_up=False):
+    if event["event"] in SKIP_EVENTS:
+        event["insert_rowid"] = None
+        insert_event(api_db, event)
+        return
     with api_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
-        if event["event"] == "NEW_BLOCK":
+        if event["event"] == "NEW_BLOCK" and not catching_up:
             clean_mempool(api_db)
         event["insert_rowid"] = execute_event(api_db, event)
         update_balances(api_db, event)
@@ -582,12 +588,13 @@ def parse_event(api_db, event):
         update_address_events(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
-        if event["event"] == "BLOCK_PARSED":
+        if event["event"] == "BLOCK_PARSED" and not catching_up:
             synchronize_mempool(api_db, api_db)
 
 
 def catch_up(api_db, ledger_db, watcher):
     check_event_hashes(api_db, ledger_db)
+    clean_mempool(api_db)
     event_to_parse_count = get_event_to_parse_count(api_db, ledger_db)
     if event_to_parse_count > 0:
         logger.debug(f"API Watcher - {event_to_parse_count} events to catch up...")
@@ -595,7 +602,7 @@ def catch_up(api_db, ledger_db, watcher):
         event_parsed = 0
         next_event = get_next_event_to_parse(api_db, ledger_db)
         while next_event and not watcher.stopping and not watcher.stopped:
-            parse_event(api_db, next_event)
+            parse_event(api_db, next_event, catching_up=True)
             event_parsed += 1
             if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
@@ -606,6 +613,7 @@ def catch_up(api_db, ledger_db, watcher):
         if not watcher.stopping and not watcher.stopped:
             duration = time.time() - start_time
             logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
+    synchronize_mempool(api_db, api_db)
 
 
 def apply_migration():
@@ -699,6 +707,8 @@ def synchronize_mempool(api_db, ledger_db):
             clean_mempool(api_db)
             cursor = api_db.cursor()
             for event in mempool_events:
+                if event["event"] in SKIP_EVENTS:
+                    continue
                 addresses = []
                 event_bindings = json.loads(event["bindings"])
                 if event["event"] in EVENTS_ADDRESS_FIELDS:
@@ -786,19 +796,18 @@ class APIWatcher(Thread):
         while not self.stopping and not self.stopped:
             try:
                 parse_next_event(self.api_db, self.ledger_db)
-                if time.time() - self.last_mempool_sync > 10:
-                    synchronize_mempool(self.api_db, self.ledger_db)
-                    self.last_mempool_sync = time.time()
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
                 time.sleep(1)
+            if time.time() - self.last_mempool_sync > 10:
+                synchronize_mempool(self.api_db, self.ledger_db)
+                self.last_mempool_sync = time.time()
         self.stopped = True
 
     def run(self):
         logger.info("Starting API Watcher...")
         self.stopped = False
         catch_up(self.api_db, self.ledger_db, self)
-        synchronize_mempool(self.api_db, self.ledger_db)
         self.follow()
 
     def stop(self):
