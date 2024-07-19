@@ -400,11 +400,11 @@ def run_api_server(args, interruped_value, server_ready_value):
         app.register_error_handler(404, handle_not_found)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
-        timer_db = None
+        timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
-            timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
             refresh_backend_height(timer_db, start=True)
         else:
+            refresh_current_block(timer_db)
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
     try:
