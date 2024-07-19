@@ -711,3 +711,7 @@ def get_oldest_tx(address: str, block_index: int):
         result = ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)
 
     return result
+
+
+def clear_raw_transactions_cache():
+    raw_transactions_cache.clear()

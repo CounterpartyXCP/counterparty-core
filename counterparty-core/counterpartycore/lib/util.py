@@ -450,6 +450,10 @@ class DictCache:
         with self.lock:
             self.dict.move_to_end(key, last=True)
 
+    def clear(self):
+        with self.lock:
+            self.dict.clear()
+
 
 URL_USERNAMEPASS_REGEX = re.compile(".+://(.+)@")
 
