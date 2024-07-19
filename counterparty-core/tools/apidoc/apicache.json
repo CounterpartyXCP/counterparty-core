@@ -8371,5 +8371,209 @@
         ],
         "next_cursor": null,
         "result_count": 3
+    },
+    "/v2/bitcoin/addresses/utxos": {
+        "result": [
+            {
+                "vout": 0,
+                "height": 839021,
+                "value": 12354,
+                "confirmations": 13463,
+                "amount": 0.00012354,
+                "txid": "23758832e0fc92a7ea303623b8f743219cb8e637e7e7ac9fb6f90641efac9379",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 8,
+                "height": 846480,
+                "value": 151286,
+                "confirmations": 6004,
+                "amount": 0.00151286,
+                "txid": "eea9feaa317df3de155e33f202c532e16979fdfe964524aa9e6118a02c6ffc62",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 0,
+                "height": 841481,
+                "value": 289853,
+                "confirmations": 11003,
+                "amount": 0.00289853,
+                "txid": "0e4109dbacb9789fa8760c62e872a78333c2df9d85f4909d324084a964869080",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 0,
+                "height": 838442,
+                "value": 557283,
+                "confirmations": 14042,
+                "amount": 0.00557283,
+                "txid": "aba5810714aa6196fec5538a83bbc281077a84ef2cbce2045b4c9f3c4439f14f",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 10,
+                "height": 845775,
+                "value": 517691,
+                "confirmations": 6709,
+                "amount": 0.00517691,
+                "txid": "622975b062e44c11ca5e61ec8ad72535349218103434d5e7d0144dabd1058e68",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 0,
+                "height": 841617,
+                "value": 92742,
+                "confirmations": 10867,
+                "amount": 0.00092742,
+                "txid": "341ae6b63c8f316a8a7ac5060d1df3f5e1bfeae2cc7996412f5b330bbc2e8bdb",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 8,
+                "height": 847750,
+                "value": 477155,
+                "confirmations": 4734,
+                "amount": 0.00477155,
+                "txid": "326e9ecef4384ee3bb2124fb5a0da23fef9bf474693b16b6def5180ad2f175a5",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 0,
+                "height": 833187,
+                "value": 619481,
+                "confirmations": 19297,
+                "amount": 0.00619481,
+                "txid": "2c8bc3eede9ec60d26c6fd7f44829adc64da593552044a28c673022220f560c3",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 0,
+                "height": 838608,
+                "value": 77148,
+                "confirmations": 13876,
+                "amount": 0.00077148,
+                "txid": "ec97c11ff5cb318505ebe20d7aa3c033816824a79f9a49821ffb584ed7d6c78f",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 25,
+                "height": 844809,
+                "value": 376627,
+                "confirmations": 7675,
+                "amount": 0.00376627,
+                "txid": "c45b372652f18070d0d054efa04133c236708db1410081be2081fbc951ca1cce",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 12,
+                "height": 844220,
+                "value": 490366,
+                "confirmations": 8264,
+                "amount": 0.00490366,
+                "txid": "2fa627ba1088c5483c9c0cd83cd54adf39529ffbdeb439a399b2a670931d00fc",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 0,
+                "height": 839462,
+                "value": 78615,
+                "confirmations": 13022,
+                "amount": 0.00078615,
+                "txid": "eae4f1dba4d75bda9dd0de12f69a980be267bbc16b7a280a2a4b40c4b3bbb70a",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 0,
+                "height": 837402,
+                "value": 70501,
+                "confirmations": 15082,
+                "amount": 0.00070501,
+                "txid": "687b875d1dc472aa2fb994c5753c9b9b56e5c6fd1a6de18a92fcb3dc7ba8067e",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 13,
+                "height": 849412,
+                "value": 637128,
+                "confirmations": 3072,
+                "amount": 0.00637128,
+                "txid": "ed314723b407051a1054a988e0095e6a4e16cb58eedb67e8b8ff3d33ead84884",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 14,
+                "height": 842368,
+                "value": 47357,
+                "confirmations": 10116,
+                "amount": 0.00047357,
+                "txid": "402374f5e7b1b40a8737ed981b9458596445791a534bbcc69c54ce4524ccb102",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 10,
+                "height": 848469,
+                "value": 300818,
+                "confirmations": 4015,
+                "amount": 0.00300818,
+                "txid": "b0e8c471b5288b221731cbc0b9eca1998212178a082c8c99ee3cc25d004aa6b7",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 0,
+                "height": 843688,
+                "value": 43319,
+                "confirmations": 8796,
+                "amount": 0.00043319,
+                "txid": "aa70e0c2fb4f1cb91ea95ed75129e176fd41d97816c5bbf8dddcdfa4457bf50e",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 1,
+                "height": 845480,
+                "value": 72368,
+                "confirmations": 7004,
+                "amount": 0.00072368,
+                "txid": "f866c27a5cde294f3ba5651552715c134da48bad6fbb6832d02947bc11f7ef3f",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 2,
+                "height": 844432,
+                "value": 363951,
+                "confirmations": 8052,
+                "amount": 0.00363951,
+                "txid": "e1161b21719d57634a73837e882fa4bf674f08bb19509b141b1a0ff61c220cef",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 0,
+                "height": 839421,
+                "value": 336973,
+                "confirmations": 13063,
+                "amount": 0.00336973,
+                "txid": "c732f0906eeada2113524c6652c17b2784780110bffd4333eb8f719ac0eff3be",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 3,
+                "height": 843818,
+                "value": 543251,
+                "confirmations": 8666,
+                "amount": 0.00543251,
+                "txid": "be4dc2b2a5d05671654ee7f949b3fc4d9f447cd8b5d348805af5c2306a2aa05c",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            },
+            {
+                "vout": 6,
+                "height": 833559,
+                "value": 34611,
+                "confirmations": 18925,
+                "amount": 0.00034611,
+                "txid": "98bef616ef265dd2f6004683e908d7df97e0c5f322cdf2fb2ebea9a9131cfa79",
+                "address": "14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": null
     }
 }

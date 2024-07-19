@@ -11,6 +11,7 @@ import flask
 import requests
 from counterpartycore import server
 from counterpartycore.lib import (
+    backend,
     config,
     exceptions,
     ledger,
@@ -434,6 +435,7 @@ def refresh_backend_height(db, start=False):
     if not start:
         BACKEND_HEIGHT = get_backend_height()
         refresh_current_block(db)
+        backend.addrindexrs.clear_raw_transactions_cache()
         if not is_server_ready():
             if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
                 logger.debug(

@@ -139,6 +139,7 @@ ROUTES = util.prepare_routes(
         "/v2/healthz": util.check_server_health,
         "/healthz": util.check_server_health,
         ### /bitcoin ###
+        "/v2/bitcoin/addresses/utxos": addrindexrs.get_unspent_txouts_by_addresses,
         "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
         "/v2/bitcoin/addresses/<address>/transactions/oldest": util.get_oldest_transaction_by_address,
         "/v2/bitcoin/addresses/<address>/utxos": addrindexrs.get_unspent_txouts,
