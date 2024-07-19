@@ -24,7 +24,7 @@ plyvel==1.5.1
 arc4==0.4.0
 halo==0.0.31
 termcolor==2.4.0
-sentry-sdk==1.45.0
+sentry-sdk==2.10.0
 docstring_parser==0.16
 psutil==5.9.8
 influxdb-client==1.42.0
