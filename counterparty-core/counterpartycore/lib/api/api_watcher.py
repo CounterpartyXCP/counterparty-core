@@ -734,7 +734,7 @@ def synchronize_mempool(api_db, ledger_db):
                         100000
                     )
                     event["bindings"] = json.dumps(event_bindings)
-                    # print(event)
+                # print(event)
                 execute_event(api_db, event)
 
             if len(mempool_events) > 0:

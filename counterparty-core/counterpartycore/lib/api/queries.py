@@ -1425,26 +1425,27 @@ def get_balances_by_addresses(
     ).result
 
     result = []
-    current_balances = {
-        "asset": balances[0]["asset"],
-        "total": 0,
-        "addresses": [],
-    }
-    for balance in balances:
-        if balance["asset"] != current_balances["asset"]:
-            result.append(current_balances)
-            current_balances = {
-                "asset": balance["asset"],
-                "total": 0,
-                "addresses": [],
-            }
-        current_balances["total"] += balance["quantity"]
-        current_balances["addresses"].append(
-            {
-                "address": balance["address"],
-                "quantity": balance["quantity"],
-            }
-        )
+    if len(balances) > 0:
+        current_balances = {
+            "asset": balances[0]["asset"],
+            "total": 0,
+            "addresses": [],
+        }
+        for balance in balances:
+            if balance["asset"] != current_balances["asset"]:
+                result.append(current_balances)
+                current_balances = {
+                    "asset": balance["asset"],
+                    "total": 0,
+                    "addresses": [],
+                }
+            current_balances["total"] += balance["quantity"]
+            current_balances["addresses"].append(
+                {
+                    "address": balance["address"],
+                    "quantity": balance["quantity"],
+                }
+            )
 
     return QueryResult(result, assets_result.next_cursor, assets_result.result_count)
 
