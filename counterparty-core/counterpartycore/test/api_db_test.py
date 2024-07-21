@@ -53,8 +53,6 @@ def test_api_database():
         api_order = api_db.execute(
             "SELECT * FROM orders WHERE tx_hash = ?", (ledger_order["tx_hash"],)
         ).fetchone()
-        print("ledger_order", ledger_order)
-        print("api_order", api_order)
         assert ledger_order["status"] == api_order["status"]
         assert ledger_order["give_asset"] == api_order["give_asset"]
         assert ledger_order["get_asset"] == api_order["get_asset"]

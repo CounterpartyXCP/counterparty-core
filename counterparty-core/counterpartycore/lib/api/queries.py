@@ -146,7 +146,13 @@ def select_rows(
     if include_unconfirmed:
         last_block += 1
 
-    no_block_index_tables = ["mempool", "assets_info", "balances"]
+    no_block_index_tables = [
+        "mempool",
+        "assets_info",
+        "balances",
+        "address_events",
+        "asset_holders",
+    ]
 
     if where_clause:
         where_clause_count = f"WHERE {where_clause} "

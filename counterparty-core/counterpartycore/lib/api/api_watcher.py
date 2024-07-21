@@ -147,7 +147,6 @@ def insert_event_to_sql(event):
         names.append(key)
         sql_bindings.append(value)
     sql += f"({', '.join(names)}) VALUES ({', '.join(['?' for _ in names])})"
-    print(sql, sql_bindings)
     return sql, sql_bindings
 
 
@@ -223,7 +222,11 @@ def insert_event(api_db, event):
 
 def rollback_event(api_db, event):
     logger.debug(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
-    with api_db:  # all or nothing
+    with api_db:  # all or
+        if event["event"] in SKIP_EVENTS:
+            sql = "DELETE FROM messages WHERE message_index = ?"
+            delete_all(api_db, sql, (event["message_index"],))
+            return
         if event["previous_state"] is None or event["previous_state"] == "null":
             sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
             deleted = delete_all(api_db, sql, (event["insert_rowid"],))
@@ -698,6 +701,16 @@ def clean_mempool(api_db):
         )
 
 
+def gen_random_tx_index(event):
+    event_bindings = json.loads(event["bindings"])
+    if "tx_index" in event_bindings:
+        event_bindings["tx_index"] = event_bindings["tx_index"] * 1000 + randrange(  # noqa: S311
+            99999999
+        )
+        event["bindings"] = json.dumps(event_bindings)
+    return event
+
+
 def synchronize_mempool(api_db, ledger_db):
     logger.trace("API Watcher - Synchronizing mempool...")
     try:
@@ -707,7 +720,7 @@ def synchronize_mempool(api_db, ledger_db):
             clean_mempool(api_db)
             cursor = api_db.cursor()
             for event in mempool_events:
-                if event["event"] in SKIP_EVENTS:
+                if event["event"] in SKIP_EVENTS + ["NEW_BLOCK", "BLOCK_PARSED"]:
                     continue
                 addresses = []
                 event_bindings = json.loads(event["bindings"])
@@ -729,17 +742,17 @@ def synchronize_mempool(api_db, ledger_db):
                 ]
                 cursor.execute(sql_insert, bindings)
                 event["block_index"] = config.MEMPOOL_BLOCK_INDEX
-                if "tx_index" in event_bindings:
-                    event_bindings["tx_index"] = event_bindings["tx_index"] * 1000 + randrange(  # noqa: S311
-                        100000
-                    )
-                    event["bindings"] = json.dumps(event_bindings)
-                # print(event)
+                event = gen_random_tx_index(event)  # noqa: PLW2901
                 try:
                     execute_event(api_db, event)
+                except apsw.ConstraintError as e:
+                    if "UNIQUE constraint failed: transactions.tx_index" in str(e):
+                        event = gen_random_tx_index(event)  # noqa: PLW2901
+                        execute_event(api_db, event)
+                    else:
+                        raise e
                 except Exception as e:
                     logger.error(f"API Watcher - Error executing mempool event: {e}")
-                    print(event)
                     raise e
 
             if len(mempool_events) > 0:

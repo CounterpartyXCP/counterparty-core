@@ -320,9 +320,8 @@ def handle_route(**kwargs):
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        import traceback
-
-        traceback.print_exc()
+        # import traceback
+        # traceback.print_exc()
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )

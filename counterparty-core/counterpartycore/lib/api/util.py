@@ -364,9 +364,13 @@ def inject_issuances_and_block_times(db, result_list):
             field_name_time = field_name.replace("index", "time")
             if field_name in item and item[field_name] in [0, config.MEMPOOL_BLOCK_INDEX, None]:
                 continue
-            if field_name in item:
+            if field_name in item and item[field_name] in block_times:
                 item[field_name_time] = block_times[item[field_name]]
-            if "params" in item and field_name in item["params"]:
+            if (
+                "params" in item
+                and field_name in item["params"]
+                and item["params"][field_name] in block_times
+            ):
                 if item["params"][field_name] in [0, config.MEMPOOL_BLOCK_INDEX]:
                     continue
                 item["params"][field_name_time] = block_times[item["params"][field_name]]
