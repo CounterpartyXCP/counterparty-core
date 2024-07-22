@@ -361,12 +361,14 @@ def update_assets_info(api_db, event):
         return
     event_bindings = json.loads(event["bindings"])
 
+    event_bindings["confirmed"] = event["block_index"] != config.MEMPOOL_BLOCK_INDEX
+
     if event["event"] == "ASSET_CREATION":
         sql = """
             INSERT OR REPLACE INTO assets_info 
-                (asset, asset_id, asset_longname, first_issuance_block_index) 
+                (asset, asset_id, asset_longname, first_issuance_block_index, confirmed) 
             VALUES 
-                (:asset_name, :asset_id, :asset_longname, :block_index)
+                (:asset_name, :asset_id, :asset_longname, :block_index, :confirmed)
             """
         cursor = api_db.cursor()
         cursor.execute(sql, event_bindings)
@@ -381,6 +383,8 @@ def update_assets_info(api_db, event):
             "SELECT * FROM assets_info WHERE asset = :asset",
             {"asset": event_bindings["asset"]},
         )
+        if existing_asset is not None and not event_bindings["confirmed"]:
+            return
         set_data = []
         set_data.append("divisible = :divisible")
         set_data.append("description = :description")
@@ -388,6 +392,7 @@ def update_assets_info(api_db, event):
         set_data.append("supply = supply + :quantity")
         set_data.append("last_issuance_block_index = :block_index")
         set_data.append("asset_longname = :asset_longname")
+        set_data.append("confirmed = :confirmed")
         if event_bindings["locked"]:
             set_data.append("locked = :locked")
         if not existing_asset["issuer"]:  # first issuance
@@ -399,9 +404,12 @@ def update_assets_info(api_db, event):
         cursor.execute(sql, event_bindings)
         return
 
+    if not event_bindings["confirmed"]:
+        return
+
     if event["event"] == "ASSET_DESTRUCTION":
         sql = """
-            UPDATE assets_info 
+            UPDATE assets_info
             SET supply = supply - :quantity
             WHERE asset = :asset
             """
@@ -699,6 +707,7 @@ def clean_mempool(api_db):
             f"DELETE FROM {table} WHERE block_index = ?",  # noqa: S608
             (config.MEMPOOL_BLOCK_INDEX,),
         )
+    delete_all(api_db, "DELETE FROM assets_info WHERE confirmed = ?", (False,))
 
 
 def gen_random_tx_index(event):
@@ -745,10 +754,14 @@ def synchronize_mempool(api_db, ledger_db):
                 event = gen_random_tx_index(event)  # noqa: PLW2901
                 try:
                     execute_event(api_db, event)
+                    update_assets_info(api_db, event)
                 except apsw.ConstraintError as e:
                     if "UNIQUE constraint failed: transactions.tx_index" in str(e):
                         event = gen_random_tx_index(event)  # noqa: PLW2901
                         execute_event(api_db, event)
+                        update_assets_info(api_db, event)
+                    elif "UNIQUE constraint failed: assets.asset_name" in str(e):
+                        pass  # edge case: asset alredy created in another confirmed tx
                     else:
                         raise e
                 except Exception as e:
