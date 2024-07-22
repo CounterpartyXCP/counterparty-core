@@ -619,7 +619,7 @@ def get_events_by_addresses(
     """
     Returns the events of a list of addresses
     :param str addresses: Comma separated list of addresses to return (e.g. 1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V,bc1q5mqesdy0gaj0suzxg4jx7ycmpw66kygdyn80mg)
-    :param int cursor: The last event index to return
+    :param int cursor: The last event index to return (e.g. 17629293)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
