@@ -163,7 +163,7 @@ def select_rows(
     elif table not in no_block_index_tables:
         where_clause_count = f"WHERE block_index < {last_block}"
     elif table == "assets_info" and not include_unconfirmed:
-        where_clause_count += "AND confirmed = 1"
+        where_clause_count = "WHERE confirmed = 1"
     else:
         where_clause_count = ""
     bindings_count = list(bindings)
@@ -186,7 +186,7 @@ def select_rows(
     elif table not in no_block_index_tables:
         where_clause = f"WHERE block_index < {last_block} "
     elif table == "assets_info" and not include_unconfirmed:
-        where_clause += "AND confirmed = 1"
+        where_clause = "WHERE confirmed = 1"
     else:
         where_clause = ""
 

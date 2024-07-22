@@ -2996,6 +2996,7 @@
                 "description": "Child of parent",
                 "first_issuance_block_index": 310498,
                 "last_issuance_block_index": 310498,
+                "confirmed": true,
                 "first_issuance_block_time": 310498000,
                 "last_issuance_block_time": 310498000,
                 "supply_normalized": "1.00000000"
@@ -3012,6 +3013,7 @@
                 "description": "Parent asset",
                 "first_issuance_block_index": 310497,
                 "last_issuance_block_index": 310497,
+                "confirmed": true,
                 "first_issuance_block_time": 310497000,
                 "last_issuance_block_time": 310497000,
                 "supply_normalized": "1.00000000"
@@ -3028,6 +3030,7 @@
                 "description": "Maximum quantity",
                 "first_issuance_block_index": 310016,
                 "last_issuance_block_index": 310016,
+                "confirmed": true,
                 "first_issuance_block_time": 310016000,
                 "last_issuance_block_time": 310016000,
                 "supply_normalized": "92233720000.00000000"
@@ -3044,6 +3047,7 @@
                 "description": "Locked asset",
                 "first_issuance_block_index": 310004,
                 "last_issuance_block_index": 310005,
+                "confirmed": true,
                 "first_issuance_block_time": 310004000,
                 "last_issuance_block_time": 310005000,
                 "supply_normalized": "0.00001000"
@@ -3060,6 +3064,7 @@
                 "description": "Callable asset",
                 "first_issuance_block_index": 310003,
                 "last_issuance_block_index": 310003,
+                "confirmed": true,
                 "first_issuance_block_time": 310003000,
                 "last_issuance_block_time": 310003000,
                 "supply_normalized": "0.00001000"
@@ -3076,6 +3081,7 @@
                 "description": "No divisible asset",
                 "first_issuance_block_index": 310002,
                 "last_issuance_block_index": 310002,
+                "confirmed": true,
                 "first_issuance_block_time": 310002000,
                 "last_issuance_block_time": 310002000,
                 "supply_normalized": "1000"
@@ -3092,6 +3098,7 @@
                 "description": "Divisible asset",
                 "first_issuance_block_index": 310001,
                 "last_issuance_block_index": 310001,
+                "confirmed": true,
                 "first_issuance_block_time": 310001000,
                 "last_issuance_block_time": 310001000,
                 "supply_normalized": "1000.00000000"
@@ -3670,6 +3677,7 @@
                 "description": "Child of parent",
                 "first_issuance_block_index": 310498,
                 "last_issuance_block_index": 310498,
+                "confirmed": true,
                 "first_issuance_block_time": 310498000,
                 "last_issuance_block_time": 310498000,
                 "supply_normalized": "1.00000000"
@@ -3686,6 +3694,7 @@
                 "description": "Parent asset",
                 "first_issuance_block_index": 310497,
                 "last_issuance_block_index": 310497,
+                "confirmed": true,
                 "first_issuance_block_time": 310497000,
                 "last_issuance_block_time": 310497000,
                 "supply_normalized": "1.00000000"
@@ -3702,6 +3711,7 @@
                 "description": "",
                 "first_issuance_block_index": 310494,
                 "last_issuance_block_index": 310494,
+                "confirmed": true,
                 "first_issuance_block_time": 310494000,
                 "last_issuance_block_time": 310494000,
                 "supply_normalized": "0.00000100"
@@ -3718,6 +3728,7 @@
                 "description": "changed",
                 "first_issuance_block_index": 310113,
                 "last_issuance_block_index": 310115,
+                "confirmed": true,
                 "first_issuance_block_time": 310113000,
                 "last_issuance_block_time": 310115000,
                 "supply_normalized": "0.00001000"
@@ -3734,6 +3745,7 @@
                 "description": "PSH issued asset",
                 "first_issuance_block_index": 310109,
                 "last_issuance_block_index": 310109,
+                "confirmed": true,
                 "first_issuance_block_time": 310109000,
                 "last_issuance_block_time": 310109000,
                 "supply_normalized": "1000"
@@ -3750,6 +3762,7 @@
                 "description": "Maximum quantity",
                 "first_issuance_block_index": 310016,
                 "last_issuance_block_index": 310016,
+                "confirmed": true,
                 "first_issuance_block_time": 310016000,
                 "last_issuance_block_time": 310016000,
                 "supply_normalized": "92233720000.00000000"
@@ -3766,6 +3779,7 @@
                 "description": "Locked asset",
                 "first_issuance_block_index": 310004,
                 "last_issuance_block_index": 310005,
+                "confirmed": true,
                 "first_issuance_block_time": 310004000,
                 "last_issuance_block_time": 310005000,
                 "supply_normalized": "0.00001000"
@@ -3782,6 +3796,7 @@
                 "description": "Callable asset",
                 "first_issuance_block_index": 310003,
                 "last_issuance_block_index": 310003,
+                "confirmed": true,
                 "first_issuance_block_time": 310003000,
                 "last_issuance_block_time": 310003000,
                 "supply_normalized": "0.00001000"
@@ -3798,6 +3813,7 @@
                 "description": "No divisible asset",
                 "first_issuance_block_index": 310002,
                 "last_issuance_block_index": 310002,
+                "confirmed": true,
                 "first_issuance_block_time": 310002000,
                 "last_issuance_block_time": 310002000,
                 "supply_normalized": "1000"
@@ -3814,6 +3830,7 @@
                 "description": "Divisible asset",
                 "first_issuance_block_index": 310001,
                 "last_issuance_block_index": 310001,
+                "confirmed": true,
                 "first_issuance_block_time": 310001000,
                 "last_issuance_block_time": 310001000,
                 "supply_normalized": "1000.00000000"
@@ -3830,6 +3847,7 @@
                 "description": "The Counterparty protocol native currency",
                 "first_issuance_block_index": 0,
                 "last_issuance_block_index": 0,
+                "confirmed": true,
                 "supply_normalized": "6040.31850000"
             }
         ],
@@ -3849,6 +3867,7 @@
             "description": "No divisible asset",
             "first_issuance_block_index": 310002,
             "last_issuance_block_index": 310002,
+            "confirmed": true,
             "first_issuance_block_time": 310002000,
             "last_issuance_block_time": 310002000,
             "supply_normalized": "1000"
