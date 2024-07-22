@@ -157,9 +157,13 @@ def select_rows(
     if where_clause:
         where_clause_count = f"WHERE {where_clause} "
         if table not in no_block_index_tables:
-            where_clause_count += f"AND block_index < {last_block}"
+            where_clause_count += f"AND block_index < {last_block} "
+        elif table == "assets_info" and not include_unconfirmed:
+            where_clause_count += "AND confirmed = 1 "
     elif table not in no_block_index_tables:
         where_clause_count = f"WHERE block_index < {last_block}"
+    elif table == "assets_info" and not include_unconfirmed:
+        where_clause_count += "AND confirmed = 1"
     else:
         where_clause_count = ""
     bindings_count = list(bindings)
@@ -176,9 +180,13 @@ def select_rows(
     if where_clause:
         where_clause = f"WHERE {where_clause} "
         if table not in no_block_index_tables:
-            where_clause += f"AND block_index < {last_block}"
+            where_clause += f"AND block_index < {last_block} "
+        elif table == "assets_info" and not include_unconfirmed:
+            where_clause += "AND confirmed = 1 "
     elif table not in no_block_index_tables:
-        where_clause = f"WHERE block_index < {last_block}"
+        where_clause = f"WHERE block_index < {last_block} "
+    elif table == "assets_info" and not include_unconfirmed:
+        where_clause += "AND confirmed = 1"
     else:
         where_clause = ""
 
@@ -192,6 +200,8 @@ def select_rows(
         select = f"{select}, {cursor_field} AS {cursor_field}"
     if table not in no_block_index_tables:
         select = f"{select}, CASE WHEN block_index = {config.MEMPOOL_BLOCK_INDEX} THEN FALSE ELSE TRUE END AS confirmed"
+    elif table == "assets_info" and "confirmed" not in select:
+        select = f"{select}, confirmed"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
     query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
