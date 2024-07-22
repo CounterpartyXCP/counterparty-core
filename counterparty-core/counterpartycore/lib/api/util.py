@@ -243,7 +243,7 @@ def prepare_route_args(function):
         )
         args.append(
             {
-                "name": "unconfirmed",
+                "name": "show_unconfirmed",
                 "type": "bool",
                 "default": "false",
                 "description": "Include results from Mempool.",

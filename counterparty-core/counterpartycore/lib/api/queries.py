@@ -141,7 +141,7 @@ def select_rows(
 
     last_block = config.MEMPOOL_BLOCK_INDEX
     include_unconfirmed = request is not None and request.args.get(
-        "unconfirmed", "false"
+        "show_unconfirmed", "false"
     ).lower() in ["true", "1"]
     if include_unconfirmed:
         last_block += 1

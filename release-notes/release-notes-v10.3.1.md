@@ -39,7 +39,7 @@
 * Add `return_psbt` argument for compose endpoints
 * Add `market_price` when getting orders or order matches by two assets
 * Make queries to get orders or order matches by two assets not case sensitive
-* Unconfirmed objects (`transactions`, `issuances`, `orders`, etc.) are accessible in the API with the parameter `?confirmed=true`.
+* Unconfirmed objects (`transactions`, `issuances`, `orders`, etc.) are accessible in the API with the parameter `?show_unconfirmed=true`.
 
 ## CLI
 
