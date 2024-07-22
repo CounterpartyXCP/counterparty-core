@@ -4939,11 +4939,6 @@
             "fee_paid_normalized": "0.02420000"
         }
     },
-    "/v2/dividends/<dividend_hash>/credits": {
-        "result": [],
-        "next_cursor": null,
-        "result_count": 0
-    },
     "/v2/events": {
         "result": [
             {
@@ -8611,5 +8606,106 @@
         ],
         "next_cursor": 17618356,
         "result_count": 1682
+    },
+    "/v2/dividends/<dividend_hash>/credits": {
+        "result": [
+            {
+                "block_index": 850533,
+                "address": "1Pg4L8Z7PYtL8Q8hvxY82DXxpjRprwhoTX",
+                "asset": "DANKMEMECASH",
+                "quantity": 140000000000,
+                "calling_function": "dividend",
+                "event": "54b424bf80622a879fdc76f83308b76b9279154d5f75da8c558fec16d04c9968",
+                "tx_index": 2738817,
+                "confirmed": true,
+                "block_time": 1720010482,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "This card is used to buy dank memes",
+                    "issuer": "1A62aP7McxBpuSsypGtbVoGqPj6N6rNMyT",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "1400.00000000"
+            },
+            {
+                "block_index": 850533,
+                "address": "1JTTehgnouTuxcPvD7WpJ5DUL9UzRdQ65s",
+                "asset": "DANKMEMECASH",
+                "quantity": 310000000000,
+                "calling_function": "dividend",
+                "event": "54b424bf80622a879fdc76f83308b76b9279154d5f75da8c558fec16d04c9968",
+                "tx_index": 2738817,
+                "confirmed": true,
+                "block_time": 1720010482,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "This card is used to buy dank memes",
+                    "issuer": "1A62aP7McxBpuSsypGtbVoGqPj6N6rNMyT",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "3100.00000000"
+            },
+            {
+                "block_index": 850533,
+                "address": "1BbDRx3UGLGDCwiPc26CAJyqjMbuyxxEi",
+                "asset": "DANKMEMECASH",
+                "quantity": 10000000000,
+                "calling_function": "dividend",
+                "event": "54b424bf80622a879fdc76f83308b76b9279154d5f75da8c558fec16d04c9968",
+                "tx_index": 2738817,
+                "confirmed": true,
+                "block_time": 1720010482,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "This card is used to buy dank memes",
+                    "issuer": "1A62aP7McxBpuSsypGtbVoGqPj6N6rNMyT",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "100.00000000"
+            },
+            {
+                "block_index": 850533,
+                "address": "14bu4678NSpw4GcJVsFbWbmze7qinTadz1",
+                "asset": "DANKMEMECASH",
+                "quantity": 90000000000,
+                "calling_function": "dividend",
+                "event": "54b424bf80622a879fdc76f83308b76b9279154d5f75da8c558fec16d04c9968",
+                "tx_index": 2738817,
+                "confirmed": true,
+                "block_time": 1720010482,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "This card is used to buy dank memes",
+                    "issuer": "1A62aP7McxBpuSsypGtbVoGqPj6N6rNMyT",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "900.00000000"
+            },
+            {
+                "block_index": 850533,
+                "address": "1KHMCFRVmePuo5sBW6UQNSPN8XUpfWvoeJ",
+                "asset": "DANKMEMECASH",
+                "quantity": 20000000000,
+                "calling_function": "dividend",
+                "event": "54b424bf80622a879fdc76f83308b76b9279154d5f75da8c558fec16d04c9968",
+                "tx_index": 2738817,
+                "confirmed": true,
+                "block_time": 1720010482,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "This card is used to buy dank memes",
+                    "issuer": "1A62aP7McxBpuSsypGtbVoGqPj6N6rNMyT",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "200.00000000"
+            }
+        ],
+        "next_cursor": 3684021,
+        "result_count": 784
     }
 }

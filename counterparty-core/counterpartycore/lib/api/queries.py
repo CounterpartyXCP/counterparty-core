@@ -1933,7 +1933,7 @@ def get_dividend_disribution(
 ):
     """
     Returns a dividend distribution by its hash
-    :param str dividend_hash: The hash of the dividend distribution to return (e.g. 9b7b9
+    :param str dividend_hash: The hash of the dividend distribution to return (e.g. 54b424bf80622a879fdc76f83308b76b9279154d5f75da8c558fec16d04c9968)
     :param int cursor: The last index of the credit to return
     :param int limit: The maximum number of credit to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
