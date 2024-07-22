@@ -89,7 +89,7 @@ def check_server_health(db, check_type: str = "light"):
     return {"status": "Healthy"}
 
 
-def remove_rowids(query_result):
+def clean_rowids_and_confirmed_fields(query_result):
     """Remove the rowid field from the query result."""
     if isinstance(query_result, list):
         filtered_results = []
@@ -98,6 +98,12 @@ def remove_rowids(query_result):
                 del row["rowid"]
             if "MAX(rowid)" in row:
                 del row["MAX(rowid)"]
+            if "confirmed" in row:
+                row["confirmed"] = bool(row["confirmed"])
+            if "block_index" in row and row["block_index"] in [0, config.MEMPOOL_BLOCK_INDEX]:
+                row["block_index"] = None
+                if "tx_index" in row:
+                    row["tx_index"] = None
             filtered_results.append(row)
         return filtered_results
     if isinstance(query_result, dict):
@@ -106,6 +112,15 @@ def remove_rowids(query_result):
             del filtered_results["rowid"]
         if "MAX(rowid)" in filtered_results:
             del filtered_results["MAX(rowid)"]
+        if "confirmed" in filtered_results:
+            filtered_results["confirmed"] = bool(filtered_results["confirmed"])
+        if "block_index" in filtered_results and filtered_results["block_index"] in [
+            0,
+            config.MEMPOOL_BLOCK_INDEX,
+        ]:
+            filtered_results["block_index"] = None
+            if "tx_index" in filtered_results:
+                filtered_results["tx_index"] = None
         return filtered_results
     return query_result
 
@@ -226,6 +241,15 @@ def prepare_route_args(function):
                 "required": False,
             }
         )
+        args.append(
+            {
+                "name": "show_unconfirmed",
+                "type": "bool",
+                "default": "false",
+                "description": "Include results from Mempool.",
+                "required": False,
+            }
+        )
     return args
 
 
@@ -282,16 +306,25 @@ def inject_issuances_and_block_times(db, result_list):
             "first_issuance_block_index",
             "last_issuance_block_index",
         ]:
-            if field_name in result_item:
+            if field_name in result_item and result_item[field_name]:
                 result_item[field_name] = int(result_item[field_name])
-            if "params" in result_item and field_name in result_item["params"]:
+            if (
+                "params" in result_item
+                and field_name in result_item["params"]
+                and result_item["params"][field_name]
+            ):
                 result_item["params"][field_name] = int(result_item["params"][field_name])
-            if field_name in result_item and result_item[field_name] not in block_indexes:
+            if (
+                field_name in result_item
+                and result_item[field_name] not in block_indexes
+                and result_item[field_name]
+            ):
                 block_indexes.append(result_item[field_name])
             if (
                 "params" in result_item
                 and field_name in result_item["params"]
                 and result_item["params"][field_name] not in block_indexes
+                and result_item["params"][field_name]
             ):
                 block_indexes.append(result_item["params"][field_name])
 
@@ -329,11 +362,15 @@ def inject_issuances_and_block_times(db, result_list):
             "last_issuance_block_index",
         ]:
             field_name_time = field_name.replace("index", "time")
-            if field_name in item and item[field_name] in [0, config.MEMPOOL_BLOCK_INDEX]:
+            if field_name in item and item[field_name] in [0, config.MEMPOOL_BLOCK_INDEX, None]:
                 continue
-            if field_name in item:
+            if field_name in item and item[field_name] in block_times:
                 item[field_name_time] = block_times[item[field_name]]
-            if "params" in item and field_name in item["params"]:
+            if (
+                "params" in item
+                and field_name in item["params"]
+                and item["params"][field_name] in block_times
+            ):
                 if item["params"][field_name] in [0, config.MEMPOOL_BLOCK_INDEX]:
                     continue
                 item["params"][field_name_time] = block_times[item["params"][field_name]]

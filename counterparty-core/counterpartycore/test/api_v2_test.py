@@ -223,6 +223,7 @@ def test_new_get_asset_info():
         "asset_id": "1911882621324134",
         "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "supply": 1000,
+        "confirmed": True,
     }
 
 
@@ -250,6 +251,7 @@ def test_new_get_asset_orders():
         "fee_provided": 1000000,
         "fee_provided_remaining": 992800,
         "status": "open",
+        "confirmed": True,
     }
 
 
@@ -276,6 +278,7 @@ def test_new_get_order_info():
         "fee_provided": 6800,
         "fee_provided_remaining": 6800,
         "status": "open",
+        "confirmed": True,
     }
 
 
@@ -304,4 +307,5 @@ def test_new_get_order_matches():
         "match_expire_index": 310512,
         "fee_paid": 7200,
         "status": "pending",
+        "confirmed": True,
     }

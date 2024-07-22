@@ -1028,8 +1028,8 @@ def get_block_by_hash(db, block_hash: str):
 
 def get_last_block(db):
     cursor = db.cursor()
-    query = "SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1"
-    cursor.execute(query)
+    query = "SELECT * FROM blocks WHERE block_index != ? ORDER BY block_index DESC LIMIT 1"
+    cursor.execute(query, (config.MEMPOOL_BLOCK_INDEX,))
     block = cursor.fetchone()
     return block
 

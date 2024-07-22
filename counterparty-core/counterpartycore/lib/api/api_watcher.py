@@ -2,10 +2,11 @@ import json
 import logging
 import os
 import time
+from random import randrange
 from threading import Thread
 
 import apsw
-from counterpartycore.lib import config, database, exceptions, ledger
+from counterpartycore.lib import blocks, config, database, exceptions, ledger
 from counterpartycore.lib.api import util
 from counterpartycore.lib.util import format_duration
 from yoyo import get_backend, read_migrations
@@ -18,7 +19,7 @@ MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "migrations")
 
 UPDATE_EVENTS_ID_FIELDS = {
     "BLOCK_PARSED": ["block_index"],
-    "TRANSACTION_PARSED": ["tx_index"],
+    "TRANSACTION_PARSED": ["tx_hash"],
     "BET_MATCH_UPDATE": ["id"],
     "BET_UPDATE": ["tx_hash"],
     "DISPENSER_UPDATE": ["tx_hash"],
@@ -82,6 +83,8 @@ EVENTS_ADDRESS_FIELDS = {
     "BURN": ["source"],
 }
 
+SKIP_EVENTS = ["NEW_TRANSACTION_OUTPUT"]
+
 
 def fetch_all(db, query, bindings=None):
     cursor = db.cursor()
@@ -136,6 +139,7 @@ def get_event_bindings(event):
 
 def insert_event_to_sql(event):
     event_bindings = get_event_bindings(event)
+    event_bindings["block_index"] = event["block_index"]
     sql_bindings = []
     sql = f"INSERT INTO {event['category']} "
     names = []
@@ -148,10 +152,14 @@ def insert_event_to_sql(event):
 
 def update_event_to_sql(event):
     event_bindings = get_event_bindings(event)
-    sql_bindings = []
+    event_bindings["block_index"] = event["block_index"]
+
+    if event_bindings["block_index"] == config.MEMPOOL_BLOCK_INDEX:
+        return None, []
 
     id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
 
+    sql_bindings = []
     sets = []
     for key, value in event_bindings.items():
         if key in id_field_names:
@@ -161,9 +169,11 @@ def update_event_to_sql(event):
     sets_clause = ", ".join(sets)
 
     where = []
+    where_bindings = []
     for id_field_name in id_field_names:
         where.append(f"{id_field_name} = ?")
         sql_bindings.append(event_bindings[id_field_name])
+        where_bindings.append(event_bindings[id_field_name])
     where_clause = " AND ".join(where)
 
     sql = f"UPDATE {event['category']} SET {sets_clause} WHERE {where_clause}"  # noqa: S608
@@ -212,7 +222,11 @@ def insert_event(api_db, event):
 
 def rollback_event(api_db, event):
     logger.debug(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
-    with api_db:  # all or nothing
+    with api_db:  # all or
+        if event["event"] in SKIP_EVENTS:
+            sql = "DELETE FROM messages WHERE message_index = ?"
+            delete_all(api_db, sql, (event["message_index"],))
+            return
         if event["previous_state"] is None or event["previous_state"] == "null":
             sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
             deleted = delete_all(api_db, sql, (event["insert_rowid"],))
@@ -347,12 +361,14 @@ def update_assets_info(api_db, event):
         return
     event_bindings = json.loads(event["bindings"])
 
+    event_bindings["confirmed"] = event["block_index"] != config.MEMPOOL_BLOCK_INDEX
+
     if event["event"] == "ASSET_CREATION":
         sql = """
             INSERT OR REPLACE INTO assets_info 
-                (asset, asset_id, asset_longname, first_issuance_block_index) 
+                (asset, asset_id, asset_longname, first_issuance_block_index, confirmed) 
             VALUES 
-                (:asset_name, :asset_id, :asset_longname, :block_index)
+                (:asset_name, :asset_id, :asset_longname, :block_index, :confirmed)
             """
         cursor = api_db.cursor()
         cursor.execute(sql, event_bindings)
@@ -367,6 +383,8 @@ def update_assets_info(api_db, event):
             "SELECT * FROM assets_info WHERE asset = :asset",
             {"asset": event_bindings["asset"]},
         )
+        if existing_asset is not None and not event_bindings["confirmed"]:
+            return
         set_data = []
         set_data.append("divisible = :divisible")
         set_data.append("description = :description")
@@ -374,6 +392,7 @@ def update_assets_info(api_db, event):
         set_data.append("supply = supply + :quantity")
         set_data.append("last_issuance_block_index = :block_index")
         set_data.append("asset_longname = :asset_longname")
+        set_data.append("confirmed = :confirmed")
         if event_bindings["locked"]:
             set_data.append("locked = :locked")
         if not existing_asset["issuer"]:  # first issuance
@@ -385,9 +404,12 @@ def update_assets_info(api_db, event):
         cursor.execute(sql, event_bindings)
         return
 
+    if not event_bindings["confirmed"]:
+        return
+
     if event["event"] == "ASSET_DESTRUCTION":
         sql = """
-            UPDATE assets_info 
+            UPDATE assets_info
             SET supply = supply - :quantity
             WHERE asset = :asset
             """
@@ -556,13 +578,19 @@ def rollback_address_events(api_db, event):
     if event["event"] not in EVENTS_ADDRESS_FIELDS:
         return
     cursor = api_db.cursor()
-    sql = "DELETE FROM address_events WHERE address = event_index = :message_index"
+    sql = "DELETE FROM address_events WHERE event_index = :message_index"
     cursor.execute(sql, event)
 
 
-def parse_event(api_db, event):
+def parse_event(api_db, event, catching_up=False):
+    if event["event"] in SKIP_EVENTS:
+        event["insert_rowid"] = None
+        insert_event(api_db, event)
+        return
     with api_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
+        if event["event"] == "NEW_BLOCK" and not catching_up:
+            clean_mempool(api_db)
         event["insert_rowid"] = execute_event(api_db, event)
         update_balances(api_db, event)
         update_expiration(api_db, event)
@@ -571,10 +599,13 @@ def parse_event(api_db, event):
         update_address_events(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
+        if event["event"] == "BLOCK_PARSED" and not catching_up:
+            synchronize_mempool(api_db, api_db)
 
 
 def catch_up(api_db, ledger_db, watcher):
     check_event_hashes(api_db, ledger_db)
+    clean_mempool(api_db)
     event_to_parse_count = get_event_to_parse_count(api_db, ledger_db)
     if event_to_parse_count > 0:
         logger.debug(f"API Watcher - {event_to_parse_count} events to catch up...")
@@ -582,7 +613,7 @@ def catch_up(api_db, ledger_db, watcher):
         event_parsed = 0
         next_event = get_next_event_to_parse(api_db, ledger_db)
         while next_event and not watcher.stopping and not watcher.stopped:
-            parse_event(api_db, next_event)
+            parse_event(api_db, next_event, catching_up=True)
             event_parsed += 1
             if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
@@ -593,6 +624,7 @@ def catch_up(api_db, ledger_db, watcher):
         if not watcher.stopping and not watcher.stopped:
             duration = time.time() - start_time
             logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
+    synchronize_mempool(api_db, api_db)
 
 
 def apply_migration():
@@ -667,18 +699,41 @@ def parse_next_event(api_db, ledger_db):
     raise exceptions.NoEventToParse("No event to parse")
 
 
+def clean_mempool(api_db):
+    delete_all(api_db, "DELETE FROM mempool")
+    for table in blocks.TABLES + ["transactions"]:
+        delete_all(
+            api_db,
+            f"DELETE FROM {table} WHERE block_index = ?",  # noqa: S608
+            (config.MEMPOOL_BLOCK_INDEX,),
+        )
+    delete_all(api_db, "DELETE FROM assets_info WHERE confirmed = ?", (False,))
+
+
+def gen_random_tx_index(event):
+    event_bindings = json.loads(event["bindings"])
+    if "tx_index" in event_bindings:
+        event_bindings["tx_index"] = event_bindings["tx_index"] * 1000 + randrange(  # noqa: S311
+            99999999
+        )
+        event["bindings"] = json.dumps(event_bindings)
+    return event
+
+
 def synchronize_mempool(api_db, ledger_db):
     logger.trace("API Watcher - Synchronizing mempool...")
     try:
         mempool_events = fetch_all(ledger_db, "SELECT * FROM mempool")
         sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event, timestamp, addresses) VALUES (?, ?, ?, ?, ?, ?, ?)"""
         with api_db:
-            delete_all(api_db, "DELETE FROM mempool")
+            clean_mempool(api_db)
             cursor = api_db.cursor()
             for event in mempool_events:
+                if event["event"] in SKIP_EVENTS + ["NEW_BLOCK", "BLOCK_PARSED"]:
+                    continue
                 addresses = []
+                event_bindings = json.loads(event["bindings"])
                 if event["event"] in EVENTS_ADDRESS_FIELDS:
-                    event_bindings = json.loads(event["bindings"])
                     for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
                         if field in event_bindings and event_bindings[field] is not None:
                             addresses.append(event_bindings[field])
@@ -695,6 +750,24 @@ def synchronize_mempool(api_db, ledger_db):
                     addresses,
                 ]
                 cursor.execute(sql_insert, bindings)
+                event["block_index"] = config.MEMPOOL_BLOCK_INDEX
+                event = gen_random_tx_index(event)  # noqa: PLW2901
+                try:
+                    execute_event(api_db, event)
+                    update_assets_info(api_db, event)
+                except apsw.ConstraintError as e:
+                    if "UNIQUE constraint failed: transactions.tx_index" in str(e):
+                        event = gen_random_tx_index(event)  # noqa: PLW2901
+                        execute_event(api_db, event)
+                        update_assets_info(api_db, event)
+                    elif "UNIQUE constraint failed: assets.asset_name" in str(e):
+                        pass  # edge case: asset alredy created in another confirmed tx
+                    else:
+                        raise e
+                except Exception as e:
+                    logger.error(f"API Watcher - Error executing mempool event: {e}")
+                    raise e
+
             if len(mempool_events) > 0:
                 logger.debug("API Watcher - %s mempool events synchronized", len(mempool_events))
     except apsw.SQLError:
@@ -717,6 +790,8 @@ class APIWatcher(Thread):
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )
+        # Temporarily disable foreign keys for mempool transactions
+        self.api_db.execute("PRAGMA foreign_keys=OFF")
         # Create XCP and BTC assets if they don't exist
         cursor = self.api_db.cursor()
         cursor.execute("""SELECT * FROM assets WHERE asset_name = ?""", ("BTC",))
@@ -744,6 +819,7 @@ class APIWatcher(Thread):
                     "last_issuance_block_index": 0,
                 },
             )
+
         cursor.close()
         self.last_mempool_sync = 0
 
@@ -751,18 +827,17 @@ class APIWatcher(Thread):
         while not self.stopping and not self.stopped:
             try:
                 parse_next_event(self.api_db, self.ledger_db)
-                if time.time() - self.last_mempool_sync > 10:
-                    synchronize_mempool(self.api_db, self.ledger_db)
-                    self.last_mempool_sync = time.time()
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
                 time.sleep(1)
+            if time.time() - self.last_mempool_sync > 10:
+                synchronize_mempool(self.api_db, self.ledger_db)
+                self.last_mempool_sync = time.time()
         self.stopped = True
 
     def run(self):
         logger.info("Starting API Watcher...")
         self.stopped = False
-        synchronize_mempool(self.api_db, self.ledger_db)
         catch_up(self.api_db, self.ledger_db, self)
         self.follow()
 

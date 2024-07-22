@@ -2,7 +2,9 @@ import json
 import typing
 from typing import Literal
 
+from counterpartycore.lib import config
 from counterpartycore.lib.api.util import divide
+from flask import request
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
@@ -137,8 +139,31 @@ def select_rows(
     if or_where:
         where_clause = " OR ".join(or_where)
 
+    last_block = config.MEMPOOL_BLOCK_INDEX
+    include_unconfirmed = request is not None and request.args.get(
+        "show_unconfirmed", "false"
+    ).lower() in ["true", "1"]
+    if include_unconfirmed:
+        last_block += 1
+
+    no_block_index_tables = [
+        "mempool",
+        "assets_info",
+        "balances",
+        "address_events",
+        "asset_holders",
+    ]
+
     if where_clause:
-        where_clause_count = f"WHERE {where_clause}"
+        where_clause_count = f"WHERE {where_clause} "
+        if table not in no_block_index_tables:
+            where_clause_count += f"AND block_index < {last_block} "
+        elif table == "assets_info" and not include_unconfirmed:
+            where_clause_count += "AND confirmed = 1 "
+    elif table not in no_block_index_tables:
+        where_clause_count = f"WHERE block_index < {last_block}"
+    elif table == "assets_info" and not include_unconfirmed:
+        where_clause_count = "WHERE confirmed = 1"
     else:
         where_clause_count = ""
     bindings_count = list(bindings)
@@ -153,7 +178,17 @@ def select_rows(
         bindings.append(last_cursor)
 
     if where_clause:
-        where_clause = f"WHERE {where_clause}"
+        where_clause = f"WHERE {where_clause} "
+        if table not in no_block_index_tables:
+            where_clause += f"AND block_index < {last_block} "
+        elif table == "assets_info" and not include_unconfirmed:
+            where_clause += "AND confirmed = 1 "
+    elif table not in no_block_index_tables:
+        where_clause = f"WHERE block_index < {last_block} "
+    elif table == "assets_info" and not include_unconfirmed:
+        where_clause = "WHERE confirmed = 1"
+    else:
+        where_clause = ""
 
     group_by_clause = ""
     if group_by:
@@ -163,6 +198,10 @@ def select_rows(
         select = f"*, {cursor_field} AS {cursor_field}"
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
+    if table not in no_block_index_tables:
+        select = f"{select}, CASE WHEN block_index = {config.MEMPOOL_BLOCK_INDEX} THEN FALSE ELSE TRUE END AS confirmed"
+    elif table == "assets_info" and "confirmed" not in select:
+        select = f"{select}, confirmed"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
     query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
@@ -373,7 +412,7 @@ def get_all_events(
 ):
     """
     Returns all events
-    :param str event_name: Comma separated list of events to return (e.g. CREDIT,DEBIT)
+    :param str event_name: Comma separated list of events to return
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -590,7 +629,7 @@ def get_events_by_addresses(
     """
     Returns the events of a list of addresses
     :param str addresses: Comma separated list of addresses to return (e.g. 1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V,bc1q5mqesdy0gaj0suzxg4jx7ycmpw66kygdyn80mg)
-    :param int cursor: The last event index to return
+    :param int cursor: The last event index to return (e.g. 17629293)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1404,26 +1443,27 @@ def get_balances_by_addresses(
     ).result
 
     result = []
-    current_balances = {
-        "asset": balances[0]["asset"],
-        "total": 0,
-        "addresses": [],
-    }
-    for balance in balances:
-        if balance["asset"] != current_balances["asset"]:
-            result.append(current_balances)
-            current_balances = {
-                "asset": balance["asset"],
-                "total": 0,
-                "addresses": [],
-            }
-        current_balances["total"] += balance["quantity"]
-        current_balances["addresses"].append(
-            {
-                "address": balance["address"],
-                "quantity": balance["quantity"],
-            }
-        )
+    if len(balances) > 0:
+        current_balances = {
+            "asset": balances[0]["asset"],
+            "total": 0,
+            "addresses": [],
+        }
+        for balance in balances:
+            if balance["asset"] != current_balances["asset"]:
+                result.append(current_balances)
+                current_balances = {
+                    "asset": balance["asset"],
+                    "total": 0,
+                    "addresses": [],
+                }
+            current_balances["total"] += balance["quantity"]
+            current_balances["addresses"].append(
+                {
+                    "address": balance["address"],
+                    "quantity": balance["quantity"],
+                }
+            )
 
     return QueryResult(result, assets_result.next_cursor, assets_result.result_count)
 
@@ -1903,7 +1943,7 @@ def get_dividend_disribution(
 ):
     """
     Returns a dividend distribution by its hash
-    :param str dividend_hash: The hash of the dividend distribution to return (e.g. 9b7b9
+    :param str dividend_hash: The hash of the dividend distribution to return (e.g. 54b424bf80622a879fdc76f83308b76b9279154d5f75da8c558fec16d04c9968)
     :param int cursor: The last index of the credit to return
     :param int limit: The maximum number of credit to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)

@@ -49,9 +49,10 @@ def test_api_database():
     ledger_orders = ledger_db.execute(
         "SELECT *, MAX(rowid) FROM orders GROUP BY tx_hash ORDER BY tx_hash"
     ).fetchall()
-    api_orders = api_db.execute("SELECT * FROM orders ORDER BY tx_hash").fetchall()
-    assert len(ledger_orders) == len(api_orders)
-    for ledger_order, api_order in zip(ledger_orders, api_orders):
+    for ledger_order in ledger_orders:
+        api_order = api_db.execute(
+            "SELECT * FROM orders WHERE tx_hash = ?", (ledger_order["tx_hash"],)
+        ).fetchone()
         assert ledger_order["status"] == api_order["status"]
         assert ledger_order["give_asset"] == api_order["give_asset"]
         assert ledger_order["get_asset"] == api_order["get_asset"]

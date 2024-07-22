@@ -871,6 +871,7 @@ def create_views(db):
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
     assert type(tx_hash) == str  # noqa: E721
+    util.CURRENT_TX_HASH = tx_hash
     cursor = db.cursor()
 
     source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
@@ -917,7 +918,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
         return tx_index + 1
     else:
         pass
-
+    util.CURRENT_TX_HASH = None
     return tx_index
 
 

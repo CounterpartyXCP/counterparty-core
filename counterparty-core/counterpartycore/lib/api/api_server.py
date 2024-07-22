@@ -22,11 +22,11 @@ from counterpartycore.lib import (
 from counterpartycore.lib.api import api_watcher, queries
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
+    clean_rowids_and_confirmed_fields,
     function_needs_db,
     get_backend_height,
     init_api_access_log,
     inject_details,
-    remove_rowids,
     to_json,
 )
 from counterpartycore.lib.database import APIDBConnectionPool, get_db_connection
@@ -183,7 +183,7 @@ def prepare_args(route, **kwargs):
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
-        if arg_name == "verbose":
+        if arg_name in ["verbose", "show_unconfirmed"]:
             continue
         if arg_name in function_args:
             continue
@@ -322,7 +322,8 @@ def handle_route(**kwargs):
         logger.error("Error in API: %s", e)
         import traceback
 
-        traceback.print_exc()
+        print(traceback.format_exc())
+        # traceback.print_exc()
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )
@@ -341,7 +342,7 @@ def handle_route(**kwargs):
         result_count = result.result_count
         result = result.result
 
-    result = remove_rowids(result)
+    result = clean_rowids_and_confirmed_fields(result)
 
     # inject details
     verbose = request.args.get("verbose", "False")
@@ -400,11 +401,11 @@ def run_api_server(args, interruped_value, server_ready_value):
         app.register_error_handler(404, handle_not_found)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
-        timer_db = None
+        timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
-            timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
             refresh_backend_height(timer_db, start=True)
         else:
+            refresh_current_block(timer_db)
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
     try:

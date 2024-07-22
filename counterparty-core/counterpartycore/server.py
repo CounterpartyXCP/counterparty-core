@@ -64,6 +64,7 @@ def initialise(*args, **kwargs):
         testcoin=kwargs.get("testcoin", False),
         regtest=kwargs.get("regtest", False),
         action=kwargs.get("action", None),
+        json_logs=kwargs.get("json_logs", False),
     )
     initialise_config(*args, **kwargs)
     return database.initialise_db()
@@ -79,6 +80,7 @@ def initialise_log_config(
     testcoin=False,
     regtest=False,
     action=None,
+    json_logs=False,
 ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -125,6 +127,7 @@ def initialise_log_config(
         config.API_LOG = api_log_file
 
     config.LOG_IN_CONSOLE = action == "start" or config.VERBOSE > 0
+    config.JSON_LOGS = json_logs
 
 
 def initialise_config(
@@ -641,6 +644,7 @@ def initialise_log_and_config(args):
         testcoin=args.testcoin,
         regtest=args.regtest,
         action=args.action,
+        json_logs=args.json_logs,
     )
 
     # set up logging
@@ -648,6 +652,7 @@ def initialise_log_and_config(args):
         verbose=config.VERBOSE,
         quiet=config.QUIET,
         log_file=config.LOG,
+        json_logs=config.JSON_LOGS,
     )
     initialise_config(**init_args)
 
