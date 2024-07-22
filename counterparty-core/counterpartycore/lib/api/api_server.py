@@ -183,7 +183,7 @@ def prepare_args(route, **kwargs):
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
-        if arg_name in ["verbose", "unconfirmed"]:
+        if arg_name in ["verbose", "show_unconfirmed"]:
             continue
         if arg_name in function_args:
             continue
