@@ -301,6 +301,14 @@ CONFIG_ARGS = [
             "help": "size of the database connection pool",
         },
     ],
+    [
+        ("--json-logs",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "show logs in JSON format",
+        },
+    ],
 ]
 
 
