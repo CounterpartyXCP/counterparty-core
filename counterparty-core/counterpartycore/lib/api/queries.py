@@ -402,7 +402,7 @@ def get_all_events(
 ):
     """
     Returns all events
-    :param str event_name: Comma separated list of events to return (e.g. CREDIT,DEBIT)
+    :param str event_name: Comma separated list of events to return
     :param int cursor: The last event index to return (e.g. 10665092)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
