@@ -43,6 +43,7 @@
 
 ## CLI
 
+* Add `--json-logs` flag to show logs in JSON format
 
 # Credits
 

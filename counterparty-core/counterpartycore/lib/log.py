@@ -83,7 +83,7 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def set_up(verbose=0, quiet=True, log_file=None):
+def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
     logging.Logger.trace = trace
     logging.Logger.event = event
 
@@ -120,7 +120,10 @@ def set_up(verbose=0, quiet=True, log_file=None):
     if config.LOG_IN_CONSOLE:
         console = logging.StreamHandler()
         console.setLevel(log_level)
-        console.setFormatter(CustomFormatter())
+        if json_logs:
+            console.setFormatter(VerboseJSONFormatter())
+        else:
+            console.setFormatter(CustomFormatter())
         logger.addHandler(console)
 
     # Log unhandled errors.
