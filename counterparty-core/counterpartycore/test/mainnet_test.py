@@ -13,7 +13,9 @@ LOCAL_API_URL = "http://localhost:4000"
 # [server_url, api_version, server_version]
 CHECK_SERVERS = [
     ["http://rpc:rpc@api1.counterparty.io:4000", "v1", "v9.61.1"],
-    # ["http://rpc:rpc@api3.counterparty.io:4000", "v1", "v10.1.1"],
+    ["https://api.counterparty.io:4000", "v2", "v10.3.0"],
+    ["https://dev.counterparty.io:4000", "v2", "v10.3.0-rc.1"],
+    ["https://api.counterparty.info", "v2", "v10.3.0"],
 ]
 
 
