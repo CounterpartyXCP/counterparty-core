@@ -2737,6 +2737,11 @@
             "last_status_tx_source": null,
             "close_block_index": null,
             "confirmed": true,
+            "fiat_price": null,
+            "oracle_price": null,
+            "fiat_unit": null,
+            "oracle_price_last_updated": null,
+            "satoshi_price": 100,
             "block_time": 310107000,
             "asset_info": {
                 "divisible": true,
@@ -2748,7 +2753,8 @@
             "give_quantity_normalized": "0.00000100",
             "give_remaining_normalized": "0.00000100",
             "escrow_quantity_normalized": "0.00000100",
-            "satoshirate_normalized": "0.00000100"
+            "satoshirate_normalized": "0.00000100",
+            "satoshi_price_normalized": "0.00000100"
         }
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends?verbose=true": {
@@ -4160,6 +4166,11 @@
             "last_status_tx_source": null,
             "close_block_index": null,
             "confirmed": true,
+            "fiat_price": null,
+            "oracle_price": null,
+            "fiat_unit": null,
+            "oracle_price_last_updated": null,
+            "satoshi_price": 100,
             "block_time": 310107000,
             "asset_info": {
                 "divisible": true,
@@ -4171,7 +4182,8 @@
             "give_quantity_normalized": "0.00000100",
             "give_remaining_normalized": "0.00000100",
             "escrow_quantity_normalized": "0.00000100",
-            "satoshirate_normalized": "0.00000100"
+            "satoshirate_normalized": "0.00000100",
+            "satoshi_price_normalized": "0.00000100"
         }
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/holders?verbose=true": {
@@ -4861,6 +4873,11 @@
                 "last_status_tx_source": null,
                 "close_block_index": null,
                 "confirmed": true,
+                "fiat_price": null,
+                "oracle_price": null,
+                "fiat_unit": null,
+                "oracle_price_last_updated": null,
+                "satoshi_price": 100,
                 "block_time": 310107000,
                 "asset_info": {
                     "divisible": true,
@@ -4872,7 +4889,8 @@
                 "give_quantity_normalized": "0.00000100",
                 "give_remaining_normalized": "0.00000100",
                 "escrow_quantity_normalized": "0.00000100",
-                "satoshirate_normalized": "0.00000100"
+                "satoshirate_normalized": "0.00000100",
+                "satoshi_price_normalized": "0.00000100"
             }
         ],
         "next_cursor": null,
@@ -4897,6 +4915,11 @@
             "last_status_tx_source": null,
             "close_block_index": null,
             "confirmed": true,
+            "fiat_price": null,
+            "oracle_price": null,
+            "fiat_unit": null,
+            "oracle_price_last_updated": null,
+            "satoshi_price": 100,
             "block_time": 310107000,
             "asset_info": {
                 "divisible": true,
@@ -4908,7 +4931,8 @@
             "give_quantity_normalized": "0.00000100",
             "give_remaining_normalized": "0.00000100",
             "escrow_quantity_normalized": "0.00000100",
-            "satoshirate_normalized": "0.00000100"
+            "satoshirate_normalized": "0.00000100",
+            "satoshi_price_normalized": "0.00000100"
         }
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec/dispenses?verbose=true": {
