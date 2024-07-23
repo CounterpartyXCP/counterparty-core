@@ -3,6 +3,7 @@ import decimal
 import inspect
 import json
 import logging
+import math
 import time
 import typing
 from logging import handlers as logging_handlers
@@ -425,6 +426,7 @@ def inject_normalized_quantities(result_list):
         "quantity_per_unit": {"asset_field": "dividend_asset_info", "divisible": None},
         "supply": {"asset_field": "asset_info", "divisible": None},
         "satoshirate": {"asset_field": None, "divisible": True},
+        "satoshi_price": {"asset_field": None, "divisible": True},
         "burned": {"asset_field": None, "divisible": True},
         "earned": {"asset_field": None, "divisible": True},
         "btc_amount": {"asset_field": None, "divisible": True},
@@ -591,6 +593,40 @@ def inject_normalized_quantities(result_list):
     return enriched_result_list
 
 
+def inject_fiat_price(db, dispenser):
+    if "satoshirate" not in dispenser:
+        return dispenser
+    if dispenser["oracle_address"] != None:  # noqa: E711
+        dispenser["fiat_price"] = util.satoshirate_to_fiat(dispenser["satoshirate"])
+        (
+            dispenser["oracle_price"],
+            _oracle_fee,
+            dispenser["fiat_unit"],
+            dispenser["oracle_price_last_updated"],
+        ) = ledger.get_oracle_last_price(db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX)
+
+        if dispenser["oracle_price"] > 0:
+            dispenser["satoshi_price"] = math.ceil(
+                (dispenser["fiat_price"] / dispenser["oracle_price"]) * config.UNIT
+            )
+        else:
+            raise exceptions.APIError("Last oracle price is zero")
+    else:
+        dispenser["fiat_price"] = None
+        dispenser["oracle_price"] = None
+        dispenser["fiat_unit"] = None
+        dispenser["oracle_price_last_updated"] = None
+        dispenser["satoshi_price"] = dispenser["satoshirate"]
+    return dispenser
+
+
+def inject_fiat_prices(db, result_list):
+    enriched_result_list = []
+    for result_item in result_list:
+        enriched_result_list.append(inject_fiat_price(db, result_item))
+    return enriched_result_list
+
+
 def inject_dispensers(db, result_list):
     # gather dispenser list
     dispenser_list = []
@@ -609,8 +645,11 @@ def inject_dispensers(db, result_list):
             "dispenser_tx_hash" in result_item
             and result_item["dispenser_tx_hash"] in dispenser_info
         ):
-            result_item["dispenser"] = dispenser_info[result_item["dispenser_tx_hash"]]
+            result_item["dispenser"] = inject_fiat_price(
+                db, dispenser_info[result_item["dispenser_tx_hash"]]
+            )
         enriched_result_list.append(result_item)
+
     return enriched_result_list
 
 
@@ -641,6 +680,7 @@ def inject_details(db, result, rule=None):
         result_is_dict = True
 
     result_list = inject_dispensers(db, result_list)
+    result_list = inject_fiat_prices(db, result_list)
     result_list = inject_unpacked_data(db, result_list)
     result_list = inject_issuances_and_block_times(db, result_list)
     result_list = inject_normalized_quantities(result_list)

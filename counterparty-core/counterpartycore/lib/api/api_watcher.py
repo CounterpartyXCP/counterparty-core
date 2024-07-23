@@ -731,8 +731,17 @@ def synchronize_mempool(api_db, ledger_db):
             for event in mempool_events:
                 if event["event"] in SKIP_EVENTS + ["NEW_BLOCK", "BLOCK_PARSED"]:
                     continue
-                addresses = []
                 event_bindings = json.loads(event["bindings"])
+                # edge case: asset alredy created in another confirmed tx
+                if event["event"] == "ASSET_CREATION":
+                    existing_asset = fetch_one(
+                        api_db,
+                        "SELECT * FROM assets WHERE asset_name = ?",
+                        (event_bindings["asset_name"],),
+                    )
+                    if existing_asset is not None:
+                        continue
+                addresses = []
                 if event["event"] in EVENTS_ADDRESS_FIELDS:
                     for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
                         if field in event_bindings and event_bindings[field] is not None:
@@ -760,8 +769,6 @@ def synchronize_mempool(api_db, ledger_db):
                         event = gen_random_tx_index(event)  # noqa: PLW2901
                         execute_event(api_db, event)
                         update_assets_info(api_db, event)
-                    elif "UNIQUE constraint failed: assets.asset_name" in str(e):
-                        pass  # edge case: asset alredy created in another confirmed tx
                     else:
                         raise e
                 except Exception as e:
