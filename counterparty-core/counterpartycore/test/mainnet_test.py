@@ -1,4 +1,5 @@
 import json
+import time
 
 import pytest
 import requests
@@ -13,7 +14,13 @@ LOCAL_API_URL = "http://localhost:4000"
 # [server_url, api_version, server_version]
 CHECK_SERVERS = [
     ["http://rpc:rpc@api1.counterparty.io:4000", "v1", "v9.61.1"],
-    # ["http://rpc:rpc@api3.counterparty.io:4000", "v1", "v10.1.1"],
+    ["https://api.counterparty.io:4000", "v2", "v10.3.0"],
+    ["https://dev.counterparty.io:4000", "v2", "v10.3.0-rc.1"],
+    ["https://api.counterparty.info", "v2", "v10.3.0"],
+    ["http://rpc:1234@public.coindaddy.io:4000", "v1", "v9.61.3"],
+    ["https://api.xcp.dev/v9_61/", "xcpdev", "v9.61.3"],
+    ["https://api.xcp.dev/v10_1/", "xcpdev", "v10.1.2.CNTRPRTY"],
+    ["https://memepool.wtf/api/", "wtf", "v10.2.0"],
 ]
 
 
@@ -37,6 +44,32 @@ def get_last_block_api_v2(api_url):
     return last_block_index, version
 
 
+def xcpdev_query(url):
+    response = requests.get(url, timeout=10).json()
+    if (
+        response["data"] is None
+        and response["message"] == "Accepted (repeat request in 1 to 5 seconds)"
+    ):
+        time.sleep(1)
+        return xcpdev_query(url)
+    return response
+
+
+def get_last_block_api_xcpdev(api_url):
+    response = xcpdev_query(f"{api_url}blocks")
+    last_block_index = response["data"]["blocks"][0]["block_index"]
+    response = xcpdev_query(f"{api_url}")
+    version = f'v{response["data"]["node"]["COUNTERPARTY_VERSION"]}'
+    return last_block_index, version
+
+
+def get_last_block_api_wtf(api_url):
+    response = requests.get(f"{api_url}runningInfo", timeout=10).json()
+    last_block_index = response["result"]["last_block"]["block_index"]
+    version = f'v{response["result"]["version_major"]}.{response["result"]["version_minor"]}.{response["result"]["version_revision"]}'
+    return last_block_index, version
+
+
 def get_block_hashes_api_v1(api_url, block_index):
     headers = {"content-type": "application/json"}
     payload = {
@@ -54,6 +87,18 @@ def get_block_hashes_api_v2(api_url, block_index):
     return response.json()["result"]["ledger_hash"], response.json()["result"]["txlist_hash"]
 
 
+def get_block_hashes_api_xcpdev(api_url, block_index):
+    response = xcpdev_query(f"{api_url}blocks/{block_index}")
+    return response["data"]["blocks"][0]["ledger_hash"], response["data"]["blocks"][0][
+        "txlist_hash"
+    ]
+
+
+def get_block_hashes_api_wtf(api_url, block_index):
+    response = requests.get(f"{api_url}block/{block_index}", timeout=10).json()
+    return response["block"][0]["ledger_hash"], response["block"][0]["txlist_hash"]
+
+
 def test_compare_hashes(skip):
     if skip:
         pytest.skip("Skipping compare hashes test.")
@@ -67,6 +112,12 @@ def test_compare_hashes(skip):
         check_server_url, check_server_api_version, check_server_version = check_server
         if check_server_api_version == "v1":
             server_last_block_index, server_version = get_last_block_api_v1(check_server_url)
+            check_servers_block_indexes.append(server_last_block_index)
+        elif check_server_api_version == "xcpdev":
+            server_last_block_index, server_version = get_last_block_api_xcpdev(check_server_url)
+            check_servers_block_indexes.append(server_last_block_index)
+        elif check_server_api_version == "wtf":
+            server_last_block_index, server_version = get_last_block_api_wtf(check_server_url)
             check_servers_block_indexes.append(server_last_block_index)
         else:
             server_last_block_index, server_version = get_last_block_api_v2(check_server_url)
@@ -84,6 +135,14 @@ def test_compare_hashes(skip):
         check_server_url, check_server_api_version, check_server_version = check_server
         if check_server_api_version == "v1":
             check_ledger_hash, check_txlist_hash = get_block_hashes_api_v1(
+                check_server_url, last_block_index
+            )
+        elif check_server_api_version == "xcpdev":
+            check_ledger_hash, check_txlist_hash = get_block_hashes_api_xcpdev(
+                check_server_url, last_block_index
+            )
+        elif check_server_api_version == "wtf":
+            check_ledger_hash, check_txlist_hash = get_block_hashes_api_wtf(
                 check_server_url, last_block_index
             )
         else:
