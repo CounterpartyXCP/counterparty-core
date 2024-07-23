@@ -792,35 +792,6 @@
         "next_cursor": 2736155,
         "result_count": 2740787
     },
-    "/v2/transactions/info": {
-        "result": {
-            "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
-            "destination": null,
-            "btc_amount": 0,
-            "fee": 56565,
-            "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
-            "unpacked_data": {
-                "message_type": "issuance",
-                "message_type_id": 22,
-                "message_data": {
-                    "asset_id": 75313533584419238,
-                    "asset": "UNNEGOTIABLE",
-                    "subasset_longname": null,
-                    "quantity": 1,
-                    "divisible": false,
-                    "lock": false,
-                    "reset": false,
-                    "callable": false,
-                    "call_date": 0,
-                    "call_price": 0.0,
-                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
-                    "status": "valid",
-                    "quantity_normalized": "1"
-                }
-            },
-            "btc_amount_normalized": "0.00000000"
-        }
-    },
     "/v2/transactions/unpack": {
         "result": {
             "message_type": "issuance",
@@ -8960,5 +8931,61 @@
         ],
         "next_cursor": 17627159,
         "result_count": 90076
+    },
+    "/v2/transactions/info": {
+        "result": {
+            "source": "178etygrwEeeyQso9we85rUqYZbkiqzL4A",
+            "destination": null,
+            "btc_amount": 0,
+            "fee": 56565,
+            "data": "16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245",
+            "decoded_tx": {
+                "version": 1,
+                "segwit": false,
+                "coinbase": false,
+                "vin": [
+                    {
+                        "hash": "7828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986",
+                        "n": 1,
+                        "script_sig": "483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202",
+                        "sequence": 4294967295,
+                        "coinbase": false
+                    }
+                ],
+                "vout": [
+                    {
+                        "value": 0,
+                        "script_pub_key": "6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec"
+                    },
+                    {
+                        "value": 76604,
+                        "script_pub_key": "76a91443434cf159cc585fbd74daa9c4b833235b19761b88ac"
+                    }
+                ],
+                "vtxinwit": [],
+                "lock_time": 0,
+                "tx_hash": "876a6cfbd4aa22ba4fa85c2e1953a1c66649468a43a961ad16ea4d5329e3e4c5"
+            },
+            "unpacked_data": {
+                "message_type": "issuance",
+                "message_type_id": 22,
+                "message_data": {
+                    "asset_id": 75313533584419238,
+                    "asset": "UNNEGOTIABLE",
+                    "subasset_longname": null,
+                    "quantity": 1,
+                    "divisible": false,
+                    "lock": false,
+                    "reset": false,
+                    "callable": false,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "description": "UNNEGOTIABLE WE MUST BECOME UNNEGOTIABLE WE ARE",
+                    "status": "valid",
+                    "quantity_normalized": "1"
+                }
+            },
+            "btc_amount_normalized": "0.00000000"
+        }
     }
 }
