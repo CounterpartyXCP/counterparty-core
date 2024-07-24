@@ -49,7 +49,7 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
             "network": network,
             "force_enabled": force_enabled,
             "platform": platform,
-            **last_block,
+            "last_block": last_block,
             **self.static_attrs,
         }
 
