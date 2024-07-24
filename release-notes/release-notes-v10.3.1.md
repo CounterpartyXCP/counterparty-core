@@ -10,6 +10,7 @@
 
 * Fix cache for `/v2/bitcoin/*` routes
 * Fix queries by `asset_longname`
+* Fix capture exception by Sentry
 
 ## Codebase
 
