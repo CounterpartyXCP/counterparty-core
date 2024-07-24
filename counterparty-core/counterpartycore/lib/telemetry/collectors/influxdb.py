@@ -5,6 +5,8 @@ class TelemetryCollectorInfluxDB(TelemetryCollectorBase):
     def collect(self):
         data = super().collect()
 
+        data = data | data["last_block"]
+
         if data is None:
             return None
 
