@@ -1427,8 +1427,8 @@ def get_balances_by_addresses(
         order="ASC",
         cursor_field="asset",
         last_cursor=cursor,
-        limit=limit,
         offset=offset,
+        limit=limit,
     )
     assets = [asset["asset"] for asset in assets_result.result]
 
@@ -1464,6 +1464,7 @@ def get_balances_by_addresses(
                     "quantity": balance["quantity"],
                 }
             )
+        result.append(current_balances)
 
     return QueryResult(result, assets_result.next_cursor, assets_result.result_count)
 
