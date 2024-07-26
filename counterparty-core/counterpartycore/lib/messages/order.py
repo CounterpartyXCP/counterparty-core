@@ -669,6 +669,9 @@ def match(db, tx, block_index=None):
 
     tx1_status = tx1["status"]
     for tx0 in order_matches:
+        # Sanity check. Should never happen.
+        if tx0["status"] != "open":
+            raise Exception(f"Order match is not open: {tx0}.")
         order_match_id = util.make_id(tx0["tx_hash"], tx1["tx_hash"])
         if not block_index:
             block_index = max(
