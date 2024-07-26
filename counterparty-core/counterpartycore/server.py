@@ -36,13 +36,15 @@ from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInflu
 from counterpartycore.lib.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
 )
-from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
+from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
 OK_GREEN = colored("[OK]", "green")
 SPINNER_STYLE = "bouncingBar"
+
+TELEMETRY_ONE_SHOT = None
 
 
 class ConfigurationError(Exception):
@@ -666,12 +668,19 @@ def initialize_telemetry():
     telemetry_daemon = None
     if not config.NO_TELEMETRY:
         logger.info("Telemetry enabled.")
-        telemetry_daemon = TelemetryDaemon(
-            interval=config.TELEMETRY_INTERVAL,
+        # telemetry_daemon = TelemetryDaemon(
+        #     interval=config.TELEMETRY_INTERVAL,
+        #     collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
+        #     client=TelemetryClientInfluxDB(),
+        # )
+        # telemetry_daemon.start()
+
+        global TELEMETRY_ONE_SHOT  # noqa: PLW0603
+        TELEMETRY_ONE_SHOT = TelemetryOneShot(
             collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
             client=TelemetryClientInfluxDB(),
         )
-        telemetry_daemon.start()
+
     else:
         logger.info("Telemetry disabled.")
 

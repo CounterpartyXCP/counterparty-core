@@ -26,6 +26,7 @@ from counterpartycore.lib import (  # noqa: E402
 )
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
+from counterpartycore.server import TELEMETRY_ONE_SHOT
 
 from .messages import (  # noqa: E402
     bet,
@@ -366,6 +367,10 @@ def parse_block(
         )
 
         cursor.close()
+
+        if TELEMETRY_ONE_SHOT:
+            TELEMETRY_ONE_SHOT.submit()
+
         return new_ledger_hash, new_txlist_hash, new_messages_hash
 
     cursor.close()
