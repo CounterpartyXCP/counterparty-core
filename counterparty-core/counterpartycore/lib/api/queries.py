@@ -202,6 +202,8 @@ def select_rows(
         select = f"{select}, CASE WHEN block_index = {config.MEMPOOL_BLOCK_INDEX} THEN FALSE ELSE TRUE END AS confirmed"
     elif table == "assets_info" and "confirmed" not in select:
         select = f"{select}, confirmed"
+    if table in ["transactions", "sends", "btcpays", "sweeps", "dispenses"]:
+        select += ", NULLIF(destination, '') AS destination"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
     query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
