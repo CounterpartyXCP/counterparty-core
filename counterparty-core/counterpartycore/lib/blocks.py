@@ -26,7 +26,11 @@ from counterpartycore.lib import (  # noqa: E402
 )
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
-from counterpartycore.server import TELEMETRY_ONE_SHOT
+from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
+from counterpartycore.lib.telemetry.collectors.influxdb import (
+    TelemetryCollectorInfluxDB,
+)
+from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
 from .messages import (  # noqa: E402
     bet,
@@ -50,6 +54,9 @@ D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
 
 NUM_PREFETCHER_THREADS = 3
+
+TELEMETRY_ONE_SHOT = None
+
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ["balances", "credits", "debits", "messages"] + [
@@ -377,6 +384,15 @@ def parse_block(
     return None, None, None
 
 
+def initialise_telemetry(no_telemetry):
+    if not no_telemetry:
+        global TELEMETRY_ONE_SHOT  # noqa: PLW0603
+        TELEMETRY_ONE_SHOT = TelemetryOneShot(
+            collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
+            client=TelemetryClientInfluxDB(),
+        )
+
+
 def initialise(db):
     """Initialise data, create and populate the database."""
     logger.info("Initializing database...")
@@ -407,7 +423,8 @@ def initialise(db):
     )
 
     # Blocks
-    cursor.execute("""CREATE TABLE IF NOT EXISTS blocks(
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS blocks(
                       block_index INTEGER UNIQUE,
                       block_hash TEXT UNIQUE,
                       block_time INTEGER,
@@ -418,7 +435,8 @@ def initialise(db):
                       difficulty INTEGER,
                       transaction_count INTEGER,
                       PRIMARY KEY (block_index, block_hash))
-                   """)
+                   """
+    )
 
     # SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
     block_columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(blocks)""")]
@@ -435,14 +453,16 @@ def initialise(db):
     if "transaction_count" not in block_columns:
         logger.info("Adding `transaction_count` column to `blocks` table...")
         cursor.execute("""ALTER TABLE blocks ADD COLUMN transaction_count INTEGER""")
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE blocks SET 
                 transaction_count = (
                        SELECT COUNT(*)
                        FROM transactions
                        WHERE transactions.block_index = blocks.block_index
                 )
-        """)
+        """
+        )
 
     database.create_indexes(
         cursor,
@@ -463,7 +483,8 @@ def initialise(db):
             )
 
     # Transactions
-    cursor.execute("""CREATE TABLE IF NOT EXISTS transactions(
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS transactions(
                       tx_index INTEGER UNIQUE,
                       tx_hash TEXT UNIQUE,
                       block_index INTEGER,
@@ -477,7 +498,8 @@ def initialise(db):
                       supported BOOL DEFAULT 1,
                       FOREIGN KEY (block_index, block_hash) REFERENCES blocks(block_index, block_hash),
                       PRIMARY KEY (tx_index, tx_hash, block_index))
-                    """)
+                    """
+    )
     database.create_indexes(
         cursor,
         "transactions",
@@ -496,7 +518,8 @@ def initialise(db):
     cursor.execute("""DELETE FROM transactions WHERE block_index < ?""", (config.BLOCK_FIRST,))
 
     # (Valid) debits
-    cursor.execute("""CREATE TABLE IF NOT EXISTS debits(
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS debits(
                       block_index INTEGER,
                       address TEXT,
                       asset TEXT,
@@ -504,7 +527,8 @@ def initialise(db):
                       action TEXT,
                       event TEXT,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   """)
+                   """
+    )
 
     debits_columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(debits)""")]
     if "tx_index" not in debits_columns:
@@ -524,7 +548,8 @@ def initialise(db):
     )
 
     # (Valid) credits
-    cursor.execute("""CREATE TABLE IF NOT EXISTS credits(
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS credits(
                       block_index INTEGER,
                       address TEXT,
                       asset TEXT,
@@ -532,7 +557,8 @@ def initialise(db):
                       calling_function TEXT,
                       event TEXT,
                       FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                   """)
+                   """
+    )
 
     credits_columns = [
         column["name"] for column in cursor.execute("""PRAGMA table_info(credits)""")
@@ -554,11 +580,13 @@ def initialise(db):
     )
 
     # Balances
-    cursor.execute("""CREATE TABLE IF NOT EXISTS balances(
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS balances(
                       address TEXT,
                       asset TEXT,
                       quantity INTEGER)
-                   """)
+                   """
+    )
 
     balances_columns = [
         column["name"] for column in cursor.execute("""PRAGMA table_info(balances)""")
@@ -583,12 +611,14 @@ def initialise(db):
 
     # Assets
     # TODO: Store more asset info here?!
-    cursor.execute("""CREATE TABLE IF NOT EXISTS assets(
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS assets(
                       asset_id TEXT UNIQUE,
                       asset_name TEXT UNIQUE,
                       block_index INTEGER,
                       asset_longname TEXT)
-                   """)
+                   """
+    )
 
     database.create_indexes(
         cursor,
@@ -660,7 +690,8 @@ def initialise(db):
     dispenser.initialise(db)
 
     # Messages
-    cursor.execute("""CREATE TABLE IF NOT EXISTS messages(
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS messages(
                       message_index INTEGER PRIMARY KEY,
                       block_index INTEGER,
                       command TEXT,
@@ -670,7 +701,8 @@ def initialise(db):
                       event TEXT,
                       tx_hash TEXT,
                       event_hash TEXT)
-                  """)
+                  """
+    )
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(messages)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE messages ADD COLUMN event TEXT""")
@@ -693,7 +725,8 @@ def initialise(db):
         ],
     )
 
-    cursor.execute("""CREATE TABLE IF NOT EXISTS transaction_outputs(
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS transaction_outputs(
                         tx_index,
                         tx_hash TEXT,
                         block_index INTEGER,
@@ -702,17 +735,20 @@ def initialise(db):
                         btc_amount INTEGER,
                         PRIMARY KEY (tx_hash, out_index),
                         FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
+                   """
+    )
 
     # Mempool events
-    cursor.execute("""CREATE TABLE IF NOT EXISTS mempool(
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS mempool(
                       tx_hash TEXT,
                       command TEXT,
                       category TEXT,
                       bindings TEXT,
                       timestamp INTEGER,
                       event TEXT)
-                  """)
+                  """
+    )
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(mempool)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
@@ -721,11 +757,13 @@ def initialise(db):
 
     # Lock UPDATE on all tables
     for table in TABLES:
-        cursor.execute(f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
+        cursor.execute(
+            f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
                            BEFORE UPDATE ON {table} BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-                        """)
+                        """
+        )
     cursor.close()
 
 
@@ -915,7 +953,10 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
                 "btc_amount": next_out["btc_amount"],
             }
             ledger.insert_record(
-                db, "transaction_outputs", transaction_outputs_bindings, "NEW_TRANSACTION_OUTPUT"
+                db,
+                "transaction_outputs",
+                transaction_outputs_bindings,
+                "NEW_TRANSACTION_OUTPUT",
             )
 
         cursor.close()
@@ -1030,7 +1071,8 @@ def reparse(db, block_index=0):
     message = ""
     with log.Spinner(step) as spinner:
         cursor.execute(
-            """SELECT * FROM blocks WHERE block_index >= ? ORDER BY block_index""", (block_index,)
+            """SELECT * FROM blocks WHERE block_index >= ? ORDER BY block_index""",
+            (block_index,),
         )
         for block in cursor.fetchall():
             start_time_block_parse = time.time()

@@ -32,19 +32,12 @@ from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
-from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
-from counterpartycore.lib.telemetry.collectors.influxdb import (
-    TelemetryCollectorInfluxDB,
-)
-from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
 OK_GREEN = colored("[OK]", "green")
 SPINNER_STYLE = "bouncingBar"
-
-TELEMETRY_ONE_SHOT = None
 
 
 class ConfigurationError(Exception):
@@ -664,29 +657,6 @@ def connect_to_backend():
         backend.bitcoind.getblockcount()
 
 
-def initialize_telemetry():
-    telemetry_daemon = None
-    if not config.NO_TELEMETRY:
-        logger.info("Telemetry enabled.")
-        # telemetry_daemon = TelemetryDaemon(
-        #     interval=config.TELEMETRY_INTERVAL,
-        #     collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
-        #     client=TelemetryClientInfluxDB(),
-        # )
-        # telemetry_daemon.start()
-
-        global TELEMETRY_ONE_SHOT  # noqa: PLW0603
-        TELEMETRY_ONE_SHOT = TelemetryOneShot(
-            collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
-            client=TelemetryClientInfluxDB(),
-        )
-
-    else:
-        logger.info("Telemetry disabled.")
-
-    return telemetry_daemon
-
-
 def start_all(args):
     api_status_poller = None
     api_server_v1 = None
@@ -706,6 +676,7 @@ def start_all(args):
 
         # initialise database
         db = database.initialise_db()
+        blocks.initialise_telemetry(config.NO_TELEMETRY)
         blocks.initialise(db)
         blocks.check_database_version(db)
         database.optimize(db)
@@ -724,7 +695,6 @@ def start_all(args):
         connect_to_backend()
 
         # Initialise telemetry.
-        telemetry_daemon = initialize_telemetry()
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
