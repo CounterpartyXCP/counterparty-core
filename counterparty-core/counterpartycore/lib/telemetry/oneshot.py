@@ -4,7 +4,6 @@ from counterpartycore.lib import config
 from counterpartycore.lib.telemetry.clients.interface import TelemetryClientI
 from counterpartycore.lib.telemetry.collectors.interface import TelemetryCollectorI
 
-DEFAULT_INTERVAL = 60
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
@@ -18,6 +17,9 @@ class TelemetryOneShot:
         self.collector = collector
 
     def submit(self):
-        data = self.collector.collect()
-        if data:
-            self.client.send(data)
+        try:
+            data = self.collector.collect()
+            if data:
+                self.client.send(data)
+        except Exception as e:
+            logger.error(f"Error in telemetry one shot: {e}")
