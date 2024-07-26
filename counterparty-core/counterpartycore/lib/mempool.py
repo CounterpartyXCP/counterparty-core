@@ -39,6 +39,12 @@ def parse_mempool_transactions(db, raw_tx_list):
                 if existing_tx:
                     logger.trace(f"Transaction {decoded_tx['tx_hash']} already in the database")
                     continue
+                existing_tx_in_mempool = cursor.execute(
+                    "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (decoded_tx["tx_hash"],)
+                ).fetchone()
+                if existing_tx_in_mempool:
+                    logger.trace(f"Transaction {decoded_tx['tx_hash']} already in the mempool")
+                    continue
                 mempool_tx_index = blocks.list_tx(
                     db,
                     config.MEMPOOL_BLOCK_HASH,

@@ -9,6 +9,7 @@ import apsw
 from counterpartycore.lib import blocks, config, database, exceptions, ledger
 from counterpartycore.lib.api import util
 from counterpartycore.lib.util import format_duration
+from sentry_sdk import capture_exception
 from yoyo import get_backend, read_migrations
 from yoyo.exceptions import LockTimeout
 
@@ -84,6 +85,8 @@ EVENTS_ADDRESS_FIELDS = {
 }
 
 SKIP_EVENTS = ["NEW_TRANSACTION_OUTPUT"]
+
+MEMPOOL_SKIP_EVENT_HASHES = []
 
 
 def fetch_all(db, query, bindings=None):
@@ -722,6 +725,7 @@ def gen_random_tx_index(event):
 
 def synchronize_mempool(api_db, ledger_db):
     logger.trace("API Watcher - Synchronizing mempool...")
+    global MEMPOOL_SKIP_EVENT_HASHES  # noqa: PLW0602
     try:
         mempool_events = fetch_all(ledger_db, "SELECT * FROM mempool")
         sql_insert = """INSERT INTO mempool (tx_hash, command, category, bindings, event, timestamp, addresses) VALUES (?, ?, ?, ?, ?, ?, ?)"""
@@ -730,6 +734,8 @@ def synchronize_mempool(api_db, ledger_db):
             cursor = api_db.cursor()
             for event in mempool_events:
                 if event["event"] in SKIP_EVENTS + ["NEW_BLOCK", "BLOCK_PARSED"]:
+                    continue
+                if event["tx_hash"] in MEMPOOL_SKIP_EVENT_HASHES:
                     continue
                 event_bindings = json.loads(event["bindings"])
                 # edge case: asset alredy created in another confirmed tx
@@ -770,7 +776,9 @@ def synchronize_mempool(api_db, ledger_db):
                         execute_event(api_db, event)
                         update_assets_info(api_db, event)
                     else:
-                        raise e
+                        logger.warning(f"Skipping duplicate event: {event}")
+                        capture_exception(e)
+                        MEMPOOL_SKIP_EVENT_HASHES.append(event["tx_hash"])
                 except Exception as e:
                     logger.error(f"API Watcher - Error executing mempool event: {e}")
                     raise e
