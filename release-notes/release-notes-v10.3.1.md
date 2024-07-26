@@ -43,6 +43,7 @@
 * Unconfirmed objects (`transactions`, `issuances`, `orders`, etc.) are accessible in the API with the parameter `?show_unconfirmed=true`
 * Inject `fiat_price` and oracle info in dispensers
 * Include decoded transaction in the result of `/v2/transactions/info`
+* Return `null` when `destination` field is empty
 
 ## CLI
 
