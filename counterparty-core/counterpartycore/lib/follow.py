@@ -18,6 +18,7 @@ from counterpartycore.lib import (
     mempool,
     sentry,
 )
+from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -118,6 +119,8 @@ class BlockchainWatcher:
         if existing_block is None:
             blocks.parse_new_block(self.db, decoded_block)
             mempool.clean_mempool(self.db)
+            if not config.NO_TELEMETRY:
+                TelemetryOneShot().submit()
 
     def receive_hashtx(self, body, sequence):
         self.hash_by_sequence[sequence] = body.hex()

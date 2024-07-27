@@ -32,11 +32,7 @@ from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
-from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
-from counterpartycore.lib.telemetry.collectors.influxdb import (
-    TelemetryCollectorInfluxDB,
-)
-from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
+from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -662,22 +658,6 @@ def connect_to_backend():
         backend.bitcoind.getblockcount()
 
 
-def initialize_telemetry():
-    telemetry_daemon = None
-    if not config.NO_TELEMETRY:
-        logger.info("Telemetry enabled.")
-        telemetry_daemon = TelemetryDaemon(
-            interval=config.TELEMETRY_INTERVAL,
-            collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
-            client=TelemetryClientInfluxDB(),
-        )
-        telemetry_daemon.start()
-    else:
-        logger.info("Telemetry disabled.")
-
-    return telemetry_daemon
-
-
 def start_all(args):
     api_status_poller = None
     api_server_v1 = None
@@ -715,7 +695,6 @@ def start_all(args):
         connect_to_backend()
 
         # Initialise telemetry.
-        telemetry_daemon = initialize_telemetry()
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
@@ -755,6 +734,8 @@ def start_all(args):
             follower_daemon.stop()
         if db:
             database.close(db)
+        if not config.NO_TELEMETRY:
+            TelemetryOneShot().close()
         backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()
