@@ -6,6 +6,7 @@ from counterpartycore.lib.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
 )
 from counterpartycore.lib.util import SingletonMeta
+from sentry_sdk import capture_exception
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -22,6 +23,7 @@ class TelemetryOneShot(metaclass=SingletonMeta):
             if data:
                 self.client.send(data)
         except Exception as e:
+            capture_exception(e)
             logger.error(f"Error in telemetry one shot: {e}")
 
     def close(self):
