@@ -13,7 +13,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 class TelemetryOneShot(metaclass=SingletonMeta):
     def __init__(self):
-        self.db = (database.get_connection(read_only=True),)
+        self.db = database.get_connection(read_only=True)
         self.collector = TelemetryCollectorInfluxDB(db=self.db)
         self.client = TelemetryClientInfluxDB()
 
