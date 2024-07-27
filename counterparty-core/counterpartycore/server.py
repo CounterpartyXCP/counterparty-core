@@ -32,6 +32,7 @@ from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
+from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -676,7 +677,6 @@ def start_all(args):
 
         # initialise database
         db = database.initialise_db()
-        blocks.initialise_telemetry(config.NO_TELEMETRY)
         blocks.initialise(db)
         blocks.check_database_version(db)
         database.optimize(db)
@@ -734,6 +734,8 @@ def start_all(args):
             follower_daemon.stop()
         if db:
             database.close(db)
+        if not config.NO_TELEMETRY:
+            TelemetryOneShot().close()
         backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()

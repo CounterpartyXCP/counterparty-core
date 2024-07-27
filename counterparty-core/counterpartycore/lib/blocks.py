@@ -26,11 +26,6 @@ from counterpartycore.lib import (  # noqa: E402
 )
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
-from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
-from counterpartycore.lib.telemetry.collectors.influxdb import (
-    TelemetryCollectorInfluxDB,
-)
-from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
 from .messages import (  # noqa: E402
     bet,
@@ -54,9 +49,6 @@ D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
 
 NUM_PREFETCHER_THREADS = 3
-
-TELEMETRY_ONE_SHOT = None
-
 
 # Order matters for FOREIGN KEY constraints.
 TABLES = ["balances", "credits", "debits", "messages"] + [
@@ -375,22 +367,10 @@ def parse_block(
 
         cursor.close()
 
-        if TELEMETRY_ONE_SHOT:
-            TELEMETRY_ONE_SHOT.submit()
-
         return new_ledger_hash, new_txlist_hash, new_messages_hash
 
     cursor.close()
     return None, None, None
-
-
-def initialise_telemetry(no_telemetry):
-    if not no_telemetry:
-        global TELEMETRY_ONE_SHOT  # noqa: PLW0603
-        TELEMETRY_ONE_SHOT = TelemetryOneShot(
-            collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
-            client=TelemetryClientInfluxDB(),
-        )
 
 
 def initialise(db):
