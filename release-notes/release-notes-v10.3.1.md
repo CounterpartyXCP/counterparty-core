@@ -44,6 +44,7 @@
 * Inject `fiat_price` and oracle info in dispensers
 * Include decoded transaction in the result of `/v2/transactions/info`
 * Return `null` when `destination` field is empty
+* `<address>` in API routes supports several addresses (comma separated)
 
 ## CLI
 
