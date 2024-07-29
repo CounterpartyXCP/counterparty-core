@@ -49,7 +49,7 @@ def init():
         dsn=dsn,
         environment=environment,
         release=release,
-        traces_sample_rate=1.0,
+        traces_sample_rate=0.1,
         before_send=before_send,
         before_send_transaction=before_send_transaction,
     )
