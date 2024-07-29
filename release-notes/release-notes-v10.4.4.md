@@ -20,6 +20,8 @@
 ## CLI
 
 - Add `wsgi-server` (`werkzeug` or `gunicorn`) and `gunicorn-workers` flags
+- Enable Sentry Caches and Queries pages
+
 
 # Credits
 
