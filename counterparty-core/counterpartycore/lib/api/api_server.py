@@ -34,6 +34,7 @@ from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
+from sentry_sdk import start_span as start_sentry_span
 from werkzeug.serving import make_server
 
 multiprocessing.set_start_method("spawn", force=True)
@@ -223,9 +224,16 @@ def execute_api_function(db, rule, route, function_args):
     ) and not request.path.startswith("/v2/blocks/last"):
         cache_key = request.url
 
-    if cache_key in BLOCK_CACHE:
-        result = BLOCK_CACHE[cache_key]
-    else:
+    with start_sentry_span(op="cache.get") as sentry_get_span:
+        sentry_get_span.set_data("cache.key", cache_key)
+        if cache_key in BLOCK_CACHE:
+            result = BLOCK_CACHE[cache_key]
+            sentry_get_span.set_data("cache.hit", True)
+            return result
+        else:
+            sentry_get_span.set_data("cache.hit", False)
+
+    with start_sentry_span(op="cache.put") as sentry_put_span:
         if function_needs_db(route["function"]):
             result = route["function"](db, **function_args)
         else:
@@ -236,11 +244,12 @@ def execute_api_function(db, rule, route, function_args):
             and route["function"].__name__ != "redirect_to_api_v1"
             and not request.path.startswith("/v2/mempool/")
         ):
+            sentry_put_span.set_data("cache.key", cache_key)
             BLOCK_CACHE[cache_key] = result
             if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
                 BLOCK_CACHE.popitem(last=False)
 
-    return result
+        return result
 
 
 def get_transaction_name(rule):

@@ -5,6 +5,7 @@ from typing import Literal
 from counterpartycore.lib import config
 from counterpartycore.lib.api.util import divide
 from flask import request
+from sentry_sdk import start_span as start_sentry_span
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
@@ -255,11 +256,15 @@ def select_rows(
         query = f"{query} OFFSET ?"
         bindings.append(offset)
 
-    cursor.execute(query, bindings)
-    result = cursor.fetchall()
+    with start_sentry_span(op="db.sql.execute", description=query) as sql_span:
+        sql_span.set_tag("db.system", "sqlite3")
+        cursor.execute(query, bindings)
+        result = cursor.fetchall()
 
-    cursor.execute(query_count, bindings_count)
-    result_count = cursor.fetchone()["count"]
+    with start_sentry_span(op="db.sql.execute", description=query_count) as sql_span:
+        sql_span.set_tag("db.system", "sqlite3")
+        cursor.execute(query_count, bindings_count)
+        result_count = cursor.fetchone()["count"]
 
     if result and len(result) > limit:
         next_cursor = result[-1][cursor_field]
