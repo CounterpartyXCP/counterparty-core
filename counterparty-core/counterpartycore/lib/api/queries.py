@@ -77,6 +77,8 @@ SUPPORTED_SORT_FIELDS = {
     "balances": ["address", "asset", "quantity"],
 }
 
+ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
+
 
 class QueryResult:
     def __init__(self, result, next_cursor, result_count=None):
@@ -117,18 +119,24 @@ def select_rows(
         for key, value in where_dict.items():
             if key.endswith("__gt"):
                 where_field.append(f"{key[:-4]} > ?")
+                bindings.append(value)
             elif key.endswith("__like"):
                 where_field.append(f"{key[:-6]} LIKE ?")
+                bindings.append(value)
             elif key.endswith("__notlike"):
                 where_field.append(f"{key[:-9]} NOT LIKE ?")
+                bindings.append(value)
             elif key.endswith("__in"):
                 where_field.append(f"{key[:-4]} IN ({','.join(['?'] * len(value))})")
-            else:
-                where_field.append(f"{key} = ?")
-            if key.endswith("__in"):
                 bindings += value
             else:
-                bindings.append(value)
+                if key in ADDRESS_FIELDS and len(value.split(",")) > 1:
+                    where_field.append(f"{key} IN ({','.join(['?'] * len(value.split(',')))})")
+                    bindings += value.split(",")
+                else:
+                    where_field.append(f"{key} = ?")
+                    bindings.append(value)
+
         and_where_clause = ""
         if where_field:
             and_where_clause = " AND ".join(where_field)
