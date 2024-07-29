@@ -31,6 +31,12 @@ def before_send(event, _hint):
     return event
 
 
+def before_send_transaction(event, _hint):
+    if event.get("transaction") == "RedirectToRpcV1":
+        return None
+    return event
+
+
 def init():
     dsn = os.environ.get("SENTRY_DSN")
     # No-op if SENTRY_DSN is not set
@@ -45,4 +51,5 @@ def init():
         release=release,
         traces_sample_rate=1.0,
         before_send=before_send,
+        before_send_transaction=before_send_transaction,
     )
