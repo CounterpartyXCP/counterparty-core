@@ -50,6 +50,7 @@
 
 * Add `--json-logs` flag to show logs in JSON format
 * Send telemetry data after each block
+* Reduce Sentry Trace Sample Rate to 10%
 
 # Credits
 
