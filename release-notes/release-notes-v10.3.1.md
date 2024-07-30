@@ -45,6 +45,8 @@
 * Include decoded transaction in the result of `/v2/transactions/info`
 * Return `null` when `destination` field is empty
 * `<address>` in API routes supports several addresses (comma separated)
+* Catch correctly `CBitcoinAddressError`
+* Return an error 400 instead 503 on `ComposeError` and `UnpackError`
 
 ## CLI
 

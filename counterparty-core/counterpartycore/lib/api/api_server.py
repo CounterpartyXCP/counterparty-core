@@ -9,6 +9,7 @@ from threading import Thread, Timer
 
 import flask
 import requests
+from bitcoin.wallet import CBitcoinAddressError
 from counterpartycore import server
 from counterpartycore.lib import (
     backend,
@@ -306,8 +307,6 @@ def handle_route(**kwargs):
     try:
         with APIDBConnectionPool().connection() as db:
             result = execute_api_function(db, rule, route, function_args)
-    except (exceptions.ComposeError, exceptions.UnpackError) as e:
-        return return_result(503, error=str(e), start_time=start_time, query_args=query_args)
     except (
         exceptions.JSONRPCInvalidRequest,
         exceptions.TransactionError,
@@ -315,15 +314,16 @@ def handle_route(**kwargs):
         exceptions.UnknownPubKeyError,
         exceptions.AssetNameError,
         exceptions.BitcoindRPCError,
+        exceptions.ComposeError,
+        exceptions.UnpackError,
+        CBitcoinAddressError,
     ) as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        import traceback
-
-        print(traceback.format_exc())
-        # traceback.print_exc()
+        # import traceback
+        # print(traceback.format_exc()) # for debugging
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )
