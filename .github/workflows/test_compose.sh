@@ -18,6 +18,9 @@ cd counterparty-core
 
 VERSION=$(cat docker-compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
+# verbose mode
+sed -i 's/#- "--verbose"/-  "-vv"/g' docker-compose.yml
+
 # stop the running containers
 docker compose --profile mainnet stop counterparty-core
 docker compose --profile testnet stop counterparty-core-testnet
