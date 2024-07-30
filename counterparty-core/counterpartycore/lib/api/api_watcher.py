@@ -627,6 +627,8 @@ def catch_up(api_db, ledger_db, watcher):
         if not watcher.stopping and not watcher.stopped:
             duration = time.time() - start_time
             logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
+    else:
+        logger.info("API Watcher - Catch up completed.")
     synchronize_mempool(api_db, api_db)
 
 
