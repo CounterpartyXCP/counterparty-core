@@ -1634,6 +1634,8 @@ class OrdersCache(metaclass=util.SingletonMeta):
         )
 
     def insert_order(self, order):
+        if order["block_index"] == config.MEMPOOL_BLOCK_INDEX:
+            return
         sql = """
             INSERT INTO orders VALUES (
                 :tx_index, :tx_hash, :block_index, :source, :give_asset, :give_quantity,
@@ -1705,7 +1707,8 @@ def get_matching_orders(db, tx_hash, give_asset, get_asset):
 
 def insert_order(db, order):
     insert_record(db, "orders", order, "OPEN_ORDER")
-    OrdersCache(db).insert_order(order)
+    if not util.PARSING_MEMPOOL:
+        OrdersCache(db).insert_order(order)
 
 
 ### UPDATES ###
@@ -1713,7 +1716,8 @@ def insert_order(db, order):
 
 def update_order(db, tx_hash, update_data):
     insert_update(db, "orders", "tx_hash", tx_hash, update_data, "ORDER_UPDATE")
-    OrdersCache(db).update_order(tx_hash, update_data)
+    if not util.PARSING_MEMPOOL:
+        OrdersCache(db).update_order(tx_hash, update_data)
 
 
 def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):

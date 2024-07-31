@@ -625,7 +625,8 @@ def parse(db, tx, message):
 
                         ledger.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
                         # Add the address to the dispensable cache
-                        DispensableCache(db).new_dispensable(action_address)
+                        if not util.PARSING_MEMPOOL:
+                            DispensableCache(db).new_dispensable(action_address)
 
                         logger.info(
                             "Dispenser opened for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
