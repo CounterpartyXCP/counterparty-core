@@ -11,6 +11,7 @@
 * Fix cache for `/v2/bitcoin/*` routes
 * Fix queries by `asset_longname`
 * Fix capture exception by Sentry
+* Don't cache `orders` and dispenser addresses from Mempool
 
 ## Codebase
 
