@@ -1864,7 +1864,7 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.sweep.ID:
             message_type_name = "sweep"
             message_data = messages.sweep.unpack(message)
-    except exceptions.UnpackError as e:
+    except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 
     return {

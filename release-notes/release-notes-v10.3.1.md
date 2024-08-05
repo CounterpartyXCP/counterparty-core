@@ -12,6 +12,7 @@
 * Fix queries by `asset_longname`
 * Fix capture exception by Sentry
 * Don't cache `orders` and dispenser addresses from Mempool
+* Catch `UnicodeError` in `transactions.unpack()` function
 
 ## Codebase
 
