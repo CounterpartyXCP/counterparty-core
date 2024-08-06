@@ -208,13 +208,14 @@ def initialise_config(
     else:
         bitcoinlib.SelectParams("mainnet")
 
-    network = ""
+    config.NETWORK_NAME = "mainnet"
     if config.TESTNET:
-        network += ".testnet"
+        config.NETWORK_NAME = "testnet"
     if config.REGTEST:
-        network += ".regtest"
+        config.NETWORK_NAME = "regtest"
     if config.TESTCOIN:
-        network += ".testcoin"
+        config.NETWORK_NAME = "testcoin"
+    network = f".{config.NETWORK_NAME }" if config.NETWORK_NAME != "mainnet" else ""
 
     # Database
     if database_file:

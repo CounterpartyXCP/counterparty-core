@@ -15,6 +15,7 @@ This release is not a protocol change and does not require any reparsing.
 * Fix capture exception by Sentry
 * Be sure not to cache `orders` and dispenser addresses from mempool
 * Catch `UnicodeError` in `transactions.unpack()` function
+* Fix `script_to_address()` function on Regtest
 
 ## Codebase
 
