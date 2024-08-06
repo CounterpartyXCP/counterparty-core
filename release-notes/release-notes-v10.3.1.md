@@ -13,6 +13,7 @@
 * Fix capture exception by Sentry
 * Don't cache `orders` and dispenser addresses from Mempool
 * Catch `UnicodeError` in `transactions.unpack()` function
+* Fix `script_to_address()` function on Regtest
 
 ## Codebase
 
