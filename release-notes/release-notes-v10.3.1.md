@@ -1,5 +1,6 @@
-# Release Notes - Counterparty Core v10.3.1 (2024-07-??)
+# Release Notes - Counterparty Core v10.3.1 (2024-08-07)
 
+This is a minor update containing many API improvements as well as bug fixes.
 
 # Upgrading
 
