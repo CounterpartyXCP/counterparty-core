@@ -21,20 +21,14 @@ jobs:
 
       # Install dependencies
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          default: true
-
       - name: Set up Homebrew
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@master
 
       - name: Install Python 3.10 and leveldb
         run: |
-          brew install python@3.10 leveldb
+          brew install rustup python@3.10 leveldb
+          brew reinstall rustup
           echo '/opt/homebrew/opt/python@3.10/libexec/bin' >> $GITHUB_PATH
 
       - name: Install pytest and build module
@@ -93,12 +87,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          default: true
+      - name: Install Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install leveldb
         run: |

@@ -450,6 +450,10 @@ class DictCache:
         with self.lock:
             self.dict.move_to_end(key, last=True)
 
+    def clear(self):
+        with self.lock:
+            self.dict.clear()
+
 
 URL_USERNAMEPASS_REGEX = re.compile(".+://(.+)@")
 
@@ -518,6 +522,8 @@ def enabled(change_name, block_index=None):
 def get_value_by_block_index(change_name, block_index=None):
     if not block_index:
         block_index = CURRENT_BLOCK_INDEX
+    if block_index is None or block_index == 0:
+        block_index = 9999999  # Set to a high number to get the highest value
 
     max_block_index = -1
 

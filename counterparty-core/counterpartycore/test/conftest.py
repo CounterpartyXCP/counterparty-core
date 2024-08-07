@@ -309,6 +309,7 @@ def api_server_v2(request, cp_server):
         "enable_zmq_publisher": False,
         "zmq_publisher_port": None,
         "db_connection_pool_size": None,
+        "json_logs": False,
     }
     server_config = (
         default_config
@@ -321,7 +322,9 @@ def api_server_v2(request, cp_server):
 
     if os.path.exists(config.API_DATABASE):
         os.unlink(config.API_DATABASE)
+    if os.path.exists(config.API_DATABASE + "-shm"):
         os.unlink(config.API_DATABASE + "-shm")
+    if os.path.exists(config.API_DATABASE + "-wal"):
         os.unlink(config.API_DATABASE + "-wal")
 
     def is_server_ready():

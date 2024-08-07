@@ -18,6 +18,9 @@ cd counterparty-core
 
 VERSION=$(cat docker-compose.yml | grep 'image: counterparty/counterparty:' | awk -F ":" '{print $3}')
 
+# verbose mode
+sed -i 's/#- "--verbose"/-  "-vv"/g' docker-compose.yml
+
 # stop the running containers
 docker compose --profile mainnet stop counterparty-core
 docker compose --profile testnet stop counterparty-core-testnet
@@ -108,7 +111,7 @@ docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
 docker compose --profile mainnet up -d counterparty-core
 
 # wait for counterparty-core to be ready
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Watching for new blocks')" = "" ]; do
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'API Watcher - Catch up completed')" = "" ]; do
     echo "Waiting for counterparty-core mainnet to be ready"
     sleep 1
 done

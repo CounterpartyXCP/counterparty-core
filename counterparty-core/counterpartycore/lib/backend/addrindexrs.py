@@ -483,6 +483,21 @@ def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash:
     return unspent
 
 
+def get_unspent_txouts_by_addresses(addresses: str, unconfirmed: bool = False):
+    """
+    Returns a list of unspent outputs for a list of addresses
+    :param addresses: The addresses to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS,1JQheacLPdM5ySCkrZkV66G2ApAXe1mqLj)
+    :param unconfirmed: Include unconfirmed transactions
+    """
+    unspents = []
+    for address in addresses.split(","):
+        address_unspents = get_unspent_txouts(address, unconfirmed)
+        for unspent in address_unspents:
+            unspent["address"] = address
+        unspents += address_unspents
+    return unspents
+
+
 # Returns transactions in the following format
 # {
 #  "blockhash": hexstring,
@@ -696,3 +711,7 @@ def get_oldest_tx(address: str, block_index: int):
         result = ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)
 
     return result
+
+
+def clear_raw_transactions_cache():
+    raw_transactions_cache.clear()

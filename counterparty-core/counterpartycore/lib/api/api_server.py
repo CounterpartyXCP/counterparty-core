@@ -9,8 +9,10 @@ from threading import Thread, Timer
 
 import flask
 import requests
+from bitcoin.wallet import CBitcoinAddressError
 from counterpartycore import server
 from counterpartycore.lib import (
+    backend,
     config,
     exceptions,
     ledger,
@@ -21,11 +23,11 @@ from counterpartycore.lib import (
 from counterpartycore.lib.api import api_watcher, queries
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
+    clean_rowids_and_confirmed_fields,
     function_needs_db,
     get_backend_height,
     init_api_access_log,
     inject_details,
-    remove_rowids,
     to_json,
 )
 from counterpartycore.lib.database import APIDBConnectionPool, get_db_connection
@@ -100,7 +102,7 @@ def is_cachable(rule):
         return True
     if rule.startswith("/v2/transactions"):
         return True
-    if rule.startswith("/v2/backend"):
+    if rule.startswith("/v2/bitcoin"):
         return True
     return False
 
@@ -182,7 +184,7 @@ def prepare_args(route, **kwargs):
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
-        if arg_name == "verbose":
+        if arg_name in ["verbose", "show_unconfirmed"]:
             continue
         if arg_name in function_args:
             continue
@@ -209,10 +211,6 @@ def prepare_args(route, **kwargs):
                 raise ValueError(f"Invalid float: {arg_name}") from e
         else:
             function_args[arg_name] = str_arg
-
-    for key in function_args:
-        if key in ["asset", "assets", "get_asset", "give_asset"]:
-            function_args[key] = function_args[key].upper()
 
     return function_args
 
@@ -309,8 +307,6 @@ def handle_route(**kwargs):
     try:
         with APIDBConnectionPool().connection() as db:
             result = execute_api_function(db, rule, route, function_args)
-    except (exceptions.ComposeError, exceptions.UnpackError) as e:
-        return return_result(503, error=str(e), start_time=start_time, query_args=query_args)
     except (
         exceptions.JSONRPCInvalidRequest,
         exceptions.TransactionError,
@@ -318,13 +314,16 @@ def handle_route(**kwargs):
         exceptions.UnknownPubKeyError,
         exceptions.AssetNameError,
         exceptions.BitcoindRPCError,
+        exceptions.ComposeError,
+        exceptions.UnpackError,
+        CBitcoinAddressError,
     ) as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
         # import traceback
-        # traceback.print_exc()
+        # print(traceback.format_exc()) # for debugging
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )
@@ -343,7 +342,7 @@ def handle_route(**kwargs):
         result_count = result.result_count
         result = result.result
 
-    result = remove_rowids(result)
+    result = clean_rowids_and_confirmed_fields(result)
 
     # inject details
     verbose = request.args.get("verbose", "False")
@@ -402,11 +401,11 @@ def run_api_server(args, interruped_value, server_ready_value):
         app.register_error_handler(404, handle_not_found)
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
-        timer_db = None
+        timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
         if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
-            timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
             refresh_backend_height(timer_db, start=True)
         else:
+            refresh_current_block(timer_db)
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
     try:
@@ -437,6 +436,7 @@ def refresh_backend_height(db, start=False):
     if not start:
         BACKEND_HEIGHT = get_backend_height()
         refresh_current_block(db)
+        backend.addrindexrs.clear_raw_transactions_cache()
         if not is_server_ready():
             if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
                 logger.debug(

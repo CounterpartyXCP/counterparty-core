@@ -121,6 +121,10 @@ def get_block_height(block_hash):
     return block_info["height"]
 
 
+def convert_to_psbt(rawtx):
+    return rpc("converttopsbt", [rawtx, True])
+
+
 @functools.lru_cache(maxsize=10000)
 def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])

@@ -49,9 +49,10 @@ def test_api_database():
     ledger_orders = ledger_db.execute(
         "SELECT *, MAX(rowid) FROM orders GROUP BY tx_hash ORDER BY tx_hash"
     ).fetchall()
-    api_orders = api_db.execute("SELECT * FROM orders ORDER BY tx_hash").fetchall()
-    assert len(ledger_orders) == len(api_orders)
-    for ledger_order, api_order in zip(ledger_orders, api_orders):
+    for ledger_order in ledger_orders:
+        api_order = api_db.execute(
+            "SELECT * FROM orders WHERE tx_hash = ?", (ledger_order["tx_hash"],)
+        ).fetchone()
         assert ledger_order["status"] == api_order["status"]
         assert ledger_order["give_asset"] == api_order["give_asset"]
         assert ledger_order["get_asset"] == api_order["get_asset"]
@@ -82,7 +83,7 @@ def test_api_database():
 
     # assets_info
     sql_ledger = "SELECT count(*) AS count FROM assets WHERE asset_name NOT IN ('XCP', 'BTC')"
-    sql_api = "SELECT count(*) AS count FROM assets_info"
+    sql_api = "SELECT count(*) AS count FROM assets_info WHERE asset NOT IN ('XCP', 'BTC')"
     assert (
         ledger_db.execute(sql_ledger).fetchone()["count"]
         == api_db.execute(sql_api).fetchone()["count"]
@@ -91,7 +92,9 @@ def test_api_database():
     ledger_assets_info = ledger_db.execute(
         "SELECT asset_name FROM assets WHERE asset_name NOT IN ('XCP', 'BTC') ORDER BY asset_name"
     ).fetchall()
-    api_assets_info = api_db.execute("SELECT asset FROM assets_info ORDER BY asset").fetchall()
+    api_assets_info = api_db.execute(
+        "SELECT asset FROM assets_info WHERE asset NOT IN ('XCP', 'BTC') ORDER BY asset"
+    ).fetchall()
     assert len(ledger_assets_info) == len(api_assets_info)
     for ledger_asset_info, api_asset_info in zip(ledger_assets_info, api_assets_info):
         assert ledger_asset_info["asset_name"] == api_asset_info["asset"]

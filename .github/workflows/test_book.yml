@@ -32,7 +32,7 @@ jobs:
         cd counterparty-core && pip install -e . && cd ..
     - name: Bootstrap testnet database
       run: |
-        counterparty-server --testnet bootstrap --no-confirm --bootstrap-url "https://bootstrap.counterparty.io/counterparty-testnet.v10.3.0.tar.gz"
+        counterparty-server --testnet bootstrap --no-confirm
     - name: Run tests
       run: |
         cd counterparty-core

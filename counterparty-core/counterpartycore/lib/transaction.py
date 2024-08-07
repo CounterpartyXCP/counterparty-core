@@ -1098,6 +1098,11 @@ COMPOSE_COMMONS_ARGS = {
         config.ESTIMATE_FEE_CONF_TARGET,
         "The number of blocks to target for confirmation",
     ),
+    "return_psbt": (
+        bool,
+        False,
+        "Construct a PSBT instead of a raw transaction hex",
+    ),
 }
 
 
@@ -1150,6 +1155,7 @@ def compose_transaction(
     old_style_api=True,
     segwit=False,
     api_v1=False,
+    return_psbt=False,
 ):
     """Create and return a transaction."""
 
@@ -1221,7 +1227,7 @@ def compose_transaction(
 
     tx_info = compose_method(db, **params)
 
-    return construct(
+    raw_transaction = construct(
         db,
         tx_info,
         encoding=encoding,
@@ -1246,6 +1252,10 @@ def compose_transaction(
         segwit=segwit,
         estimate_fee_per_kb_nblocks=confirmation_target,
     )
+    if return_psbt:
+        psbt = backend.bitcoind.convert_to_psbt(raw_transaction)
+        return psbt
+    return raw_transaction
 
 
 COMPOSABLE_TRANSACTIONS = [
@@ -1734,19 +1744,22 @@ def info(db, rawtransaction: str, block_index: int = None):
     :param rawtransaction: Raw transaction in hex format (e.g. 01000000017828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986010000006b483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202ffffffff0200000000000000004d6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec3c2b0100000000001976a91443434cf159cc585fbd74daa9c4b833235b19761b88ac00000000)
     :param block_index: Block index mandatory for transactions before block 335000
     """
+    decoded_tx = deserialize.deserialize_tx(
+        rawtransaction, use_txid=util.enabled("correct_segwit_txids", block_index)
+    )
     source, destination, btc_amount, fee, data, _extra = gettxinfo.get_tx_info(
         db,
-        deserialize.deserialize_tx(
-            rawtransaction, use_txid=util.enabled("correct_segwit_txids", block_index)
-        ),
+        decoded_tx,
         block_index=block_index,
     )
+    del decoded_tx["__data__"]
     result = {
         "source": source,
         "destination": destination if destination else None,
         "btc_amount": btc_amount,
         "fee": fee,
         "data": util.hexlify(data) if data else "",
+        "decoded_tx": decoded_tx,
     }
     if data:
         result["data"] = util.hexlify(data)
@@ -1851,7 +1864,7 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.sweep.ID:
             message_type_name = "sweep"
             message_data = messages.sweep.unpack(message)
-    except exceptions.UnpackError as e:
+    except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 
     return {

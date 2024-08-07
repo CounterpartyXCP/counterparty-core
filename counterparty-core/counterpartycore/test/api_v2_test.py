@@ -88,6 +88,13 @@ def test_api_v2(request):
         url = url.replace("<dividend_hash>", dividend_hash)
         if route.startswith("/v2/events"):
             url += "?limit=5&verbose=true"
+        elif (
+            route.startswith("/v2/addresses/balances")
+            or route.startswith("/v2/addresses/transactions")
+            or route.startswith("/v2/addresses/events")
+            or route.startswith("/v2/addresses/mempool")
+        ):
+            url += "?verbose=true&limit=6&addresses=" + ADDR[0] + "," + ADDR[1]
         else:
             url += "?verbose=true"
         print(url)
@@ -216,6 +223,7 @@ def test_new_get_asset_info():
         "asset_id": "1911882621324134",
         "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "supply": 1000,
+        "confirmed": True,
     }
 
 
@@ -243,6 +251,7 @@ def test_new_get_asset_orders():
         "fee_provided": 1000000,
         "fee_provided_remaining": 992800,
         "status": "open",
+        "confirmed": True,
     }
 
 
@@ -269,6 +278,7 @@ def test_new_get_order_info():
         "fee_provided": 6800,
         "fee_provided_remaining": 6800,
         "status": "open",
+        "confirmed": True,
     }
 
 
@@ -297,4 +307,5 @@ def test_new_get_order_matches():
         "match_expire_index": 310512,
         "fee_paid": 7200,
         "status": "pending",
+        "confirmed": True,
     }

@@ -1,4 +1,4 @@
-from counterpartycore.lib import ledger, transaction
+from counterpartycore.lib import transaction
 from counterpartycore.lib.api import queries, util
 from counterpartycore.lib.backend import addrindexrs, bitcoind
 
@@ -36,6 +36,10 @@ ROUTES = util.prepare_routes(
         "/v2/transactions/<int:tx_index>/events/<event>": queries.get_events_by_transaction_index_and_event,
         "/v2/transactions/<tx_hash>/events/<event>": queries.get_events_by_transaction_hash_and_event,
         ### /addresses ###
+        "/v2/addresses/balances": queries.get_balances_by_addresses,
+        "/v2/addresses/transactions": queries.get_transactions_by_addresses,
+        "/v2/addresses/events": queries.get_events_by_addresses,
+        "/v2/addresses/mempool": queries.get_mempool_events_by_addresses,
         "/v2/addresses/<address>/balances": queries.get_address_balances,
         "/v2/addresses/<address>/balances/<asset>": queries.get_balance_by_address_and_asset,
         "/v2/addresses/<address>/credits": queries.get_credits_by_address,
@@ -76,10 +80,10 @@ ROUTES = util.prepare_routes(
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
         "/v2/assets/<asset>": queries.get_asset,
-        "/v2/assets/<asset>/info": ledger.get_asset_info,
         "/v2/assets/<asset>/balances": queries.get_asset_balances,
         "/v2/assets/<asset>/balances/<address>": queries.get_balance_by_address_and_asset,
         "/v2/assets/<asset>/orders": queries.get_orders_by_asset,
+        "/v2/assets/<asset>/matches": queries.get_order_matches_by_asset,
         "/v2/assets/<asset>/credits": queries.get_credits_by_asset,
         "/v2/assets/<asset>/debits": queries.get_debits_by_asset,
         "/v2/assets/<asset>/dividends": queries.get_dividends_by_asset,
@@ -89,12 +93,14 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/dispensers/<address>": queries.get_dispenser_by_address_and_asset,
         "/v2/assets/<asset>/holders": queries.get_asset_holders,
         "/v2/assets/<asset>/dispenses": queries.get_dispenses_by_asset,
+        "/v2/assets/<asset>/subassets": queries.get_subassets_by_asset,
         ### /orders ###
         "/v2/orders": queries.get_orders,
         "/v2/orders/<order_hash>": queries.get_order,
         "/v2/orders/<order_hash>/matches": queries.get_order_matches_by_order,
         "/v2/orders/<order_hash>/btcpays": queries.get_btcpays_by_order,
         "/v2/orders/<asset1>/<asset2>": queries.get_orders_by_two_assets,
+        "/v2/orders/<asset1>/<asset2>/matches": queries.get_order_matches_by_two_assets,
         ### /bets ###
         "/v2/bets": queries.get_bets,
         "/v2/bets/<bet_hash>": queries.get_bet,
@@ -133,6 +139,7 @@ ROUTES = util.prepare_routes(
         "/v2/healthz": util.check_server_health,
         "/healthz": util.check_server_health,
         ### /bitcoin ###
+        "/v2/bitcoin/addresses/utxos": addrindexrs.get_unspent_txouts_by_addresses,
         "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
         "/v2/bitcoin/addresses/<address>/transactions/oldest": util.get_oldest_transaction_by_address,
         "/v2/bitcoin/addresses/<address>/utxos": addrindexrs.get_unspent_txouts,

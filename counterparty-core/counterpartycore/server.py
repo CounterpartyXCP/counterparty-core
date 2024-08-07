@@ -32,11 +32,7 @@ from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
-from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
-from counterpartycore.lib.telemetry.collectors.influxdb import (
-    TelemetryCollectorInfluxDB,
-)
-from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
+from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -64,6 +60,7 @@ def initialise(*args, **kwargs):
         testcoin=kwargs.get("testcoin", False),
         regtest=kwargs.get("regtest", False),
         action=kwargs.get("action", None),
+        json_logs=kwargs.get("json_logs", False),
     )
     initialise_config(*args, **kwargs)
     return database.initialise_db()
@@ -79,6 +76,7 @@ def initialise_log_config(
     testcoin=False,
     regtest=False,
     action=None,
+    json_logs=False,
 ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -125,6 +123,7 @@ def initialise_log_config(
         config.API_LOG = api_log_file
 
     config.LOG_IN_CONSOLE = action == "start" or config.VERBOSE > 0
+    config.JSON_LOGS = json_logs
 
 
 def initialise_config(
@@ -209,13 +208,14 @@ def initialise_config(
     else:
         bitcoinlib.SelectParams("mainnet")
 
-    network = ""
+    config.NETWORK_NAME = "mainnet"
     if config.TESTNET:
-        network += ".testnet"
+        config.NETWORK_NAME = "testnet"
     if config.REGTEST:
-        network += ".regtest"
+        config.NETWORK_NAME = "regtest"
     if config.TESTCOIN:
-        network += ".testcoin"
+        config.NETWORK_NAME = "testcoin"
+    network = f".{config.NETWORK_NAME }" if config.NETWORK_NAME != "mainnet" else ""
 
     # Database
     if database_file:
@@ -641,6 +641,7 @@ def initialise_log_and_config(args):
         testcoin=args.testcoin,
         regtest=args.regtest,
         action=args.action,
+        json_logs=args.json_logs,
     )
 
     # set up logging
@@ -648,6 +649,7 @@ def initialise_log_and_config(args):
         verbose=config.VERBOSE,
         quiet=config.QUIET,
         log_file=config.LOG,
+        json_logs=config.JSON_LOGS,
     )
     initialise_config(**init_args)
 
@@ -655,22 +657,6 @@ def initialise_log_and_config(args):
 def connect_to_backend():
     if not config.FORCE:
         backend.bitcoind.getblockcount()
-
-
-def initialize_telemetry():
-    telemetry_daemon = None
-    if not config.NO_TELEMETRY:
-        logger.info("Telemetry enabled.")
-        telemetry_daemon = TelemetryDaemon(
-            interval=config.TELEMETRY_INTERVAL,
-            collector=TelemetryCollectorInfluxDB(db=database.get_connection(read_only=True)),
-            client=TelemetryClientInfluxDB(),
-        )
-        telemetry_daemon.start()
-    else:
-        logger.info("Telemetry disabled.")
-
-    return telemetry_daemon
 
 
 def start_all(args):
@@ -710,7 +696,6 @@ def start_all(args):
         connect_to_backend()
 
         # Initialise telemetry.
-        telemetry_daemon = initialize_telemetry()
 
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
@@ -750,6 +735,8 @@ def start_all(args):
             follower_daemon.stop()
         if db:
             database.close(db)
+        if not config.NO_TELEMETRY:
+            TelemetryOneShot().close()
         backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()

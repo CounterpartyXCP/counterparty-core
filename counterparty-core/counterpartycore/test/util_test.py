@@ -157,8 +157,8 @@ def insert_block(db, block_index, parse_block=True):
         "previous_block_hash": None,
         "difficulty": None,
     }
-    ledger.insert_record(db, "blocks", bindings, "NEW_BLOCK")
     util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
+    ledger.insert_record(db, "blocks", bindings, "NEW_BLOCK")
 
     if parse_block:
         blocks.parse_block(db, block_index, block_time)

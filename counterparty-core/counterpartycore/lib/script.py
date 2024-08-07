@@ -316,7 +316,7 @@ def get_asm(scriptpubkey):
         asm = []
         # TODO: This should be `for element in scriptpubkey`.
         for op in scriptpubkey:
-            if type(op) == bitcoinlib.core.script.CScriptOp:
+            if type(op) == bitcoinlib.core.script.CScriptOp:  # noqa: E721
                 # TODO: `op = element`
                 asm.append(getattr(opcodes, str(op)))
             else:
@@ -348,9 +348,8 @@ def script_to_address(scriptpubkey):
     if isinstance(scriptpubkey, str):
         scriptpubkey = binascii.unhexlify(scriptpubkey)
     try:
-        network = "mainnet" if config.TESTNET == False else "testnet"  # noqa: E712
         script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
-        return utils.script_to_address(script, network)
+        return utils.script_to_address(script, config.NETWORK_NAME)
     except BaseException as e:  # noqa: F841
         raise exceptions.DecodeError("scriptpubkey decoding error")  # noqa: B904
 
