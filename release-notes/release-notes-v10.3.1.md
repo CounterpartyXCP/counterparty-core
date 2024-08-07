@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.3.1 (2024-08-06)
+# Release Notes - Counterparty Core v10.3.1 (2024-08-07)
 
 This release is a relatively minor update with a large number of improvements to the node API, as well as a few important bugfixes and tweaks to the CLI and telemetry subsystems.
 
