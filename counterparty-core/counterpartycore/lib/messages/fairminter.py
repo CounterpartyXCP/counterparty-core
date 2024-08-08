@@ -108,6 +108,9 @@ def validate(
     except exceptions.AssetNameError as e:
         problems.append(f"Invalid asset name: {e}")
 
+    if "|" in description:
+        problems.append("Description cannot contain the '|' character.")
+
     asset_name = asset
     if asset_parent != "":
         asset_name = f"{asset_parent}.{asset}"
