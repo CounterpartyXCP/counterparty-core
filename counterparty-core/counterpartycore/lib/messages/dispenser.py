@@ -411,6 +411,8 @@ def compose(
 
 
 def compose_dispense(db, source, destination, quantity, no_only_btc=False):
+    if not util.enabled("enable_dispense_tx"):
+        raise exceptions.ComposeError("dispense tx is not enabled")
     dispensers = ledger.get_dispensers(db, address=destination)
     if len(dispensers) == 0:
         # simple BTC send
