@@ -880,6 +880,33 @@ def get_assets_by_longname(db, asset_longname):
     return cursor.fetchall()
 
 
+def get_asset(db, asset):
+    cursor = db.cursor()
+    name_field = "asset_longname" if "." in asset else "asset"
+    query = f"""
+        SELECT * FROM issuances
+        WHERE ({name_field} = ? AND status = ?)
+        ORDER BY tx_index DESC
+    """  # nosec B608  # noqa: S608
+    bindings = (asset, "valid")
+    cursor.execute(query, bindings)
+    issuances = cursor.fetchall()
+    if not issuances:
+        return None
+
+    locked = False
+    supply = 0
+    for issuance in issuances:
+        supply += issuance["quantity"]
+        if issuance["locked"]:
+            locked = True
+
+    asset = issuances[0]
+    asset["supply"] = supply
+    asset["locked"] = locked
+    return asset
+
+
 #####################
 #    BROADCASTS     #
 #####################
