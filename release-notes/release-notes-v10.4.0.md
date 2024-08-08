@@ -8,6 +8,7 @@
 
 * Fix `get_value_by_block_index()` on `regtest`
 * Fix events hash mismatch after a reparse
+* Fix `regtest` default ports
 
 
 ## Codebase
