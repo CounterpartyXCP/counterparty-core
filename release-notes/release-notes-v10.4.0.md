@@ -4,6 +4,10 @@
 
 # ChangeLog
 
+## Protocole Changes
+
+* Make Dispenses Normal Counterparty Transactions (see https://github.com/CounterpartyXCP/counterparty-core/pull/2141)
+
 ## Bugfixes
 
 * Fix `get_value_by_block_index()` on `regtest`
