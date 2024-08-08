@@ -238,6 +238,7 @@ def validate(
         util.enabled("dispenser_must_be_created_by_source")
         and open_address is not None
         and source != open_address
+        and status != STATUS_CLOSED
     ):
         problems.append("dispenser must be created by source")
     else:
