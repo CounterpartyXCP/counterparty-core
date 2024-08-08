@@ -9,7 +9,6 @@ import apsw
 from counterpartycore.lib import blocks, config, database, exceptions, ledger
 from counterpartycore.lib.api import util
 from counterpartycore.lib.util import format_duration
-from sentry_sdk import capture_exception
 from yoyo import get_backend, read_migrations
 from yoyo.exceptions import LockTimeout
 
@@ -778,8 +777,7 @@ def synchronize_mempool(api_db, ledger_db):
                         execute_event(api_db, event)
                         update_assets_info(api_db, event)
                     else:
-                        logger.warning(f"Skipping duplicate event: {event}")
-                        capture_exception(e)
+                        # Skipping duplicate event
                         MEMPOOL_SKIP_EVENT_HASHES.append(event["tx_hash"])
                 except Exception as e:
                     logger.error(f"API Watcher - Error executing mempool event: {e}")
