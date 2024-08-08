@@ -7,8 +7,6 @@ from counterpartycore.lib import config, database, exceptions, ledger
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
-FORMAT = ">QQQQ?QQQQQQ??Q?"  # exclude description at the end
-LENGTH = 4 * 8 + 1 + 6 * 8 + 2 * 1 + 8 + 1
 ID = 90
 
 
@@ -193,39 +191,12 @@ def compose(
         raise exceptions.ComposeError(problems)
 
     minted_asset_commission_int = int((minted_asset_commission or 0) * 1e8)
-    asset_id = ledger.generate_asset_id(asset)
-    asset_parent_id = ledger.generate_asset_id(asset_parent) if asset_parent else 0
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
-    data += struct.pack(
-        FORMAT,
-        asset_id,
-        price,
-        max_mint_per_tx,
-        hard_cap,
-        burn_payment,
-        premint_quantity,
-        start_block,
-        end_block,
-        soft_cap,
-        soft_cap_deadline_block,
-        asset_parent_id,
-        lock_description,
-        lock_quantity,
-        minted_asset_commission_int,
-        divisible,
-    )
-    if description:
-        data += struct.pack(f">{len(description)}s", description.encode("utf-8"))
-
-    return (source, [], data)
-
-
-def unpack(message, return_dict=False):
-    try:
-        (
-            asset_id,
+    data_content = "|".join(
+        [
+            asset,
             price,
             max_mint_per_tx,
             hard_cap,
@@ -235,40 +206,58 @@ def unpack(message, return_dict=False):
             end_block,
             soft_cap,
             soft_cap_deadline_block,
-            asset_parent_id,
+            asset_parent,
             lock_description,
             lock_quantity,
             minted_asset_commission_int,
             divisible,
-        ) = struct.unpack(FORMAT, message)
+            description,
+        ]
+    )
+    data += struct.pack(f">{len(data_content)}s", data_content)
+    return (source, [], data)
 
-        description = None
-        if len(message) > LENGTH:
-            description = struct.unpack(f">{len(message) - LENGTH}s", message[LENGTH:])[0].decode(
-                "utf-8"
-            )
 
-        asset = ledger.generate_asset_name(asset_id)
-        asset_parent = ledger.generate_asset_name(asset_parent_id) if asset_parent_id else ""
+def unpack(message, return_dict=False):
+    try:
+        data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8")
+        (
+            asset,
+            price,
+            max_mint_per_tx,
+            hard_cap,
+            burn_payment,
+            premint_quantity,
+            start_block,
+            end_block,
+            soft_cap,
+            soft_cap_deadline_block,
+            asset_parent,
+            lock_description,
+            lock_quantity,
+            minted_asset_commission_int,
+            divisible,
+            description,
+        ) = data_content.split("|")
 
         if return_dict:
             return {
                 "asset": asset,
-                "price": price,
-                "max_mint_per_tx": max_mint_per_tx,
+                "price": int(price),
+                "max_mint_per_tx": int(max_mint_per_tx),
                 "description": description,
-                "hard_cap": hard_cap,
-                "burn_payment": burn_payment,
-                "premint_quantity": premint_quantity,
-                "start_block": start_block,
-                "end_block": end_block,
-                "soft_cap": soft_cap,
-                "soft_cap_deadline_block": soft_cap_deadline_block,
+                "hard_cap": int(hard_cap),
+                "burn_payment": bool(burn_payment),
+                "premint_quantity": int(premint_quantity),
+                "start_block": int(start_block),
+                "end_block": int(end_block),
+                "soft_cap": int(soft_cap),
+                "soft_cap_deadline_block": int(soft_cap_deadline_block),
                 "asset_parent": asset_parent,
-                "lock_description": lock_description,
-                "lock_quantity": lock_quantity,
+                "lock_description": bool(lock_description),
+                "lock_quantity": bool(lock_quantity),
                 "minted_asset_commission": D(minted_asset_commission_int) / D(1e8),
-                "divisible": divisible,
+                "divisible": bool(divisible),
             }
         else:
             return (
