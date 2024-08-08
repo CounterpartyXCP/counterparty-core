@@ -383,7 +383,9 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if not data and destinations != [
         config.UNSPENDABLE,
     ]:
-        if util.enabled("dispensers", block_index) and not composing:
+        if util.enabled("disable_vanilla_btc_dispense", block_index):
+            raise BTCOnlyError("no data and not unspendable")
+        elif util.enabled("dispensers", block_index) and not composing:
             dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
             if len(dispensers_outputs) == 0:
                 raise BTCOnlyError("no data and not unspendable")
@@ -416,7 +418,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         message_type_id = None
 
     if message_type_id == dispenser.DISPENSE_ID and util.enabled(
-        "dispense_prefix", block_index=block_index
+        "enable_dispense_tx", block_index=block_index
     ):
         # if there is a dispense prefix we assume all potential_dispensers are dispensers
         # that's mean we don't need to call get_dispensers_outputs()

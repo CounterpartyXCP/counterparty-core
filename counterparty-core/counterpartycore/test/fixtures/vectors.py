@@ -885,7 +885,7 @@ UNITTEST_VECTOR = {
             },
             {
                 "comment": "Dispense",
-                "mock_protocol_changes": {"dispense_prefix": True, "short_tx_type_id": True},
+                "mock_protocol_changes": {"enable_dispense_tx": True, "short_tx_type_id": True},
                 "in": (
                     deserialize.deserialize_tx(
                         "0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff03e8030000000000001976a9149c8d1f5405451de6070bf1db86ab6accb495b62588ac00000000000000000c6a0a3ab408a679f108a193352bc5f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",

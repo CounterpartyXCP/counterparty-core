@@ -542,11 +542,18 @@
     "block_index": 900000,
     "testnet_block_index": 2815000
   },
-  "dispense_prefix": {
+  "enable_dispense_tx": {
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,
     "block_index": 900000,
+    "testnet_block_index": 2815000
+  },
+  "disable_vanilla_btc_dispense": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 4,
+    "minimum_version_revision": 0,
+    "block_index": 925000,
     "testnet_block_index": 2815000
   }
 }
