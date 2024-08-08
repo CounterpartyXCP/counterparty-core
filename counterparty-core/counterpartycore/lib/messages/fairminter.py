@@ -56,21 +56,21 @@ def validate(
     db,
     source,
     asset,
+    asset_parent="",
     price=0,
     max_mint_per_tx=0,
-    description="",
     hard_cap=0,
-    burn_payment=False,
     premint_quantity=0,
     start_block=0,
     end_block=0,
     soft_cap=0,
     soft_cap_deadline_block=0,
-    asset_parent="",
+    minted_asset_commission=0.0,
+    burn_payment=False,
     lock_description=False,
     lock_quantity=True,
-    minted_asset_commission=0,
     divisible=True,
+    description="",
 ):
     problems = []
 
@@ -107,9 +107,6 @@ def validate(
             ledger.generate_asset_id(asset_parent)
     except exceptions.AssetNameError as e:
         problems.append(f"Invalid asset name: {e}")
-
-    if "|" in description:
-        problems.append("Description cannot contain the '|' character.")
 
     asset_name = asset
     if asset_parent != "":
@@ -153,42 +150,42 @@ def compose(
     db,
     source,
     asset,
+    asset_parent="",
     price=0,
     max_mint_per_tx=0,
-    description="",
     hard_cap=0,
-    burn_payment=False,
     premint_quantity=0,
     start_block=0,
     end_block=0,
     soft_cap=0,
     soft_cap_deadline_block=0,
-    asset_parent="",
+    minted_asset_commission=0.0,
+    burn_payment=False,
     lock_description=False,
     lock_quantity=True,
-    minted_asset_commission=0,
     divisible=True,
+    description="",
 ):
     # validate parameters
     problems = validate(
         db,
         source,
         asset,
+        asset_parent,
         price,
         max_mint_per_tx,
-        description,
         hard_cap,
-        burn_payment,
         premint_quantity,
         start_block,
         end_block,
         soft_cap,
         soft_cap_deadline_block,
-        asset_parent,
+        minted_asset_commission,
+        burn_payment,
         lock_description,
         lock_quantity,
-        minted_asset_commission,
         divisible,
+        description,
     )
     if len(problems) > 0:
         raise exceptions.ComposeError(problems)
@@ -200,19 +197,19 @@ def compose(
     data_content = "|".join(
         [
             asset,
+            asset_parent,
             price,
             max_mint_per_tx,
             hard_cap,
-            burn_payment,
             premint_quantity,
             start_block,
             end_block,
             soft_cap,
             soft_cap_deadline_block,
-            asset_parent,
+            minted_asset_commission_int,
+            burn_payment,
             lock_description,
             lock_quantity,
-            minted_asset_commission_int,
             divisible,
             description,
         ]
@@ -223,63 +220,65 @@ def compose(
 
 def unpack(message, return_dict=False):
     try:
-        data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8")
+        data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
         (
             asset,
+            asset_parent,
             price,
             max_mint_per_tx,
             hard_cap,
-            burn_payment,
             premint_quantity,
             start_block,
             end_block,
             soft_cap,
             soft_cap_deadline_block,
-            asset_parent,
+            minted_asset_commission_int,
+            burn_payment,
             lock_description,
             lock_quantity,
-            minted_asset_commission_int,
             divisible,
-            description,
-        ) = data_content.split("|")
+        ) = data_content[0:15]
+        description = "|".join(data_content[15:]) if len(data_content) > 15 else ""
+
+        minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
         if return_dict:
             return {
                 "asset": asset,
+                "asset_parent": asset_parent,
                 "price": int(price),
                 "max_mint_per_tx": int(max_mint_per_tx),
-                "description": description,
                 "hard_cap": int(hard_cap),
-                "burn_payment": bool(burn_payment),
                 "premint_quantity": int(premint_quantity),
                 "start_block": int(start_block),
                 "end_block": int(end_block),
                 "soft_cap": int(soft_cap),
                 "soft_cap_deadline_block": int(soft_cap_deadline_block),
-                "asset_parent": asset_parent,
+                "minted_asset_commission": int(minted_asset_commission),
+                "burn_payment": bool(burn_payment),
                 "lock_description": bool(lock_description),
                 "lock_quantity": bool(lock_quantity),
-                "minted_asset_commission": D(minted_asset_commission_int) / D(1e8),
                 "divisible": bool(divisible),
+                "description": description,
             }
         else:
             return (
                 asset,
-                price,
-                max_mint_per_tx,
-                description,
-                hard_cap,
-                burn_payment,
-                premint_quantity,
-                start_block,
-                end_block,
-                soft_cap,
-                soft_cap_deadline_block,
                 asset_parent,
-                lock_description,
-                lock_quantity,
-                D(minted_asset_commission_int) / D(1e8),
-                divisible,
+                int(price),
+                int(max_mint_per_tx),
+                int(hard_cap),
+                int(premint_quantity),
+                int(start_block),
+                int(end_block),
+                int(soft_cap),
+                int(soft_cap_deadline_block),
+                int(minted_asset_commission),
+                bool(burn_payment),
+                bool(lock_description),
+                bool(lock_quantity),
+                bool(divisible),
+                description,
             )
     except Exception as e:
         raise exceptions.UnpackError(f"Cannot unpack fair minter message: {e}") from e
@@ -288,42 +287,42 @@ def unpack(message, return_dict=False):
 def parse(db, tx, message):
     (
         asset,
+        asset_parent,
         price,
         max_mint_per_tx,
-        description,
         hard_cap,
-        burn_payment,
         premint_quantity,
         start_block,
         end_block,
         soft_cap,
         soft_cap_deadline_block,
-        asset_parent,
+        minted_asset_commission,
+        burn_payment,
         lock_description,
         lock_quantity,
-        minted_asset_commission,
         divisible,
+        description,
     ) = unpack(message)
 
     problems = validate(
         db,
         tx["source"],
         asset,
+        asset_parent,
         price,
         max_mint_per_tx,
-        description,
         hard_cap,
-        burn_payment,
         premint_quantity,
         start_block,
         end_block,
         soft_cap,
         soft_cap_deadline_block,
-        asset_parent,
+        minted_asset_commission,
+        burn_payment,
         lock_description,
         lock_quantity,
-        minted_asset_commission,
         divisible,
+        description,
     )
 
     status = "pending"
