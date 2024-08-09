@@ -160,6 +160,7 @@ def select_rows(
         "balances",
         "address_events",
         "asset_holders",
+        "messages",
     ]
 
     if where_clause:
