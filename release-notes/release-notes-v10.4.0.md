@@ -19,6 +19,8 @@
 
 ## CLI
 
+* Move Counterparty Node UUID from `~/counterparty-node-uuid` to `~/.local/state/counterparty/.counterparty-node-uuid`
+
 # Credits
 
 * Ouziel Slama
