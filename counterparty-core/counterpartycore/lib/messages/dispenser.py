@@ -234,9 +234,24 @@ def validate(
         problems.append(
             f"address doesn't has enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})"
         )
+    elif (
+        util.enabled("dispenser_must_be_created_by_source")
+        and open_address is not None
+        and source != open_address
+        and status != STATUS_CLOSED
+    ):
+        problems.append("dispenser must be created by source")
     else:
-        if status == STATUS_OPEN_EMPTY_ADDRESS and not (open_address):
+        if status == STATUS_OPEN_EMPTY_ADDRESS and not open_address:
             open_address = source
+            status = STATUS_OPEN
+
+        # status == STATUS_OPEN_EMPTY_ADDRESS means open_address != source
+        if (
+            util.enabled("dispenser_must_be_created_by_source")
+            and status == STATUS_OPEN_EMPTY_ADDRESS
+            and open_address == source
+        ):
             status = STATUS_OPEN
 
         open_dispensers = []

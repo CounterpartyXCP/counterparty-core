@@ -4,6 +4,10 @@
 
 # ChangeLog
 
+## Protocole Changes
+
+* Require Dispenser to be Source Address (see https://github.com/CounterpartyXCP/counterparty-core/pull/2140)
+
 ## Bugfixes
 
 * Fix `get_value_by_block_index()` on `regtest`
