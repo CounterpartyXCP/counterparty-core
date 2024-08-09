@@ -743,11 +743,11 @@ def start_all(args):
         try:
             database.check_wal_file(config.DATABASE)
         except exceptions.WALFileFoundError:
-            logger.error(
+            logger.warn(
                 "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
             )
         except exceptions.DatabaseError:
-            logger.error(
+            logger.warn(
                 "Database is in use by another process and was unable to be closed correctly."
             )
         # Ensure that the last closed connection is not read-only in order to delete WAL and SHM files
