@@ -9,6 +9,7 @@
 * Fix `get_value_by_block_index()` on `regtest`
 * Fix events hash mismatch after a reparse
 * Fix `/v2/assets/XCP` route
+* Fix queries on `messages` table (remove mempool filtering)
 
 ## Codebase
 

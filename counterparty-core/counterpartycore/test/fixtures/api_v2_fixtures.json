@@ -231,8 +231,7 @@
                     "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
                     "block_time": 310491000
                 },
-                "tx_hash": null,
-                "confirmed": true
+                "tx_hash": null
             },
             {
                 "event_index": 1183,
@@ -242,8 +241,7 @@
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492
                 },
-                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
-                "confirmed": true
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
                 "event_index": 1182,
@@ -290,8 +288,7 @@
                     "fee_required_remaining_normalized": "0.00900000",
                     "fee_provided_remaining_normalized": "0.00006800"
                 },
-                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
-                "confirmed": true
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
                 "event_index": 1181,
@@ -314,8 +311,7 @@
                     },
                     "quantity_normalized": "1.00000000"
                 },
-                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
-                "confirmed": true
+                "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
                 "event_index": 1180,
@@ -363,8 +359,7 @@
                     },
                     "btc_amount_normalized": "0.00000000"
                 },
-                "tx_hash": null,
-                "confirmed": true
+                "tx_hash": null
             },
             {
                 "event_index": 1179,
@@ -378,8 +373,7 @@
                     "previous_block_hash": null,
                     "txlist_hash": null
                 },
-                "tx_hash": null,
-                "confirmed": true
+                "tx_hash": null
             }
         ],
         "next_cursor": null,
@@ -389,33 +383,27 @@
         "result": [
             {
                 "event": "TRANSACTION_PARSED",
-                "event_count": 1,
-                "confirmed": true
+                "event_count": 1
             },
             {
                 "event": "OPEN_ORDER",
-                "event_count": 1,
-                "confirmed": true
+                "event_count": 1
             },
             {
                 "event": "NEW_TRANSACTION",
-                "event_count": 1,
-                "confirmed": true
+                "event_count": 1
             },
             {
                 "event": "NEW_BLOCK",
-                "event_count": 1,
-                "confirmed": true
+                "event_count": 1
             },
             {
                 "event": "DEBIT",
-                "event_count": 1,
-                "confirmed": true
+                "event_count": 1
             },
             {
                 "event": "BLOCK_PARSED",
-                "event_count": 1,
-                "confirmed": true
+                "event_count": 1
             }
         ],
         "next_cursor": null,
@@ -921,7 +909,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "confirmed": true,
                 "block_time": 310001000
             },
             {
@@ -947,7 +934,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "confirmed": true,
                 "block_time": 310001000
             },
             {
@@ -978,7 +964,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "confirmed": true,
                 "block_time": 310001000
             },
             {
@@ -993,7 +978,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "confirmed": true,
                 "block_time": 310001000
             },
             {
@@ -1019,7 +1003,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "confirmed": true,
                 "block_time": 310001000
             }
         ],
@@ -1038,7 +1021,6 @@
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
-                "confirmed": true,
                 "block_time": 310491000
             },
             {
@@ -1088,7 +1070,6 @@
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
-                "confirmed": true,
                 "block_time": 310491000
             },
             {
@@ -1114,7 +1095,6 @@
                 },
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "block_index": 310491,
-                "confirmed": true,
                 "block_time": 310491000
             }
         ],
@@ -1156,7 +1136,6 @@
                 },
                 "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "block_index": 310001,
-                "confirmed": true,
                 "block_time": 310001000
             }
         ],
@@ -1552,7 +1531,6 @@
                 },
                 "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
                 "block_index": 310498,
-                "confirmed": true,
                 "block_time": 310498000
             },
             {
@@ -1583,7 +1561,6 @@
                 },
                 "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
                 "block_index": 310498,
-                "confirmed": true,
                 "block_time": 310498000
             },
             {
@@ -1609,7 +1586,6 @@
                 },
                 "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
                 "block_index": 310498,
-                "confirmed": true,
                 "block_time": 310498000
             },
             {
@@ -1649,7 +1625,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310498,
-                "confirmed": true,
                 "block_time": 310498000
             },
             {
@@ -1675,7 +1650,6 @@
                 },
                 "tx_hash": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
                 "block_index": 310497,
-                "confirmed": true,
                 "block_time": 310497000
             }
         ],
@@ -4984,7 +4958,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310500,
-                "confirmed": true,
                 "block_time": 310500000
             },
             {
@@ -5001,7 +4974,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310500,
-                "confirmed": true,
                 "block_time": 310500000
             },
             {
@@ -5017,7 +4989,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310499,
-                "confirmed": true,
                 "block_time": 310499000
             },
             {
@@ -5034,7 +5005,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310499,
-                "confirmed": true,
                 "block_time": 310499000
             },
             {
@@ -5050,7 +5020,6 @@
                 },
                 "tx_hash": null,
                 "block_index": 310498,
-                "confirmed": true,
                 "block_time": 310498000
             }
         ],
@@ -5070,7 +5039,6 @@
             },
             "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
             "block_index": 310001,
-            "confirmed": true,
             "block_time": 310001000
         }
     },
@@ -5078,28 +5046,23 @@
         "result": [
             {
                 "event": "TRANSACTION_PARSED",
-                "event_count": 44,
-                "confirmed": true
+                "event_count": 44
             },
             {
                 "event": "SEND",
-                "event_count": 9,
-                "confirmed": true
+                "event_count": 9
             },
             {
                 "event": "ORDER_UPDATE",
-                "event_count": 2,
-                "confirmed": true
+                "event_count": 2
             },
             {
                 "event": "ORDER_MATCH",
-                "event_count": 1,
-                "confirmed": true
+                "event_count": 1
             },
             {
                 "event": "OPEN_ORDER",
-                "event_count": 6,
-                "confirmed": true
+                "event_count": 6
             }
         ],
         "next_cursor": "OPEN_DISPENSER",
@@ -5130,7 +5093,6 @@
                 },
                 "tx_hash": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
                 "block_index": 310498,
-                "confirmed": true,
                 "block_time": 310498000
             },
             {
@@ -5156,7 +5118,6 @@
                 },
                 "tx_hash": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
                 "block_index": 310497,
-                "confirmed": true,
                 "block_time": 310497000
             },
             {
@@ -5182,7 +5143,6 @@
                 },
                 "tx_hash": "a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba",
                 "block_index": 310496,
-                "confirmed": true,
                 "block_time": 310496000
             },
             {
@@ -5208,7 +5168,6 @@
                 },
                 "tx_hash": "02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e",
                 "block_index": 310495,
-                "confirmed": true,
                 "block_time": 310495000
             },
             {
@@ -5234,7 +5193,6 @@
                 },
                 "tx_hash": "321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503",
                 "block_index": 310494,
-                "confirmed": true,
                 "block_time": 310494000
             }
         ],
@@ -5244,8 +5202,7 @@
     "http://localhost:10009/v2/events/CREDIT/count?limit=5&verbose=true": {
         "result": {
             "event": "CREDIT",
-            "event_count": 34,
-            "confirmed": true
+            "event_count": 34
         }
     },
     "http://localhost:10009/v2/dispenses?verbose=true": {
