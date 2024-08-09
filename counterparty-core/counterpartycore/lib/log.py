@@ -9,7 +9,7 @@ from logging.handlers import RotatingFileHandler
 import zmq
 from dateutil.tz import tzlocal
 from halo import Halo
-from json_log_formatter import VerboseJSONFormatter
+from json_log_formatter import JSONFormatter
 from termcolor import colored, cprint
 
 from counterpartycore.lib import config, util
@@ -83,6 +83,39 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+class CustomisedJSONFormatter(JSONFormatter):
+    def json_record(self, message: str, extra: dict, record: logging.LogRecord) -> dict:
+        extra["filename"] = record.filename
+        extra["funcName"] = record.funcName
+        extra["levelname"] = record.levelname
+        extra["lineno"] = record.lineno
+        extra["module"] = record.module
+        extra["name"] = record.name
+        extra["pathname"] = record.pathname
+        extra["process"] = record.process
+        extra["processName"] = record.processName
+        if hasattr(record, "stack_info"):
+            extra["stack_info"] = record.stack_info
+        else:
+            extra["stack_info"] = None
+        extra["thread"] = record.thread
+        extra["threadName"] = record.threadName
+
+        if (
+            record.levelno != logging.EVENT
+            and util.CURRENT_BLOCK_INDEX is not None
+            and "/counterpartycore/lib/messages/" in record.pathname
+        ):
+            if util.PARSING_MEMPOOL:
+                extra["block_index"] = "Mempool"
+            else:
+                extra["block_index"] = util.CURRENT_BLOCK_INDEX
+        else:
+            extra["block_index"] = None
+
+        return super(CustomisedJSONFormatter, self).json_record(message, extra, record)
+
+
 def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
     logging.Logger.trace = trace
     logging.Logger.event = event
@@ -114,14 +147,14 @@ def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
         max_log_size = 20 * 1024 * 1024  # 20 MB
         fileh = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
         fileh.setLevel(logging.TRACE)
-        fileh.setFormatter(VerboseJSONFormatter())
+        fileh.setFormatter(CustomisedJSONFormatter())
         logger.addHandler(fileh)
 
     if config.LOG_IN_CONSOLE:
         console = logging.StreamHandler()
         console.setLevel(log_level)
         if json_logs:
-            console.setFormatter(VerboseJSONFormatter())
+            console.setFormatter(CustomisedJSONFormatter())
         else:
             console.setFormatter(CustomFormatter())
         logger.addHandler(console)
