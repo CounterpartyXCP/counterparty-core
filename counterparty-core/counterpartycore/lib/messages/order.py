@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 # Filled orders may not be re‐opened, so only orders not involving BTC (and so
 # which cannot have expired order matches) may be filled.
 import decimal
