@@ -811,10 +811,11 @@ class APIWatcher(Thread):
         self.api_db.execute("PRAGMA foreign_keys=OFF")
         # Create XCP and BTC assets if they don't exist
         cursor = self.api_db.cursor()
-        cursor.execute("""SELECT * FROM assets WHERE asset_name = ?""", ("BTC",))
+        cursor.execute("""SELECT * FROM assets_info WHERE asset = ?""", ("XCP",))
         if not list(cursor):
-            cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None))
-            cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
+            cursor.execute(
+                """INSERT OR REPLACE INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None)
+            )
             insert_asset_info_sql = """
                 INSERT INTO assets_info (
                     asset, divisible, locked, supply, description,
@@ -829,11 +830,11 @@ class APIWatcher(Thread):
                 {
                     "asset": "XCP",
                     "divisible": True,
-                    "locked": False,
-                    "supply": 0,
+                    "locked": True,
+                    "supply": ledger.xcp_supply(self.ledger_db),
                     "description": "The Counterparty protocol native currency",
-                    "first_issuance_block_index": 0,
-                    "last_issuance_block_index": 0,
+                    "first_issuance_block_index": 278319,
+                    "last_issuance_block_index": 283810,
                 },
             )
 
