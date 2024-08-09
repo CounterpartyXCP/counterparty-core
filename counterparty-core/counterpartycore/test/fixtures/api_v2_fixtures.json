@@ -3846,13 +3846,13 @@
                 "issuer": null,
                 "owner": null,
                 "divisible": true,
-                "locked": false,
-                "supply": 604031847920,
+                "locked": true,
+                "supply": 1208063695840,
                 "description": "The Counterparty protocol native currency",
-                "first_issuance_block_index": 0,
-                "last_issuance_block_index": 0,
+                "first_issuance_block_index": 278319,
+                "last_issuance_block_index": 283810,
                 "confirmed": true,
-                "supply_normalized": "6040.31850000"
+                "supply_normalized": "12080.63700000"
             }
         ],
         "next_cursor": null,
