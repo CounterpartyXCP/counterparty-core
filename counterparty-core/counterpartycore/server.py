@@ -733,10 +733,10 @@ def start_all(args):
             api_server_v1.stop()
         if follower_daemon:
             follower_daemon.stop()
-        if db:
-            database.close(db)
         if not config.NO_TELEMETRY:
             TelemetryOneShot().close()
+        if db:
+            database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()
