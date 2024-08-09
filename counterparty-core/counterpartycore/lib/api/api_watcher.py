@@ -814,6 +814,9 @@ class APIWatcher(Thread):
         cursor.execute("""SELECT * FROM assets_info WHERE asset = ?""", ("XCP",))
         if not list(cursor):
             cursor.execute(
+                """INSERT OR REPLACE INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None)
+            )
+            cursor.execute(
                 """INSERT OR REPLACE INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None)
             )
             insert_asset_info_sql = """
