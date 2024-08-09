@@ -11,12 +11,15 @@
 * Fix `regtest` default ports
 * Fix `/v2/assets/XCP` route
 * Fix queries on `messages` table (remove mempool filtering)
+* Fix graceful closing of `counterparty.db`
 
 ## Codebase
 
 ## API
 
 ## CLI
+
+* Move Counterparty Node UUID from `~/counterparty-node-uuid` to `~/.local/state/counterparty/.counterparty-node-uuid`
 
 # Credits
 
