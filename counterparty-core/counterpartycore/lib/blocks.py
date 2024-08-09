@@ -205,12 +205,13 @@ def parse_tx(db, tx):
                 if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
                     logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
                 cursor.close()
+                util.CURRENT_TX_HASH = None
                 return False
 
             # NOTE: for debugging (check asset conservation after every `N` transactions).
             # if not tx['tx_index'] % N:
             #     check.asset_conservation(db)
-
+            util.CURRENT_TX_HASH = None
             return True
     except Exception as e:
         raise exceptions.ParseTransactionError(f"{e}")  # noqa: B904

@@ -9026,5 +9026,16 @@
         ],
         "next_cursor": 17630748,
         "result_count": 2742583
+    },
+    "/v2/addresses/<address>/compose/dispense": {
+        "result": {
+            "rawtransaction": "01000000017004c1186a4a6a11708e1739839488180dbb6dbf4a9bf52228faa5b3173cdb05000000001976a914818895f3dc2c178629d3d2d8fa3ec4a3f817982188acffffffff03e8030000000000001976a9144695974623d397083e3d469163e0c680ac77639188ac00000000000000000c6a0a0d1e454cefefcbe168ff6b070506000000001976a914818895f3dc2c178629d3d2d8fa3ec4a3f817982188ac00000000",
+            "params": {
+                "source": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+                "destination": "17SDWBrEVyJ2nisHDmozgw35R9Bgu8ewqo",
+                "quantity": 1000
+            },
+            "name": "dispense"
+        }
     }
 }

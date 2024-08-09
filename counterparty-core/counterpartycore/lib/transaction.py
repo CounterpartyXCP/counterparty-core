@@ -30,6 +30,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.backend import addrindexrs
+from counterpartycore.lib.messages import dispense  # noqa: F401
 from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer
 
 # Constants
@@ -838,7 +839,7 @@ class TransactionService:
                 txid_ba = bytearray(ptx.GetTxid())
                 txid_ba.reverse()
                 pretx_txid = bytes(txid_ba)  # gonna leave the malleability problem to upstream
-                self.logger.trace("pretx_txid: %s", binascii.hexlify(pretx_txid))
+                self.logger.debug(f"pretx_txid {pretx_txid}")
 
             if unsigned_pretx:
                 # we set a long lock on this, don't want other TXs to spend from it
@@ -1704,6 +1705,37 @@ def compose_send(
         "rawtransaction": rawtransaction,
         "params": params,
         "name": "send",
+    }
+
+
+def compose_dispense(
+    db,
+    address: str,
+    dispenser: str,
+    quantity: int,
+    **construct_args,
+):
+    """
+    Composes a transaction to send BTC to a dispenser.
+    :param address: The address that will be sending (must have the necessary quantity of BTC) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param dispenser: The dispenser that will be receiving the asset (e.g. 17SDWBrEVyJ2nisHDmozgw35R9Bgu8ewqo)
+    :param quantity: The quantity of BTC to send (in satoshis, hence integer) (e.g. 1000)
+    """
+    params = {
+        "source": address,
+        "destination": dispenser,
+        "quantity": quantity,
+    }
+    rawtransaction = compose_transaction(
+        db,
+        name="dispense",
+        params=params,
+        **construct_args,
+    )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "dispense",
     }
 
 
