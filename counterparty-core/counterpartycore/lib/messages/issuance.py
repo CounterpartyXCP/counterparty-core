@@ -76,6 +76,8 @@ def initialise(db):
         cursor.execute("""ALTER TABLE issuances ADD COLUMN asset_longname TEXT""")
     if "reset" not in columns:
         cursor.execute("""ALTER TABLE issuances ADD COLUMN reset BOOL""")
+    if "description_locked" not in columns:
+        cursor.execute("""ALTER TABLE issuances ADD COLUMN description_locked BOOL""")
 
     # If sweep_hotfix activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
@@ -100,6 +102,7 @@ def initialise(db):
                               status TEXT,
                               asset_longname TEXT,
                               reset BOOL,
+                              description_locked BOOL,
                               PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index))
@@ -110,7 +113,7 @@ def initialise(db):
                 call_date, call_price, description, fee_paid, locked, status, asset_longname, reset)
                 SELECT tx_index, tx_hash, 0, block_index, asset, quantity, divisible, source,
                 issuer, transfer, callable, call_date, call_price, description, fee_paid,
-                locked, status, asset_longname, reset FROM issuances""",
+                locked, status, asset_longname, reset, description_locked FROM issuances""",
             {},
         )
         cursor.execute("DROP TABLE issuances")
@@ -236,6 +239,12 @@ def validate(
             problems.append("locked asset and non‐zero quantity")
         if issuance_locked and reset:
             problems.append("cannot reset a locked asset")
+        if (
+            util.enabled("lockable_issuance_descriptions", block_index)
+            and last_issuance["description_locked"]
+            and description is not None
+        ):
+            problems.append("Cannot update a locked description")
     else:
         reissuance = False
         if description.lower() == "lock":
@@ -934,13 +943,18 @@ def parse(db, tx, message, message_type_id):
             )
 
         # Lock?
+        description_locked = False
         if not isinstance(lock, bool):
             lock = False
         if status == "valid":
-            if (description and description.lower() == "lock") or lock:
-                lock = True
+            if description and description.lower() == "lock":
+                if util.enabled("lockable_issuance_descriptions", tx["block_index"]):
+                    description_locked = True
+                else:
+                    lock = True
+
                 issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
-                if description.lower() == "lock" and len(issuances) > 0:
+                if len(issuances) > 0:
                     description = issuances[-1]["description"]  # Use last description
 
             if not reissuance:
@@ -976,6 +990,7 @@ def parse(db, tx, message, message_type_id):
             "description": description,
             "fee_paid": fee,
             "locked": lock,
+            "description_locked": description_locked,
             "reset": reset,
             "status": status,
             "asset_longname": asset_longname,
