@@ -62,6 +62,8 @@ class CustomFormatter(logging.Formatter):
 
     def format(self, record):
         attrs = ["bold"] if hasattr(record, "bold") else []
+
+        time_format = colored("%(asctime)s", attrs=attrs)
         level_name_format = colored("%(levelname)8s", self.COLORS.get(record.levelno), attrs=attrs)
 
         if (
@@ -70,11 +72,15 @@ class CustomFormatter(logging.Formatter):
             and "/counterpartycore/lib/messages/" in record.pathname
         ):
             if util.PARSING_MEMPOOL:
-                log_format = f"%(asctime)s - [{level_name_format}] - Mempool - %(message)s"
+                log_message = "Mempool - %(message)s"
             else:
-                log_format = f"%(asctime)s - [{level_name_format}] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
+                log_message = f"Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
         else:
-            log_format = f"%(asctime)s - [{level_name_format}] - %(message)s"
+            log_message = "%(message)s"
+        if hasattr(record, "bold"):
+            log_message = colored(log_message, attrs=attrs)
+
+        log_format = f"{time_format} - [{level_name_format}] - {log_message}"
 
         formatter = logging.Formatter(log_format)
         if isinstance(record.args, dict):

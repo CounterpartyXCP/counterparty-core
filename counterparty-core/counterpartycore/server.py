@@ -695,8 +695,6 @@ def start_all(args):
         # Backend.
         connect_to_backend()
 
-        # Initialise telemetry.
-
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
         transaction.initialise()
