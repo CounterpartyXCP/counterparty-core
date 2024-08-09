@@ -58,6 +58,7 @@ This release is not a protocol change and does not require any reparsing.
 * Add `--json-logs` flag for displaying logs in the JSON format
 * Send telemetry data after each block
 * Reduce Sentry Trace Sample Rate to 10%
+* Enable Sentry Caches and Queries pages
 
 
 # Credits
