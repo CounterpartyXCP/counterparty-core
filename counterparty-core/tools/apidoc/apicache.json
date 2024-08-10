@@ -6282,150 +6282,6 @@
         "next_cursor": null,
         "result_count": null
     },
-    "/v2/addresses/events": {
-        "result": [
-            {
-                "event_index": 17618366,
-                "event": "DISPENSE",
-                "params": {
-                    "asset": "A4843919604117950000",
-                    "block_index": 852611,
-                    "btc_amount": 200000,
-                    "destination": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
-                    "dispense_index": 0,
-                    "dispense_quantity": 1,
-                    "dispenser_tx_hash": "5f6ea4dc1916012be057bcbf54fa6f24c50b75eed50cac18616731e7e592ba78",
-                    "source": "bc1qxfs3r7rp76mzd9wxxy3d2hc6pj39rvu8vj59ss",
-                    "tx_hash": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
-                    "tx_index": 2741056,
-                    "block_time": 1721218343,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAArklEQVR42mNgGNbgkZraf2LEyDYchtH5yJaQbSG6gfgspJrBhCwlOrzJtQSvRZQYSlJQ4dK8rjsRjGFsZJqsOAAyUQzChUHqyE2aeA2myAKoJrghbRFyYIxsMEyMJAuQUhOGK5fXuGMVo4oFVA0iKJM2cYAG8BlIOwto5oNleTooGOYTHJg8C5ANiYyMxMAMDv8ps4CmPkC3hNLwZ8CW2bD4gIGqFpATDKRaQDIAAIzvGNxDphDYAAAAAElFTkSuQmCC",
-                        "issuer": "1HuW7s7whSYhibzJ5KVW4DuNRYpnLeXpir",
-                        "divisible": false,
-                        "locked": true
-                    },
-                    "dispense_quantity_normalized": "1",
-                    "btc_amount_normalized": "0.00200000"
-                },
-                "tx_hash": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
-                "block_index": 852611,
-                "confirmed": true,
-                "block_time": 1721218343
-            },
-            {
-                "event_index": 17618364,
-                "event": "CREDIT",
-                "params": {
-                    "address": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
-                    "asset": "A4843919604117950000",
-                    "block_index": 852611,
-                    "calling_function": "dispense",
-                    "event": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
-                    "quantity": 1,
-                    "tx_index": 2741056,
-                    "block_time": 1721218343,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAArklEQVR42mNgGNbgkZraf2LEyDYchtH5yJaQbSG6gfgspJrBhCwlOrzJtQSvRZQYSlJQ4dK8rjsRjGFsZJqsOAAyUQzChUHqyE2aeA2myAKoJrghbRFyYIxsMEyMJAuQUhOGK5fXuGMVo4oFVA0iKJM2cYAG8BlIOwto5oNleTooGOYTHJg8C5ANiYyMxMAMDv8ps4CmPkC3hNLwZ8CW2bD4gIGqFpATDKRaQDIAAIzvGNxDphDYAAAAAElFTkSuQmCC",
-                        "issuer": "1HuW7s7whSYhibzJ5KVW4DuNRYpnLeXpir",
-                        "divisible": false,
-                        "locked": true
-                    },
-                    "quantity_normalized": "1"
-                },
-                "tx_hash": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
-                "block_index": 852611,
-                "confirmed": true,
-                "block_time": 1721218343
-            },
-            {
-                "event_index": 17618362,
-                "event": "DISPENSE",
-                "params": {
-                    "asset": "A9919993051204500000",
-                    "block_index": 852611,
-                    "btc_amount": 150000,
-                    "destination": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
-                    "dispense_index": 0,
-                    "dispense_quantity": 1,
-                    "dispenser_tx_hash": "6aa0ea8e1f9b10875f32c2a4bd8bde8ea92099b8670b84f24fd1decfff095e38",
-                    "source": "bc1q0xjcvyv7qty5qw83x4psspfh0cysv7fffr3sc0",
-                    "tx_hash": "6a7d9c1ec3ad23bede42cd7a7e591cf3dc32363c48b626c15770dc735c5bd4a4",
-                    "tx_index": 2741055,
-                    "block_time": 1721218343,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhUlEQVR42mNgGAWjAAj+48GUG+7j44MTU2oJ3KDk5GSaWELQcKpYQAhTZMHtjQ0EMVUsWJanA8bIBsPEyLUAw5WX5iZgFaOKBbQIov+4LLkGFL+GJEdRHKCHO00swGYJckRTxQJ8mKoWIBd0VLEAOb3TxAfomYqahmPNbNSuD6hW5tDUAgCuKY81b8rNFwAAAABJRU5ErkJggg==",
-                        "issuer": "1NhL9CquLPYp7TjN34Umssvcp6KqAQVL5F",
-                        "divisible": false,
-                        "locked": true
-                    },
-                    "dispense_quantity_normalized": "1",
-                    "btc_amount_normalized": "0.00150000"
-                },
-                "tx_hash": "6a7d9c1ec3ad23bede42cd7a7e591cf3dc32363c48b626c15770dc735c5bd4a4",
-                "block_index": 852611,
-                "confirmed": true,
-                "block_time": 1721218343
-            },
-            {
-                "event_index": 17618360,
-                "event": "CREDIT",
-                "params": {
-                    "address": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
-                    "asset": "A9919993051204500000",
-                    "block_index": 852611,
-                    "calling_function": "dispense",
-                    "event": "6a7d9c1ec3ad23bede42cd7a7e591cf3dc32363c48b626c15770dc735c5bd4a4",
-                    "quantity": 1,
-                    "tx_index": 2741055,
-                    "block_time": 1721218343,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhUlEQVR42mNgGAWjAAj+48GUG+7j44MTU2oJ3KDk5GSaWELQcKpYQAhTZMHtjQ0EMVUsWJanA8bIBsPEyLUAw5WX5iZgFaOKBbQIov+4LLkGFL+GJEdRHKCHO00swGYJckRTxQJ8mKoWIBd0VLEAOb3TxAfomYqahmPNbNSuD6hW5tDUAgCuKY81b8rNFwAAAABJRU5ErkJggg==",
-                        "issuer": "1NhL9CquLPYp7TjN34Umssvcp6KqAQVL5F",
-                        "divisible": false,
-                        "locked": true
-                    },
-                    "quantity_normalized": "1"
-                },
-                "tx_hash": "6a7d9c1ec3ad23bede42cd7a7e591cf3dc32363c48b626c15770dc735c5bd4a4",
-                "block_index": 852611,
-                "confirmed": true,
-                "block_time": 1721218343
-            },
-            {
-                "event_index": 17618358,
-                "event": "NEW_TRANSACTION",
-                "params": {
-                    "block_hash": "000000000000000000013da4cc0cf7020d5c896b51eda8b9675893af2b68b626",
-                    "block_index": 852611,
-                    "block_time": 1721218343,
-                    "btc_amount": 200000,
-                    "data": "0d00",
-                    "destination": "bc1qxfs3r7rp76mzd9wxxy3d2hc6pj39rvu8vj59ss",
-                    "fee": 0,
-                    "source": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
-                    "tx_hash": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
-                    "tx_index": 2741056,
-                    "unpacked_data": {
-                        "message_type": "dispense",
-                        "message_type_id": 13,
-                        "message_data": {}
-                    },
-                    "btc_amount_normalized": "0.00200000"
-                },
-                "tx_hash": null,
-                "block_index": 852611,
-                "confirmed": true,
-                "block_time": 1721218343
-            }
-        ],
-        "next_cursor": 17618356,
-        "result_count": 1682
-    },
     "/v2/dividends/<dividend_hash>/credits": {
         "result": [
             {
@@ -9026,5 +8882,144 @@
         ],
         "next_cursor": 17630748,
         "result_count": 2742583
+    },
+    "/v2/addresses/events": {
+        "result": [
+            {
+                "event_index": 17618366,
+                "event": "DISPENSE",
+                "params": {
+                    "asset": "A4843919604117950000",
+                    "block_index": 852611,
+                    "btc_amount": 200000,
+                    "destination": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
+                    "dispense_index": 0,
+                    "dispense_quantity": 1,
+                    "dispenser_tx_hash": "5f6ea4dc1916012be057bcbf54fa6f24c50b75eed50cac18616731e7e592ba78",
+                    "source": "bc1qxfs3r7rp76mzd9wxxy3d2hc6pj39rvu8vj59ss",
+                    "tx_hash": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
+                    "tx_index": 2741056,
+                    "block_time": 1721218343,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAArklEQVR42mNgGNbgkZraf2LEyDYchtH5yJaQbSG6gfgspJrBhCwlOrzJtQSvRZQYSlJQ4dK8rjsRjGFsZJqsOAAyUQzChUHqyE2aeA2myAKoJrghbRFyYIxsMEyMJAuQUhOGK5fXuGMVo4oFVA0iKJM2cYAG8BlIOwto5oNleTooGOYTHJg8C5ANiYyMxMAMDv8ps4CmPkC3hNLwZ8CW2bD4gIGqFpATDKRaQDIAAIzvGNxDphDYAAAAAElFTkSuQmCC",
+                        "issuer": "1HuW7s7whSYhibzJ5KVW4DuNRYpnLeXpir",
+                        "divisible": false,
+                        "locked": true
+                    },
+                    "dispense_quantity_normalized": "1",
+                    "btc_amount_normalized": "0.00200000"
+                },
+                "tx_hash": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
+                "block_index": 852611,
+                "block_time": 1721218343
+            },
+            {
+                "event_index": 17618364,
+                "event": "CREDIT",
+                "params": {
+                    "address": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
+                    "asset": "A4843919604117950000",
+                    "block_index": 852611,
+                    "calling_function": "dispense",
+                    "event": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
+                    "quantity": 1,
+                    "tx_index": 2741056,
+                    "block_time": 1721218343,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAArklEQVR42mNgGNbgkZraf2LEyDYchtH5yJaQbSG6gfgspJrBhCwlOrzJtQSvRZQYSlJQ4dK8rjsRjGFsZJqsOAAyUQzChUHqyE2aeA2myAKoJrghbRFyYIxsMEyMJAuQUhOGK5fXuGMVo4oFVA0iKJM2cYAG8BlIOwto5oNleTooGOYTHJg8C5ANiYyMxMAMDv8ps4CmPkC3hNLwZ8CW2bD4gIGqFpATDKRaQDIAAIzvGNxDphDYAAAAAElFTkSuQmCC",
+                        "issuer": "1HuW7s7whSYhibzJ5KVW4DuNRYpnLeXpir",
+                        "divisible": false,
+                        "locked": true
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
+                "block_index": 852611,
+                "block_time": 1721218343
+            },
+            {
+                "event_index": 17618362,
+                "event": "DISPENSE",
+                "params": {
+                    "asset": "A9919993051204500000",
+                    "block_index": 852611,
+                    "btc_amount": 150000,
+                    "destination": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
+                    "dispense_index": 0,
+                    "dispense_quantity": 1,
+                    "dispenser_tx_hash": "6aa0ea8e1f9b10875f32c2a4bd8bde8ea92099b8670b84f24fd1decfff095e38",
+                    "source": "bc1q0xjcvyv7qty5qw83x4psspfh0cysv7fffr3sc0",
+                    "tx_hash": "6a7d9c1ec3ad23bede42cd7a7e591cf3dc32363c48b626c15770dc735c5bd4a4",
+                    "tx_index": 2741055,
+                    "block_time": 1721218343,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhUlEQVR42mNgGAWjAAj+48GUG+7j44MTU2oJ3KDk5GSaWELQcKpYQAhTZMHtjQ0EMVUsWJanA8bIBsPEyLUAw5WX5iZgFaOKBbQIov+4LLkGFL+GJEdRHKCHO00swGYJckRTxQJ8mKoWIBd0VLEAOb3TxAfomYqahmPNbNSuD6hW5tDUAgCuKY81b8rNFwAAAABJRU5ErkJggg==",
+                        "issuer": "1NhL9CquLPYp7TjN34Umssvcp6KqAQVL5F",
+                        "divisible": false,
+                        "locked": true
+                    },
+                    "dispense_quantity_normalized": "1",
+                    "btc_amount_normalized": "0.00150000"
+                },
+                "tx_hash": "6a7d9c1ec3ad23bede42cd7a7e591cf3dc32363c48b626c15770dc735c5bd4a4",
+                "block_index": 852611,
+                "block_time": 1721218343
+            },
+            {
+                "event_index": 17618360,
+                "event": "CREDIT",
+                "params": {
+                    "address": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
+                    "asset": "A9919993051204500000",
+                    "block_index": 852611,
+                    "calling_function": "dispense",
+                    "event": "6a7d9c1ec3ad23bede42cd7a7e591cf3dc32363c48b626c15770dc735c5bd4a4",
+                    "quantity": 1,
+                    "tx_index": 2741055,
+                    "block_time": 1721218343,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhUlEQVR42mNgGAWjAAj+48GUG+7j44MTU2oJ3KDk5GSaWELQcKpYQAhTZMHtjQ0EMVUsWJanA8bIBsPEyLUAw5WX5iZgFaOKBbQIov+4LLkGFL+GJEdRHKCHO00swGYJckRTxQJ8mKoWIBd0VLEAOb3TxAfomYqahmPNbNSuD6hW5tDUAgCuKY81b8rNFwAAAABJRU5ErkJggg==",
+                        "issuer": "1NhL9CquLPYp7TjN34Umssvcp6KqAQVL5F",
+                        "divisible": false,
+                        "locked": true
+                    },
+                    "quantity_normalized": "1"
+                },
+                "tx_hash": "6a7d9c1ec3ad23bede42cd7a7e591cf3dc32363c48b626c15770dc735c5bd4a4",
+                "block_index": 852611,
+                "block_time": 1721218343
+            },
+            {
+                "event_index": 17618358,
+                "event": "NEW_TRANSACTION",
+                "params": {
+                    "block_hash": "000000000000000000013da4cc0cf7020d5c896b51eda8b9675893af2b68b626",
+                    "block_index": 852611,
+                    "block_time": 1721218343,
+                    "btc_amount": 200000,
+                    "data": "0d00",
+                    "destination": "bc1qxfs3r7rp76mzd9wxxy3d2hc6pj39rvu8vj59ss",
+                    "fee": 0,
+                    "source": "1EC2K34dNc41pk63rc7bMQjbndqfoqQg4V",
+                    "tx_hash": "2a64bb1c62e142e9b8aeca52e6ea4acac75af9b9eabd39de50b25c3c2260a181",
+                    "tx_index": 2741056,
+                    "unpacked_data": {
+                        "message_type": "dispense",
+                        "message_type_id": 13,
+                        "message_data": {}
+                    },
+                    "btc_amount_normalized": "0.00200000"
+                },
+                "tx_hash": null,
+                "block_index": 852611,
+                "block_time": 1721218343
+            }
+        ],
+        "next_cursor": 17618356,
+        "result_count": 1692
     }
 }

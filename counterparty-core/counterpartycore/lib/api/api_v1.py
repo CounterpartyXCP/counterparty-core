@@ -14,7 +14,6 @@ import math
 import re
 import threading
 import time
-import traceback
 
 import counterpartycore.lib.sentry as sentry  # noqa: F401
 import flask
@@ -580,7 +579,6 @@ class APIServer(threading.Thread):
                     # TypeError happens when unexpected keyword arguments are passed in
                     error_msg = f"Error composing {tx} transaction via API: {str(error)}"
                     logging.warning(error_msg)
-                    logging.warning(traceback.format_exc())
                     raise JSONRPCDispatchException(  # noqa: B904
                         code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg
                     )
