@@ -695,8 +695,6 @@ def start_all(args):
         # Backend.
         connect_to_backend()
 
-        # Initialise telemetry.
-
         # Reset UTXO_LOCKS.  This previously was done in
         # initilise_config
         transaction.initialise()
@@ -733,21 +731,21 @@ def start_all(args):
             api_server_v1.stop()
         if follower_daemon:
             follower_daemon.stop()
-        if db:
-            database.close(db)
         if not config.NO_TELEMETRY:
             TelemetryOneShot().close()
+        if db:
+            database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()
         try:
             database.check_wal_file(config.DATABASE)
         except exceptions.WALFileFoundError:
-            logger.error(
+            logger.warning(
                 "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
             )
         except exceptions.DatabaseError:
-            logger.error(
+            logger.warning(
                 "Database is in use by another process and was unable to be closed correctly."
             )
         # Ensure that the last closed connection is not read-only in order to delete WAL and SHM files

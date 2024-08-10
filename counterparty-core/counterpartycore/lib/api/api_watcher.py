@@ -9,7 +9,6 @@ import apsw
 from counterpartycore.lib import blocks, config, database, exceptions, ledger
 from counterpartycore.lib.api import util
 from counterpartycore.lib.util import format_duration
-from sentry_sdk import capture_exception
 from yoyo import get_backend, read_migrations
 from yoyo.exceptions import LockTimeout
 
@@ -778,8 +777,7 @@ def synchronize_mempool(api_db, ledger_db):
                         execute_event(api_db, event)
                         update_assets_info(api_db, event)
                     else:
-                        logger.warning(f"Skipping duplicate event: {event}")
-                        capture_exception(e)
+                        # Skipping duplicate event
                         MEMPOOL_SKIP_EVENT_HASHES.append(event["tx_hash"])
                 except Exception as e:
                     logger.error(f"API Watcher - Error executing mempool event: {e}")
@@ -811,10 +809,14 @@ class APIWatcher(Thread):
         self.api_db.execute("PRAGMA foreign_keys=OFF")
         # Create XCP and BTC assets if they don't exist
         cursor = self.api_db.cursor()
-        cursor.execute("""SELECT * FROM assets WHERE asset_name = ?""", ("BTC",))
+        cursor.execute("""SELECT * FROM assets_info WHERE asset = ?""", ("XCP",))
         if not list(cursor):
-            cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None))
-            cursor.execute("""INSERT INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None))
+            cursor.execute(
+                """INSERT OR REPLACE INTO assets VALUES (?,?,?,?)""", ("0", "BTC", None, None)
+            )
+            cursor.execute(
+                """INSERT OR REPLACE INTO assets VALUES (?,?,?,?)""", ("1", "XCP", None, None)
+            )
             insert_asset_info_sql = """
                 INSERT INTO assets_info (
                     asset, divisible, locked, supply, description,
@@ -829,11 +831,11 @@ class APIWatcher(Thread):
                 {
                     "asset": "XCP",
                     "divisible": True,
-                    "locked": False,
-                    "supply": 0,
+                    "locked": True,
+                    "supply": ledger.xcp_supply(self.ledger_db),
                     "description": "The Counterparty protocol native currency",
-                    "first_issuance_block_index": 0,
-                    "last_issuance_block_index": 0,
+                    "first_issuance_block_index": 278319,
+                    "last_issuance_block_index": 283810,
                 },
             )
 

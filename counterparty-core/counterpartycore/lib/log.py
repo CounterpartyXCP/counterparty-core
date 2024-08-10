@@ -9,7 +9,7 @@ from logging.handlers import RotatingFileHandler
 import zmq
 from dateutil.tz import tzlocal
 from halo import Halo
-from json_log_formatter import VerboseJSONFormatter
+from json_log_formatter import JSONFormatter
 from termcolor import colored, cprint
 
 from counterpartycore.lib import config, util
@@ -62,6 +62,8 @@ class CustomFormatter(logging.Formatter):
 
     def format(self, record):
         attrs = ["bold"] if hasattr(record, "bold") else []
+
+        time_format = colored("%(asctime)s", attrs=attrs)
         level_name_format = colored("%(levelname)8s", self.COLORS.get(record.levelno), attrs=attrs)
 
         if (
@@ -70,17 +72,54 @@ class CustomFormatter(logging.Formatter):
             and "/counterpartycore/lib/messages/" in record.pathname
         ):
             if util.PARSING_MEMPOOL:
-                log_format = f"%(asctime)s - [{level_name_format}] - Mempool - %(message)s"
+                log_message = "Mempool - %(message)s"
             else:
-                log_format = f"%(asctime)s - [{level_name_format}] - Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
+                log_message = f"Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
         else:
-            log_format = f"%(asctime)s - [{level_name_format}] - %(message)s"
+            log_message = "%(message)s"
+        if hasattr(record, "bold"):
+            log_message = colored(log_message, attrs=attrs)
+
+        log_format = f"{time_format} - [{level_name_format}] - {log_message}"
 
         formatter = logging.Formatter(log_format)
         if isinstance(record.args, dict):
             record.args = truncate_fields(record.args)
         formatter.formatTime = formatTime
         return formatter.format(record)
+
+
+class CustomisedJSONFormatter(JSONFormatter):
+    def json_record(self, message: str, extra: dict, record: logging.LogRecord) -> dict:
+        extra["filename"] = record.filename
+        extra["funcName"] = record.funcName
+        extra["levelname"] = record.levelname
+        extra["lineno"] = record.lineno
+        extra["module"] = record.module
+        extra["name"] = record.name
+        extra["pathname"] = record.pathname
+        extra["process"] = record.process
+        extra["processName"] = record.processName
+        if hasattr(record, "stack_info"):
+            extra["stack_info"] = record.stack_info
+        else:
+            extra["stack_info"] = None
+        extra["thread"] = record.thread
+        extra["threadName"] = record.threadName
+
+        if (
+            record.levelno != logging.EVENT
+            and util.CURRENT_BLOCK_INDEX is not None
+            and "/counterpartycore/lib/messages/" in record.pathname
+        ):
+            if util.PARSING_MEMPOOL:
+                extra["block_index"] = "Mempool"
+            else:
+                extra["block_index"] = util.CURRENT_BLOCK_INDEX
+        else:
+            extra["block_index"] = None
+
+        return super(CustomisedJSONFormatter, self).json_record(message, extra, record)
 
 
 def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
@@ -114,14 +153,14 @@ def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
         max_log_size = 20 * 1024 * 1024  # 20 MB
         fileh = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
         fileh.setLevel(logging.TRACE)
-        fileh.setFormatter(VerboseJSONFormatter())
+        fileh.setFormatter(CustomisedJSONFormatter())
         logger.addHandler(fileh)
 
     if config.LOG_IN_CONSOLE:
         console = logging.StreamHandler()
         console.setLevel(log_level)
         if json_logs:
-            console.setFormatter(VerboseJSONFormatter())
+            console.setFormatter(CustomisedJSONFormatter())
         else:
             console.setFormatter(CustomFormatter())
         logger.addHandler(console)

@@ -965,9 +965,7 @@ def match(db, tx, block_index=None):
     return
 
 
-def expire(db, block_index):
-    cursor = db.cursor()
-
+def expire_orders(db, block_index):
     # Expire orders and give refunds for the quantity give_remaining (if non-zero; if not BTC).
     orders = ledger.get_orders_to_expire(db, block_index)
     # Edge case: filled orders, and therefore not expired in the previous block,
@@ -977,6 +975,8 @@ def expire(db, block_index):
     for order in orders:
         cancel_order(db, order, "expired", block_index, 0)  # tx_index=0 for block action
 
+
+def expire_order_matches(db, block_index):
     # Expire order_matches for BTC with no BTC.
     order_matches = ledger.get_order_matches_to_expire(db, block_index)
     for order_match in order_matches:
@@ -1013,4 +1013,11 @@ def expire(db, block_index):
             match(db, ledger.get_order(db, order_hash=order_match["tx0_hash"])[0], block_index)
             match(db, ledger.get_order(db, order_hash=order_match["tx1_hash"])[0], block_index)
 
-    cursor.close()
+
+def expire(db, block_index):
+    if util.enabled("expire_order_matches_then_orders"):
+        expire_order_matches(db, block_index)
+        expire_orders(db, block_index)
+    else:
+        expire_orders(db, block_index)
+        expire_order_matches(db, block_index)
