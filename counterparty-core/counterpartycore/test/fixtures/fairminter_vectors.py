@@ -58,6 +58,26 @@ FAIRMINTER_VECTOR = {
                     ]
                 ),
             },
+            {
+                "in": (
+                    ADDR[1],  # source
+                    "A1603612687792733727",  # asset
+                    "",  # asset_parent,
+                    0,  # price=0,
+                    10,  # max_mint_per_tx,
+                ),
+                "out": ([]),
+            },
+            {
+                "in": (
+                    ADDR[1],  # source
+                    "A1603612687",  # asset
+                    "",  # asset_parent,
+                    0,  # price=0,
+                    10,  # max_mint_per_tx,
+                ),
+                "out": (["Invalid asset name: numeric asset name not in range"]),
+            },
         ],
         "compose": [
             {

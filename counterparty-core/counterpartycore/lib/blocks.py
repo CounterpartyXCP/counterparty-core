@@ -36,6 +36,7 @@ from .messages import (  # noqa: E402
     destroy,
     dispenser,
     dividend,
+    fairminter,
     issuance,
     order,
     rps,
@@ -308,6 +309,9 @@ def parse_block(
     # Close dispensers
     dispenser.close_pending(db, block_index)
 
+    # Fairminters operations
+    fairminter.before_block(db, block_index)
+
     txlist = []
     for tx in transactions:
         try:
@@ -320,6 +324,9 @@ def parse_block(
             logger.warning(f"ParseTransactionError for tx {tx['tx_hash']}: {e}")
             raise e
             # pass
+
+    # Fairminters operations
+    fairminter.after_block(db, block_index)
 
     if block_index != config.MEMPOOL_BLOCK_INDEX:
         # Calculate consensus hashes.
@@ -670,6 +677,7 @@ def initialise(db):
     rpsresolve.initialise(db)
     sweep.initialise(db)
     dispenser.initialise(db)
+    fairminter.initialise(db)
 
     # Messages
     cursor.execute(

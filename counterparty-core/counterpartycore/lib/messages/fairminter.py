@@ -36,6 +36,7 @@ def initialise(db):
             lock_description BOOL,
             lock_quantity BOOL,
             divisible BOOL,
+            pre_minted BOOL DEFAULT 0,
             status TEXT,
         )
     """
@@ -90,6 +91,8 @@ def validate(
                 problems.append(f"{optional_int_param} must be an integer.")
             elif optional_int_param < 0:
                 problems.append(f"{optional_int_param} must be >= 0.")
+            elif optional_int_param > config.MAX_INT:
+                problems.append(f"{optional_int_param} exceeds maximum value.")
     # check boolean parameters
     for option_bool_param in [burn_payment, lock_description, lock_quantity, divisible]:
         if not isinstance(option_bool_param, bool):
@@ -123,6 +126,11 @@ def validate(
             problems.append(f"Description of asset {asset_name} is locked.")
         if hard_cap and existing_asset["supply"] >= hard_cap:
             problems.append(f"Hard cap of asset {asset_name} is already reached.")
+
+    if existing_asset is None and asset_parent != "":
+        existing_parent = ledger.get_asset(db, asset_parent)
+        if existing_parent is None:
+            problems.append("Asset parent does not exist")
 
     if price == 0 and max_mint_per_tx == 0:
         problems.append("Price or max_mint_per_tx must be > 0.")
@@ -328,25 +336,53 @@ def parse(db, tx, message):
         description,
     )
 
-    status = "pending"
+    # if problems, insert into fairminters table with status invalid and return
     if problems:
         status = "invalid: " + "; ".join(problems)
-    else:
-        if start_block == 0 or tx["block_index"] >= start_block:
-            status = "open"
-        if end_block > 0 and tx["block_index"] > end_block:
-            status = "closed"
+        bindings = {
+            "tx_hash": tx["tx_hash"],
+            "tx_index": tx["tx_index"],
+            "block_index": tx["block_index"],
+            "source": tx["source"],
+            "status": status,
+        }
+        ledger.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
+        return
+
+    status = "pending"
+    if start_block == 0 or tx["block_index"] >= start_block:
+        status = "open"
+    if end_block > 0 and tx["block_index"] > end_block:
+        status = "closed"
 
     asset_longname = ""
     if asset_parent == "":
         asset_longname = f"{asset_parent}.{asset}"
+
+    existing_asset = ledger.get_asset(db, asset_longname if asset_longname != "" else asset)
+
+    fee = 0
+    asset_name = asset
+    if asset_longname != "":
+        if existing_asset is None:
+            asset_name = util.generate_random_asset()
+        else:
+            asset_name = existing_asset["asset"]
+    else:
+        # only new named assets have fees
+        if existing_asset is None and not asset.startswith("A"):
+            fee = 0.5
+
+    pre_minted = False
+    if status == "open" and premint_quantity > 0:
+        pre_minted = True
 
     bindings = {
         "tx_hash": tx["tx_hash"],
         "tx_index": tx["tx_index"],
         "block_index": tx["block_index"],
         "source": tx["source"],
-        "asset": asset,
+        "asset": asset_name,
         "asset_parent": asset_parent,
         "asset_longname": asset_longname,
         "description": description,
@@ -364,36 +400,80 @@ def parse(db, tx, message):
         "lock_quantity": lock_quantity,
         "divisible": divisible,
         "status": status,
+        "pre_minted": pre_minted,
     }
     ledger.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
 
-    if len(problems) == 0:
-        # calculate fee
-        fee = 0
-        if asset_parent == "" and not asset.startswith("A"):
-            # named asset
-            fee = 0.5
-
-        quantity = premint_quantity
-
+    if not existing_asset:
+        # Add to table of assets.
+        asset_id = ledger.generate_asset_id(asset_name, tx["block_index"])
         bindings = {
-            "tx_index": tx["tx_index"],
-            "tx_hash": tx["tx_hash"],
+            "asset_id": str(asset_id),
+            "asset_name": asset_name,
             "block_index": tx["block_index"],
-            "asset": asset,
-            "quantity": quantity,
-            "divisible": divisible,
-            "source": tx["source"],
-            "issuer": tx["source"],
-            "transfer": False,
-            "callable": False,
-            "call_date": 0,
-            "call_price": 0,
-            "description": description,
-            "fee_paid": fee,
-            "locked": False,
-            "reset": False,
-            "status": "valid",
             "asset_longname": asset_longname,
         }
-        ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+        ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
+
+    bindings = {
+        "tx_index": tx["tx_index"],
+        "tx_hash": tx["tx_hash"],
+        "block_index": tx["block_index"],
+        "asset": asset,
+        "quantity": premint_quantity,
+        "divisible": divisible,
+        "source": tx["source"],
+        "issuer": tx["source"],
+        "transfer": False,
+        "callable": False,
+        "call_date": 0,
+        "call_price": 0,
+        "description": description,
+        "fee_paid": fee,
+        "locked": False,
+        "reset": False,
+        "status": "valid",
+        "asset_longname": asset_longname,
+        "fair_minted": True,
+    }
+    ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+
+    if pre_minted:
+        ledger.credit(
+            db,
+            tx["source"],
+            asset_name,
+            premint_quantity,
+            tx["tx_index"],
+            action="premint",
+            event=tx["tx_hash"],
+        )
+
+
+def premint_assets(db, block_index):
+    fairminters = ledger.get_fairminters_to_premint(db, block_index)
+    for fairminter in fairminters:
+        ledger.credit(
+            db,
+            fairminter["source"],
+            fairminter["asset"],
+            fairminter["premint_quantity"],
+            fairminter["tx_index"],
+            action="premint",
+            event=fairminter["tx_hash"],
+        )
+        ledger.update_fairminter(db, fairminter["tx_hash"], {"pre_minted": True})
+
+
+def close_fairminters(db, block_index):
+    fairminters = ledger.get_fairminters_to_close(db, block_index)
+    for fairminter in fairminters:
+        ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+
+
+def before_block(db, block_index):
+    premint_assets(db, block_index)
+
+
+def after_block(db, block_index):
+    close_fairminters(db, block_index)

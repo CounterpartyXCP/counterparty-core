@@ -1791,6 +1791,53 @@ def update_order_match_status(db, id, status):
 
 
 #####################
+#     FAIRMINTER    #
+#####################
+
+
+def get_fairminters_to_premint(db, block_index):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM fairminters
+        WHERE 
+            status = :status 
+            AND pre_minted = :pre_minted
+            AND premint_quantity > :premint_quantity
+            AND start_block = :start_block
+        ORDER BY tx_index
+    """
+    bindings = {
+        "status": "open",
+        "pre_minted": False,
+        "premint_quantity": 0,
+        "start_block": block_index,
+    }
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_fairminters_to_close(db, block_index):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM fairminters
+        WHERE 
+            status != :status
+            AND end_block = :end_block
+        ORDER BY tx_index
+    """
+    bindings = {
+        "status": "closed",
+        "end_block": block_index,
+    }
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def update_fairminter(db, tx_hash, update_data):
+    insert_update(db, "fairminters", "tx_hash", tx_hash, update_data, "FAIRMINTER_UPDATE")
+
+
+#####################
 #     SUPPLIES      #
 #####################
 

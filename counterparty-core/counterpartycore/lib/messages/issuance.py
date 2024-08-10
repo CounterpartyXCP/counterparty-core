@@ -116,6 +116,9 @@ def initialise(db):
         cursor.execute("DROP TABLE issuances")
         cursor.execute("ALTER TABLE new_issuances RENAME TO issuances")
 
+    if "fair_minted" not in columns:
+        cursor.execute("""ALTER TABLE issuances ADD COLUMN fair_minted BOOL DEFAULT 0""")
+
     database.create_indexes(
         cursor,
         "issuances",
@@ -215,6 +218,9 @@ def validate(
         elif last_issuance["locked"]:
             # before the issuance_lock_fix, only the last issuance was checked
             issuance_locked = True
+
+        if last_issuance["fair_minted"]:
+            problems.append("cannot issue a fair minted asset")
 
         if last_issuance["issuer"] != source:
             problems.append("issued by another address")
@@ -980,7 +986,7 @@ def parse(db, tx, message, message_type_id):
             "status": status,
             "asset_longname": asset_longname,
         }
-        if "integer overflow" not in status:
+        if "integer overflow" not in status and "cannot issue a fair minted asset" not in status:
             ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
         logger.info(
