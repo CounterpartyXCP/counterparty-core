@@ -17,6 +17,7 @@
 # 70 cancel
 # 80 rps
 # 81 rpsresolve
+# 90 fairminter
 # 110 destroy
 #
 # Allocate each new type of message within the "logical" 10 number boundary

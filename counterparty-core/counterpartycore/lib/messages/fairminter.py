@@ -2,7 +2,7 @@ import decimal
 import logging
 import struct
 
-from counterpartycore.lib import config, database, exceptions, ledger
+from counterpartycore.lib import config, database, exceptions, ledger, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -68,7 +68,7 @@ def validate(
     minted_asset_commission=0.0,
     burn_payment=False,
     lock_description=False,
-    lock_quantity=True,
+    lock_quantity=False,
     divisible=True,
     description="",
 ):
@@ -102,9 +102,9 @@ def validate(
             problems.append("minted_asset_commission must be >=0 and <1")
 
     try:
-        ledger.generate_asset_id(asset)
+        ledger.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
         if asset_parent != "":
-            ledger.generate_asset_id(asset_parent)
+            ledger.generate_asset_id(asset_parent, util.CURRENT_BLOCK_INDEX)
     except exceptions.AssetNameError as e:
         problems.append(f"Invalid asset name: {e}")
 
@@ -162,7 +162,7 @@ def compose(
     minted_asset_commission=0.0,
     burn_payment=False,
     lock_description=False,
-    lock_quantity=True,
+    lock_quantity=False,
     divisible=True,
     description="",
 ):
@@ -196,24 +196,27 @@ def compose(
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
     data_content = "|".join(
         [
-            asset,
-            asset_parent,
-            price,
-            max_mint_per_tx,
-            hard_cap,
-            premint_quantity,
-            start_block,
-            end_block,
-            soft_cap,
-            soft_cap_deadline_block,
-            minted_asset_commission_int,
-            burn_payment,
-            lock_description,
-            lock_quantity,
-            divisible,
-            description,
+            str(value)
+            for value in [
+                asset,
+                asset_parent,
+                price,
+                max_mint_per_tx,
+                hard_cap,
+                premint_quantity,
+                start_block,
+                end_block,
+                soft_cap,
+                soft_cap_deadline_block,
+                minted_asset_commission_int,
+                int(burn_payment),
+                int(lock_description),
+                int(lock_quantity),
+                int(divisible),
+                description,
+            ]
         ]
-    )
+    ).encode("utf-8")
     data += struct.pack(f">{len(data_content)}s", data_content)
     return (source, [], data)
 
@@ -254,11 +257,11 @@ def unpack(message, return_dict=False):
                 "end_block": int(end_block),
                 "soft_cap": int(soft_cap),
                 "soft_cap_deadline_block": int(soft_cap_deadline_block),
-                "minted_asset_commission": int(minted_asset_commission),
-                "burn_payment": bool(burn_payment),
-                "lock_description": bool(lock_description),
-                "lock_quantity": bool(lock_quantity),
-                "divisible": bool(divisible),
+                "minted_asset_commission": minted_asset_commission,
+                "burn_payment": bool(int(burn_payment)),
+                "lock_description": bool(int(lock_description)),
+                "lock_quantity": bool(int(lock_quantity)),
+                "divisible": bool(int(divisible)),
                 "description": description,
             }
         else:
@@ -273,11 +276,11 @@ def unpack(message, return_dict=False):
                 int(end_block),
                 int(soft_cap),
                 int(soft_cap_deadline_block),
-                int(minted_asset_commission),
-                bool(burn_payment),
-                bool(lock_description),
-                bool(lock_quantity),
-                bool(divisible),
+                minted_asset_commission,
+                bool(int(burn_payment)),
+                bool(int(lock_description)),
+                bool(int(lock_quantity)),
+                bool(int(divisible)),
                 description,
             )
     except Exception as e:
