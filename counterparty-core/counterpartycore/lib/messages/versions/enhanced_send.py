@@ -106,7 +106,7 @@ def compose(
     # Just send BTC?
     if asset == config.BTC:
         # try to compose a dispense instead
-        send1.compose_send_btc(db, source, destination, quantity)
+        return send1.compose_send_btc(db, source, destination, quantity)
 
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)

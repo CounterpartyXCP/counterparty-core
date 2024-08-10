@@ -45,11 +45,12 @@ def test_vector(
         conftest.RANDOM_ASSET_INT = 26**12 + 1
 
         if method == "parse":
-            util_test.insert_transaction(inputs[0], server_db)
-            # insert message as 2nd arg
-            inputs = inputs[:1] + (inputs[0]["data"][4:],) + inputs[1:]
-        elif method == "dispense":
-            util_test.insert_transaction(inputs[0], server_db)
+            if tx_name != "dispense":
+                util_test.insert_transaction(inputs[0], server_db)
+                # insert message as 2nd arg
+                inputs = inputs[:1] + (inputs[0]["data"][4:],) + inputs[1:]
+            else:
+                util_test.insert_transaction(inputs[0], server_db)
 
         util_test.check_outputs(
             tx_name,
