@@ -111,7 +111,7 @@ def initialise(db):
         cursor.execute(
             """INSERT INTO new_issuances(tx_index, tx_hash, msg_index,
                 block_index, asset, quantity, divisible, source, issuer, transfer, callable,
-                call_date, call_price, description, fee_paid, locked, status, asset_longname, reset)
+                call_date, call_price, description, fee_paid, locked, status, asset_longname, reset, description_locked)
                 SELECT tx_index, tx_hash, 0, block_index, asset, quantity, divisible, source,
                 issuer, transfer, callable, call_date, call_price, description, fee_paid,
                 locked, status, asset_longname, reset, description_locked FROM issuances""",
