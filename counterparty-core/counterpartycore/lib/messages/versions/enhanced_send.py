@@ -4,7 +4,7 @@ import logging
 import struct
 
 from counterpartycore.lib import address, config, exceptions, ledger, message_type, util
-from counterpartycore.lib.messages import dispenser
+from counterpartycore.lib.messages.versions import send1
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -106,7 +106,7 @@ def compose(
     # Just send BTC?
     if asset == config.BTC:
         # try to compose a dispense instead
-        return dispenser.compose_dispense(db, source, destination, quantity)
+        send1.compose_send_btc(db, source, destination, quantity)
 
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)

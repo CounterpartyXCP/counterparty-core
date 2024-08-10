@@ -6940,7 +6940,33 @@ UNITTEST_VECTOR = {
             {"mock_protocol_changes": {"dispensers": True}, "in": (ADDR[5], 200), "out": True},
             {"mock_protocol_changes": {"dispensers": True}, "in": (ADDR[0], 200), "out": False},
         ],
-        "dispense": [
+    },
+    "dispense": {
+        "compose": [
+            {
+                "in": (ADDR[0], ADDR[5], 10),
+                "out": (
+                    ADDR[0],
+                    [(ADDR[5], 10)],
+                    b"\r\x00",
+                ),
+            },
+            {
+                "in": (ADDR[0], ADDR[5], 10000),
+                "error": (
+                    exceptions.ComposeError,
+                    ["dispenser doesn't have enough asset to give"],
+                ),
+            },
+            {
+                "in": (ADDR[0], ADDR[2], 10),
+                "error": (
+                    exceptions.ComposeError,
+                    ["address doesn't have any open dispenser"],
+                ),
+            },
+        ],
+        "parse": [
             {
                 "mock_protocol_changes": {"dispensers": True},
                 "in": (
@@ -7036,32 +7062,6 @@ UNITTEST_VECTOR = {
                 ],
             },
         ],
-    },
-    "dispense": {
-        "compose": [
-            {
-                "in": (ADDR[0], ADDR[5], 10),
-                "out": (
-                    ADDR[0],
-                    [(ADDR[5], 10)],
-                    b"\r\x00",
-                ),
-            },
-            {
-                "in": (ADDR[0], ADDR[5], 10000),
-                "error": (
-                    exceptions.ComposeError,
-                    "dispenser doesn't have enough asset to give",
-                ),
-            },
-            {
-                "in": (ADDR[0], ADDR[2], 10),
-                "error": (
-                    exceptions.ComposeError,
-                    "address doesn't have any open dispenser",
-                ),
-            },
-        ]
     },
     "transaction_helper.serializer": {
         "var_int": [

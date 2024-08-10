@@ -34,6 +34,7 @@ from .messages import (  # noqa: E402
     burn,
     cancel,
     destroy,
+    dispense,
     dispenser,
     dividend,
     issuance,
@@ -178,7 +179,7 @@ def parse_tx(db, tx):
             elif message_type_id == dispenser.DISPENSE_ID and util.enabled(
                 "dispensers", block_index=tx["block_index"]
             ):
-                dispenser.dispense(db, tx)
+                dispense.parse(db, tx)
             else:
                 supported = False
 

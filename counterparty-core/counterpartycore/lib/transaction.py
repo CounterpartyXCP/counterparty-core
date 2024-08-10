@@ -1846,7 +1846,7 @@ def unpack(db, datahex: str, block_index: int = None):
             message_data = messages.dispenser.unpack(message, return_dict=True)
         elif message_type_id == messages.dispenser.DISPENSE_ID:
             message_type_name = "dispense"
-            message_data = {}
+            message_data = message.dispense.unpack(message, return_dict=True)
         # Dividend
         elif message_type_id == messages.dividend.ID:
             message_type_name = "dividend"

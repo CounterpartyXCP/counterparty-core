@@ -6,7 +6,7 @@ import logging
 import struct
 
 from ... import config, exceptions, ledger, message_type, util
-from .. import dispenser
+from .. import dispense
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -68,13 +68,23 @@ def validate(db, source, destination, asset, quantity, block_index):
     return problems
 
 
+def compose_send_btc(db, source: str, destination: str, quantity: int):
+    if not util.enabled("enable_dispense_tx"):
+        return (source, [(destination, quantity)], None)
+    # try to compose a dispense instead
+    try:
+        return dispense.compose(db, source, destination, quantity)
+    except (exceptions.NoDispenserError, exceptions.ComposeError):
+        # simple BTC send
+        return (source, [(destination, quantity)], None)
+
+
 def compose(db, source: str, destination: str, asset: str, quantity: int):
     cursor = db.cursor()
 
     # Just send BTC?
     if asset == config.BTC:
-        # try to compose a dispense instead
-        return dispenser.compose_dispense(db, source, destination, quantity)
+        return compose_send_btc(db, source, destination, quantity)
 
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)

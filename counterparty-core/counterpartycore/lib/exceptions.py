@@ -125,3 +125,7 @@ class SerializationError(Exception):
 
 class NoEventToParse(Exception):
     pass
+
+
+class NoDispenserError(Exception):
+    pass
