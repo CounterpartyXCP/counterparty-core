@@ -66,6 +66,7 @@ def initialise(db):
                       status TEXT,
                       asset_longname TEXT,
                       reset BOOL,
+                      description_locked BOOL,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    """)
 
