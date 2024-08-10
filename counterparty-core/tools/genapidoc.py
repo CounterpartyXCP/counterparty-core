@@ -341,6 +341,7 @@ def gen_unpack_doc():
     for message_name in message_type_names:
         url = f"{API_ROOT}/v2/transactions/{message_type_tx_hash[message_name]}"
         args = {"verbose": "true"}
+        print(url)
         response = requests.get(url, params=args)  # noqa S113
         result = response.json()
         md += f"\n**{message_name.capitalize()}**\n\n"

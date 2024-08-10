@@ -3,6 +3,7 @@ import platform
 import time
 from uuid import uuid4
 
+import appdirs
 from counterpartycore.lib import config
 
 start_time = time.time()
@@ -49,22 +50,30 @@ def __read_config_with_default(key, default):
     return getattr(config, key, default)
 
 
-NODE_UUID_FILENAME = ".counterparty-node-uuid"
-NODE_UUID_FILEPATH = os.path.join(os.path.expanduser("~"), NODE_UUID_FILENAME)
-
-
 class ID:
     def __init__(self):
         # if file exists, read id from file
         # else create new id and write to file
         id = None
 
-        if os.path.exists(NODE_UUID_FILEPATH):
-            with open(NODE_UUID_FILEPATH) as f:
+        state_dir = appdirs.user_state_dir(
+            appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+        )
+        if not os.path.isdir(state_dir):
+            os.makedirs(state_dir, mode=0o755)
+        node_uid_filepath = os.path.join(state_dir, ".counterparty-node-uuid")
+
+        # Migrate old file
+        node_uid_old_filepath = os.path.join(os.path.expanduser("~"), ".counterparty-node-uuid")
+        if os.path.exists(node_uid_old_filepath):
+            os.rename(node_uid_old_filepath, node_uid_filepath)
+
+        if os.path.exists(node_uid_filepath):
+            with open(node_uid_filepath) as f:
                 id = f.read()
         else:
             id = str(uuid4())
-            with open(NODE_UUID_FILEPATH, "w") as f:
+            with open(node_uid_filepath, "w") as f:
                 f.write(id)
 
         self.id = id
