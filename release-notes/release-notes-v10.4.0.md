@@ -12,6 +12,7 @@
 * Fix `/v2/assets/XCP` route
 * Fix queries on `messages` table (remove mempool filtering)
 * Fix graceful closing of `counterparty.db`
+* Fix Get XCP Holders route
 
 ## Codebase
 
