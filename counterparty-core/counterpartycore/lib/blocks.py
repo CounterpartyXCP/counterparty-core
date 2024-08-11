@@ -36,6 +36,7 @@ from .messages import (  # noqa: E402
     destroy,
     dispenser,
     dividend,
+    fairmint,
     fairminter,
     issuance,
     order,
@@ -180,6 +181,14 @@ def parse_tx(db, tx):
                 "dispensers", block_index=tx["block_index"]
             ):
                 dispenser.dispense(db, tx)
+            elif message_type_id == fairminter.ID and util.enabled(
+                "fairminter", block_index=tx["block_index"]
+            ):
+                fairminter.parse(db, tx, message)
+            elif message_type_id == fairmint.ID and util.enabled(
+                "fairminter", block_index=tx["block_index"]
+            ):
+                fairmint.parse(db, tx, message)
             else:
                 supported = False
 
@@ -678,6 +687,7 @@ def initialise(db):
     sweep.initialise(db)
     dispenser.initialise(db)
     fairminter.initialise(db)
+    fairmint.initialise(db)
 
     # Messages
     cursor.execute(
