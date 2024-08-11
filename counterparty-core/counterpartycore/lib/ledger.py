@@ -1816,13 +1816,29 @@ def get_fairminters_to_premint(db, block_index):
     return cursor.fetchall()
 
 
+def get_fairminters_to_open(db, block_index):
+    cursor = db.cursor()
+    query = """
+        SELECT *, MAX(rowid) AS rowid FROM fairminters
+        WHERE start_block = :start_block
+        GROUP BY tx_hash
+        ORDER BY tx_index
+    """
+    bindings = {
+        "start_block": block_index,
+    }
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
 def get_fairminters_to_close(db, block_index):
     cursor = db.cursor()
     query = """
-        SELECT * FROM fairminters
-        WHERE 
-            status != :status
-            AND end_block = :end_block
+        SELECT * FROM (
+            SELECT *, MAX(rowid) AS rowid FROM fairminters
+            WHERE end_block = :end_block
+            GROUP BY tx_hash
+        ) WHERE status != :status
         ORDER BY tx_index
     """
     bindings = {

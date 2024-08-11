@@ -140,8 +140,8 @@ def validate(
 
     if end_block < 0:
         problems.append("End block must be >= 0.")
-    if start_block > 0 and end_block > 0 and start_block >= end_block:
-        problems.append("Start block must be < end block.")
+    if start_block > 0 and end_block > 0 and start_block > end_block:
+        problems.append("Start block must be <= end block.")  # could be one block fair minter
 
     if hard_cap > 0 and soft_cap >= hard_cap:
         problems.append("Soft cap must be < hard cap.")
@@ -434,7 +434,7 @@ def parse(db, tx, message):
         "reset": False,
         "status": "valid",
         "asset_longname": asset_longname,
-        "fair_minted": True,
+        "fair_minting": True,
     }
     ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
@@ -448,31 +448,68 @@ def parse(db, tx, message):
             action="premint",
             event=tx["tx_hash"],
         )
-
-
-def premint_assets(db, block_index):
-    fairminters = ledger.get_fairminters_to_premint(db, block_index)
-    for fairminter in fairminters:
+    elif premint_quantity > 0:
+        # to preserve assets held and asset supply from the issuance above
         ledger.credit(
             db,
-            fairminter["source"],
-            fairminter["asset"],
-            fairminter["premint_quantity"],
-            fairminter["tx_index"],
-            action="premint",
-            event=fairminter["tx_hash"],
+            config.UNSPENDABLE,
+            asset_name,
+            premint_quantity,
+            tx["tx_index"],
+            action="escrowed premint",
+            event=tx["tx_hash"],
         )
-        ledger.update_fairminter(db, fairminter["tx_hash"], {"pre_minted": True})
+
+
+def open_fairminters(db, block_index):
+    fairminters = ledger.get_fairminters_to_open(db, block_index)
+    for fairminter in fairminters:
+        assert fairminter["status"] != "open"  # sanity check
+        update_data = {"status": "open"}
+        if fairminter["premint_quantity"] > 0:
+            assert not fairminter["pre_minted"]  # sanity check
+            ledger.debit(
+                db,
+                config.UNSPENDABLE,
+                fairminter["asset"],
+                fairminter["premint_quantity"],
+                0,  # tx_index=0 for block actions
+                action="unescrowed premint",
+                event=fairminter["tx_hash"],
+            )
+            ledger.credit(
+                db,
+                fairminter["source"],
+                fairminter["asset"],
+                fairminter["premint_quantity"],
+                0,  # tx_index=0 for block actions
+                action="premint",
+                event=fairminter["tx_hash"],
+            )
+            update_data["pre_minted"] = True
+        ledger.update_fairminter(db, fairminter["tx_hash"], update_data)
 
 
 def close_fairminters(db, block_index):
     fairminters = ledger.get_fairminters_to_close(db, block_index)
     for fairminter in fairminters:
+        assert fairminter["status"] != "closed"  # sanity check
         ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+        # unlock issuance when fair minter is closed
+        last_issuance = ledger.get_asset(db, fairminter["asset"])
+        last_issuance["quantity"] = 0
+        last_issuance["fair_minting"] = False
+        last_issuance["block_index"] = block_index
+        last_issuance["msg_index"] += 1  # (tx_index, msg_index) and (tx_hash, msg_index) are unique
+        if fairminter["lock_quantity"]:
+            last_issuance["locked"] = True
+        # if fairminter["lock_description"]:
+        #    last_issuance["description_locked"] = True
+        ledger.insert_record(db, "issuances", last_issuance, "ASSET_ISSUANCE")
 
 
 def before_block(db, block_index):
-    premint_assets(db, block_index)
+    open_fairminters(db, block_index)
 
 
 def after_block(db, block_index):
