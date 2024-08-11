@@ -17,6 +17,7 @@ This release is not a protocol change and does not require any reparsing.
 * Fix queries on `messages` table (remove mempool filtering)
 * Fix graceful closing of `counterparty.db`
 * Fix Get XCP Holders route
+* Fix division by zero in API market prices
 
 ## Codebase
 
