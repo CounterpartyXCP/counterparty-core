@@ -77,6 +77,8 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/order": transaction.compose_order,
         "/v2/addresses/<address>/compose/send": transaction.compose_send,
         "/v2/addresses/<address>/compose/sweep": transaction.compose_sweep,
+        "/v2/addresses/<address>/compose/fairminter": transaction.compose_fairminter,
+        "/v2/addresses/<address>/compose/fairmint": transaction.compose_fairmint,
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
         "/v2/assets/<asset>": queries.get_asset,
