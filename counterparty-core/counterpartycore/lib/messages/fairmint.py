@@ -170,6 +170,12 @@ def parse(db, tx, message):
     ledger.credit(db, asset_destination, asset, earn_quantity, asset_action, tx["tx_hash"])
 
     last_issuance = ledger.get_asset(db, asset)
+    fair_minting = True
+    if fairminter["hard_cap"] > 0:
+        fairmint_quantity = ledger.get_fairmint_quantity(db, fairminter["tx_hash"])
+        if fairmint_quantity + quantity == fairminter["hard_cap"]:
+            fair_minting = False
+
     bindings = last_issuance | {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
@@ -177,6 +183,9 @@ def parse(db, tx, message):
         "quantity": earn_quantity,
         "source": tx["source"],
         "status": "valid",
-        "fair_minting": True,
+        "fair_minting": fair_minting,
     }
     ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+
+    if not fair_minting:
+        ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
