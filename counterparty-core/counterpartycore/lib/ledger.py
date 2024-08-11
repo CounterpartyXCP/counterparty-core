@@ -1851,6 +1851,36 @@ def get_fairmint_quantity(db, fairminter_tx_hash):
     return cursor.fetchone()["quantity"]
 
 
+def get_soft_caped_fairminters(db, block_index):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid) AS rowid
+            FROM fairminters
+            WHERE soft_cap > 0 AND soft_cap_deadline_block = :block_index
+            GROUP BY tx_hash
+        ) WHERE status = :status
+        ORDER BY tx_index
+    """
+    bindings = {
+        "block_index": block_index,
+        "status": "open",
+    }
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_valid_fairmints(db, fairminter_tx_hash):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM fairmints
+        WHERE fairminter_tx_hash = ? AND status = ?
+    """
+    bindings = (fairminter_tx_hash, "valid")
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
 def update_fairminter(db, tx_hash, update_data):
     insert_update(db, "fairminters", "tx_hash", tx_hash, update_data, "FAIRMINTER_UPDATE")
 
