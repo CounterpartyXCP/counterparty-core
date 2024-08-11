@@ -528,7 +528,7 @@ def get_value_by_block_index(change_name, block_index=None):
     max_block_index = -1
 
     if config.REGTEST:
-        for key, value in PROTOCOL_CHANGES[change_name]["testnet"]:  # noqa: B007
+        for key in PROTOCOL_CHANGES[change_name]["testnet"]:
             if int(key) > int(max_block_index):
                 max_block_index = key
         return PROTOCOL_CHANGES[change_name]["testnet"][max_block_index]["value"]

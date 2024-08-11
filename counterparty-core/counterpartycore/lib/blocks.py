@@ -222,6 +222,7 @@ def parse_tx(db, tx):
 def replay_transactions_events(db, transactions):
     cursor = db.cursor()
     for tx in transactions:
+        util.CURRENT_TX_HASH = tx["tx_hash"]
         transaction_bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
@@ -263,6 +264,7 @@ def replay_transactions_events(db, transactions):
                 "NEW_TRANSACTION_OUTPUT",
                 transaction_outputs_bindings,
             )
+        util.CURRENT_TX_HASH = None
 
 
 def parse_block(
