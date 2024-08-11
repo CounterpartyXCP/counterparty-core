@@ -46,9 +46,13 @@ def initialise(db):
         cursor,
         "fairminters",
         [
+            ["tx_hash"],
             ["block_index"],
             ["asset"],
+            ["asset_longname"],
+            ["asset_parent"],
             ["source"],
+            ["status"],
         ],
     )
 
@@ -118,6 +122,8 @@ def validate(
 
     # check if existing asset is locked, issued by source, hard cap is reached
     if existing_asset:
+        if existing_asset["fair_minting"]:
+            problems.append(f"Fair minter already opened for {asset_name}.")
         if existing_asset["locked"]:
             problems.append(f"Asset {asset_name} is locked.")
         if existing_asset["issuer"] != source:

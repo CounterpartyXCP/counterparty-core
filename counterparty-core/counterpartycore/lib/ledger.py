@@ -1795,27 +1795,6 @@ def update_order_match_status(db, id, status):
 #####################
 
 
-def get_fairminters_to_premint(db, block_index):
-    cursor = db.cursor()
-    query = """
-        SELECT * FROM fairminters
-        WHERE 
-            status = :status 
-            AND pre_minted = :pre_minted
-            AND premint_quantity > :premint_quantity
-            AND start_block = :start_block
-        ORDER BY tx_index
-    """
-    bindings = {
-        "status": "open",
-        "pre_minted": False,
-        "premint_quantity": 0,
-        "start_block": block_index,
-    }
-    cursor.execute(query, bindings)
-    return cursor.fetchall()
-
-
 def get_fairminters_to_open(db, block_index):
     cursor = db.cursor()
     query = """
@@ -1847,6 +1826,29 @@ def get_fairminters_to_close(db, block_index):
     }
     cursor.execute(query, bindings)
     return cursor.fetchall()
+
+
+def get_fairminter_by_asset(db, asset):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM fairminters
+        WHERE asset = ?
+        ORDER BY rowid DESC LIMIT 1
+    """
+    bindings = (asset,)
+    cursor.execute(query, bindings)
+    return cursor.fetchone()
+
+
+def get_fairmint_quantity(db, fairminter_tx_hash):
+    cursor = db.cursor()
+    query = """
+        SELECT SUM(earn_quantity) AS quantity FROM fairmints
+        WHERE fairminter_tx_hash = ? AND status = ?
+    """
+    bindings = (fairminter_tx_hash, "valid")
+    cursor.execute(query, bindings)
+    return cursor.fetchone()["quantity"]
 
 
 def update_fairminter(db, tx_hash, update_data):
