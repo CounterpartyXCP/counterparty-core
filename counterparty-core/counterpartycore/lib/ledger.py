@@ -895,14 +895,13 @@ def get_asset(db, asset):
         return None
 
     locked = False
-    supply = 0
     for issuance in issuances:
-        supply += issuance["quantity"]
         if issuance["locked"]:
             locked = True
+            break
 
     asset = issuances[0]
-    asset["supply"] = supply
+    asset["supply"] = asset_supply(db, issuance["asset"])
     asset["locked"] = locked
     return asset
 

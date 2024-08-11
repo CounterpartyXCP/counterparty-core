@@ -68,9 +68,9 @@ def validate(
             return problems
 
         if fairminter["hard_cap"] > 0:
-            fairmint_quantity = ledger.get_fairmint_quantity(db, fairminter["tx_hash"])
-            if fairmint_quantity + quantity > fairminter["hard_cap"]:
-                problems.append("Fairmint quantity exceeds hard cap")
+            asset_supply = ledger.asset_supply(db, fairminter["asset"])
+            if asset_supply + quantity > fairminter["hard_cap"]:
+                problems.append("asset supply quantity exceeds hard cap")
 
         xcp_total_price = quantity * fairminter["price"]
         balance = ledger.get_balance(db, source, "XCP")
@@ -172,8 +172,8 @@ def parse(db, tx, message):
     last_issuance = ledger.get_asset(db, asset)
     fair_minting = True
     if fairminter["hard_cap"] > 0:
-        fairmint_quantity = ledger.get_fairmint_quantity(db, fairminter["tx_hash"])
-        if fairmint_quantity + quantity == fairminter["hard_cap"]:
+        asset_supply = ledger.asset_supply(db, fairminter["asset"])
+        if asset_supply + quantity == fairminter["hard_cap"]:
             fair_minting = False
 
     bindings = last_issuance | {
