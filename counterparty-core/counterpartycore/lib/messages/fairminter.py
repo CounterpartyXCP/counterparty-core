@@ -552,18 +552,37 @@ def check_soft_cap(db, block_index):
                 if fairmint_quantity < fairminter["soft_cap"]:
                     # reimburse paid quantity to minter
                     xcp_destination = fairmint["source"]
+                    xcp_action = "fairmint refund"
+                elif fairminter["burn_payment"]:
+                    # burn paid quantity
+                    xcp_destination = None
+                    xcp_action = "burned fairmint payment"
                 else:
                     # send funds to issuer
                     xcp_destination = fairminter["source"]
-                ledger.credit(
-                    db,
-                    xcp_destination,
-                    "XCP",
-                    fairmint["paid_quantity"],
-                    fairmint["tx_index"],
-                    action="unescrowed fairmint",
-                    event=fairmint["tx_hash"],
-                )
+                    xcp_action = "fairmint payment"
+                if xcp_destination:
+                    ledger.credit(
+                        db,
+                        xcp_destination,
+                        "XCP",
+                        fairmint["paid_quantity"],
+                        fairmint["tx_index"],
+                        action=xcp_action,
+                        event=fairmint["tx_hash"],
+                    )
+                else:
+                    bindings = {
+                        "tx_index": fairmint["tx_index"],
+                        "tx_hash": fairmint["tx_hash"],
+                        "block_index": block_index,
+                        "source": fairmint["source"],
+                        "asset": "XCP",
+                        "quantity": fairmint["paid_quantity"],
+                        "tag": xcp_action,
+                        "status": "valid",
+                    }
+                    ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
             if fairmint_quantity >= fairminter["soft_cap"]:
                 # send assets to minter

@@ -147,15 +147,14 @@ def parse(db, tx, message):
     xcp_destination = fairminter["source"]
     asset_destination = tx["source"]
 
-    if fairminter["burn_payment"]:
-        xcp_action = "burn payment"
-        xcp_destination = config.UNSPENDABLE
-
     if soft_cap_not_reached:
         xcp_action = "escrowed fairmint"
         xcp_destination = config.UNSPENDABLE
         asset_action = "escrowed fairmint"
         asset_destination = config.UNSPENDABLE
+    elif fairminter["burn_payment"]:
+        xcp_action = "burn fairmint payment"
+        xcp_destination = None
 
     if fairminter["price"] > 0:
         paid_quantity = quantity * fairminter["price"]
@@ -171,7 +170,20 @@ def parse(db, tx, message):
 
     if paid_quantity > 0:
         ledger.debit(db, tx["source"], "XCP", paid_quantity, xcp_action, tx["tx_hash"])
-        ledger.credit(db, xcp_destination, "XCP", paid_quantity, xcp_action, tx["tx_hash"])
+        if xcp_destination:
+            ledger.credit(db, xcp_destination, "XCP", paid_quantity, xcp_action, tx["tx_hash"])
+        else:
+            bindings = {
+                "tx_index": tx["tx_index"],
+                "tx_hash": tx["tx_hash"],
+                "block_index": tx["block_index"],
+                "source": tx["source"],
+                "asset": "XCP",
+                "quantity": paid_quantity,
+                "tag": xcp_action,
+                "status": "valid",
+            }
+            ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
     if asset_destination == config.UNSPENDABLE:
         ledger.credit(
