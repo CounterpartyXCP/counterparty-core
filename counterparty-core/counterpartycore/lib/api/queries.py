@@ -2398,7 +2398,7 @@ def get_all_fairminters(db, cursor: int = None, limit: int = 100, offset: int = 
     return select_rows(db, "fairminters", last_cursor=cursor, limit=limit, offset=offset)
 
 
-def get_fairminter(db, fairminter_hash: str):
+def get_fairminter(db, tx_hash: str):
     """
     Returns the fairminter by its hash
     :param str fairminter_hash: The hash of the fairminter to return
@@ -2406,7 +2406,7 @@ def get_fairminter(db, fairminter_hash: str):
     return select_row(
         db,
         "fairminters",
-        where={"tx_hash": fairminter_hash},
+        where={"tx_hash": tx_hash},
     )
 
 
@@ -2438,7 +2438,7 @@ def get_fairminters_by_address(
 
 
 def get_fairmints_by_fairminter(
-    db, fairminter_tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+    db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the mints by fairminter
@@ -2447,7 +2447,7 @@ def get_fairmints_by_fairminter(
     return select_rows(
         db,
         "fairmints",
-        where={"fairminter_tx_hash": fairminter_tx_hash},
+        where={"fairminter_tx_hash": tx_hash},
         last_cursor=cursor,
         limit=limit,
         offset=offset,

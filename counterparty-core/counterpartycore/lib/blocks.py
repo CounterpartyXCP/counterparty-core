@@ -82,6 +82,8 @@ TABLES = ["balances", "credits", "debits", "messages"] + [
     "dispensers",
     "dispenses",
     "dispenser_refills",
+    "fairminters",
+    "fairmints",
 ]
 
 MAINNET_BURNS = {}
@@ -213,7 +215,9 @@ def parse_tx(db, tx):
                     {"supported": False, "tx_hash": tx["tx_hash"]},
                 )
                 if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
-                    logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
+                    logger.info(
+                        f"Unsupported transaction: hash {tx['tx_hash']}; ID: {message_type_id}; data {tx['data']}"
+                    )
                 cursor.close()
                 return False
 

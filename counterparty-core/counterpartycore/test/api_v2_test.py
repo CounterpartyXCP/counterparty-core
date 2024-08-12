@@ -48,6 +48,7 @@ def test_api_v2(request):
         "v1",
         "rpc",
         "api",
+        "fairminters",  # TEMPORARY
     ]
     results = {}
     fixtures = {}

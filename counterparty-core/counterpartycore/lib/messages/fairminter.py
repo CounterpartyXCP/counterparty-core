@@ -37,7 +37,7 @@ def initialise(db):
             lock_quantity BOOL,
             divisible BOOL,
             pre_minted BOOL DEFAULT 0,
-            status TEXT,
+            status TEXT
         )
     """
     cursor.execute(create_table_sql)
@@ -103,7 +103,7 @@ def validate(
             problems.append(f"{option_bool_param} must be a boolean.")
     # check minted_asset_commission
     if minted_asset_commission is not None:
-        if not isinstance(minted_asset_commission, float):
+        if not isinstance(minted_asset_commission, (float, D)):
             problems.append("minted_asset_commission must be a float")
         elif minted_asset_commission < 0 or minted_asset_commission >= 1:
             problems.append("minted_asset_commission must be >=0 and <1")
@@ -366,6 +366,7 @@ def parse(db, tx, message):
             "status": status,
         }
         ledger.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
+        logger.info(f"Fair minter {tx['tx_hash']} is invalid: {status}")
         return
 
     # determine status
@@ -377,7 +378,7 @@ def parse(db, tx, message):
 
     # is subasset ?
     asset_longname = ""
-    if asset_parent == "":
+    if asset_parent != "":
         asset_longname = f"{asset_parent}.{asset}"
 
     existing_asset = ledger.get_asset(db, asset_longname if asset_longname != "" else asset)
@@ -394,7 +395,7 @@ def parse(db, tx, message):
     else:
         # only new named assets have fees
         if existing_asset is None and not asset.startswith("A"):
-            fee = 0.5
+            fee = 0.5 * config.UNIT
 
     # we only premint if the faireminter is open, otherwise
     # we will do it at opening (`start_block`)
@@ -419,7 +420,7 @@ def parse(db, tx, message):
         "premint_quantity": premint_quantity,
         "start_block": start_block,
         "end_block": end_block,
-        "minted_asset_commission_int": int(minted_asset_commission * 1e8),
+        "minted_asset_commission_int": int(minted_asset_commission * D(1e8)),
         "soft_cap": soft_cap,
         "soft_cap_deadline_block": soft_cap_deadline_block,
         "lock_description": lock_description,
@@ -429,6 +430,7 @@ def parse(db, tx, message):
         "pre_minted": pre_minted,
     }
     ledger.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
+    logger.info(f"Fair minter opened for {asset_name} by {tx['source']}.")
 
     if not existing_asset:
         # Add to table of assets if new asset
@@ -437,7 +439,7 @@ def parse(db, tx, message):
             "asset_id": str(asset_id),
             "asset_name": asset_name,
             "block_index": tx["block_index"],
-            "asset_longname": asset_longname,
+            "asset_longname": asset_longname if asset_longname != "" else None,
         }
         ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
 
@@ -485,6 +487,18 @@ def parse(db, tx, message):
             premint_quantity,
             tx["tx_index"],
             action="escrowed premint",
+            event=tx["tx_hash"],
+        )
+
+    # debit fees
+    if fee > 0:
+        ledger.debit(
+            db,
+            tx["source"],
+            config.XCP,
+            int(fee),
+            tx["tx_index"],
+            action="fairminter fee",
             event=tx["tx_hash"],
         )
 
@@ -573,7 +587,7 @@ def check_soft_cap(db, block_index):
             ledger.debit(
                 db,
                 config.UNSPENDABLE,
-                "XCP",
+                config.XCP,
                 paid_quantity,
                 0,  # tx_index=0 for block actions
                 action="unescrowed fairmint payment",
@@ -604,7 +618,7 @@ def check_soft_cap(db, block_index):
                     ledger.credit(
                         db,
                         xcp_destination,
-                        "XCP",
+                        config.XCP,
                         fairmint["paid_quantity"],
                         fairmint["tx_index"],
                         action=xcp_action,
@@ -617,7 +631,7 @@ def check_soft_cap(db, block_index):
                         "tx_hash": fairmint["tx_hash"],
                         "block_index": block_index,
                         "source": fairmint["source"],
-                        "asset": "XCP",
+                        "asset": config.XCP,
                         "quantity": fairmint["paid_quantity"],
                         "tag": xcp_action,
                         "status": "valid",

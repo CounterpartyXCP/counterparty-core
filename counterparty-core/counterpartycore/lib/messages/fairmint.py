@@ -24,7 +24,7 @@ def initialise(db):
             earn_quantity INTEGER,
             paid_quantity INTEGER,
             commission INTEGER,
-            status TEXT,
+            status TEXT
         )
     """
 
@@ -36,7 +36,7 @@ def initialise(db):
         [
             ["tx_hash"],
             ["block_index"],
-            ["fair_minter_tx_hash"],
+            ["fairminter_tx_hash"],
             ["asset"],
             ["source"],
             ["status"],
@@ -81,7 +81,7 @@ def validate(
             problems.append("asset supply quantity exceeds hard cap")
         # check if the user has enough XCP
         xcp_total_price = quantity * fairminter["price"]
-        balance = ledger.get_balance(db, source, "XCP")
+        balance = ledger.get_balance(db, source, config.XCP)
         if balance < xcp_total_price:
             problems.append("Insufficient XCP balance")
     else:
@@ -197,10 +197,10 @@ def parse(db, tx, message):
 
     if paid_quantity > 0:
         # we debit the user
-        ledger.debit(db, tx["source"], "XCP", paid_quantity, xcp_action, tx["tx_hash"])
+        ledger.debit(db, tx["source"], config.XCP, paid_quantity, xcp_action, tx["tx_hash"])
         if xcp_destination:
             # we credit the destination if it exists (issuer or escrow)
-            ledger.credit(db, xcp_destination, "XCP", paid_quantity, xcp_action, tx["tx_hash"])
+            ledger.credit(db, xcp_destination, config.XCP, paid_quantity, xcp_action, tx["tx_hash"])
         else:
             # else we burn the payment
             bindings = {
@@ -208,7 +208,7 @@ def parse(db, tx, message):
                 "tx_hash": tx["tx_hash"],
                 "block_index": tx["block_index"],
                 "source": tx["source"],
-                "asset": "XCP",
+                "asset": config.XCP,
                 "quantity": paid_quantity,
                 "tag": xcp_action,
                 "status": "valid",

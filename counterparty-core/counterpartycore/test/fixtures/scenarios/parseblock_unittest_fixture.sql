@@ -2819,23 +2819,23 @@ CREATE TABLE "issuances"(
                               locked BOOL,
                               status TEXT,
                               asset_longname TEXT,
-                              reset BOOL,
+                              reset BOOL, fair_minting BOOL DEFAULT 0,
                               PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index));
-INSERT INTO issuances VALUES(2,'1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1',0,310001,'DIVISIBLE',100000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Divisible asset',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(3,'7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584',0,310002,'NODIVISIBLE',1000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'No divisible asset',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(4,'c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140',0,310003,'CALLABLE',1000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Callable asset',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(5,'90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da',0,310004,'LOCKED',1000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Locked asset',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(6,'344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc',0,310005,'LOCKED',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Locked asset',0,1,'valid',NULL,0);
-INSERT INTO issuances VALUES(17,'bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39',0,310016,'MAXI',9223372036854775807,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Maximum quantity',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(110,'e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e',0,310109,'PAYTOSCRIPT',1000,0,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',0,0,0,0.0,'PSH issued asset',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(114,'34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63',0,310113,'LOCKEDPREV',1000,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'Locked asset',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(115,'025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2',0,310114,'LOCKEDPREV',0,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'Locked asset',0,1,'valid',NULL,0);
-INSERT INTO issuances VALUES(116,'4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb',0,310115,'LOCKEDPREV',0,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'changed',0,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(495,'321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503',0,310494,'DIVIDEND',100,1,'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH','mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',0,0,0,0.0,'',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(498,'076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f',0,310497,'PARENT',100000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Parent asset',50000000,0,'valid',NULL,0);
-INSERT INTO issuances VALUES(499,'0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf',0,310498,'A95428956661682277',100000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Child of parent',25000000,0,'valid','PARENT.already.issued',0);
+INSERT INTO issuances VALUES(2,'1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1',0,310001,'DIVISIBLE',100000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Divisible asset',50000000,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(3,'7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584',0,310002,'NODIVISIBLE',1000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'No divisible asset',50000000,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(4,'c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140',0,310003,'CALLABLE',1000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Callable asset',50000000,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(5,'90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da',0,310004,'LOCKED',1000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Locked asset',50000000,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(6,'344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc',0,310005,'LOCKED',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Locked asset',0,1,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(17,'bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39',0,310016,'MAXI',9223372036854775807,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Maximum quantity',50000000,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(110,'e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e',0,310109,'PAYTOSCRIPT',1000,0,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',0,0,0,0.0,'PSH issued asset',50000000,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(114,'34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63',0,310113,'LOCKEDPREV',1000,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'Locked asset',50000000,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(115,'025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2',0,310114,'LOCKEDPREV',0,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'Locked asset',0,1,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(116,'4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb',0,310115,'LOCKEDPREV',0,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'changed',0,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(495,'321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503',0,310494,'DIVIDEND',100,1,'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH','mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',0,0,0,0.0,'',50000000,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(498,'076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f',0,310497,'PARENT',100000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Parent asset',50000000,0,'valid',NULL,0,0);
+INSERT INTO issuances VALUES(499,'0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf',0,310498,'A95428956661682277',100000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Child of parent',25000000,0,'valid','PARENT.already.issued',0,0);
 -- Triggers and indices on  issuances
 CREATE TRIGGER block_update_issuances
                            BEFORE UPDATE ON issuances BEGIN
@@ -3339,6 +3339,101 @@ CREATE TRIGGER block_update_dispenser_refills
 CREATE INDEX dispenser_refills_block_index_idx ON dispenser_refills (block_index)
         ;
 CREATE INDEX dispenser_refills_tx_hash_idx ON dispenser_refills (tx_hash)
+        ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=FULL;
+-- PRAGMA max_page_count=4294967294;
+
+BEGIN TRANSACTION;
+
+-- Table  fairminters
+DROP TABLE IF EXISTS fairminters;
+CREATE TABLE fairminters (
+            tx_hash TEXT PRIMARY KEY,
+            tx_index INTEGER,
+            block_index INTEGER,
+            source TEXT,
+            asset TEXT,
+            asset_parent TEXT,
+            asset_longname TEXT,
+            description TEXT,
+            price INTEGER,
+            hard_cap INTEGER,
+            burn_payment BOOL,
+            max_mint_per_tx INTEGER,
+            premint_quantity INTEGER,
+            start_block INTEGER,
+            end_block INTEGER,
+            minted_asset_commission_int INTEGER,
+            soft_cap INTEGER,
+            soft_cap_deadline_block INTEGER,
+            lock_description BOOL,
+            lock_quantity BOOL,
+            divisible BOOL,
+            pre_minted BOOL DEFAULT 0,
+            status TEXT
+        );
+-- Triggers and indices on  fairminters
+CREATE TRIGGER block_update_fairminters
+                           BEFORE UPDATE ON fairminters BEGIN
+                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                           END;
+CREATE INDEX fairminters_asset_idx ON fairminters (asset)
+        ;
+CREATE INDEX fairminters_asset_longname_idx ON fairminters (asset_longname)
+        ;
+CREATE INDEX fairminters_asset_parent_idx ON fairminters (asset_parent)
+        ;
+CREATE INDEX fairminters_block_index_idx ON fairminters (block_index)
+        ;
+CREATE INDEX fairminters_source_idx ON fairminters (source)
+        ;
+CREATE INDEX fairminters_status_idx ON fairminters (status)
+        ;
+CREATE INDEX fairminters_tx_hash_idx ON fairminters (tx_hash)
+        ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=FULL;
+-- PRAGMA max_page_count=4294967294;
+
+BEGIN TRANSACTION;
+
+-- Table  fairmints
+DROP TABLE IF EXISTS fairmints;
+CREATE TABLE fairmints (
+            tx_hash TEXT PRIMARY KEY,
+            tx_index INTEGER,
+            block_index INTEGER,
+            source TEXT,
+            fairminter_tx_hash TEXT,
+            asset TEXT,
+            earn_quantity INTEGER,
+            paid_quantity INTEGER,
+            commission INTEGER,
+            status TEXT
+        );
+-- Triggers and indices on  fairmints
+CREATE TRIGGER block_update_fairmints
+                           BEFORE UPDATE ON fairmints BEGIN
+                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                           END;
+CREATE INDEX fairmints_asset_idx ON fairmints (asset)
+        ;
+CREATE INDEX fairmints_block_index_idx ON fairmints (block_index)
+        ;
+CREATE INDEX fairmints_fairminter_tx_hash_idx ON fairmints (fairminter_tx_hash)
+        ;
+CREATE INDEX fairmints_source_idx ON fairmints (source)
+        ;
+CREATE INDEX fairmints_status_idx ON fairmints (status)
+        ;
+CREATE INDEX fairmints_tx_hash_idx ON fairmints (tx_hash)
         ;
 
 COMMIT TRANSACTION;

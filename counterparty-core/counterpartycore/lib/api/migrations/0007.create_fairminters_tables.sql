@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS fairminters (
     status TEXT,
     earned_quantity INTEGER,
     commission INTEGER,
-    paid_quantity INTEGER,
+    paid_quantity INTEGER
 );
 CREATE INDEX IF NOT EXISTS fairminters_tx_hash_idx ON fairminters (tx_hash);
 CREATE INDEX IF NOT EXISTS fairminters_block_index_idx ON fairminters (block_index);
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS fairmints (
     earn_quantity INTEGER,
     paid_quantity INTEGER,
     commission INTEGER,
-    status TEXT,
+    status TEXT
 );
 CREATE INDEX IF NOT EXISTS fairmints_tx_hash_idx ON fairmints (tx_hash);
 CREATE INDEX IF NOT EXISTS fairmints_block_index_idx ON fairmints (block_index);
