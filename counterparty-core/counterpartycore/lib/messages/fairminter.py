@@ -30,7 +30,7 @@ def initialise(db):
             premint_quantity INTEGER,
             start_block INTEGER,
             end_block INTEGER,
-            minted_asset_commission INTEGER,
+            minted_asset_commission_int INTEGER,
             soft_cap INTEGER,
             soft_cap_deadline_block INTEGER,
             lock_description BOOL,
@@ -204,7 +204,7 @@ def compose(
     if len(problems) > 0:
         raise exceptions.ComposeError(problems)
 
-    minted_asset_commission_int = int((minted_asset_commission or 0) * 1e8)
+    minted_asset_commission_int = int(minted_asset_commission * 1e8)
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
@@ -399,7 +399,7 @@ def parse(db, tx, message):
         "premint_quantity": premint_quantity,
         "start_block": start_block,
         "end_block": end_block,
-        "minted_asset_commission": minted_asset_commission,
+        "minted_asset_commission_int": int(minted_asset_commission * 1e8),
         "soft_cap": soft_cap,
         "soft_cap_deadline_block": soft_cap_deadline_block,
         "lock_description": lock_description,
@@ -522,7 +522,7 @@ def check_soft_cap(db, block_index):
     fairminters = ledger.get_soft_caped_fairminters(db, block_index)
 
     for fairminter in fairminters:
-        fairmint_quantity = ledger.get_fairmint_quantity(db, fairminter["tx_hash"])
+        fairmint_quantity, paid_quantity = ledger.get_fairmint_quantities(db, fairminter["tx_hash"])
         fairmints = ledger.get_valid_fairmints(db, fairminter["tx_hash"])
 
         # unescrow assets
@@ -535,6 +535,17 @@ def check_soft_cap(db, block_index):
             action="unescrowed fairmint",
             event=fairminter["tx_hash"],
         )
+        # unescrow XCP
+        if paid_quantity > 0:
+            ledger.debit(
+                db,
+                config.UNSPENDABLE,
+                "XCP",
+                paid_quantity,
+                0,  # tx_index=0 for block actions
+                action="unescrowed fairmint payment",
+                event=fairminter["tx_hash"],
+            )
 
         for fairmint in fairmints:
             if fairmint["paid_quantity"] > 0:
@@ -544,15 +555,6 @@ def check_soft_cap(db, block_index):
                 else:
                     # send funds to issuer
                     xcp_destination = fairminter["source"]
-                ledger.debit(
-                    db,
-                    config.UNSPENDABLE,
-                    "XCP",
-                    fairmint["paid_quantity"],
-                    fairmint["tx_index"],
-                    action="unescrowed fairmint",
-                    event=fairmint["tx_hash"],
-                )
                 ledger.credit(
                     db,
                     xcp_destination,
@@ -574,6 +576,17 @@ def check_soft_cap(db, block_index):
                     action="unescrowed fairmint",
                     event=fairmint["tx_hash"],
                 )
+                # send commission to issuer
+                if fairmint["commission"] > 0:
+                    ledger.credit(
+                        db,
+                        fairminter["source"],
+                        fairminter["asset"],
+                        fairmint["commission"],
+                        fairmint["tx_index"],
+                        action="fairmint commission",
+                        event=fairmint["tx_hash"],
+                    )
 
         if fairmint_quantity < fairminter["soft_cap"]:
             close_fairminter(db, fairminter, block_index)

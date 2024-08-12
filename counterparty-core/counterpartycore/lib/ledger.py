@@ -1839,15 +1839,22 @@ def get_fairminter_by_asset(db, asset):
     return cursor.fetchone()
 
 
-def get_fairmint_quantity(db, fairminter_tx_hash):
+def get_fairmint_quantities(db, fairminter_tx_hash):
     cursor = db.cursor()
     query = """
-        SELECT SUM(earn_quantity) AS quantity FROM fairmints
+        SELECT
+            SUM(earn_quantity) AS quantity,
+            SUM(paid_quantity) AS paid_quantity,
+            SUM(commission) AS commission
+        FROM fairmints
         WHERE fairminter_tx_hash = ? AND status = ?
     """
     bindings = (fairminter_tx_hash, "valid")
     cursor.execute(query, bindings)
-    return cursor.fetchone()["quantity"]
+    sums = cursor.fetchone()
+    if not sums:
+        return None, None
+    return sums["quantity"] + sums["commission"], sums["paid_quantity"]
 
 
 def get_soft_caped_fairminters(db, block_index):

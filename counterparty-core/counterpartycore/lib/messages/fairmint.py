@@ -23,6 +23,7 @@ def initialise(db):
             asset TEXT,
             earn_quantity INTEGER,
             paid_quantity INTEGER,
+            commission INTEGER,
             status TEXT,
         )
     """
@@ -163,11 +164,25 @@ def parse(db, tx, message):
         paid_quantity = 0
         earn_quantity = fairminter["max_mint_per_tx"]
 
+    commission = 0
+    if fairminter["minted_asset_commission_int"] > 0:
+        commission = int((D(fairminter["minted_asset_commission_int"]) / D(1e8)) * D(earn_quantity))
+        earn_quantity -= commission
+
     if paid_quantity > 0:
         ledger.debit(db, tx["source"], "XCP", paid_quantity, xcp_action, tx["tx_hash"])
         ledger.credit(db, xcp_destination, "XCP", paid_quantity, xcp_action, tx["tx_hash"])
 
-    ledger.credit(db, asset_destination, asset, earn_quantity, asset_action, tx["tx_hash"])
+    if asset_destination == config.UNSPENDABLE:
+        ledger.credit(
+            db, asset_destination, asset, earn_quantity + commission, asset_action, tx["tx_hash"]
+        )
+    else:
+        ledger.credit(db, asset_destination, asset, earn_quantity, asset_action, tx["tx_hash"])
+        if commission > 0:
+            ledger.credit(
+                db, fairminter["source"], asset, commission, "fairmint commission", tx["tx_hash"]
+            )
 
     last_issuance = ledger.get_asset(db, asset)
     fair_minting = True
@@ -180,7 +195,7 @@ def parse(db, tx, message):
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
         "block_index": tx["block_index"],
-        "quantity": earn_quantity,
+        "quantity": earn_quantity + commission,
         "source": tx["source"],
         "status": "valid",
         "fair_minting": fair_minting,
@@ -189,3 +204,17 @@ def parse(db, tx, message):
 
     if not fair_minting:
         ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+
+    bindings = {
+        "tx_hash": tx["tx_hash"],
+        "tx_index": tx["tx_index"],
+        "block_index": tx["block_index"],
+        "source": tx["source"],
+        "fairminter_tx_hash": fairminter["tx_hash"],
+        "asset": fairminter["asset"],
+        "earn_quantity": earn_quantity,
+        "paid_quantity": paid_quantity,
+        "commission": commission,
+        "status": status,
+    }
+    ledger.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
