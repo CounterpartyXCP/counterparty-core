@@ -70,6 +70,12 @@ def validate(
         if quantity <= 0:
             problems.append("Quantity must be greater than 0")
             return problems
+        if fairminter["max_mint_per_tx"] > 0 and quantity > fairminter["max_mint_per_tx"]:
+            problems.append("Quantity exceeds maximum allowed per transaction")
+            return problems
+        if quantity > config.MAX_INT:
+            problems.append("Quantity exceeds maximum allowed value")
+            return problems
         # check id we don't exceed the hard cap
         if fairminter["hard_cap"] > 0 and asset_supply + quantity > fairminter["hard_cap"]:
             problems.append("asset supply quantity exceeds hard cap")
