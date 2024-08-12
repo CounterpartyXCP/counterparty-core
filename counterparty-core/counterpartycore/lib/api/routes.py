@@ -63,6 +63,9 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/transactions": queries.get_transactions_by_address,
         "/v2/addresses/<address>/dividends": queries.get_dividends_distributed_by_address,
         "/v2/addresses/<address>/orders": queries.get_orders_by_address,
+        "/v2/addresses/<address>/fairminters": queries.get_fairminters_by_address,
+        "/v2/addresses/<address>/fairmints": queries.get_fairmints_by_address,
+        "/v2/addresses/<address>/fairmints/<asset>": queries.get_fairmints_by_address_and_asset,
         ### /addresses/<address>/compose/ ###
         "/v2/addresses/<address>/compose/bet": transaction.compose_bet,
         "/v2/addresses/<address>/compose/broadcast": transaction.compose_broadcast,
@@ -96,6 +99,9 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/holders": queries.get_asset_holders,
         "/v2/assets/<asset>/dispenses": queries.get_dispenses_by_asset,
         "/v2/assets/<asset>/subassets": queries.get_subassets_by_asset,
+        "/v2/assets/<asset>/fairminters": queries.get_fairminters_by_asset,
+        "/v2/assets/<asset>/fairmints": queries.get_fairmints_by_asset,
+        "/v2/assets/<asset>/fairmints/<address>": queries.get_fairmints_by_address_and_asset,
         ### /orders ###
         "/v2/orders": queries.get_orders,
         "/v2/orders/<order_hash>": queries.get_order,
@@ -137,6 +143,10 @@ ROUTES = util.prepare_routes(
         ### /broadcasts ###
         "/v2/broadcasts": queries.get_valid_broadcasts,
         "/v2/broadcasts/<tx_hash>": queries.get_broadcast_by_transaction_hash,
+        ### /fairminters ###
+        "/v2/fairminters": queries.get_all_fairminters,
+        "/v2/fairminters/<tx_hash>": queries.get_fairminter,
+        "/v2/fairminters/<tx_hash>/mints": queries.get_fairmints_by_fairminter,
         ### /healthz ###
         "/v2/healthz": util.check_server_health,
         "/healthz": util.check_server_health,

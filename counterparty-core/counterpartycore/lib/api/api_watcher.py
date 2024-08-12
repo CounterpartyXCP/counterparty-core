@@ -262,6 +262,7 @@ def rollback_event(api_db, event):
         rollback_assets_info(api_db, event)
         rollback_xcp_supply(api_db, event)
         rollback_address_events(api_db, event)
+        rollback_fairminters(api_db, event)
 
         sql = "DELETE FROM messages WHERE message_index = ?"
         delete_all(api_db, sql, (event["message_index"],))
@@ -584,6 +585,40 @@ def rollback_address_events(api_db, event):
     cursor.execute(sql, event)
 
 
+def update_fairminters(api_db, event):
+    if event["event"] != "NEW_FAIRMINT":
+        return
+    if event["status"] != "valid":
+        return
+    event_bindings = json.loads(event["bindings"])
+    cursor = api_db.cursor()
+    sql = """
+        UPDATE fairminters SET
+            earned_quantity = earned_quantity + :earn_quantity,
+            commission = commission + :commission,
+            paid_quantity = paid_quantity + :paid_quantity
+        WHERE tx_hash = :fairminter_tx_hash
+    """
+    cursor.execute(sql, event_bindings)
+
+
+def rollback_fairminters(api_db, event):
+    if event["event"] != "NEW_FAIRMINT":
+        return
+    if event["status"] != "valid":
+        return
+    event_bindings = json.loads(event["bindings"])
+    cursor = api_db.cursor()
+    sql = """
+        UPDATE fairminters SET
+            earned_quantity = earned_quantity - :earn_quantity,
+            commission = commission - :commission,
+            paid_quantity = paid_quantity - :paid_quantity
+        WHERE tx_hash = :fairminter_tx_hash
+    """
+    cursor.execute(sql, event_bindings)
+
+
 def parse_event(api_db, event, catching_up=False):
     if event["event"] in SKIP_EVENTS:
         event["insert_rowid"] = None
@@ -599,6 +634,7 @@ def parse_event(api_db, event, catching_up=False):
         update_assets_info(api_db, event)
         update_xcp_supply(api_db, event)
         update_address_events(api_db, event)
+        update_fairminters(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
         if event["event"] == "BLOCK_PARSED" and not catching_up:
