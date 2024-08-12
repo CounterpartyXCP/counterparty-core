@@ -243,9 +243,11 @@ def validate(
         if (
             util.enabled("lockable_issuance_descriptions", block_index)
             and last_issuance["description_locked"]
-            and description is not None
         ):
-            problems.append("Cannot update a locked description")
+            if description is not None:
+                problems.append("Cannot update a locked description")
+            if reset:
+                problems.append("Cannot reset issuance with locked description")
     else:
         reissuance = False
         if description.lower() == "lock":
