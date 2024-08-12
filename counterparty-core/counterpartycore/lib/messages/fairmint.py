@@ -63,20 +63,28 @@ def validate(
     if fairminter["status"] != "open":
         problems.append("Fairminter is not open for asset: {}".format(asset))
 
+    asset_supply = ledger.asset_supply(db, fairminter["asset"])
+
     if fairminter["price"] > 0:
+        # if the fairminter is not free the quantity is mandatory
         if quantity <= 0:
             problems.append("Quantity must be greater than 0")
             return problems
-
-        if fairminter["hard_cap"] > 0:
-            asset_supply = ledger.asset_supply(db, fairminter["asset"])
-            if asset_supply + quantity > fairminter["hard_cap"]:
-                problems.append("asset supply quantity exceeds hard cap")
-
+        # check id we don't exceed the hard cap
+        if fairminter["hard_cap"] > 0 and asset_supply + quantity > fairminter["hard_cap"]:
+            problems.append("asset supply quantity exceeds hard cap")
+        # check if the user has enough XCP
         xcp_total_price = quantity * fairminter["price"]
         balance = ledger.get_balance(db, source, "XCP")
         if balance < xcp_total_price:
             problems.append("Insufficient XCP balance")
+    else:
+        # check id we don't exceed the hard cap
+        if (
+            fairminter["hard_cap"] > 0
+            and asset_supply + fairminter["max_mint_per_tx"] > fairminter["hard_cap"]
+        ):
+            problems.append("asset supply quantity exceeds hard cap")
 
     return problems
 
@@ -93,6 +101,8 @@ def compose(
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
+    # to optimize the data size (avoiding fixed sizes per parameter) we use a simple
+    # string of characters separated by `|`.
     data_content = "|".join(
         [
             str(value)
@@ -136,43 +146,57 @@ def parse(db, tx, message):
         ledger.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
         return
 
+    # get corresponding fairminter
     fairminter = ledger.get_fairminter_by_asset(db, asset)
 
+    # determine if the soft cap has been reached
     soft_cap_not_reached = (
         fairminter["soft_cap"] > 0 and fairminter["soft_cap_deadline_block"] > tx["block_index"]
     )
 
+    # we determine who to send the payment and assets to
+    # By default the assets are sent to the minter
+    # and the payment to the issuer
     xcp_action = "fairmint"
-    asset_action = "fairmint"
     xcp_destination = fairminter["source"]
+    asset_action = "fairmint"
     asset_destination = tx["source"]
 
+    # if the soft cap is not reached we escrow the assets and payments
+    # which will be distributed in the `fairminters.check_soft_cap()` function.
     if soft_cap_not_reached:
         xcp_action = "escrowed fairmint"
         xcp_destination = config.UNSPENDABLE
         asset_action = "escrowed fairmint"
         asset_destination = config.UNSPENDABLE
+    # if the soft cap is reached but the payment must
+    # be burned there is no destination.
     elif fairminter["burn_payment"]:
         xcp_action = "burn fairmint payment"
         xcp_destination = None
-
+    # we determine how many assets we need to send
+    # and the price paid by the user
     if fairminter["price"] > 0:
         paid_quantity = quantity * fairminter["price"]
         earn_quantity = quantity
     else:
         paid_quantity = 0
         earn_quantity = fairminter["max_mint_per_tx"]
-
+    # we determine the commission to be paid to the issuer
+    # and we subtract it from the assets to be sent to the user
     commission = 0
     if fairminter["minted_asset_commission_int"] > 0:
         commission = int((D(fairminter["minted_asset_commission_int"]) / D(1e8)) * D(earn_quantity))
         earn_quantity -= commission
 
     if paid_quantity > 0:
+        # we debit the user
         ledger.debit(db, tx["source"], "XCP", paid_quantity, xcp_action, tx["tx_hash"])
         if xcp_destination:
+            # we credit the destination if it exists (issuer or escrow)
             ledger.credit(db, xcp_destination, "XCP", paid_quantity, xcp_action, tx["tx_hash"])
         else:
+            # else we burn the payment
             bindings = {
                 "tx_index": tx["tx_index"],
                 "tx_hash": tx["tx_hash"],
@@ -186,37 +210,20 @@ def parse(db, tx, message):
             ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
     if asset_destination == config.UNSPENDABLE:
+        # the minted amount and commission are escrowed
         ledger.credit(
             db, asset_destination, asset, earn_quantity + commission, asset_action, tx["tx_hash"]
         )
     else:
+        # the minted amount is sent to the user
         ledger.credit(db, asset_destination, asset, earn_quantity, asset_action, tx["tx_hash"])
         if commission > 0:
+            # the commission is sent to the issuer
             ledger.credit(
                 db, fairminter["source"], asset, commission, "fairmint commission", tx["tx_hash"]
             )
 
-    last_issuance = ledger.get_asset(db, asset)
-    fair_minting = True
-    if fairminter["hard_cap"] > 0:
-        asset_supply = ledger.asset_supply(db, fairminter["asset"])
-        if asset_supply + quantity == fairminter["hard_cap"]:
-            fair_minting = False
-
-    bindings = last_issuance | {
-        "tx_index": tx["tx_index"],
-        "tx_hash": tx["tx_hash"],
-        "block_index": tx["block_index"],
-        "quantity": earn_quantity + commission,
-        "source": tx["source"],
-        "status": "valid",
-        "fair_minting": fair_minting,
-    }
-    ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
-
-    if not fair_minting:
-        ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
-
+    # we insert the fairmint record
     bindings = {
         "tx_hash": tx["tx_hash"],
         "tx_index": tx["tx_index"],
@@ -230,3 +237,31 @@ def parse(db, tx, message):
         "status": status,
     }
     ledger.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
+
+    # we prepare the new issuance
+    last_issuance = ledger.get_asset(db, asset)
+    bindings = last_issuance | {
+        "tx_index": tx["tx_index"],
+        "tx_hash": tx["tx_hash"],
+        "block_index": tx["block_index"],
+        "quantity": earn_quantity + commission,
+        "source": tx["source"],
+        "status": "valid",
+    }
+
+    # we check if the hard cap is reached and in this case...
+    if fairminter["hard_cap"] > 0:
+        asset_supply = ledger.asset_supply(db, fairminter["asset"])
+        if asset_supply + quantity == fairminter["hard_cap"]:
+            # ...we unlock the issuances for this assets
+            bindings["fair_minting"] = False
+            # we check if we need to lock the assets
+            if fairminter["lock_quantity"]:
+                bindings["locked"] = True
+            # if fairminter["lock_description"]:
+            #    bindings["description_locked"] = True
+            # and we close the fairminter
+            ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+
+    # we insert the new issuance
+    ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")

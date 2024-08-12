@@ -108,6 +108,7 @@ def validate(
         elif minted_asset_commission < 0 or minted_asset_commission >= 1:
             problems.append("minted_asset_commission must be >=0 and <1")
 
+    # check asset name format
     try:
         ledger.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
         if asset_parent != "":
@@ -116,33 +117,41 @@ def validate(
         problems.append(f"Invalid asset name: {e}")
 
     asset_name = asset
+    # is subasset ?
     if asset_parent != "":
         asset_name = f"{asset_parent}.{asset}"
+
+    # check if asset exists
     existing_asset = ledger.get_asset(db, asset_name)
 
-    # check if existing asset is locked, issued by source, hard cap is reached
     if existing_asset:
+        # check if a fair minter is already opened for this asset
         if existing_asset["fair_minting"]:
             problems.append(f"Fair minter already opened for {asset_name}.")
+        # check if asset is locked
         if existing_asset["locked"]:
             problems.append(f"Asset {asset_name} is locked.")
+        # check if source is the issuer
         if existing_asset["issuer"] != source:
             problems.append(f"Asset {asset_name} is not issued by {source}.")
+        # check if description is locked
         if description != "" and existing_asset["description_locked"]:
             problems.append(f"Description of asset {asset_name} is locked.")
-        if hard_cap and existing_asset["supply"] >= hard_cap:
+        # check if hard cap is already reached
+        if hard_cap and existing_asset["supply"] + premint_quantity >= hard_cap:
             problems.append(f"Hard cap of asset {asset_name} is already reached.")
+    else:
+        if premint_quantity > 0 and premint_quantity >= hard_cap:
+            problems.append("Premint quantity must be < hard cap.")
 
     if existing_asset is None and asset_parent != "":
+        # if the asset does not exist its parent must exist
         existing_parent = ledger.get_asset(db, asset_parent)
         if existing_parent is None:
             problems.append("Asset parent does not exist")
 
     if price == 0 and max_mint_per_tx == 0:
         problems.append("Price or max_mint_per_tx must be > 0.")
-
-    if premint_quantity > 0 and premint_quantity >= hard_cap:
-        problems.append("Premint quantity must be < hard cap.")
 
     if end_block < 0:
         problems.append("End block must be >= 0.")
@@ -208,6 +217,9 @@ def compose(
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
+    # to optimize the data size (avoiding fixed sizes per parameter) we use a simple
+    # string of characters separated by `|`.
+    # The description is placed last to be able to contain `|`.
     data_content = "|".join(
         [
             str(value)
@@ -255,6 +267,7 @@ def unpack(message, return_dict=False):
             lock_quantity,
             divisible,
         ) = data_content[0:15]
+        # The description is placed last to be able to contain `|`.
         description = "|".join(data_content[15:]) if len(data_content) > 15 else ""
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
@@ -355,12 +368,14 @@ def parse(db, tx, message):
         ledger.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
         return
 
+    # determine status
     status = "pending"
     if start_block == 0 or tx["block_index"] >= start_block:
         status = "open"
     if end_block > 0 and tx["block_index"] > end_block:
         status = "closed"
 
+    # is subasset ?
     asset_longname = ""
     if asset_parent == "":
         asset_longname = f"{asset_parent}.{asset}"
@@ -370,6 +385,8 @@ def parse(db, tx, message):
     fee = 0
     asset_name = asset
     if asset_longname != "":
+        # if the asset is a subasset and does not exist we generate a random numeric name
+        # subassets are free
         if existing_asset is None:
             asset_name = util.generate_random_asset()
         else:
@@ -379,10 +396,13 @@ def parse(db, tx, message):
         if existing_asset is None and not asset.startswith("A"):
             fee = 0.5
 
+    # we only premint if the faireminter is open, otherwise
+    # we will do it at opening (`start_block`)
     pre_minted = False
     if status == "open" and premint_quantity > 0:
         pre_minted = True
 
+    # insert into fairminters table
     bindings = {
         "tx_hash": tx["tx_hash"],
         "tx_index": tx["tx_index"],
@@ -411,7 +431,7 @@ def parse(db, tx, message):
     ledger.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
 
     if not existing_asset:
-        # Add to table of assets.
+        # Add to table of assets if new asset
         asset_id = ledger.generate_asset_id(asset_name, tx["block_index"])
         bindings = {
             "asset_id": str(asset_id),
@@ -421,6 +441,7 @@ def parse(db, tx, message):
         }
         ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
 
+    # insert issuance
     bindings = {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
@@ -445,6 +466,7 @@ def parse(db, tx, message):
     ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
     if pre_minted:
+        # issuer is credited with the preminted quantity
         ledger.credit(
             db,
             tx["source"],
@@ -455,7 +477,7 @@ def parse(db, tx, message):
             event=tx["tx_hash"],
         )
     elif premint_quantity > 0:
-        # to preserve assets held and asset supply from the issuance above
+        # This means that the fair mint is not yet open. In this case we escrow the premint.
         ledger.credit(
             db,
             config.UNSPENDABLE,
@@ -467,13 +489,18 @@ def parse(db, tx, message):
         )
 
 
+# called each block
 def open_fairminters(db, block_index):
+    # gets the fairminters with a `start_block` equal to `block_index`
     fairminters = ledger.get_fairminters_to_open(db, block_index)
     for fairminter in fairminters:
         assert fairminter["status"] != "open"  # sanity check
+        # update status to open
         update_data = {"status": "open"}
+        # if there is a premint we must unescrow it and send it to the issuer
         if fairminter["premint_quantity"] > 0:
             assert not fairminter["pre_minted"]  # sanity check
+            # unescrow premint quantity...
             ledger.debit(
                 db,
                 config.UNSPENDABLE,
@@ -483,6 +510,7 @@ def open_fairminters(db, block_index):
                 action="unescrowed premint",
                 event=fairminter["tx_hash"],
             )
+            # ...and send it to the issuer
             ledger.credit(
                 db,
                 fairminter["source"],
@@ -493,10 +521,12 @@ def open_fairminters(db, block_index):
                 event=fairminter["tx_hash"],
             )
             update_data["pre_minted"] = True
+        # update fairminter
         ledger.update_fairminter(db, fairminter["tx_hash"], update_data)
 
 
 def close_fairminter(db, fairminter, block_index):
+    # update status to closed
     ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
     # unlock issuance when fair minter is closed
     last_issuance = ledger.get_asset(db, fairminter["asset"])
@@ -519,13 +549,17 @@ def close_fairminters(db, block_index):
 
 
 def check_soft_cap(db, block_index):
+    # get fairminters with `soft_cap_deadline_block` equal to `block_index`
     fairminters = ledger.get_soft_caped_fairminters(db, block_index)
 
+    # we loop on the fairminters to check if the soft cap is reached.
+    # If it is reached we transfer the assets to the minters and the payments
+    # to the issuer. If not we refund the payments and destroy the assets.
     for fairminter in fairminters:
         fairmint_quantity, paid_quantity = ledger.get_fairmint_quantities(db, fairminter["tx_hash"])
         fairmints = ledger.get_valid_fairmints(db, fairminter["tx_hash"])
 
-        # unescrow assets
+        # we start by unescrow all the assets and payments for this fairminter...
         ledger.debit(
             db,
             config.UNSPENDABLE,
@@ -535,7 +569,6 @@ def check_soft_cap(db, block_index):
             action="unescrowed fairmint",
             event=fairminter["tx_hash"],
         )
-        # unescrow XCP
         if paid_quantity > 0:
             ledger.debit(
                 db,
@@ -546,21 +579,27 @@ def check_soft_cap(db, block_index):
                 action="unescrowed fairmint payment",
                 event=fairminter["tx_hash"],
             )
-
+        # ...and then we loop on the fairmints to decide how
+        # to distribute the assets and payments
         for fairmint in fairmints:
+            # is the fairmint paid ?
             if fairmint["paid_quantity"] > 0:
+                # soft cap not reached
                 if fairmint_quantity < fairminter["soft_cap"]:
                     # reimburse paid quantity to minter
                     xcp_destination = fairmint["source"]
                     xcp_action = "fairmint refund"
+                # soft cap reached but payment is burned
                 elif fairminter["burn_payment"]:
                     # burn paid quantity
                     xcp_destination = None
                     xcp_action = "burned fairmint payment"
+                # soft cap reached and payment sent to issuer
                 else:
                     # send funds to issuer
                     xcp_destination = fairminter["source"]
                     xcp_action = "fairmint payment"
+                # credit paid quantity to issuer or minter...
                 if xcp_destination:
                     ledger.credit(
                         db,
@@ -571,6 +610,7 @@ def check_soft_cap(db, block_index):
                         action=xcp_action,
                         event=fairmint["tx_hash"],
                     )
+                # ...or destroy it
                 else:
                     bindings = {
                         "tx_index": fairmint["tx_index"],
@@ -584,6 +624,8 @@ def check_soft_cap(db, block_index):
                     }
                     ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
+            # the soft cap is reached, the assets are distributed to
+            # the miner and the commissions to the issuer.
             if fairmint_quantity >= fairminter["soft_cap"]:
                 # send assets to minter
                 ledger.credit(
@@ -606,7 +648,8 @@ def check_soft_cap(db, block_index):
                         action="fairmint commission",
                         event=fairmint["tx_hash"],
                     )
-
+        # the soft cap is not reached, we close the
+        # fairminter and destroy all the assets at once
         if fairmint_quantity < fairminter["soft_cap"]:
             close_fairminter(db, fairminter, block_index)
             # destroy assets
@@ -623,10 +666,12 @@ def check_soft_cap(db, block_index):
             ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
 
+# This function is called on each block BEFORE parsing the transactions
 def before_block(db, block_index):
     open_fairminters(db, block_index)
 
 
+# This function is called on each block AFTER parsing the transactions
 def after_block(db, block_index):
     check_soft_cap(db, block_index)
     close_fairminters(db, block_index)
