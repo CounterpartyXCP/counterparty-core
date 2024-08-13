@@ -240,7 +240,7 @@ def api_server(request, cp_server):
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
 
-    # print(config.DATABASE, config.API_DATABASE)
+    print("api_server", config.DATABASE, config.API_DATABASE)
 
     # start RPC server and wait for server to be ready
     api_server = api.APIServer()
@@ -345,7 +345,7 @@ def api_server_v2(request, cp_server):
             if result.status_code != 200:
                 raise requests.exceptions.RequestException
             result = result.json()
-            if result["result"]["counterparty_height"] < 310500:
+            if result["result"]["counterparty_height"] < 310502:
                 raise requests.exceptions.RequestException
             break
         except requests.exceptions.RequestException:

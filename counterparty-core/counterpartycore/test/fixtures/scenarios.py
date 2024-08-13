@@ -233,11 +233,23 @@ UNITTEST_FIXTURE = [
         ),
         {"encoding": "opreturn"},
     ],
-    ["create_next_block", 500],
+    [
+        "fairminter",
+        (ADDR[0], "FREEFAIRMIN", "", 0, 10),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairminter",
+        (ADDR[0], "PAIDFAIRMIN", "", 10, 0),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    ["create_next_block", 502],
 ]
 
 PARSEBLOCKS_FIXTURE = UNITTEST_FIXTURE + [
-    ["create_next_block", 501, False]  # parse_block=False so we can unittest blocks.parse_block
+    ["create_next_block", 503, False]  # parse_block=False so we can unittest blocks.parse_block
 ]
 
 

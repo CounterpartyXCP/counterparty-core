@@ -68,7 +68,7 @@ DEFAULT_PARAMS = {
     "burn_end": 4017708,
     "burn_quantity": int(0.62 * UNIT),
     "burn_verysmall_quantity": int(0.0001 * UNIT),
-    "default_block_index": 310000 + 501,
+    "default_block_index": 310000 + 503,
     "default_block_hash": "2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8",
     "regular_dust_size": 5430,  # This was the default value used in a lot of tests historically
 }
