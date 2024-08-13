@@ -280,6 +280,7 @@ FAIRMINTER_VECTOR = {
         ],
         "parse": [
             {
+                "comment": "Fairminter with start block and soft cap",
                 "in": (
                     {
                         "fee": 10000,
@@ -364,7 +365,118 @@ FAIRMINTER_VECTOR = {
                         },
                     },
                 ],
-            }
+            },
+            {
+                "comment": "Fairminter without start block and with soft cap",
+                "in": (
+                    {
+                        "fee": 10000,
+                        "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        "data": b"ZFAIRMINTED||0|10|1000|100|0|900000|50|850000|10000000|0|0|1|1|une asset super top",
+                        "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "block_index": DP["default_block_index"],
+                        "btc_amount": 5430,
+                        "tx_index": DP["default_tx_index"],
+                        "supported": 1,
+                        "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "block_time": 310501000,
+                        "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
+                    },
+                ),
+                "records": [
+                    {
+                        "table": "fairminters",
+                        "values": {
+                            "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "asset": "FAIRMINTED",
+                            "asset_parent": "",
+                            "price": 0,
+                            "max_mint_per_tx": 10,
+                            "hard_cap": 1000,
+                            "premint_quantity": 100,
+                            "start_block": 0,
+                            "end_block": 900000,
+                            "soft_cap": 50,
+                            "soft_cap_deadline_block": 850000,
+                            "minted_asset_commission_int": 10000000,
+                            "burn_payment": False,
+                            "lock_description": False,
+                            "lock_quantity": True,
+                            "divisible": True,
+                            "description": "une asset super top",
+                            "status": "open",
+                        },
+                    },
+                    {
+                        "table": "credits",
+                        "values": {
+                            "block_index": DP["default_block_index"],
+                            "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+                            "asset": "FAIRMINTED",
+                            "quantity": 100,
+                            "calling_function": "escrowed premint",
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        },
+                    },
+                ],
+            },
+            {
+                "comment": "Fairminter without start block and without soft cap",
+                "in": (
+                    {
+                        "fee": 10000,
+                        "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        "data": b"ZFAIRMINTED||0|10|1000|100|0|900000|0|0|10000000|0|0|1|1|une asset super top",
+                        "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "block_index": DP["default_block_index"],
+                        "btc_amount": 5430,
+                        "tx_index": DP["default_tx_index"],
+                        "supported": 1,
+                        "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "block_time": 310501000,
+                        "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
+                    },
+                ),
+                "records": [
+                    {
+                        "table": "fairminters",
+                        "values": {
+                            "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "asset": "FAIRMINTED",
+                            "asset_parent": "",
+                            "price": 0,
+                            "max_mint_per_tx": 10,
+                            "hard_cap": 1000,
+                            "premint_quantity": 100,
+                            "start_block": 0,
+                            "end_block": 900000,
+                            "soft_cap": 0,
+                            "soft_cap_deadline_block": 0,
+                            "minted_asset_commission_int": 10000000,
+                            "burn_payment": False,
+                            "lock_description": False,
+                            "lock_quantity": True,
+                            "divisible": True,
+                            "description": "une asset super top",
+                            "status": "open",
+                        },
+                    },
+                    {
+                        "table": "credits",
+                        "values": {
+                            "block_index": DP["default_block_index"],
+                            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "asset": "FAIRMINTED",
+                            "quantity": 100,
+                            "calling_function": "premint",
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        },
+                    },
+                ],
+            },
         ],
     }
 }
