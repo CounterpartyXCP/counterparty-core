@@ -894,6 +894,9 @@ def check_outputs(
                     )
                 else:
                     msg = f"expected outputs don't match test_outputs: expected_outputs={outputs} test_outputs={test_outputs}"
+                import json
+
+                print(json.dumps(test_outputs, indent=4))
                 raise Exception(msg)  # noqa: B904
         if records is not None:
             for record in records:

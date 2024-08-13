@@ -251,11 +251,11 @@ UNITTEST_FIXTURE = [
         {"encoding": "opreturn"},
         {"short_tx_type_id": True, "fairminter": True},
     ],
-    ["create_next_block", 503],
+    ["create_next_block", 703],
 ]
 
 PARSEBLOCKS_FIXTURE = UNITTEST_FIXTURE + [
-    ["create_next_block", 504, False]  # parse_block=False so we can unittest blocks.parse_block
+    ["create_next_block", 704, False]  # parse_block=False so we can unittest blocks.parse_block
 ]
 
 
