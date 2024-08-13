@@ -19,7 +19,8 @@ from counterpartycore.lib.ledger import CreditError, DebitError
 from counterpartycore.lib.messages import issuance
 from counterpartycore.lib.util import QuantityError, RPCError
 
-from .fairminter_vectors import FAIRMINTER_VECTOR
+from .contract_vectors.fairmint import FAIRMINT_VECTOR
+from .contract_vectors.fairminter import FAIRMINTER_VECTOR
 from .params import (
     ADDR,
     MULTISIGADDR,
@@ -31,9 +32,10 @@ from .params import (
     DEFAULT_PARAMS as DP,
 )
 
-# UNITTEST_VECTOR = FAIRMINTER_VECTOR
-UNITTEST_VECTOR = (
+UNITTEST_VECTOR = FAIRMINTER_VECTOR | FAIRMINT_VECTOR
+UNITTEST_VECTOR_ = (
     FAIRMINTER_VECTOR
+    | FAIRMINT_VECTOR
     | {
         "bet": {
             "validate": [

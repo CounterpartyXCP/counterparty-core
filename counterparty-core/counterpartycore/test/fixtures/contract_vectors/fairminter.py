@@ -1,11 +1,9 @@
 from decimal import Decimal
 
-from counterpartycore.lib import config, deserialize, exceptions, script  # noqa: F401
-
-from .params import (
+from ..params import (
     ADDR,
 )
-from .params import DEFAULT_PARAMS as DP
+from ..params import DEFAULT_PARAMS as DP
 
 # source
 # asset
