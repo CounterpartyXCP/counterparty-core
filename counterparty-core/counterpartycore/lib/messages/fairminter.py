@@ -80,27 +80,32 @@ def validate(
     problems = []
 
     # check integer parameters
-    for optional_int_param in [
-        price,
-        max_mint_per_tx,
-        hard_cap,
-        premint_quantity,
-        start_block,
-        end_block,
-        soft_cap,
-        soft_cap_deadline_block,
-    ]:
-        if optional_int_param is not None:
-            if not isinstance(optional_int_param, int):
-                problems.append(f"{optional_int_param} must be an integer.")
-            elif optional_int_param < 0:
-                problems.append(f"{optional_int_param} must be >= 0.")
-            elif optional_int_param > config.MAX_INT:
-                problems.append(f"{optional_int_param} exceeds maximum value.")
+    for param_name, param_value in {
+        "price": price,
+        "max_mint_per_tx": max_mint_per_tx,
+        "hard_cap": hard_cap,
+        "premint_quantity": premint_quantity,
+        "start_block": start_block,
+        "end_block": end_block,
+        "soft_cap": soft_cap,
+        "soft_cap_deadline_block": soft_cap_deadline_block,
+    }.items():
+        if param_value != 0:
+            if not isinstance(param_value, int):
+                problems.append(f"`{param_name}` must be an integer.")
+            elif param_value < 0:
+                problems.append(f"`{param_name}` must be >= 0.")
+            elif param_value > config.MAX_INT:
+                problems.append(f"`{param_name}` exceeds maximum value.")
     # check boolean parameters
-    for option_bool_param in [burn_payment, lock_description, lock_quantity, divisible]:
-        if not isinstance(option_bool_param, bool):
-            problems.append(f"{option_bool_param} must be a boolean.")
+    for param_name, param_value in {
+        "burn_payment": burn_payment,
+        "lock_description": lock_description,
+        "lock_quantity": lock_quantity,
+        "divisible": divisible,
+    }.items():
+        if not isinstance(param_value, bool):
+            problems.append(f"`{param_name}` must be a boolean.")
     # check minted_asset_commission
     if minted_asset_commission is not None:
         if not isinstance(minted_asset_commission, (float, D)):
@@ -127,19 +132,20 @@ def validate(
     if existing_asset:
         # check if a fair minter is already opened for this asset
         if existing_asset["fair_minting"]:
-            problems.append(f"Fair minter already opened for {asset_name}.")
+            problems.append(f"Fair minter already opened for `{asset_name}`.")
         # check if asset is locked
         if existing_asset["locked"]:
-            problems.append(f"Asset {asset_name} is locked.")
+            problems.append(f"Asset `{asset_name}` is locked.")
         # check if source is the issuer
         if existing_asset["issuer"] != source:
-            problems.append(f"Asset {asset_name} is not issued by {source}.")
+            problems.append(f"Asset `{asset_name}` is not issued by `{source}`.")
         # check if description is locked
-        if description != "" and existing_asset["description_locked"]:
-            problems.append(f"Description of asset {asset_name} is locked.")
+        # TODO
+        # if description != "" and existing_asset["description_locked"]:
+        #    problems.append(f"Description of asset `{asset_name}` is locked.")
         # check if hard cap is already reached
         if hard_cap and existing_asset["supply"] + premint_quantity >= hard_cap:
-            problems.append(f"Hard cap of asset {asset_name} is already reached.")
+            problems.append(f"Hard cap of asset `{asset_name}` is already reached.")
     else:
         if premint_quantity > 0 and premint_quantity >= hard_cap:
             problems.append("Premint quantity must be < hard cap.")
