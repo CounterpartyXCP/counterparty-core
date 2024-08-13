@@ -520,8 +520,9 @@ INSERT INTO blocks VALUES(310497,'f1118591fe79b8bf52ccf0c5de9826bfd266b1fdc24b44
 INSERT INTO blocks VALUES(310498,'b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e',310498000,'5fe6cdb0828379bf240fad99c68bba34e1889bbc19605ce5c297b82352264414','b488f6f0e6c233f202ee17c0843236d464144e79c870af88bae56355ae9372b7','31fb849548f5054c3f49f5ba1fc015a6169db27f00e90ea2baa6fe453e2744a5',NULL,NULL,1);
 INSERT INTO blocks VALUES(310499,'1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764',310499000,'bc09daa74c639506a1de4eadcd0aa8f599c1bc6a2a287cce7bfc89c301253233','d3600ba20e48e3ba3976a7e0a1922ef0ee0da9f778d50103eba04cb64209c914','653fcfddfcdd9c742f7e982034f58b9931d9ab49e74bb30fdec478db3738e7a3',NULL,NULL,1);
 INSERT INTO blocks VALUES(310500,'54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b',310500000,'6c240f1f3a985ff91e6a280c4448b8d739a06caa6fa383c4b9a7b90d27bdb17b','dfc9222cc153a873ae747a4e9b561edc5e5a0495bc768e6a56eab996ce1ecd4b','b4863d195b3da7a95b910942afd154c40173f75cb4a9b6c3a0093a932bff25b4',NULL,NULL,1);
-INSERT INTO blocks VALUES(310501,'9d9019d15a1d878f2c39c7e3de4340a043a4a31aebb298acdf8e913284ae26ba',310501000,'e8b2ef8341481df3650760ed3fbe7bf8549fa843c3664c837a0768253c9809a5','597158b5ad7541bf5f8667d2fc2350ec1c55528560cc5462e1de7ae4ee256c20','c3ed469e38f5fe5e77bda6c1aff8f392e81f84403ebe88667fc48af39813adfd',NULL,NULL,0);
-INSERT INTO blocks VALUES(310502,'b5a4cd1270bc437e909d9569079ad17437a65822ee9e4c378670732a1430ed67',310502000,'c4885a0105fceb508de53bf566de327a1bbfc63111ad3a47dee26fcf5e9a67bd','00d05e6170634d94f6370fd10669b77c1459b314aa8d37e63417322a83ded02d','0c5692c73f75b74dff082f8a95707790f004b5b9341979a48175004dc59fe944',NULL,NULL,0);
+INSERT INTO blocks VALUES(310501,'9d9019d15a1d878f2c39c7e3de4340a043a4a31aebb298acdf8e913284ae26ba',310501000,'21921f9e40915d2f4d33ce415de80e473082423b967fa344bf7f67475ebe83d3','c027c3d0f9e1279cb58d693eaee429756053aaf7f1f080ca828b6ba1f6dba552','d8f79b1254ab2e4a621f8387dd18209306756d79525dbc281c9e4a6a9fdd0d7d',NULL,NULL,1);
+INSERT INTO blocks VALUES(310502,'b5a4cd1270bc437e909d9569079ad17437a65822ee9e4c378670732a1430ed67',310502000,'011d64d2a8e04e99484345b33b5c6b85ccdf84155877a04bb46e5475e4f0f243','d3fe9759c08b134fd7f5bd8a061feb21574a880453a56ee7114bd90cc4de0acd','55e6f7436344e523ba5f6258112a4271a5f399caedd9cf3d8894a2bc4a2847cb',NULL,NULL,0);
+INSERT INTO blocks VALUES(310503,'219e9a113a7c66443183171e389bfd5eaf957f5b8ab825358d72fa8e0cc8c16c',310503000,'d5beb0b3bdf0ac894fa7eb8bd3e3a3b92a6f85bbf30877e3aa3ee98ada8837e9','014056fd99ca1d4ac246e73097a83acc4fae9ebb0595e5b04aec43afb36818ff','afbb08b88fde013783b0810b4f6fdaa80aab3607d13d3082d156ddb13a38c64d',NULL,NULL,0);
 -- Triggers and indices on  blocks
 CREATE INDEX blocks_block_index_block_hash_idx ON blocks (block_index, block_hash)
         ;
@@ -606,6 +607,7 @@ INSERT INTO transactions VALUES(498,'076ae3d8eeb7fb40d2ae27692340157c746d9832806
 INSERT INTO transactions VALUES(499,'0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf',310498,'b7058b6d1ddc325a10bf33144937e06ce6025215b416518ae120da9440ae279e',310498000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6550,X'0000001501530821671B10650000000005F5E10001108E90A57DBA9967C422E83080F22F0C684368696C64206F6620706172656E74',1);
 INSERT INTO transactions VALUES(500,'83b96c0f72fea31403567852f2bdb4840ffdf18bda2e82df4f27aad633830e29',310499,'1950e1a4d7fc820ed9603f6df6819c3c953c277c726340dec2a4253e261a1764',310499000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6250,X'5A46524545464149524D494E7C7C307C31307C307C307C307C307C307C307C307C307C307C307C317C',1);
 INSERT INTO transactions VALUES(501,'e1a080e9f96504451746c1f46033cd6789f518f8b1c74c4da7c80abb835cf449',310500,'54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b',310500000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,6250,X'5A50414944464149524D494E7C7C31307C307C307C307C307C307C307C307C307C307C307C307C317C',1);
+INSERT INTO transactions VALUES(502,'d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67',310501,'9d9019d15a1d878f2c39c7e3de4340a043a4a31aebb298acdf8e913284ae26ba',310501000,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','',0,5575,X'5B46524545464149524D494E7C30',1);
 -- Triggers and indices on  transactions
 CREATE INDEX transactions_block_index_idx ON transactions (block_index)
         ;
@@ -724,6 +726,7 @@ INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',918750000
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','A95428956661682277',100000000,310498,499);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91825000000,310499,500);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91775000000,310500,501);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','FREEFAIRMIN',10,310501,'fairmint');
 -- Triggers and indices on  balances
 CREATE INDEX balances_address_asset_idx ON balances (address, asset)
         ;
@@ -824,6 +827,7 @@ INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',918750000
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','A95428956661682277',100000000,310498,499);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91825000000,310499,500);
 INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','XCP',91775000000,310500,501);
+INSERT INTO balances VALUES('mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','FREEFAIRMIN',10,310501,'fairmint');
 -- Triggers and indices on  balances
 CREATE INDEX balances_address_asset_idx ON balances (address, asset)
         ;
@@ -892,6 +896,7 @@ INSERT INTO credits VALUES(310495,'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj','DIVIDEND
 INSERT INTO credits VALUES(310496,'mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj','XCP',92945878046,'send','a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba',497);
 INSERT INTO credits VALUES(310497,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','PARENT',100000000,'issuance','076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f',498);
 INSERT INTO credits VALUES(310498,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','A95428956661682277',100000000,'issuance','0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf',499);
+INSERT INTO credits VALUES(310501,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','FREEFAIRMIN',10,'d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67',NULL,'fairmint');
 -- Triggers and indices on  credits
 CREATE TRIGGER block_update_credits
                            BEFORE UPDATE ON credits BEGIN
@@ -2255,9 +2260,16 @@ INSERT INTO messages VALUES(1249,310500,'insert','debits','{"action":"fairminter
 INSERT INTO messages VALUES(1250,310500,'parse','transactions','{"supported":true,"tx_hash":"e1a080e9f96504451746c1f46033cd6789f518f8b1c74c4da7c80abb835cf449","tx_index":501}',0,'TRANSACTION_PARSED','e1a080e9f96504451746c1f46033cd6789f518f8b1c74c4da7c80abb835cf449','222734e476c6493eba2d503efabb39655abaf55c86cdd1810a260ab0da7239db');
 INSERT INTO messages VALUES(1251,310500,'parse','blocks','{"block_index":310500,"ledger_hash":"6c240f1f3a985ff91e6a280c4448b8d739a06caa6fa383c4b9a7b90d27bdb17b","messages_hash":"b4863d195b3da7a95b910942afd154c40173f75cb4a9b6c3a0093a932bff25b4","transaction_count":1,"txlist_hash":"dfc9222cc153a873ae747a4e9b561edc5e5a0495bc768e6a56eab996ce1ecd4b"}',0,'BLOCK_PARSED',NULL,'9755679a1b52670ff6fc8314ff3920762b637d487ec72db3568d86a61f26d1b3');
 INSERT INTO messages VALUES(1252,310501,'insert','blocks','{"block_hash":"9d9019d15a1d878f2c39c7e3de4340a043a4a31aebb298acdf8e913284ae26ba","block_index":310501,"block_time":310501000,"difficulty":null,"ledger_hash":null,"previous_block_hash":null,"txlist_hash":null}',0,'NEW_BLOCK',NULL,'818ddae2043e6dad3a1ed65e67cd019017d16423490d01eb781d20c4c5c78757');
-INSERT INTO messages VALUES(1253,310501,'parse','blocks','{"block_index":310501,"ledger_hash":"e8b2ef8341481df3650760ed3fbe7bf8549fa843c3664c837a0768253c9809a5","messages_hash":"c3ed469e38f5fe5e77bda6c1aff8f392e81f84403ebe88667fc48af39813adfd","transaction_count":0,"txlist_hash":"597158b5ad7541bf5f8667d2fc2350ec1c55528560cc5462e1de7ae4ee256c20"}',0,'BLOCK_PARSED',NULL,'706480347f500a131ec46ad73f808b9b82ce4f53289c844ec4cf3605d9b59724');
-INSERT INTO messages VALUES(1254,310502,'insert','blocks','{"block_hash":"b5a4cd1270bc437e909d9569079ad17437a65822ee9e4c378670732a1430ed67","block_index":310502,"block_time":310502000,"difficulty":null,"ledger_hash":null,"previous_block_hash":null,"txlist_hash":null}',0,'NEW_BLOCK',NULL,'6867a62daacfeeda628dab485b19d13bf0c9cac6aad0b74b74c98d71836f8d97');
-INSERT INTO messages VALUES(1255,310502,'parse','blocks','{"block_index":310502,"ledger_hash":"c4885a0105fceb508de53bf566de327a1bbfc63111ad3a47dee26fcf5e9a67bd","messages_hash":"0c5692c73f75b74dff082f8a95707790f004b5b9341979a48175004dc59fe944","transaction_count":0,"txlist_hash":"00d05e6170634d94f6370fd10669b77c1459b314aa8d37e63417322a83ded02d"}',0,'BLOCK_PARSED',NULL,'19e05663bc3eb83ffb7d840937b861033de1eeb57131667cd498ab343ccf233e');
+INSERT INTO messages VALUES(1253,310501,'insert','transactions','{"block_hash":"9d9019d15a1d878f2c39c7e3de4340a043a4a31aebb298acdf8e913284ae26ba","block_index":310501,"block_time":310501000,"btc_amount":0,"data":"5b46524545464149524d494e7c30","destination":"","fee":5575,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","supported":true,"tx_hash":"d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67","tx_index":502}',0,'NEW_TRANSACTION',NULL,'5f5d73d20669318b4498a10dd6256fe20d4c727b60b15feab533d64527dd5e8c');
+INSERT INTO messages VALUES(1254,310501,'insert','credits','{"address":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","asset":"FREEFAIRMIN","block_index":310501,"calling_function":"d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67","event":null,"quantity":10,"tx_index":"fairmint"}',0,'CREDIT','d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67','aa8d3c37dbe2b0db9ec4f4e838494948e12fd019def9dfddfc7ce3cbfbcc8a18');
+INSERT INTO messages VALUES(1255,310501,'insert','fairmints','{"asset":"FREEFAIRMIN","block_index":310501,"commission":0,"earn_quantity":10,"fairminter_tx_hash":"83b96c0f72fea31403567852f2bdb4840ffdf18bda2e82df4f27aad633830e29","paid_quantity":0,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67","tx_index":502}',0,'NEW_FAIRMINT','d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67','6df00a4c4b4bd663404d4a299afc1534f5aef6bd805b9275a3282217a228bc83');
+INSERT INTO messages VALUES(1256,310501,'insert','issuances','{"asset":"FREEFAIRMIN","asset_longname":"","block_index":310501,"call_date":0,"call_price":0.0,"callable":false,"description":"","divisible":true,"fair_minting":true,"fee_paid":0,"issuer":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","locked":false,"msg_index":0,"quantity":10,"reset":false,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","transfer":false,"tx_hash":"d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67","tx_index":502}',0,'ASSET_ISSUANCE','d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67','3213c5edd14676960377a43a5b1f50c24963660b7f275c5da22a5566ad4d79dd');
+INSERT INTO messages VALUES(1257,310501,'parse','transactions','{"supported":true,"tx_hash":"d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67","tx_index":502}',0,'TRANSACTION_PARSED','d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67','9e21bd387784fa23c97521c5720d3f40c396d6be7012b4954406f9da7ceb991e');
+INSERT INTO messages VALUES(1258,310501,'parse','blocks','{"block_index":310501,"ledger_hash":"21921f9e40915d2f4d33ce415de80e473082423b967fa344bf7f67475ebe83d3","messages_hash":"d8f79b1254ab2e4a621f8387dd18209306756d79525dbc281c9e4a6a9fdd0d7d","transaction_count":1,"txlist_hash":"c027c3d0f9e1279cb58d693eaee429756053aaf7f1f080ca828b6ba1f6dba552"}',0,'BLOCK_PARSED',NULL,'fd0f52512179f7c62702d51bd8579deaaffb39e938309020d042c70184e6f4e3');
+INSERT INTO messages VALUES(1259,310502,'insert','blocks','{"block_hash":"b5a4cd1270bc437e909d9569079ad17437a65822ee9e4c378670732a1430ed67","block_index":310502,"block_time":310502000,"difficulty":null,"ledger_hash":null,"previous_block_hash":null,"txlist_hash":null}',0,'NEW_BLOCK',NULL,'13dc1b174f9db49c35573973f9d84c1ca5dedafbadc02bb4e1546e3f9fbc9a7d');
+INSERT INTO messages VALUES(1260,310502,'parse','blocks','{"block_index":310502,"ledger_hash":"011d64d2a8e04e99484345b33b5c6b85ccdf84155877a04bb46e5475e4f0f243","messages_hash":"55e6f7436344e523ba5f6258112a4271a5f399caedd9cf3d8894a2bc4a2847cb","transaction_count":0,"txlist_hash":"d3fe9759c08b134fd7f5bd8a061feb21574a880453a56ee7114bd90cc4de0acd"}',0,'BLOCK_PARSED',NULL,'d93309465d534b3dce6d900f9159a7f1f1a7bd4042d4e99800397b73412055c8');
+INSERT INTO messages VALUES(1261,310503,'insert','blocks','{"block_hash":"219e9a113a7c66443183171e389bfd5eaf957f5b8ab825358d72fa8e0cc8c16c","block_index":310503,"block_time":310503000,"difficulty":null,"ledger_hash":null,"previous_block_hash":null,"txlist_hash":null}',0,'NEW_BLOCK',NULL,'ddd61f7227514d0b4224fb481d35f924bd678f10628ef2942f6f1f212729b0dc');
+INSERT INTO messages VALUES(1262,310503,'parse','blocks','{"block_index":310503,"ledger_hash":"d5beb0b3bdf0ac894fa7eb8bd3e3a3b92a6f85bbf30877e3aa3ee98ada8837e9","messages_hash":"afbb08b88fde013783b0810b4f6fdaa80aab3607d13d3082d156ddb13a38c64d","transaction_count":0,"txlist_hash":"014056fd99ca1d4ac246e73097a83acc4fae9ebb0595e5b04aec43afb36818ff"}',0,'BLOCK_PARSED',NULL,'7ac7bed6ead3f761e07e1c873e9b77a51eaa05ad72c9fca314670122f1ddc81f');
 -- Triggers and indices on  messages
 CREATE TRIGGER block_update_messages
                            BEFORE UPDATE ON messages BEGIN
@@ -2862,6 +2874,7 @@ INSERT INTO issuances VALUES(498,'076ae3d8eeb7fb40d2ae27692340157c746d9832806766
 INSERT INTO issuances VALUES(499,'0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf',0,310498,'A95428956661682277',100000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Child of parent',25000000,0,'valid','PARENT.already.issued',0,0);
 INSERT INTO issuances VALUES(500,'83b96c0f72fea31403567852f2bdb4840ffdf18bda2e82df4f27aad633830e29',0,310499,'FREEFAIRMIN',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid','',0,1);
 INSERT INTO issuances VALUES(501,'e1a080e9f96504451746c1f46033cd6789f518f8b1c74c4da7c80abb835cf449',0,310500,'PAIDFAIRMIN',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid','',0,1);
+INSERT INTO issuances VALUES(502,'d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67',0,310501,'FREEFAIRMIN',10,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',0,0,'valid','',0,1);
 -- Triggers and indices on  issuances
 CREATE TRIGGER block_update_issuances
                            BEFORE UPDATE ON issuances BEGIN
@@ -3448,6 +3461,7 @@ CREATE TABLE fairmints (
             commission INTEGER,
             status TEXT
         );
+INSERT INTO fairmints VALUES('d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67',502,310501,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','83b96c0f72fea31403567852f2bdb4840ffdf18bda2e82df4f27aad633830e29','FREEFAIRMIN',10,0,0,'valid');
 -- Triggers and indices on  fairmints
 CREATE TRIGGER block_update_fairmints
                            BEFORE UPDATE ON fairmints BEGIN

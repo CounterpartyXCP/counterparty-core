@@ -845,7 +845,11 @@ def check_outputs(
             tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
     tested_method = getattr(tested_module, method)
 
-    with MockProtocolChangesContext(**(mock_protocol_changes or {})):
+    default_protocol_changes = mock_protocol_changes or {}
+    if method in ["compose", "pack"] and "short_tx_type_id" not in default_protocol_changes:
+        default_protocol_changes["short_tx_type_id"] = False
+
+    with MockProtocolChangesContext(**default_protocol_changes):
         test_outputs = None
         if error is not None:
             if pytest_config.getoption("verbose") >= 2:

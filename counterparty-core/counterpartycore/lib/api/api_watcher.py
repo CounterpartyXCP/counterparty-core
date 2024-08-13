@@ -588,9 +588,9 @@ def rollback_address_events(api_db, event):
 def update_fairminters(api_db, event):
     if event["event"] != "NEW_FAIRMINT":
         return
-    if event["status"] != "valid":
-        return
     event_bindings = json.loads(event["bindings"])
+    if event_bindings["status"] != "valid":
+        return
     cursor = api_db.cursor()
     sql = """
         UPDATE fairminters SET

@@ -127,9 +127,9 @@ def unpack(message, return_dict=False):
         data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
         (asset, quantity) = data_content
         if return_dict:
-            return {"asset": asset, "quantity": quantity}
+            return {"asset": asset, "quantity": int(quantity)}
         else:
-            return (asset, quantity)
+            return (asset, int(quantity))
     except Exception as e:
         raise exceptions.UnpackError(f"Cannot unpack fair mint message: {e}") from e
 
@@ -150,6 +150,7 @@ def parse(db, tx, message):
             "status": status,
         }
         ledger.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
+        logger.info(f"Fairmint {tx['tx_hash']} is invalid: {status}")
         return
 
     # get corresponding fairminter
@@ -194,6 +195,8 @@ def parse(db, tx, message):
     if fairminter["minted_asset_commission_int"] > 0:
         commission = int((D(fairminter["minted_asset_commission_int"]) / D(1e8)) * D(earn_quantity))
         earn_quantity -= commission
+
+    print("PAID QUANTITY: ", paid_quantity)
 
     if paid_quantity > 0:
         # we debit the user
@@ -253,6 +256,7 @@ def parse(db, tx, message):
         "quantity": earn_quantity + commission,
         "source": tx["source"],
         "status": "valid",
+        "fee_paid": 0,
     }
 
     # we check if the hard cap is reached and in this case...
@@ -270,4 +274,10 @@ def parse(db, tx, message):
             ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance
+    del bindings["supply"]
     ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+
+    # log
+    logger.info(
+        f"{earn_quantity + commission} {asset} minted for {paid_quantity} XCP by {tx['source']}"
+    )

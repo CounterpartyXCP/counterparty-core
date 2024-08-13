@@ -177,13 +177,16 @@ Fair minter opened for FREEFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Fair minter opened for PAIDFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+10 FREEFAIRMIN minted for 0 XCP by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
 Checking for conservation of assets.
 XCP has been conserved (6039.3184792 XCP both issued and held)
 A95428956661682277 has been conserved (1.0 A95428956661682277 both issued and held)
 CALLABLE has been conserved (0.00001 CALLABLE both issued and held)
 DIVIDEND has been conserved (0.000001 DIVIDEND both issued and held)
 DIVISIBLE has been conserved (1000.0 DIVISIBLE both issued and held)
-FREEFAIRMIN has been conserved (0.0 FREEFAIRMIN both issued and held)
+FREEFAIRMIN has been conserved (0.0000001 FREEFAIRMIN both issued and held)
 LOCKED has been conserved (0.00001 LOCKED both issued and held)
 LOCKEDPREV has been conserved (0.00001 LOCKEDPREV both issued and held)
 MAXI has been conserved (92233720368.54775807 MAXI both issued and held)

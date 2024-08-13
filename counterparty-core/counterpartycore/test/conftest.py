@@ -42,7 +42,7 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
         "allow_always_latest": True,
     },  # override to be true only at block 310495
     "short_tx_type_id": {
-        "block_index": 310502,
+        "block_index": DEFAULT_PARAMS["default_block_index"] + 1,
         "allow_always_latest": False,
     },  # override to be true only at block 310502
     "enhanced_sends": {
@@ -50,7 +50,7 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
         "allow_always_latest": False,
     },  # override to be true only at block 310999
     "issuance_lock_fix": {
-        "block_index": 310502,
+        "block_index": DEFAULT_PARAMS["default_block_index"] + 1,
         "allow_always_latest": False,
     },  # override to be true only at block 310502
     "segwit_support": {
@@ -58,7 +58,10 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
         "allow_always_latest": False,
     },  # override to be true only at block 310999,
     "dispensers": {"block_index": 0, "allow_always_latest": True},
-    "multisig_addresses": {"block_index": 310502, "allow_always_latest": True},
+    "multisig_addresses": {
+        "block_index": DEFAULT_PARAMS["default_block_index"] + 1,
+        "allow_always_latest": True,
+    },
 }
 DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = (
     False  # if true, never look at MOCK_PROTOCOL_CHANGES_AT_BLOCK
@@ -345,7 +348,8 @@ def api_server_v2(request, cp_server):
             if result.status_code != 200:
                 raise requests.exceptions.RequestException
             result = result.json()
-            if result["result"]["counterparty_height"] < 310502:
+            print(DEFAULT_PARAMS["default_block_index"])
+            if result["result"]["counterparty_height"] < DEFAULT_PARAMS["default_block_index"] - 1:
                 raise requests.exceptions.RequestException
             break
         except requests.exceptions.RequestException:
