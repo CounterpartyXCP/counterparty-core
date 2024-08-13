@@ -8560,15 +8560,15 @@ UNITTEST_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1239,
+                    "bindings": '{"block_index":310500,"ledger_hash":"5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d","messages_hash":"4f9aa1d3b75acfc3ec9fc1b9a6874f9de59cd85f2292336c6a494450c1156ba7","transaction_count":0,"txlist_hash":"35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"}',
                     "block_index": 310500,
-                    "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310500,"ledger_hash":"5ffefc7a2724be6bd697796bb82638ec913c5cbb73627153d1a13b48c7a6c02d","messages_hash":"4cff3b25733ea80f00f94f56e8a14e66e1f65b6588041a084e633a32ae72ea96","transaction_count":0,"txlist_hash":"35f4a33840d002ab4e0e44f11c1749ae95b41376927fb346140508b32518edd1"}',
-                    "timestamp": 0,
+                    "command": "parse",
                     "event": "BLOCK_PARSED",
+                    "event_hash": "f0a1c92bf156979531224d09112057d6682f6017b4ed12178fc331fde9623f19",
+                    "message_index": 1239,
+                    "timestamp": 0,
                     "tx_hash": None,
-                    "event_hash": "0ce34415dfacbe1fcea7c7d629e170305dd1a7fcb196e7e6ff0d033afdabda31",
                 },
             }
         ],
