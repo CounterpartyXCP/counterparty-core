@@ -1941,7 +1941,7 @@ BEGIN TRANSACTION;
 -- Table  fairminters
 DROP TABLE IF EXISTS fairminters;
 CREATE TABLE fairminters (
-            tx_hash TEXT PRIMARY KEY,
+            tx_hash TEXT,
             tx_index INTEGER,
             block_index INTEGER,
             source TEXT,

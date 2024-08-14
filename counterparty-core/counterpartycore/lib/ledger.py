@@ -454,6 +454,29 @@ def get_balances_count(db, address):
     return cursor.fetchall()
 
 
+def get_credits_by_asset(db, asset: str):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM credits
+        WHERE asset = ?
+    """
+    bindings = (asset,)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_debits_by_asset(db, asset: str):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM debits
+        WHERE asset = ?
+    """
+    bindings = (asset,)
+    print(query, bindings)
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
 #####################
 #     ISSUANCES     #
 #####################

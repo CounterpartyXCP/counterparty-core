@@ -284,6 +284,42 @@ UNITTEST_FIXTURE = [
         {"encoding": "opreturn"},
         {"short_tx_type_id": True, "fairminter": True},
     ],
+    [
+        "fairminter",
+        (
+            ADDR[1],  # source
+            "A160361285792733729",  # asset
+            "",  # asset_parent,
+            10,  # price=0,
+            0,  # max_mint_per_tx,
+            50,  # hard_cap=0,
+            20,  # premint_quantity=0,
+            0,  # start_block=0,
+            0,  # end_block=0,
+            20,  # soft_cap=0,
+            310520,  # soft_cap_deadline_block=0,
+            0.3,  # minted_asset_commission=0.0,
+            False,  # burn_payment=False,
+            True,  # lock_description=False,
+            True,  # lock_quantity
+            True,  # divisible
+            "softcap description",
+        ),
+        {"encoding": "multisig"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairmint",
+        (ADDR[1], "A160361285792733729", 10),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairmint",
+        (ADDR[1], "A160361285792733729", 20),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
     ["create_next_block", 703],
 ]
 

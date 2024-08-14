@@ -3,6 +3,7 @@ import logging
 import struct
 
 from counterpartycore.lib import config, database, exceptions, ledger
+from counterpartycore.lib.messages import fairminter as fairminter_mod
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -293,6 +294,7 @@ def parse(db, tx, message):
             # if fairminter["lock_description"]:
             #    bindings["description_locked"] = True
             # and we close the fairminter
+            fairminter_mod.check_fairminter_soft_cap(db, fairminter, tx["block_index"])
             ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance

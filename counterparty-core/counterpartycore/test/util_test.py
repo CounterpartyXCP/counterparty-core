@@ -297,6 +297,7 @@ def dummy_tx_hash(raw_transaction):
         tx.txs_out[-1].coin_value = 0  # set change to 0
 
     tx_id = tx.id()
+    # print(tx_id)
 
     # check we haven't created this before (if we do 2 exactly the sends for example)
     if tx_id in UNIQUE_DUMMY_TX_HASH:

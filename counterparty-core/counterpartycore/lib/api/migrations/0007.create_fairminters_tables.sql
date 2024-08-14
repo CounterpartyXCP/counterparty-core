@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS fairminters (
-    tx_hash TEXT PRIMARY KEY,
+    tx_hash TEXT,
     tx_index INTEGER,
     block_index INTEGER,
     source TEXT,
