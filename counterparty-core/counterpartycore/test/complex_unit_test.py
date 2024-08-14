@@ -37,7 +37,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     # balance before send
     alice_balance = ledger.get_balance(server_db, alice, "XCP")
     bob_balance = ledger.get_balance(server_db, bob, "XCP")
-    assert alice_balance == 91775000000
+    assert alice_balance == 91675000000
     assert bob_balance == 0
 
     # create send

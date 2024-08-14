@@ -135,6 +135,7 @@ def test_new_get_balances_by_address():
     result = requests.get(url)  # noqa: S113
 
     assert result.json()["result"] == [
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "RAIDFAIRMIN", "quantity": 20},
         {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "FREEFAIRMIN", "quantity": 10},
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -155,7 +156,7 @@ def test_new_get_balances_by_address():
             "asset": "DIVISIBLE",
             "quantity": 98800000000,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91775000000},
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91675000000},
     ]
 
 
@@ -172,7 +173,7 @@ def test_new_get_balances_by_asset():
             "quantity": 300000000,
         },
         {"address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy", "asset": "XCP", "quantity": 46449548498},
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91775000000},
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91675000000},
         {"address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "asset": "XCP", "quantity": 92945878046},
         {"address": "mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK", "asset": "XCP", "quantity": 14999857},
         {"address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "XCP", "quantity": 99999990},

@@ -1093,7 +1093,7 @@ UNITTEST_VECTOR = (
                     "out": None,
                 },
             ],
-            "get_next_tx_index": [{"in": (), "out": 503}],
+            "get_next_tx_index": [{"in": (), "out": 505}],
         },
         "cancel": {
             "compose": [
@@ -6837,7 +6837,7 @@ UNITTEST_VECTOR = (
                     "out": (
                         None,
                         [
-                            "address doesn't has enough balance of XCP (91775000000 < 9223372036854775808)",
+                            "address doesn't has enough balance of XCP (91675000000 < 9223372036854775808)",
                             "integer overflow",
                         ],
                     ),
@@ -8749,15 +8749,15 @@ UNITTEST_VECTOR = (
                 {
                     "in": (),
                     "out": {
-                        "message_index": 1669,
+                        "message_index": 1683,
                         "block_index": 310703,
                         "command": "parse",
                         "category": "blocks",
-                        "bindings": '{"block_index":310703,"ledger_hash":"19bfae9ac58717fa1bd268cf621f096f3bb44aa05e6bb574b237d3d6665a299b","messages_hash":"a568bc9d2f3ecfeb937fd80b8ec96600b0b9d9c32cfcbe60ff7cac4575c58c39","transaction_count":0,"txlist_hash":"1784f11c0da0fe7cc55ccc74a67b16569db685ca51c8b14e2e0c852008a92c7d"}',
+                        "bindings": '{"block_index":310703,"ledger_hash":"ac096e8dbbc4a4b8001da616f03859926898bd4bd05e8fde4e9391ea425ba0e7","messages_hash":"f07f3c96132fa663a3bfb924e1a27357baf95042da8b2a5a9e62e0d33dd9a886","transaction_count":0,"txlist_hash":"c118e79509d81a5ea215a01c07856967207ed8841748a197ed151e4aa6d9fe45"}',
                         "timestamp": 0,
                         "event": "BLOCK_PARSED",
                         "tx_hash": None,
-                        "event_hash": "1c43a431394388d9eab6b08aafa4b7117d982a6108482300980f9955e14a6273",
+                        "event_hash": "dcff29a9c563c73d2ed3b45bcd0355b3bf4d38b2d48fb314ddb6dc07761ce50a",
                     },
                 }
             ],
@@ -8885,11 +8885,11 @@ UNITTEST_VECTOR = (
                 },
             ],
             "xcp_created": [{"in": (), "out": 604506847920}],
-            "xcp_destroyed": [{"in": (), "out": 575000000}],
+            "xcp_destroyed": [{"in": (), "out": 675000000}],
             "xcp_supply": [
                 {
                     "in": (),
-                    "out": 603931847920,
+                    "out": 603831847920,
                 }
             ],
             "creations": [
@@ -8909,10 +8909,12 @@ UNITTEST_VECTOR = (
                         "PAYTOSCRIPT": 1000,
                         "A95428956661682277": 100000000,
                         "PARENT": 100000000,
+                        "QAIDFAIRMIN": 20,
+                        "RAIDFAIRMIN": 20,
                     },
                 }
             ],
-            "destructions": [{"in": (), "out": {"XCP": 575000000}}],
+            "destructions": [{"in": (), "out": {"XCP": 675000000}}],
             "asset_supply": [
                 {
                     "in": ("DIVISIBLE",),
@@ -8923,7 +8925,8 @@ UNITTEST_VECTOR = (
                 {
                     "in": (),
                     "out": {
-                        "XCP": 603931847920,
+                        "XCP": 603831847920,
+                        "A95428956661682277": 100000000,
                         "CALLABLE": 1000,
                         "DIVIDEND": 100,
                         "DIVISIBLE": 100000000000,
@@ -8933,14 +8936,15 @@ UNITTEST_VECTOR = (
                         "MAXI": 9223372036854775807,
                         "NODIVISIBLE": 1000,
                         "PAIDFAIRMIN": 0,
-                        "PAYTOSCRIPT": 1000,
-                        "A95428956661682277": 100000000,
                         "PARENT": 100000000,
+                        "PAYTOSCRIPT": 1000,
+                        "QAIDFAIRMIN": 20,
+                        "RAIDFAIRMIN": 20,
                     },
                 }
             ],
             "get_balance": [
-                {"in": (ADDR[0], "XCP"), "out": 91775000000},
+                {"in": (ADDR[0], "XCP"), "out": 91675000000},
                 {"in": (ADDR[0], "foobar"), "out": 0},
             ],
             "get_asset_name": [
@@ -8954,7 +8958,7 @@ UNITTEST_VECTOR = (
                     "out": [
                         {
                             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                            "address_quantity": 91775000000,
+                            "address_quantity": 91675000000,
                             "escrow": None,
                         },
                         {
