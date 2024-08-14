@@ -196,14 +196,22 @@ def parse(db, tx, message):
         commission = int((D(fairminter["minted_asset_commission_int"]) / D(1e8)) * D(earn_quantity))
         earn_quantity -= commission
 
-    print("PAID QUANTITY: ", paid_quantity)
-
     if paid_quantity > 0:
         # we debit the user
-        ledger.debit(db, tx["source"], config.XCP, paid_quantity, xcp_action, tx["tx_hash"])
+        ledger.debit(
+            db, tx["source"], config.XCP, paid_quantity, tx["tx_index"], xcp_action, tx["tx_hash"]
+        )
         if xcp_destination:
             # we credit the destination if it exists (issuer or escrow)
-            ledger.credit(db, xcp_destination, config.XCP, paid_quantity, xcp_action, tx["tx_hash"])
+            ledger.credit(
+                db,
+                xcp_destination,
+                config.XCP,
+                paid_quantity,
+                tx["tx_index"],
+                xcp_action,
+                tx["tx_hash"],
+            )
         else:
             # else we burn the payment
             bindings = {
@@ -221,15 +229,29 @@ def parse(db, tx, message):
     if asset_destination == config.UNSPENDABLE:
         # the minted amount and commission are escrowed
         ledger.credit(
-            db, asset_destination, asset, earn_quantity + commission, asset_action, tx["tx_hash"]
+            db,
+            asset_destination,
+            asset,
+            earn_quantity + commission,
+            tx["tx_index"],
+            asset_action,
+            tx["tx_hash"],
         )
     else:
         # the minted amount is sent to the user
-        ledger.credit(db, asset_destination, asset, earn_quantity, asset_action, tx["tx_hash"])
+        ledger.credit(
+            db, asset_destination, asset, earn_quantity, tx["tx_index"], asset_action, tx["tx_hash"]
+        )
         if commission > 0:
             # the commission is sent to the issuer
             ledger.credit(
-                db, fairminter["source"], asset, commission, "fairmint commission", tx["tx_hash"]
+                db,
+                fairminter["source"],
+                asset,
+                commission,
+                tx["tx_index"],
+                "fairmint commission",
+                tx["tx_hash"],
             )
 
     # we insert the fairmint record

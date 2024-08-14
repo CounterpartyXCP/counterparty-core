@@ -19,8 +19,8 @@ def test_parse_block(server_db):
     test_outputs = blocks.parse_block(server_db, DP["default_block_index"], 1420914478)
     outputs = (
         "71a6242235f8da85884c791cc19456e361fb1bf97cdedf5f8282fc2591ce87a9",
-        "78bd2599554a13291792e984e29503fccea2092fdee2c0c370e5f1b321117416",
-        "7f139ce6b6c9a0f0603120b621cce490f52c2e817c926f3d38c77ab549ac69f6",
+        "b93a5d05ff00ae3eb2bf6af50b038c2d14c70242ca13515f3524a4b1d916f842",
+        "894a2abadbe841968597b8fba3d76b042509873981182005f483b113d8a2c26f",
     )
     try:
         assert outputs == test_outputs

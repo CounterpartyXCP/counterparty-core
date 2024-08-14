@@ -32,7 +32,7 @@ from .params import (
     DEFAULT_PARAMS as DP,
 )
 
-UNITTEST_VECTOR_ = FAIRMINTER_VECTOR | FAIRMINT_VECTOR
+# UNITTEST_VECTOR_ = FAIRMINTER_VECTOR | FAIRMINT_VECTOR
 UNITTEST_VECTOR = (
     FAIRMINTER_VECTOR
     | FAIRMINT_VECTOR
@@ -8753,11 +8753,11 @@ UNITTEST_VECTOR = (
                         "block_index": 310703,
                         "command": "parse",
                         "category": "blocks",
-                        "bindings": '{"block_index":310703,"ledger_hash":"ac096e8dbbc4a4b8001da616f03859926898bd4bd05e8fde4e9391ea425ba0e7","messages_hash":"f07f3c96132fa663a3bfb924e1a27357baf95042da8b2a5a9e62e0d33dd9a886","transaction_count":0,"txlist_hash":"c118e79509d81a5ea215a01c07856967207ed8841748a197ed151e4aa6d9fe45"}',
+                        "bindings": '{"block_index":310703,"ledger_hash":"ac096e8dbbc4a4b8001da616f03859926898bd4bd05e8fde4e9391ea425ba0e7","messages_hash":"0dfc2938fc5332e971b621e9d25ba9541f4dd0725cb73b2b34a91f5caec5db63","transaction_count":0,"txlist_hash":"7bfca69dad5d9aae3f2899fef0bf85b0f0c8a2454fed6a2588db30bb9caa1b5d"}',
                         "timestamp": 0,
                         "event": "BLOCK_PARSED",
                         "tx_hash": None,
-                        "event_hash": "dcff29a9c563c73d2ed3b45bcd0355b3bf4d38b2d48fb314ddb6dc07761ce50a",
+                        "event_hash": "403045bf0cccf4c10a3f58eaec7e94a9d5cf78e99e47b2398554342549047ad4",
                     },
                 }
             ],

@@ -812,7 +812,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or (tx_name == "versions.enhanced_send" and method == "unpack")
         or (tx_name == "versions.mpma" and method == "unpack")
         or (tx_name == "sweep" and method == "unpack")
-        or (tx_name == "fairminter" and method == "unpack")
+        or (tx_name in ["fairminter", "fairmint"] and method == "unpack")
     ):
         return tested_method(*inputs)
     else:

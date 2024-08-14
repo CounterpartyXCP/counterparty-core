@@ -279,6 +279,7 @@ UNITTEST_FIXTURE = [
             0,  # end_block=0,
             20,  # soft_cap=0,
             400000,  # soft_cap_deadline_block=0,
+            0.5,  # minted_asset_commission=0.0,
         ),
         {"encoding": "opreturn"},
         {"short_tx_type_id": True, "fairminter": True},
