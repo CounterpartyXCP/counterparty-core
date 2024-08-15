@@ -781,6 +781,14 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
     )
 
 
+def _get_last_description(db, asset, default):
+    issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
+    if len(issuances) > 0:
+        return issuances[-1]["description"]  # Use last description
+
+    return default
+
+
 def parse(db, tx, message, message_type_id):
     (
         asset_id,
@@ -946,29 +954,29 @@ def parse(db, tx, message, message_type_id):
             )
 
         # Lock?
-        description_locked = False
         if not isinstance(lock, bool):
             lock = False
-        if status == "valid":
-            if description and description.lower() == "lock":
-                if util.enabled("lockable_issuance_descriptions", tx["block_index"]):
-                    description_locked = True
-                else:
-                    lock = True
 
-                issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
-                if len(issuances) > 0:
-                    description = issuances[-1]["description"]  # Use last description
+        description_locked = False
+        if status == "valid" and description:
+            if description.lower() == "lock":
+                lock = True
+                description = _get_last_description(db, asset, description)
+            elif description.lower() == "lock_description" and util.enabled(
+                "lockable_issuance_descriptions", tx["block_index"]
+            ):
+                description_locked = True
+                description = _get_last_description(db, asset, description)
 
-            if not reissuance:
-                # Add to table of assets.
-                bindings = {
-                    "asset_id": str(asset_id),
-                    "asset_name": str(asset),
-                    "block_index": tx["block_index"],
-                    "asset_longname": subasset_longname,
-                }
-                ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
+        if status == "valid" and not reissuance:
+            # Add to table of assets.
+            bindings = {
+                "asset_id": str(asset_id),
+                "asset_name": str(asset),
+                "block_index": tx["block_index"],
+                "asset_longname": subasset_longname,
+            }
+            ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
 
         if status == "valid" and reissuance:
             # when reissuing, add the asset_longname to the issuances table for API lookups
