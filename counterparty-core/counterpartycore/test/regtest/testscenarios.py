@@ -21,7 +21,7 @@ def compare_strings(string1, string2):
     return len(diff)
 
 
-def run_item(node, item):
+def run_item(node, item, context):
     print(f"Running: {item['title']}")
     for i, address in enumerate(node.addresses):
         item["source"] = item["source"].replace(f"$ADDRESS_{i+1}", address)
@@ -43,6 +43,8 @@ def run_item(node, item):
             )
             for i, address in enumerate(node.addresses):
                 expected_result = expected_result.replace(f"$ADDRESS_{i+1}", address)
+            for name, value in context.items():
+                expected_result = expected_result.replace(f"${name}", value)
             expected_result = json.loads(expected_result)
 
             assert result["result"] == expected_result
@@ -56,6 +58,9 @@ def run_item(node, item):
             print(f"Got: {got_result_str}")
             compare_strings(expected_result_str, got_result_str)
             raise e
+    for name, value in item.get("set_variables", {}).items():
+        context[name] = value.replace("$TX_HASH", tx_hash).replace("$BLOCK_HASH", block_hash)
+    return context
 
 
 def run_scenarios():
@@ -66,8 +71,10 @@ def run_scenarios():
         while not regtest_node_thread.ready():
             time.sleep(1)
 
+        context = {}
+
         for item in SCENARIOS:
-            run_item(regtest_node_thread.node, item)
+            context = run_item(regtest_node_thread.node, item, context)
     except KeyboardInterrupt:
         pass
     except Exception as e:
