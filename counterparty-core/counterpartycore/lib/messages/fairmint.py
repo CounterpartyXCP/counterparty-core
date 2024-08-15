@@ -159,7 +159,7 @@ def parse(db, tx, message):
 
     # determine if the soft cap has been reached
     soft_cap_not_reached = (
-        fairminter["soft_cap"] > 0 and fairminter["soft_cap_deadline_block"] > tx["block_index"]
+        fairminter["soft_cap"] > 0 and fairminter["soft_cap_deadline_block"] >= tx["block_index"]
     )
 
     # we determine who to send the payment and assets to

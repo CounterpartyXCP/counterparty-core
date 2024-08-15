@@ -57,8 +57,6 @@ def get_zmq_notifications_addresses():
     pubrawtx_address = f"tcp://{config.BACKEND_CONNECT}:{pubrawtx_port}"
     pubrawblock_address = f"tcp://{config.BACKEND_CONNECT}:{pubrawblock_port}"
 
-    print(f"pubrawtx_address: {pubrawtx_address}")
-    print(f"pubrawblock_address: {pubrawblock_address}")
     return pubrawtx_address, pubrawblock_address
 
 
@@ -205,6 +203,9 @@ class BlockchainWatcher:
             self.receive_message(topic, body, seq)
         except Exception as e:
             logger.error("Error processing message: %s", e)
+            import traceback
+
+            print(traceback.format_exc())  # for debugging
             capture_exception(e)
             raise e
 

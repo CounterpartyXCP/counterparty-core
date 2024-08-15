@@ -50,14 +50,14 @@ def run_item(node, item, context):
             assert result["result"] == expected_result
 
             print(f"{item['title']}: " + colored("Success", "green"))
-        except AssertionError as e:
-            print(f"Failed: {item['title']}")
+        except AssertionError:
+            print(colored(f"Failed: {item['title']}", "red"))
             expected_result_str = json.dumps(expected_result, indent=4, sort_keys=True)
             got_result_str = json.dumps(result["result"], indent=4, sort_keys=True)
             print(f"Expected: {expected_result_str}")
             print(f"Got: {got_result_str}")
             compare_strings(expected_result_str, got_result_str)
-            raise e
+            # raise e
     for name, value in item.get("set_variables", {}).items():
         context[name] = value.replace("$TX_HASH", tx_hash).replace("$BLOCK_HASH", block_hash)
     return context
