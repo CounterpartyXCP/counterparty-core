@@ -57,6 +57,8 @@ def get_zmq_notifications_addresses():
     pubrawtx_address = f"tcp://{config.BACKEND_CONNECT}:{pubrawtx_port}"
     pubrawblock_address = f"tcp://{config.BACKEND_CONNECT}:{pubrawblock_port}"
 
+    print(f"pubrawtx_address: {pubrawtx_address}")
+    print(f"pubrawblock_address: {pubrawblock_address}")
     return pubrawtx_address, pubrawblock_address
 
 
