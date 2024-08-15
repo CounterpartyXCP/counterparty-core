@@ -165,7 +165,7 @@ def parse(db, tx, message):
     # we determine who to send the payment and assets to
     # By default the assets are sent to the minter
     # and the payment to the issuer
-    xcp_action = "fairmint"
+    xcp_action = "fairmint payment"
     xcp_destination = fairminter["source"]
     asset_action = "fairmint"
     asset_destination = tx["source"]
@@ -294,7 +294,11 @@ def parse(db, tx, message):
             # if fairminter["lock_description"]:
             #    bindings["description_locked"] = True
             # and we close the fairminter
-            fairminter_mod.check_fairminter_soft_cap(db, fairminter, tx["block_index"])
+            if (
+                fairminter["soft_cap"] > 0
+                and fairminter["soft_cap_deadline_block"] >= tx["block_index"]
+            ):
+                fairminter_mod.check_fairminter_soft_cap(db, fairminter, tx["block_index"])
             ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance
