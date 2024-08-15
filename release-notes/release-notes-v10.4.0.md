@@ -6,8 +6,7 @@ This release includes a variety of protocol upgrades.
 
 # ChangeLog
 
-* Setting an issuance's description to `"lock"` no longer locks the asset's quantity.
-  Instead, it locks the description. Setting `lock` to `true` will still lock the asset's quantity.
+* By setting an issuance’s description to "lock_description", the asset’s description is locked, preserving the previously set description.
 
 ## Protocol Changes
 
@@ -19,8 +18,7 @@ This release includes a variety of protocol upgrades.
 
 ## API
 
-* Setting an issuance's description to `"lock"` no longer locks the asset's quantity.
-  Instead, it locks the description. Setting `lock` to `true` will still lock the asset's quantity.
+* By setting an issuance’s description to "lock_description", the asset’s description is locked, preserving the previously set description.
 
 ## CLI
 
