@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import threading
 import time
 import urllib.parse
 from io import StringIO
@@ -30,6 +31,7 @@ class RegtestNode:
         self.bitcoind_process = None
         self.addresses = []
         self.block_count = 0
+        self.ready = False
 
     def api_call(self, url):
         return json.loads(sh.curl(f"http://localhost:24000/v2/{url}").strip())
@@ -48,15 +50,19 @@ class RegtestNode:
         query_string = urllib.parse.urlencode(params)
         compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
         result = self.api_call(compose_url)
+        # print(result)
         raw_transaction = result["result"]["rawtransaction"]
         signed_transaction_json = self.bitcoin_wallet(
             "signrawtransactionwithwallet", raw_transaction
         ).strip()
         signed_transaction = json.loads(signed_transaction_json)["hex"]
-        self.bitcoin_wallet("sendrawtransaction", signed_transaction)
-        self.mine_blocks(1)
+        tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction).strip()
+        block_hash = self.mine_blocks(1)
+        block_info_json = self.bitcoin_cli("getblock", block_hash, 1)
+        block_time = json.loads(block_info_json)["time"]
         self.wait_for_counterparty_server()
-        print(f"Transaction sent: {tx_name} {params}")
+        print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
+        return tx_hash, block_hash, block_time
 
     def wait_for_counterparty_server(self, block=None):
         while True:
@@ -79,21 +85,23 @@ class RegtestNode:
                 raise json.JSONDecodeError("Invalid response", "", 0)
             except (sh.ErrorReturnCode, ServerNotReady, json.JSONDecodeError) as e:
                 if not isinstance(e, ServerNotReady):
-                    print("Waiting for counterparty server to start...")
+                    print("Waiting for counterparty...")
                 time.sleep(1)
 
-    def wait_for_counterparty_follower(self, server_output):
+    def wait_for_counterparty_follower(self):
         while True:
-            if "Starting blockchain watcher..." in server_output.getvalue():
+            if "Starting blockchain watcher..." in self.server_out.getvalue():
                 print("Server ready")
                 return
-            print("Waiting for counterparty server to start...")
+            print("Waiting for counterparty server...")
             time.sleep(2)
 
     def mine_blocks(self, blocks=1, address=None):
         reward_address = address or self.addresses[0]
-        self.bitcoin_wallet("generatetoaddress", blocks, reward_address)
+        block_hashes_json = self.bitcoin_wallet("generatetoaddress", blocks, reward_address)
+        block_hashes = json.loads(block_hashes_json)
         self.block_count += blocks
+        return block_hashes.pop()
 
     def generate_addresses_with_btc(self):
         for i in range(10):
@@ -155,17 +163,17 @@ class RegtestNode:
             # _err=sys.stdout,
         )
 
-        buf = StringIO()
+        self.server_out = StringIO()
         self.counterparty_server_process = sh.counterparty_server(
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
             "-vv",
             "start",
             _bg=True,
-            _out=buf,
+            _out=self.server_out,
             _err_to_out=True,
         )
-        self.wait_for_counterparty_follower(buf)
+        self.wait_for_counterparty_follower()
 
         self.generate_xcp()
 
@@ -174,6 +182,7 @@ class RegtestNode:
             print(f"{balance['address']}: {balance['quantity'] / 1e8} XCP")
 
         print("Regtest node ready")
+        self.ready = True
 
         self.counterparty_server_process.wait()
 
@@ -195,10 +204,31 @@ class RegtestNode:
             pass
 
 
-try:
-    node = RegtestNode()
-    node.start()
-except KeyboardInterrupt:
-    pass
-finally:
-    node.stop()
+class RegtestNodeThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.node = None
+
+    def run(self):
+        self.node = RegtestNode()
+        self.node.start()
+
+    def stop(self):
+        if self.node:
+            self.node.stop()
+
+    def ready(self):
+        if self.node:
+            return self.node.ready
+        return False
+
+
+if __name__ == "__main__":
+    try:
+        node = RegtestNode()
+        node.start()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.stop()
