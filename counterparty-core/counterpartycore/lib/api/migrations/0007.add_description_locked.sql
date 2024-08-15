@@ -1,0 +1,1 @@
+ALTER TABLE issuances ADD COLUMN description_locked BOOL;
