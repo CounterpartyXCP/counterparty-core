@@ -562,8 +562,8 @@ def close_fairminter(db, fairminter, block_index):
     last_issuance["msg_index"] += 1  # (tx_index, msg_index) and (tx_hash, msg_index) are unique
     if fairminter["lock_quantity"]:
         last_issuance["locked"] = True
-    # if fairminter["lock_description"]:
-    #    last_issuance["description_locked"] = True
+    if fairminter["lock_description"]:
+        last_issuance["description_locked"] = True
     del last_issuance["supply"]
     ledger.insert_record(db, "issuances", last_issuance, "ASSET_ISSUANCE")
 

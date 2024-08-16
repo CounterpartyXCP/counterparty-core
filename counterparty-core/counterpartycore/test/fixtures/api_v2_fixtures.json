@@ -9,7 +9,7 @@
                 "difficulty": null,
                 "ledger_hash": "0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386",
                 "txlist_hash": "027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0",
-                "messages_hash": "7e8097000cba3dbdb7c0c064df872623c7910476632c3da049757538232cc9d8",
+                "messages_hash": "4d1bf7e910cf003e4034c7caf1b76d86a15480da0d0c7734774e6123c572f059",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -21,7 +21,7 @@
                 "difficulty": null,
                 "ledger_hash": "847a5c6b5da7f393e9bfee4c5c1dd38701c5019031f7a395b2ac40b6c0104da5",
                 "txlist_hash": "5582acd4ce0b596c8e82c659959950e2cb7e9e3716abe03f75fbd0744b9d6cf3",
-                "messages_hash": "b8343c311a24e84e1bb7b3249fa860e4314e42ae366ee292b443dfb137d9884d",
+                "messages_hash": "8e4a1245b3c037bf7c2505e8569ffbe6992c659d7ab68ad0a6008cd3950b1e94",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -33,7 +33,7 @@
                 "difficulty": null,
                 "ledger_hash": "cfbd0b39cded275283124d7a544edeced5493d3c9e0b04ab3008167f147cf3be",
                 "txlist_hash": "4de66a9d468ede1c6894445d1b56a79fb379ae7bff0bf4b269c00bf6ab84c84f",
-                "messages_hash": "54e8245f9a8fde074a3d8a7b323fe48f3e76e26efa58c0ad7fbc386ac304fa66",
+                "messages_hash": "037bcc2b210ca9b2e02c27637e87412e9b5474f313b332c9198f8157bba7bb06",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -45,7 +45,7 @@
                 "difficulty": null,
                 "ledger_hash": "46de7156dab120bf9e980847c1b1165f855d4ec40175e32bd6a36f126e768fb1",
                 "txlist_hash": "296fbf33cf115dcfe418ca1d581d00206a2b9ba6209bf0579f4eedd6011660fe",
-                "messages_hash": "e884bdf54713fada4e4454bf7d0693bfe34e3bcd14d0070aad9f025327499569",
+                "messages_hash": "0226c93604ff3005b8232e01ca0d5099998606ec34c45578b77e15ea85f0d80c",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -57,7 +57,7 @@
                 "difficulty": null,
                 "ledger_hash": "ded6275f5e3e7898a67743059512c60df84fea03635da9ba4f9d53254f346198",
                 "txlist_hash": "be327d8be6676e393ea8d17cbf944d17010fada200651a9e36bdce71a8a2bd0f",
-                "messages_hash": "83d4329ed2a3041cd65b8053a95f20d624adf10e888515443a71c3e184022eda",
+                "messages_hash": "6a20072b37d69ded8363c9bd6f537caca9e2f81dd5a2c2a9b74ee53d594cc283",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -69,7 +69,7 @@
                 "difficulty": null,
                 "ledger_hash": "71212e64e7bb234e0fc80c3e3990700b8387b731e7551cd5cf2c3cdec14ce205",
                 "txlist_hash": "c35b2fd447565fe4bb88ff084e6467a8570dd78efc59a84519b8e6e94582d9b8",
-                "messages_hash": "5d59a5a021ee25314b874d73965eb05d6cac43c38fceeab50a9f270fb7116dbc",
+                "messages_hash": "936e77fca094965658b8d6b66a4cbe78bc3fe289ce1d6b7add75ca99f6f41779",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -81,7 +81,7 @@
                 "difficulty": null,
                 "ledger_hash": "8d6dcd9e2743c7ed872a8b55275b1a840ca99e44cf991790a3fc1fe1ab6864a6",
                 "txlist_hash": "14133b53e07203e7eab83ace150dc82576a9147d16c7baf15eb059afedfc4974",
-                "messages_hash": "38f3fe37e1f475bdd6a9ad7a3315bad4fe8d6c05138b89013190d0a3ce002d5d",
+                "messages_hash": "a69c41843c30b766e3922c58462faa33fc4ec51631a1cde7fa2d56916c39006b",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -93,7 +93,7 @@
                 "difficulty": null,
                 "ledger_hash": "c8fb768dcb3496fe5a905fed312545e646c6b2fb335accc57db5b2a91160f522",
                 "txlist_hash": "9518d7d33b0eb4114f8133ce3451430a2cbcecbe1387c7d9817a03d537c80c8f",
-                "messages_hash": "5eca8e76e11ed27e7bc3adb26dab37a109ac39616ea81eae290146ad582bb3a0",
+                "messages_hash": "9472b20761892f8c0f44511cbfca385b42bc575f2440f0f048018bced031a41f",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -105,7 +105,7 @@
                 "difficulty": null,
                 "ledger_hash": "6b62b8ac141e2a054dd449e6be4fdd00e2356a571b24245fc58064793c71f13a",
                 "txlist_hash": "70f60ae9b2013884615f15495007948123c9f2cee71859cde76fbd989bf546c0",
-                "messages_hash": "cb487b9ed707fed7b75c82ce87bab32fdaccf7507c1789dc663e832f3d1727a9",
+                "messages_hash": "0545c88cec78df09151e3ddffd0cc138706c13c542d670d0dee212394be81f87",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -117,7 +117,7 @@
                 "difficulty": null,
                 "ledger_hash": "326a4a4ede187f73b6244e0bb8ae15b5112f9b1b9d8c177d70c4af13a4796f63",
                 "txlist_hash": "7a4f09ada6a0396efdf0704631b6f338d300d14473bccf349a9b677c2f02ec38",
-                "messages_hash": "f98acb57857951d64b3784b6ca8d1dd4cb9b6de0577d7d3186a4d05c31b2c2fd",
+                "messages_hash": "f7cd96e77bbba64b7c176f87c39055c8e47cf821872f1db5ab409f686a0a9930",
                 "transaction_count": 0,
                 "confirmed": true
             }
@@ -134,7 +134,7 @@
             "difficulty": null,
             "ledger_hash": "0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386",
             "txlist_hash": "027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0",
-            "messages_hash": "7e8097000cba3dbdb7c0c064df872623c7910476632c3da049757538232cc9d8",
+            "messages_hash": "4d1bf7e910cf003e4034c7caf1b76d86a15480da0d0c7734774e6123c572f059",
             "transaction_count": 0,
             "confirmed": true
         }
@@ -1352,7 +1352,7 @@
                     "call_price": 0.0,
                     "callable": false,
                     "description": "softcap description",
-                    "description_locked": false,
+                    "description_locked": true,
                     "divisible": true,
                     "fair_minting": false,
                     "fee_paid": 0,
@@ -5151,7 +5151,7 @@
                 "params": {
                     "block_index": 310703,
                     "ledger_hash": "0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386",
-                    "messages_hash": "7e8097000cba3dbdb7c0c064df872623c7910476632c3da049757538232cc9d8",
+                    "messages_hash": "4d1bf7e910cf003e4034c7caf1b76d86a15480da0d0c7734774e6123c572f059",
                     "transaction_count": 0,
                     "txlist_hash": "027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0",
                     "block_time": 310703000
@@ -5182,7 +5182,7 @@
                 "params": {
                     "block_index": 310702,
                     "ledger_hash": "847a5c6b5da7f393e9bfee4c5c1dd38701c5019031f7a395b2ac40b6c0104da5",
-                    "messages_hash": "b8343c311a24e84e1bb7b3249fa860e4314e42ae366ee292b443dfb137d9884d",
+                    "messages_hash": "8e4a1245b3c037bf7c2505e8569ffbe6992c659d7ab68ad0a6008cd3950b1e94",
                     "transaction_count": 0,
                     "txlist_hash": "5582acd4ce0b596c8e82c659959950e2cb7e9e3716abe03f75fbd0744b9d6cf3",
                     "block_time": 310702000
@@ -5213,7 +5213,7 @@
                 "params": {
                     "block_index": 310701,
                     "ledger_hash": "cfbd0b39cded275283124d7a544edeced5493d3c9e0b04ab3008167f147cf3be",
-                    "messages_hash": "54e8245f9a8fde074a3d8a7b323fe48f3e76e26efa58c0ad7fbc386ac304fa66",
+                    "messages_hash": "037bcc2b210ca9b2e02c27637e87412e9b5474f313b332c9198f8157bba7bb06",
                     "transaction_count": 0,
                     "txlist_hash": "4de66a9d468ede1c6894445d1b56a79fb379ae7bff0bf4b269c00bf6ab84c84f",
                     "block_time": 310701000
@@ -5680,7 +5680,7 @@
                 "asset_longname": "",
                 "locked": true,
                 "reset": false,
-                "description_locked": false,
+                "description_locked": true,
                 "fair_minting": false,
                 "confirmed": true,
                 "block_time": 310506000,

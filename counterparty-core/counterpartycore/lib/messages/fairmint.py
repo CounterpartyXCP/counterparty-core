@@ -291,8 +291,8 @@ def parse(db, tx, message):
             # we check if we need to lock the assets
             if fairminter["lock_quantity"]:
                 bindings["locked"] = True
-            # if fairminter["lock_description"]:
-            #    bindings["description_locked"] = True
+            if fairminter["lock_description"]:
+                bindings["description_locked"] = True
             # and we close the fairminter
             if (
                 fairminter["soft_cap"] > 0
