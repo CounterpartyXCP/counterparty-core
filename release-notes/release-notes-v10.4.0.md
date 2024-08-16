@@ -1,30 +1,28 @@
-# Release Notes - Counterparty Core v10.4.0 (2024-08-??)
+# Release Notes - Counterparty Core v10.4.0 (2024-??-??)
+
+This release includes a variety of protocol upgrades.
 
 # Upgrading
 
 # ChangeLog
 
-## Bugfixes
+* By setting an issuance’s description to "lock_description", the asset’s description is locked, preserving the previously set description.
 
-* Fix `get_value_by_block_index()` on `regtest`
-* Fix events hash mismatch after a reparse
-* Fix `regtest` default ports
-* Fix `/v2/assets/XCP` route
-* Fix queries on `messages` table (remove mempool filtering)
-* Fix graceful closing of `counterparty.db`
-* Fix Get XCP Holders route
+## Protocol Changes
+
+* [Lockable Issuance Descriptions](https://github.com/CounterpartyXCP/counterparty-core/pull/2153)
+
+## Bugfixes
 
 ## Codebase
 
 ## API
 
-## CLI
+* By setting an issuance’s description to "lock_description", the asset’s description is locked, preserving the previously set description.
 
-* Move Counterparty Node UUID from `~/counterparty-node-uuid` to `~/.local/state/counterparty/.counterparty-node-uuid`
+## CLI
 
 # Credits
 
 * Ouziel Slama
-* Adam Krellenstein
 * Warren Puffett
-* Matt Marcello
