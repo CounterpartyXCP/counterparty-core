@@ -29,17 +29,24 @@ def initialise(db):
         ],
     )
 
-    cursor.execute("""CREATE TABLE IF NOT EXISTS destructions(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      asset INTEGER,
-                      quantity INTEGER,
-                      tag TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
+    create_destructions_sql = """
+        CREATE TABLE IF NOT EXISTS destructions(
+            tx_index INTEGER,
+            tx_hash TEXT,
+            block_index INTEGER,
+            source TEXT,
+            asset INTEGER,
+            quantity INTEGER,
+            tag TEXT,
+            status TEXT
+        )
+    """
+    cursor.execute(create_destructions_sql)
+
+    if database.has_fk_on(cursor, "destructions", "transactions.tx_index") or database.field_is_pk(
+        cursor, "destructions", "tx_index"
+    ):
+        database.copy_old_table(cursor, "destructions", create_destructions_sql)
 
     database.create_indexes(
         cursor,

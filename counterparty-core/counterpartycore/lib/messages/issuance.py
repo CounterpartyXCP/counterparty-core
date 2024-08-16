@@ -116,6 +116,35 @@ def initialise(db):
         cursor.execute("DROP TABLE issuances")
         cursor.execute("ALTER TABLE new_issuances RENAME TO issuances")
 
+    # remove FOREIGN KEY with transactions
+    if database.has_fk_on(cursor, "issuances", "transactions.tx_index"):
+        create_issuances_query = """
+            CREATE TABLE IF NOT EXISTS issuances(
+                tx_index INTEGER,
+                tx_hash TEXT,
+                msg_index INTEGER DEFAULT 0,
+                block_index INTEGER,
+                asset TEXT,
+                quantity INTEGER,
+                divisible BOOL,
+                source TEXT,
+                issuer TEXT,
+                transfer BOOL,
+                callable BOOL,
+                call_date INTEGER,
+                call_price REAL,
+                description TEXT,
+                fee_paid INTEGER,
+                locked BOOL,
+                status TEXT,
+                asset_longname TEXT,
+                reset BOOL,
+                PRIMARY KEY (tx_index, msg_index),
+                UNIQUE (tx_hash, msg_index)
+            )
+        """
+        database.copy_old_table(cursor, "issuances", create_issuances_query)
+
     if "fair_minting" not in columns:
         cursor.execute("""ALTER TABLE issuances ADD COLUMN fair_minting BOOL DEFAULT 0""")
 

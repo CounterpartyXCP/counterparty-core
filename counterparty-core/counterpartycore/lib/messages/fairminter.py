@@ -564,6 +564,7 @@ def close_fairminter(db, fairminter, block_index):
         last_issuance["locked"] = True
     # if fairminter["lock_description"]:
     #    last_issuance["description_locked"] = True
+    del last_issuance["supply"]
     ledger.insert_record(db, "issuances", last_issuance, "ASSET_ISSUANCE")
 
 

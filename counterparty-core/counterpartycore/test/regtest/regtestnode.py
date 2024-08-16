@@ -57,9 +57,7 @@ class RegtestNode:
         ).strip()
         signed_transaction = json.loads(signed_transaction_json)["hex"]
         tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction).strip()
-        block_hash = self.mine_blocks(1)
-        block_info_json = self.bitcoin_cli("getblock", block_hash, 1)
-        block_time = json.loads(block_info_json)["time"]
+        block_hash, block_time = self.mine_blocks(1)
         self.wait_for_counterparty_server()
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
         return tx_hash, block_hash, block_time
@@ -100,8 +98,11 @@ class RegtestNode:
         reward_address = address or self.addresses[0]
         block_hashes_json = self.bitcoin_wallet("generatetoaddress", blocks, reward_address)
         block_hashes = json.loads(block_hashes_json)
+        block_hash = block_hashes.pop()
+        block_info_json = self.bitcoin_cli("getblock", block_hash, 1)
+        block_time = json.loads(block_info_json)["time"]
         self.block_count += blocks
-        return block_hashes.pop()
+        return block_hash, block_time
 
     def generate_addresses_with_btc(self):
         for i in range(10):

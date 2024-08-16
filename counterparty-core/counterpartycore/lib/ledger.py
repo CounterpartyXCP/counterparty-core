@@ -472,7 +472,6 @@ def get_debits_by_asset(db, asset: str):
         WHERE asset = ?
     """
     bindings = (asset,)
-    print(query, bindings)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 

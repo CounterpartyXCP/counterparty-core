@@ -1,3 +1,4 @@
+# soft cap reached.
 SCENARIO = [
     {
         "title": "Create FAIRMINTA fairminter",

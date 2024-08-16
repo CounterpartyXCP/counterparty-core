@@ -5,11 +5,12 @@ import json
 import time
 
 from regtestnode import RegtestNodeThread
-from scenarios import fairminter
+from scenarios import scenario_1_fairminter, scenario_2_fairminter
 from termcolor import colored
 
 SCENARIOS = []
-SCENARIOS += fairminter.SCENARIO
+SCENARIOS += scenario_1_fairminter.SCENARIO
+SCENARIOS += scenario_2_fairminter.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -23,11 +24,16 @@ def compare_strings(string1, string2):
 
 def run_item(node, item, context):
     print(f"Running: {item['title']}")
-    for i, address in enumerate(node.addresses):
-        item["source"] = item["source"].replace(f"$ADDRESS_{i+1}", address)
-    tx_hash, block_hash, block_time = node.send_transaction(
-        item["source"], item["transaction"], item["params"]
-    )
+    if item["transaction"] == "mine_blocks":
+        block_hash, block_time = node.mine_blocks(item["params"]["blocks"])
+        tx_hash = "null"
+        node.wait_for_counterparty_server()
+    else:
+        for i, address in enumerate(node.addresses):
+            item["source"] = item["source"].replace(f"$ADDRESS_{i+1}", address)
+        tx_hash, block_hash, block_time = node.send_transaction(
+            item["source"], item["transaction"], item["params"]
+        )
     for control in item["controls"]:
         control_url = control["url"].replace("$TX_HASH", tx_hash)
         for i, address in enumerate(node.addresses):
