@@ -58,24 +58,24 @@ def validate(
 
     fairminter = ledger.get_fairminter_by_asset(db, asset)
     if not fairminter:
-        problems.append("Fairminter not found for asset: {}".format(asset))
+        problems.append("fairminter not found for asset: `{}`".format(asset))
         return problems
 
     if fairminter["status"] != "open":
-        problems.append("Fairminter is not open for asset: {}".format(asset))
+        problems.append("fairminter is not open for asset: `{}`".format(asset))
 
     asset_supply = ledger.asset_supply(db, fairminter["asset"])
 
     if fairminter["price"] > 0:
         # if the fairminter is not free the quantity is mandatory
         if quantity <= 0:
-            problems.append("Quantity must be greater than 0")
+            problems.append("quantity must be greater than 0")
             return problems
         if fairminter["max_mint_per_tx"] > 0 and quantity > fairminter["max_mint_per_tx"]:
-            problems.append("Quantity exceeds maximum allowed per transaction")
+            problems.append("quantity exceeds maximum allowed per transaction")
             return problems
         if quantity > config.MAX_INT:
-            problems.append("Quantity exceeds maximum allowed value")
+            problems.append("quantity exceeds maximum allowed value")
             return problems
         # check id we don't exceed the hard cap
         if fairminter["hard_cap"] > 0 and asset_supply + quantity > fairminter["hard_cap"]:
@@ -84,7 +84,7 @@ def validate(
         xcp_total_price = quantity * fairminter["price"]
         balance = ledger.get_balance(db, source, config.XCP)
         if balance < xcp_total_price:
-            problems.append("Insufficient XCP balance")
+            problems.append("insufficient XCP balance")
     else:
         # check id we don't exceed the hard cap
         if (

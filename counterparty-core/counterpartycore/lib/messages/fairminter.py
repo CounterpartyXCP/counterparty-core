@@ -92,11 +92,11 @@ def validate(
     }.items():
         if param_value != 0:
             if not isinstance(param_value, int):
-                problems.append(f"`{param_name}` must be an integer.")
+                problems.append(f"`{param_name}` must be an integer")
             elif param_value < 0:
-                problems.append(f"`{param_name}` must be >= 0.")
+                problems.append(f"`{param_name}` must be greater than or equal to 0")
             elif param_value > config.MAX_INT:
-                problems.append(f"`{param_name}` exceeds maximum value.")
+                problems.append(f"`{param_name}` exceeds maximum value")
     # check boolean parameters
     for param_name, param_value in {
         "burn_payment": burn_payment,
@@ -105,13 +105,13 @@ def validate(
         "divisible": divisible,
     }.items():
         if not isinstance(param_value, bool):
-            problems.append(f"`{param_name}` must be a boolean.")
+            problems.append(f"`{param_name}` must be a boolean")
     # check minted_asset_commission
     if minted_asset_commission is not None:
         if not isinstance(minted_asset_commission, (float, D)):
-            problems.append("minted_asset_commission must be a float")
+            problems.append("`minted_asset_commission` must be a float")
         elif minted_asset_commission < 0 or minted_asset_commission >= 1:
-            problems.append("minted_asset_commission must be >=0 and <1")
+            problems.append("`minted_asset_commission` must be less than 0 or greater than or equal to 1")
 
     # check asset name format
     try:
@@ -119,7 +119,7 @@ def validate(
         if asset_parent != "":
             ledger.generate_asset_id(asset_parent, util.CURRENT_BLOCK_INDEX)
     except exceptions.AssetNameError as e:
-        problems.append(f"Invalid asset name: {e}")
+        problems.append(f"invalid asset name: `{e}`")
 
     asset_name = asset
     # is subasset ?
@@ -132,45 +132,45 @@ def validate(
     if existing_asset:
         # check if a fair minter is already opened for this asset
         if existing_asset["fair_minting"]:
-            problems.append(f"Fair minter already opened for `{asset_name}`.")
+            problems.append(f"fair minter already opened for `{asset_name}`")
         # check if asset is locked
         if existing_asset["locked"]:
-            problems.append(f"Asset `{asset_name}` is locked.")
+            problems.append(f"asset `{asset_name}` is locked")
         # check if source is the issuer
         if existing_asset["issuer"] != source:
-            problems.append(f"Asset `{asset_name}` is not issued by `{source}`.")
+            problems.append(f"asset `{asset_name}` is not issued by `{source}`")
         # check if description is locked
         # TODO
         # if description != "" and existing_asset["description_locked"]:
         #    problems.append(f"Description of asset `{asset_name}` is locked.")
         # check if hard cap is already reached
         if hard_cap and existing_asset["supply"] + premint_quantity >= hard_cap:
-            problems.append(f"Hard cap of asset `{asset_name}` is already reached.")
+            problems.append(f"hard cap of asset `{asset_name}` is already reached")
     else:
         if premint_quantity > 0 and premint_quantity >= hard_cap:
-            problems.append("Premint quantity must be < hard cap.")
+            problems.append("premint quantity must be less than hard cap")
 
     if existing_asset is None and asset_parent != "":
         # if the asset does not exist its parent must exist
         existing_parent = ledger.get_asset(db, asset_parent)
         if existing_parent is None:
-            problems.append("Asset parent does not exist")
+            problems.append("asset parent does not exist")
 
     if price == 0 and max_mint_per_tx == 0:
-        problems.append("Price or max_mint_per_tx must be > 0.")
+        problems.append("price or `max_mint_per_tx` must be greater than 0")
 
     if end_block < 0:
-        problems.append("End block must be >= 0.")
+        problems.append("end block must be greater than or equal to 0")
     if start_block > 0 and end_block > 0 and start_block > end_block:
-        problems.append("Start block must be <= end block.")  # could be one block fair minter
+        problems.append("start block must be less than or equal to end block")  # could be one block fair minter
 
     if hard_cap > 0 and soft_cap >= hard_cap:
-        problems.append("Soft cap must be < hard cap.")
+        problems.append("soft cap must be less than hard cap")
     if soft_cap > 0:
         if not soft_cap_deadline_block:
-            problems.append("Soft cap deadline block must be specified if soft cap is specified.")
+            problems.append("soft cap deadline block must be specified if soft cap is specified")
         elif end_block > 0 and soft_cap_deadline_block >= end_block:
-            problems.append("Soft cap deadline block must be < end block.")
+            problems.append("soft cap deadline block must be less than end block")
 
     return problems
 
