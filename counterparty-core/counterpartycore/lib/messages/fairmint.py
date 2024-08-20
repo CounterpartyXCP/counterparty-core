@@ -58,21 +58,21 @@ def validate(
 
     fairminter = ledger.get_fairminter_by_asset(db, asset)
     if not fairminter:
-        problems.append("fairminter not found for asset: `{}`".format(asset))
+        problems.append(f"fairminter not found for asset: `{asset}`")
         return problems
 
     if fairminter["status"] != "open":
-        problems.append("fairminter is not open for asset: `{}`".format(asset))
+        problems.append(f"fairminter is not open for asset: `{asset}`")
 
     asset_supply = ledger.asset_supply(db, fairminter["asset"])
 
     if fairminter["price"] > 0:
         # if the fairminter is not free the quantity is mandatory
         if quantity <= 0:
-            problems.append("quantity must be greater than 0")
+            problems.append("Quantity must be greater than 0")
             return problems
         if fairminter["max_mint_per_tx"] > 0 and quantity > fairminter["max_mint_per_tx"]:
-            problems.append("quantity exceeds maximum allowed per transaction")
+            problems.append("Quantity exceeds maximum allowed per transaction")
             return problems
         if quantity > config.MAX_INT:
             problems.append("quantity exceeds maximum allowed value")
@@ -129,8 +129,8 @@ def unpack(message, return_dict=False):
         (asset, quantity) = data_content
         if return_dict:
             return {"asset": asset, "quantity": int(quantity)}
-        else:
-            return (asset, int(quantity))
+
+        return (asset, int(quantity))
     except Exception as e:
         raise exceptions.UnpackError(f"Cannot unpack fair mint message: {e}") from e
 
