@@ -26,6 +26,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 "db_dir": config.FETCHER_DB,
                 "log_file": config.FETCHER_LOG,
                 "log_level": config.LOG_LEVEL_STRING,
+                "json_format": config.JSON_LOGS,
                 "start_height": start_height,
             }
         else:
