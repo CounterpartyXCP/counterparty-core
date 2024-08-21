@@ -10,7 +10,7 @@ pub enum Mode {
 impl<'source> FromPyObject<'source> for Mode {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
         let mode_str: String = obj.extract()?;
-        match mode_str.as_str() {
+        match mode_str.trim().to_lowercase().as_str() {
             "indexer" => Ok(Mode::Indexer),
             "fetcher" => Ok(Mode::Fetcher),
             _ => Err(PyErr::new::<PyValueError, _>(
@@ -32,7 +32,7 @@ impl From<LogLevel> for Level {
 impl<'source> FromPyObject<'source> for LogLevel {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
         let level_str: String = obj.extract()?;
-        match level_str.as_str() {
+        match level_str.trim().to_lowercase().as_str() {
             "trace" => Ok(LogLevel(Level::TRACE)),
             "debug" => Ok(LogLevel(Level::DEBUG)),
             "info" => Ok(LogLevel(Level::INFO)),
@@ -54,7 +54,7 @@ pub enum Network {
 impl<'source> FromPyObject<'source> for Network {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
         let network_str: String = obj.extract()?;
-        match network_str.as_str() {
+        match network_str.trim().to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
             "testnet" => Ok(Network::Testnet),
             _ => Err(PyErr::new::<PyValueError, _>(
@@ -119,6 +119,7 @@ pub struct Config {
     pub p2sh_address_version: Vec<u8>,
     pub network: Network,
     pub heights: Heights,
+    pub json_format: bool,
 }
 
 impl Config {
@@ -195,6 +196,11 @@ impl<'source> FromPyObject<'source> for Config {
             _ => LogLevel(Level::INFO),
         };
 
+        let json_format = match dict.get_item("json_format") {
+            Ok(Some(item)) => item.extract()?,
+            _ => false,
+        };
+
         let prefix = match dict.get_item("prefix") {
             Ok(Some(item)) => item.extract::<Vec<u8>>()?,
             _ => b"CNTRPRTY".to_vec(),
@@ -238,6 +244,7 @@ impl<'source> FromPyObject<'source> for Config {
             p2sh_address_version,
             network,
             heights,
+            json_format,
         })
     }
 }
