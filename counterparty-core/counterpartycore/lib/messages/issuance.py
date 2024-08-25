@@ -120,6 +120,39 @@ def initialise(db):
         cursor.execute("DROP TABLE issuances")
         cursor.execute("ALTER TABLE new_issuances RENAME TO issuances")
 
+    # remove FOREIGN KEY with transactions
+    if database.has_fk_on(cursor, "issuances", "transactions.tx_index"):
+        create_issuances_query = """
+            CREATE TABLE IF NOT EXISTS issuances(
+                tx_index INTEGER,
+                tx_hash TEXT,
+                msg_index INTEGER DEFAULT 0,
+                block_index INTEGER,
+                asset TEXT,
+                quantity INTEGER,
+                divisible BOOL,
+                source TEXT,
+                issuer TEXT,
+                transfer BOOL,
+                callable BOOL,
+                call_date INTEGER,
+                call_price REAL,
+                description TEXT,
+                fee_paid INTEGER,
+                locked BOOL,
+                status TEXT,
+                asset_longname TEXT,
+                reset BOOL,
+                description_locked BOOL,
+                PRIMARY KEY (tx_index, msg_index),
+                UNIQUE (tx_hash, msg_index)
+            )
+        """
+        database.copy_old_table(cursor, "issuances", create_issuances_query)
+
+    if "fair_minting" not in columns:
+        cursor.execute("""ALTER TABLE issuances ADD COLUMN fair_minting BOOL DEFAULT 0""")
+
     database.create_indexes(
         cursor,
         "issuances",
@@ -219,6 +252,9 @@ def validate(
         elif last_issuance["locked"]:
             # before the issuance_lock_fix, only the last issuance was checked
             issuance_locked = True
+
+        if last_issuance["fair_minting"]:
+            problems.append("cannot issue during fair minting")
 
         if last_issuance["issuer"] != source:
             problems.append("issued by another address")
@@ -1006,6 +1042,9 @@ def parse(db, tx, message, message_type_id):
             "status": status,
             "asset_longname": asset_longname,
         }
+        # ensure last issuance is locked when fair minting is active
+        if "cannot issue during fair minting" in status:
+            bindings["fair_minting"] = True
         if "integer overflow" not in status:
             ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 

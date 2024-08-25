@@ -1418,32 +1418,32 @@ BEGIN TRANSACTION;
 
 -- Table  issuances
 DROP TABLE IF EXISTS issuances;
-CREATE TABLE "issuances"(
-                              tx_index INTEGER,
-                              tx_hash TEXT,
-                              msg_index INTEGER DEFAULT 0,
-                              block_index INTEGER,
-                              asset TEXT,
-                              quantity INTEGER,
-                              divisible BOOL,
-                              source TEXT,
-                              issuer TEXT,
-                              transfer BOOL,
-                              callable BOOL,
-                              call_date INTEGER,
-                              call_price REAL,
-                              description TEXT,
-                              fee_paid INTEGER,
-                              locked BOOL,
-                              status TEXT,
-                              asset_longname TEXT,
-                              reset BOOL,
-                              description_locked BOOL,
-                              PRIMARY KEY (tx_index, msg_index),
-                              FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                              UNIQUE (tx_hash, msg_index));
-INSERT INTO issuances VALUES(6,'1ba2a0b4ee8543976aab629c78103c0ba86c60250c11d51f9bc40676487283b7',0,310005,'BBBB',1000000000,1,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid',NULL,0,0);
-INSERT INTO issuances VALUES(7,'3f9e2dc4f7a72dee0e2d3badd871324506fe6c8239f62b6aa35f316800d55846',0,310006,'BBBC',100000,0,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0,0);
+CREATE TABLE issuances(
+                tx_index INTEGER,
+                tx_hash TEXT,
+                msg_index INTEGER DEFAULT 0,
+                block_index INTEGER,
+                asset TEXT,
+                quantity INTEGER,
+                divisible BOOL,
+                source TEXT,
+                issuer TEXT,
+                transfer BOOL,
+                callable BOOL,
+                call_date INTEGER,
+                call_price REAL,
+                description TEXT,
+                fee_paid INTEGER,
+                locked BOOL,
+                status TEXT,
+                asset_longname TEXT,
+                reset BOOL,
+                description_locked BOOL, fair_minting BOOL DEFAULT 0,
+                PRIMARY KEY (tx_index, msg_index),
+                UNIQUE (tx_hash, msg_index)
+            );
+INSERT INTO issuances VALUES(6,'1ba2a0b4ee8543976aab629c78103c0ba86c60250c11d51f9bc40676487283b7',0,310005,'BBBB',1000000000,1,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid',NULL,0,0,0);
+INSERT INTO issuances VALUES(7,'3f9e2dc4f7a72dee0e2d3badd871324506fe6c8239f62b6aa35f316800d55846',0,310006,'BBBC',100000,0,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0,0,0);
 -- Triggers and indices on  issuances
 CREATE TRIGGER block_update_issuances
                            BEFORE UPDATE ON issuances BEGIN
@@ -1690,15 +1690,15 @@ BEGIN TRANSACTION;
 -- Table  destructions
 DROP TABLE IF EXISTS destructions;
 CREATE TABLE destructions(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      asset INTEGER,
-                      quantity INTEGER,
-                      tag TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
+            tx_index INTEGER,
+            tx_hash TEXT,
+            block_index INTEGER,
+            source TEXT,
+            asset INTEGER,
+            quantity INTEGER,
+            tag TEXT,
+            status TEXT
+        );
 -- Triggers and indices on  destructions
 CREATE TRIGGER block_update_destructions
                            BEFORE UPDATE ON destructions BEGIN
@@ -1929,6 +1929,101 @@ CREATE TRIGGER block_update_dispenser_refills
 CREATE INDEX dispenser_refills_block_index_idx ON dispenser_refills (block_index)
         ;
 CREATE INDEX dispenser_refills_tx_hash_idx ON dispenser_refills (tx_hash)
+        ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=FULL;
+-- PRAGMA max_page_count=4294967294;
+
+BEGIN TRANSACTION;
+
+-- Table  fairminters
+DROP TABLE IF EXISTS fairminters;
+CREATE TABLE fairminters (
+            tx_hash TEXT,
+            tx_index INTEGER,
+            block_index INTEGER,
+            source TEXT,
+            asset TEXT,
+            asset_parent TEXT,
+            asset_longname TEXT,
+            description TEXT,
+            price INTEGER,
+            hard_cap INTEGER,
+            burn_payment BOOL,
+            max_mint_per_tx INTEGER,
+            premint_quantity INTEGER,
+            start_block INTEGER,
+            end_block INTEGER,
+            minted_asset_commission_int INTEGER,
+            soft_cap INTEGER,
+            soft_cap_deadline_block INTEGER,
+            lock_description BOOL,
+            lock_quantity BOOL,
+            divisible BOOL,
+            pre_minted BOOL DEFAULT 0,
+            status TEXT
+        );
+-- Triggers and indices on  fairminters
+CREATE TRIGGER block_update_fairminters
+                           BEFORE UPDATE ON fairminters BEGIN
+                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                           END;
+CREATE INDEX fairminters_asset_idx ON fairminters (asset)
+        ;
+CREATE INDEX fairminters_asset_longname_idx ON fairminters (asset_longname)
+        ;
+CREATE INDEX fairminters_asset_parent_idx ON fairminters (asset_parent)
+        ;
+CREATE INDEX fairminters_block_index_idx ON fairminters (block_index)
+        ;
+CREATE INDEX fairminters_source_idx ON fairminters (source)
+        ;
+CREATE INDEX fairminters_status_idx ON fairminters (status)
+        ;
+CREATE INDEX fairminters_tx_hash_idx ON fairminters (tx_hash)
+        ;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=FULL;
+-- PRAGMA max_page_count=4294967294;
+
+BEGIN TRANSACTION;
+
+-- Table  fairmints
+DROP TABLE IF EXISTS fairmints;
+CREATE TABLE fairmints (
+            tx_hash TEXT PRIMARY KEY,
+            tx_index INTEGER,
+            block_index INTEGER,
+            source TEXT,
+            fairminter_tx_hash TEXT,
+            asset TEXT,
+            earn_quantity INTEGER,
+            paid_quantity INTEGER,
+            commission INTEGER,
+            status TEXT
+        );
+-- Triggers and indices on  fairmints
+CREATE TRIGGER block_update_fairmints
+                           BEFORE UPDATE ON fairmints BEGIN
+                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                           END;
+CREATE INDEX fairmints_asset_idx ON fairmints (asset)
+        ;
+CREATE INDEX fairmints_block_index_idx ON fairmints (block_index)
+        ;
+CREATE INDEX fairmints_fairminter_tx_hash_idx ON fairmints (fairminter_tx_hash)
+        ;
+CREATE INDEX fairmints_source_idx ON fairmints (source)
+        ;
+CREATE INDEX fairmints_status_idx ON fairmints (status)
+        ;
+CREATE INDEX fairmints_tx_hash_idx ON fairmints (tx_hash)
         ;
 
 COMMIT TRANSACTION;

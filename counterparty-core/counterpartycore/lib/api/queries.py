@@ -2386,3 +2386,116 @@ def get_dispenser_info_by_hash(db, dispenser_hash: str):
         "dispensers",
         where={"tx_hash": dispenser_hash},
     )
+
+
+def get_all_fairminters(db, cursor: int = None, limit: int = 100, offset: int = None):
+    """
+    Returns all fairminters
+    :param int cursor: The last index of the fairminter to return
+    :param int limit: The maximum number of fairminter to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(db, "fairminters", last_cursor=cursor, limit=limit, offset=offset)
+
+
+def get_fairminter(db, tx_hash: str):
+    """
+    Returns the fairminter by its hash
+    :param str fairminter_hash: The hash of the fairminter to return
+    """
+    return select_row(
+        db,
+        "fairminters",
+        where={"tx_hash": tx_hash},
+    )
+
+
+def get_fairminters_by_asset(
+    db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the fairminter by its asset
+    :param str asset: The asset of the fairminter to return
+    """
+    where = {"asset": asset.upper()}
+    if "." in asset:
+        where = {"asset_longname": asset.upper()}
+    return select_rows(
+        db, "fairminters", where=where, last_cursor=cursor, limit=limit, offset=offset
+    )
+
+
+def get_fairminters_by_address(
+    db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the fairminter by its source
+    :param str address: The source of the fairminter to return
+    """
+    return select_rows(
+        db, "fairminters", where={"source": address}, last_cursor=cursor, limit=limit, offset=offset
+    )
+
+
+def get_fairmints_by_fairminter(
+    db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the mints by fairminter
+    :param str fairminter_hash: The hash of the fairminter to return
+    """
+    return select_rows(
+        db,
+        "fairmints",
+        where={"fairminter_tx_hash": tx_hash},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_fairmints_by_address(
+    db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the mints by address
+    :param str address: The address of the mints to return
+    """
+    return select_rows(
+        db, "fairmints", where={"source": address}, last_cursor=cursor, limit=limit, offset=offset
+    )
+
+
+def get_fairmints_by_asset(
+    db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the mints by asset
+    :param str asset: The asset of the mints to return
+    """
+    return select_rows(
+        db,
+        "fairmints",
+        where={"asset": asset.upper()},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_fairmints_by_address_and_asset(
+    db, address: str, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the mints by address and asset
+    :param str address: The address of the mints to return
+    :param str asset: The asset of the mints to return
+    """
+    return select_rows(
+        db,
+        "fairmints",
+        where={"source": address, "asset": asset.upper()},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )

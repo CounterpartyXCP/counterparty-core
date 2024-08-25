@@ -36,6 +36,8 @@ from .messages import (  # noqa: E402
     destroy,
     dispenser,
     dividend,
+    fairmint,
+    fairminter,
     issuance,
     order,
     rps,
@@ -80,6 +82,8 @@ TABLES = ["balances", "credits", "debits", "messages"] + [
     "dispensers",
     "dispenses",
     "dispenser_refills",
+    "fairminters",
+    "fairmints",
 ]
 
 MAINNET_BURNS = {}
@@ -179,6 +183,14 @@ def parse_tx(db, tx):
                 "dispensers", block_index=tx["block_index"]
             ):
                 dispenser.dispense(db, tx)
+            elif message_type_id == fairminter.ID and util.enabled(
+                "fairminter", block_index=tx["block_index"]
+            ):
+                fairminter.parse(db, tx, message)
+            elif message_type_id == fairmint.ID and util.enabled(
+                "fairminter", block_index=tx["block_index"]
+            ):
+                fairmint.parse(db, tx, message)
             else:
                 supported = False
 
@@ -203,7 +215,9 @@ def parse_tx(db, tx):
                     {"supported": False, "tx_hash": tx["tx_hash"]},
                 )
                 if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
-                    logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
+                    logger.info(
+                        f"Unsupported transaction: hash {tx['tx_hash']}; ID: {message_type_id}; data {tx['data']}"
+                    )
                 cursor.close()
                 return False
 
@@ -308,6 +322,9 @@ def parse_block(
     # Close dispensers
     dispenser.close_pending(db, block_index)
 
+    # Fairminters operations
+    fairminter.before_block(db, block_index)
+
     txlist = []
     for tx in transactions:
         try:
@@ -320,6 +337,9 @@ def parse_block(
             logger.warning(f"ParseTransactionError for tx {tx['tx_hash']}: {e}")
             raise e
             # pass
+
+    # Fairminters operations
+    fairminter.after_block(db, block_index)
 
     if block_index != config.MEMPOOL_BLOCK_INDEX:
         # Calculate consensus hashes.
@@ -670,6 +690,8 @@ def initialise(db):
     rpsresolve.initialise(db)
     sweep.initialise(db)
     dispenser.initialise(db)
+    fairminter.initialise(db)
+    fairmint.initialise(db)
 
     # Messages
     cursor.execute(
