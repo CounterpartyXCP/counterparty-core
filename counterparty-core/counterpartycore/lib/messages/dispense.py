@@ -33,7 +33,8 @@ def validate(db, source, destination, quantity):
             problems.append("dispenser is not open")
         if dispenser["give_remaining"] == 0:
             problems.append("dispenser is empty")
-        must_give = get_must_give(db, dispenser, quantity) * dispenser["give_quantity"]
+        must_give = get_must_give(db, dispenser, quantity)
+        logger.debug("must_give: %s", must_give)
         if must_give > dispenser["give_remaining"]:
             problems.append("dispenser doesn't have enough asset to give")
     return problems
