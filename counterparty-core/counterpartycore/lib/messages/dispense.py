@@ -9,19 +9,19 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def get_must_give(db, dispenser, btc_amount, block_index=None):
-    if (dispenser["oracle_address"] != None) and util.enabled(  # noqa: E711
+    if (dispenser["oracle_address"] is not None) and util.enabled(  # noqa: E711
         "oracle_dispensers", block_index
     ):
-        last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(
+        last_price, _last_fee, _last_fiat_label, _last_updated = ledger.get_oracle_last_price(
             db, dispenser["oracle_address"], block_index
         )
         fiatrate = util.satoshirate_to_fiat(dispenser["satoshirate"])
         return int(floor(((btc_amount / config.UNIT) * last_price) / fiatrate))
-    else:
-        return int(floor(btc_amount / dispenser["satoshirate"]))
+
+    return int(floor(btc_amount / dispenser["satoshirate"]))
 
 
-def validate(db, source, destination, quantity):
+def validate(db, _source, destination, quantity):
     problems = []
     if not util.enabled("enable_dispense_tx"):
         problems.append("dispense tx is not enabled")
@@ -114,10 +114,7 @@ def parse(db, tx):
                 )
                 max_dispenser_limit_hit = False
 
-                if (
-                    max_dispenses_limit > 0
-                    and dispenser["dispense_count"] + 1 >= max_dispenses_limit
-                ):
+                if dispenser["dispense_count"] + 1 >= max_dispenses_limit > 0:
                     max_dispenser_limit_hit = True
 
                 dispenser["give_remaining"] = give_remaining
