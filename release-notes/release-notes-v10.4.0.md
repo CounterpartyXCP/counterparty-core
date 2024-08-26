@@ -23,7 +23,11 @@ This release includes a variety of protocol upgrades.
 
 ## Bugfixes
 
+* Fix adding new transactions in unit test fixtures (`scenarios.py`)
+
 ## Codebase
+
+* New test suite with `regtest` network
 
 ## API
 
