@@ -549,6 +549,13 @@
     "block_index": 925000,
     "testnet_block_index": 2815000
   },
+  "dispenser_must_be_created_by_source": {
+    "minimum_version_major": 10,
+      "minimum_version_minor": 2,
+      "minimum_version_revision": 0,
+      "block_index": 900000,
+      "testnet_block_index": 2815000
+  },
   "expire_order_matches_then_orders": {
       "minimum_version_major": 10,
       "minimum_version_minor": 4,

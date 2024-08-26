@@ -8,6 +8,7 @@ This release includes a variety of protocol upgrades.
 
 ## Protocole Changes
 
+* Require Dispenser to be Source Address (see https://github.com/CounterpartyXCP/counterparty-core/pull/2140)
 * Make Dispenses Normal Counterparty Transactions (see https://github.com/CounterpartyXCP/counterparty-core/pull/2141)
 * By setting an issuance’s description to "lock_description", the asset’s description is locked, preserving the previously set description.
 
