@@ -35,6 +35,8 @@ def test_api_v2(request):
     dividend_hash = "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518"
     issuance_hash = "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf"
     broadcast_hash = "7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af"
+    minter_hash = "83b96c0f72fea31403567852f2bdb4840ffdf18bda2e82df4f27aad633830e29"
+    # mint_hash = "d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67"
     event = "CREDIT"
     event_index = 10
     tx_index = 2
@@ -48,6 +50,7 @@ def test_api_v2(request):
         "v1",
         "rpc",
         "api",
+        "fairminters",  # TEMPORARY
     ]
     results = {}
     fixtures = {}
@@ -83,6 +86,8 @@ def test_api_v2(request):
             url = url.replace("<tx_hash>", issuance_hash)
         if "broadcasts" in url:
             url = url.replace("<tx_hash>", broadcast_hash)
+        if "fairminters" in url:
+            url = url.replace("<tx_hash>", minter_hash)
         url = url.replace("<tx_hash>", tx_hash)
         url = url.replace("<block_hash>", block_hash)
         url = url.replace("<dividend_hash>", dividend_hash)
@@ -130,6 +135,8 @@ def test_new_get_balances_by_address():
     result = requests.get(url)  # noqa: S113
 
     assert result.json()["result"] == [
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "RAIDFAIRMIN", "quantity": 20},
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "FREEFAIRMIN", "quantity": 10},
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "A95428956661682277",
@@ -149,7 +156,7 @@ def test_new_get_balances_by_address():
             "asset": "DIVISIBLE",
             "quantity": 98800000000,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91875000000},
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91675000000},
     ]
 
 
@@ -166,13 +173,13 @@ def test_new_get_balances_by_asset():
             "quantity": 300000000,
         },
         {"address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy", "asset": "XCP", "quantity": 46449548498},
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91875000000},
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91675000000},
         {"address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "asset": "XCP", "quantity": 92945878046},
         {"address": "mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK", "asset": "XCP", "quantity": 14999857},
         {"address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "XCP", "quantity": 99999990},
         {"address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b", "asset": "XCP", "quantity": 92999130360},
         {"address": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42", "asset": "XCP", "quantity": 92949122099},
-        {"address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM", "asset": "XCP", "quantity": 92999138812},
+        {"address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM", "asset": "XCP", "quantity": 92999138821},
         {
             "address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
             "asset": "XCP",
@@ -236,14 +243,14 @@ def test_new_get_asset_orders():
     assert result[0] == {
         "tx_index": 493,
         "tx_hash": "1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
-        "block_index": 310492,
+        "block_index": 310513,
         "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         "give_asset": "BTC",
         "give_quantity": 800000,
-        "give_remaining": 0,
+        "give_remaining": 800000,
         "get_asset": "XCP",
         "get_quantity": 100000000,
-        "get_remaining": 0,
+        "get_remaining": 100000000,
         "expiration": 2000,
         "expire_index": 312492,
         "fee_required": 0,
@@ -301,11 +308,11 @@ def test_new_get_order_matches():
         "backward_quantity": 800000,
         "tx0_block_index": 310491,
         "tx1_block_index": 310492,
-        "block_index": 310492,
+        "block_index": 310513,
         "tx0_expiration": 2000,
         "tx1_expiration": 2000,
         "match_expire_index": 310512,
         "fee_paid": 7200,
-        "status": "pending",
+        "status": "expired",
         "confirmed": True,
     }

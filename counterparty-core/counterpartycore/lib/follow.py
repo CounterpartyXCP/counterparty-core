@@ -2,6 +2,7 @@ import asyncio
 import logging
 import struct
 import time
+import traceback
 
 import zmq
 import zmq.asyncio
@@ -203,6 +204,7 @@ class BlockchainWatcher:
             self.receive_message(topic, body, seq)
         except Exception as e:
             logger.error("Error processing message: %s", e)
+            print(traceback.format_exc())  # for debugging
             capture_exception(e)
             raise e
 

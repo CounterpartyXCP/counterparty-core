@@ -26,6 +26,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 "db_dir": config.FETCHER_DB,
                 "log_file": config.FETCHER_LOG,
                 "log_level": config.LOG_LEVEL_STRING,
+                "json_format": config.JSON_LOGS,
                 "start_height": start_height,
             }
         else:
@@ -57,7 +58,9 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     config.__version__,
                     fetcher_version,
                 )
-                raise ValueError("Fetcher version mismatch.")
+                raise ValueError(
+                    f"Fetcher version mismatch {config.__version__} != {fetcher_version}."
+                )
             self.fetcher.start()
         except Exception as e:
             logger.error(f"Failed to initialize fetcher: {e}. Retrying in 5 seconds...")

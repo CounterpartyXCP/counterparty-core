@@ -551,9 +551,23 @@
   },
   "expire_order_matches_then_orders": {
       "minimum_version_major": 10,
-      "minimum_version_minor": 2,
+      "minimum_version_minor": 4,
       "minimum_version_revision": 0,
       "block_index": 900000,
       "testnet_block_index": 2815000
+  },
+  "fairminter": {
+      "minimum_version_major": 10,
+      "minimum_version_minor": 4,
+      "minimum_version_revision": 0,
+      "block_index": 900000,
+      "testnet_block_index": 2815000
+  },
+  "lockable_issuance_descriptions": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 4,
+    "minimum_version_revision": 0,
+    "block_index": 900000,
+    "testnet_block_index": 2815000
   }
 }

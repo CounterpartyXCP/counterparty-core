@@ -66,6 +66,7 @@ def initialise(db):
                       status TEXT,
                       asset_longname TEXT,
                       reset BOOL,
+                      description_locked BOOL,
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                    """)
 
@@ -76,6 +77,8 @@ def initialise(db):
         cursor.execute("""ALTER TABLE issuances ADD COLUMN asset_longname TEXT""")
     if "reset" not in columns:
         cursor.execute("""ALTER TABLE issuances ADD COLUMN reset BOOL""")
+    if "description_locked" not in columns:
+        cursor.execute("""ALTER TABLE issuances ADD COLUMN description_locked BOOL""")
 
     # If sweep_hotfix activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
@@ -100,6 +103,7 @@ def initialise(db):
                               status TEXT,
                               asset_longname TEXT,
                               reset BOOL,
+                              description_locked BOOL,
                               PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index))
@@ -107,14 +111,47 @@ def initialise(db):
         cursor.execute(
             """INSERT INTO new_issuances(tx_index, tx_hash, msg_index,
                 block_index, asset, quantity, divisible, source, issuer, transfer, callable,
-                call_date, call_price, description, fee_paid, locked, status, asset_longname, reset)
+                call_date, call_price, description, fee_paid, locked, status, asset_longname, reset, description_locked)
                 SELECT tx_index, tx_hash, 0, block_index, asset, quantity, divisible, source,
                 issuer, transfer, callable, call_date, call_price, description, fee_paid,
-                locked, status, asset_longname, reset FROM issuances""",
+                locked, status, asset_longname, reset, description_locked FROM issuances""",
             {},
         )
         cursor.execute("DROP TABLE issuances")
         cursor.execute("ALTER TABLE new_issuances RENAME TO issuances")
+
+    # remove FOREIGN KEY with transactions
+    if database.has_fk_on(cursor, "issuances", "transactions.tx_index"):
+        create_issuances_query = """
+            CREATE TABLE IF NOT EXISTS issuances(
+                tx_index INTEGER,
+                tx_hash TEXT,
+                msg_index INTEGER DEFAULT 0,
+                block_index INTEGER,
+                asset TEXT,
+                quantity INTEGER,
+                divisible BOOL,
+                source TEXT,
+                issuer TEXT,
+                transfer BOOL,
+                callable BOOL,
+                call_date INTEGER,
+                call_price REAL,
+                description TEXT,
+                fee_paid INTEGER,
+                locked BOOL,
+                status TEXT,
+                asset_longname TEXT,
+                reset BOOL,
+                description_locked BOOL,
+                PRIMARY KEY (tx_index, msg_index),
+                UNIQUE (tx_hash, msg_index)
+            )
+        """
+        database.copy_old_table(cursor, "issuances", create_issuances_query)
+
+    if "fair_minting" not in columns:
+        cursor.execute("""ALTER TABLE issuances ADD COLUMN fair_minting BOOL DEFAULT 0""")
 
     database.create_indexes(
         cursor,
@@ -216,6 +253,9 @@ def validate(
             # before the issuance_lock_fix, only the last issuance was checked
             issuance_locked = True
 
+        if last_issuance["fair_minting"]:
+            problems.append("cannot issue during fair minting")
+
         if last_issuance["issuer"] != source:
             problems.append("issued by another address")
         if (bool(last_issuance["divisible"]) != bool(divisible)) and (
@@ -236,6 +276,14 @@ def validate(
             problems.append("locked asset and non‐zero quantity")
         if issuance_locked and reset:
             problems.append("cannot reset a locked asset")
+        if (
+            util.enabled("lockable_issuance_descriptions", block_index)
+            and last_issuance["description_locked"]
+        ):
+            if description is not None:
+                problems.append("Cannot update a locked description")
+            if reset:
+                problems.append("Cannot reset issuance with locked description")
     else:
         reissuance = False
         if description.lower() == "lock":
@@ -769,6 +817,14 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
     )
 
 
+def _get_last_description(db, asset, default):
+    issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
+    if len(issuances) > 0:
+        return issuances[-1]["description"]  # Use last description
+
+    return default
+
+
 def parse(db, tx, message, message_type_id):
     (
         asset_id,
@@ -936,22 +992,27 @@ def parse(db, tx, message, message_type_id):
         # Lock?
         if not isinstance(lock, bool):
             lock = False
-        if status == "valid":
-            if (description and description.lower() == "lock") or lock:
-                lock = True
-                issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
-                if description.lower() == "lock" and len(issuances) > 0:
-                    description = issuances[-1]["description"]  # Use last description
 
-            if not reissuance:
-                # Add to table of assets.
-                bindings = {
-                    "asset_id": str(asset_id),
-                    "asset_name": str(asset),
-                    "block_index": tx["block_index"],
-                    "asset_longname": subasset_longname,
-                }
-                ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
+        description_locked = False
+        if status == "valid" and description:
+            if description.lower() == "lock":
+                lock = True
+                description = _get_last_description(db, asset, description)
+            elif description.lower() == "lock_description" and util.enabled(
+                "lockable_issuance_descriptions", tx["block_index"]
+            ):
+                description_locked = True
+                description = _get_last_description(db, asset, description)
+
+        if status == "valid" and not reissuance:
+            # Add to table of assets.
+            bindings = {
+                "asset_id": str(asset_id),
+                "asset_name": str(asset),
+                "block_index": tx["block_index"],
+                "asset_longname": subasset_longname,
+            }
+            ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
 
         if status == "valid" and reissuance:
             # when reissuing, add the asset_longname to the issuances table for API lookups
@@ -976,10 +1037,14 @@ def parse(db, tx, message, message_type_id):
             "description": description,
             "fee_paid": fee,
             "locked": lock,
+            "description_locked": description_locked,
             "reset": reset,
             "status": status,
             "asset_longname": asset_longname,
         }
+        # ensure last issuance is locked when fair minting is active
+        if "cannot issue during fair minting" in status:
+            bindings["fair_minting"] = True
         if "integer overflow" not in status:
             ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 

@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 # Filled orders may not be re‐opened, so only orders not involving BTC (and so
 # which cannot have expired order matches) may be filled.
 import decimal
@@ -1017,9 +1015,9 @@ def expire_order_matches(db, block_index):
 
 
 def expire(db, block_index):
-    if util.enabled("expire_order_matches_then_orders"):
-        expire_order_matches(db, block_index)
-        expire_orders(db, block_index)
-    else:
-        expire_orders(db, block_index)
-        expire_order_matches(db, block_index)
+    # if util.enabled("expire_order_matches_then_orders"):
+    #    expire_order_matches(db, block_index)
+    #    expire_orders(db, block_index)
+    # else:
+    expire_orders(db, block_index)
+    expire_order_matches(db, block_index)

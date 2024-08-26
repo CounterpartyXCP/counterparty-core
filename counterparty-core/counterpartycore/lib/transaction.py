@@ -1770,6 +1770,100 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
     }
 
 
+def compose_fairminter(
+    db,
+    address: str,
+    asset: str,
+    asset_parent: str = "",
+    price: int = 0,
+    max_mint_per_tx: int = 0,
+    hard_cap: int = 0,
+    premint_quantity: int = 0,
+    start_block: int = 0,
+    end_block: int = 0,
+    soft_cap: int = 0,
+    soft_cap_deadline_block: int = 0,
+    minted_asset_commission: float = 0.0,
+    burn_payment: bool = False,
+    lock_description: bool = False,
+    lock_quantity: bool = False,
+    divisible: bool = True,
+    description: str = "",
+    **construct_args,
+):
+    """
+    Composes a transaction to issue a new asset using the FairMinter protocol.
+    :param address: The address that will be issuing the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param asset: The asset to issue (e.g. MYASSET)
+    :param asset_parent: The parent asset of the asset to issue
+    :param price: The price in XCP of the asset to issue
+    :param max_mint_per_tx: Amount minted if price is equal to 0; otherwise, maximum amount of asset that can be minted in a single transaction; if 0, there is no limit
+    :param hard_cap: The maximum amount of asset that can be minted; if 0 there is no limit
+    :param premint_quantity: Amount of asset to be minted when the sale starts, if 0, no premint; preminted assets are sent to the source of the transaction
+    :param start_block: The block at which the sale starts
+    :param end_block: The block at which the sale ends
+    :param soft_cap: Minimum amount of asset to be minted, if None, no minimum; if the soft cap is not reached by the soft_cap_deadline_block, the sale is canceled, asset is revoked from all minters and all payments are refunded
+    :param soft_cap_deadline_block: The block at which the soft cap must be reached
+    :param minted_asset_commission: Commission to be paid in minted asset, a fraction of 1 (i.e., 0.05 is five percent); the commission is deducted from the asset received by the minter and sent to the Fair Minter owner
+    :param burn_payment: If True, the payment asset is burned, otherwise it is sent to the source
+    :param lock_description: If True, the description of the asset is locked
+    :param lock_quantity: If True, the quantity of the asset cannot be changed after the minting
+    :param divisible: If True, the asset is divisible
+    :param description: The description of the asset
+    """
+    params = {
+        "source": address,
+        "asset": asset,
+        "asset_parent": asset_parent,
+        "price": price,
+        "max_mint_per_tx": max_mint_per_tx,
+        "hard_cap": hard_cap,
+        "premint_quantity": premint_quantity,
+        "start_block": start_block,
+        "end_block": end_block,
+        "soft_cap": soft_cap,
+        "soft_cap_deadline_block": soft_cap_deadline_block,
+        "minted_asset_commission": minted_asset_commission,
+        "burn_payment": burn_payment,
+        "lock_description": lock_description,
+        "lock_quantity": lock_quantity,
+        "divisible": divisible,
+        "description": description,
+    }
+    rawtransaction = compose_transaction(
+        db,
+        name="fairminter",
+        params=params,
+        **construct_args,
+    )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "fairminter",
+    }
+
+
+def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construct_args):
+    """
+    Composes a transaction to mint a quantity of an asset using the FairMinter protocol.
+    :param address: The address that will be minting the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param asset: The asset to mint (e.g. MYASSET)
+    :param quantity: The quantity of the asset to mint (in satoshis, hence integer) (e.g. 1000)
+    """
+    params = {"source": address, "asset": asset, "quantity": quantity}
+    rawtransaction = compose_transaction(
+        db,
+        name="fairmint",
+        params=params,
+        **construct_args,
+    )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "fairmint",
+    }
+
+
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
@@ -1896,6 +1990,14 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.sweep.ID:
             message_type_name = "sweep"
             message_data = messages.sweep.unpack(message)
+        # Fair Minter
+        elif message_type_id == messages.fairminter.ID:
+            message_type_name = "fairminter"
+            message_data = messages.fairminter.unpack(message)
+        # Fair Mint
+        elif message_type_id == messages.fairmint.ID:
+            message_type_name = "fairmint"
+            message_data = messages.fairmint.unpack(message)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 

@@ -15,8 +15,8 @@ LOCAL_API_URL = "http://localhost:4000"
 CHECK_SERVERS = [
     ["http://rpc:rpc@api1.counterparty.io:4000", "v1", "v9.61.1"],
     ["https://api.counterparty.io:4000", "v2", "v10.3.1"],
-    ["https://dev.counterparty.io:4000", "v2", "v10.3.1"],
-    ["https://api.counterparty.info", "v2", "v10.3.0"],
+    ["https://dev.counterparty.io:4000", "v2", "v10.3.2"],
+    ["https://api.counterparty.info", "v2", "v10.3.1"],
     ["http://rpc:1234@public.coindaddy.io:4000", "v1", "v9.61.3"],
     ["https://api.xcp.dev/v9_61/", "xcpdev", "v9.61.3"],
     ["https://api.xcp.dev/v10_1/", "xcpdev", "v10.1.2.CNTRPRTY"],

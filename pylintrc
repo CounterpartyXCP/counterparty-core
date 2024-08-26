@@ -427,6 +427,8 @@ disable=line-too-long,
         missing-module-docstring,
         logging-format-interpolation,
         logging-fstring-interpolation,
+        too-many-arguments,
+        too-many-locals,
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
