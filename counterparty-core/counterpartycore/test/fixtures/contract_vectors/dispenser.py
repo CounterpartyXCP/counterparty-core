@@ -88,7 +88,7 @@ DISPENSER_VECTOR = {
                 "out": (
                     None,
                     [
-                        "address doesn't has enough balance of XCP (91875000000 < 9223372036854775808)",
+                        "address doesn't has enough balance of XCP (91675000000 < 9223372036854775808)",
                         "integer overflow",
                     ],
                 ),
@@ -157,7 +157,7 @@ DISPENSER_VECTOR = {
                         "block_time": 155409000,
                         "block_hash": DP["default_block_hash"],
                         "btc_amount": 17630,
-                        "tx_index": 503,
+                        "tx_index": DP["default_tx_index"],
                         "destination": ADDR[0],
                         "data": b"\x00\x00\x00\x0c\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00\x00d\x00",
                     },
@@ -166,7 +166,7 @@ DISPENSER_VECTOR = {
                     {
                         "table": "dispensers",
                         "values": {
-                            "tx_index": 503,
+                            "tx_index": DP["default_tx_index"],
                             "tx_hash": "db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d",
                             "block_index": DP["default_block_index"],
                             "source": ADDR[0],
@@ -203,7 +203,7 @@ DISPENSER_VECTOR = {
                         "block_time": 155409000,
                         "block_hash": DP["default_block_hash"],
                         "btc_amount": 17630,
-                        "tx_index": 503,
+                        "tx_index": DP["default_tx_index"],
                         "destination": ADDR[5],
                         "data": b"\x00\x00\x00\x0c\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n",
                     },
@@ -249,7 +249,7 @@ DISPENSER_VECTOR = {
                         "block_time": 155409000,
                         "block_hash": DP["default_block_hash"],
                         "btc_amount": 0,
-                        "tx_index": 503,
+                        "tx_index": DP["default_tx_index"],
                         "destination": "",
                         # compose(ADDR[0], config.XCP, 100, 100, config.MAX_INT + 1, 0)
                         # generated with overflow checking commented out
@@ -303,7 +303,7 @@ DISPENSER_VECTOR = {
                         "block_time": 155409000,
                         "block_hash": DP["default_block_hash"],
                         "btc_amount": 100,
-                        "tx_index": 503,
+                        "tx_index": DP["default_tx_index"],
                         "destination": ADDR[5],
                         "data": b"",
                     },
@@ -351,7 +351,7 @@ DISPENSER_VECTOR = {
                         "block_time": 155409000,
                         "block_hash": DP["default_block_hash"],
                         "btc_amount": 300,
-                        "tx_index": 503,
+                        "tx_index": DP["default_tx_index"],
                         "destination": ADDR[5],
                         "data": b"",
                     },
