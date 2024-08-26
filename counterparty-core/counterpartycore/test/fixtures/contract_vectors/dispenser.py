@@ -282,7 +282,7 @@ DISPENSER_VECTOR = {
                         "block_time": 155409000,
                         "block_hash": DP["default_block_hash"],
                         "btc_amount": 17630,
-                        "tx_index": 503,
+                        "tx_index": DP["default_tx_index"],
                         "destination": ADDR[0],
                         # source != open_address
                         "data": b"\x00\x00\x00\x0c\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\t)\x00",
