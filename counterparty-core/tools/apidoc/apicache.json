@@ -9010,7 +9010,9 @@
                     "unpacked_data": {
                         "message_type": "dispense",
                         "message_type_id": 13,
-                        "message_data": {}
+                        "message_data": {
+                            "data": "00"
+                        }
                     },
                     "btc_amount_normalized": "0.00200000"
                 },
@@ -9021,5 +9023,8 @@
         ],
         "next_cursor": 17618356,
         "result_count": 1692
+    },
+    "/v2/addresses/<address>/compose/dispense": {
+        "error": "['dispense tx is not enabled']"
     }
 }

@@ -34,6 +34,7 @@ from .messages import (  # noqa: E402
     burn,
     cancel,
     destroy,
+    dispense,
     dispenser,
     dividend,
     fairmint,
@@ -182,7 +183,7 @@ def parse_tx(db, tx):
             elif message_type_id == dispenser.DISPENSE_ID and util.enabled(
                 "dispensers", block_index=tx["block_index"]
             ):
-                dispenser.dispense(db, tx)
+                dispense.parse(db, tx)
             elif message_type_id == fairminter.ID and util.enabled(
                 "fairminter", block_index=tx["block_index"]
             ):
@@ -219,12 +220,13 @@ def parse_tx(db, tx):
                         f"Unsupported transaction: hash {tx['tx_hash']}; ID: {message_type_id}; data {tx['data']}"
                     )
                 cursor.close()
+                util.CURRENT_TX_HASH = None
                 return False
 
             # NOTE: for debugging (check asset conservation after every `N` transactions).
             # if not tx['tx_index'] % N:
             #     check.asset_conservation(db)
-
+            util.CURRENT_TX_HASH = None
             return True
     except Exception as e:
         raise exceptions.ParseTransactionError(f"{e}")  # noqa: B904

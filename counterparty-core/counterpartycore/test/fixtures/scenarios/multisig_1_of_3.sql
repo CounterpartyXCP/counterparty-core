@@ -1438,7 +1438,8 @@ CREATE TABLE issuances(
                 status TEXT,
                 asset_longname TEXT,
                 reset BOOL,
-                description_locked BOOL, fair_minting BOOL DEFAULT 0,
+                description_locked BOOL,
+                fair_minting BOOL DEFAULT 0,
                 PRIMARY KEY (tx_index, msg_index),
                 UNIQUE (tx_hash, msg_index)
             );

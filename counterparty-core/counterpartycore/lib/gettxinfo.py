@@ -2,7 +2,7 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import arc4, backend, config, script, util
+from counterpartycore.lib import arc4, backend, config, message_type, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
@@ -250,6 +250,8 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
     dispenser_source = sources.split("-")[0]
     out_index = 0
     for out in dispensers_outputs:
+        if out[0] is None or out[1] is None:
+            continue
         if out[0] != dispenser_source:
             source = dispenser_source
             destination = out[0]
@@ -345,7 +347,6 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-
     # Ignore coinbase transactions.
     if decoded_tx["coinbase"]:
         raise DecodeError("coinbase transaction")
@@ -382,6 +383,9 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if not data and destinations != [
         config.UNSPENDABLE,
     ]:
+        if util.enabled("disable_vanilla_btc_dispense", block_index):
+            raise BTCOnlyError("no data and not unspendable")
+
         if util.enabled("dispensers", block_index) and not composing:
             dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
             if len(dispensers_outputs) == 0:
@@ -408,6 +412,21 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         return get_dispensers_tx_info(sources, dispensers_outputs)
 
     destinations = "-".join(destinations)
+
+    try:
+        message_type_id, _ = message_type.unpack(data, block_index)
+    except struct.error:  # Deterministically raised.
+        message_type_id = None
+
+    if message_type_id == dispenser.DISPENSE_ID and util.enabled(
+        "enable_dispense_tx", block_index=block_index
+    ):
+        # if there is a dispense prefix we assume all potential_dispensers are dispensers
+        # that's mean we don't need to call get_dispensers_outputs()
+        # and so we avoid a db query (dispenser.is_dispensable()).
+        # If one of them is not a dispenser `dispenser.dispense()` will silently skip it
+        return get_dispensers_tx_info(sources, potential_dispensers)
+
     return sources, destinations, btc_amount, round(fee), data, []
 
 
