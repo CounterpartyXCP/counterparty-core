@@ -4,7 +4,7 @@ import difflib
 import json
 import time
 
-from regtestnode import RegtestNodeThread
+from regtestnode import ComposeError, RegtestNodeThread
 from scenarios import scenario_1_fairminter, scenario_2_fairminter, scenario_3_dispenser
 from termcolor import colored
 
@@ -35,41 +35,58 @@ def run_item(node, item, context):
             for key in item["params"]:
                 if isinstance(item["params"][key], str):
                     item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i+1}", address)
-        tx_hash, block_hash, block_time = node.send_transaction(
-            item["source"], item["transaction"], item["params"]
-        )
-    for control in item["controls"]:
-        control_url = control["url"].replace("$TX_HASH", tx_hash)
-        for i, address in enumerate(node.addresses):
-            control_url = control_url.replace(f"$ADDRESS_{i+1}", address)
-        result = node.api_call(control_url)
         try:
-            expected_result = control["result"]
-            expected_result = (
-                json.dumps(expected_result)
-                .replace("$TX_HASH", tx_hash)
-                .replace("$BLOCK_HASH", block_hash)
-                .replace('"$BLOCK_TIME"', str(block_time))
+            tx_hash, block_hash, block_time = node.send_transaction(
+                item["source"], item["transaction"], item["params"]
             )
+        except ComposeError as e:
+            if "expected_error" in item:
+                try:
+                    assert (str(item["expected_error"]),) == e.args
+                    print(f"{item['title']}: " + colored("Success", "green"))
+                except AssertionError:
+                    print(colored(f"Failed: {item['title']}", "red"))
+                    print(f"Expected: {item['expected_error']}")
+                    print(f"Got: {str(e)}")
+                    # raise e
+            else:
+                raise e
+
+    if "controls" in item:
+        for control in item["controls"]:
+            control_url = control["url"].replace("$TX_HASH", tx_hash)
             for i, address in enumerate(node.addresses):
-                expected_result = expected_result.replace(f"$ADDRESS_{i+1}", address)
-            for name, value in context.items():
-                expected_result = expected_result.replace(f"${name}", value)
-            expected_result = json.loads(expected_result)
+                control_url = control_url.replace(f"$ADDRESS_{i+1}", address)
+            result = node.api_call(control_url)
+            try:
+                expected_result = control["result"]
+                expected_result = (
+                    json.dumps(expected_result)
+                    .replace("$TX_HASH", tx_hash)
+                    .replace("$BLOCK_HASH", block_hash)
+                    .replace('"$BLOCK_TIME"', str(block_time))
+                )
+                for i, address in enumerate(node.addresses):
+                    expected_result = expected_result.replace(f"$ADDRESS_{i+1}", address)
+                for name, value in context.items():
+                    expected_result = expected_result.replace(f"${name}", value)
+                expected_result = json.loads(expected_result)
 
-            assert result["result"] == expected_result
+                assert result["result"] == expected_result
 
-            print(f"{item['title']}: " + colored("Success", "green"))
-        except AssertionError:
-            print(colored(f"Failed: {item['title']}", "red"))
-            expected_result_str = json.dumps(expected_result, indent=4, sort_keys=True)
-            got_result_str = json.dumps(result["result"], indent=4, sort_keys=True)
-            print(f"Expected: {expected_result_str}")
-            print(f"Got: {got_result_str}")
-            compare_strings(expected_result_str, got_result_str)
-            # raise e
+                print(f"{item['title']}: " + colored("Success", "green"))
+            except AssertionError:
+                print(colored(f"Failed: {item['title']}", "red"))
+                expected_result_str = json.dumps(expected_result, indent=4, sort_keys=True)
+                got_result_str = json.dumps(result["result"], indent=4, sort_keys=True)
+                print(f"Expected: {expected_result_str}")
+                print(f"Got: {got_result_str}")
+                compare_strings(expected_result_str, got_result_str)
+                # raise e
+
     for name, value in item.get("set_variables", {}).items():
         context[name] = value.replace("$TX_HASH", tx_hash).replace("$BLOCK_HASH", block_hash)
+
     return context
 
 
@@ -91,7 +108,7 @@ def run_scenarios():
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        print(regtest_node_thread.node.server_out.getvalue())
+        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

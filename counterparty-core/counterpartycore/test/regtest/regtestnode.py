@@ -17,6 +17,10 @@ class ServerNotReady(Exception):
     pass
 
 
+class ComposeError(Exception):
+    pass
+
+
 class RegtestNode:
     def __init__(self, datadir="regtestnode"):
         self.datadir = datadir
@@ -51,6 +55,8 @@ class RegtestNode:
         compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
         result = self.api_call(compose_url)
         # print(result)
+        if "error" in result:
+            raise ComposeError(result["error"])
         raw_transaction = result["result"]["rawtransaction"]
         signed_transaction_json = self.bitcoin_wallet(
             "signrawtransactionwithwallet", raw_transaction

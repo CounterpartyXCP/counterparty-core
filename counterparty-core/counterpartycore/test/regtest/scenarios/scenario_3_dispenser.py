@@ -56,7 +56,7 @@ SCENARIO = [
         ],
     },
     {
-        "title": "Dispense 1",
+        "title": "Dispense 1: get 900 XCP",
         "transaction": "dispense",
         "source": "$ADDRESS_2",
         "params": {
@@ -144,5 +144,15 @@ SCENARIO = [
                 ],
             }
         ],
+    },
+    {
+        "title": "Dispense 2: get no enough asset error",
+        "transaction": "dispense",
+        "source": "$ADDRESS_3",
+        "params": {
+            "dispenser": "$ADDRESS_1",
+            "quantity": 101,
+        },
+        "expected_error": ["dispenser doesn't have enough asset to give"],
     },
 ]
