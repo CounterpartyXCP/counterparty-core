@@ -3,7 +3,7 @@
 import logging
 import struct
 
-from counterpartycore.lib import address, config, exceptions, ledger, message_type, util
+from counterpartycore.lib import address, backend, config, exceptions, ledger, message_type, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -75,6 +75,10 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
     # destination is always required
     if not destination:
         problems.append("destination is required")
+
+    if util.enabled("utxo_support") and util.is_utxo_format(destination):
+        if not backend.bitcoind.is_valid_utxo(destination):
+            problems.append("destination is a invalid UTXO")
 
     # check memo
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:

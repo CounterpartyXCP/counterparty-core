@@ -130,6 +130,30 @@ def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
 
 
+def get_utxo_address(utxo):
+    tx_hash = utxo.split(":")[0]
+    vout = int(utxo.split(":")[1])
+    try:
+        transaction = getrawtransaction(tx_hash, True)
+    except exceptions.BitcoindRPCError as e:
+        raise exceptions.InvalidUTXOError(f"Could not find UTXO {utxo}") from e
+    if vout >= len(transaction["vout"]):
+        raise exceptions.InvalidUTXOError("vout index out of range")
+    if "address" not in transaction["vout"][vout]["scriptPubKey"]:
+        raise exceptions.InvalidUTXOError("vout does not have an address")
+    return transaction["vout"][vout]["scriptPubKey"]["address"]
+
+
+def is_valid_utxo(utxo):
+    if not util.is_utxo_format(utxo):
+        return False
+    try:
+        get_utxo_address(utxo)
+        return True
+    except exceptions.InvalidUTXOError:
+        return False
+
+
 def fee_per_kb(
     conf_target: int = config.ESTIMATE_FEE_CONF_TARGET, mode: str = config.ESTIMATE_FEE_MODE
 ):

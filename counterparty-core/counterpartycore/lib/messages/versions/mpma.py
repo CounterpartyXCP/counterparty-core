@@ -11,7 +11,7 @@ from itertools import groupby
 from bitcoin.core import key  # noqa: F401
 from bitstring import ReadError
 
-from counterpartycore.lib import config, exceptions, ledger, message_type, util
+from counterpartycore.lib import backend, config, exceptions, ledger, message_type, util
 
 from .mpma_util.internals import _decode_mpma_send_decode, _encode_mpma_send
 
@@ -81,6 +81,10 @@ def validate(db, source, asset_dest_quant_list, block_index):
         # destination is always required
         if not destination:
             problems.append(f"destination is required for {asset}")
+
+        if util.enabled("utxo_support") and util.is_utxo_format(destination):
+            if not backend.bitcoind.is_valid_utxo(destination):
+                problems.append("destination is a invalid UTXO")
 
         if util.enabled("options_require_memo"):
             results = ledger.get_addresses(db, address=destination) if destination else None

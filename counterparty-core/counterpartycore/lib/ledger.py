@@ -262,10 +262,17 @@ def remove_from_balance(db, address, asset, quantity, tx_index):
     balance = min(balance, config.MAX_INT)
     assert balance >= 0
 
+    balance_address = address
+    utxo = None
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        balance_address = None
+        utxo = address
+
     if not no_balance:  # don't create balance if quantity is 0 and there is no balance
         bindings = {
             "quantity": balance,
-            "address": address,
+            "address": balance_address,
+            "utxo": utxo,
             "asset": asset,
             "block_index": util.CURRENT_BLOCK_INDEX,
             "tx_index": tx_index,
@@ -294,8 +301,6 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     if asset == config.BTC:
         raise DebitError("Cannot debit bitcoins.")
 
-    debit_cursor = db.cursor()  # noqa: F841
-
     # Contracts can only hold XCP balances.
     if util.enabled("contracts_only_xcp_balances"):  # Protocol change.
         if len(address) == 40:
@@ -306,10 +311,17 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
 
     remove_from_balance(db, address, asset, quantity, tx_index)
 
+    debit_address = address
+    utxo = None
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        debit_address = None
+        utxo = address
+
     # Record debit.
     bindings = {
         "block_index": block_index,
-        "address": address,
+        "address": debit_address,
+        "utxo": utxo,
         "asset": asset,
         "quantity": quantity,
         "action": action,
@@ -328,9 +340,16 @@ def add_to_balance(db, address, asset, quantity, tx_index):
     balance = round(old_balance + quantity)
     balance = min(balance, config.MAX_INT)
 
+    balance_address = address
+    utxo = None
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        balance_address = None
+        utxo = address
+
     bindings = {
         "quantity": balance,
-        "address": address,
+        "address": balance_address,
+        "utxo": utxo,
         "asset": asset,
         "block_index": util.CURRENT_BLOCK_INDEX,
         "tx_index": tx_index,
@@ -368,10 +387,17 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
 
     add_to_balance(db, address, asset, quantity, tx_index)
 
+    credit_address = address
+    utxo = None
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        credit_address = None
+        utxo = address
+
     # Record credit.
     bindings = {
         "block_index": block_index,
-        "address": address,
+        "address": credit_address,
+        "utxo": utxo,
         "asset": asset,
         "quantity": quantity,
         "calling_function": action,
@@ -392,11 +418,16 @@ def transfer(db, source, destination, asset, quantity, action, event):
 def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list=False):
     """Get balance of contract or address."""
     cursor = db.cursor()
-    query = """
+
+    field_name = "address"
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        field_name = "utxo"
+
+    query = f"""
         SELECT * FROM balances
-        WHERE (address = ? AND asset = ?)
+        WHERE ({field_name} = ? AND asset = ?)
         ORDER BY rowid DESC LIMIT 1
-    """
+    """  # noqa: S608
     bindings = (address, asset)
     balances = list(cursor.execute(query, bindings))
     cursor.close()
@@ -415,12 +446,17 @@ def get_address_balances(db, address: str):
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     """
     cursor = db.cursor()
-    query = """
-        SELECT address, asset, quantity, MAX(rowid)
+
+    field_name = "address"
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        field_name = "utxo"
+
+    query = f"""
+        SELECT {field_name}, asset, quantity, MAX(rowid)
         FROM balances
-        WHERE address = ?
-        GROUP BY address, asset
-    """
+        WHERE {field_name} = ?
+        GROUP BY {field_name}, asset
+    """  # noqa: S608
     bindings = (address,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -428,12 +464,17 @@ def get_address_balances(db, address: str):
 
 def get_address_assets(db, address):
     cursor = db.cursor()
-    query = """
+
+    field_name = "address"
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        field_name = "utxo"
+
+    query = f"""
         SELECT DISTINCT asset
         FROM balances
-        WHERE address=:address
+        WHERE {field_name}=:address
         GROUP BY asset
-    """
+    """  # noqa: S608
     bindings = {"address": address}
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -441,14 +482,19 @@ def get_address_assets(db, address):
 
 def get_balances_count(db, address):
     cursor = db.cursor()
-    query = """
+
+    field_name = "address"
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        field_name = "utxo"
+
+    query = f"""
         SELECT COUNT(*) AS cnt FROM (
             SELECT DISTINCT asset
             FROM balances
-            WHERE address=:address
+            WHERE {field_name}=:address
             GROUP BY asset
         )
-    """
+    """  # noqa: S608
     bindings = {"address": address}
     cursor.execute(query, bindings)
     return cursor.fetchall()

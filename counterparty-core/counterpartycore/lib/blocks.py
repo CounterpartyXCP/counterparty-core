@@ -535,6 +535,8 @@ def initialise(db):
     debits_columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(debits)""")]
     if "tx_index" not in debits_columns:
         cursor.execute("""ALTER TABLE debits ADD COLUMN tx_index INTEGER""")
+    if "utxo" not in debits_columns:
+        cursor.execute("""ALTER TABLE debits ADD COLUMN utxo TEXT""")
 
     database.create_indexes(
         cursor,
@@ -546,6 +548,7 @@ def initialise(db):
             ["event"],
             ["action"],
             ["quantity"],
+            ["utxo"],
         ],
     )
 
@@ -567,6 +570,8 @@ def initialise(db):
     ]
     if "tx_index" not in credits_columns:
         cursor.execute("""ALTER TABLE credits ADD COLUMN tx_index INTEGER""")
+    if "utxo" not in credits_columns:
+        cursor.execute("""ALTER TABLE credits ADD COLUMN utxo TEXT""")
 
     database.create_indexes(
         cursor,
@@ -578,6 +583,7 @@ def initialise(db):
             ["event"],
             ["calling_function"],
             ["quantity"],
+            ["utxo"],
         ],
     )
 
@@ -598,6 +604,8 @@ def initialise(db):
         cursor.execute("""ALTER TABLE balances ADD COLUMN block_index INTEGER""")
     if "tx_index" not in balances_columns:
         cursor.execute("""ALTER TABLE balances ADD COLUMN tx_index INTEGER""")
+    if "utxo" not in balances_columns:
+        cursor.execute("""ALTER TABLE balances ADD COLUMN utxo TEXT""")
 
     database.create_indexes(
         cursor,

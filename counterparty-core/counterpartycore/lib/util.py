@@ -584,3 +584,20 @@ def inverse_hash(hashstring):
 
 def ib2h(b):
     return inverse_hash(b2h(b))
+
+
+def is_utxo_format(value):
+    values = value.split(":")
+    if len(values) != 2:
+        return False
+    if not values[1].isnumeric():
+        return False
+    if str(int(values[1])) != values[1]:
+        return False
+    try:
+        int(values[0], 16)
+    except ValueError:
+        return False
+    if len(values[0]) != 64:
+        return False
+    return True
