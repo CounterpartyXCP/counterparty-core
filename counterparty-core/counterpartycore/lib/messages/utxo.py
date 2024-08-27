@@ -27,7 +27,7 @@ def validate(db, source, destination, asset, quantity):
 
     balance = ledger.get_balance(db, source, asset)
     if balance < quantity:
-        raise exceptions.ComposeError("insufficient funds")
+        problems.append("insufficient funds")
 
     source_is_address = True
     destination_is_address = True
@@ -107,16 +107,19 @@ def unpack(message, return_dict=False):
 
 def parse(db, tx, message):
     (source, destination, asset, quantity) = unpack(message)
+
     problems = validate(db, source, destination, asset, quantity)
 
     if util.is_utxo_format(source):
         if backend.bitcoind.get_utxo_address(source) != tx["source"]:
             problems.append("source does not match the UTXO source")
         action = "detach from utxo"
+        event = "DETACH_FROM_UTXO"
     else:
         if source != tx["source"]:
             problems.append("source does not match the source address")
         action = "attach to utxo"
+        event = "ATTACH_TO_UTXO"
 
     status = "valid"
     if problems:
@@ -150,7 +153,7 @@ def parse(db, tx, message):
             "quantity": quantity,
         }
 
-    ledger.insert_record(db, "sends", bindings, "SEND")
+    ledger.insert_record(db, "sends", bindings, event)
 
     if status == "valid":
         if util.is_utxo_format(source):

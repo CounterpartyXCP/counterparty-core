@@ -803,17 +803,28 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                 ]
             )
         )
-        or tx_name == "script"
         or method == "get_tx_info_legacy"
-        or tx_name == "transaction"
-        or tx_name == "transaction_helper.serializer"
-        or tx_name == "backend"
-        or tx_name == "message_type"
-        or tx_name == "address"
-        or (tx_name == "versions.enhanced_send" and method == "unpack")
-        or (tx_name == "versions.mpma" and method == "unpack")
-        or (tx_name == "sweep" and method == "unpack")
-        or (tx_name in ["fairminter", "fairmint"] and method == "unpack")
+        or tx_name
+        in [
+            "script",
+            "transaction",
+            "transaction_helper.serializer",
+            "backend",
+            "message_type",
+            "address",
+        ]
+        or (
+            tx_name
+            in [
+                "fairminter",
+                "fairmint",
+                "utxo",
+                "versions.enhanced_send",
+                "versions.mpma",
+                "sweep",
+            ]
+            and method == "unpack"
+        )
     ):
         return tested_method(*inputs)
     else:
