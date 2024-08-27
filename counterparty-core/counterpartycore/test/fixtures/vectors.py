@@ -823,6 +823,7 @@ UNITTEST_VECTOR = (
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                         [],
+                        [],
                     ),
                 },
                 # data in OP_CHECKMULTISIG script
@@ -841,6 +842,7 @@ UNITTEST_VECTOR = (
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                         [],
+                        [],
                     ),
                 },
                 # data in OP_CHECKMULTISIG script, destination = p2sh
@@ -858,6 +860,7 @@ UNITTEST_VECTOR = (
                         5430,
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
+                        [],
                         [],
                     ),
                 },
@@ -879,6 +882,7 @@ UNITTEST_VECTOR = (
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                         [],
+                        [],
                     ),
                 },
                 {
@@ -896,6 +900,7 @@ UNITTEST_VECTOR = (
                         5430,
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
+                        [],
                         [],
                     ),
                 },

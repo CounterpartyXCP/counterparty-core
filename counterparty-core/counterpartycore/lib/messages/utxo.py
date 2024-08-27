@@ -163,3 +163,38 @@ def parse(db, tx, message):
                 "Detach %(asset)s from %(source)s to address: %(destination)s (%(tx_hash)s) [%(status)s]",
                 bindings,
             )
+
+
+def move_assets(db, tx):
+    utxos = tx["utxo_moves"].split(" ")
+    assert len(utxos) > 1
+    destination = utxos.pop()
+    sources = utxos
+    action = "utxo move"
+
+    for source in sources:
+        balances = ledger.get_utxo_balances(db, source)
+        for balance in balances:
+            if balance["quantity"] == 0:
+                continue
+            ledger.debit(
+                db,
+                source,
+                balance["asset"],
+                balance["quantity"],
+                tx["tx_index"],
+                action=action,
+                event=tx["tx_hash"],
+            )
+            ledger.credit(
+                db,
+                destination,
+                balance["asset"],
+                balance["quantity"],
+                tx["tx_index"],
+                action=action,
+                event=tx["tx_hash"],
+            )
+            logger.info(
+                f"Move {balance['asset']} from utxo: {source} to utxo: {destination} ({tx['tx_hash']})"
+            )

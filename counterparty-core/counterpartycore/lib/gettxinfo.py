@@ -2,7 +2,7 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import arc4, backend, config, message_type, script, util
+from counterpartycore.lib import arc4, backend, config, ledger, message_type, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
@@ -548,11 +548,45 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False):
         return get_tx_info_legacy(decoded_tx, block_index)
 
 
+def get_utxo_moves(db, decoded_tx):
+    """
+    Get the UTXO move info.
+    Returns a list of UTXOs. Last UTXO is the destination, previous UTXOs are the sources.
+    """
+    sources = []
+    # we check that each vin does not contain assets..
+    for vin in decoded_tx["vin"]:
+        vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
+        utxo = vin_hash + ":" + str(vin["n"])
+        utxo_balances = ledger.get_utxo_balances(db, utxo)
+        if len(utxo_balances) > 0:
+            sources.append(utxo)
+    destination = None
+    # if yes, the destination is the first non-OP_RETURN vout
+    if len(sources) > 0:
+        for n, vout in enumerate(decoded_tx["vout"]):
+            asm = script.script_to_asm(vout["script_pub_key"])
+            if asm[0] == OP_RETURN:  # noqa: F405
+                continue
+            destination = decoded_tx["tx_hash"] + ":" + str(n)
+            return sources + [destination]
+    if len(sources) >= 2:  # we need at least one source and one destination
+        return sources
+    return []
+
+
 def get_tx_info(db, decoded_tx, block_index):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
+    if util.enabled("utxo_support", block_index=block_index):
+        utxo_moves = get_utxo_moves(db, decoded_tx)
+    else:
+        utxo_moves = []
     try:
-        return _get_tx_info(db, decoded_tx, block_index)
+        source, destination, btc_amount, fee, data, dispensers_outs = _get_tx_info(
+            db, decoded_tx, block_index
+        )
+        return source, destination, btc_amount, fee, data, dispensers_outs, utxo_moves
     except DecodeError as e:  # noqa: F841
-        return b"", None, None, None, None, None
+        return b"", None, None, None, None, None, utxo_moves
     except BTCOnlyError as e:  # noqa: F841
-        return b"", None, None, None, None, None
+        return b"", None, None, None, None, None, utxo_moves

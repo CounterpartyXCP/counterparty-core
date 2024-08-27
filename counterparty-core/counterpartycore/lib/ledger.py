@@ -462,6 +462,10 @@ def get_address_balances(db, address: str):
     return cursor.fetchall()
 
 
+def get_utxo_balances(db, utxo: str):
+    return get_address_balances(db, utxo)
+
+
 def get_address_assets(db, address):
     cursor = db.cursor()
 

@@ -103,6 +103,9 @@ def parse_tx(db, tx):
 
     try:
         with db:
+            if "utxo_moves" in tx and tx["utxo_moves"]:
+                utxo.move_assets(db, tx)
+
             # Only one source and one destination allowed for now.
             if len(tx["source"].split("-")) > 1:
                 return
@@ -505,10 +508,18 @@ def initialise(db):
                       fee INTEGER,
                       data BLOB,
                       supported BOOL DEFAULT 1,
+                      utxo_moves TEXT,
                       FOREIGN KEY (block_index, block_hash) REFERENCES blocks(block_index, block_hash),
                       PRIMARY KEY (tx_index, tx_hash, block_index))
                     """
     )
+
+    transactions_columns = [
+        column["name"] for column in cursor.execute("""PRAGMA table_info(transactions)""")
+    ]
+    if "utxo_moves" not in transactions_columns:
+        cursor.execute("""ALTER TABLE transactions ADD COLUMN utxo_moves TEXT""")
+
     database.create_indexes(
         cursor,
         "transactions",
@@ -936,7 +947,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
     util.CURRENT_TX_HASH = tx_hash
     cursor = db.cursor()
 
-    source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
+    source, destination, btc_amount, fee, data, dispensers_outs, utxo_moves = get_tx_info(
         db, decoded_tx, block_index
     )
 
@@ -947,7 +958,9 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
     else:
         assert block_index == util.CURRENT_BLOCK_INDEX
 
-    if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
+    if (source and (data or destination == config.UNSPENDABLE or dispensers_outs)) or len(
+        utxo_moves
+    ) > 0:
         transaction_bindings = {
             "tx_index": tx_index,
             "tx_hash": tx_hash,
@@ -959,6 +972,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             "btc_amount": btc_amount,
             "fee": fee,
             "data": data,
+            "utxo_moves": " ".join(utxo_moves),
         }
         ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
 
