@@ -30,6 +30,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.backend import addrindexrs
+from counterpartycore.lib.messages import dispense  # noqa: F401
 from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer
 
 # Constants
@@ -838,7 +839,7 @@ class TransactionService:
                 txid_ba = bytearray(ptx.GetTxid())
                 txid_ba.reverse()
                 pretx_txid = bytes(txid_ba)  # gonna leave the malleability problem to upstream
-                self.logger.trace("pretx_txid: %s", binascii.hexlify(pretx_txid))
+                self.logger.debug(f"pretx_txid {pretx_txid}")
 
             if unsigned_pretx:
                 # we set a long lock on this, don't want other TXs to spend from it
@@ -1468,7 +1469,7 @@ def compose_dispenser(
     :param escrow_quantity: The quantity of the asset to reserve for this dispenser (in satoshis, hence integer) (e.g. 1000)
     :param mainchainrate: The quantity of the main chain asset (BTC) per dispensed portion (in satoshis, hence integer) (e.g. 100)
     :param status: The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed (e.g. 0)
-    :param open_address: The address that you would like to open the dispenser on
+    :param open_address: The address that you would like to open the dispenser on; MUST be equal to `address` from block 900000 onwards
     :param oracle_address: The address that you would like to use as a price oracle for this dispenser
     """
     params = {
@@ -1704,6 +1705,37 @@ def compose_send(
         "rawtransaction": rawtransaction,
         "params": params,
         "name": "send",
+    }
+
+
+def compose_dispense(
+    db,
+    address: str,
+    dispenser: str,
+    quantity: int,
+    **construct_args,
+):
+    """
+    Composes a transaction to send BTC to a dispenser.
+    :param address: The address that will be sending (must have the necessary quantity of BTC) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param dispenser: The dispenser that will be receiving the asset (e.g. 17SDWBrEVyJ2nisHDmozgw35R9Bgu8ewqo)
+    :param quantity: The quantity of BTC to send (in satoshis, hence integer) (e.g. 1000)
+    """
+    params = {
+        "source": address,
+        "destination": dispenser,
+        "quantity": quantity,
+    }
+    rawtransaction = compose_transaction(
+        db,
+        name="dispense",
+        params=params,
+        **construct_args,
+    )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "dispense",
     }
 
 
@@ -1985,7 +2017,7 @@ def unpack(db, datahex: str, block_index: int = None):
             message_data = messages.dispenser.unpack(message, return_dict=True)
         elif message_type_id == messages.dispenser.DISPENSE_ID:
             message_type_name = "dispense"
-            message_data = {}
+            message_data = messages.dispense.unpack(message, return_dict=True)
         # Dividend
         elif message_type_id == messages.dividend.ID:
             message_type_name = "dividend"

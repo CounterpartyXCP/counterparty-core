@@ -50,10 +50,9 @@ def test_vector(
             inputs = inputs[:1] + (inputs[0]["data"][1:],) + inputs[1:]
         elif method == "parse":
             util_test.insert_transaction(inputs[0], server_db)
-            # insert message as 2nd arg
-            inputs = inputs[:1] + (inputs[0]["data"][4:],) + inputs[1:]
-        elif method == "dispense":
-            util_test.insert_transaction(inputs[0], server_db)
+            if tx_name != "dispense":
+                # insert message as 2nd arg
+                inputs = inputs[:1] + (inputs[0]["data"][4:],) + inputs[1:]
 
         util_test.check_outputs(
             tx_name,

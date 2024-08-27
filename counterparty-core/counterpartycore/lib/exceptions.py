@@ -129,3 +129,7 @@ class NoEventToParse(Exception):
 
 class InvalidUTXOError(Exception):
     pass
+
+
+class NoDispenserError(Exception):
+    pass
