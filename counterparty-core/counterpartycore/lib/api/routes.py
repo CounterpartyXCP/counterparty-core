@@ -82,6 +82,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/sweep": transaction.compose_sweep,
         "/v2/addresses/<address>/compose/dispense": transaction.compose_dispense,
         "/v2/addresses/<address>/compose/fairminter": transaction.compose_fairminter,
+        "/v2/addresses/<address>/compose/fairmint": transaction.compose_fairmint,
         "/v2/addresses/<address>/compose/attach": transaction.compose_attach,
         "/v2/utxos/<utxo>/compose/detach": transaction.compose_detach,
         ### /assets ###
