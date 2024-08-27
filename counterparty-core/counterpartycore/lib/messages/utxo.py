@@ -122,6 +122,13 @@ def parse(db, tx, message):
     if problems:
         status = "invalid: " + "; ".join(problems)
 
+    bindings = {
+        "tx_index": tx["tx_index"],
+        "tx_hash": tx["tx_hash"],
+        "block_index": tx["block_index"],
+        "status": status,
+    }
+
     if status == "valid":
         ledger.debit(
             db, source, asset, quantity, tx["tx_index"], action=action, event=tx["tx_hash"]
@@ -135,26 +142,24 @@ def parse(db, tx, message):
             action=action,
             event=tx["tx_hash"],
         )
+        # we store parameters only if the transaction is valid
+        bindings = bindings | {
+            "source": source,
+            "destination": destination,
+            "asset": asset,
+            "quantity": quantity,
+        }
 
-    bindings = {
-        "tx_index": tx["tx_index"],
-        "tx_hash": tx["tx_hash"],
-        "block_index": tx["block_index"],
-        "source": tx["source"],
-        "destination": tx["destination"],
-        "asset": asset,
-        "quantity": quantity,
-        "status": status,
-    }
     ledger.insert_record(db, "sends", bindings, "SEND")
 
-    if util.is_utxo_format(source):
-        logger.info(
-            "Attach %(asset)s from %(source)s to utxo: %(destination)s (%(tx_hash)s) [%(status)s]",
-            bindings,
-        )
-    else:
-        logger.info(
-            "Detach %(asset)s from %(source)s to address: %(destination)s (%(tx_hash)s) [%(status)s]",
-            bindings,
-        )
+    if status == "valid":
+        if util.is_utxo_format(source):
+            logger.info(
+                "Attach %(asset)s from %(source)s to utxo: %(destination)s (%(tx_hash)s) [%(status)s]",
+                bindings,
+            )
+        else:
+            logger.info(
+                "Detach %(asset)s from %(source)s to address: %(destination)s (%(tx_hash)s) [%(status)s]",
+                bindings,
+            )
