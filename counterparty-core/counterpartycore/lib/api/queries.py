@@ -1996,7 +1996,7 @@ def get_asset_balances(
         "balances",
         where={"asset": asset.upper(), "quantity__gt": 0},
         cursor_field="address",
-        select="address, asset, quantity",
+        select="address, utxo, asset, quantity",
         order="ASC",
         last_cursor=cursor,
         limit=limit,

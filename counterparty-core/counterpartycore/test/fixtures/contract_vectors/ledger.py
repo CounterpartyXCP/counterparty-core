@@ -55,15 +55,15 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1713,
+                    "message_index": 1723,
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386","messages_hash":"6d72d4485c0b16a0dcc4499bf9176f10b76f40c37b8b47972e32ae7ef2ce96ba","transaction_count":0,"txlist_hash":"027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"a27ebbb2d1584c93e7859f2dda6c2e42e687f5436a956a6d44da655b8b4c4b0e","messages_hash":"b1d8fea3f162b09f146e4824e048963a31b04ba88d89a4c9c7718c75caf68b3e","transaction_count":0,"txlist_hash":"8b0a201e4d019a83a91ef66517d27b5320c2680ab0e0761a28ba4a3cff96b77b"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "ee4977b7255b29530d4a55b4b64d51a0dafc293025ff8d7b1b2df49bd0901567",
+                    "event_hash": "0fc5112a1f5d6d6d928b1ed1097dec25fc7f3cfe8a285f329cb842fc1035468a",
                 },
             }
         ],
@@ -252,7 +252,7 @@ LEDGER_VECTOR = {
             }
         ],
         "get_balance": [
-            {"in": (ADDR[0], "XCP"), "out": 91675000000},
+            {"in": (ADDR[0], "XCP"), "out": 91674999900},
             {"in": (ADDR[0], "foobar"), "out": 0},
         ],
         "get_asset_name": [
@@ -266,7 +266,7 @@ LEDGER_VECTOR = {
                 "out": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                        "address_quantity": 91675000000,
+                        "address_quantity": 91674999900,
                         "escrow": None,
                     },
                     {
@@ -325,6 +325,11 @@ LEDGER_VECTOR = {
                         "escrow": None,
                     },
                     {
+                        "address": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                        "address_quantity": 100,
+                        "escrow": None,
+                    },
+                    {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                         "address_quantity": 100000000,
                         "escrow": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8",
@@ -366,7 +371,7 @@ LEDGER_VECTOR = {
                 "out": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                        "address_quantity": 98800000000,
+                        "address_quantity": 98799999999,
                         "escrow": None,
                     },
                     {
@@ -382,6 +387,11 @@ LEDGER_VECTOR = {
                     {
                         "address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
                         "address_quantity": 100000000,
+                        "escrow": None,
+                    },
+                    {
+                        "address": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                        "address_quantity": 1,
                         "escrow": None,
                     },
                 ],

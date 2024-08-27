@@ -158,12 +158,12 @@ def parse(db, tx, message):
     if status == "valid":
         if util.is_utxo_format(source):
             logger.info(
-                "Attach %(asset)s from %(source)s to utxo: %(destination)s (%(tx_hash)s) [%(status)s]",
+                "Detach %(asset)s from %(source)s to address: %(destination)s (%(tx_hash)s) [%(status)s]",
                 bindings,
             )
         else:
             logger.info(
-                "Detach %(asset)s from %(source)s to address: %(destination)s (%(tx_hash)s) [%(status)s]",
+                "Attach %(asset)s from %(source)s to utxo: %(destination)s (%(tx_hash)s) [%(status)s]",
                 bindings,
             )
 

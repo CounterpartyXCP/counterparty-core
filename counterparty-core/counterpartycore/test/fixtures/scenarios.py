@@ -320,6 +320,23 @@ UNITTEST_FIXTURE = [
         {"encoding": "opreturn"},
         {"short_tx_type_id": True, "fairminter": True},
     ],
+    [
+        "utxo",
+        (ADDR[0], "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1", "XCP", 100),
+        {"encoding": "multisig"},
+        {"short_tx_type_id": True, "utxo_support": True},
+    ],
+    [
+        "utxo",
+        (
+            ADDR[0],
+            "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "DIVISIBLE",
+            1,
+        ),
+        {"encoding": "multisig"},
+        {"short_tx_type_id": True, "utxo_support": True},
+    ],
     ["create_next_block", 703],
 ]
 

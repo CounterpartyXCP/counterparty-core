@@ -88,7 +88,7 @@ DISPENSER_VECTOR = {
                 "out": (
                     None,
                     [
-                        "address doesn't has enough balance of XCP (91675000000 < 9223372036854775808)",
+                        "address doesn't has enough balance of XCP (91674999900 < 9223372036854775808)",
                         "integer overflow",
                     ],
                 ),

@@ -378,8 +378,6 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     if asset == config.BTC:
         raise CreditError("Cannot debit bitcoins.")
 
-    credit_cursor = db.cursor()  # noqa: F841
-
     # Contracts can only hold XCP balances.
     if util.enabled("contracts_only_xcp_balances"):  # Protocol change.
         if len(address) == 40:
@@ -2024,7 +2022,7 @@ def holders(db, asset, exclude_empty_holders=False):
     query = """
         SELECT *, rowid
         FROM balances
-        WHERE asset = ?
+        WHERE asset = ? AND address IS NOT NULL
     """
     bindings = (asset,)
     cursor.execute(query, bindings)
@@ -2032,6 +2030,21 @@ def holders(db, asset, exclude_empty_holders=False):
         cursor,
         ["asset", "address"],
         {"address": "address", "address_quantity": "quantity"},
+        exclude_empty_holders=exclude_empty_holders,
+        table="balances",
+    )
+
+    query = """
+        SELECT *, rowid
+        FROM balances
+        WHERE asset = ? AND utxo IS NOT NULL
+    """
+    bindings = (asset,)
+    cursor.execute(query, bindings)
+    holders += _get_holders(
+        cursor,
+        ["asset", "utxo"],
+        {"address": "utxo", "address_quantity": "quantity"},
         exclude_empty_holders=exclude_empty_holders,
         table="balances",
     )
@@ -2365,7 +2378,7 @@ def held(db):  # TODO: Rename ?
         SELECT asset, SUM(quantity) AS total FROM (
             SELECT address, asset, quantity, (address || asset) AS aa, MAX(rowid)
             FROM balances
-            WHERE address IS NOT NULL
+            WHERE address IS NOT NULL AND utxo IS NULL
             GROUP BY aa
         ) GROUP BY asset
         """,
@@ -2373,7 +2386,15 @@ def held(db):  # TODO: Rename ?
         SELECT asset, SUM(quantity) AS total FROM (
             SELECT NULL, asset, quantity
             FROM balances
-            WHERE address IS NULL
+            WHERE address IS NULL AND utxo IS NULL
+        ) GROUP BY asset
+        """,
+        """
+        SELECT asset, SUM(quantity) AS total FROM (
+            SELECT utxo, asset, quantity, (utxo || asset) AS aa, MAX(rowid)
+            FROM balances
+            WHERE address IS NULL AND utxo IS NOT NULL
+            GROUP BY aa
         ) GROUP BY asset
         """,
         """

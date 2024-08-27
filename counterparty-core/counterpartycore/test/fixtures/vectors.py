@@ -34,9 +34,9 @@ from .params import (
     DEFAULT_PARAMS as DP,
 )
 
-UNITTEST_VECTOR = UTXO_VECTOR
+UNITTEST_VECTOR_ = UTXO_VECTOR
 
-UNITTEST_VECTOR_ = (
+UNITTEST_VECTOR = (
     FAIRMINTER_VECTOR
     | FAIRMINT_VECTOR
     | LEDGER_VECTOR
@@ -1105,7 +1105,7 @@ UNITTEST_VECTOR_ = (
                     "out": None,
                 },
             ],
-            "get_next_tx_index": [{"in": (), "out": 508}],
+            "get_next_tx_index": [{"in": (), "out": 510}],
         },
         "cancel": {
             "compose": [
@@ -4589,7 +4589,7 @@ UNITTEST_VECTOR_ = (
                                 "asset": "DIVISIBLE",
                                 "block_index": DP["default_block_index"],
                                 "dividend_asset": "XCP",
-                                "fee_paid": 60000,
+                                "fee_paid": 80000,
                                 "quantity_per_unit": 100000000,
                                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                                 "status": "valid",
@@ -4638,7 +4638,7 @@ UNITTEST_VECTOR_ = (
                                 "asset": "XCP",
                                 "block_index": DP["default_block_index"],
                                 "event": "450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c",
-                                "quantity": 1200000000,
+                                "quantity": 1200000001,
                             },
                         },
                         {
@@ -4649,7 +4649,7 @@ UNITTEST_VECTOR_ = (
                                 "asset": "XCP",
                                 "block_index": DP["default_block_index"],
                                 "event": "450c4ced564fa52a84746ecd79d64db6f124bddee19ff2c3cd926adea673ce4c",
-                                "quantity": 60000,
+                                "quantity": 80000,
                             },
                         },
                     ],
