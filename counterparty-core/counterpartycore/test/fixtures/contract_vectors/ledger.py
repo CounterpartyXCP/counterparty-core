@@ -59,11 +59,11 @@ LEDGER_VECTOR = {
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386","messages_hash":"4d1bf7e910cf003e4034c7caf1b76d86a15480da0d0c7734774e6123c572f059","transaction_count":0,"txlist_hash":"027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386","messages_hash":"6d72d4485c0b16a0dcc4499bf9176f10b76f40c37b8b47972e32ae7ef2ce96ba","transaction_count":0,"txlist_hash":"027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "bf50cab82fc99d8f9f9aaef8acb271bc5587c2ba8da4d41e0aa9942251da3f45",
+                    "event_hash": "ee4977b7255b29530d4a55b4b64d51a0dafc293025ff8d7b1b2df49bd0901567",
                 },
             }
         ],
@@ -400,6 +400,7 @@ LEDGER_VECTOR = {
                         "calling_function": "escrowed premint",
                         "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                         "tx_index": 505,
+                        "utxo": None,
                     },
                     {
                         "block_index": 310505,
@@ -409,6 +410,7 @@ LEDGER_VECTOR = {
                         "calling_function": "escrowed fairmint",
                         "event": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
                         "tx_index": 506,
+                        "utxo": None,
                     },
                     {
                         "block_index": 310506,
@@ -418,6 +420,7 @@ LEDGER_VECTOR = {
                         "calling_function": "escrowed fairmint",
                         "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                         "tx_index": 507,
+                        "utxo": None,
                     },
                     {
                         "block_index": 310506,
@@ -427,6 +430,7 @@ LEDGER_VECTOR = {
                         "calling_function": "unescrowed fairmint",
                         "event": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
                         "tx_index": 506,
+                        "utxo": None,
                     },
                     {
                         "block_index": 310506,
@@ -436,6 +440,7 @@ LEDGER_VECTOR = {
                         "calling_function": "fairmint commission",
                         "event": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
                         "tx_index": 506,
+                        "utxo": None,
                     },
                     {
                         "block_index": 310506,
@@ -445,6 +450,7 @@ LEDGER_VECTOR = {
                         "calling_function": "unescrowed fairmint",
                         "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                         "tx_index": 507,
+                        "utxo": None,
                     },
                     {
                         "block_index": 310506,
@@ -454,6 +460,7 @@ LEDGER_VECTOR = {
                         "calling_function": "fairmint commission",
                         "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                         "tx_index": 507,
+                        "utxo": None,
                     },
                     {
                         "block_index": 310506,
@@ -463,6 +470,7 @@ LEDGER_VECTOR = {
                         "calling_function": "premint",
                         "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                         "tx_index": 0,
+                        "utxo": None,
                     },
                 ],
             }
@@ -479,6 +487,7 @@ LEDGER_VECTOR = {
                         "action": "unescrowed fairmint",
                         "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                         "tx_index": 0,
+                        "utxo": None,
                     }
                 ],
             }

@@ -5,7 +5,7 @@
 import logging
 import struct
 
-from ... import backend, config, exceptions, ledger, message_type, util
+from ... import config, exceptions, ledger, message_type, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -50,10 +50,6 @@ def validate(db, source, destination, asset, quantity, block_index):
     if util.enabled("send_destination_required"):  # Protocol change.
         if not destination:
             problems.append("destination is required")
-
-    if util.enabled("utxo_support") and util.is_utxo_format(destination):
-        if not backend.bitcoind.is_valid_utxo(destination):
-            problems.append("destination is a invalid UTXO")
 
     if util.enabled("options_require_memo"):
         # Check destination address options
@@ -170,6 +166,3 @@ def parse(db, tx, message):
     )
 
     cursor.close()
-
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

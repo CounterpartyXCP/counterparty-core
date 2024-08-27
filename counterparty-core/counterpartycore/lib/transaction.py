@@ -1832,6 +1832,83 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     }
 
 
+def compose_utxo(
+    db,
+    source: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    **construct_args,
+):
+    params = {
+        "source": source,
+        "destination": destination,
+        "asset": asset,
+        "quantity": quantity,
+    }
+    rawtransaction = compose_transaction(
+        db,
+        name="utxo",
+        params=params,
+        **construct_args,
+    )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "utxo",
+    }
+
+
+def compose_attach(
+    db,
+    address: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    **construct_args,
+):
+    """
+    Attach assets from an address to UTXO.
+    :param address: The address from which the assets are attached
+    :param destination: The utxo to attach the assets to
+    :param asset: The asset or subasset to attach (e.g. XCP)
+    :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
+    """
+    return compose_utxo(
+        db,
+        source=address,
+        destination=destination,
+        asset=asset,
+        quantity=quantity,
+        **construct_args,
+    )
+
+
+def compose_detach(
+    db,
+    utxo: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    **construct_args,
+):
+    """
+    Detach assets from UTXO to an address.
+    :param utxo: The utxo from which the assets are detached
+    :param destination: The address to detach the assets to
+    :param asset: The asset or subasset to detach (e.g. XCP)
+    :param quantity: The quantity of the asset to detach (in satoshis, hence integer) (e.g. 1000)
+    """
+    return compose_utxo(
+        db,
+        source=utxo,
+        destination=destination,
+        asset=asset,
+        quantity=quantity,
+        **construct_args,
+    )
+
+
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.

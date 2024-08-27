@@ -44,6 +44,7 @@ from .messages import (  # noqa: E402
     rpsresolve,
     send,
     sweep,
+    utxo,
 )
 from .messages.versions import enhanced_send, mpma  # noqa: E402
 
@@ -191,6 +192,10 @@ def parse_tx(db, tx):
                 "fairminter", block_index=tx["block_index"]
             ):
                 fairmint.parse(db, tx, message)
+            elif message_type_id == utxo.ID and util.enabled(
+                "utxo_support", block_index=tx["block_index"]
+            ):
+                utxo.parse(db, tx, message)
             else:
                 supported = False
 

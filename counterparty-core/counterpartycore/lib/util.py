@@ -587,6 +587,8 @@ def ib2h(b):
 
 
 def is_utxo_format(value):
+    if not isinstance(value, str):
+        return False
     values = value.split(":")
     if len(values) != 2:
         return False

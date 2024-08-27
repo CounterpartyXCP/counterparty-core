@@ -9,7 +9,7 @@
                 "difficulty": null,
                 "ledger_hash": "0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386",
                 "txlist_hash": "027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0",
-                "messages_hash": "4d1bf7e910cf003e4034c7caf1b76d86a15480da0d0c7734774e6123c572f059",
+                "messages_hash": "6d72d4485c0b16a0dcc4499bf9176f10b76f40c37b8b47972e32ae7ef2ce96ba",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -21,7 +21,7 @@
                 "difficulty": null,
                 "ledger_hash": "847a5c6b5da7f393e9bfee4c5c1dd38701c5019031f7a395b2ac40b6c0104da5",
                 "txlist_hash": "5582acd4ce0b596c8e82c659959950e2cb7e9e3716abe03f75fbd0744b9d6cf3",
-                "messages_hash": "8e4a1245b3c037bf7c2505e8569ffbe6992c659d7ab68ad0a6008cd3950b1e94",
+                "messages_hash": "a363d6851c29565a4bac468d2fd9309f0e2f310d3414ab77f82bb6b0326e9844",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -33,7 +33,7 @@
                 "difficulty": null,
                 "ledger_hash": "cfbd0b39cded275283124d7a544edeced5493d3c9e0b04ab3008167f147cf3be",
                 "txlist_hash": "4de66a9d468ede1c6894445d1b56a79fb379ae7bff0bf4b269c00bf6ab84c84f",
-                "messages_hash": "037bcc2b210ca9b2e02c27637e87412e9b5474f313b332c9198f8157bba7bb06",
+                "messages_hash": "065668ea38820a8eb41e33e8a3c50490bf143bec427e2bbd1dbc946fbb9aaa98",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -45,7 +45,7 @@
                 "difficulty": null,
                 "ledger_hash": "46de7156dab120bf9e980847c1b1165f855d4ec40175e32bd6a36f126e768fb1",
                 "txlist_hash": "296fbf33cf115dcfe418ca1d581d00206a2b9ba6209bf0579f4eedd6011660fe",
-                "messages_hash": "0226c93604ff3005b8232e01ca0d5099998606ec34c45578b77e15ea85f0d80c",
+                "messages_hash": "8ee3470cfdf0c4e8c665d3cfb51e7614a6a8cb57825b5842f0c34201455e563f",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -57,7 +57,7 @@
                 "difficulty": null,
                 "ledger_hash": "ded6275f5e3e7898a67743059512c60df84fea03635da9ba4f9d53254f346198",
                 "txlist_hash": "be327d8be6676e393ea8d17cbf944d17010fada200651a9e36bdce71a8a2bd0f",
-                "messages_hash": "6a20072b37d69ded8363c9bd6f537caca9e2f81dd5a2c2a9b74ee53d594cc283",
+                "messages_hash": "0c94974f483dace3b6c01da4382c8fcb6d2142d7e84b71ae060593a126c31a8f",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -69,7 +69,7 @@
                 "difficulty": null,
                 "ledger_hash": "71212e64e7bb234e0fc80c3e3990700b8387b731e7551cd5cf2c3cdec14ce205",
                 "txlist_hash": "c35b2fd447565fe4bb88ff084e6467a8570dd78efc59a84519b8e6e94582d9b8",
-                "messages_hash": "936e77fca094965658b8d6b66a4cbe78bc3fe289ce1d6b7add75ca99f6f41779",
+                "messages_hash": "8e27688c091871ef2c5210012733c6ce0aa67e0d297f1d7dc2cda799c3e2a55e",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -81,7 +81,7 @@
                 "difficulty": null,
                 "ledger_hash": "8d6dcd9e2743c7ed872a8b55275b1a840ca99e44cf991790a3fc1fe1ab6864a6",
                 "txlist_hash": "14133b53e07203e7eab83ace150dc82576a9147d16c7baf15eb059afedfc4974",
-                "messages_hash": "a69c41843c30b766e3922c58462faa33fc4ec51631a1cde7fa2d56916c39006b",
+                "messages_hash": "5c8b05097d9cb47621cce6a48c6567e0489dd0ca6be3594d7cc4d92aaee301b3",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -93,7 +93,7 @@
                 "difficulty": null,
                 "ledger_hash": "c8fb768dcb3496fe5a905fed312545e646c6b2fb335accc57db5b2a91160f522",
                 "txlist_hash": "9518d7d33b0eb4114f8133ce3451430a2cbcecbe1387c7d9817a03d537c80c8f",
-                "messages_hash": "9472b20761892f8c0f44511cbfca385b42bc575f2440f0f048018bced031a41f",
+                "messages_hash": "cdf047d4585c83ba07da23eb8bb81b2af99482282972bb160713f395b75203f5",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -105,7 +105,7 @@
                 "difficulty": null,
                 "ledger_hash": "6b62b8ac141e2a054dd449e6be4fdd00e2356a571b24245fc58064793c71f13a",
                 "txlist_hash": "70f60ae9b2013884615f15495007948123c9f2cee71859cde76fbd989bf546c0",
-                "messages_hash": "0545c88cec78df09151e3ddffd0cc138706c13c542d670d0dee212394be81f87",
+                "messages_hash": "285b27c4b64d35875fef80bf5dc19b82597cf66e3ee72f11ff2b65cacb27baf1",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -117,7 +117,7 @@
                 "difficulty": null,
                 "ledger_hash": "326a4a4ede187f73b6244e0bb8ae15b5112f9b1b9d8c177d70c4af13a4796f63",
                 "txlist_hash": "7a4f09ada6a0396efdf0704631b6f338d300d14473bccf349a9b677c2f02ec38",
-                "messages_hash": "f7cd96e77bbba64b7c176f87c39055c8e47cf821872f1db5ab409f686a0a9930",
+                "messages_hash": "b58761ee7c748653ccb41fc1f69650fc22d24eb5e3c250ea2e7a921d1a901394",
                 "transaction_count": 0,
                 "confirmed": true
             }
@@ -134,7 +134,7 @@
             "difficulty": null,
             "ledger_hash": "0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386",
             "txlist_hash": "027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0",
-            "messages_hash": "4d1bf7e910cf003e4034c7caf1b76d86a15480da0d0c7734774e6123c572f059",
+            "messages_hash": "6d72d4485c0b16a0dcc4499bf9176f10b76f40c37b8b47972e32ae7ef2ce96ba",
             "transaction_count": 0,
             "confirmed": true
         }
@@ -148,7 +148,7 @@
             "difficulty": null,
             "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
             "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
-            "messages_hash": "b9346c00d7edf7f36ece176ed1537ce96ebb23af2f202c5e2e5d9d227ec9cc7d",
+            "messages_hash": "53e05b51bd3885993b422b4b487452c60a5cec38c91ffef5a0996af7b4d57536",
             "transaction_count": 1,
             "confirmed": true
         }
@@ -162,7 +162,7 @@
             "difficulty": null,
             "ledger_hash": "6c240f1f3a985ff91e6a280c4448b8d739a06caa6fa383c4b9a7b90d27bdb17b",
             "txlist_hash": "dfc9222cc153a873ae747a4e9b561edc5e5a0495bc768e6a56eab996ce1ecd4b",
-            "messages_hash": "27a1b6a2a6128396d861e583254d367af0cbc1ab7dc5cb85dda47d9361f6c66c",
+            "messages_hash": "83c2d4073bef11616b29f75fd79d504ca38289cc3a7c551cf5a4096a131e86ae",
             "transaction_count": 1,
             "confirmed": true
         }
@@ -226,7 +226,7 @@
                 "params": {
                     "block_index": 310491,
                     "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
-                    "messages_hash": "b9346c00d7edf7f36ece176ed1537ce96ebb23af2f202c5e2e5d9d227ec9cc7d",
+                    "messages_hash": "53e05b51bd3885993b422b4b487452c60a5cec38c91ffef5a0996af7b4d57536",
                     "transaction_count": 1,
                     "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
                     "block_time": 310491000
@@ -301,6 +301,7 @@
                     "event": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "quantity": 100000000,
                     "tx_index": 492,
+                    "utxo": null,
                     "block_time": 310491000,
                     "asset_info": {
                         "divisible": true,
@@ -429,6 +430,7 @@
                 "action": "open order",
                 "event": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "tx_index": 492,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310491000,
                 "asset_info": {
@@ -836,6 +838,7 @@
                     "event": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                     "quantity": 100000000000,
                     "tx_index": 2,
+                    "utxo": null,
                     "block_time": 310001000,
                     "asset_info": {
                         "asset_longname": null,
@@ -906,6 +909,7 @@
                     "event": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                     "quantity": 50000000,
                     "tx_index": 2,
+                    "utxo": null,
                     "block_time": 310001000,
                     "asset_info": {
                         "divisible": true,
@@ -998,6 +1002,7 @@
                     "event": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "quantity": 100000000,
                     "tx_index": 492,
+                    "utxo": null,
                     "block_time": 310491000,
                     "asset_info": {
                         "divisible": true,
@@ -1039,6 +1044,7 @@
                     "event": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                     "quantity": 100000000000,
                     "tx_index": 2,
+                    "utxo": null,
                     "block_time": 310001000,
                     "asset_info": {
                         "asset_longname": null,
@@ -1385,6 +1391,7 @@
                     "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                     "quantity": 20,
                     "tx_index": 0,
+                    "utxo": null,
                     "block_time": 310506000,
                     "asset_info": {
                         "asset_longname": "",
@@ -1410,6 +1417,7 @@
                     "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                     "quantity": 6,
                     "tx_index": 507,
+                    "utxo": null,
                     "block_time": 310506000,
                     "asset_info": {
                         "asset_longname": "",
@@ -1589,6 +1597,7 @@
                 "calling_function": "premint",
                 "event": "b0df16b4855f37f4a417f9238c33b53edeec1f7a35bc72068987cf6f3fcc0247",
                 "tx_index": 503,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310502000,
                 "asset_info": {
@@ -1608,6 +1617,7 @@
                 "calling_function": "fairmint",
                 "event": "d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67",
                 "tx_index": 502,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310501000,
                 "asset_info": {
@@ -1627,6 +1637,7 @@
                 "calling_function": "issuance",
                 "event": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
                 "tx_index": 499,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310498000,
                 "asset_info": {
@@ -1646,6 +1657,7 @@
                 "calling_function": "issuance",
                 "event": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
                 "tx_index": 498,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310497000,
                 "asset_info": {
@@ -1665,6 +1677,7 @@
                 "calling_function": "send",
                 "event": "c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34",
                 "tx_index": 483,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310482000,
                 "asset_info": {
@@ -1684,6 +1697,7 @@
                 "calling_function": "bet settled",
                 "event": "16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae",
                 "tx_index": 103,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310102000,
                 "asset_info": {
@@ -1703,6 +1717,7 @@
                 "calling_function": "issuance",
                 "event": "bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39",
                 "tx_index": 17,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310016000,
                 "asset_info": {
@@ -1722,6 +1737,7 @@
                 "calling_function": "issuance",
                 "event": "90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da",
                 "tx_index": 5,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310004000,
                 "asset_info": {
@@ -1741,6 +1757,7 @@
                 "calling_function": "issuance",
                 "event": "c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140",
                 "tx_index": 4,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310003000,
                 "asset_info": {
@@ -1760,6 +1777,7 @@
                 "calling_function": "issuance",
                 "event": "7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584",
                 "tx_index": 3,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310002000,
                 "asset_info": {
@@ -1779,6 +1797,7 @@
                 "calling_function": "issuance",
                 "event": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "tx_index": 2,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310001000,
                 "asset_info": {
@@ -1798,6 +1817,7 @@
                 "calling_function": "burn",
                 "event": "6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597",
                 "tx_index": 1,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310000000,
                 "asset_info": {
@@ -1823,6 +1843,7 @@
                 "action": "fairminter fee",
                 "event": "f0bb460f8ff563f8ed29064dbbd03a325110a7865fcb8f22068789d3fd2413cb",
                 "tx_index": 504,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310503000,
                 "asset_info": {
@@ -1842,6 +1863,7 @@
                 "action": "fairminter fee",
                 "event": "b0df16b4855f37f4a417f9238c33b53edeec1f7a35bc72068987cf6f3fcc0247",
                 "tx_index": 503,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310502000,
                 "asset_info": {
@@ -1861,6 +1883,7 @@
                 "action": "fairminter fee",
                 "event": "e1a080e9f96504451746c1f46033cd6789f518f8b1c74c4da7c80abb835cf449",
                 "tx_index": 501,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310500000,
                 "asset_info": {
@@ -1880,6 +1903,7 @@
                 "action": "fairminter fee",
                 "event": "83b96c0f72fea31403567852f2bdb4840ffdf18bda2e82df4f27aad633830e29",
                 "tx_index": 500,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310499000,
                 "asset_info": {
@@ -1899,6 +1923,7 @@
                 "action": "issuance fee",
                 "event": "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf",
                 "tx_index": 499,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310498000,
                 "asset_info": {
@@ -1918,6 +1943,7 @@
                 "action": "issuance fee",
                 "event": "076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f",
                 "tx_index": 498,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310497000,
                 "asset_info": {
@@ -1937,6 +1963,7 @@
                 "action": "open order",
                 "event": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                 "tx_index": 492,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310491000,
                 "asset_info": {
@@ -1956,6 +1983,7 @@
                 "action": "send",
                 "event": "b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5",
                 "tx_index": 482,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310481000,
                 "asset_info": {
@@ -1975,6 +2003,7 @@
                 "action": "send",
                 "event": "f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7",
                 "tx_index": 111,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310110000,
                 "asset_info": {
@@ -1994,6 +2023,7 @@
                 "action": "bet",
                 "event": "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1",
                 "tx_index": 20,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310019000,
                 "asset_info": {
@@ -2013,6 +2043,7 @@
                 "action": "issuance fee",
                 "event": "bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39",
                 "tx_index": 17,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310016000,
                 "asset_info": {
@@ -2032,6 +2063,7 @@
                 "action": "send",
                 "event": "e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c",
                 "tx_index": 16,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310015000,
                 "asset_info": {
@@ -2051,6 +2083,7 @@
                 "action": "send",
                 "event": "1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a",
                 "tx_index": 15,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310014000,
                 "asset_info": {
@@ -2070,6 +2103,7 @@
                 "action": "send",
                 "event": "0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132",
                 "tx_index": 14,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310013000,
                 "asset_info": {
@@ -2089,6 +2123,7 @@
                 "action": "send",
                 "event": "698e97e507da8623cf38ab42701853443c8f7fe0d93b4674aabb42f9800ee9d6",
                 "tx_index": 13,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310012000,
                 "asset_info": {
@@ -2108,6 +2143,7 @@
                 "action": "open order",
                 "event": "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a",
                 "tx_index": 11,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310010000,
                 "asset_info": {
@@ -2127,6 +2163,7 @@
                 "action": "open order",
                 "event": "21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b",
                 "tx_index": 10,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310009000,
                 "asset_info": {
@@ -2146,6 +2183,7 @@
                 "action": "send",
                 "event": "4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43",
                 "tx_index": 9,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310008000,
                 "asset_info": {
@@ -2165,6 +2203,7 @@
                 "action": "send",
                 "event": "6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753",
                 "tx_index": 8,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310007000,
                 "asset_info": {
@@ -2184,6 +2223,7 @@
                 "action": "open order",
                 "event": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8",
                 "tx_index": 7,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310006000,
                 "asset_info": {
@@ -2203,6 +2243,7 @@
                 "action": "issuance fee",
                 "event": "90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da",
                 "tx_index": 5,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310004000,
                 "asset_info": {
@@ -2222,6 +2263,7 @@
                 "action": "issuance fee",
                 "event": "c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140",
                 "tx_index": 4,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310003000,
                 "asset_info": {
@@ -2241,6 +2283,7 @@
                 "action": "issuance fee",
                 "event": "7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584",
                 "tx_index": 3,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310002000,
                 "asset_info": {
@@ -2260,6 +2303,7 @@
                 "action": "issuance fee",
                 "event": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
                 "tx_index": 2,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310001000,
                 "asset_info": {
@@ -4167,6 +4211,7 @@
                 "calling_function": "send",
                 "event": "e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c",
                 "tx_index": 16,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310015000,
                 "asset_info": {
@@ -4186,6 +4231,7 @@
                 "calling_function": "send",
                 "event": "1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a",
                 "tx_index": 15,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310014000,
                 "asset_info": {
@@ -4205,6 +4251,7 @@
                 "calling_function": "issuance",
                 "event": "7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584",
                 "tx_index": 3,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310002000,
                 "asset_info": {
@@ -4230,6 +4277,7 @@
                 "action": "send",
                 "event": "e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c",
                 "tx_index": 16,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310015000,
                 "asset_info": {
@@ -4249,6 +4297,7 @@
                 "action": "send",
                 "event": "1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a",
                 "tx_index": 15,
+                "utxo": null,
                 "confirmed": true,
                 "block_time": 310014000,
                 "asset_info": {
@@ -5151,7 +5200,7 @@
                 "params": {
                     "block_index": 310703,
                     "ledger_hash": "0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386",
-                    "messages_hash": "4d1bf7e910cf003e4034c7caf1b76d86a15480da0d0c7734774e6123c572f059",
+                    "messages_hash": "6d72d4485c0b16a0dcc4499bf9176f10b76f40c37b8b47972e32ae7ef2ce96ba",
                     "transaction_count": 0,
                     "txlist_hash": "027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0",
                     "block_time": 310703000
@@ -5182,7 +5231,7 @@
                 "params": {
                     "block_index": 310702,
                     "ledger_hash": "847a5c6b5da7f393e9bfee4c5c1dd38701c5019031f7a395b2ac40b6c0104da5",
-                    "messages_hash": "8e4a1245b3c037bf7c2505e8569ffbe6992c659d7ab68ad0a6008cd3950b1e94",
+                    "messages_hash": "a363d6851c29565a4bac468d2fd9309f0e2f310d3414ab77f82bb6b0326e9844",
                     "transaction_count": 0,
                     "txlist_hash": "5582acd4ce0b596c8e82c659959950e2cb7e9e3716abe03f75fbd0744b9d6cf3",
                     "block_time": 310702000
@@ -5213,7 +5262,7 @@
                 "params": {
                     "block_index": 310701,
                     "ledger_hash": "cfbd0b39cded275283124d7a544edeced5493d3c9e0b04ab3008167f147cf3be",
-                    "messages_hash": "037bcc2b210ca9b2e02c27637e87412e9b5474f313b332c9198f8157bba7bb06",
+                    "messages_hash": "065668ea38820a8eb41e33e8a3c50490bf143bec427e2bbd1dbc946fbb9aaa98",
                     "transaction_count": 0,
                     "txlist_hash": "4de66a9d468ede1c6894445d1b56a79fb379ae7bff0bf4b269c00bf6ab84c84f",
                     "block_time": 310701000
@@ -5281,6 +5330,7 @@
                     "event": "41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef",
                     "quantity": 9,
                     "tx_index": 0,
+                    "utxo": null,
                     "block_time": 310588000,
                     "asset_info": {
                         "divisible": true,
@@ -5306,6 +5356,7 @@
                     "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                     "quantity": 20,
                     "tx_index": 0,
+                    "utxo": null,
                     "block_time": 310506000,
                     "asset_info": {
                         "asset_longname": "",
@@ -5331,6 +5382,7 @@
                     "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                     "quantity": 6,
                     "tx_index": 507,
+                    "utxo": null,
                     "block_time": 310506000,
                     "asset_info": {
                         "asset_longname": "",
@@ -5356,6 +5408,7 @@
                     "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                     "quantity": 14,
                     "tx_index": 507,
+                    "utxo": null,
                     "block_time": 310506000,
                     "asset_info": {
                         "asset_longname": "",
@@ -5381,6 +5434,7 @@
                     "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                     "quantity": 200,
                     "tx_index": 507,
+                    "utxo": null,
                     "block_time": 310506000,
                     "asset_info": {
                         "divisible": true,

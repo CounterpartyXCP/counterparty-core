@@ -586,6 +586,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def rps_expire(db, block_index):
         pass
 
+    def is_valid_utxo(value):
+        return util.is_utxo_format(value)
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
@@ -599,6 +602,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction", mocked_getrawtransaction
     )
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.is_valid_utxo", is_valid_utxo)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
         mocked_getrawtransaction_batch,

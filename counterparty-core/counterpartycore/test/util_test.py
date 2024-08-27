@@ -43,7 +43,7 @@ from counterpartycore.lib import (  # noqa: E402
     transaction,
     util,
 )
-from counterpartycore.lib.messages import fairminter  # noqa
+from counterpartycore.lib.messages import fairminter, utxo  # noqa
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
     INTEGRATION_SCENARIOS,

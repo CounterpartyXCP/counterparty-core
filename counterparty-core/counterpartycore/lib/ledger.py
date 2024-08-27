@@ -278,8 +278,8 @@ def remove_from_balance(db, address, asset, quantity, tx_index):
             "tx_index": tx_index,
         }
         query = """
-            INSERT INTO balances
-            VALUES (:address, :asset, :quantity, :block_index, :tx_index)
+            INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo)
+            VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo)
         """
         balance_cursor.execute(query, bindings)
 
@@ -355,8 +355,8 @@ def add_to_balance(db, address, asset, quantity, tx_index):
         "tx_index": tx_index,
     }
     query = """
-        INSERT INTO balances
-        VALUES (:address, :asset, :quantity, :block_index, :tx_index)
+        INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo)
+        VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo)
     """
     balance_cursor.execute(query, bindings)
 
