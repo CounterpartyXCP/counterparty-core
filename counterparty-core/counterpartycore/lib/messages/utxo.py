@@ -195,6 +195,19 @@ def move_assets(db, tx):
                 action=action,
                 event=tx["tx_hash"],
             )
+            bindings = {
+                "tx_index": tx["tx_index"],
+                "tx_hash": tx["tx_hash"],
+                "block_index": tx["block_index"],
+                "status": "valid",
+                "source": source,
+                "destination": destination,
+                "asset": balance["asset"],
+                "quantity": balance["quantity"],
+            }
+
+            ledger.insert_record(db, "sends", bindings, "UTXO_MOVE")
+
             logger.info(
                 f"Move {balance['asset']} from utxo: {source} to utxo: {destination} ({tx['tx_hash']})"
             )
