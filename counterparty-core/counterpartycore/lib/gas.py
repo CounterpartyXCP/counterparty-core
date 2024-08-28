@@ -1,9 +1,56 @@
 import math
 
+from counterpartycore.lib import config, ledger, util
 
-# TODO
-def get_transaction_fee(db, transaction_type):
-    return 0
+
+def increment_counter(db, transaction_id, block_index):
+    cursor = db.cursor()
+    difficulty_period = block_index // 2016
+    current_count = cursor.execute(
+        """
+        SELECT count FROM transaction_count
+        WHERE transaction_id = ? AND difficulty_period = ?
+    """,
+        (transaction_id, difficulty_period),
+    ).fetchone()
+    if current_count is None:
+        new_count = 1
+    else:
+        new_count = current_count["count"] + 1
+
+    bindings = {
+        "block_index": block_index,
+        "difficulty_period": difficulty_period,
+        "transaction_id": transaction_id,
+        "count": new_count,
+    }
+    ledger.insert_record(db, "transaction_count", bindings, "INCREMENT_TRANSACTION_COUNT")
+
+
+def get_average_transaction_count(db, transaction_id, block_index):
+    cursor = db.cursor()
+    previous_difficulty_period = (block_index // 2016) - 1
+    if previous_difficulty_period < 0:
+        return 0
+    transaction_count = cursor.execute(
+        """
+        SELECT count FROM transaction_count
+        WHERE transaction_id = ? AND difficulty_period = ?
+    """,
+        (transaction_id, previous_difficulty_period),
+    ).fetchone()
+    # return average number of transactions per block
+    return transaction_count // 2016
+
+
+def get_transaction_fee(db, transaction_type, block_index):
+    x = get_average_transaction_count(db, transaction_type)
+    a = util.get_value_by_block_index("fee_lower_threshold", block_index)
+    b = util.get_value_by_block_index("fee_upper_threshold", block_index)
+    base_fee = util.get_value_by_block_index("base_fee", block_index)
+    k = util.get_value_by_block_index("fee_sigmoid_k", block_index)
+    fee = calculate_fee(x, a, b, base_fee, k)
+    return int(fee * config.UNIT)
 
 
 def calculate_fee(x, a, b, base_fee, k):

@@ -592,7 +592,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def get_utxo_address(value):
         return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"
 
-    def get_transaction_fee(db, transaction_type):
+    def get_transaction_fee(db, transaction_type, block_index):
         return 10
 
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)

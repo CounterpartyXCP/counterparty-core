@@ -2033,3 +2033,28 @@ CREATE INDEX fairmints_tx_hash_idx ON fairmints (tx_hash)
         ;
 
 COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=FULL;
+-- PRAGMA max_page_count=4294967294;
+
+BEGIN TRANSACTION;
+
+-- Table  transaction_count
+DROP TABLE IF EXISTS transaction_count;
+CREATE TABLE transaction_count(
+            block_index INTEGER,
+            difficulty_period INTEGER,
+            transaction_id INTEGER,
+            count INTEGER);
+-- Triggers and indices on  transaction_count
+CREATE TRIGGER block_update_transaction_count
+                           BEFORE UPDATE ON transaction_count BEGIN
+                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                           END;
+CREATE INDEX transaction_count_block_index_idx ON transaction_count (block_index)
+        ;
+CREATE INDEX transaction_count_difficulty_period_transaction_id_idx ON transaction_count (difficulty_period, transaction_id)
+        ;
+
+COMMIT TRANSACTION;

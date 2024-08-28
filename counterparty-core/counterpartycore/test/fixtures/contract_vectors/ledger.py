@@ -55,15 +55,15 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1727,
+                    "message_index": 1729,
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"810efa958965423c5a4a3c88c9a673936a8f52c56836e899889bced0f62d4723","messages_hash":"70f3b2cbc381200e350bbba8ec485a5abbb9efa14cf700f3b766bcb75f306ab1","transaction_count":0,"txlist_hash":"8b0a201e4d019a83a91ef66517d27b5320c2680ab0e0761a28ba4a3cff96b77b"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"810efa958965423c5a4a3c88c9a673936a8f52c56836e899889bced0f62d4723","messages_hash":"dbf2444c4c3472a3a5f19c7e932982d4000d2f446830ff1c49034b496a71c927","transaction_count":0,"txlist_hash":"8b0a201e4d019a83a91ef66517d27b5320c2680ab0e0761a28ba4a3cff96b77b"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "d769fa2d435833943c864863c0434ab7afbc51b32bc24231725135b1c08d2240",
+                    "event_hash": "2e3a7468ba0254cf24329304fe5eb198a0cb818ef4f663846bae5eaf461e85fd",
                 },
             }
         ],

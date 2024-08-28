@@ -86,6 +86,7 @@ TABLES = ["balances", "credits", "debits", "messages"] + [
     "dispenser_refills",
     "fairminters",
     "fairmints",
+    "transaction_count",
 ]
 
 MAINNET_BURNS = {}
@@ -782,6 +783,24 @@ def initialise(db):
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(mempool)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
+
+    # transaction_count
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS transaction_count(
+            block_index INTEGER,
+            difficulty_period INTEGER,
+            transaction_id INTEGER,
+            count INTEGER)
+        """
+    )
+    database.create_indexes(
+        cursor,
+        "transaction_count",
+        [
+            ["block_index"],
+            ["difficulty_period", "transaction_id"],
+        ],
+    )
 
     create_views(db)
 
