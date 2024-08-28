@@ -1,22 +1,51 @@
 import math
 
-from counterpartycore.lib import config, ledger, util
+from counterpartycore.lib import config, database, ledger, util
 
 
-def increment_counter(db, transaction_id, block_index):
+def initialise(db):
     cursor = db.cursor()
-    difficulty_period = block_index // 2016
-    current_count = cursor.execute(
+    # transaction_count
+    cursor.execute(
+        """CREATE TABLE IF NOT EXISTS transaction_count(
+            block_index INTEGER,
+            difficulty_period INTEGER,
+            transaction_id INTEGER,
+            count INTEGER)
+        """
+    )
+    database.create_indexes(
+        cursor,
+        "transaction_count",
+        [
+            ["block_index"],
+            ["difficulty_period", "transaction_id"],
+        ],
+    )
+
+
+def get_transaction_count_for_difficulty_period(db, transaction_id, difficulty_period):
+    cursor = db.cursor()
+    count = cursor.execute(
         """
         SELECT count FROM transaction_count
         WHERE transaction_id = ? AND difficulty_period = ?
+        ORDER BY rowid DESC
+        LIMIT 1
     """,
         (transaction_id, difficulty_period),
     ).fetchone()
-    if current_count is None:
-        new_count = 1
-    else:
-        new_count = current_count["count"] + 1
+    if count is None:
+        return 0
+    return count["count"]
+
+
+def increment_counter(db, transaction_id, block_index):
+    difficulty_period = block_index // 2016
+    current_count = get_transaction_count_for_difficulty_period(
+        db, transaction_id, difficulty_period
+    )
+    new_count = current_count + 1
 
     bindings = {
         "block_index": block_index,
@@ -27,24 +56,19 @@ def increment_counter(db, transaction_id, block_index):
     ledger.insert_record(db, "transaction_count", bindings, "INCREMENT_TRANSACTION_COUNT")
 
 
-def get_average_transaction_count(db, transaction_id, block_index):
-    cursor = db.cursor()
+def get_average_transactions(db, transaction_id, block_index):
     previous_difficulty_period = (block_index // 2016) - 1
     if previous_difficulty_period < 0:
         return 0
-    transaction_count = cursor.execute(
-        """
-        SELECT count FROM transaction_count
-        WHERE transaction_id = ? AND difficulty_period = ?
-    """,
-        (transaction_id, previous_difficulty_period),
-    ).fetchone()
+    transaction_count = get_transaction_count_for_difficulty_period(
+        db, transaction_id, previous_difficulty_period
+    )
     # return average number of transactions per block
     return transaction_count // 2016
 
 
 def get_transaction_fee(db, transaction_type, block_index):
-    x = get_average_transaction_count(db, transaction_type)
+    x = get_average_transactions(db, transaction_type, block_index)
     a = util.get_value_by_block_index("fee_lower_threshold", block_index)
     b = util.get_value_by_block_index("fee_upper_threshold", block_index)
     base_fee = util.get_value_by_block_index("base_fee", block_index)
