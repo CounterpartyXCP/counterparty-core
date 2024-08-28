@@ -20,6 +20,7 @@ from counterpartycore.lib.util import RPCError
 from .contract_vectors.dispenser import DISPENSER_VECTOR
 from .contract_vectors.fairmint import FAIRMINT_VECTOR
 from .contract_vectors.fairminter import FAIRMINTER_VECTOR
+from .contract_vectors.gas import GAS_VECTOR
 from .contract_vectors.ledger import LEDGER_VECTOR
 from .contract_vectors.send import SEND_VECTOR
 from .contract_vectors.utxo import UTXO_VECTOR
@@ -34,7 +35,7 @@ from .params import (
     DEFAULT_PARAMS as DP,
 )
 
-# UNITTEST_VECTOR = UTXO_VECTOR
+UNITTEST_VECTOR_ = UTXO_VECTOR | GAS_VECTOR
 
 UNITTEST_VECTOR = (
     FAIRMINTER_VECTOR
@@ -43,6 +44,7 @@ UNITTEST_VECTOR = (
     | UTXO_VECTOR
     | SEND_VECTOR
     | DISPENSER_VECTOR
+    | GAS_VECTOR
     | {
         "bet": {
             "validate": [

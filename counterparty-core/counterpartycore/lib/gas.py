@@ -67,12 +67,15 @@ def get_average_transactions(db, transaction_id, block_index):
     return transaction_count // 2016
 
 
-def get_transaction_fee(db, transaction_type, block_index):
-    x = get_average_transactions(db, transaction_type, block_index)
-    a = util.get_value_by_block_index("fee_lower_threshold", block_index)
-    b = util.get_value_by_block_index("fee_upper_threshold", block_index)
-    base_fee = util.get_value_by_block_index("base_fee", block_index)
-    k = util.get_value_by_block_index("fee_sigmoid_k", block_index)
+def get_transaction_fee(db, transaction_id, block_index):
+    x = get_average_transactions(db, transaction_id, block_index)
+    fee_params = util.get_value_by_block_index("fee_parameters", block_index)
+
+    a = fee_params[str(transaction_id)]["fee_lower_threshold"]
+    b = fee_params[str(transaction_id)]["fee_upper_threshold"]
+    base_fee = fee_params[str(transaction_id)]["base_fee"]
+    k = fee_params[str(transaction_id)]["fee_sigmoid_k"]
+
     fee = calculate_fee(x, a, b, base_fee, k)
     return int(fee * config.UNIT)
 

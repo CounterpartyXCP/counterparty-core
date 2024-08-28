@@ -584,79 +584,36 @@
     "block_index": 900000,
     "testnet_block_index": 2815000
   },
-  "fee_lower_threshold": {
+  "fee_parameteres": {
     "minimum_version_major": 0,
     "mainnet":{
-      "1":{
-        "value": 0  
+      "1": {
+        "value": null 
       },
-      "900000":{
-        "value": 3
-      }   
-    },
-    "testnet":{
-      "1":{
-        "value": 0
-      },    
-      "2815000":{
-        "value": 3
+      "900000": {
+        "value": {
+          "100": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
+          }
+        }
       }
-    }
-  },
-  "fee_upper_threshold": {
-    "minimum_version_major": 0,
-    "mainnet":{
-      "1":{
-        "value": 0  
-      },
-      "900000":{
-        "value": 15
-      }   
     },
     "testnet":{
-      "1":{
-        "value":0
+      "1": {
+        "value": null
       },    
-      "2815000":{
-        "value": 15
-      }
-    }
-  },
-  "base_fee": {
-    "minimum_version_major": 0,
-    "mainnet":{
-      "1":{
-        "value": 0  
-      },
-      "900000":{
-        "value": 1
-      }   
-    },
-    "testnet":{
-      "1":{
-        "value":0
-      },    
-      "2815000":{
-        "value": 1
-      }
-    }
-  },
-  "fee_sigmoid_k": {
-    "minimum_version_major": 0,
-    "mainnet":{
-      "1":{
-        "value": 0  
-      },
-      "900000":{
-        "value": 1
-      }   
-    },
-    "testnet":{
-      "1":{
-        "value":0
-      },    
-      "2815000":{
-        "value": 1
+      "2815000": {
+        "value": {
+          "100": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
+          }
+        }
       }
     }
   }
