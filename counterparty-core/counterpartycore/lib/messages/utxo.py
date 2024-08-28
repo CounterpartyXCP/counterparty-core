@@ -44,7 +44,7 @@ def validate(db, source, destination, asset, quantity):
     destination_is_utxo = util.is_utxo_format(destination)
 
     # attach to utxo
-    if source_is_address and not destination_is_utxo:
+    if source_is_address and (not destination_is_utxo and destination is not None):
         problems.append("If source is an address, destination must be a UTXO")
     # or detach from utxo
     if source_is_utxo and not destination_is_address:
@@ -59,7 +59,11 @@ def compose(db, source, destination, asset, quantity):
         raise exceptions.ComposeError(problems)
 
     # we make an RPC call only at the time of composition
-    if util.is_utxo_format(destination) and not backend.bitcoind.is_valid_utxo(destination):
+    if (
+        destination
+        and util.is_utxo_format(destination)
+        and not backend.bitcoind.is_valid_utxo(destination)
+    ):
         raise exceptions.ComposeError(["destination is not a UTXO"])
     if util.is_utxo_format(source) and not backend.bitcoind.is_valid_utxo(source):
         raise exceptions.ComposeError(["source is not a UTXO"])
@@ -73,7 +77,7 @@ def compose(db, source, destination, asset, quantity):
             str(value)
             for value in [
                 source,
-                destination,
+                destination or "",
                 asset,
                 quantity,
             ]
@@ -91,7 +95,9 @@ def compose(db, source, destination, asset, quantity):
 def unpack(message, return_dict=False):
     try:
         data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
-        (source, destination, asset, quantity) = data_content
+        (source, destination_str, asset, quantity) = data_content
+        destination = None if destination_str == "" else destination_str
+
         if return_dict:
             return {
                 "source": source,
@@ -109,6 +115,10 @@ def parse(db, tx, message):
     (source, destination, asset, quantity) = unpack(message)
 
     problems = validate(db, source, destination, asset, quantity)
+
+    recipient = destination
+    if not recipient:
+        recipient = tx["utxos_info"].split(" ")[-1]
 
     if util.is_utxo_format(source):
         if backend.bitcoind.get_utxo_address(source) != tx["source"]:
@@ -138,7 +148,7 @@ def parse(db, tx, message):
         )
         ledger.credit(
             db,
-            destination,
+            recipient,
             asset,
             quantity,
             tx["tx_index"],
@@ -148,7 +158,7 @@ def parse(db, tx, message):
         # we store parameters only if the transaction is valid
         bindings = bindings | {
             "source": source,
-            "destination": destination,
+            "destination": recipient,
             "asset": asset,
             "quantity": quantity,
         }
