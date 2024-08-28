@@ -165,6 +165,7 @@ class RegtestNode:
             f"--db-dir={self.datadir}",
             f"--daemon-dir={self.datadir}",
             "--daemon-rpc-port=18443",
+            "--jsonrpc-import",
             _bg=True,
             # _out=sys.stdout,
             # _err=sys.stdout,

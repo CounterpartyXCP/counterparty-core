@@ -5,13 +5,19 @@ import json
 import time
 
 from regtestnode import ComposeError, RegtestNodeThread
-from scenarios import scenario_1_fairminter, scenario_2_fairminter, scenario_3_dispenser
+from scenarios import (
+    scenario_1_fairminter,
+    scenario_2_fairminter,
+    scenario_3_dispenser,
+    scenario_4_utxo,
+)
 from termcolor import colored
 
 SCENARIOS = []
 SCENARIOS += scenario_1_fairminter.SCENARIO
 SCENARIOS += scenario_2_fairminter.SCENARIO
 SCENARIOS += scenario_3_dispenser.SCENARIO
+SCENARIOS += scenario_4_utxo.SCENARIO
 
 
 def compare_strings(string1, string2):

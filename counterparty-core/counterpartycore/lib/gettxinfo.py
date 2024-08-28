@@ -556,7 +556,10 @@ def get_utxos_info(db, decoded_tx):
     sources = []
     # we check that each vin does not contain assets..
     for vin in decoded_tx["vin"]:
-        vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
+        if isinstance(vin["hash"], str):
+            vin_hash = vin["hash"]
+        else:
+            vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
         utxo = vin_hash + ":" + str(vin["n"])
         utxo_balances = ledger.get_utxo_balances(db, utxo)
         if len(utxo_balances) > 0:

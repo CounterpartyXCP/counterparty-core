@@ -108,6 +108,9 @@ def parse_tx(db, tx):
             if "utxos_info" in tx and tx["utxos_info"]:
                 utxo.move_assets(db, tx)
 
+            if not tx["source"]:  # utxos move only
+                return
+
             # Only one source and one destination allowed for now.
             if len(tx["source"].split("-")) > 1:
                 return
@@ -964,7 +967,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
 
     if (source and (data or destination == config.UNSPENDABLE or dispensers_outs)) or len(
         utxos_info
-    ) > 0:
+    ) > 1:
         transaction_bindings = {
             "tx_index": tx_index,
             "tx_hash": tx_hash,
@@ -980,21 +983,22 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
         }
         ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
 
-        for next_out in dispensers_outs:
-            transaction_outputs_bindings = {
-                "tx_index": tx_index,
-                "tx_hash": tx_hash,
-                "block_index": block_index,
-                "out_index": next_out["out_index"],
-                "destination": next_out["destination"],
-                "btc_amount": next_out["btc_amount"],
-            }
-            ledger.insert_record(
-                db,
-                "transaction_outputs",
-                transaction_outputs_bindings,
-                "NEW_TRANSACTION_OUTPUT",
-            )
+        if dispensers_outs:
+            for next_out in dispensers_outs:
+                transaction_outputs_bindings = {
+                    "tx_index": tx_index,
+                    "tx_hash": tx_hash,
+                    "block_index": block_index,
+                    "out_index": next_out["out_index"],
+                    "destination": next_out["destination"],
+                    "btc_amount": next_out["btc_amount"],
+                }
+                ledger.insert_record(
+                    db,
+                    "transaction_outputs",
+                    transaction_outputs_bindings,
+                    "NEW_TRANSACTION_OUTPUT",
+                )
 
         cursor.close()
 
