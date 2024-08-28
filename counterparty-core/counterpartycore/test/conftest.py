@@ -592,6 +592,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def get_utxo_address(value):
         return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"
 
+    def get_transaction_fee(db, transaction_type):
+        return 10
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
@@ -628,3 +631,5 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
     )
+
+    monkeypatch.setattr("counterpartycore.lib.gas.get_transaction_fee", get_transaction_fee)

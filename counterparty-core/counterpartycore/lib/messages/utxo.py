@@ -1,7 +1,7 @@
 import logging
 import struct
 
-from counterpartycore.lib import backend, config, exceptions, ledger, script, util
+from counterpartycore.lib import backend, config, exceptions, gas, ledger, script, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -25,10 +25,6 @@ def validate(db, source, destination, asset, quantity):
     if quantity > config.MAX_INT:
         problems.append("integer overflow")
 
-    balance = ledger.get_balance(db, source, asset)
-    if balance < quantity:
-        problems.append("insufficient funds")
-
     source_is_address = True
     destination_is_address = True
     try:
@@ -49,6 +45,24 @@ def validate(db, source, destination, asset, quantity):
     # or detach from utxo
     if source_is_utxo and not destination_is_address:
         problems.append("If source is a UTXO, destination must be an address")
+
+    fee = gas.get_transaction_fee(db, ID)
+
+    asset_balance = ledger.get_balance(db, source, asset)
+    if source_is_address:
+        fee_payer = source
+    else:
+        fee_payer = destination
+
+    if asset == config.XCP and fee_payer == source:
+        if asset_balance < quantity + fee:
+            problems.append("insufficient funds for transfer and fee")
+    else:
+        if asset_balance < quantity:
+            problems.append("insufficient funds for transfer")
+        xcp_balance = ledger.get_balance(db, fee_payer, config.XCP)
+        if xcp_balance < fee:
+            problems.append("insufficient funds for fee")
 
     return problems
 
@@ -143,6 +157,37 @@ def parse(db, tx, message):
     }
 
     if status == "valid":
+        # fee payment
+        fee = gas.get_transaction_fee(db, ID)
+        if fee > 0:
+            # fee is always paid by the address
+            if action == "attach to utxo":
+                fee_payer = source
+            else:
+                fee_payer = recipient
+            # debit fee from the fee payer
+            ledger.debit(
+                db,
+                fee_payer,
+                config.XCP,
+                fee,
+                tx["tx_index"],
+                action=f"{action} fee",
+                event=tx["tx_hash"],
+            )
+            # destroy fee
+            destroy_bindings = {
+                "tx_index": tx["tx_index"],
+                "tx_hash": tx["tx_hash"],
+                "block_index": tx["block_index"],
+                "source": tx["source"],
+                "asset": config.XCP,
+                "quantity": fee,
+                "tag": f"{action} fee",
+                "status": "valid",
+            }
+            ledger.insert_record(db, "destructions", destroy_bindings, "ASSET_DESTRUCTION")
+        # debit asset from source and credit to recipient
         ledger.debit(
             db, source, asset, quantity, tx["tx_index"], action=action, event=tx["tx_hash"]
         )
@@ -161,6 +206,7 @@ def parse(db, tx, message):
             "destination": recipient,
             "asset": asset,
             "quantity": quantity,
+            "fee_paid": fee,
         }
 
     ledger.insert_record(db, "sends", bindings, event)

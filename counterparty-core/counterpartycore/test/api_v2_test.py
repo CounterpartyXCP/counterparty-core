@@ -156,7 +156,7 @@ def test_new_get_balances_by_address():
             "asset": "DIVISIBLE",
             "quantity": 98799999999,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91674999900},
+        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91674999880},
     ]
 
 
@@ -188,7 +188,7 @@ def test_new_get_balances_by_asset():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
-            "quantity": 91674999900,
+            "quantity": 91674999880,
             "utxo": None,
         },
         {

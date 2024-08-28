@@ -7,9 +7,9 @@
                 "block_time": 310703000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "a27ebbb2d1584c93e7859f2dda6c2e42e687f5436a956a6d44da655b8b4c4b0e",
+                "ledger_hash": "810efa958965423c5a4a3c88c9a673936a8f52c56836e899889bced0f62d4723",
                 "txlist_hash": "8b0a201e4d019a83a91ef66517d27b5320c2680ab0e0761a28ba4a3cff96b77b",
-                "messages_hash": "b1d8fea3f162b09f146e4824e048963a31b04ba88d89a4c9c7718c75caf68b3e",
+                "messages_hash": "70f3b2cbc381200e350bbba8ec485a5abbb9efa14cf700f3b766bcb75f306ab1",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -19,9 +19,9 @@
                 "block_time": 310702000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "fe91a8148c7b8213a0d5fc76a09ffc951b4087542e0c5f424f28c8fdeb38fb37",
+                "ledger_hash": "0e7aed030242216365652251488da2971d130b0fb672c0c838c5422bfee06aa2",
                 "txlist_hash": "172e1ec197f4c23093ba3a1f16436e23ea45a06f5c6cab6140d6949752ab4305",
-                "messages_hash": "3da68554ff31ef39c2b6cbf61fe17ecf62f51c7ae26caf5504fa3f9102868f03",
+                "messages_hash": "7d4193484a482d571df2d89eb3eef2a8e7fae12065b10db7ed125cc9ac94f265",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -31,9 +31,9 @@
                 "block_time": 310701000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "22fe5265a458c1d6b6a9323a97484417596dc116cf2e7e20d4982424deccd2dc",
+                "ledger_hash": "b54bc35f3029ec596346aaf2fa7ae4064d487cea2516cadb1053d655c6a1f09f",
                 "txlist_hash": "cd4704f39e89a061b7463cf9872b9114f34afad407e84bc488af202d1a6259ce",
-                "messages_hash": "d3ee6cee3523a90786a8a1bcf7c0516cfddd0a61e92ee2bcc05e3c9b3979d965",
+                "messages_hash": "5657d1d5c7920a807b1c2124df0ffd4a0af81480f1459d101b9e616bf0807aad",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -43,9 +43,9 @@
                 "block_time": 310700000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "df335ef45d95f27a2994886eec8ed7f266e9d0e2e4e97ec50cfab7824eb66aea",
+                "ledger_hash": "002825be58483bcccfebc185edb4dc6bfb8f631e12705ef0fd3d6357675d5b74",
                 "txlist_hash": "e7486aaaad13b6c0af3964692b89b1404703193bb330716f194b62970e89402e",
-                "messages_hash": "0506ae69d4b2b16f7a982166b9a17ab01b28c4da5ba73b4cc4a833708dff3dcc",
+                "messages_hash": "04679cd7f8b313ed8c218ab40a490affd53c61d1e71ae8b6dca62a56ac3c2902",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -55,9 +55,9 @@
                 "block_time": 310699000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "e27ed1f2c3c64c8a6c72aa54f6d02098fc8946b3992eb9cc3b57279b5815ec70",
+                "ledger_hash": "9a35135039bc2eaf60f23e1ead048912c619e893b3dbf1986bb0c3343701fd0d",
                 "txlist_hash": "2bef48cf95adae34bbc0704a89d8e5f72f9be5118f3ea52a13f34c2a13521f49",
-                "messages_hash": "25e2072ecddae95202c3d20f775aeb8da659b16e51fd494cc4bf49f7bf85fd75",
+                "messages_hash": "327cdeaa55696a10bc9da46ae1563d57be5b95744faba98b5584dcf9e247501e",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -67,9 +67,9 @@
                 "block_time": 310698000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "e12c6773dfaffb6671c65c02d23630cbe4e6a020cfded9f55f19b443c0b0ecdb",
+                "ledger_hash": "90a8c0be8944b489037ddf6cc5c1b437764846208820cf3d557ccfcc70cc2d82",
                 "txlist_hash": "5d2c2906fcbd1d7d3405f5cc72590a1b99494a813c92829346b72f8315b16a72",
-                "messages_hash": "1833bf62e47e459c53530f8ea4e3b2281ed2af16b548c69c8bcdaf0ace6baab6",
+                "messages_hash": "cc2518e821915bd880660c2ec1e1fe781171ccf56f953a8f148ca04e8abc83d0",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -79,9 +79,9 @@
                 "block_time": 310697000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "4efe23062f3366e47abb2167e88c45629a984328899aea7abcc2aca4602ca96c",
+                "ledger_hash": "94d39ccd2eb4dc06f13f3c3ce34fda5abc13325f5c879a6702f99d2be7b0e992",
                 "txlist_hash": "cb406f8a7f3a623b7a8b21fb21d21ed3bedb34b6d1eeca7257de98e26a2a80be",
-                "messages_hash": "68882a9f0126bd756cba0afc3910a86e630321392f964a584e08d40ec185cb36",
+                "messages_hash": "8ec0c71d3953ac1287ad097d548c1e6d111094af68841034528e10d6b20883cc",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -91,9 +91,9 @@
                 "block_time": 310696000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "ef54acfdda828d5423e3e28203179f62daef3e0f55894f7b053f0ca16ac7f5dc",
+                "ledger_hash": "52ea67c16ad1a06ba7af6215da20748bf79b9adcd3b8653ab4d7bf8a2515fff6",
                 "txlist_hash": "4ef1881936c6a895be4ce7b8aa9a7ec6231cf72b74dd0037e334db37345a96ea",
-                "messages_hash": "9ba7f8b6ac85dd058a2260057808f3a9a48c3d1f991580a1ac6ea58bed00a625",
+                "messages_hash": "4b311cf382fb95015ed10d564760ab3a824ccd4c6ffe85137538b6b548b415b4",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -103,9 +103,9 @@
                 "block_time": 310695000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "663544061ad622eefa42e6dec31d69955c58049f47d7cff73ee2120e70f78137",
+                "ledger_hash": "69babd005251e89779d8abf297cd8051982377cee936efc397494170d59f706d",
                 "txlist_hash": "3793d3f0f045e05b5f578878cb6c409e609fedfa43677bd4e92ba82c9446f5f9",
-                "messages_hash": "8e29c4d7efcbce53547dd30bbcff7f5e668f4929e237c43423c87cd70bcca15f",
+                "messages_hash": "649531ca34bc33d1dceabece2fce2f4105bba852e973a30317c3547dbbf0f5da",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -115,9 +115,9 @@
                 "block_time": 310694000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "a0f7ef4baf09d8d3cfba6c555c67b264749bd0d4289da9683b8c42e5d1961ca3",
+                "ledger_hash": "ad7e23037179f2d405c44b3e7a54741a964e5853e18e744d41ed0c609f8e4e13",
                 "txlist_hash": "6bc8dbc2addf5aedd42360fb560527054a7ef9faa7c4c59e3bff57376fe2d52c",
-                "messages_hash": "e7029fc69f26329a5012555968289da5c4b9ee7f18028d0732f406622193d769",
+                "messages_hash": "2c7bd55e147310fe8f7a8e0ec9711984a1709f54875bf9b1aec00f7b7693f163",
                 "transaction_count": 0,
                 "confirmed": true
             }
@@ -132,9 +132,9 @@
             "block_time": 310703000,
             "previous_block_hash": null,
             "difficulty": null,
-            "ledger_hash": "a27ebbb2d1584c93e7859f2dda6c2e42e687f5436a956a6d44da655b8b4c4b0e",
+            "ledger_hash": "810efa958965423c5a4a3c88c9a673936a8f52c56836e899889bced0f62d4723",
             "txlist_hash": "8b0a201e4d019a83a91ef66517d27b5320c2680ab0e0761a28ba4a3cff96b77b",
-            "messages_hash": "b1d8fea3f162b09f146e4824e048963a31b04ba88d89a4c9c7718c75caf68b3e",
+            "messages_hash": "70f3b2cbc381200e350bbba8ec485a5abbb9efa14cf700f3b766bcb75f306ab1",
             "transaction_count": 0,
             "confirmed": true
         }
@@ -1331,7 +1331,7 @@
     "http://localhost:10009/v2/addresses/events?verbose=true&limit=6&addresses=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc,mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns": {
         "result": [
             {
-                "event_index": 1339,
+                "event_index": 1343,
                 "event": "ORDER_MATCH_EXPIRATION",
                 "params": {
                     "block_index": 310513,
@@ -1345,7 +1345,7 @@
                 "block_time": 310513000
             },
             {
-                "event_index": 1322,
+                "event_index": 1326,
                 "event": "DEBIT",
                 "params": {
                     "action": "attach to utxo",
@@ -1371,7 +1371,59 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1321,
+                "event_index": 1325,
+                "event": "ASSET_DESTRUCTION",
+                "params": {
+                    "asset": "XCP",
+                    "block_index": 310508,
+                    "quantity": 10,
+                    "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "status": "valid",
+                    "tag": "attach to utxo fee",
+                    "tx_hash": "ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e",
+                    "tx_index": 509,
+                    "block_time": 310508000,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00000010"
+                },
+                "tx_hash": "ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e",
+                "block_index": 310508,
+                "block_time": 310508000
+            },
+            {
+                "event_index": 1324,
+                "event": "DEBIT",
+                "params": {
+                    "action": "attach to utxo fee",
+                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "asset": "XCP",
+                    "block_index": 310508,
+                    "event": "ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e",
+                    "quantity": 10,
+                    "tx_index": 509,
+                    "utxo": null,
+                    "block_time": 310508000,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00000010"
+                },
+                "tx_hash": "ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e",
+                "block_index": 310508,
+                "block_time": 310508000
+            },
+            {
+                "event_index": 1323,
                 "event": "NEW_TRANSACTION",
                 "params": {
                     "block_hash": "40cfaee344032c167d7317bb94d2e514f8dca023302303a908dd994e15d902cf",
@@ -1398,65 +1450,10 @@
                 "tx_hash": null,
                 "block_index": 310508,
                 "block_time": 310508000
-            },
-            {
-                "event_index": 1315,
-                "event": "DEBIT",
-                "params": {
-                    "action": "attach to utxo",
-                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "asset": "XCP",
-                    "block_index": 310507,
-                    "event": "9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883",
-                    "quantity": 100,
-                    "tx_index": 508,
-                    "utxo": null,
-                    "block_time": 310507000,
-                    "asset_info": {
-                        "divisible": true,
-                        "asset_longname": null,
-                        "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
-                    },
-                    "quantity_normalized": "0.00000100"
-                },
-                "tx_hash": "9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883",
-                "block_index": 310507,
-                "block_time": 310507000
-            },
-            {
-                "event_index": 1314,
-                "event": "NEW_TRANSACTION",
-                "params": {
-                    "block_hash": "015b45f96ad6b4bfc950934e9c9d8c29a499b837ea7c4c722ff482d8d9896a93",
-                    "block_index": 310507,
-                    "block_time": 310507000,
-                    "btc_amount": 0,
-                    "data": "646d6e367133645332456e44557833626d795763364434737a4a4e5647746152377a637c346630343333626138343130333865326531363332383434353933306464376263613335333039623134623064613434353163386639346336333133363862383a317c5843507c313030",
-                    "destination": "",
-                    "fee": 10850,
-                    "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "supported": true,
-                    "tx_hash": "9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883",
-                    "tx_index": 508,
-                    "utxos_info": "dc078cdea6abfeec782c99efe7b680e749f20e33a5484e12dcf13dbd8ef017cf:0",
-                    "unpacked_data": {
-                        "message_type": "unknown",
-                        "message_type_id": 1684893238,
-                        "message_data": {
-                            "error": "Unknown message type"
-                        }
-                    },
-                    "btc_amount_normalized": "0.00000000"
-                },
-                "tx_hash": null,
-                "block_index": 310507,
-                "block_time": 310507000
             }
         ],
-        "next_cursor": 1310,
-        "result_count": 163
+        "next_cursor": 1317,
+        "result_count": 167
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
@@ -1580,7 +1577,7 @@
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "XCP",
-                "quantity": 91674999900,
+                "quantity": 91674999880,
                 "asset_info": {
                     "divisible": true,
                     "asset_longname": null,
@@ -1878,6 +1875,26 @@
                 "quantity_normalized": "0.00000001"
             },
             {
+                "block_index": 310508,
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "XCP",
+                "quantity": 10,
+                "action": "attach to utxo fee",
+                "event": "ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e",
+                "tx_index": 509,
+                "utxo": null,
+                "confirmed": true,
+                "block_time": 310508000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "0.00000010"
+            },
+            {
                 "block_index": 310507,
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "XCP",
@@ -1896,6 +1913,26 @@
                     "issuer": null
                 },
                 "quantity_normalized": "0.00000100"
+            },
+            {
+                "block_index": 310507,
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "XCP",
+                "quantity": 10,
+                "action": "attach to utxo fee",
+                "event": "9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883",
+                "tx_index": 508,
+                "utxo": null,
+                "confirmed": true,
+                "block_time": 310507000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "0.00000010"
             },
             {
                 "block_index": 310503,
@@ -2379,7 +2416,7 @@
             }
         ],
         "next_cursor": null,
-        "result_count": 26
+        "result_count": 28
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/bets?verbose=true": {
         "result": [
@@ -2477,6 +2514,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 10,
                 "confirmed": true,
                 "block_time": 310508000,
                 "asset_info": {
@@ -2486,7 +2524,8 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "0.00000001"
+                "quantity_normalized": "0.00000001",
+                "fee_paid_normalized": "0.00000010"
             },
             {
                 "tx_index": 508,
@@ -2499,6 +2538,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 10,
                 "confirmed": true,
                 "block_time": 310507000,
                 "asset_info": {
@@ -2508,7 +2548,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "0.00000100"
+                "quantity_normalized": "0.00000100",
+                "fee_paid_normalized": "0.00000010"
             },
             {
                 "tx_index": 482,
@@ -2521,6 +2562,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": "68656c6c6f",
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310481000,
                 "asset_info": {
@@ -2530,7 +2572,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 111,
@@ -2543,6 +2586,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310110000,
                 "asset_info": {
@@ -2552,7 +2596,8 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 16,
@@ -2565,6 +2610,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310015000,
                 "asset_info": {
@@ -2574,7 +2620,8 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "10"
+                "quantity_normalized": "10",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 15,
@@ -2587,6 +2634,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310014000,
                 "asset_info": {
@@ -2596,7 +2644,8 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "5"
+                "quantity_normalized": "5",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 14,
@@ -2609,6 +2658,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310013000,
                 "asset_info": {
@@ -2618,7 +2668,8 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "10.00000000"
+                "quantity_normalized": "10.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 13,
@@ -2631,6 +2682,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310012000,
                 "asset_info": {
@@ -2640,7 +2692,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "3.00000000"
+                "quantity_normalized": "3.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 9,
@@ -2653,6 +2706,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310008000,
                 "asset_info": {
@@ -2662,7 +2716,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 8,
@@ -2675,6 +2730,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310007000,
                 "asset_info": {
@@ -2684,7 +2740,8 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             }
         ],
         "next_cursor": null,
@@ -2703,6 +2760,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": "fade0001",
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310482000,
                 "asset_info": {
@@ -2712,7 +2770,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             }
         ],
         "next_cursor": null,
@@ -2731,6 +2790,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310015000,
                 "asset_info": {
@@ -2740,7 +2800,8 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "10"
+                "quantity_normalized": "10",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 15,
@@ -2753,6 +2814,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310014000,
                 "asset_info": {
@@ -2762,7 +2824,8 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "5"
+                "quantity_normalized": "5",
+                "fee_paid_normalized": "0.00000000"
             }
         ],
         "next_cursor": null,
@@ -4197,7 +4260,7 @@
                 "owner": null,
                 "divisible": true,
                 "locked": true,
-                "supply": 1207663695840,
+                "supply": 1207663695800,
                 "description": "The Counterparty protocol native currency",
                 "first_issuance_block_index": 278319,
                 "last_issuance_block_index": 283810,
@@ -4463,6 +4526,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310015000,
                 "asset_info": {
@@ -4472,7 +4536,8 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "10"
+                "quantity_normalized": "10",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 15,
@@ -4485,6 +4550,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310014000,
                 "asset_info": {
@@ -4494,7 +4560,8 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "5"
+                "quantity_normalized": "5",
+                "fee_paid_normalized": "0.00000000"
             }
         ],
         "next_cursor": null,
@@ -5294,12 +5361,12 @@
     "http://localhost:10009/v2/events?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1723,
+                "event_index": 1727,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310703,
-                    "ledger_hash": "a27ebbb2d1584c93e7859f2dda6c2e42e687f5436a956a6d44da655b8b4c4b0e",
-                    "messages_hash": "b1d8fea3f162b09f146e4824e048963a31b04ba88d89a4c9c7718c75caf68b3e",
+                    "ledger_hash": "810efa958965423c5a4a3c88c9a673936a8f52c56836e899889bced0f62d4723",
+                    "messages_hash": "70f3b2cbc381200e350bbba8ec485a5abbb9efa14cf700f3b766bcb75f306ab1",
                     "transaction_count": 0,
                     "txlist_hash": "8b0a201e4d019a83a91ef66517d27b5320c2680ab0e0761a28ba4a3cff96b77b",
                     "block_time": 310703000
@@ -5309,7 +5376,7 @@
                 "block_time": 310703000
             },
             {
-                "event_index": 1722,
+                "event_index": 1726,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "b8b21ab596ed7ad84e449d098c04d86cbb6623c5e88af7772166882efbd91218",
@@ -5325,12 +5392,12 @@
                 "block_time": 310703000
             },
             {
-                "event_index": 1721,
+                "event_index": 1725,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310702,
-                    "ledger_hash": "fe91a8148c7b8213a0d5fc76a09ffc951b4087542e0c5f424f28c8fdeb38fb37",
-                    "messages_hash": "3da68554ff31ef39c2b6cbf61fe17ecf62f51c7ae26caf5504fa3f9102868f03",
+                    "ledger_hash": "0e7aed030242216365652251488da2971d130b0fb672c0c838c5422bfee06aa2",
+                    "messages_hash": "7d4193484a482d571df2d89eb3eef2a8e7fae12065b10db7ed125cc9ac94f265",
                     "transaction_count": 0,
                     "txlist_hash": "172e1ec197f4c23093ba3a1f16436e23ea45a06f5c6cab6140d6949752ab4305",
                     "block_time": 310702000
@@ -5340,7 +5407,7 @@
                 "block_time": 310702000
             },
             {
-                "event_index": 1720,
+                "event_index": 1724,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "69cb443673c221a8e157d61707d52cf980c87faf5c3b31a5850ff43be70883c8",
@@ -5356,12 +5423,12 @@
                 "block_time": 310702000
             },
             {
-                "event_index": 1719,
+                "event_index": 1723,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310701,
-                    "ledger_hash": "22fe5265a458c1d6b6a9323a97484417596dc116cf2e7e20d4982424deccd2dc",
-                    "messages_hash": "d3ee6cee3523a90786a8a1bcf7c0516cfddd0a61e92ee2bcc05e3c9b3979d965",
+                    "ledger_hash": "b54bc35f3029ec596346aaf2fa7ae4064d487cea2516cadb1053d655c6a1f09f",
+                    "messages_hash": "5657d1d5c7920a807b1c2124df0ffd4a0af81480f1459d101b9e616bf0807aad",
                     "transaction_count": 0,
                     "txlist_hash": "cd4704f39e89a061b7463cf9872b9114f34afad407e84bc488af202d1a6259ce",
                     "block_time": 310701000
@@ -5371,8 +5438,8 @@
                 "block_time": 310701000
             }
         ],
-        "next_cursor": 1718,
-        "result_count": 1724
+        "next_cursor": 1722,
+        "result_count": 1728
     },
     "http://localhost:10009/v2/events/10?limit=5&verbose=true": {
         "result": {
@@ -5414,12 +5481,12 @@
             }
         ],
         "next_cursor": "ORDER_MATCH",
-        "result_count": 29
+        "result_count": 30
     },
     "http://localhost:10009/v2/events/CREDIT?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1491,
+                "event_index": 1495,
                 "event": "CREDIT",
                 "params": {
                     "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
@@ -5445,7 +5512,7 @@
                 "block_time": 310588000
             },
             {
-                "event_index": 1323,
+                "event_index": 1327,
                 "event": "CREDIT",
                 "params": {
                     "address": null,
@@ -5471,7 +5538,7 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1316,
+                "event_index": 1318,
                 "event": "CREDIT",
                 "params": {
                     "address": null,
@@ -5576,6 +5643,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 10,
                 "confirmed": true,
                 "block_time": 310508000,
                 "asset_info": {
@@ -5585,7 +5653,8 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "0.00000001"
+                "quantity_normalized": "0.00000001",
+                "fee_paid_normalized": "0.00000010"
             },
             {
                 "tx_index": 508,
@@ -5598,6 +5667,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 10,
                 "confirmed": true,
                 "block_time": 310507000,
                 "asset_info": {
@@ -5607,7 +5677,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "0.00000100"
+                "quantity_normalized": "0.00000100",
+                "fee_paid_normalized": "0.00000010"
             },
             {
                 "tx_index": 497,
@@ -5620,6 +5691,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310496000,
                 "asset_info": {
@@ -5629,7 +5701,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "929.45878000"
+                "quantity_normalized": "929.45878000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 496,
@@ -5642,6 +5715,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310495000,
                 "asset_info": {
@@ -5651,7 +5725,8 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "0.00000010"
+                "quantity_normalized": "0.00000010",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 483,
@@ -5664,6 +5739,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": "fade0001",
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310482000,
                 "asset_info": {
@@ -5673,7 +5749,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 482,
@@ -5686,6 +5763,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": "68656c6c6f",
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310481000,
                 "asset_info": {
@@ -5695,7 +5773,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 111,
@@ -5708,6 +5787,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310110000,
                 "asset_info": {
@@ -5717,7 +5797,8 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 16,
@@ -5730,6 +5811,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310015000,
                 "asset_info": {
@@ -5739,7 +5821,8 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "10"
+                "quantity_normalized": "10",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 15,
@@ -5752,6 +5835,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310014000,
                 "asset_info": {
@@ -5761,7 +5845,8 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "5"
+                "quantity_normalized": "5",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 14,
@@ -5774,6 +5859,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310013000,
                 "asset_info": {
@@ -5783,7 +5869,8 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "10.00000000"
+                "quantity_normalized": "10.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 13,
@@ -5796,6 +5883,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310012000,
                 "asset_info": {
@@ -5805,7 +5893,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "3.00000000"
+                "quantity_normalized": "3.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 9,
@@ -5818,6 +5907,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310008000,
                 "asset_info": {
@@ -5827,7 +5917,8 @@
                     "locked": true,
                     "issuer": null
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 8,
@@ -5840,6 +5931,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310007000,
                 "asset_info": {
@@ -5849,7 +5941,8 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "1.00000000"
+                "quantity_normalized": "1.00000000",
+                "fee_paid_normalized": "0.00000000"
             }
         ],
         "next_cursor": null,

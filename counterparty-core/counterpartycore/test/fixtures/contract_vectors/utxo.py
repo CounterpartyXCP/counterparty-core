@@ -27,8 +27,8 @@ UTXO_VECTOR = {
             {
                 "in": (UTXO_1, UTXO_1, "XCP", 100),
                 "out": [
-                    "insufficient funds",
                     "If source is a UTXO, destination must be an address",
+                    "insufficient funds for transfer and fee",
                 ],
             },
             {
@@ -37,7 +37,7 @@ UTXO_VECTOR = {
             },
             {
                 "in": (ADDR[0], UTXO_1, "XCP", 99999999999999),
-                "out": ["insufficient funds"],
+                "out": ["insufficient funds for transfer and fee"],
             },
             {
                 "in": (
@@ -46,7 +46,7 @@ UTXO_VECTOR = {
                     "BTC",
                     100,
                 ),
-                "out": ["cannot send bitcoins", "insufficient funds"],
+                "out": ["cannot send bitcoins", "insufficient funds for transfer"],
             },
             {
                 "in": (
@@ -55,7 +55,7 @@ UTXO_VECTOR = {
                     "XCP",
                     config.MAX_INT + 1,
                 ),
-                "out": ["integer overflow", "insufficient funds"],
+                "out": ["integer overflow", "insufficient funds for transfer and fee"],
             },
             {
                 "in": (
@@ -146,6 +146,18 @@ UTXO_VECTOR = {
                         },
                     },
                     {
+                        "table": "debits",
+                        "values": {
+                            "address": ADDR[0],
+                            "asset": "XCP",
+                            "quantity": 10,
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "tx_index": DP["default_tx_index"],
+                            "action": "attach to utxo fee",
+                        },
+                    },
+                    {
                         "table": "credits",
                         "values": {
                             "utxo": UTXO_1,
@@ -169,6 +181,7 @@ UTXO_VECTOR = {
                             "destination": UTXO_1,
                             "asset": "XCP",
                             "quantity": 100,
+                            "fee_paid": 10,
                         },
                     },
                     {
@@ -177,7 +190,7 @@ UTXO_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1","quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1","fee_paid":10,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "ATTACH_TO_UTXO",
                         },
                     },
@@ -226,6 +239,19 @@ UTXO_VECTOR = {
                         },
                     },
                     {
+                        "table": "debits",
+                        "values": {
+                            "utxo": None,
+                            "address": ADDR[1],
+                            "asset": "XCP",
+                            "quantity": 10,
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "tx_index": DP["default_tx_index"],
+                            "action": "detach from utxo fee",
+                        },
+                    },
+                    {
                         "table": "sends",
                         "values": {
                             "tx_index": DP["default_tx_index"],
@@ -236,6 +262,7 @@ UTXO_VECTOR = {
                             "destination": ADDR[1],
                             "asset": "XCP",
                             "quantity": 100,
+                            "fee_paid": 10,
                         },
                     },
                     {
@@ -244,7 +271,7 @@ UTXO_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","quantity":100,"source":"4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","fee_paid":10,"quantity":100,"source":"4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "DETACH_FROM_UTXO",
                         },
                     },
