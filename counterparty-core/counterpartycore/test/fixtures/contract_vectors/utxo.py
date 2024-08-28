@@ -7,6 +7,7 @@ from ..params import (
 
 UTXO_1 = "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1"
 UTXO_2 = "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1"
+UTXO_3 = "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1:1"
 
 UTXO_VECTOR = {
     "utxo": {
@@ -277,6 +278,100 @@ UTXO_VECTOR = {
                     },
                 ],
             },
+        ],
+        "move_assets": [
+            {
+                "in": (
+                    {
+                        "tx_index": DP["default_tx_index"],
+                        "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        "block_index": DP["default_block_index"],
+                        "utxos_info": f"{UTXO_2} {UTXO_3}",
+                    },
+                ),
+                "records": [
+                    {
+                        "table": "debits",
+                        "values": {
+                            "utxo": UTXO_2,
+                            "address": None,
+                            "asset": "XCP",
+                            "quantity": 100,
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"] - 1,
+                            "tx_index": DP["default_tx_index"],
+                            "action": "utxo move",
+                        },
+                    },
+                    {
+                        "table": "credits",
+                        "values": {
+                            "utxo": UTXO_3,
+                            "address": None,
+                            "asset": "XCP",
+                            "quantity": 100,
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"] - 1,
+                            "tx_index": DP["default_tx_index"],
+                            "calling_function": "utxo move",
+                        },
+                    },
+                    {
+                        "table": "debits",
+                        "values": {
+                            "utxo": UTXO_2,
+                            "address": None,
+                            "asset": "DIVISIBLE",
+                            "quantity": 1,
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"] - 1,
+                            "tx_index": DP["default_tx_index"],
+                            "action": "utxo move",
+                        },
+                    },
+                    {
+                        "table": "credits",
+                        "values": {
+                            "utxo": UTXO_3,
+                            "address": None,
+                            "asset": "DIVISIBLE",
+                            "quantity": 1,
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"] - 1,
+                            "tx_index": DP["default_tx_index"],
+                            "calling_function": "utxo move",
+                        },
+                    },
+                    {
+                        "table": "sends",
+                        "values": {
+                            "tx_index": DP["default_tx_index"],
+                            "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "status": "valid",
+                            "source": UTXO_2,
+                            "destination": UTXO_3,
+                            "asset": "XCP",
+                            "quantity": 100,
+                            "fee_paid": 0,
+                        },
+                    },
+                    {
+                        "table": "sends",
+                        "values": {
+                            "tx_index": DP["default_tx_index"],
+                            "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "status": "valid",
+                            "source": UTXO_2,
+                            "destination": UTXO_3,
+                            "asset": "DIVISIBLE",
+                            "quantity": 1,
+                            "fee_paid": 0,
+                        },
+                    },
+                ],
+            }
         ],
     }
 }

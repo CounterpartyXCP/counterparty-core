@@ -22,5 +22,11 @@ GAS_VECTOR = {
                 ],
             }
         ],
+        "get_average_transactions": [
+            {
+                "in": (100, 310507),  # utxo.ID, 310507
+                "out": 0,
+            }
+        ],
     }
 }

@@ -234,6 +234,7 @@ def move_assets(db, tx):
     sources = utxos
     action = "utxo move"
 
+    msg_index = 0
     for source in sources:
         balances = ledger.get_utxo_balances(db, source)
         for balance in balances:
@@ -266,9 +267,11 @@ def move_assets(db, tx):
                 "destination": destination,
                 "asset": balance["asset"],
                 "quantity": balance["quantity"],
+                "msg_index": msg_index,
             }
 
             ledger.insert_record(db, "sends", bindings, "UTXO_MOVE")
+            msg_index += 1
 
             logger.info(
                 f"Move {balance['asset']} from utxo: {source} to utxo: {destination} ({tx['tx_hash']})"
