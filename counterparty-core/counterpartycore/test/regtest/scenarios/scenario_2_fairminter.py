@@ -173,7 +173,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/128/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT",
+                "url": "blocks/128/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT,NEW_TRANSACTION",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
@@ -262,6 +262,24 @@ SCENARIO = [
                             "quantity": 100000000,
                             "tx_index": 16,
                             "utxo": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event_index": 132,
+                        "event": "NEW_TRANSACTION",
+                        "params": {
+                            "block_hash": "$BLOCK_HASH",
+                            "block_index": 128,
+                            "block_time": "$BLOCK_TIME",
+                            "btc_amount": 0,
+                            "data": "5b464149524d494e54427c313030303030303030",
+                            "destination": "",
+                            "fee": 5725,
+                            "source": "$ADDRESS_3",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": 16,
+                            "utxos_info": "$TX_HASH:1",
                         },
                         "tx_hash": "$TX_HASH",
                     },

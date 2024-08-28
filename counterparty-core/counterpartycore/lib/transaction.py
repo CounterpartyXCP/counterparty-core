@@ -1182,6 +1182,8 @@ def compose_transaction(
                 #    pkhshs.append(script.make_pubkeyhash(addr))
                 # params[address_name] = pkhshs
                 pass
+            elif util.is_utxo_format(address):
+                pass
             else:
                 provided_pubkeys += script.extract_pubkeys(address)
                 params[address_name] = script.make_pubkeyhash(address)

@@ -41,6 +41,10 @@ def run_item(node, item, context):
             for key in item["params"]:
                 if isinstance(item["params"][key], str):
                     item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i+1}", address)
+        for name, value in context.items():
+            for key in item["params"]:
+                if isinstance(item["params"][key], str):
+                    item["params"][key] = item["params"][key].replace(f"${name}", value)
         try:
             tx_hash, block_hash, block_time = node.send_transaction(
                 item["source"], item["transaction"], item["params"]

@@ -83,5 +83,79 @@ SCENARIO = [
                 ],
             }
         ],
-    }
+    },
+    {
+        "title": "Attach asset to UTXO",
+        "transaction": "attach",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "MYASSETA",
+            "quantity": 10 * 10**8,
+            "destination": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+        },
+        "controls": [
+            {
+                "url": "blocks/135/events?event_name=ATTACH_TO_UTXO,INCREMENT_TRANSACTION_COUNT,CREDIT,DEBIT",
+                "result": [
+                    {
+                        "event": "ATTACH_TO_UTXO",
+                        "event_index": 194,
+                        "params": {
+                            "asset": "MYASSETA",
+                            "block_index": 135,
+                            "destination": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+                            "fee_paid": 0,
+                            "quantity": 1000000000,
+                            "source": "$ADDRESS_1",
+                            "status": "valid",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": 22,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "INCREMENT_TRANSACTION_COUNT",
+                        "event_index": 193,
+                        "params": {
+                            "block_index": 135,
+                            "count": 1,
+                            "difficulty_period": 0,
+                            "transaction_id": 100,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "CREDIT",
+                        "event_index": 192,
+                        "params": {
+                            "address": None,
+                            "asset": "MYASSETA",
+                            "block_index": 135,
+                            "calling_function": "attach to utxo",
+                            "event": "$TX_HASH",
+                            "quantity": 1000000000,
+                            "tx_index": 22,
+                            "utxo": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "DEBIT",
+                        "event_index": 191,
+                        "params": {
+                            "action": "attach to utxo",
+                            "address": "$ADDRESS_1",
+                            "asset": "MYASSETA",
+                            "block_index": 135,
+                            "event": "$TX_HASH",
+                            "quantity": 1000000000,
+                            "tx_index": 22,
+                            "utxo": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                ],
+            }
+        ],
+    },
 ]
