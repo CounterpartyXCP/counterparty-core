@@ -34,9 +34,9 @@ from .params import (
     DEFAULT_PARAMS as DP,
 )
 
-UNITTEST_VECTOR = UTXO_VECTOR
+# UNITTEST_VECTOR = UTXO_VECTOR
 
-UNITTEST_VECTOR_ = (
+UNITTEST_VECTOR = (
     FAIRMINTER_VECTOR
     | FAIRMINT_VECTOR
     | LEDGER_VECTOR
@@ -823,7 +823,7 @@ UNITTEST_VECTOR_ = (
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                         [],
-                        [],
+                        ["4f4a408d8bd90ca994e1f6b0969a8fe1a6bcf33211a4b5bad876d26b6f3a666b:0"],
                     ),
                 },
                 # data in OP_CHECKMULTISIG script
@@ -842,7 +842,7 @@ UNITTEST_VECTOR_ = (
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                         [],
-                        [],
+                        ["564501b070077eb6e978a547ae28a3e8ec4505da3de856f03a0d127750a44f11:0"],
                     ),
                 },
                 # data in OP_CHECKMULTISIG script, destination = p2sh
@@ -861,7 +861,7 @@ UNITTEST_VECTOR_ = (
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                         [],
-                        [],
+                        ["1f9b910792994070699d898d59217df052bc3568d7b8e4e5d5bba485aa62c73a:0"],
                     ),
                 },
                 {
@@ -882,7 +882,7 @@ UNITTEST_VECTOR_ = (
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                         [],
-                        [],
+                        ["3481e0520d4f928617e86c0695f3d49faabb10b5432d44eb02e01141a4e6fc4d:0"],
                     ),
                 },
                 {
@@ -901,7 +901,7 @@ UNITTEST_VECTOR_ = (
                         10000,
                         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                         [],
-                        [],
+                        ["3481e0520d4f928617e86c0695f3d49faabb10b5432d44eb02e01141a4e6fc4d:0"],
                     ),
                 },
             ],

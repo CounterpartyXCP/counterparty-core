@@ -202,9 +202,11 @@ def insert_raw_transaction(raw_transaction, db):
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
+        deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-            db, deserialize.deserialize_tx(raw_transaction, True), block_index
+            db, deserialized_tx, block_index
         )
+        utxos_info = gettxinfo.get_utxos_info(db, deserialized_tx)
         bindings = {
             "tx_index": tx_index,
             "tx_hash": tx_hash,
@@ -217,6 +219,7 @@ def insert_raw_transaction(raw_transaction, db):
             "fee": fee,
             "data": data,
             "supported": True,
+            "utxos_info": " ".join(utxos_info),
         }
         ledger.insert_record(db, "transactions", bindings, "NEW_TRANSACTION")
 
@@ -249,9 +252,11 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index[0]["tx_index"] if len(tx_index) else 0
     tx_index = tx_index + 1
 
+    deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-        db, deserialize.deserialize_tx(raw_transaction, True), util.CURRENT_BLOCK_INDEX
+        db, deserialized_tx, util.CURRENT_BLOCK_INDEX
     )
+    utxos_info = gettxinfo.get_utxos_info(db, deserialized_tx)
     tx = {
         "tx_index": tx_index,
         "tx_hash": tx_hash,
@@ -264,6 +269,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
         "fee": fee,
         "data": data,
         "supported": True,
+        "utxos_info": " ".join(utxos_info),
     }
 
     cursor.close()

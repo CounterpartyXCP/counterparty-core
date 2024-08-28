@@ -169,8 +169,9 @@ def parse(db, tx, message):
 
 
 def move_assets(db, tx):
-    utxos = tx["utxo_moves"].split(" ")
-    assert len(utxos) > 1
+    utxos = tx["utxos_info"].split(" ")
+    if len(utxos) < 2:
+        return
     destination = utxos.pop()
     sources = utxos
     action = "utxo move"

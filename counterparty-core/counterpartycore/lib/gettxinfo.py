@@ -548,7 +548,7 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False):
         return get_tx_info_legacy(decoded_tx, block_index)
 
 
-def get_utxo_moves(db, decoded_tx):
+def get_utxos_info(db, decoded_tx):
     """
     Get the UTXO move info.
     Returns a list of UTXOs. Last UTXO is the destination, previous UTXOs are the sources.
@@ -562,31 +562,28 @@ def get_utxo_moves(db, decoded_tx):
         if len(utxo_balances) > 0:
             sources.append(utxo)
     destination = None
-    # if yes, the destination is the first non-OP_RETURN vout
-    if len(sources) > 0:
-        for n, vout in enumerate(decoded_tx["vout"]):
-            asm = script.script_to_asm(vout["script_pub_key"])
-            if asm[0] == OP_RETURN:  # noqa: F405
-                continue
-            destination = decoded_tx["tx_hash"] + ":" + str(n)
-            return sources + [destination]
-    if len(sources) >= 2:  # we need at least one source and one destination
-        return sources
+    # the destination is the first non-OP_RETURN vout
+    for n, vout in enumerate(decoded_tx["vout"]):
+        asm = script.script_to_asm(vout["script_pub_key"])
+        if asm[0] == OP_RETURN:  # noqa: F405
+            continue
+        destination = decoded_tx["tx_hash"] + ":" + str(n)
+        return sources + [destination]
     return []
 
 
 def get_tx_info(db, decoded_tx, block_index):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     if util.enabled("utxo_support", block_index=block_index):
-        utxo_moves = get_utxo_moves(db, decoded_tx)
+        utxos_info = get_utxos_info(db, decoded_tx)
     else:
-        utxo_moves = []
+        utxos_info = []
     try:
         source, destination, btc_amount, fee, data, dispensers_outs = _get_tx_info(
             db, decoded_tx, block_index
         )
-        return source, destination, btc_amount, fee, data, dispensers_outs, utxo_moves
+        return source, destination, btc_amount, fee, data, dispensers_outs, utxos_info
     except DecodeError as e:  # noqa: F841
-        return b"", None, None, None, None, None, utxo_moves
+        return b"", None, None, None, None, None, utxos_info
     except BTCOnlyError as e:  # noqa: F841
-        return b"", None, None, None, None, None, utxo_moves
+        return b"", None, None, None, None, None, utxos_info

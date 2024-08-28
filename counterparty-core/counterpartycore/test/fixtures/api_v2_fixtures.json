@@ -181,7 +181,7 @@
                 "fee": 6800,
                 "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "34ddf77d56739516eec4be2cef26c823380845834393dcedc8c06c184b55463b:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "order",
@@ -330,6 +330,7 @@
                     "supported": true,
                     "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
                     "tx_index": 492,
+                    "utxos_info": "34ddf77d56739516eec4be2cef26c823380845834393dcedc8c06c184b55463b:0",
                     "unpacked_data": {
                         "message_type": "order",
                         "message_type_id": 10,
@@ -496,7 +497,7 @@
                 "fee": 10850,
                 "data": "646d6e367133645332456e44557833626d795763364434737a4a4e5647746152377a637c346630343333626138343130333865326531363332383434353933306464376263613335333039623134623064613434353163386639346336333133363862383a317c444956495349424c457c31",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "cdb939766a0550cc7fd96a1e140738e88ab09979f9b6c709a1c2635c9253ddf5:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -519,7 +520,7 @@
                 "fee": 10850,
                 "data": "646d6e367133645332456e44557833626d795763364434737a4a4e5647746152377a637c346630343333626138343130333865326531363332383434353933306464376263613335333039623134623064613434353163386639346336333133363862383a317c5843507c313030",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "dc078cdea6abfeec782c99efe7b680e749f20e33a5484e12dcf13dbd8ef017cf:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -542,7 +543,7 @@
                 "fee": 5800,
                 "data": "5b413136303336313238353739323733333732397c3230",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "33b22f767d86a1375935576b0b0b76fee0c080ab5dd4e8d9aa27537df84abef2:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -565,7 +566,7 @@
                 "fee": 5800,
                 "data": "5b413136303336313238353739323733333732397c3130",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "8abd458920b9327516672c0c4e011d6263f813c78d14619a90d0673fcdcb6e54:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -588,7 +589,7 @@
                 "fee": 8825,
                 "data": "5a413136303336313238353739323733333732397c7c31307c307c35307c32307c307c307c32307c3331303532307c33303030303030307c307c317c317c317c736f6674636170206465736372697074696f6e",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "107d0bd488339e25669691cdcabb05b06d944a988ed5d4c4e78d6e09ffbf92b5:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -611,7 +612,7 @@
                 "fee": 6625,
                 "data": "5a51414944464149524d494e7c7c31307c307c35307c32307c307c307c32307c3430303030307c35303030303030307c307c307c307c317c",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "a43a27102d9434037b14b3997763f94590e7d372fd12a384beab9d8526b3cf1a:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -634,7 +635,7 @@
                 "fee": 6325,
                 "data": "5a52414944464149524d494e7c7c31307c31307c33307c32307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "0cf1625e17413e9069e0684697244a349b83c82f4d35ff94f71552dfbccc7e5a:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -657,7 +658,7 @@
                 "fee": 5575,
                 "data": "5b46524545464149524d494e7c30",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "f9254bcd42ed8a66c682c9bd573b3a2e83509859f772e0f927436191c1a55924:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -680,7 +681,7 @@
                 "fee": 6250,
                 "data": "5a50414944464149524d494e7c7c31307c307c307c307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "a07d555fe802d7e2b565e7d907009ce3bb3ffb873a2f3937a069782eb3f061f7:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -703,7 +704,7 @@
                 "fee": 6250,
                 "data": "5a46524545464149524d494e7c7c307c31307c307c307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "0c28a73aa890e45848462aafb833841ff867fa21ea70444936462c4a28befda3:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -731,7 +732,7 @@
             "fee": 6800,
             "data": "00000014000000a25be34b66000000174876e800010000000000000000000f446976697369626c65206173736574",
             "supported": true,
-            "utxo_moves": null,
+            "utxos_info": "ae7a3edc95c2e5ecf013374d39915de4bbf5d98934bc7e53b00016267f8ffba0:0",
             "confirmed": true,
             "unpacked_data": {
                 "message_type": "issuance",
@@ -768,7 +769,7 @@
             "fee": 6800,
             "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
             "supported": true,
-            "utxo_moves": null,
+            "utxos_info": "34ddf77d56739516eec4be2cef26c823380845834393dcedc8c06c184b55463b:0",
             "confirmed": true,
             "unpacked_data": {
                 "message_type": "order",
@@ -1197,7 +1198,7 @@
                 "fee": 10850,
                 "data": "646d6e367133645332456e44557833626d795763364434737a4a4e5647746152377a637c346630343333626138343130333865326531363332383434353933306464376263613335333039623134623064613434353163386639346336333133363862383a317c444956495349424c457c31",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "cdb939766a0550cc7fd96a1e140738e88ab09979f9b6c709a1c2635c9253ddf5:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -1220,7 +1221,7 @@
                 "fee": 10850,
                 "data": "646d6e367133645332456e44557833626d795763364434737a4a4e5647746152377a637c346630343333626138343130333865326531363332383434353933306464376263613335333039623134623064613434353163386639346336333133363862383a317c5843507c313030",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "dc078cdea6abfeec782c99efe7b680e749f20e33a5484e12dcf13dbd8ef017cf:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -1243,7 +1244,7 @@
                 "fee": 5800,
                 "data": "5b413136303336313238353739323733333732397c3230",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "33b22f767d86a1375935576b0b0b76fee0c080ab5dd4e8d9aa27537df84abef2:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -1266,7 +1267,7 @@
                 "fee": 5800,
                 "data": "5b413136303336313238353739323733333732397c3130",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "8abd458920b9327516672c0c4e011d6263f813c78d14619a90d0673fcdcb6e54:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -1289,7 +1290,7 @@
                 "fee": 8825,
                 "data": "5a413136303336313238353739323733333732397c7c31307c307c35307c32307c307c307c32307c3331303532307c33303030303030307c307c317c317c317c736f6674636170206465736372697074696f6e",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "107d0bd488339e25669691cdcabb05b06d944a988ed5d4c4e78d6e09ffbf92b5:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -1312,7 +1313,7 @@
                 "fee": 6625,
                 "data": "5a51414944464149524d494e7c7c31307c307c35307c32307c307c307c32307c3430303030307c35303030303030307c307c307c307c317c",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "a43a27102d9434037b14b3997763f94590e7d372fd12a384beab9d8526b3cf1a:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -1384,6 +1385,7 @@
                     "supported": true,
                     "tx_hash": "ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e",
                     "tx_index": 509,
+                    "utxos_info": "cdb939766a0550cc7fd96a1e140738e88ab09979f9b6c709a1c2635c9253ddf5:0",
                     "unpacked_data": {
                         "message_type": "unknown",
                         "message_type_id": 1684893238,
@@ -1438,6 +1440,7 @@
                     "supported": true,
                     "tx_hash": "9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883",
                     "tx_index": 508,
+                    "utxos_info": "dc078cdea6abfeec782c99efe7b680e749f20e33a5484e12dcf13dbd8ef017cf:0",
                     "unpacked_data": {
                         "message_type": "unknown",
                         "message_type_id": 1684893238,
@@ -3403,7 +3406,7 @@
                 "fee": 10850,
                 "data": "646d6e367133645332456e44557833626d795763364434737a4a4e5647746152377a637c346630343333626138343130333865326531363332383434353933306464376263613335333039623134623064613434353163386639346336333133363862383a317c444956495349424c457c31",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "cdb939766a0550cc7fd96a1e140738e88ab09979f9b6c709a1c2635c9253ddf5:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -3426,7 +3429,7 @@
                 "fee": 10850,
                 "data": "646d6e367133645332456e44557833626d795763364434737a4a4e5647746152377a637c346630343333626138343130333865326531363332383434353933306464376263613335333039623134623064613434353163386639346336333133363862383a317c5843507c313030",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "dc078cdea6abfeec782c99efe7b680e749f20e33a5484e12dcf13dbd8ef017cf:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -3449,7 +3452,7 @@
                 "fee": 6625,
                 "data": "5a51414944464149524d494e7c7c31307c307c35307c32307c307c307c32307c3430303030307c35303030303030307c307c307c307c317c",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "a43a27102d9434037b14b3997763f94590e7d372fd12a384beab9d8526b3cf1a:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -3472,7 +3475,7 @@
                 "fee": 6325,
                 "data": "5a52414944464149524d494e7c7c31307c31307c33307c32307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "0cf1625e17413e9069e0684697244a349b83c82f4d35ff94f71552dfbccc7e5a:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -3495,7 +3498,7 @@
                 "fee": 5575,
                 "data": "5b46524545464149524d494e7c30",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "f9254bcd42ed8a66c682c9bd573b3a2e83509859f772e0f927436191c1a55924:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -3518,7 +3521,7 @@
                 "fee": 6250,
                 "data": "5a50414944464149524d494e7c7c31307c307c307c307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "a07d555fe802d7e2b565e7d907009ce3bb3ffb873a2f3937a069782eb3f061f7:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -3541,7 +3544,7 @@
                 "fee": 6250,
                 "data": "5a46524545464149524d494e7c7c307c31307c307c307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "0c28a73aa890e45848462aafb833841ff867fa21ea70444936462c4a28befda3:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -3564,7 +3567,7 @@
                 "fee": 6550,
                 "data": "0000001501530821671b10650000000005f5e10001108e90a57dba9967c422e83080f22f0c684368696c64206f6620706172656e74",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "0c2cc9e9cdd3a29c7a2fcd38a68d409c4c03ff78456fde49595d8fdfd6110b67:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "issuance",
@@ -3598,7 +3601,7 @@
                 "fee": 6300,
                 "data": "00000014000000000aa4097d0000000005f5e100010000000000000000000c506172656e74206173736574",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "fccea6e9a0ad88c0b3a93594e176a9226095acdad38b63daabbdfe96737b8bf7:1",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "issuance",
@@ -3633,7 +3636,7 @@
                 "fee": 6800,
                 "data": "0000000a00000000000000010000000005f5e100000000000000000000000000000c350007d000000000000dbba0",
                 "supported": true,
-                "utxo_moves": null,
+                "utxos_info": "34ddf77d56739516eec4be2cef26c823380845834393dcedc8c06c184b55463b:0",
                 "confirmed": true,
                 "unpacked_data": {
                     "message_type": "order",
