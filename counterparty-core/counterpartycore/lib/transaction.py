@@ -1954,18 +1954,34 @@ def compose_detach(
     )
 
 
-def compose_movetoutxo(db, utxo: str, destination: str, **construct_args):
+def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
     """
     Move assets from UTXO to another UTXO.
     :param utxo: The utxo from which the assets are moved
     :param destination: The address to move the assets to
+    :param more_utxos: The additional utxos to fund the transaction
     """
     decimal.getcontext().prec = 8
 
+    more_utxos_list = []
+    input_count = 1
+    total_value = D("0")
     try:
         source_address, source_value = backend.bitcoind.get_utxo_address_and_value(utxo)
+        total_value += D(source_value)
+        for more_utxo in more_utxos.split(","):
+            if more_utxo == "":
+                continue
+            _more_utxo_address, more_utxo_value = backend.bitcoind.get_utxo_address_and_value(
+                more_utxo
+            )
+            more_utxo_tx_hash, more_utxo_vout = more_utxo.split(":")
+            more_utxos_list.append({"txid": more_utxo_tx_hash, "vout": int(more_utxo_vout)})
+            input_count += 1
+            total_value += D(more_utxo_value)
     except exceptions.InvalidUTXOError as e:
         raise exceptions.ComposeError("Invalid UTXO for source") from e
+
     try:
         script.validate(destination)
     except Exception as e:
@@ -1975,16 +1991,16 @@ def compose_movetoutxo(db, utxo: str, destination: str, **construct_args):
 
     fee_per_kb = backend.bitcoind.fee_per_kb()
     # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
-    tx_size = (1 * 148) + (2 * 34) + 10
+    tx_size = (input_count * 148) + (2 * 34) + 10
     fee = (D(fee_per_kb) / config.UNIT) * (D(tx_size) / 1024)
 
     dust = D("0.0000546")
-    change = D(source_value) - dust - fee
+    change = D(total_value) - dust - fee
 
     if change < 0:
         raise exceptions.ComposeError("Insufficient funds for fee")
 
-    inputs = [{"txid": tx_hash, "vout": int(vout)}]
+    inputs = [{"txid": tx_hash, "vout": int(vout)}] + more_utxos_list
     outputs = [{destination: str(dust)}, {source_address: str(change)}]
     rawtransaction = backend.bitcoind.createrawtransaction(inputs, outputs)
 
