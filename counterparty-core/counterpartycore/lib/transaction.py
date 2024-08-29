@@ -1187,14 +1187,12 @@ def compose_transaction(
     for address_name in ["source", "destination"]:
         if address_name in params:
             address = params[address_name]
-            if isinstance(address, list):
+            if isinstance(address, list) or address is None or util.is_utxo_format(address):
                 # pkhshs = []
                 # for addr in address:
                 #    provided_pubkeys += script.extract_pubkeys(addr)
                 #    pkhshs.append(script.make_pubkeyhash(addr))
                 # params[address_name] = pkhshs
-                pass
-            elif util.is_utxo_format(address):
                 pass
             else:
                 provided_pubkeys += script.extract_pubkeys(address)
@@ -1909,9 +1907,9 @@ def compose_utxo(
 def compose_attach(
     db,
     address: str,
-    destination: str,
     asset: str,
     quantity: int,
+    destination: str = None,
     **construct_args,
 ):
     """

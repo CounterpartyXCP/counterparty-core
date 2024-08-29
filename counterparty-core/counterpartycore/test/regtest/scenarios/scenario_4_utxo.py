@@ -257,7 +257,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "DETACH_FROM_UTXO",
-                        "event_index": 208,
+                        "event_index": 207,
                         "params": {
                             "asset": "MYASSETA",
                             "block_index": 137,
@@ -269,17 +269,6 @@ SCENARIO = [
                             "status": "valid",
                             "tx_hash": "$TX_HASH",
                             "tx_index": 24,
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
-                        "event": "INCREMENT_TRANSACTION_COUNT",
-                        "event_index": 207,
-                        "params": {
-                            "block_index": 137,
-                            "count": 2,
-                            "difficulty_period": 0,
-                            "transaction_id": 100,
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -310,6 +299,83 @@ SCENARIO = [
                             "quantity": 500000000,
                             "tx_index": 24,
                             "utxo": "$UTXO_MOVE_1_TX_HASH:0",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                ],
+            }
+        ],
+    },
+    {
+        "title": "Attach asset to new UTXO",
+        "transaction": "attach",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "MYASSETA",
+            "quantity": 10 * 10**8,
+        },
+        "set_variables": {
+            "UTXO_ATTACH_2_TX_HASH": "$TX_HASH",
+        },
+        "controls": [
+            {
+                "url": "blocks/138/events?event_name=ATTACH_TO_UTXO,INCREMENT_TRANSACTION_COUNT,CREDIT,DEBIT",
+                "result": [
+                    {
+                        "event": "ATTACH_TO_UTXO",
+                        "event_index": 215,
+                        "params": {
+                            "asset": "MYASSETA",
+                            "block_index": 138,
+                            "destination": "$TX_HASH:1",
+                            "fee_paid": 0,
+                            "msg_index": 0,
+                            "quantity": 1000000000,
+                            "source": "$ADDRESS_1",
+                            "status": "valid",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": 25,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "INCREMENT_TRANSACTION_COUNT",
+                        "event_index": 214,
+                        "params": {
+                            "block_index": 138,
+                            "count": 2,
+                            "difficulty_period": 0,
+                            "transaction_id": 100,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "CREDIT",
+                        "event_index": 213,
+                        "params": {
+                            "address": None,
+                            "asset": "MYASSETA",
+                            "block_index": 138,
+                            "calling_function": "attach to utxo",
+                            "event": "$TX_HASH",
+                            "quantity": 1000000000,
+                            "tx_index": 25,
+                            "utxo": "$TX_HASH:1",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "DEBIT",
+                        "event_index": 212,
+                        "params": {
+                            "action": "attach to utxo",
+                            "address": "$ADDRESS_1",
+                            "asset": "MYASSETA",
+                            "block_index": 138,
+                            "event": "$TX_HASH",
+                            "quantity": 1000000000,
+                            "tx_index": 25,
+                            "utxo": None,
                         },
                         "tx_hash": "$TX_HASH",
                     },

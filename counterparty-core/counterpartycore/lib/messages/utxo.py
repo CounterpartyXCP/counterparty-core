@@ -31,16 +31,20 @@ def validate(db, source, destination, asset, quantity, block_index=None):
         script.validate(source)
     except script.AddressError:
         source_is_address = False
-    try:
-        script.validate(destination)
-    except script.AddressError:
-        destination_is_address = False
+    if destination:
+        try:
+            script.validate(destination)
+        except script.AddressError:
+            destination_is_address = False
 
     source_is_utxo = util.is_utxo_format(source)
-    destination_is_utxo = util.is_utxo_format(destination)
+    if destination:
+        destination_is_utxo = util.is_utxo_format(destination)
+    else:
+        destination_is_utxo = True
 
     # attach to utxo
-    if source_is_address and (not destination_is_utxo and destination is not None):
+    if source_is_address and not destination_is_utxo:
         problems.append("If source is an address, destination must be a UTXO")
     # or detach from utxo
     if source_is_utxo and not destination_is_address:
@@ -52,20 +56,17 @@ def validate(db, source, destination, asset, quantity, block_index=None):
         fee = 0
 
     asset_balance = ledger.get_balance(db, source, asset)
-    if source_is_address:
-        fee_payer = source
-    else:
-        fee_payer = destination
 
-    if asset == config.XCP and fee_payer == source:
+    if asset == config.XCP:
         if asset_balance < quantity + fee:
             problems.append("insufficient funds for transfer and fee")
     else:
         if asset_balance < quantity:
             problems.append("insufficient funds for transfer")
-        xcp_balance = ledger.get_balance(db, fee_payer, config.XCP)
-        if xcp_balance < fee:
-            problems.append("insufficient funds for fee")
+        if source_is_address:
+            xcp_balance = ledger.get_balance(db, source, config.XCP)
+            if xcp_balance < fee:
+                problems.append("insufficient funds for fee")
 
     return problems
 
