@@ -9,7 +9,6 @@ import decimal
 import hashlib
 import inspect
 import io
-import json
 import logging
 import sys
 import threading
@@ -1950,6 +1949,8 @@ def compose_movetoutxo(db, utxo: str, destination: str, **construct_args):
     :param utxo: The utxo from which the assets are moved
     :param destination: The address to move the assets to
     """
+    decimal.getcontext().prec = 8
+
     try:
         source_address, source_value = backend.bitcoind.get_utxo_address_and_value(utxo)
     except exceptions.InvalidUTXOError as e:
@@ -1964,13 +1965,16 @@ def compose_movetoutxo(db, utxo: str, destination: str, **construct_args):
     fee_per_kb = backend.bitcoind.fee_per_kb()
     # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
     tx_size = (1 * 148) + (2 * 34) + 10
-    fee = fee_per_kb * (tx_size / 1024)
+    fee = (D(fee_per_kb) / config.UNIT) * (D(tx_size) / 1024)
 
-    dust = 0.00005460
-    change = source_value - dust - fee
+    dust = D("0.0000546")
+    change = D(source_value) - dust - fee
 
-    inputs = json.dumps([{"txid": tx_hash, "vout": int(vout)}])
-    outputs = json.dumps([{destination: dust}, {source_address: change}])
+    if change < 0:
+        raise exceptions.ComposeError("Insufficient funds for fee")
+
+    inputs = [{"txid": tx_hash, "vout": int(vout)}]
+    outputs = [{destination: str(dust)}, {source_address: str(change)}]
     rawtransaction = backend.bitcoind.createrawtransaction(inputs, outputs)
 
     return {

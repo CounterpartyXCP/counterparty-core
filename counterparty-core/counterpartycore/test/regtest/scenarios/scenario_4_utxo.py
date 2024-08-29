@@ -158,4 +158,83 @@ SCENARIO = [
             }
         ],
     },
+    {
+        "title": "Move assets from UTXO to UTXO",
+        "transaction": "movetoutxo",
+        "source": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+        "params": {
+            "destination": "$ADDRESS_4",
+        },
+        "controls": [
+            {
+                "url": "blocks/136/events?event_name=UTXO_MOVE,CREDIT,DEBIT,NEW_TRANSACTION",
+                "result": [
+                    {
+                        "event": "UTXO_MOVE",
+                        "event_index": 201,
+                        "params": {
+                            "asset": "MYASSETA",
+                            "block_index": 136,
+                            "destination": "$TX_HASH:0",
+                            "msg_index": 0,
+                            "quantity": 1000000000,
+                            "source": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+                            "status": "valid",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": 23,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "CREDIT",
+                        "event_index": 200,
+                        "params": {
+                            "address": None,
+                            "asset": "MYASSETA",
+                            "block_index": 136,
+                            "calling_function": "utxo move",
+                            "event": "$TX_HASH",
+                            "quantity": 1000000000,
+                            "tx_index": 23,
+                            "utxo": "$TX_HASH:0",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "DEBIT",
+                        "event_index": 199,
+                        "params": {
+                            "action": "utxo move",
+                            "address": None,
+                            "asset": "MYASSETA",
+                            "block_index": 136,
+                            "event": "$TX_HASH",
+                            "quantity": 1000000000,
+                            "tx_index": 23,
+                            "utxo": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "NEW_TRANSACTION",
+                        "event_index": 198,
+                        "params": {
+                            "block_hash": "$BLOCK_HASH",
+                            "block_index": 136,
+                            "block_time": "$BLOCK_TIME",
+                            "btc_amount": None,
+                            "data": None,
+                            "destination": None,
+                            "fee": None,
+                            "source": "",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": 23,
+                            "utxos_info": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1 $TX_HASH:0",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                ],
+            }
+        ],
+    },
 ]

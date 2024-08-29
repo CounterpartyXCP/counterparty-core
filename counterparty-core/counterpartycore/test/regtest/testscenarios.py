@@ -42,6 +42,7 @@ def run_item(node, item, context):
                 if isinstance(item["params"][key], str):
                     item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i+1}", address)
         for name, value in context.items():
+            item["source"] = item["source"].replace(f"${name}", value)
             for key in item["params"]:
                 if isinstance(item["params"][key], str):
                     item["params"][key] = item["params"][key].replace(f"${name}", value)
