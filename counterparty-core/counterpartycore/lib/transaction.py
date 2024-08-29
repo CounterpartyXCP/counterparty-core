@@ -108,6 +108,7 @@ def construct(
     p2sh_source_multisig_pubkeys=None,
     p2sh_source_multisig_pubkeys_required=None,
     p2sh_pretx_txid=None,
+    exclude_utxos="",
 ):
     if TRANSACTION_SERVICE_SINGLETON is None:
         raise Exception("Transaction not initialized")
@@ -136,6 +137,7 @@ def construct(
         p2sh_source_multisig_pubkeys,
         p2sh_source_multisig_pubkeys_required,
         p2sh_pretx_txid,
+        exclude_utxos,
     )
 
 
@@ -349,6 +351,7 @@ class TransactionService:
         data_btc_out,
         regular_dust_size,
         disable_utxo_locks,
+        exclude_utxos,
     ):
         # Array of UTXOs, as retrieved by listunspent function from bitcoind
         if custom_inputs:
@@ -382,6 +385,7 @@ class TransactionService:
                     make_outkey(output) not in filter_unspents_utxo_locks
                     and self.make_outkey_vin_txid(output["txid"], output["vout"])
                     not in filter_unspents_p2sh_locks
+                    and f"{output['txid']}:{output['vout']}" not in exclude_utxos.split(",")
                 ):
                     filtered_unspent.append(output)
             unspent = filtered_unspent
@@ -566,6 +570,7 @@ class TransactionService:
         p2sh_source_multisig_pubkeys=None,
         p2sh_source_multisig_pubkeys_required=None,
         p2sh_pretx_txid=None,
+        exclude_utxos="",
     ):
         if estimate_fee_per_kb is None:
             estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
@@ -781,6 +786,7 @@ class TransactionService:
                 data_btc_out,
                 regular_dust_size,
                 disable_utxo_locks,
+                exclude_utxos,
             )
             btc_in = n_btc_in
             final_fee = n_final_fee
@@ -1104,6 +1110,11 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "Construct a PSBT instead of a raw transaction hex",
     ),
+    "exclude_utxos": (
+        str,
+        "",
+        "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
+    ),
 }
 
 
@@ -1157,6 +1168,7 @@ def compose_transaction(
     segwit=False,
     api_v1=False,
     return_psbt=False,
+    exclude_utxos="",
 ):
     """Create and return a transaction."""
 
@@ -1254,6 +1266,7 @@ def compose_transaction(
         old_style_api=old_style_api,
         segwit=segwit,
         estimate_fee_per_kb_nblocks=confirmation_target,
+        exclude_utxos=exclude_utxos,
     )
     if return_psbt:
         psbt = backend.bitcoind.convert_to_psbt(raw_transaction)

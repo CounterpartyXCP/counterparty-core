@@ -105,6 +105,7 @@ SCENARIO = [
                             "block_index": 135,
                             "destination": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
                             "fee_paid": 0,
+                            "msg_index": 0,
                             "quantity": 1000000000,
                             "source": "$ADDRESS_1",
                             "status": "valid",
@@ -164,6 +165,9 @@ SCENARIO = [
         "source": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
         "params": {
             "destination": "$ADDRESS_4",
+        },
+        "set_variables": {
+            "UTXO_MOVE_1_TX_HASH": "$TX_HASH",
         },
         "controls": [
             {
@@ -230,6 +234,82 @@ SCENARIO = [
                             "tx_hash": "$TX_HASH",
                             "tx_index": 23,
                             "utxos_info": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1 $TX_HASH:0",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                ],
+            }
+        ],
+    },
+    {
+        "title": "Detach assets from UTXO",
+        "transaction": "detach",
+        "source": "$UTXO_MOVE_1_TX_HASH:0",
+        "params": {
+            "destination": "$ADDRESS_5",
+            "asset": "MYASSETA",
+            "quantity": 5 * 10**8,
+            "exclude_utxos": "$UTXO_MOVE_1_TX_HASH:0",
+        },
+        "controls": [
+            {
+                "url": "blocks/137/events?event_name=DETACH_FROM_UTXO,INCREMENT_TRANSACTION_COUNT,CREDIT,DEBIT",
+                "result": [
+                    {
+                        "event": "DETACH_FROM_UTXO",
+                        "event_index": 208,
+                        "params": {
+                            "asset": "MYASSETA",
+                            "block_index": 137,
+                            "destination": "$ADDRESS_5",
+                            "fee_paid": 0,
+                            "msg_index": 0,
+                            "quantity": 500000000,
+                            "source": "$UTXO_MOVE_1_TX_HASH:0",
+                            "status": "valid",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": 24,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "INCREMENT_TRANSACTION_COUNT",
+                        "event_index": 207,
+                        "params": {
+                            "block_index": 137,
+                            "count": 2,
+                            "difficulty_period": 0,
+                            "transaction_id": 100,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "CREDIT",
+                        "event_index": 206,
+                        "params": {
+                            "address": "$ADDRESS_5",
+                            "asset": "MYASSETA",
+                            "block_index": 137,
+                            "calling_function": "detach from utxo",
+                            "event": "$TX_HASH",
+                            "quantity": 500000000,
+                            "tx_index": 24,
+                            "utxo": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "DEBIT",
+                        "event_index": 205,
+                        "params": {
+                            "action": "detach from utxo",
+                            "address": None,
+                            "asset": "MYASSETA",
+                            "block_index": 137,
+                            "event": "$TX_HASH",
+                            "quantity": 500000000,
+                            "tx_index": 24,
+                            "utxo": "$UTXO_MOVE_1_TX_HASH:0",
                         },
                         "tx_hash": "$TX_HASH",
                     },
