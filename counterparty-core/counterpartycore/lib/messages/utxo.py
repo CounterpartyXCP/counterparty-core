@@ -68,6 +68,13 @@ def validate(db, source, destination, asset, quantity, block_index=None):
 
 
 def compose(db, source, destination, asset, quantity):
+    """
+    Compose a UTXO message.
+    source: the source address or UTXO
+    destination: the destination address or UTXO
+    asset: the asset to transfer
+    quantity: the quantity to transfer
+    """
     problems = validate(db, source, destination, asset, quantity)
     if problems:
         raise exceptions.ComposeError(problems)
