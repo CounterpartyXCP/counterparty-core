@@ -130,7 +130,11 @@ def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
 
 
-def get_utxo_address(utxo):
+def createrawtransaction(inputs, outputs):
+    return rpc("createrawtransaction", [inputs, outputs])
+
+
+def get_utxo_address_and_value(utxo):
     tx_hash = utxo.split(":")[0]
     vout = int(utxo.split(":")[1])
     try:
@@ -141,14 +145,14 @@ def get_utxo_address(utxo):
         raise exceptions.InvalidUTXOError("vout index out of range")
     if "address" not in transaction["vout"][vout]["scriptPubKey"]:
         raise exceptions.InvalidUTXOError("vout does not have an address")
-    return transaction["vout"][vout]["scriptPubKey"]["address"]
+    return transaction["vout"][vout]["scriptPubKey"]["address"], transaction["vout"][vout]["value"]
 
 
 def is_valid_utxo(utxo):
     if not util.is_utxo_format(utxo):
         return False
     try:
-        get_utxo_address(utxo)
+        get_utxo_address_and_value(utxo)
         return True
     except exceptions.InvalidUTXOError:
         return False

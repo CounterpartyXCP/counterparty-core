@@ -9,6 +9,7 @@ import decimal
 import hashlib
 import inspect
 import io
+import json
 import logging
 import sys
 import threading
@@ -1941,6 +1942,45 @@ def compose_detach(
         quantity=quantity,
         **construct_args,
     )
+
+
+def compose_movetoutxo(db, utxo: str, destination: str, **construct_args):
+    """
+    Move assets from UTXO to another UTXO.
+    :param utxo: The utxo from which the assets are moved
+    :param destination: The address to move the assets to
+    """
+    try:
+        source_address, source_value = backend.bitcoind.get_utxo_address_and_value(utxo)
+    except exceptions.InvalidUTXOError as e:
+        raise exceptions.ComposeError("Invalid UTXO for source") from e
+    try:
+        script.validate(destination)
+    except Exception as e:
+        raise exceptions.ComposeError("Invalid address for destination") from e
+
+    tx_hash, vout = utxo.split(":")
+
+    fee_per_kb = backend.bitcoind.fee_per_kb()
+    # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
+    tx_size = (1 * 148) + (2 * 34) + 10
+    fee = fee_per_kb * (tx_size / 1024)
+
+    dust = 0.00005460
+    change = source_value - dust - fee
+
+    inputs = json.dumps([{"txid": tx_hash, "vout": int(vout)}])
+    outputs = json.dumps([{destination: dust}, {source_address: change}])
+    rawtransaction = backend.bitcoind.createrawtransaction(inputs, outputs)
+
+    return {
+        "rawtransaction": rawtransaction,
+        "params": {
+            "source": utxo,
+            "destination": destination,
+        },
+        "name": "movetoutxo",
+    }
 
 
 def info(db, rawtransaction: str, block_index: int = None):

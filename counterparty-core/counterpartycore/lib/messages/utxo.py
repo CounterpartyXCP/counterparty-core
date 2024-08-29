@@ -101,7 +101,7 @@ def compose(db, source, destination, asset, quantity):
 
     source_address = source
     if util.is_utxo_format(source):
-        source_address = backend.bitcoind.get_utxo_address(source)
+        source_address, _value = backend.bitcoind.get_utxo_address_and_value(source)
 
     return (source_address, [], data)
 
@@ -135,7 +135,8 @@ def parse(db, tx, message):
         recipient = tx["utxos_info"].split(" ")[-1]
 
     if util.is_utxo_format(source):
-        if backend.bitcoind.get_utxo_address(source) != tx["source"]:
+        source_address, _value = backend.bitcoind.get_utxo_address_and_value(source)
+        if source_address != tx["source"]:
             problems.append("source does not match the UTXO source")
         action = "detach from utxo"
         event = "DETACH_FROM_UTXO"

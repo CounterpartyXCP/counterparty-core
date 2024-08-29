@@ -589,8 +589,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def is_valid_utxo(value):
         return util.is_utxo_format(value)
 
-    def get_utxo_address(value):
-        return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"
+    def get_utxo_address_and_value(value):
+        return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 100
 
     def get_transaction_fee(db, transaction_type, block_index):
         return 10
@@ -609,7 +609,10 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.backend.bitcoind.getrawtransaction", mocked_getrawtransaction
     )
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.is_valid_utxo", is_valid_utxo)
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_utxo_address", get_utxo_address)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_utxo_address_and_value",
+        get_utxo_address_and_value,
+    )
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
         mocked_getrawtransaction_batch,
