@@ -46,7 +46,10 @@ def validate(db, source, destination, asset, quantity, block_index=None):
     if source_is_utxo and not destination_is_address:
         problems.append("If source is a UTXO, destination must be an address")
 
-    fee = gas.get_transaction_fee(db, ID, block_index or util.CURRENT_BLOCK_INDEX)
+    if source_is_address:
+        fee = gas.get_transaction_fee(db, ID, block_index or util.CURRENT_BLOCK_INDEX)
+    else:
+        fee = 0
 
     asset_balance = ledger.get_balance(db, source, asset)
     if source_is_address:
@@ -179,7 +182,10 @@ def parse(db, tx, message):
 
     if status == "valid":
         # fee payment
-        fee = gas.get_transaction_fee(db, ID, tx["block_index"])
+        if action == "attach to utxo":
+            fee = gas.get_transaction_fee(db, ID, tx["block_index"])
+        else:
+            fee = 0
         if fee > 0:
             # fee is always paid by the address
             if action == "attach to utxo":
@@ -230,7 +236,8 @@ def parse(db, tx, message):
             "fee_paid": fee,
         }
         # update counter
-        gas.increment_counter(db, ID, tx["block_index"])
+        if action == "attach to utxo":
+            gas.increment_counter(db, ID, tx["block_index"])
 
     ledger.insert_record(db, "sends", bindings, event)
 

@@ -240,19 +240,6 @@ UTXO_VECTOR = {
                         },
                     },
                     {
-                        "table": "debits",
-                        "values": {
-                            "utxo": None,
-                            "address": ADDR[1],
-                            "asset": "XCP",
-                            "quantity": 10,
-                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
-                            "block_index": DP["default_block_index"],
-                            "tx_index": DP["default_tx_index"],
-                            "action": "detach from utxo fee",
-                        },
-                    },
-                    {
                         "table": "sends",
                         "values": {
                             "tx_index": DP["default_tx_index"],
@@ -263,7 +250,7 @@ UTXO_VECTOR = {
                             "destination": ADDR[1],
                             "asset": "XCP",
                             "quantity": 100,
-                            "fee_paid": 10,
+                            "fee_paid": 0,
                         },
                     },
                     {
@@ -272,7 +259,7 @@ UTXO_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","fee_paid":10,"msg_index":0,"quantity":100,"source":"4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","fee_paid":0,"msg_index":0,"quantity":100,"source":"4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "DETACH_FROM_UTXO",
                         },
                     },
