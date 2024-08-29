@@ -6,7 +6,7 @@ This release includes a variety of protocol upgrades.
 
 # ChangeLog
 
-## Protocole Changes
+## Protocol Changes
 
 * Require Dispenser to be Source Address
     - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/2141
