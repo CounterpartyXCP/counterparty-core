@@ -136,6 +136,20 @@ def test_new_get_balances_by_address():
 
     assert result.json()["result"] == [
         {
+            "address": None,
+            "asset": "DIVISIBLE",
+            "quantity": 1,
+            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        },
+        {
+            "address": None,
+            "asset": "XCP",
+            "quantity": 100,
+            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        },
+        {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "RAIDFAIRMIN",
             "quantity": 20,
@@ -213,84 +227,86 @@ def test_new_get_balances_by_asset():
     asset = "XCP"
     url = f"{API_ROOT}/v2/assets/{asset}/balances"
     result = requests.get(url)  # noqa: S113
+    import json
 
+    print(json.dumps(result.json()["result"], indent=4))
     assert result.json()["result"] == [
         {
-            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
-            "asset": "XCP",
-            "quantity": 100,
-            "address": None,
-            "utxo_address": None,
-        },
-        {
-            "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
-            "asset": "XCP",
-            "quantity": 300000000,
-            "utxo": None,
-            "utxo_address": None,
-        },
-        {
-            "address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
-            "asset": "XCP",
-            "quantity": 46449548498,
-            "utxo": None,
-            "utxo_address": None,
-        },
-        {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "utxo": None,
+            "utxo_address": None,
             "asset": "XCP",
             "quantity": 91674999880,
-            "utxo": None,
-            "utxo_address": None,
-        },
-        {
-            "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
-            "asset": "XCP",
-            "quantity": 92945878046,
-            "utxo": None,
-            "utxo_address": None,
-        },
-        {
-            "address": "mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK",
-            "asset": "XCP",
-            "quantity": 14999857,
-            "utxo": None,
-            "utxo_address": None,
         },
         {
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+            "utxo": None,
+            "utxo_address": None,
             "asset": "XCP",
             "quantity": 99999990,
-            "utxo": None,
-            "utxo_address": None,
         },
         {
-            "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
-            "asset": "XCP",
-            "quantity": 92999130360,
+            "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
             "utxo": None,
             "utxo_address": None,
-        },
-        {
-            "address": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
             "asset": "XCP",
-            "quantity": 92949122099,
-            "utxo": None,
-            "utxo_address": None,
+            "quantity": 300000000,
         },
         {
             "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
-            "asset": "XCP",
-            "quantity": 92999138821,
             "utxo": None,
             "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 92999138821,
+        },
+        {
+            "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 92999130360,
+        },
+        {
+            "address": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 92949122099,
+        },
+        {
+            "address": "mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 14999857,
+        },
+        {
+            "address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 46449548498,
         },
         {
             "address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
-            "asset": "XCP",
-            "quantity": 92999030129,
             "utxo": None,
             "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 92999030129,
+        },
+        {
+            "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 92945878046,
+        },
+        {
+            "address": None,
+            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "XCP",
+            "quantity": 100,
         },
     ]
 

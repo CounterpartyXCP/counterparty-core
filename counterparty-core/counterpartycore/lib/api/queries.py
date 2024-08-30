@@ -2009,7 +2009,7 @@ def get_asset_balances(
         db,
         "balances",
         where={"asset": asset.upper(), "quantity__gt": 0},
-        cursor_field="address",
+        # cursor_field="address, utxo",
         select="address, utxo, utxo_address, asset, quantity",
         order="ASC",
         last_cursor=cursor,

@@ -1132,7 +1132,7 @@
             },
             {
                 "asset": "DIVISIBLE",
-                "total": 98899999999,
+                "total": 98900000000,
                 "addresses": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -1147,6 +1147,13 @@
                         "utxo_address": null,
                         "quantity": 100000000,
                         "quantity_normalized": "1.00000000"
+                    },
+                    {
+                        "address": null,
+                        "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                        "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "quantity": 1,
+                        "quantity_normalized": "0.00000001"
                     }
                 ],
                 "asset_info": {
@@ -1480,6 +1487,36 @@
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
             {
+                "address": null,
+                "asset": "DIVISIBLE",
+                "quantity": 1,
+                "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "0.00000001"
+            },
+            {
+                "address": null,
+                "asset": "XCP",
+                "quantity": 100,
+                "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "0.00000100"
+            },
+            {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "RAIDFAIRMIN",
                 "quantity": 20,
@@ -1631,7 +1668,7 @@
             }
         ],
         "next_cursor": null,
-        "result_count": 10
+        "result_count": 12
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances/NODIVISIBLE?verbose=true": {
         "result": {
@@ -4419,21 +4456,6 @@
     "http://localhost:10009/v2/assets/NODIVISIBLE/balances?verbose=true": {
         "result": [
             {
-                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
-                "utxo": null,
-                "utxo_address": null,
-                "asset": "NODIVISIBLE",
-                "quantity": 10,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "10"
-            },
-            {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "utxo": null,
                 "utxo_address": null,
@@ -4462,6 +4484,21 @@
                     "locked": false
                 },
                 "quantity_normalized": "5"
+            },
+            {
+                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                "utxo": null,
+                "utxo_address": null,
+                "asset": "NODIVISIBLE",
+                "quantity": 10,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "No divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": false,
+                    "locked": false
+                },
+                "quantity_normalized": "10"
             }
         ],
         "next_cursor": null,

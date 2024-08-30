@@ -313,12 +313,13 @@ def update_balances(api_db, event):
             """  # noqa: S608
     else:
         sql = f"""
-            INSERT INTO balances ({field_name}, asset, quantity)
-            VALUES (:address_or_utxo, :asset, :quantity)
+            INSERT INTO balances ({field_name}, asset, quantity, utxo_address)
+            VALUES (:address_or_utxo, :asset, :quantity, :utxo_address)
             """  # noqa: S608
     insert_bindings = {
         "address_or_utxo": address_or_utxo,
         "asset": event_bindings["asset"],
+        "utxo_address": event_bindings["utxo_address"],
         "quantity": quantity,
     }
     cursor.execute(sql, insert_bindings)

@@ -523,7 +523,115 @@ SCENARIO = [
                         "tx_hash": "$TX_HASH",
                     },
                 ],
-            }
+            },
+            {
+                "url": "assets/MYASSETA/balances",
+                "result": [
+                    {
+                        "address": "$ADDRESS_1",
+                        "asset": "MYASSETA",
+                        "quantity": 98000000000,
+                        "utxo": None,
+                        "utxo_address": None,
+                    },
+                    {
+                        "address": "$ADDRESS_5",
+                        "asset": "MYASSETA",
+                        "quantity": 500000000,
+                        "utxo": None,
+                        "utxo_address": None,
+                    },
+                    {
+                        "address": None,
+                        "asset": "MYASSETA",
+                        "quantity": 1500000000,
+                        "utxo": "$TX_HASH:0",
+                        "utxo_address": "$ADDRESS_6",
+                    },
+                ],
+            },
+            {
+                "url": "addresses/$ADDRESS_6/balances",
+                "result": [
+                    {
+                        "address": None,
+                        "asset": "MYASSETA",
+                        "quantity": 1500000000,
+                        "utxo": "$TX_HASH:0",
+                        "utxo_address": "$ADDRESS_6",
+                    },
+                    {
+                        "address": "$ADDRESS_6",
+                        "asset": "XCP",
+                        "quantity": 74999997333,
+                        "utxo": None,
+                        "utxo_address": None,
+                    },
+                ],
+            },
+            {
+                "url": "addresses/balances?addresses=$ADDRESS_6,$ADDRESS_1,$ADDRESS_5",
+                "result": [
+                    {
+                        "addresses": [
+                            {
+                                "address": "$ADDRESS_1",
+                                "quantity": 98000000000,
+                                "utxo": None,
+                                "utxo_address": None,
+                            },
+                            {
+                                "address": "$ADDRESS_5",
+                                "quantity": 500000000,
+                                "utxo": None,
+                                "utxo_address": None,
+                            },
+                            {
+                                "address": None,
+                                "quantity": 1500000000,
+                                "utxo": "$TX_HASH:0",
+                                "utxo_address": "$ADDRESS_6",
+                            },
+                        ],
+                        "asset": "MYASSETA",
+                        "total": 100000000000,
+                    },
+                    {
+                        "addresses": [
+                            {
+                                "address": "$ADDRESS_6",
+                                "quantity": 74999997333,
+                                "utxo": None,
+                                "utxo_address": None,
+                            },
+                            {
+                                "address": "$ADDRESS_1",
+                                "quantity": 84849988167,
+                                "utxo": None,
+                                "utxo_address": None,
+                            },
+                            {
+                                "address": "$ADDRESS_5",
+                                "quantity": 74999997500,
+                                "utxo": None,
+                                "utxo_address": None,
+                            },
+                        ],
+                        "asset": "XCP",
+                        "total": 234849983000,
+                    },
+                ],
+            },
+            {
+                "url": "addresses/$ADDRESS_6/balances/MYASSETA",
+                "result": {
+                    "address": None,
+                    "asset": "MYASSETA",
+                    "quantity": 1500000000,
+                    "utxo": "$TX_HASH:0",
+                    "utxo_address": "$ADDRESS_6",
+                },
+            },
         ],
     },
 ]
