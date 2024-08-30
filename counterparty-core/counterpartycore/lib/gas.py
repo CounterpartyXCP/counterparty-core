@@ -2,6 +2,8 @@ import math
 
 from counterpartycore.lib import config, database, ledger, util
 
+PERIOD_DURATION = 2016  # blocks, around 2 weeks
+
 
 def initialise(db):
     cursor = db.cursor()
@@ -25,12 +27,12 @@ def initialise(db):
 def get_transaction_count_for_last_period(db, transaction_id, block_index):
     cursor = db.cursor()
     count = cursor.execute(
-        """
+        f"""
         SELECT count FROM transaction_count
-        WHERE transaction_id = ? AND block_index >= ? - 2016
+        WHERE transaction_id = ? AND block_index >= ? - {PERIOD_DURATION}
         ORDER BY rowid DESC
         LIMIT 1
-    """,
+        """,  # noqa S608
         (transaction_id, block_index),
     ).fetchone()
     if count is None:
@@ -51,11 +53,11 @@ def increment_counter(db, transaction_id, block_index):
 
 
 def get_average_transactions(db, transaction_id, block_index):
-    if block_index < 2016:
+    if block_index < PERIOD_DURATION:
         return 0
     transaction_count = get_transaction_count_for_last_period(db, transaction_id, block_index)
-    # return average number of transactions for the last 2016 blocks
-    return transaction_count // 2016
+    # return average number of transactions for the last PERIOD_DURATION blocks
+    return transaction_count // PERIOD_DURATION
 
 
 def get_transaction_fee(db, transaction_id, block_index):
