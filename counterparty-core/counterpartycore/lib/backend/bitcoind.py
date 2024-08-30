@@ -149,6 +149,13 @@ def get_utxo_address_and_value(utxo):
     return transaction["vout"][vout]["scriptPubKey"]["address"], transaction["vout"][vout]["value"]
 
 
+def safe_get_utxo_address(utxo):
+    try:
+        return get_utxo_address_and_value(utxo)[0]
+    except exceptions.InvalidUTXOError:
+        return "unknown"
+
+
 def is_valid_utxo(utxo):
     if not util.is_utxo_format(utxo):
         return False

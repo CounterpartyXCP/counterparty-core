@@ -316,7 +316,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         debit_address = None
         utxo = address
-        utxo_address, _utxo_value = backend.bitcoind.get_utxo_address_and_value(utxo)
+        utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
 
     remove_from_balance(db, address, asset, quantity, tx_index, utxo_address)
 
@@ -394,7 +394,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         credit_address = None
         utxo = address
-        utxo_address, _utxo_value = backend.bitcoind.get_utxo_address_and_value(utxo)
+        utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
 
     add_to_balance(db, address, asset, quantity, tx_index, utxo_address)
 
