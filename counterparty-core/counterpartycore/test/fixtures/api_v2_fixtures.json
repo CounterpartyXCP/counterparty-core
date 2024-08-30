@@ -1073,6 +1073,8 @@
                 "addresses": [
                     {
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                        "utxo": null,
+                        "utxo_address": null,
                         "quantity": 50,
                         "quantity_normalized": "0.00000050"
                     }
@@ -1092,6 +1094,8 @@
                 "addresses": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "utxo": null,
+                        "utxo_address": null,
                         "quantity": 100000000,
                         "quantity_normalized": "1.00000000"
                     }
@@ -1111,6 +1115,8 @@
                 "addresses": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "utxo": null,
+                        "utxo_address": null,
                         "quantity": 1000,
                         "quantity_normalized": "0.00001000"
                     }
@@ -1130,11 +1136,15 @@
                 "addresses": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "utxo": null,
+                        "utxo_address": null,
                         "quantity": 98799999999,
                         "quantity_normalized": "988.00000000"
                     },
                     {
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                        "utxo": null,
+                        "utxo_address": null,
                         "quantity": 100000000,
                         "quantity_normalized": "1.00000000"
                     }
@@ -1154,6 +1164,8 @@
                 "addresses": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "utxo": null,
+                        "utxo_address": null,
                         "quantity": 10,
                         "quantity_normalized": "0.00000010"
                     }
@@ -1173,6 +1185,8 @@
                 "addresses": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "utxo": null,
+                        "utxo_address": null,
                         "quantity": 1000,
                         "quantity_normalized": "0.00001000"
                     }
@@ -1469,6 +1483,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "RAIDFAIRMIN",
                 "quantity": 20,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "asset_longname": "",
                     "description": "",
@@ -1482,6 +1498,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "FREEFAIRMIN",
                 "quantity": 10,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "asset_longname": "",
                     "description": "",
@@ -1495,6 +1513,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "A95428956661682277",
                 "quantity": 100000000,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "asset_longname": "PARENT.already.issued",
                     "description": "Child of parent",
@@ -1508,6 +1528,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "PARENT",
                 "quantity": 100000000,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "asset_longname": null,
                     "description": "Parent asset",
@@ -1521,6 +1543,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "MAXI",
                 "quantity": 9223372036854775807,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "asset_longname": null,
                     "description": "Maximum quantity",
@@ -1534,6 +1558,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "LOCKED",
                 "quantity": 1000,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "asset_longname": null,
                     "description": "Locked asset",
@@ -1547,6 +1573,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "CALLABLE",
                 "quantity": 1000,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "asset_longname": null,
                     "description": "Callable asset",
@@ -1560,6 +1588,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "NODIVISIBLE",
                 "quantity": 985,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "asset_longname": null,
                     "description": "No divisible asset",
@@ -1573,6 +1603,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "DIVISIBLE",
                 "quantity": 98799999999,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "asset_longname": null,
                     "description": "Divisible asset",
@@ -1586,6 +1618,8 @@
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "XCP",
                 "quantity": 91674999880,
+                "utxo": null,
+                "utxo_address": null,
                 "asset_info": {
                     "divisible": true,
                     "asset_longname": null,
@@ -1604,6 +1638,8 @@
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "NODIVISIBLE",
             "quantity": 985,
+            "utxo": null,
+            "utxo_address": null,
             "asset_info": {
                 "asset_longname": null,
                 "description": "No divisible asset",
@@ -1616,6 +1652,48 @@
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/credits?verbose=true": {
         "result": [
+            {
+                "block_index": 310508,
+                "address": null,
+                "asset": "DIVISIBLE",
+                "quantity": 1,
+                "calling_function": "attach to utxo",
+                "event": "ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e",
+                "tx_index": 509,
+                "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "confirmed": true,
+                "block_time": 310508000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "0.00000001"
+            },
+            {
+                "block_index": 310507,
+                "address": null,
+                "asset": "XCP",
+                "quantity": 100,
+                "calling_function": "attach to utxo",
+                "event": "9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883",
+                "tx_index": 508,
+                "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "confirmed": true,
+                "block_time": 310507000,
+                "asset_info": {
+                    "divisible": true,
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "quantity_normalized": "0.00000100"
+            },
             {
                 "block_index": 310502,
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -1870,7 +1948,7 @@
             }
         ],
         "next_cursor": null,
-        "result_count": 12
+        "result_count": 14
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/debits?verbose=true": {
         "result": [
@@ -4343,6 +4421,7 @@
             {
                 "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
                 "utxo": null,
+                "utxo_address": null,
                 "asset": "NODIVISIBLE",
                 "quantity": 10,
                 "asset_info": {
@@ -4357,6 +4436,7 @@
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "utxo": null,
+                "utxo_address": null,
                 "asset": "NODIVISIBLE",
                 "quantity": 985,
                 "asset_info": {
@@ -4371,6 +4451,7 @@
             {
                 "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                 "utxo": null,
+                "utxo_address": null,
                 "asset": "NODIVISIBLE",
                 "quantity": 5,
                 "asset_info": {
@@ -4391,6 +4472,8 @@
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "NODIVISIBLE",
             "quantity": 985,
+            "utxo": null,
+            "utxo_address": null,
             "asset_info": {
                 "asset_longname": null,
                 "description": "No divisible asset",

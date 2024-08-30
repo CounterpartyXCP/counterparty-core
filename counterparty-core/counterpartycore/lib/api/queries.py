@@ -865,7 +865,7 @@ def get_credits_by_address(
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"address": address, "quantity__gt": 0}
+    where = [{"address": address, "quantity__gt": 0}, {"utxo_address": address, "quantity__gt": 0}]
     if action:
         where["calling_function"] = action
     return select_rows(db, "credits", where=where, last_cursor=cursor, limit=limit, offset=offset)
@@ -938,7 +938,7 @@ def get_debits_by_address(
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = {"address": address, "quantity__gt": 0}
+    where = [{"address": address, "quantity__gt": 0}, {"utxo_address": address, "quantity__gt": 0}]
     if action:
         where["action"] = action
     return select_rows(db, "debits", where=where, last_cursor=cursor, limit=limit, offset=offset)
@@ -1420,11 +1420,14 @@ def get_address_balances(
     return select_rows(
         db,
         "balances",
-        where={"address": address, "quantity__gt": 0},
+        where=[
+            {"address": address, "quantity__gt": 0},
+            {"utxo_address": address, "quantity__gt": 0},
+        ],
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="address, asset, quantity",
+        select="address, asset, quantity, utxo, utxo_address",
         sort=sort,
     )
 
@@ -1444,7 +1447,10 @@ def get_balances_by_addresses(
         db,
         "balances",
         select="DISTINCT asset AS asset",
-        where={"address__in": addresses.split(","), "quantity__gt": 0},
+        where=[
+            {"address__in": addresses.split(","), "quantity__gt": 0},
+            {"utxo_address__in": addresses.split(","), "quantity__gt": 0},
+        ],
         order="ASC",
         cursor_field="asset",
         last_cursor=cursor,
@@ -1456,8 +1462,11 @@ def get_balances_by_addresses(
     balances = select_rows(
         db,
         "balances",
-        where={"address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
-        select="address, asset, quantity",
+        where=[
+            {"address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
+            {"utxo_address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
+        ],
+        select="address, asset, quantity, utxo, utxo_address",
         order="ASC",
         cursor_field="asset",
         sort=sort,
@@ -1482,6 +1491,8 @@ def get_balances_by_addresses(
             current_balances["addresses"].append(
                 {
                     "address": balance["address"],
+                    "utxo": balance["utxo"],
+                    "utxo_address": balance["utxo_address"],
                     "quantity": balance["quantity"],
                 }
             )
@@ -1499,8 +1510,11 @@ def get_balance_by_address_and_asset(db, address: str, asset: str):
     return select_row(
         db,
         "balances",
-        select="address, asset, quantity",
-        where={"address": address, "asset": asset.upper()},
+        select="address, asset, quantity, utxo, utxo_address",
+        where=[
+            {"address": address, "asset": asset.upper()},
+            {"utxo_address": address, "asset": asset.upper()},
+        ],
     )
 
 
@@ -1996,7 +2010,7 @@ def get_asset_balances(
         "balances",
         where={"asset": asset.upper(), "quantity__gt": 0},
         cursor_field="address",
-        select="address, utxo, asset, quantity",
+        select="address, utxo, utxo_address, asset, quantity",
         order="ASC",
         last_cursor=cursor,
         limit=limit,
