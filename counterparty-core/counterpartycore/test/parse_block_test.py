@@ -20,7 +20,7 @@ def test_parse_block(server_db):
     outputs = (
         "0dc4742800f25978a7b66ad8b0cf275a87427778eae88acb3b0590e4e5e87567",
         "268302c985f5b7a94126d3b235c4b306ee55212a432e6103262cf92c379a6752",
-        "9001341246b5aaee548ab53e58539fb6bb6c2253c71e19bd38d654cc28f34e41",
+        "d757b7be04e8fb07bf5fbec01609a93d3ee84019c3820ac86730829d4a5559dc",
     )
     try:
         assert outputs == test_outputs

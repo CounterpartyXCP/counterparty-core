@@ -560,6 +560,7 @@ def initialise(db):
         cursor.execute("""ALTER TABLE debits ADD COLUMN tx_index INTEGER""")
     if "utxo" not in debits_columns:
         cursor.execute("""ALTER TABLE debits ADD COLUMN utxo TEXT""")
+        cursor.execute("""ALTER TABLE debits ADD COLUMN utxo_address TEXT""")
 
     database.create_indexes(
         cursor,
@@ -572,6 +573,7 @@ def initialise(db):
             ["action"],
             ["quantity"],
             ["utxo"],
+            ["utxo_address"],
         ],
     )
 
@@ -595,6 +597,7 @@ def initialise(db):
         cursor.execute("""ALTER TABLE credits ADD COLUMN tx_index INTEGER""")
     if "utxo" not in credits_columns:
         cursor.execute("""ALTER TABLE credits ADD COLUMN utxo TEXT""")
+        cursor.execute("""ALTER TABLE credits ADD COLUMN utxo_address TEXT""")
 
     database.create_indexes(
         cursor,
@@ -607,6 +610,7 @@ def initialise(db):
             ["calling_function"],
             ["quantity"],
             ["utxo"],
+            ["utxo_address"],
         ],
     )
 
@@ -629,6 +633,7 @@ def initialise(db):
         cursor.execute("""ALTER TABLE balances ADD COLUMN tx_index INTEGER""")
     if "utxo" not in balances_columns:
         cursor.execute("""ALTER TABLE balances ADD COLUMN utxo TEXT""")
+        cursor.execute("""ALTER TABLE balances ADD COLUMN utxo_address TEXT""")
 
     database.create_indexes(
         cursor,
@@ -639,6 +644,8 @@ def initialise(db):
             ["asset"],
             ["block_index"],
             ["quantity"],
+            ["utxo"],
+            ["utxo_address"],
         ],
     )
 

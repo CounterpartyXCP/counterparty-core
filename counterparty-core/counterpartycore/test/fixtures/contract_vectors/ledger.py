@@ -59,11 +59,11 @@ LEDGER_VECTOR = {
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"810efa958965423c5a4a3c88c9a673936a8f52c56836e899889bced0f62d4723","messages_hash":"a810b636c93b71fd91b7ad23968c7b4086f0e5882e68dffa744f0bfc7f593c63","transaction_count":0,"txlist_hash":"8b0a201e4d019a83a91ef66517d27b5320c2680ab0e0761a28ba4a3cff96b77b"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"810efa958965423c5a4a3c88c9a673936a8f52c56836e899889bced0f62d4723","messages_hash":"0cb909407267e1e14c108911d3de97542ef25eaef2719f22e6d92e44e0aacfbe","transaction_count":0,"txlist_hash":"8b0a201e4d019a83a91ef66517d27b5320c2680ab0e0761a28ba4a3cff96b77b"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "1a3180a9f9b28d039ce34d945c5a1b7a3c0a13b5b912189020bfd50df924c84f",
+                    "event_hash": "d6b76c6f8bcae85fbb3089734d977848d1bf489783e97d27f14cbbae53f682dd",
                 },
             }
         ],
@@ -411,6 +411,7 @@ LEDGER_VECTOR = {
                         "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                         "tx_index": 505,
                         "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310505,
@@ -421,6 +422,7 @@ LEDGER_VECTOR = {
                         "event": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
                         "tx_index": 506,
                         "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -431,6 +433,7 @@ LEDGER_VECTOR = {
                         "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                         "tx_index": 507,
                         "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -441,6 +444,7 @@ LEDGER_VECTOR = {
                         "event": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
                         "tx_index": 506,
                         "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -451,6 +455,7 @@ LEDGER_VECTOR = {
                         "event": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
                         "tx_index": 506,
                         "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -461,6 +466,7 @@ LEDGER_VECTOR = {
                         "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                         "tx_index": 507,
                         "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -471,6 +477,7 @@ LEDGER_VECTOR = {
                         "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                         "tx_index": 507,
                         "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -481,6 +488,7 @@ LEDGER_VECTOR = {
                         "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                         "tx_index": 0,
                         "utxo": None,
+                        "utxo_address": None,
                     },
                 ],
             }
@@ -498,6 +506,7 @@ LEDGER_VECTOR = {
                         "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                         "tx_index": 0,
                         "utxo": None,
+                        "utxo_address": None,
                     }
                 ],
             }

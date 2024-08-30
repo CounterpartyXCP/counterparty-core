@@ -245,7 +245,7 @@ def replay_events(db, events):
 ###########################
 
 
-def remove_from_balance(db, address, asset, quantity, tx_index):
+def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     balance_cursor = db.cursor()
 
     no_balance = False
@@ -273,13 +273,14 @@ def remove_from_balance(db, address, asset, quantity, tx_index):
             "quantity": balance,
             "address": balance_address,
             "utxo": utxo,
+            "utxo_address": utxo_address,
             "asset": asset,
             "block_index": util.CURRENT_BLOCK_INDEX,
             "tx_index": tx_index,
         }
         query = """
-            INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo)
-            VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo)
+            INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo, utxo_address)
+            VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo, :utxo_address)
         """
         balance_cursor.execute(query, bindings)
 
@@ -309,19 +310,22 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     if asset == config.BTC:
         raise exceptions.BalanceError(f"Cannot debit bitcoins from a {config.XCP_NAME} address!")
 
-    remove_from_balance(db, address, asset, quantity, tx_index)
-
     debit_address = address
     utxo = None
+    utxo_address = None
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         debit_address = None
         utxo = address
+        utxo_address, _utxo_value = backend.bitcoind.get_utxo_address_and_value(utxo)
+
+    remove_from_balance(db, address, asset, quantity, tx_index, utxo_address)
 
     # Record debit.
     bindings = {
         "block_index": block_index,
         "address": debit_address,
         "utxo": utxo,
+        "utxo_address": utxo_address,
         "asset": asset,
         "quantity": quantity,
         "action": action,
@@ -333,7 +337,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     BLOCK_LEDGER.append(f"{block_index}{address}{asset}{quantity}")
 
 
-def add_to_balance(db, address, asset, quantity, tx_index):
+def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     balance_cursor = db.cursor()
 
     old_balance = get_balance(db, address, asset)
@@ -350,13 +354,14 @@ def add_to_balance(db, address, asset, quantity, tx_index):
         "quantity": balance,
         "address": balance_address,
         "utxo": utxo,
+        "utxo_address": utxo_address,
         "asset": asset,
         "block_index": util.CURRENT_BLOCK_INDEX,
         "tx_index": tx_index,
     }
     query = """
-        INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo)
-        VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo)
+        INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo, utxo_address)
+        VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo, :utxo_address)
     """
     balance_cursor.execute(query, bindings)
 
@@ -383,19 +388,22 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
         if len(address) == 40:
             assert asset == config.XCP
 
-    add_to_balance(db, address, asset, quantity, tx_index)
-
     credit_address = address
     utxo = None
+    utxo_address = None
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         credit_address = None
         utxo = address
+        utxo_address, _utxo_value = backend.bitcoind.get_utxo_address_and_value(utxo)
+
+    add_to_balance(db, address, asset, quantity, tx_index, utxo_address)
 
     # Record credit.
     bindings = {
         "block_index": block_index,
         "address": credit_address,
         "utxo": utxo,
+        "utxo_address": utxo_address,
         "asset": asset,
         "quantity": quantity,
         "calling_function": action,
