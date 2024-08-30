@@ -122,7 +122,6 @@ SCENARIO = [
                         "params": {
                             "block_index": 135,
                             "count": 1,
-                            "difficulty_period": 0,
                             "transaction_id": 100,
                         },
                         "tx_hash": "$TX_HASH",
@@ -352,7 +351,6 @@ SCENARIO = [
                         "params": {
                             "block_index": 138,
                             "count": 2,
-                            "difficulty_period": 0,
                             "transaction_id": 100,
                         },
                         "tx_hash": "$TX_HASH",

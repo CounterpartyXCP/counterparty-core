@@ -1,6 +1,6 @@
 GAS_VECTOR = {
     "gas": {
-        "get_transaction_count_for_difficulty_period": [
+        "get_transaction_count_for_last_period": [
             {
                 "in": (100, 154),  # utxo.ID, 310507 // 2016
                 "out": 2,
@@ -14,7 +14,6 @@ GAS_VECTOR = {
                         "table": "transaction_count",
                         "values": {
                             "block_index": 310507,
-                            "difficulty_period": 154,
                             "transaction_id": 100,
                             "count": 3,
                         },

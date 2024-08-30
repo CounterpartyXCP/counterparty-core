@@ -2056,7 +2056,6 @@ BEGIN TRANSACTION;
 DROP TABLE IF EXISTS transaction_count;
 CREATE TABLE transaction_count(
             block_index INTEGER,
-            difficulty_period INTEGER,
             transaction_id INTEGER,
             count INTEGER);
 -- Triggers and indices on  transaction_count
@@ -2064,9 +2063,7 @@ CREATE TRIGGER block_update_transaction_count
                            BEFORE UPDATE ON transaction_count BEGIN
                                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
                            END;
-CREATE INDEX transaction_count_block_index_idx ON transaction_count (block_index)
-        ;
-CREATE INDEX transaction_count_difficulty_period_transaction_id_idx ON transaction_count (difficulty_period, transaction_id)
+CREATE INDEX transaction_count_block_index_transaction_id_idx ON transaction_count (block_index, transaction_id)
         ;
 
 COMMIT TRANSACTION;

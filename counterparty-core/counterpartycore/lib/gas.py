@@ -9,7 +9,6 @@ def initialise(db):
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS transaction_count(
             block_index INTEGER,
-            difficulty_period INTEGER,
             transaction_id INTEGER,
             count INTEGER)
         """
@@ -18,22 +17,21 @@ def initialise(db):
         cursor,
         "transaction_count",
         [
-            ["block_index"],
-            ["difficulty_period", "transaction_id"],
+            ["block_index", "transaction_id"],
         ],
     )
 
 
-def get_transaction_count_for_difficulty_period(db, transaction_id, difficulty_period):
+def get_transaction_count_for_last_period(db, transaction_id, block_index):
     cursor = db.cursor()
     count = cursor.execute(
         """
         SELECT count FROM transaction_count
-        WHERE transaction_id = ? AND difficulty_period = ?
+        WHERE transaction_id = ? AND block_index >= ? - 2016
         ORDER BY rowid DESC
         LIMIT 1
     """,
-        (transaction_id, difficulty_period),
+        (transaction_id, block_index),
     ).fetchone()
     if count is None:
         return 0
@@ -41,15 +39,11 @@ def get_transaction_count_for_difficulty_period(db, transaction_id, difficulty_p
 
 
 def increment_counter(db, transaction_id, block_index):
-    difficulty_period = block_index // 2016
-    current_count = get_transaction_count_for_difficulty_period(
-        db, transaction_id, difficulty_period
-    )
+    current_count = get_transaction_count_for_last_period(db, transaction_id, block_index)
     new_count = current_count + 1
 
     bindings = {
         "block_index": block_index,
-        "difficulty_period": difficulty_period,
         "transaction_id": transaction_id,
         "count": new_count,
     }
@@ -57,13 +51,10 @@ def increment_counter(db, transaction_id, block_index):
 
 
 def get_average_transactions(db, transaction_id, block_index):
-    previous_difficulty_period = (block_index // 2016) - 1
-    if previous_difficulty_period < 0:
+    if block_index < 2016:
         return 0
-    transaction_count = get_transaction_count_for_difficulty_period(
-        db, transaction_id, previous_difficulty_period
-    )
-    # return average number of transactions per block
+    transaction_count = get_transaction_count_for_last_period(db, transaction_id, block_index)
+    # return average number of transactions for the last 2016 blocks
     return transaction_count // 2016
 
 
