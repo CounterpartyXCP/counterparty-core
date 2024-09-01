@@ -86,6 +86,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/attach": transaction.compose_attach,
         "/v2/utxos/<utxo>/compose/detach": transaction.compose_detach,
         "/v2/utxos/<utxo>/compose/movetoutxo": transaction.compose_movetoutxo,
+        "/v2/compose": transaction.multiple_compose,
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
         "/v2/assets/<asset>": queries.get_asset,

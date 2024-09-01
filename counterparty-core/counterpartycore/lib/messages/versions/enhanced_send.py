@@ -197,6 +197,20 @@ def parse(db, tx, message):
             db, destination, asset, quantity, tx["tx_index"], action="send", event=tx["tx_hash"]
         )
 
+    if util.enabled("new_prefix_xcp1"):
+        last_msg_index = cursor.execute(
+            """
+            SELECT MAX(msg_index) as msg_index FROM sends WHERE tx_hash = ?
+        """,
+            (tx["tx_hash"],),
+        ).fetchone()
+        if last_msg_index and last_msg_index["msg_index"] is not None:
+            msg_index = last_msg_index["msg_index"] + 1
+        else:
+            msg_index = 0
+    else:
+        msg_index = 0
+
     # Add parsed transaction to message-type–specific table.
     bindings = {
         "tx_index": tx["tx_index"],
@@ -208,6 +222,7 @@ def parse(db, tx, message):
         "quantity": quantity,
         "status": status,
         "memo": memo_bytes,
+        "msg_index": msg_index,
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:
         ledger.insert_record(db, "sends", bindings, "ENHANCED_SEND")

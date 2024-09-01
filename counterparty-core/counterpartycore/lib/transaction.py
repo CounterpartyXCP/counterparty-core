@@ -2113,8 +2113,8 @@ def multiple_compose(db, json_txs: str):
 
     rawtransaction = compose_transaction(
         db,
-        name=None,
-        params=None,
+        name="",
+        params={},
         **construct_args,
     )
 

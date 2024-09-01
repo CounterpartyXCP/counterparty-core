@@ -25,16 +25,11 @@ def unpack(packed_data, block_index=None):
 
     if util.enabled("new_prefix_xcp1"):
         current_index = 0
-        print("packed_data", packed_data)
-        print("len(packed_data)", len(packed_data))
         while current_index < len(packed_data) - 2:
             message_length = struct.unpack(">H", packed_data[current_index : current_index + 2])[0]  # noqa: F841
-            print("message_length", message_length)
             new_data = packed_data[current_index + 2 : current_index + message_length + 2]
             message_datas.append(new_data)
-            print("message_datas", message_datas)
             current_index += message_length + 2
-            print("current_index", current_index)
     else:
         message_datas = [packed_data]
 

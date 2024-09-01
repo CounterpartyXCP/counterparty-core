@@ -54,6 +54,8 @@ class RegtestNode:
         query_string = urllib.parse.urlencode(params)
         if tx_name in ["detach", "movetoutxo"]:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
+        elif tx_name == "multiple":
+            compose_url = f"compose?{query_string}"
         else:
             compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
         result = self.api_call(compose_url)
