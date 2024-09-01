@@ -9,6 +9,7 @@ import decimal
 import hashlib
 import inspect
 import io
+import json
 import logging
 import struct
 import sys
@@ -1121,6 +1122,11 @@ COMPOSE_COMMONS_ARGS = {
         "",
         "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
     ),
+    "return_only_data": (
+        bool,
+        False,
+        "Return only the data part of the transaction, not the full transaction",
+    ),
 }
 
 
@@ -1175,6 +1181,8 @@ def compose_transaction(
     api_v1=False,
     return_psbt=False,
     exclude_utxos="",
+    return_only_data=False,
+    compose_data=None,
 ):
     """Create and return a transaction."""
 
@@ -1209,22 +1217,23 @@ def compose_transaction(
         if not script.is_fully_valid(binascii.unhexlify(pubkey)):
             raise script.AddressError(f"invalid public key: {pubkey}")
 
-    compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
-    compose_params = inspect.getfullargspec(compose_method)[0]
-    missing_params = [p for p in compose_params if p not in params and p != "db"]
-    if api_v1:
-        for param in missing_params:
-            params[param] = None
-    else:
-        if len(missing_params) > 0:
-            default_values = get_default_args(compose_method)
+    if compose_data is None:
+        compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
+        compose_params = inspect.getfullargspec(compose_method)[0]
+        missing_params = [p for p in compose_params if p not in params and p != "db"]
+        if api_v1:
             for param in missing_params:
-                if param in default_values:
-                    params[param] = default_values[param]
-                else:
-                    raise exceptions.ComposeError(
-                        f"missing parameters: {', '.join(missing_params)}"
-                    )
+                params[param] = None
+        else:
+            if len(missing_params) > 0:
+                default_values = get_default_args(compose_method)
+                for param in missing_params:
+                    if param in default_values:
+                        params[param] = default_values[param]
+                    else:
+                        raise exceptions.ComposeError(
+                            f"missing parameters: {', '.join(missing_params)}"
+                        )
 
     # dont override fee_per_kb if specified
     if fee_per_kb is not None:
@@ -1244,14 +1253,20 @@ def compose_transaction(
         segwit = params["segwit"]
         del params["segwit"]
 
-    tx_info = compose_method(db, **params)
+    if compose_data is None:
+        tx_info = compose_method(db, **params)
 
-    if util.enabled("new_prefix_xcp1"):
-        # add message length to the message
-        if tx_info[2]:
-            message_length = len(tx_info[2])
-            message_lenth_bytes = struct.pack(">H", message_length)  # 2 bytes
-            tx_info = (tx_info[0], tx_info[1], message_lenth_bytes + tx_info[2])
+        if util.enabled("new_prefix_xcp1"):
+            # add message length to the message
+            if tx_info[2]:
+                message_length = len(tx_info[2])
+                message_lenth_bytes = struct.pack(">H", message_length)  # 2 bytes
+                tx_info = (tx_info[0], tx_info[1], message_lenth_bytes + tx_info[2])
+    else:
+        tx_info = compose_data
+
+    if return_only_data:
+        return tx_info
 
     raw_transaction = construct(
         db,
@@ -1299,6 +1314,10 @@ COMPOSABLE_TRANSACTIONS = [
     "order",
     "send",
     "sweep",
+    "fairminter",
+    "fairmint",
+    "attach",
+    "detach",
 ]
 
 
@@ -1354,6 +1373,8 @@ def compose_bet(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1385,6 +1406,8 @@ def compose_broadcast(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1405,6 +1428,8 @@ def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1426,6 +1451,8 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1446,6 +1473,8 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1468,6 +1497,8 @@ def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **con
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1514,6 +1545,8 @@ def compose_dispenser(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1543,6 +1576,8 @@ def compose_dividend(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1589,6 +1624,8 @@ def compose_issuance(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1641,6 +1678,8 @@ def compose_mpma(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1684,6 +1723,8 @@ def compose_order(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1727,6 +1768,8 @@ def compose_send(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1758,6 +1801,8 @@ def compose_dispense(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1789,6 +1834,8 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1862,6 +1909,8 @@ def compose_fairminter(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1883,6 +1932,8 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -1910,6 +1961,8 @@ def compose_utxo(
         params=params,
         **construct_args,
     )
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
     return {
         "rawtransaction": rawtransaction,
         "params": params,
@@ -2027,6 +2080,53 @@ def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
     }
 
 
+def multiple_compose(db, json_txs: str):
+    txs = json.loads(json_txs)
+    tx_info = []
+    source = None
+    destination = None
+    data = b""
+    for tx in txs["transactions"]:
+        tx_name = tx["name"]
+        tx_params = tx["params"]
+        tx_params["return_only_data"] = True
+        this_module = sys.modules[__name__]
+        func = getattr(this_module, f"compose_{tx_name}")
+        tx_info = func(db, **tx_params)
+
+        if source is None:
+            source = tx_info[0]
+        elif source != tx_info[0]:
+            raise exceptions.ComposeError("All transactions must have the same source")
+
+        if destination is None:
+            destination = tx_info[1]
+        elif destination is not None and destination != () and destination != tx_info[1]:
+            raise exceptions.ComposeError("All transactions must have the same destination")
+
+        data += tx_info[2]
+
+    compose_data = (source, destination, data)
+
+    construct_args = txs.get("construct_args", {})
+    construct_args["compose_data"] = compose_data
+
+    rawtransaction = compose_transaction(
+        db,
+        name=None,
+        params=None,
+        **construct_args,
+    )
+
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return rawtransaction
+    return {
+        "rawtransaction": rawtransaction,
+        "params": txs,
+        "name": "utxo",
+    }
+
+
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
@@ -2063,7 +2163,7 @@ def unpack(db, datahex: str, block_index: int = None):
     :param block_index: Block index of the transaction containing this data
     """
     data = binascii.unhexlify(datahex)
-    message_type_id, message = message_type.unpack(data)
+    message_type_id, message = message_type.unpack(data)[0]
     block_index = block_index or util.CURRENT_BLOCK_INDEX
 
     issuance_ids = [

@@ -8474,32 +8474,46 @@ UNITTEST_VECTOR = (
             "unpack": [
                 {
                     "in": (binascii.unhexlify("01deadbeef"), 310502),
-                    "out": (1, binascii.unhexlify("deadbeef")),
+                    "out": [(1, binascii.unhexlify("deadbeef"))],
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_prefix_xcp1": False},
                 },
                 {
                     "in": (binascii.unhexlify("02deadbeef"), 310502),
-                    "out": (2, binascii.unhexlify("deadbeef")),
+                    "out": [(2, binascii.unhexlify("deadbeef"))],
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_prefix_xcp1": False},
                 },
                 {
                     "in": (binascii.unhexlify("00000001deadbeef"), 310502),
-                    "out": (1, binascii.unhexlify("deadbeef")),
+                    "out": [(1, binascii.unhexlify("deadbeef"))],
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_prefix_xcp1": False},
                 },
                 {
                     "in": (binascii.unhexlify("00000000deadbeef"), 310502),
-                    "out": (0, binascii.unhexlify("deadbeef")),
+                    "out": [(0, binascii.unhexlify("deadbeef"))],
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_prefix_xcp1": False},
                 },
                 {
                     "in": (binascii.unhexlify("00"), 310502),
-                    "out": (None, None),
+                    "out": [(None, None)],
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_prefix_xcp1": False},
                 },
                 {
-                    "in": (binascii.unhexlify("000a01deadbeef"), 310502),
-                    "out": (1, binascii.unhexlify("deadbeef")),
+                    "in": (binascii.unhexlify("000501deadbeef"), 310502),
+                    "out": [(1, binascii.unhexlify("deadbeef"))],
+                    "mock_protocol_changes": {"short_tx_type_id": True, "new_prefix_xcp1": True},
+                },
+                {
+                    "in": (binascii.unhexlify("000501deadbeef000401deadbeef"), 310502),
+                    "out": [(1, binascii.unhexlify("deadbeef")), (1, binascii.unhexlify("deadbe"))],
+                    "mock_protocol_changes": {"short_tx_type_id": True, "new_prefix_xcp1": True},
+                },
+                {
+                    "in": (binascii.unhexlify("000501deadbeef000401deadbeefaabbcc"), 310502),
+                    "out": [
+                        (1, binascii.unhexlify("deadbeef")),
+                        (1, binascii.unhexlify("deadbe")),
+                        (187, b"\xcc"),
+                    ],
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_prefix_xcp1": True},
                 },
             ],

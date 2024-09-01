@@ -416,8 +416,8 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     destinations = "-".join(destinations)
 
     try:
-        message_type_id, _ = message_type.unpack(data, block_index)
-    except struct.error:  # Deterministically raised.
+        message_type_id, _ = message_type.unpack(data, block_index)[0]
+    except (struct.error, IndexError):  # Deterministically raised.
         message_type_id = None
 
     if message_type_id == dispenser.DISPENSE_ID and util.enabled(
