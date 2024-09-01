@@ -603,3 +603,13 @@ def is_utxo_format(value):
     if len(values[0]) != 64:
         return False
     return True
+
+
+def prefix(block_index):
+    if config.TESTCOIN:
+        return b"XX"  # 2 bytes (possibly accidentally created)
+    else:
+        if block_index is None or enabled("new_prefix_xcp1", block_index):
+            return b"XCP1"  # 4 bytes
+        else:
+            return b"CNTRPRTY"  # 8 bytes

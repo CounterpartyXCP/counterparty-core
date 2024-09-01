@@ -6246,6 +6246,7 @@ UNITTEST_VECTOR = (
                             }
                         ],
                         [("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", 5430)],
+                        DP["default_block_index"],
                         (
                             [
                                 b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80"
@@ -6272,6 +6273,7 @@ UNITTEST_VECTOR = (
                             }
                         ],
                         [("mvCounterpartyXXXXXXXXXXXXXXW24Hef", 62000000)],
+                        DP["default_block_index"],
                         None,
                         ("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", 37990000),
                         None,

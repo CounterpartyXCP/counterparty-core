@@ -30,25 +30,25 @@ def get_opreturn(asm):
     raise DecodeError("invalid OP_RETURN")
 
 
-def decode_opreturn(asm, decoded_tx):
+def decode_opreturn(asm, decoded_tx, block_index):
     chunk = get_opreturn(asm)
     chunk = arc4_decrypt(chunk, decoded_tx)
-    if chunk[: len(config.PREFIX)] == config.PREFIX:  # Data
-        destination, data = None, chunk[len(config.PREFIX) :]
+    if chunk[: len(util.prefix(block_index))] == util.prefix(block_index):  # Data
+        destination, data = None, chunk[len(util.prefix(block_index)) :]
     else:
         raise DecodeError("unrecognised OP_RETURN output")
 
     return destination, data
 
 
-def decode_checksig(asm, decoded_tx):
+def decode_checksig(asm, decoded_tx, block_index):
     pubkeyhash = script.get_checksig(asm)
     chunk = arc4_decrypt(pubkeyhash, decoded_tx)  # TODO: This is slow!
-    if chunk[1 : len(config.PREFIX) + 1] == config.PREFIX:  # Data
+    if chunk[1 : len(util.prefix(block_index)) + 1] == util.prefix(block_index):  # Data
         # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
         chunk_length = chunk[0]
         chunk = chunk[1 : chunk_length + 1]
-        destination, data = None, chunk[len(config.PREFIX) :]
+        destination, data = None, chunk[len(util.prefix(block_index)) :]
     else:  # Destination
         pubkeyhash = binascii.hexlify(pubkeyhash).decode("utf-8")
         destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
@@ -63,17 +63,17 @@ def decode_scripthash(asm):
     return destination, None
 
 
-def decode_checkmultisig(asm, decoded_tx):
+def decode_checkmultisig(asm, decoded_tx, block_index):
     pubkeys, signatures_required = script.get_checkmultisig(asm)
     chunk = b""
     for pubkey in pubkeys[:-1]:  # (No data in last pubkey.)
         chunk += pubkey[1:-1]  # Skip sign byte and nonce byte.
     chunk = arc4_decrypt(chunk, decoded_tx)
-    if chunk[1 : len(config.PREFIX) + 1] == config.PREFIX:  # Data
+    if chunk[1 : len(util.prefix(block_index)) + 1] == util.prefix(block_index):  # Data
         # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
         chunk_length = chunk[0]
         chunk = chunk[1 : chunk_length + 1]
-        destination, data = None, chunk[len(config.PREFIX) :]
+        destination, data = None, chunk[len(util.prefix(block_index)) :]
     else:  # Destination
         pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
         destination, data = (
@@ -155,7 +155,7 @@ def get_vin_info(vin):
     return vout["value"], vout["script_pub_key"], is_segwit
 
 
-def get_transaction_sources(decoded_tx):
+def get_transaction_sources(decoded_tx, block_index):
     sources = []
     outputs_value = 0
 
@@ -167,11 +167,11 @@ def get_transaction_sources(decoded_tx):
         asm = script.script_to_asm(script_pubkey)
 
         if asm[-1] == OP_CHECKSIG:  # noqa: F405
-            new_source, new_data = decode_checksig(asm, decoded_tx)
+            new_source, new_data = decode_checksig(asm, decoded_tx, block_index)
             if new_data or not new_source:
                 raise DecodeError("data in source")
         elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
-            new_source, new_data = decode_checkmultisig(asm, decoded_tx)
+            new_source, new_data = decode_checkmultisig(asm, decoded_tx, block_index)
             if new_data or not new_source:
                 raise DecodeError("data in source")
         elif asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:  # noqa: F405
@@ -195,7 +195,7 @@ def get_transaction_sources(decoded_tx):
     return "-".join(sources), outputs_value
 
 
-def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
+def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit, block_index):
     p2sh_encoding_source = None
     data = b""
     outputs_value = 0
@@ -214,7 +214,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
         asm = script.script_to_asm(vin["script_sig"])
 
         new_source, new_destination, new_data = p2sh_encoding.decode_p2sh_input(
-            asm, p2sh_is_segwit=prevout_is_segwit
+            asm, block_index, p2sh_is_segwit=prevout_is_segwit
         )
         # this could be a p2sh source address with no encoded data
         if new_data is None:
@@ -270,7 +270,7 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
     return source, destination, btc_amount, fee, data, outs
 
 
-def parse_transaction_vouts(decoded_tx):
+def parse_transaction_vouts(decoded_tx, block_index):
     # Get destinations and data outputs.
     destinations, btc_amount, fee, data, potential_dispensers = [], 0, 0, b"", []
 
@@ -285,13 +285,13 @@ def parse_transaction_vouts(decoded_tx):
         # Ignore transactions with invalid script.
         asm = script.script_to_asm(script_pub_key)
         if asm[0] == OP_RETURN:  # noqa: F405
-            new_destination, new_data = decode_opreturn(asm, decoded_tx)
+            new_destination, new_data = decode_opreturn(asm, decoded_tx, block_index)
         elif asm[-1] == OP_CHECKSIG:  # noqa: F405
-            new_destination, new_data = decode_checksig(asm, decoded_tx)
+            new_destination, new_data = decode_checksig(asm, decoded_tx, block_index)
             potential_dispensers[-1] = (new_destination, output_value)
         elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
             try:
-                new_destination, new_data = decode_checkmultisig(asm, decoded_tx)
+                new_destination, new_data = decode_checkmultisig(asm, decoded_tx, block_index)
                 potential_dispensers[-1] = (new_destination, output_value)
             except script.MultiSigAddressError:
                 raise DecodeError("invalid OP_CHECKMULTISIG")  # noqa: B904
@@ -361,7 +361,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     else:
         logger.trace("parsed_vouts not in decoded_tx")
         destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(
-            decoded_tx
+            decoded_tx, block_index
         )
 
     # source can be determined by parsing the p2sh_data transaction
@@ -372,7 +372,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     p2sh_encoding_source = None
     if util.enabled("p2sh_encoding") and data == b"P2SH":
         p2sh_encoding_source, data, outputs_value = get_transaction_source_from_p2sh(
-            decoded_tx, p2sh_is_segwit
+            decoded_tx, p2sh_is_segwit, block_index
         )
         fee += outputs_value
         fee_added = True
@@ -396,7 +396,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
     if p2sh_encoding_source is None:
-        sources, outputs_value = get_transaction_sources(decoded_tx)
+        sources, outputs_value = get_transaction_sources(decoded_tx, block_index)
         if not fee_added:
             fee += outputs_value
     else:  # use the source from the p2sh data source
@@ -475,11 +475,11 @@ def get_tx_info_legacy(decoded_tx, block_index):
                 continue
 
             data_pubkey = arc4_decrypt(pubkeyhash, decoded_tx)
-            if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
+            if data_pubkey[1:9] == util.prefix(block_index) or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
                 data_chunk_length = data_pubkey[0]  # No ord() necessary.
                 data_chunk = data_pubkey[1 : data_chunk_length + 1]
-                if data_chunk[-8:] == config.PREFIX:
+                if data_chunk[-8:] == util.prefix(block_index):
                     data += data_chunk[:-8]
                     break
                 else:
@@ -495,8 +495,8 @@ def get_tx_info_legacy(decoded_tx, block_index):
     # Check for, and strip away, prefix (except for burns).
     if destination == config.UNSPENDABLE:
         pass
-    elif data[: len(config.PREFIX)] == config.PREFIX:
-        data = data[len(config.PREFIX) :]
+    elif data[: len(util.prefix(block_index))] == util.prefix(block_index):
+        data = data[len(util.prefix(block_index)) :]
     else:
         raise DecodeError("no prefix")
 

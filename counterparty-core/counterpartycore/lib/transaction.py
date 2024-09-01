@@ -70,7 +70,7 @@ def initialise(force=False):
 
     TRANSACTION_SERVICE_SINGLETON = TransactionService(
         backend=backend,
-        prefix=config.PREFIX,
+        prefix=util.prefix(util.CURRENT_BLOCK_INDEX),
         ps2h_dust_return_pubkey=config.P2SH_DUST_RETURN_PUBKEY,
         utxo_locks_max_age=config.UTXO_LOCKS_MAX_AGE,
         utxo_locks_max_addresses=config.UTXO_LOCKS_MAX_ADDRESSES,
@@ -710,7 +710,9 @@ class TransactionService:
                 if dust_return_pubkey is not None:
                     pubkeylength = len(dust_return_pubkey)
 
-                chunk_size = p2sh_encoding.maximum_data_chunk_size(pubkeylength)
+                chunk_size = p2sh_encoding.maximum_data_chunk_size(
+                    pubkeylength, util.CURRENT_BLOCK_INDEX
+                )
             elif encoding == "opreturn":
                 chunk_size = config.OP_RETURN_MAX_SIZE
                 if len(data) + len(self.prefix) > chunk_size:
@@ -829,6 +831,7 @@ class TransactionService:
                     source=source_address,
                     source_value=source_value,
                     data_output=data_output,
+                    block_index=util.CURRENT_BLOCK_INDEX,
                     change_output=change_output,
                     pubkey=dust_return_pubkey,
                     multisig_pubkeys=p2sh_source_multisig_pubkeys,
@@ -867,6 +870,7 @@ class TransactionService:
                     source_input=source_input,
                     destination_outputs=destination_outputs,
                     data_output=data_output,
+                    block_index=util.CURRENT_BLOCK_INDEX,
                     pubkey=dust_return_pubkey,
                     multisig_pubkeys=p2sh_source_multisig_pubkeys,
                     multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
@@ -886,6 +890,7 @@ class TransactionService:
                 encoding,
                 inputs,
                 destination_outputs,
+                util.CURRENT_BLOCK_INDEX,
                 data_output,
                 change_output,
                 dust_return_pubkey=dust_return_pubkey,
