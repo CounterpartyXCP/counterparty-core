@@ -5,13 +5,19 @@ import json
 import time
 
 from regtestnode import ComposeError, RegtestNodeThread
-from scenarios import scenario_1_fairminter, scenario_2_fairminter, scenario_3_dispenser
+from scenarios import (
+    scenario_1_fairminter,
+    scenario_2_fairminter,
+    scenario_3_dispenser,
+    scenario_4_utxo,
+)
 from termcolor import colored
 
 SCENARIOS = []
 SCENARIOS += scenario_1_fairminter.SCENARIO
 SCENARIOS += scenario_2_fairminter.SCENARIO
 SCENARIOS += scenario_3_dispenser.SCENARIO
+SCENARIOS += scenario_4_utxo.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -35,6 +41,11 @@ def run_item(node, item, context):
             for key in item["params"]:
                 if isinstance(item["params"][key], str):
                     item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i+1}", address)
+        for name, value in context.items():
+            item["source"] = item["source"].replace(f"${name}", value)
+            for key in item["params"]:
+                if isinstance(item["params"][key], str):
+                    item["params"][key] = item["params"][key].replace(f"${name}", value)
         try:
             tx_hash, block_hash, block_time = node.send_transaction(
                 item["source"], item["transaction"], item["params"]

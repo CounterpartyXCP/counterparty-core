@@ -178,6 +178,3 @@ def parse(db, tx, message):
     )
 
     cursor.close()
-
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

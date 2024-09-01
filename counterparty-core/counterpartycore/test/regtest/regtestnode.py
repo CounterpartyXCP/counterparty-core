@@ -52,7 +52,10 @@ class RegtestNode:
     def send_transaction(self, source, tx_name, params):
         self.wait_for_counterparty_server()
         query_string = urllib.parse.urlencode(params)
-        compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
+        if tx_name in ["detach", "movetoutxo"]:
+            compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
+        else:
+            compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
         result = self.api_call(compose_url)
         # print(result)
         if "error" in result:
@@ -165,6 +168,7 @@ class RegtestNode:
             f"--db-dir={self.datadir}",
             f"--daemon-dir={self.datadir}",
             "--daemon-rpc-port=18443",
+            "--jsonrpc-import",
             _bg=True,
             # _out=sys.stdout,
             # _err=sys.stdout,

@@ -195,11 +195,17 @@ TX Construct - Transaction constructed.
 TX Construct - Constructing `OPRETURN` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 TX Construct - Transaction constructed.
 20 A160361285792733729 minted for 200 XCP by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+Attach XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883) [valid]
+TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+Attach DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e) [valid]
 Order match cancelled XCP / BTC (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81) [expired]
 Bet 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef canceled [expired]
 Bet Expiration 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef
 Checking for conservation of assets.
-XCP has been conserved (6038.3184792 XCP both issued and held)
+XCP has been conserved (6038.318479 XCP both issued and held)
 A160361285792733729 has been conserved (0.0000005 A160361285792733729 both issued and held)
 A95428956661682277 has been conserved (1.0 A95428956661682277 both issued and held)
 CALLABLE has been conserved (0.00001 CALLABLE both issued and held)

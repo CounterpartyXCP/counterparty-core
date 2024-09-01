@@ -576,5 +576,45 @@
     "minimum_version_revision": 0,
     "block_index": 900000,
     "testnet_block_index": 2815000
+  },
+  "utxo_support": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 4,
+    "minimum_version_revision": 0,
+    "block_index": 900000,
+    "testnet_block_index": 2815000
+  },
+  "fee_parameters": {
+    "minimum_version_major": 0,
+    "mainnet":{
+      "1": {
+        "value": null 
+      },
+      "900000": {
+        "value": {
+          "100": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
+          }
+        }
+      }
+    },
+    "testnet":{
+      "1": {
+        "value": null
+      },    
+      "2815000": {
+        "value": {
+          "100": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
+          }
+        }
+      }
+    }
   }
 }

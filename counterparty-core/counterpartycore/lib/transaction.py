@@ -108,6 +108,7 @@ def construct(
     p2sh_source_multisig_pubkeys=None,
     p2sh_source_multisig_pubkeys_required=None,
     p2sh_pretx_txid=None,
+    exclude_utxos="",
 ):
     if TRANSACTION_SERVICE_SINGLETON is None:
         raise Exception("Transaction not initialized")
@@ -136,6 +137,7 @@ def construct(
         p2sh_source_multisig_pubkeys,
         p2sh_source_multisig_pubkeys_required,
         p2sh_pretx_txid,
+        exclude_utxos,
     )
 
 
@@ -349,6 +351,7 @@ class TransactionService:
         data_btc_out,
         regular_dust_size,
         disable_utxo_locks,
+        exclude_utxos,
     ):
         # Array of UTXOs, as retrieved by listunspent function from bitcoind
         if custom_inputs:
@@ -382,6 +385,7 @@ class TransactionService:
                     make_outkey(output) not in filter_unspents_utxo_locks
                     and self.make_outkey_vin_txid(output["txid"], output["vout"])
                     not in filter_unspents_p2sh_locks
+                    and f"{output['txid']}:{output['vout']}" not in exclude_utxos.split(",")
                 ):
                     filtered_unspent.append(output)
             unspent = filtered_unspent
@@ -566,6 +570,7 @@ class TransactionService:
         p2sh_source_multisig_pubkeys=None,
         p2sh_source_multisig_pubkeys_required=None,
         p2sh_pretx_txid=None,
+        exclude_utxos="",
     ):
         if estimate_fee_per_kb is None:
             estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
@@ -781,6 +786,7 @@ class TransactionService:
                 data_btc_out,
                 regular_dust_size,
                 disable_utxo_locks,
+                exclude_utxos,
             )
             btc_in = n_btc_in
             final_fee = n_final_fee
@@ -1104,6 +1110,11 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "Construct a PSBT instead of a raw transaction hex",
     ),
+    "exclude_utxos": (
+        str,
+        "",
+        "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
+    ),
 }
 
 
@@ -1157,6 +1168,7 @@ def compose_transaction(
     segwit=False,
     api_v1=False,
     return_psbt=False,
+    exclude_utxos="",
 ):
     """Create and return a transaction."""
 
@@ -1175,7 +1187,7 @@ def compose_transaction(
     for address_name in ["source", "destination"]:
         if address_name in params:
             address = params[address_name]
-            if isinstance(address, list):
+            if isinstance(address, list) or address is None or util.is_utxo_format(address):
                 # pkhshs = []
                 # for addr in address:
                 #    provided_pubkeys += script.extract_pubkeys(addr)
@@ -1252,6 +1264,7 @@ def compose_transaction(
         old_style_api=old_style_api,
         segwit=segwit,
         estimate_fee_per_kb_nblocks=confirmation_target,
+        exclude_utxos=exclude_utxos,
     )
     if return_psbt:
         psbt = backend.bitcoind.convert_to_psbt(raw_transaction)
@@ -1861,6 +1874,143 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
         "rawtransaction": rawtransaction,
         "params": params,
         "name": "fairmint",
+    }
+
+
+def compose_utxo(
+    db,
+    source: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    **construct_args,
+):
+    params = {
+        "source": source,
+        "destination": destination,
+        "asset": asset,
+        "quantity": quantity,
+    }
+    rawtransaction = compose_transaction(
+        db,
+        name="utxo",
+        params=params,
+        **construct_args,
+    )
+    return {
+        "rawtransaction": rawtransaction,
+        "params": params,
+        "name": "utxo",
+    }
+
+
+def compose_attach(
+    db,
+    address: str,
+    asset: str,
+    quantity: int,
+    destination: str = None,
+    **construct_args,
+):
+    """
+    Attach assets from an address to UTXO.
+    :param address: The address from which the assets are attached
+    :param destination: The utxo to attach the assets to
+    :param asset: The asset or subasset to attach (e.g. XCP)
+    :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
+    """
+    return compose_utxo(
+        db,
+        source=address,
+        destination=destination,
+        asset=asset,
+        quantity=quantity,
+        **construct_args,
+    )
+
+
+def compose_detach(
+    db,
+    utxo: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    **construct_args,
+):
+    """
+    Detach assets from UTXO to an address.
+    :param utxo: The utxo from which the assets are detached
+    :param destination: The address to detach the assets to
+    :param asset: The asset or subasset to detach (e.g. XCP)
+    :param quantity: The quantity of the asset to detach (in satoshis, hence integer) (e.g. 1000)
+    """
+    return compose_utxo(
+        db,
+        source=utxo,
+        destination=destination,
+        asset=asset,
+        quantity=quantity,
+        **construct_args,
+    )
+
+
+def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
+    """
+    Move assets from UTXO to another UTXO.
+    :param utxo: The utxo from which the assets are moved
+    :param destination: The address to move the assets to
+    :param more_utxos: The additional utxos to fund the transaction
+    """
+    decimal.getcontext().prec = 8
+
+    more_utxos_list = []
+    input_count = 1
+    total_value = D("0")
+    try:
+        source_address, source_value = backend.bitcoind.get_utxo_address_and_value(utxo)
+        total_value += D(source_value)
+        for more_utxo in more_utxos.split(","):
+            if more_utxo == "":
+                continue
+            _more_utxo_address, more_utxo_value = backend.bitcoind.get_utxo_address_and_value(
+                more_utxo
+            )
+            more_utxo_tx_hash, more_utxo_vout = more_utxo.split(":")
+            more_utxos_list.append({"txid": more_utxo_tx_hash, "vout": int(more_utxo_vout)})
+            input_count += 1
+            total_value += D(more_utxo_value)
+    except exceptions.InvalidUTXOError as e:
+        raise exceptions.ComposeError("Invalid UTXO for source") from e
+
+    try:
+        script.validate(destination)
+    except Exception as e:
+        raise exceptions.ComposeError("Invalid address for destination") from e
+
+    tx_hash, vout = utxo.split(":")
+
+    fee_per_kb = backend.bitcoind.fee_per_kb()
+    # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
+    tx_size = (input_count * 148) + (2 * 34) + 10
+    fee = (D(fee_per_kb) / config.UNIT) * (D(tx_size) / 1024)
+
+    dust = D("0.0000546")
+    change = D(total_value) - dust - fee
+
+    if change < 0:
+        raise exceptions.ComposeError("Insufficient funds for fee")
+
+    inputs = [{"txid": tx_hash, "vout": int(vout)}] + more_utxos_list
+    outputs = [{destination: str(dust)}, {source_address: str(change)}]
+    rawtransaction = backend.bitcoind.createrawtransaction(inputs, outputs)
+
+    return {
+        "rawtransaction": rawtransaction,
+        "params": {
+            "source": utxo,
+            "destination": destination,
+        },
+        "name": "movetoutxo",
     }
 
 

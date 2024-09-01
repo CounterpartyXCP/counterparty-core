@@ -55,15 +55,15 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1713,
+                    "message_index": 1729,
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"0c1d0bc6a05f06e26e558d6f4da16fff5b7241375734e9d71394b433bc177386","messages_hash":"4d1bf7e910cf003e4034c7caf1b76d86a15480da0d0c7734774e6123c572f059","transaction_count":0,"txlist_hash":"027ba6c30a70a11e784f3b88de3ae8e4ed427835812177eb06c8a5b6e3e4a1c0"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"810efa958965423c5a4a3c88c9a673936a8f52c56836e899889bced0f62d4723","messages_hash":"1beffb2ae06a4ea33b1379a44388146a977fea93e1363bac79fed1687a53f514","transaction_count":0,"txlist_hash":"8b0a201e4d019a83a91ef66517d27b5320c2680ab0e0761a28ba4a3cff96b77b"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "bf50cab82fc99d8f9f9aaef8acb271bc5587c2ba8da4d41e0aa9942251da3f45",
+                    "event_hash": "c509144e7d29bcb490a94c42cc30f99375a59a1a29c617c1f4462a8c63e7a955",
                 },
             }
         ],
@@ -191,11 +191,11 @@ LEDGER_VECTOR = {
             },
         ],
         "xcp_created": [{"in": (), "out": 604506847920}],
-        "xcp_destroyed": [{"in": (), "out": 675000000}],
+        "xcp_destroyed": [{"in": (), "out": 675000020}],
         "xcp_supply": [
             {
                 "in": (),
-                "out": 603831847920,
+                "out": 603831847900,
             }
         ],
         "creations": [
@@ -221,7 +221,7 @@ LEDGER_VECTOR = {
                 },
             }
         ],
-        "destructions": [{"in": (), "out": {"XCP": 675000000}}],
+        "destructions": [{"in": (), "out": {"XCP": 675000020}}],
         "asset_supply": [
             {
                 "in": ("DIVISIBLE",),
@@ -232,7 +232,7 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "XCP": 603831847920,
+                    "XCP": 603831847900,
                     "A95428956661682277": 100000000,
                     "CALLABLE": 1000,
                     "DIVIDEND": 100,
@@ -252,7 +252,7 @@ LEDGER_VECTOR = {
             }
         ],
         "get_balance": [
-            {"in": (ADDR[0], "XCP"), "out": 91675000000},
+            {"in": (ADDR[0], "XCP"), "out": 91674999880},
             {"in": (ADDR[0], "foobar"), "out": 0},
         ],
         "get_asset_name": [
@@ -266,7 +266,7 @@ LEDGER_VECTOR = {
                 "out": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                        "address_quantity": 91675000000,
+                        "address_quantity": 91674999880,
                         "escrow": None,
                     },
                     {
@@ -325,6 +325,11 @@ LEDGER_VECTOR = {
                         "escrow": None,
                     },
                     {
+                        "address": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                        "address_quantity": 100,
+                        "escrow": None,
+                    },
+                    {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                         "address_quantity": 100000000,
                         "escrow": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8",
@@ -366,7 +371,7 @@ LEDGER_VECTOR = {
                 "out": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                        "address_quantity": 98800000000,
+                        "address_quantity": 98799999999,
                         "escrow": None,
                     },
                     {
@@ -382,6 +387,11 @@ LEDGER_VECTOR = {
                     {
                         "address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
                         "address_quantity": 100000000,
+                        "escrow": None,
+                    },
+                    {
+                        "address": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                        "address_quantity": 1,
                         "escrow": None,
                     },
                 ],
@@ -400,6 +410,8 @@ LEDGER_VECTOR = {
                         "calling_function": "escrowed premint",
                         "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                         "tx_index": 505,
+                        "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310505,
@@ -409,6 +421,8 @@ LEDGER_VECTOR = {
                         "calling_function": "escrowed fairmint",
                         "event": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
                         "tx_index": 506,
+                        "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -418,6 +432,8 @@ LEDGER_VECTOR = {
                         "calling_function": "escrowed fairmint",
                         "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                         "tx_index": 507,
+                        "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -427,6 +443,8 @@ LEDGER_VECTOR = {
                         "calling_function": "unescrowed fairmint",
                         "event": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
                         "tx_index": 506,
+                        "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -436,6 +454,8 @@ LEDGER_VECTOR = {
                         "calling_function": "fairmint commission",
                         "event": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
                         "tx_index": 506,
+                        "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -445,6 +465,8 @@ LEDGER_VECTOR = {
                         "calling_function": "unescrowed fairmint",
                         "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                         "tx_index": 507,
+                        "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -454,6 +476,8 @@ LEDGER_VECTOR = {
                         "calling_function": "fairmint commission",
                         "event": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                         "tx_index": 507,
+                        "utxo": None,
+                        "utxo_address": None,
                     },
                     {
                         "block_index": 310506,
@@ -463,6 +487,8 @@ LEDGER_VECTOR = {
                         "calling_function": "premint",
                         "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                         "tx_index": 0,
+                        "utxo": None,
+                        "utxo_address": None,
                     },
                 ],
             }
@@ -479,6 +505,8 @@ LEDGER_VECTOR = {
                         "action": "unescrowed fairmint",
                         "event": "737fb998f29418a3253fad04de9c5406b18331f411a7cfa89ae8ee6b55f7ce03",
                         "tx_index": 0,
+                        "utxo": None,
+                        "utxo_address": None,
                     }
                 ],
             }

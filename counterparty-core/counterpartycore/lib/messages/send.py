@@ -90,6 +90,9 @@ def initialise(db):
     if "memo" not in columns:
         cursor.execute("""ALTER TABLE sends ADD COLUMN memo BLOB""")
 
+    if "fee_paid" not in columns:
+        cursor.execute("""ALTER TABLE sends ADD COLUMN fee_paid INTEGER DEFAULT 0""")
+
     database.create_indexes(
         cursor,
         "sends",

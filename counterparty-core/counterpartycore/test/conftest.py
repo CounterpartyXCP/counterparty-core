@@ -586,6 +586,15 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def rps_expire(db, block_index):
         pass
 
+    def is_valid_utxo(value):
+        return util.is_utxo_format(value)
+
+    def get_utxo_address_and_value(value):
+        return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 100
+
+    def get_transaction_fee(db, transaction_type, block_index):
+        return 10
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
@@ -598,6 +607,11 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction", mocked_getrawtransaction
+    )
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.is_valid_utxo", is_valid_utxo)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_utxo_address_and_value",
+        get_utxo_address_and_value,
     )
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
@@ -620,3 +634,5 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
     )
+
+    monkeypatch.setattr("counterpartycore.lib.gas.get_transaction_fee", get_transaction_fee)

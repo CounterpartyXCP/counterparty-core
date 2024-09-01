@@ -295,23 +295,31 @@ def update_balances(api_db, event):
     if event["event"] == "DEBIT":
         quantity = -quantity
 
-    sql = "SELECT * FROM balances WHERE address = :address AND asset = :asset"
+    field_name = "address"
+    address_or_utxo = event_bindings["address"]
+    if event_bindings["utxo"]:
+        field_name = "utxo"
+        address_or_utxo = event_bindings["utxo"]
+    event_bindings["address_or_utxo"] = address_or_utxo
+
+    sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608
     existing_balance = fetch_one(api_db, sql, event_bindings)
 
     if existing_balance is not None:
-        sql = """
+        sql = f"""
             UPDATE balances
             SET quantity = quantity + :quantity
-            WHERE address = :address AND asset = :asset
-            """
+            WHERE {field_name} = :address_or_utxo AND asset = :asset
+            """  # noqa: S608
     else:
-        sql = """
-            INSERT INTO balances (address, asset, quantity)
-            VALUES (:address, :asset, :quantity)
-            """
+        sql = f"""
+            INSERT INTO balances ({field_name}, asset, quantity, utxo_address)
+            VALUES (:address_or_utxo, :asset, :quantity, :utxo_address)
+            """  # noqa: S608
     insert_bindings = {
-        "address": event_bindings["address"],
+        "address_or_utxo": address_or_utxo,
         "asset": event_bindings["asset"],
+        "utxo_address": event_bindings["utxo_address"],
         "quantity": quantity,
     }
     cursor.execute(sql, insert_bindings)

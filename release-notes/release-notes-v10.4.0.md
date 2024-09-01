@@ -6,7 +6,7 @@ This release includes a variety of protocol upgrades.
 
 # ChangeLog
 
-## Protocole Changes
+## Protocol Changes
 
 * Require Dispenser to be Source Address
     - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/2141
@@ -20,6 +20,15 @@ This release includes a variety of protocol upgrades.
 * Fair Minting Protocol
     - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/2142
     - Spec: https://gist.github.com/ouziel-slama/9eb05ff9890eb402cd9adb4e166a5469
+* UTXO Support
+    - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/2180
+    - Spec: https://gist.github.com/ouziel-slama/3b3fa3738063c6390af0d6b692276935
+* Gas System
+    - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/2180
+    - Spec: https://gist.github.com/adamkrellenstein/7c7cab257cee162233fc2ba6682eb8da
+* Expire order matches then orders
+    - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/1794
+    - Issue: https://github.com/CounterpartyXCP/counterparty-core/pull/1633
 
 ## Bugfixes
 

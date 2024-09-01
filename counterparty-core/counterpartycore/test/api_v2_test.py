@@ -135,28 +135,90 @@ def test_new_get_balances_by_address():
     result = requests.get(url)  # noqa: S113
 
     assert result.json()["result"] == [
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "RAIDFAIRMIN", "quantity": 20},
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "FREEFAIRMIN", "quantity": 10},
+        {
+            "address": None,
+            "asset": "DIVISIBLE",
+            "quantity": 1,
+            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        },
+        {
+            "address": None,
+            "asset": "XCP",
+            "quantity": 100,
+            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "RAIDFAIRMIN",
+            "quantity": 20,
+            "utxo": None,
+            "utxo_address": None,
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "FREEFAIRMIN",
+            "quantity": 10,
+            "utxo": None,
+            "utxo_address": None,
+        },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "A95428956661682277",
             "quantity": 100000000,
+            "utxo": None,
+            "utxo_address": None,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "PARENT", "quantity": 100000000},
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "PARENT",
+            "quantity": 100000000,
+            "utxo": None,
+            "utxo_address": None,
+        },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "MAXI",
             "quantity": 9223372036854775807,
+            "utxo": None,
+            "utxo_address": None,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "LOCKED", "quantity": 1000},
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "CALLABLE", "quantity": 1000},
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "NODIVISIBLE", "quantity": 985},
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "LOCKED",
+            "quantity": 1000,
+            "utxo": None,
+            "utxo_address": None,
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "CALLABLE",
+            "quantity": 1000,
+            "utxo": None,
+            "utxo_address": None,
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "NODIVISIBLE",
+            "quantity": 985,
+            "utxo": None,
+            "utxo_address": None,
+        },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "DIVISIBLE",
-            "quantity": 98800000000,
+            "quantity": 98799999999,
+            "utxo": None,
+            "utxo_address": None,
         },
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91675000000},
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "XCP",
+            "quantity": 91674999880,
+            "utxo": None,
+            "utxo_address": None,
+        },
     ]
 
 
@@ -165,25 +227,86 @@ def test_new_get_balances_by_asset():
     asset = "XCP"
     url = f"{API_ROOT}/v2/assets/{asset}/balances"
     result = requests.get(url)  # noqa: S113
+    import json
 
+    print(json.dumps(result.json()["result"], indent=4))
     assert result.json()["result"] == [
         {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 91674999880,
+        },
+        {
+            "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 99999990,
+        },
+        {
             "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+            "utxo": None,
+            "utxo_address": None,
             "asset": "XCP",
             "quantity": 300000000,
         },
-        {"address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy", "asset": "XCP", "quantity": 46449548498},
-        {"address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "asset": "XCP", "quantity": 91675000000},
-        {"address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj", "asset": "XCP", "quantity": 92945878046},
-        {"address": "mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK", "asset": "XCP", "quantity": 14999857},
-        {"address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "asset": "XCP", "quantity": 99999990},
-        {"address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b", "asset": "XCP", "quantity": 92999130360},
-        {"address": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42", "asset": "XCP", "quantity": 92949122099},
-        {"address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM", "asset": "XCP", "quantity": 92999138821},
+        {
+            "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 92999138821,
+        },
+        {
+            "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 92999130360,
+        },
+        {
+            "address": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 92949122099,
+        },
+        {
+            "address": "mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 14999857,
+        },
+        {
+            "address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 46449548498,
+        },
         {
             "address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
+            "utxo": None,
+            "utxo_address": None,
             "asset": "XCP",
             "quantity": 92999030129,
+        },
+        {
+            "address": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "quantity": 92945878046,
+        },
+        {
+            "address": None,
+            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "XCP",
+            "quantity": 100,
         },
     ]
 
@@ -203,11 +326,16 @@ def test_new_get_balances_vs_old():
             ],
         },
     )
-    new_balances = sorted(new_balances, key=lambda x: (x["address"], x["asset"], x["quantity"]))
-    old_balance = sorted(old_balance, key=lambda x: (x["address"], x["asset"], x["quantity"]))
+    new_balances = sorted(
+        new_balances, key=lambda x: (x["address"] or x["utxo"], x["asset"], x["quantity"])
+    )
+    old_balance = sorted(
+        old_balance, key=lambda x: (x["address"] or x["utxo"], x["asset"], x["quantity"])
+    )
     assert len(new_balances) == len(old_balance)
     for new_balance, old_balance in zip(new_balances, old_balance):  # noqa: B020
         assert new_balance["address"] == old_balance["address"]
+        assert new_balance["utxo"] == old_balance["utxo"]
         assert new_balance["asset"] == old_balance["asset"]
         assert new_balance["quantity"] == old_balance["quantity"]
 

@@ -245,7 +245,7 @@ def replay_events(db, events):
 ###########################
 
 
-def remove_from_balance(db, address, asset, quantity, tx_index):
+def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     balance_cursor = db.cursor()
 
     no_balance = False
@@ -262,17 +262,25 @@ def remove_from_balance(db, address, asset, quantity, tx_index):
     balance = min(balance, config.MAX_INT)
     assert balance >= 0
 
+    balance_address = address
+    utxo = None
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        balance_address = None
+        utxo = address
+
     if not no_balance:  # don't create balance if quantity is 0 and there is no balance
         bindings = {
             "quantity": balance,
-            "address": address,
+            "address": balance_address,
+            "utxo": utxo,
+            "utxo_address": utxo_address,
             "asset": asset,
             "block_index": util.CURRENT_BLOCK_INDEX,
             "tx_index": tx_index,
         }
         query = """
-            INSERT INTO balances
-            VALUES (:address, :asset, :quantity, :block_index, :tx_index)
+            INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo, utxo_address)
+            VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo, :utxo_address)
         """
         balance_cursor.execute(query, bindings)
 
@@ -294,8 +302,6 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     if asset == config.BTC:
         raise DebitError("Cannot debit bitcoins.")
 
-    debit_cursor = db.cursor()  # noqa: F841
-
     # Contracts can only hold XCP balances.
     if util.enabled("contracts_only_xcp_balances"):  # Protocol change.
         if len(address) == 40:
@@ -304,12 +310,22 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     if asset == config.BTC:
         raise exceptions.BalanceError(f"Cannot debit bitcoins from a {config.XCP_NAME} address!")
 
-    remove_from_balance(db, address, asset, quantity, tx_index)
+    debit_address = address
+    utxo = None
+    utxo_address = None
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        debit_address = None
+        utxo = address
+        utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
+
+    remove_from_balance(db, address, asset, quantity, tx_index, utxo_address)
 
     # Record debit.
     bindings = {
         "block_index": block_index,
-        "address": address,
+        "address": debit_address,
+        "utxo": utxo,
+        "utxo_address": utxo_address,
         "asset": asset,
         "quantity": quantity,
         "action": action,
@@ -321,23 +337,31 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     BLOCK_LEDGER.append(f"{block_index}{address}{asset}{quantity}")
 
 
-def add_to_balance(db, address, asset, quantity, tx_index):
+def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     balance_cursor = db.cursor()
 
     old_balance = get_balance(db, address, asset)
     balance = round(old_balance + quantity)
     balance = min(balance, config.MAX_INT)
 
+    balance_address = address
+    utxo = None
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        balance_address = None
+        utxo = address
+
     bindings = {
         "quantity": balance,
-        "address": address,
+        "address": balance_address,
+        "utxo": utxo,
+        "utxo_address": utxo_address,
         "asset": asset,
         "block_index": util.CURRENT_BLOCK_INDEX,
         "tx_index": tx_index,
     }
     query = """
-        INSERT INTO balances
-        VALUES (:address, :asset, :quantity, :block_index, :tx_index)
+        INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo, utxo_address)
+        VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo, :utxo_address)
     """
     balance_cursor.execute(query, bindings)
 
@@ -359,19 +383,27 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     if asset == config.BTC:
         raise CreditError("Cannot debit bitcoins.")
 
-    credit_cursor = db.cursor()  # noqa: F841
-
     # Contracts can only hold XCP balances.
     if util.enabled("contracts_only_xcp_balances"):  # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
-    add_to_balance(db, address, asset, quantity, tx_index)
+    credit_address = address
+    utxo = None
+    utxo_address = None
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        credit_address = None
+        utxo = address
+        utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
+
+    add_to_balance(db, address, asset, quantity, tx_index, utxo_address)
 
     # Record credit.
     bindings = {
         "block_index": block_index,
-        "address": address,
+        "address": credit_address,
+        "utxo": utxo,
+        "utxo_address": utxo_address,
         "asset": asset,
         "quantity": quantity,
         "calling_function": action,
@@ -392,11 +424,16 @@ def transfer(db, source, destination, asset, quantity, action, event):
 def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list=False):
     """Get balance of contract or address."""
     cursor = db.cursor()
-    query = """
+
+    field_name = "address"
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        field_name = "utxo"
+
+    query = f"""
         SELECT * FROM balances
-        WHERE (address = ? AND asset = ?)
+        WHERE ({field_name} = ? AND asset = ?)
         ORDER BY rowid DESC LIMIT 1
-    """
+    """  # noqa: S608
     bindings = (address, asset)
     balances = list(cursor.execute(query, bindings))
     cursor.close()
@@ -415,25 +452,39 @@ def get_address_balances(db, address: str):
     :param str address: The address to return (e.g. 1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
     """
     cursor = db.cursor()
-    query = """
-        SELECT address, asset, quantity, MAX(rowid)
+
+    field_name = "address"
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        field_name = "utxo"
+
+    query = f"""
+        SELECT {field_name}, asset, quantity, MAX(rowid)
         FROM balances
-        WHERE address = ?
-        GROUP BY address, asset
-    """
+        WHERE {field_name} = ?
+        GROUP BY {field_name}, asset
+    """  # noqa: S608
     bindings = (address,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
+def get_utxo_balances(db, utxo: str):
+    return get_address_balances(db, utxo)
+
+
 def get_address_assets(db, address):
     cursor = db.cursor()
-    query = """
+
+    field_name = "address"
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        field_name = "utxo"
+
+    query = f"""
         SELECT DISTINCT asset
         FROM balances
-        WHERE address=:address
+        WHERE {field_name}=:address
         GROUP BY asset
-    """
+    """  # noqa: S608
     bindings = {"address": address}
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -441,14 +492,19 @@ def get_address_assets(db, address):
 
 def get_balances_count(db, address):
     cursor = db.cursor()
-    query = """
+
+    field_name = "address"
+    if util.enabled("utxo_support") and util.is_utxo_format(address):
+        field_name = "utxo"
+
+    query = f"""
         SELECT COUNT(*) AS cnt FROM (
             SELECT DISTINCT asset
             FROM balances
-            WHERE address=:address
+            WHERE {field_name}=:address
             GROUP BY asset
         )
-    """
+    """  # noqa: S608
     bindings = {"address": address}
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -1974,7 +2030,7 @@ def holders(db, asset, exclude_empty_holders=False):
     query = """
         SELECT *, rowid
         FROM balances
-        WHERE asset = ?
+        WHERE asset = ? AND address IS NOT NULL
     """
     bindings = (asset,)
     cursor.execute(query, bindings)
@@ -1982,6 +2038,21 @@ def holders(db, asset, exclude_empty_holders=False):
         cursor,
         ["asset", "address"],
         {"address": "address", "address_quantity": "quantity"},
+        exclude_empty_holders=exclude_empty_holders,
+        table="balances",
+    )
+
+    query = """
+        SELECT *, rowid
+        FROM balances
+        WHERE asset = ? AND utxo IS NOT NULL
+    """
+    bindings = (asset,)
+    cursor.execute(query, bindings)
+    holders += _get_holders(
+        cursor,
+        ["asset", "utxo"],
+        {"address": "utxo", "address_quantity": "quantity"},
         exclude_empty_holders=exclude_empty_holders,
         table="balances",
     )
@@ -2315,7 +2386,7 @@ def held(db):  # TODO: Rename ?
         SELECT asset, SUM(quantity) AS total FROM (
             SELECT address, asset, quantity, (address || asset) AS aa, MAX(rowid)
             FROM balances
-            WHERE address IS NOT NULL
+            WHERE address IS NOT NULL AND utxo IS NULL
             GROUP BY aa
         ) GROUP BY asset
         """,
@@ -2323,7 +2394,15 @@ def held(db):  # TODO: Rename ?
         SELECT asset, SUM(quantity) AS total FROM (
             SELECT NULL, asset, quantity
             FROM balances
-            WHERE address IS NULL
+            WHERE address IS NULL AND utxo IS NULL
+        ) GROUP BY asset
+        """,
+        """
+        SELECT asset, SUM(quantity) AS total FROM (
+            SELECT utxo, asset, quantity, (utxo || asset) AS aa, MAX(rowid)
+            FROM balances
+            WHERE address IS NULL AND utxo IS NOT NULL
+            GROUP BY aa
         ) GROUP BY asset
         """,
         """

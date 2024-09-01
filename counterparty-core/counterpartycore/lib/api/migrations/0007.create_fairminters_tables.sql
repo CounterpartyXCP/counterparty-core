@@ -1,3 +1,4 @@
+-- depends: 0007.add_description_locked
 CREATE TABLE IF NOT EXISTS fairminters (
     tx_hash TEXT,
     tx_index INTEGER,

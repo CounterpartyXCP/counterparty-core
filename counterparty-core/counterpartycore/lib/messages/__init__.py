@@ -18,6 +18,7 @@
 # 80 rps
 # 81 rpsresolve
 # 90 fairminter
+# 100 utxo attach and dettach
 # 110 destroy
 #
 # Allocate each new type of message within the "logical" 10 number boundary
