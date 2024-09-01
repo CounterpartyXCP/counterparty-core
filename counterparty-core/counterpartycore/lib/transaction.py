@@ -10,6 +10,7 @@ import hashlib
 import inspect
 import io
 import logging
+import struct
 import sys
 import threading
 
@@ -1244,6 +1245,13 @@ def compose_transaction(
         del params["segwit"]
 
     tx_info = compose_method(db, **params)
+
+    if util.enabled("new_prefix_xcp1"):
+        # add message length to the message
+        if tx_info[2]:
+            message_length = len(tx_info[2])
+            message_lenth_bytes = struct.pack(">H", message_length)  # 2 bytes
+            tx_info = (tx_info[0], tx_info[1], message_lenth_bytes + tx_info[2])
 
     raw_transaction = construct(
         db,

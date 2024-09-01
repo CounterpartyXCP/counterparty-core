@@ -259,6 +259,8 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
             fee = 0
             data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
             data += b"\x00"
+            if util.enabled("new_prefix_xcp1"):
+                data = b"\x00\x02" + data
 
             if util.enabled("multiple_dispenses"):
                 outs.append({"destination": out[0], "btc_amount": out[1], "out_index": out_index})
