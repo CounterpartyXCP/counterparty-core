@@ -2081,12 +2081,29 @@ def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
 
 
 def multiple_compose(db, json_txs: str):
-    txs = json.loads(json_txs)
+    try:
+        txs = json.loads(json_txs)
+    except json.JSONDecodeError as e:
+        raise exceptions.ComposeError("Invalid JSON") from e
+    if not isinstance(txs, dict) or "transactions" not in txs:
+        raise exceptions.ComposeError("Invalid JSON: must contain a 'transactions' key")
+
     tx_info = []
     source = None
     destination = None
     data = b""
     for tx in txs["transactions"]:
+        if "name" not in tx or "params" not in tx:
+            raise exceptions.ComposeError(
+                "Invalid JSON: each transaction must have a 'name' and 'params' key"
+            )
+        if tx["name"] not in COMPOSABLE_TRANSACTIONS:
+            raise exceptions.ComposeError(
+                f"Invalid JSON: '{tx['name']}' is not a valid transaction"
+            )
+        if not isinstance(tx["params"], dict):
+            raise exceptions.ComposeError("Invalid JSON: 'params' must be a dictionary")
+
         tx_name = tx["name"]
         tx_params = tx["params"]
         tx_params["return_only_data"] = True

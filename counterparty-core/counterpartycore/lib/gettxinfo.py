@@ -244,8 +244,8 @@ def get_dispensers_outputs(db, potential_dispensers):
     return outputs
 
 
-def get_dispensers_tx_info(sources, dispensers_outputs):
-    source, destination, btc_amount, fee, data, outs = b"", None, None, None, None, []
+def get_dispensers_tx_info(sources, dispensers_outputs, tx_data=None):
+    source, destination, btc_amount, fee, data, outs = b"", None, None, None, tx_data, []
 
     dispenser_source = sources.split("-")[0]
     out_index = 0
@@ -257,10 +257,11 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
             destination = out[0]
             btc_amount = out[1]
             fee = 0
-            data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
-            data += b"\x00"
-            if util.enabled("new_prefix_xcp1"):
-                data = b"\x00\x02" + data
+            if data is None:
+                data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
+                data += b"\x00"
+                if util.enabled("new_prefix_xcp1"):
+                    data = b"\x00\x02" + data
 
             if util.enabled("multiple_dispenses"):
                 outs.append({"destination": out[0], "btc_amount": out[1], "out_index": out_index})
@@ -416,18 +417,20 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     destinations = "-".join(destinations)
 
     try:
-        message_type_id, _ = message_type.unpack(data, block_index)[0]
-    except (struct.error, IndexError):  # Deterministically raised.
-        message_type_id = None
+        message_type_ids = [
+            message_type_id for message_type_id, _ in message_type.unpack(data, block_index)
+        ]
+    except struct.error:  # Deterministically raised.
+        message_type_ids = [None]
 
-    if message_type_id == dispenser.DISPENSE_ID and util.enabled(
+    if dispenser.DISPENSE_ID in message_type_ids and util.enabled(
         "enable_dispense_tx", block_index=block_index
     ):
         # if there is a dispense prefix we assume all potential_dispensers are dispensers
         # that's mean we don't need to call get_dispensers_outputs()
         # and so we avoid a db query (dispenser.is_dispensable()).
         # If one of them is not a dispenser `dispenser.dispense()` will silently skip it
-        return get_dispensers_tx_info(sources, potential_dispensers)
+        return get_dispensers_tx_info(sources, potential_dispensers, data)
 
     return sources, destinations, btc_amount, round(fee), data, []
 
