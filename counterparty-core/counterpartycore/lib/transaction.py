@@ -2090,7 +2090,7 @@ def multiple_compose(db, json_txs: str):
 
     tx_info = []
     source = None
-    destination = None
+    destination = []
     data = b""
     for tx in txs["transactions"]:
         if "name" not in tx or "params" not in tx:
@@ -2116,14 +2116,16 @@ def multiple_compose(db, json_txs: str):
         elif source != tx_info[0]:
             raise exceptions.ComposeError("All transactions must have the same source")
 
-        if destination is None:
+        if not len(destination) and len(tx_info[1]):
             destination = tx_info[1]
-        elif destination is not None and destination != () and destination != tx_info[1]:
+        elif len(tx_info[1]) and len(destination) and destination != tx_info[1]:
             raise exceptions.ComposeError("All transactions must have the same destination")
 
         data += tx_info[2]
 
     compose_data = (source, destination, data)
+
+    print("COMPOSE DATA", compose_data)
 
     construct_args = txs.get("construct_args", {})
     construct_args["compose_data"] = compose_data
