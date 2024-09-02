@@ -615,9 +615,9 @@ def generate_asset_name(asset_id, block_index):
     return asset_name
 
 
-def get_asset_id(db, asset_name, block_index):
+def get_asset_id(db, asset_name, block_index, no_validate=False):
     """Return asset_id from asset_name."""
-    if not util.enabled("hotfix_numeric_assets"):
+    if not util.enabled("hotfix_numeric_assets") or no_validate:
         return generate_asset_id(asset_name, block_index)
     cursor = db.cursor()
     query = """

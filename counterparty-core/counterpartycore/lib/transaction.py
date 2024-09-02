@@ -1127,6 +1127,11 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "Return only the data part of the transaction, not the full transaction",
     ),
+    "no_validate": (
+        bool,
+        False,
+        "Do not validate parameters",
+    ),
 }
 
 
@@ -1183,6 +1188,7 @@ def compose_transaction(
     exclude_utxos="",
     return_only_data=False,
     compose_data=None,
+    no_validate=False,
 ):
     """Create and return a transaction."""
 
@@ -1252,6 +1258,8 @@ def compose_transaction(
     if "segwit" in params:
         segwit = params["segwit"]
         del params["segwit"]
+
+    params["no_validate"] = no_validate
 
     if compose_data is None:
         tx_info = compose_method(db, **params)
@@ -2080,7 +2088,7 @@ def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
     }
 
 
-def multiple_compose(db, json_txs: str):
+def compose_multiple(db, json_txs: str):
     try:
         txs = json.loads(json_txs)
     except json.JSONDecodeError as e:
@@ -2104,12 +2112,14 @@ def multiple_compose(db, json_txs: str):
         if not isinstance(tx["params"], dict):
             raise exceptions.ComposeError("Invalid JSON: 'params' must be a dictionary")
 
+        construct_args = txs.get("construct_args", {})
+
         tx_name = tx["name"]
         tx_params = tx["params"]
         tx_params["return_only_data"] = True
         this_module = sys.modules[__name__]
         func = getattr(this_module, f"compose_{tx_name}")
-        tx_info = func(db, **tx_params)
+        tx_info = func(db, **tx_params, **construct_args)
 
         if source is None:
             source = tx_info[0]
@@ -2127,7 +2137,6 @@ def multiple_compose(db, json_txs: str):
 
     print("COMPOSE DATA", compose_data)
 
-    construct_args = txs.get("construct_args", {})
     construct_args["compose_data"] = compose_data
 
     rawtransaction = compose_transaction(

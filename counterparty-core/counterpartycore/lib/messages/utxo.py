@@ -71,7 +71,7 @@ def validate(db, source, destination, asset, quantity, block_index=None):
     return problems
 
 
-def compose(db, source, destination, asset, quantity):
+def compose(db, source, destination, asset, quantity, no_validate=False):
     """
     Compose a UTXO message.
     source: the source address or UTXO
@@ -80,18 +80,19 @@ def compose(db, source, destination, asset, quantity):
     quantity: the quantity to transfer
     """
     problems = validate(db, source, destination, asset, quantity)
-    if problems:
+    if problems and not no_validate:
         raise exceptions.ComposeError(problems)
 
     # we make an RPC call only at the time of composition
-    if (
-        destination
-        and util.is_utxo_format(destination)
-        and not backend.bitcoind.is_valid_utxo(destination)
-    ):
-        raise exceptions.ComposeError(["destination is not a UTXO"])
-    if util.is_utxo_format(source) and not backend.bitcoind.is_valid_utxo(source):
-        raise exceptions.ComposeError(["source is not a UTXO"])
+    if not no_validate:
+        if (
+            destination
+            and util.is_utxo_format(destination)
+            and not backend.bitcoind.is_valid_utxo(destination)
+        ):
+            raise exceptions.ComposeError(["destination is not a UTXO"])
+        if util.is_utxo_format(source) and not backend.bitcoind.is_valid_utxo(source):
+            raise exceptions.ComposeError(["source is not a UTXO"])
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
