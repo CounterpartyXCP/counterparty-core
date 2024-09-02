@@ -206,16 +206,7 @@ def parse(db, tx, message):
         )
 
     if util.enabled("new_prefix_xcp1"):
-        last_msg_index = cursor.execute(
-            """
-            SELECT MAX(msg_index) as msg_index FROM sends WHERE tx_hash = ?
-        """,
-            (tx["tx_hash"],),
-        ).fetchone()
-        if last_msg_index and last_msg_index["msg_index"] is not None:
-            msg_index = last_msg_index["msg_index"] + 1
-        else:
-            msg_index = 0
+        msg_index = ledger.get_next_send_msg_index(db, tx["tx_hash"])
     else:
         msg_index = 0
 

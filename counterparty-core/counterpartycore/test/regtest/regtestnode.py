@@ -63,6 +63,7 @@ class RegtestNode:
         if "error" in result:
             raise ComposeError(result["error"])
         raw_transaction = result["result"]["rawtransaction"]
+        # print(f"Raw transaction: {tx_name} {params} ({raw_transaction})")
         signed_transaction_json = self.bitcoin_wallet(
             "signrawtransactionwithwallet", raw_transaction
         ).strip()

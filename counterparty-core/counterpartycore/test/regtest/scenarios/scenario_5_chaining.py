@@ -213,7 +213,7 @@ SCENARIO = [
         "set_variables": {"ORDER_2_HASH": "$TX_HASH"},
         "controls": [
             {
-                "url": "blocks/143/events",
+                "url": "blocks/143/events?event_name=OPEN_ORDER,ORDER_MATCH,ORDER_UPDATE",
                 "result": [
                     {
                         "event": "ORDER_MATCH",
@@ -350,7 +350,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/144/events?event_name=OPEN_ORDER,ORDER_FILLED,ORDER_MATCH_UPDATE,BTC_PAY,CREDIT,DEBIT,ASSET_CREATION,ASSET_ISSUANCE,INCREMENT_TRANSACTION_COUNT,ATTACH_TO_UTXO,DEBIT,CREDIT",
+                "url": "blocks/144/events?event_name=OPEN_ORDER,ORDER_FILLED,ORDER_MATCH_UPDATE,BTC_PAY,CREDIT,DEBIT,ASSET_CREATION,ASSET_ISSUANCE,INCREMENT_TRANSACTION_COUNT,ATTACH_TO_UTXO",
                 "result": [
                     {
                         "event": "OPEN_ORDER",
@@ -359,8 +359,8 @@ SCENARIO = [
                             "block_index": 144,
                             "expiration": 10,
                             "expire_index": 154,
-                            "fee_provided": 26844,
-                            "fee_provided_remaining": 26844,
+                            "fee_provided": 30296,
+                            "fee_provided_remaining": 30296,
                             "fee_required": 0,
                             "fee_required_remaining": 0,
                             "get_asset": "XCP",
