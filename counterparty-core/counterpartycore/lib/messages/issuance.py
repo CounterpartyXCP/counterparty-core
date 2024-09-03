@@ -423,7 +423,9 @@ def compose(
     subasset_parent = None
     subasset_longname = None
     if util.enabled("subassets"):  # Protocol change.
-        subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(asset)
+        subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(
+            asset, util.enabled("allow_subassets_on_numerics")
+        )
         if subasset_longname is not None:
             # try to find an existing subasset
             assets = ledger.get_assets_by_longname(db, subasset_longname)
@@ -851,7 +853,7 @@ def parse(db, tx, message, message_type_id):
             # ensure the subasset_longname is valid
             util.validate_subasset_longname(subasset_longname)
             subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(
-                subasset_longname
+                subasset_longname, util.enabled("allow_subassets_on_numerics")
             )
         except exceptions.AssetNameError as e:  # noqa: F841
             asset = None

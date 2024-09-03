@@ -591,6 +591,13 @@
     "block_index": 900000,
     "testnet_block_index": 2815000
   },
+  "allow_subassets_on_numerics": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 4,
+    "minimum_version_revision": 0,
+    "block_index": 900000,
+    "testnet_block_index": 2815000
+  },
   "fee_parameters": {
     "minimum_version_major": 0,
     "mainnet":{
