@@ -367,6 +367,10 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
             decoded_tx, block_index
         )
 
+    if util.enabled("new_prefix_xcp1") and data:
+        flags = data[0]  # noqa F841
+        data = data[1:]
+
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output
     sources = []

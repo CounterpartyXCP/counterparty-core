@@ -613,3 +613,32 @@ def prefix(block_index):
             return b"XCP1"  # 4 bytes
         else:
             return b"CNTRPRTY"  # 8 bytes
+
+
+def bools_to_byte(
+    v0: bool = False,
+    v1: bool = False,
+    v2: bool = False,
+    v3: bool = False,
+    v4: bool = False,
+    v5: bool = False,
+    v6: bool = False,
+    v7: bool = False,
+) -> bytes:
+    flags = 0
+    for i, v in enumerate([v0, v1, v2, v3, v4, v5, v6, v7]):
+        if v:
+            flags |= 1 << i
+    return bytes([flags])  # Convertit l'entier en un objet bytes d'un seul octet
+
+
+def get_flag(flags: bytes, pos: int) -> bool:
+    if len(flags) != 1:
+        raise ValueError("Les flags doivent être un seul octet")
+    if pos < 0 or pos > 7:
+        raise ValueError("La position doit être entre 0 et 7")
+    return bool(flags[0] & (1 << pos))
+
+
+def gen_flags(signed=False, commpressed=False):
+    return bools_to_byte(signed, commpressed)

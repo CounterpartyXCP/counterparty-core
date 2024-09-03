@@ -950,6 +950,9 @@ class TransactionService:
         desired_source = script.make_canonical(desired_source)
 
         # Check desired info against parsed info.
+        if util.enabled("new_prefix_xcp1") and desired_data:
+            flags = desired_data[0]  # noqa F841
+            desired_data = desired_data[1:]
         desired = (desired_source, desired_destination, desired_data)
         parsed = (parsed_source, parsed_destination, parsed_data)
         if desired != parsed:
@@ -1265,11 +1268,13 @@ def compose_transaction(
         tx_info = compose_method(db, **params)
 
         if util.enabled("new_prefix_xcp1"):
-            # add message length to the message
+            # add flags and message length to the message
             if tx_info[2]:
                 message_length = len(tx_info[2])
                 message_lenth_bytes = struct.pack(">H", message_length)  # 2 bytes
-                tx_info = (tx_info[0], tx_info[1], message_lenth_bytes + tx_info[2])
+                flags = util.gen_flags(signed=False, commpressed=False)
+                message = flags + message_lenth_bytes + tx_info[2]
+                tx_info = (tx_info[0], tx_info[1], message)
     else:
         tx_info = compose_data
 
