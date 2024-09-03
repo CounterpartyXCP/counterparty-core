@@ -60,7 +60,7 @@ def initialise(db):
 def validate(db, source, order_match_id, block_index):
     problems = []
     order_match = None
-    order_matches = ledger.get_order_match(db, id=order_match_id)
+    order_matches = ledger.get_order_match(db, id=order_match_id, tx1_address=source)
     if len(order_matches) == 0:
         problems.append(f"no such order match {order_match_id}")
         return None, None, None, None, order_match, problems
@@ -104,7 +104,7 @@ def validate(db, source, order_match_id, block_index):
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
 
-def compose(db, source: str, order_match_id: str, no_validate=False):
+def compose(db, source: str, order_match_id: str, quantity=None, no_validate=False):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(
@@ -113,14 +113,24 @@ def compose(db, source: str, order_match_id: str, no_validate=False):
     if problems and not no_validate:
         raise exceptions.ComposeError(problems)
 
-    # Warn if down to the wire.
-    time_left = order_match["match_expire_index"] - util.CURRENT_BLOCK_INDEX
-    if time_left < 4:
-        logger.warning(
-            f"Only {time_left} blocks until that order match expires. The payment might not make into the blockchain in time."
-        )
-    if 10 - time_left < 4:
-        logger.warning(f"Order match has only {10 - time_left} confirmation(s).")
+    if util.enabled("new_prefix_xcp1") and tx1_hash == "00":
+        orders = ledger.get_order(db, tx0_hash)
+        if not orders:
+            raise exceptions.ComposeError("order not found")
+        if not quantity:
+            raise exceptions.ComposeError("quantity not provided")
+        destination = orders[0]["source"]
+        btc_quantity = quantity
+
+    if not no_validate:
+        # Warn if down to the wire.
+        time_left = order_match["match_expire_index"] - util.CURRENT_BLOCK_INDEX
+        if time_left < 4:
+            logger.warning(
+                f"Only {time_left} blocks until that order match expires. The payment might not make into the blockchain in time."
+            )
+        if 10 - time_left < 4:
+            logger.warning(f"Order match has only {10 - time_left} confirmation(s).")
 
     tx0_hash_bytes, tx1_hash_bytes = (
         binascii.unhexlify(bytes(tx0_hash, "utf-8")),
@@ -169,6 +179,10 @@ def parse(db, tx, message):
         if problems:
             order_match = None  # noqa: F841
             status = "invalid: " + "; ".join(problems)
+
+    if util.enabled("new_prefix_xcp1") and int(tx1_hash, 16) == 0:
+        tx1_hash = order_match["tx1_hash"]
+        order_match_id = order_match["id"]
 
     if status == "valid":
         # BTC must be paid all at once.

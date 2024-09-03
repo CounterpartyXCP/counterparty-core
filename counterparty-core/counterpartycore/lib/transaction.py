@@ -1423,13 +1423,14 @@ def compose_broadcast(
     }
 
 
-def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
+def compose_btcpay(db, address: str, order_match_id: str, quantity: int = None, **construct_args):
     """
     Composes a transaction to pay for a BTC order match.
     :param address: The address that will be sending the payment (e.g. bc1qsteve3tfxfg9pcmvzw645sr9zy7es5rx645p6l)
     :param order_match_id: The ID of the order match to pay for (e.g. e470416a9500fb046835192da013f48e6468a07dba1bede4a0b68e666ed23c8d_4953bde3d9417b103615c2d3d4b284d4fcf7cbd820e5dd19ac0084e9ebd090b2)
+    :param quantity: Only use for transaction chaining with order_match_id=`<tx0_hash>_00`
     """
-    params = {"source": address, "order_match_id": order_match_id}
+    params = {"source": address, "order_match_id": order_match_id, "quantity": quantity}
     rawtransaction = compose_transaction(
         db,
         name="btcpay",
