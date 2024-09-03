@@ -205,7 +205,7 @@ def parse(db, tx, message):
             db, destination, asset, quantity, tx["tx_index"], action="send", event=tx["tx_hash"]
         )
 
-    if util.enabled("new_prefix_xcp1"):
+    if util.enabled("new_tx_format"):
         msg_index = ledger.get_next_send_msg_index(db, tx["tx_hash"])
     else:
         msg_index = 0

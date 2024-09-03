@@ -1593,22 +1593,8 @@ def get_pending_btc_order_matches(db, address):
     return cursor.fetchall()
 
 
-def get_order_match(db, id, tx1_address=None):
+def get_order_match(db, id):
     cursor = db.cursor()
-
-    if util.enabled("new_prefix_xcp1") and tx1_address is not None:
-        tx0_hash, tx1_hash = id.split("_")
-        if int(tx1_hash, 16) == 0:
-            query = """
-                SELECT *, rowid
-                FROM order_matches
-                WHERE tx0_hash = ? AND tx1_address = ?
-                ORDER BY rowid DESC LIMIT 1
-            """
-            bindings = (tx0_hash, tx1_address)
-            cursor.execute(query, bindings)
-            return cursor.fetchall()
-
     query = """
         SELECT *, rowid
         FROM order_matches

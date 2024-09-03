@@ -21,7 +21,7 @@ FIXTURE_OPTIONS = {"utxo_locks_max_addresses": 2000}
 
 
 def construct_tx(db, source, destination, disable_utxo_locks=False, custom_inputs=None):
-    with util_test.MockProtocolChangesContext(new_prefix_xcp1=False):
+    with util_test.MockProtocolChangesContext(new_tx_format=False):
         tx_info = send.compose(db, source, destination, "XCP", 1)
         return transaction.construct(
             db, tx_info, disable_utxo_locks=disable_utxo_locks, custom_inputs=custom_inputs

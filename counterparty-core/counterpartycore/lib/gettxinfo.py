@@ -260,7 +260,7 @@ def get_dispensers_tx_info(sources, dispensers_outputs, tx_data=None):
             if data is None:
                 data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
                 data += b"\x00"
-                if util.enabled("new_prefix_xcp1"):
+                if util.enabled("new_tx_format"):
                     data = b"\x00\x02" + data
 
             if util.enabled("multiple_dispenses"):
@@ -367,7 +367,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
             decoded_tx, block_index
         )
 
-    if util.enabled("new_prefix_xcp1") and data:
+    if util.enabled("new_tx_format") and data:
         flags = data[0]  # noqa F841
         data = data[1:]
 

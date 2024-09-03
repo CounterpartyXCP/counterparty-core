@@ -617,7 +617,7 @@
       }
     }
   },
-  "new_prefix_xcp1": {
+  "new_tx_format": {
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,

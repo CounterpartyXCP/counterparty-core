@@ -23,7 +23,7 @@ def pack(message_type_id, block_index=None):
 def unpack(packed_data, block_index=None):
     message_datas = []
 
-    if util.enabled("new_prefix_xcp1"):
+    if util.enabled("new_tx_format"):
         current_index = 0
         while current_index < len(packed_data) - 2:
             message_length = struct.unpack(">H", packed_data[current_index : current_index + 2])[0]  # noqa: F841
