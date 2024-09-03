@@ -326,8 +326,11 @@ def validate(
             cursor.close()
             if util.enabled("numeric_asset_names"):  # Protocol change.
                 if subasset_longname is not None and util.enabled("subassets"):  # Protocol change.
-                    # subasset issuance is 0.25
-                    fee = int(0.25 * config.UNIT)
+                    if util.enabled("free_subassets", block_index):
+                        fee = 0
+                    else:
+                        # subasset issuance is 0.25
+                        fee = int(0.25 * config.UNIT)
                 elif len(asset) >= 13:
                     fee = 0
                 else:
