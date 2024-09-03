@@ -281,7 +281,7 @@ SCENARIO = [
                             "btc_amount": 0,
                             "data": "00145b464149524d494e54427c313030303030303030",
                             "destination": "",
-                            "fee": 5700,
+                            "fee": 5800,
                             "source": "$ADDRESS_3",
                             "tx_hash": "$TX_HASH",
                             "tx_index": 16,

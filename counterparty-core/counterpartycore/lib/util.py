@@ -609,10 +609,7 @@ def prefix(block_index):
     if config.TESTCOIN:
         return b"XX"  # 2 bytes (possibly accidentally created)
     else:
-        if block_index is None or enabled("new_prefix_xcp1", block_index):
-            return b"XCP1"  # 4 bytes
-        else:
-            return b"CNTRPRTY"  # 8 bytes
+        return b"CNTRPRTY"  # 8 bytes
 
 
 def bools_to_byte(
