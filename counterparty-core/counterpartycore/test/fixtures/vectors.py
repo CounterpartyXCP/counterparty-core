@@ -3088,6 +3088,7 @@ UNITTEST_VECTOR = (
                     ),
                 },
                 {
+                    "mock_protocol_changes": {"free_subassets": False},
                     "in": (
                         ADDR[0],
                         None,
@@ -3118,6 +3119,7 @@ UNITTEST_VECTOR = (
                     ),
                 },
                 {
+                    "mock_protocol_changes": {"free_subassets": False},
                     "in": (
                         ADDR[1],
                         None,
@@ -3148,6 +3150,7 @@ UNITTEST_VECTOR = (
                     ),
                 },
                 {
+                    "mock_protocol_changes": {"free_subassets": False},
                     "in": (
                         ADDR[0],
                         None,
@@ -3178,6 +3181,7 @@ UNITTEST_VECTOR = (
                     ),
                 },
                 {
+                    "mock_protocol_changes": {"free_subassets": False},
                     "comment": "A subasset name must be unique",
                     "in": (
                         ADDR[0],
@@ -3240,6 +3244,7 @@ UNITTEST_VECTOR = (
                     ),
                 },
                 {
+                    "mock_protocol_changes": {"free_subassets": False},
                     "in": (
                         ADDR[0],
                         None,
@@ -3261,6 +3266,37 @@ UNITTEST_VECTOR = (
                         0.0,
                         ["a subasset must be a numeric asset"],
                         25000000,
+                        "description",
+                        True,
+                        False,
+                        False,
+                        False,
+                        None,
+                    ),
+                },
+                {
+                    "comment": "subassets are free after protocol change",
+                    "in": (
+                        ADDR[0],
+                        None,
+                        "UNRELATED",
+                        1000,
+                        True,
+                        None,
+                        None,
+                        False,
+                        None,
+                        None,
+                        "description",
+                        "PARENT",
+                        "PARENT.child1",
+                        DP["default_block_index"],
+                    ),
+                    "out": (
+                        0,
+                        0.0,
+                        ["a subasset must be a numeric asset"],
+                        0,
                         "description",
                         True,
                         False,
@@ -4018,6 +4054,7 @@ UNITTEST_VECTOR = (
                     ],
                 },
                 {
+                    "mock_protocol_changes": {"free_subassets": False},
                     "comment": "first time issuance of subasset",
                     "in": (
                         {
@@ -4091,6 +4128,7 @@ UNITTEST_VECTOR = (
                     ],
                 },
                 {
+                    "mock_protocol_changes": {"free_subassets": False},
                     "comment": "first time issuance of subasset with description",
                     "in": (
                         {
