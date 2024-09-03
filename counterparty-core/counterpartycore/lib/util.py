@@ -640,5 +640,5 @@ def get_flag(flags: bytes, pos: int) -> bool:
     return bool(flags[0] & (1 << pos))
 
 
-def gen_flags(signed=False, commpressed=False):
-    return bools_to_byte(signed, commpressed)
+def gen_flags(signed=False, compressed=False):
+    return bools_to_byte(signed, compressed)

@@ -1272,7 +1272,7 @@ def compose_transaction(
             if tx_info[2]:
                 message_length = len(tx_info[2])
                 message_lenth_bytes = struct.pack(">H", message_length)  # 2 bytes
-                flags = util.gen_flags(signed=False, commpressed=False)
+                flags = util.gen_flags(signed=False, compressed=False)
                 message = flags + message_lenth_bytes + tx_info[2]
                 tx_info = (tx_info[0], tx_info[1], message)
     else:
@@ -2137,11 +2137,14 @@ def compose_multiple(db, json_txs: str):
         elif len(tx_info[1]) and len(destination) and destination != tx_info[1]:
             raise exceptions.ComposeError("All transactions must have the same destination")
 
-        data += tx_info[2]
+        data += tx_info[2][1:]  # skip the first flags byte
+
+    # add first flags byte
+    data = util.gen_flags(signed=False, compressed=False) + data
 
     compose_data = (source, destination, data)
 
-    print("COMPOSE DATA", compose_data)
+    # print("COMPOSE DATA", compose_data)
 
     construct_args["compose_data"] = compose_data
 
