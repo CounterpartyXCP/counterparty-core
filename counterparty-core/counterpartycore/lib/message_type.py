@@ -1,5 +1,6 @@
 import logging
 import struct
+from io import BytesIO
 
 from counterpartycore.lib import config, util
 
@@ -24,12 +25,13 @@ def unpack(packed_data, block_index=None):
     message_datas = []
 
     if util.enabled("new_tx_format"):
-        current_index = 0
-        while current_index < len(packed_data) - 2:
-            message_length = struct.unpack(">H", packed_data[current_index : current_index + 2])[0]  # noqa: F841
-            new_data = packed_data[current_index + 2 : current_index + message_length + 2]
+        byte_stream = BytesIO(packed_data)
+        message_length = byte_stream.read(2)
+        while message_length:
+            message_length = struct.unpack(">H", message_length)[0]
+            new_data = byte_stream.read(message_length)
             message_datas.append(new_data)
-            current_index += message_length + 2
+            message_length = byte_stream.read(2)
     else:
         message_datas = [packed_data]
 
