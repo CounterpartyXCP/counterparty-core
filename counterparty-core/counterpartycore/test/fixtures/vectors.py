@@ -8551,21 +8551,20 @@ UNITTEST_VECTOR = (
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_tx_format": False},
                 },
                 {
-                    "in": (binascii.unhexlify("000501deadbeef"), 310502),
+                    "in": (binascii.unhexlify("0501deadbeef"), 310502),
                     "out": [(1, binascii.unhexlify("deadbeef"))],
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_tx_format": True},
                 },
                 {
-                    "in": (binascii.unhexlify("000501deadbeef000401deadbeef"), 310502),
+                    "in": (binascii.unhexlify("0501deadbeef0401deadbe"), 310502),
                     "out": [(1, binascii.unhexlify("deadbeef")), (1, binascii.unhexlify("deadbe"))],
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_tx_format": True},
                 },
                 {
-                    "in": (binascii.unhexlify("000501deadbeef000401deadbeefaabbcc"), 310502),
+                    "in": (binascii.unhexlify("0501deadbeef0401deadbeefaabbcc"), 310502),
                     "out": [
                         (1, binascii.unhexlify("deadbeef")),
                         (1, binascii.unhexlify("deadbe")),
-                        (187, b"\xcc"),
                     ],
                     "mock_protocol_changes": {"short_tx_type_id": True, "new_tx_format": True},
                 },

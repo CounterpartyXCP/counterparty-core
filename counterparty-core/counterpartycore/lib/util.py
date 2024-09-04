@@ -17,6 +17,7 @@ from operator import itemgetter
 
 import gnupg
 import requests
+import varint
 from counterparty_rs import utils as pycoin_rs_utils
 
 from counterpartycore.lib import config, exceptions
@@ -639,3 +640,11 @@ def get_flag(flags: bytes, pos: int) -> bool:
 
 def gen_flags(signed=False, compressed=False):
     return bools_to_byte(signed, compressed)
+
+
+def read_varint(stream):
+    """Read a varint from a stream."""
+    try:
+        return varint.decode_stream(stream)
+    except (TypeError, EOFError):
+        return None

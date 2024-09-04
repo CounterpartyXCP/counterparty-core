@@ -11,12 +11,12 @@ import inspect
 import io
 import json
 import logging
-import struct
 import sys
 import threading
 
 import bitcoin as bitcoinlib
 import cachetools
+import varint
 from bitcoin.core import CTransaction
 
 from counterpartycore.lib import (
@@ -1270,10 +1270,9 @@ def compose_transaction(
         if util.enabled("new_tx_format"):
             # add flags and message length to the message
             if tx_info[2]:
-                message_length = len(tx_info[2])
-                message_lenth_bytes = struct.pack(">H", message_length)  # 2 bytes
                 flags = util.gen_flags(signed=False, compressed=False)
-                message = flags + message_lenth_bytes + tx_info[2]
+                message_length = varint.encode(len(tx_info[2]))
+                message = flags + message_length + tx_info[2]
                 tx_info = (tx_info[0], tx_info[1], message)
     else:
         tx_info = compose_data

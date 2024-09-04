@@ -26,12 +26,11 @@ def unpack(packed_data, block_index=None):
 
     if util.enabled("new_tx_format"):
         byte_stream = BytesIO(packed_data)
-        message_length = byte_stream.read(2)
+        message_length = util.read_varint(byte_stream)
         while message_length:
-            message_length = struct.unpack(">H", message_length)[0]
             new_data = byte_stream.read(message_length)
             message_datas.append(new_data)
-            message_length = byte_stream.read(2)
+            message_length = util.read_varint(byte_stream)
     else:
         message_datas = [packed_data]
 
