@@ -11,6 +11,7 @@ from scenarios import (
     scenario_3_dispenser,
     scenario_4_utxo,
     scenario_5_chaining,
+    scenario_6_presigned,
 )
 from termcolor import colored
 
@@ -20,6 +21,8 @@ SCENARIOS += scenario_2_fairminter.SCENARIO
 SCENARIOS += scenario_3_dispenser.SCENARIO
 SCENARIOS += scenario_4_utxo.SCENARIO
 SCENARIOS += scenario_5_chaining.SCENARIO
+# SCENARIOS += scenario_6_presigned.SCENARIO
+SCENARIOS = scenario_6_presigned.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -31,23 +34,35 @@ def compare_strings(string1, string2):
     return len(diff)
 
 
+def prepare_item(item, node, context):
+    for i, address in enumerate(node.addresses):
+        item["source"] = item["source"].replace(f"$ADDRESS_{i+1}", address)
+        for key in item["params"]:
+            if isinstance(item["params"][key], str):
+                item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i+1}", address)
+    for name, value in context.items():
+        item["source"] = item["source"].replace(f"${name}", value)
+        for key in item["params"]:
+            if isinstance(item["params"][key], str):
+                item["params"][key] = item["params"][key].replace(f"${name}", value)
+    return item
+
+
 def run_item(node, item, context):
     print(f"Running: {item['title']}")
     if item["transaction"] == "mine_blocks":
         block_hash, block_time = node.mine_blocks(item["params"]["blocks"])
         tx_hash = "null"
         node.wait_for_counterparty_server()
+    elif item["transaction"].startswith("presigned"):
+        item["transaction"] = item["transaction"].replace("presigned_", "")
+        item = prepare_item(item, node, context)
+        data = node.send_transaction(
+            item["source"], item["transaction"], item["params"], return_only_data=True
+        )
+        print(data)
     else:
-        for i, address in enumerate(node.addresses):
-            item["source"] = item["source"].replace(f"$ADDRESS_{i+1}", address)
-            for key in item["params"]:
-                if isinstance(item["params"][key], str):
-                    item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i+1}", address)
-        for name, value in context.items():
-            item["source"] = item["source"].replace(f"${name}", value)
-            for key in item["params"]:
-                if isinstance(item["params"][key], str):
-                    item["params"][key] = item["params"][key].replace(f"${name}", value)
+        item = prepare_item(item, node, context)
         try:
             tx_hash, block_hash, block_time = node.send_transaction(
                 item["source"], item["transaction"], item["params"]

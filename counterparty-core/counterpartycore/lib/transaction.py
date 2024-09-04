@@ -1192,6 +1192,8 @@ def compose_transaction(
     return_only_data=False,
     compose_data=None,
     no_validate=False,
+    data_signer=None,
+    data_signature=None,
 ):
     """Create and return a transaction."""
 
@@ -1266,7 +1268,6 @@ def compose_transaction(
 
     if compose_data is None:
         tx_info = compose_method(db, **params)
-
         if util.enabled("new_tx_format"):
             # add flags and message length to the message
             if tx_info[2]:
@@ -1275,6 +1276,12 @@ def compose_transaction(
                 message = flags + message_length + tx_info[2]
                 tx_info = (tx_info[0], tx_info[1], message)
     else:
+        if util.enabled("new_tx_format") and data_signer and data_signature:
+            source_length = varint.encode(len(data_signer))
+            signature_length = varint.encode(len(data_signature))
+            compose_data = (
+                source_length + data_signer + signature_length + data_signature + compose_data
+            )
         tx_info = compose_data
 
     if return_only_data:
@@ -2159,6 +2166,51 @@ def compose_multiple(db, json_txs: str):
         "rawtransaction": rawtransaction,
         "params": txs,
         "name": "utxo",
+    }
+
+
+def compose_presigned(
+    db, address: str, inputs: str, data: str, signature: str, destination: str, btc_amount: int
+):
+    """
+    Composes a transaction from presigned inputs.
+    :param address: The signer of the data
+    :param inputs: The inputs to the transaction, first input is used to determine the source address
+    :param data: The data to include in the transaction
+    :param signature: The signature of the data
+    :param destination: The destination of the transaction
+    :param btc_amount: The amount of BTC to send
+    """
+    custom_inputs = []
+    for input in inputs.split(","):
+        tx_hash, vout = input.split(":")
+        custom_inputs.append({"txid": tx_hash, "vout": int(vout)})
+
+    first_input_address = backend.bitcoind.safe_get_utxo_address(inputs[0])
+    if first_input_address is None:
+        raise exceptions.ComposeError(f"Invalid UTXO: {inputs[0]}")
+
+    rawtransaction = compose_transaction(
+        db,
+        name="",
+        params={},
+        custom_inputs=custom_inputs,
+        compose_data=(first_input_address, destination, data),
+        data_signature=signature,
+        data_signer=address,
+    )
+
+    return {
+        "rawtransaction": rawtransaction,
+        "params": {
+            "inputs": inputs,
+            "data": data,
+            "address": address,
+            "signature": signature,
+            "destination": destination,
+            "btc_amount": btc_amount,
+        },
+        "name": "presigned",
     }
 
 

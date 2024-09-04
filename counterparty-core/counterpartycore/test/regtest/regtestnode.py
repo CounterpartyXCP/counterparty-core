@@ -49,8 +49,10 @@ class RegtestNode:
                 print("Waiting for bitcoind to start...")
                 time.sleep(1)
 
-    def send_transaction(self, source, tx_name, params, retry=0):
+    def send_transaction(self, source, tx_name, params, retry=0, return_only_data=False):
         self.wait_for_counterparty_server()
+        if return_only_data:
+            params["return_only_data"] = 1
         query_string = urllib.parse.urlencode(params)
         if tx_name in ["detach", "movetoutxo"]:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
@@ -63,6 +65,8 @@ class RegtestNode:
         if "error" in result:
             raise ComposeError(result["error"])
         raw_transaction = result["result"]["rawtransaction"]
+        if return_only_data:
+            return raw_transaction
         # print(f"Raw transaction: {tx_name} {params} ({raw_transaction})")
         signed_transaction_json = self.bitcoin_wallet(
             "signrawtransactionwithwallet", raw_transaction
