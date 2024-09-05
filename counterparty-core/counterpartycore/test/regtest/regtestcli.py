@@ -151,18 +151,17 @@ def atomic_swap(seller_address, utxo, price_btc, buyer_address, data=None):
     # Join Buyer and Seller PSBTs
     signed_transaction = join_and_finalize_psbt(buyer_psbt, signed_seller_psbt)
     # Ensure inputs and outputs are in the correct order.
-    # Bitcoin Core shuffles the inputs and outputs,
+    # Bitcoin Core `joinpsbts` shuffles the inputs and outputs,
     # there are not so many possibilities so we
-    # try again as much as necessary.
+    # try again as much as necessary. For testing purposes only of course.
     retry_count = 0
     while (
         not first_output_is_buyer(signed_transaction, buyer_address)
         or not first_input_is_buyer(signed_transaction, buyer_utxos)
         or (data and not first_output_is_op_return(signed_transaction))
     ) and retry_count < 1000:
-        # try with the other order
-        print("First output is not the buyer's address, retrying...")
-        signed_transaction = join_and_finalize_psbt(signed_seller_psbt, buyer_psbt)
+        print("Inputs and outputs order are wrong, retrying...")
+        signed_transaction = join_and_finalize_psbt(buyer_psbt, signed_seller_psbt)
         retry_count += 1
 
     if not first_output_is_buyer(signed_transaction, buyer_address):
