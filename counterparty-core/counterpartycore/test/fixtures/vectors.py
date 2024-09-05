@@ -3376,6 +3376,35 @@ UNITTEST_VECTOR = (
                     "error": (exceptions.AssetNameError, "too short"),
                 },
                 {
+                    "comment": "disallow subassets on numerics",
+                    "mock_protocol_changes": {"allow_subassets_on_numerics": False},
+                    "in": (
+                        ADDR[0],
+                        "A9542895.subasset",
+                        1000,
+                        None,
+                        True,
+                        False,
+                        None,
+                        "",
+                    ),
+                    "error": (exceptions.AssetNameError, "parent asset name starts with 'A'"),
+                },
+                {
+                    "comment": "allow subassets on numerics",
+                    "in": (
+                        ADDR[0],
+                        "A95428956661682177.subasset",
+                        1000,
+                        None,
+                        True,
+                        False,
+                        None,
+                        "",
+                    ),
+                    "error": (exceptions.ComposeError, ["parent asset not found"]),
+                },
+                {
                     "in": (ADDR[0], "BSSET", 1000, None, True, False, None, ""),
                     "out": (
                         "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -8397,7 +8426,7 @@ UNITTEST_VECTOR = (
                 },
                 {
                     "in": ("ABADPARENT.child1",),
-                    "error": (exceptions.AssetNameError, "parent asset name starts with ‘A’"),
+                    "error": (exceptions.AssetNameError, "parent asset name starts with 'A'"),
                 },
                 {
                     "in": ("BTC.child1",),
@@ -8427,6 +8456,27 @@ UNITTEST_VECTOR = (
                     "error": (
                         exceptions.AssetNameError,
                         "subasset name contains consecutive periods",
+                    ),
+                },
+                {
+                    "comment": "numerics disallowed",
+                    "in": ("A95428956661682177.subasset",),
+                    "error": (
+                        exceptions.AssetNameError,
+                        "parent asset name too long",
+                    ),
+                },
+                {
+                    "comment": "numerics allowed",
+                    "in": ("A95428956661682177.subasset", True),
+                    "out": ("A95428956661682177", "A95428956661682177.subasset"),
+                },
+                {
+                    "comment": "numerics allowed but too long",
+                    "in": ("A123456789012345678901.subasset", True),
+                    "error": (
+                        exceptions.AssetNameError,
+                        "parent asset name too long",
                     ),
                 },
             ],

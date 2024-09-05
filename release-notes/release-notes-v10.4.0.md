@@ -29,6 +29,12 @@ This release includes a variety of protocol upgrades.
 * Expire order matches then orders
     - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/1794
     - Issue: https://github.com/CounterpartyXCP/counterparty-core/pull/1633
+* Free Subassets
+    - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/2194
+    - Issue: https://github.com/CounterpartyXCP/counterparty-core/issues/1840
+* Subassets on Numeric Assets
+    - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/2195
+    - Issue: https://github.com/CounterpartyXCP/counterparty-core/issues/1842
 
 ## Bugfixes
 

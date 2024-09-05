@@ -178,7 +178,7 @@ def date_passed(date):
 # checks and validates subassets (PARENT.SUBASSET)
 #   throws exceptions for assset or subasset names with invalid syntax
 #   returns (None, None) if the asset is not a subasset name
-def parse_subasset_from_asset_name(asset):
+def parse_subasset_from_asset_name(asset, allow_subassets_on_numerics=False):
     subasset_parent = None
     subasset_child = None
     subasset_longname = None
@@ -189,7 +189,7 @@ def parse_subasset_from_asset_name(asset):
         subasset_longname = asset
 
         # validate parent asset
-        validate_subasset_parent_name(subasset_parent)
+        validate_subasset_parent_name(subasset_parent, allow_subassets_on_numerics)
 
         # validate child asset
         validate_subasset_longname(subasset_longname, subasset_child)
@@ -225,8 +225,21 @@ def validate_subasset_longname(subasset_longname, subasset_child=None):
     return True
 
 
-# throws exceptions for invalid subasset names
-def validate_subasset_parent_name(asset_name):
+def is_numeric(s):
+    pattern = r"^A(\d{17,20})$"
+    match = re.match(pattern, s)
+    if match:
+        numeric_part = match.group(1)
+        numeric_value = int(numeric_part)
+        lower_bound = 26**12 + 1
+        upper_bound = 256**8
+
+        return lower_bound <= numeric_value <= upper_bound
+
+    return False
+
+
+def legacy_validate_subasset_parent_name(asset_name):
     if asset_name == config.BTC:
         raise exceptions.AssetNameError(f"parent asset cannot be {config.BTC}")
     if asset_name == config.XCP:
@@ -236,10 +249,32 @@ def validate_subasset_parent_name(asset_name):
     if len(asset_name) >= 13:
         raise exceptions.AssetNameError("parent asset name too long")
     if asset_name[0] == "A":
-        raise exceptions.AssetNameError("parent asset name starts with ‘A’")
+        raise exceptions.AssetNameError("parent asset name starts with 'A'")
     for c in asset_name:
         if c not in B26_DIGITS:
             raise exceptions.AssetNameError("parent asset name contains invalid character:", c)
+    return True
+
+
+# throws exceptions for invalid subasset names
+def validate_subasset_parent_name(asset_name, allow_subassets_on_numerics):
+    if not allow_subassets_on_numerics:
+        return legacy_validate_subasset_parent_name(asset_name)
+
+    if asset_name == config.BTC:
+        raise exceptions.AssetNameError(f"parent asset cannot be {config.BTC}")
+    if asset_name == config.XCP:
+        raise exceptions.AssetNameError(f"parent asset cannot be {config.XCP}")
+    if len(asset_name) < 4:
+        raise exceptions.AssetNameError("parent asset name too short")
+    if len(asset_name) > 21:
+        raise exceptions.AssetNameError("parent asset name too long")
+
+    if not is_numeric(asset_name):
+        for c in asset_name:
+            if c not in B26_DIGITS:
+                raise exceptions.AssetNameError("parent asset name contains invalid character:", c)
+
     return True
 
 
