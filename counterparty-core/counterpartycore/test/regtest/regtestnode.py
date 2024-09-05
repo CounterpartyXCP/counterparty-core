@@ -50,22 +50,15 @@ class RegtestNode:
                 time.sleep(1)
 
     def broadcast_transaction(self, signed_transaction, retry=0):
-        try:
-            tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction).strip()
-        except sh.ErrorReturnCode_25 as e:
-            if retry < 6:
-                print("Error: bad-txns-inputs-missingorspent")
-                print("Sleeping for 5 seconds and retrying...")
-                time.sleep(10)
-                return self.broadcast_transaction(signed_transaction, retry + 1)
-            else:
-                raise e
+        tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
         block_hash, block_time = self.mine_blocks(1)
         self.wait_for_counterparty_server()
         return tx_hash, block_hash, block_time
 
-    def send_transaction(self, source, tx_name, params, retry=0):
+    def send_transaction(self, source, tx_name, params, return_only_data=False, retry=0):
         self.wait_for_counterparty_server()
+        if return_only_data:
+            params["return_only_data"] = True
         query_string = urllib.parse.urlencode(params)
         if tx_name in ["detach", "movetoutxo"]:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
@@ -75,12 +68,23 @@ class RegtestNode:
         # print(result)
         if "error" in result:
             raise ComposeError(result["error"])
+        if return_only_data:
+            return result["result"]["data"]
         raw_transaction = result["result"]["rawtransaction"]
         signed_transaction_json = self.bitcoin_wallet(
             "signrawtransactionwithwallet", raw_transaction
         ).strip()
         signed_transaction = json.loads(signed_transaction_json)["hex"]
-        tx_hash, block_hash, block_time = self.broadcast_transaction(signed_transaction)
+        try:
+            tx_hash, block_hash, block_time = self.broadcast_transaction(signed_transaction)
+        except sh.ErrorReturnCode_25 as e:
+            if retry < 6:
+                print("Error: bad-txns-inputs-missingorspent")
+                print("Sleeping for 5 seconds and retrying...")
+                time.sleep(10)
+                return self.send_transaction(source, tx_name, params, return_only_data, retry + 1)
+            else:
+                raise e
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
         return tx_hash, block_hash, block_time
 

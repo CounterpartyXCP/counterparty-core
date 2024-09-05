@@ -1115,6 +1115,11 @@ COMPOSE_COMMONS_ARGS = {
         "",
         "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
     ),
+    "return_only_data": (
+        bool,
+        False,
+        "Return only the data part of the transaction",
+    ),
 }
 
 
@@ -1169,6 +1174,7 @@ def compose_transaction(
     api_v1=False,
     return_psbt=False,
     exclude_utxos="",
+    return_only_data=False,
 ):
     """Create and return a transaction."""
 
@@ -1240,6 +1246,9 @@ def compose_transaction(
 
     tx_info = compose_method(db, **params)
 
+    if return_only_data:
+        return config.PREFIX + tx_info[2]
+
     raw_transaction = construct(
         db,
         tx_info,
@@ -1299,6 +1308,14 @@ def compose(db, source, transaction_name, api_v1=False, **kwargs):
     )
 
 
+def get_key_name(**construct_args):
+    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+        return "data"
+    if "return_psbt" in construct_args and construct_args["return_psbt"]:
+        return "psbt"
+    return "rawtransaction"
+
+
 def compose_bet(
     db,
     address: str,
@@ -1342,7 +1359,7 @@ def compose_bet(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "bet",
     }
@@ -1373,7 +1390,7 @@ def compose_broadcast(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "broadcast",
     }
@@ -1393,7 +1410,7 @@ def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "btcpay",
     }
@@ -1414,7 +1431,7 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "burn",
     }
@@ -1434,7 +1451,7 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "cancel",
     }
@@ -1456,7 +1473,7 @@ def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **con
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "destroy",
     }
@@ -1502,7 +1519,7 @@ def compose_dispenser(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "dispenser",
     }
@@ -1531,7 +1548,7 @@ def compose_dividend(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "dividend",
     }
@@ -1577,7 +1594,7 @@ def compose_issuance(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "issuance",
     }
@@ -1629,7 +1646,7 @@ def compose_mpma(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "mpma",
     }
@@ -1672,7 +1689,7 @@ def compose_order(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "order",
     }
@@ -1715,7 +1732,7 @@ def compose_send(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "send",
     }
@@ -1746,7 +1763,7 @@ def compose_dispense(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "dispense",
     }
@@ -1777,7 +1794,7 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "sweep",
     }
@@ -1850,7 +1867,7 @@ def compose_fairminter(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "fairminter",
     }
@@ -1871,7 +1888,7 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "fairmint",
     }
@@ -1898,7 +1915,7 @@ def compose_utxo(
         **construct_args,
     )
     return {
-        "rawtransaction": rawtransaction,
+        get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "utxo",
     }

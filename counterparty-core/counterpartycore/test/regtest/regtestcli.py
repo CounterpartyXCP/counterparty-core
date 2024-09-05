@@ -1,7 +1,9 @@
+import binascii
 import decimal
 import json
 
 import sh
+from counterpartycore.lib import arc4
 
 D = decimal.Decimal
 
@@ -53,16 +55,22 @@ def get_utxos_and_change(buyer_address, price_btc):
     # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
     tx_size = (input_count * 148) + (2 * 34) + 10
     fee = D(fee_per_kb) * (D(tx_size) / 1024)
+    print("FEE", fee)
     # Calculate change
     change = D(total_value) - D(price_btc) - D(fee)
     return buyer_utxos, change
 
 
-def prepare_buyer_unsigned_psbt(buyer_address, buyer_utxos, change):
+def prepare_buyer_unsigned_psbt(buyer_address, buyer_utxos, change, data=None):
     buyer_psbt_inputs = json.dumps(
         [{"txid": utxo["txid"], "vout": utxo["vout"]} for utxo in buyer_utxos]
     )
-    buyer_psbt_outputs = json.dumps({buyer_address: str(change)})
+    outputs = [{buyer_address: str(change)}]
+    if data:
+        outputs = [{"data": data}] + outputs
+        print("DATA", data)
+        print("len", len(data))
+    buyer_psbt_outputs = json.dumps(outputs)
     buyer_psbt = bitcoin_cli("createpsbt", buyer_psbt_inputs, buyer_psbt_outputs).strip()
     return buyer_psbt
 
@@ -70,10 +78,39 @@ def prepare_buyer_unsigned_psbt(buyer_address, buyer_utxos, change):
 def first_output_is_buyer(signed_transaction, buyer_address):
     # Sanity check
     decoded_tx = bitcoin_cli_json("decoderawtransaction", signed_transaction)
-    # Ensure first output is the seller's address
-    if decoded_tx["vout"][0]["scriptPubKey"]["address"] != buyer_address:
-        return False
-    return True
+    # print(json.dumps(decoded_tx, indent=4))
+    # Ensure first output is the buyer's address
+    if (
+        decoded_tx["vout"][0]["scriptPubKey"]["asm"].startswith("OP_RETURN")
+        and "address" in decoded_tx["vout"][1]["scriptPubKey"]
+        and decoded_tx["vout"][1]["scriptPubKey"]["address"] == buyer_address
+    ):
+        return True
+    if (
+        "address" in decoded_tx["vout"][0]["scriptPubKey"]
+        and decoded_tx["vout"][0]["scriptPubKey"]["address"] == buyer_address
+    ):
+        return True
+    return False
+
+
+def first_input_is_buyer(signed_transaction, buyer_utxos):
+    # Sanity check
+    decoded_tx = bitcoin_cli_json("decoderawtransaction", signed_transaction)
+    # Ensure first input is the buyer's address
+    for utxo in buyer_utxos:
+        if decoded_tx["vin"][0]["txid"] == utxo["txid"]:
+            return True
+    return False
+
+
+def first_output_is_op_return(signed_transaction):
+    # Sanity check
+    decoded_tx = bitcoin_cli_json("decoderawtransaction", signed_transaction)
+    # Ensure first output is the buyer's address
+    if decoded_tx["vout"][0]["scriptPubKey"]["asm"].startswith("OP_RETURN"):
+        return True
+    return False
 
 
 def join_and_finalize_psbt(psbt_1, psbt_2):
@@ -82,14 +119,14 @@ def join_and_finalize_psbt(psbt_1, psbt_2):
     final_psbt = bitcoin_cli("joinpsbts", pbsts).strip()
     # Buyer signs final PSBT
     signed_final_psbt_json = bitcoin_cli_json("walletprocesspsbt", final_psbt)
-    print(signed_final_psbt_json)
+    # print(signed_final_psbt_json)
     # Finalize PSBT
     final_psbt_json = bitcoin_cli_json("finalizepsbt", signed_final_psbt_json["psbt"])
     # print(final_psbt_json)
     return final_psbt_json["hex"]
 
 
-def atomic_swap(seller_address, utxo, price_btc, buyer_address):
+def atomic_swap(seller_address, utxo, price_btc, buyer_address, data=None):
     decimal.getcontext().prec = 8
 
     txid, vout = utxo.split(":")  # UTXO containing the asset(s) to be sold
@@ -102,18 +139,41 @@ def atomic_swap(seller_address, utxo, price_btc, buyer_address):
     # Get Buyer UTXOs
     buyer_utxos, change = get_utxos_and_change(buyer_address, price_btc)
 
+    if data:
+        data = binascii.unhexlify(data)
+        key = arc4.init_arc4(binascii.unhexlify(buyer_utxos[0]["txid"]))
+        data = key.encrypt(data)
+        data = binascii.hexlify(data).decode("utf-8")
+
     # Buyer generates PSBT
-    buyer_psbt = prepare_buyer_unsigned_psbt(buyer_address, buyer_utxos, change)
+    buyer_psbt = prepare_buyer_unsigned_psbt(buyer_address, buyer_utxos, change, data)
 
     # Join Buyer and Seller PSBTs
     signed_transaction = join_and_finalize_psbt(buyer_psbt, signed_seller_psbt)
-
-    # Sanity check
-    if not first_output_is_buyer(signed_transaction, buyer_address):
+    # Ensure inputs and outputs are in the correct order.
+    # Bitcoin Core shuffles the inputs and outputs,
+    # there are not so many possibilities so we
+    # try again as much as necessary.
+    retry_count = 0
+    while (
+        not first_output_is_buyer(signed_transaction, buyer_address)
+        or not first_input_is_buyer(signed_transaction, buyer_utxos)
+        or (data and not first_output_is_op_return(signed_transaction))
+    ) and retry_count < 1000:
         # try with the other order
+        print("First output is not the buyer's address, retrying...")
         signed_transaction = join_and_finalize_psbt(signed_seller_psbt, buyer_psbt)
+        retry_count += 1
+
     if not first_output_is_buyer(signed_transaction, buyer_address):
         raise Exception("First output is not the buyer's address")
+    if not first_input_is_buyer(signed_transaction, buyer_utxos):
+        raise Exception("First input is not the buyer's address")
+    if data and not first_output_is_op_return(signed_transaction):
+        raise Exception("First output is not an OP_RETURN")
+
+    # decoded_tx = bitcoin_cli_json("decoderawtransaction", signed_transaction)
+    # print(json.dumps(decoded_tx, indent=4))
 
     return signed_transaction
 

@@ -92,11 +92,22 @@ def run_item(node, item, context):
         item = prepare_item(item, node, context)
         try:
             if item["transaction"] == "atomic_swap":
+                data = None
+                if "counterparty_tx" in item["params"]:
+                    counterparty_tx = prepare_item(item["params"]["counterparty_tx"], node, context)
+                    data = node.send_transaction(
+                        counterparty_tx["source"],
+                        counterparty_tx["transaction"],
+                        counterparty_tx["params"],
+                        return_only_data=True,
+                    )
+
                 signed_transaction = atomic_swap(
                     item["params"]["seller"],
                     item["params"]["utxo"],
                     item["params"]["price"] / 1e8,
                     item["params"]["buyer"],
+                    data,
                 )
                 tx_hash, block_hash, block_time = node.broadcast_transaction(signed_transaction)
             else:
