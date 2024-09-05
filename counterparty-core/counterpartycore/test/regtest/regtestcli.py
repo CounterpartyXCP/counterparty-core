@@ -29,26 +29,18 @@ def bitcoin_cli_json(*args):
     return json.loads(bitcoin_cli(*args).strip())
 
 
-def atomic_swap(params):
-    # Parse parameters
-    seller_address = params["seller"]  # Seller's address
-    txid, vout = params["utxo"].split(":")  # UTXO containing the asset(s) to be sold
-    price_btc = params["price"] / 1e8  # Price in satoshis
-    buyer_address = params["buyer"]  # Buyer's address
-
-    decimal.getcontext().prec = 8
-
+def prepare_seller_signed_psbt(seller_address, txid, vout, price_btc):
     # Seller generates PSBT
     seller_psbt_inputs = json.dumps([{"txid": txid, "vout": int(vout)}])
     seller_psbt_outputs = json.dumps({seller_address: price_btc})
     seller_psbt = bitcoin_cli("createpsbt", seller_psbt_inputs, seller_psbt_outputs).strip()
     # Seller signs PSBT
     signed_seller_psbt_json = bitcoin_cli_json("walletprocesspsbt", seller_psbt)
-    print(signed_seller_psbt_json)
-    signed_seller_psbt = signed_seller_psbt_json["psbt"]
+    # print(signed_seller_psbt_json)
+    return signed_seller_psbt_json["psbt"]
 
-    # The buyer obtains the PSBT generated (signed_seller_psbt) by the seller somewhere and:
 
+def get_utxos_and_change(buyer_address, price_btc):
     # Get Buyer UTXOs
     # Super naive way to select UTXOs only for testing purposes
     buyer_utxos = json.loads(
@@ -63,30 +55,65 @@ def atomic_swap(params):
     fee = D(fee_per_kb) * (D(tx_size) / 1024)
     # Calculate change
     change = D(total_value) - D(price_btc) - D(fee)
+    return buyer_utxos, change
 
-    # Buyer generates PSBT
+
+def prepare_buyer_unsigned_psbt(buyer_address, buyer_utxos, change):
     buyer_psbt_inputs = json.dumps(
         [{"txid": utxo["txid"], "vout": utxo["vout"]} for utxo in buyer_utxos]
     )
     buyer_psbt_outputs = json.dumps({buyer_address: str(change)})
     buyer_psbt = bitcoin_cli("createpsbt", buyer_psbt_inputs, buyer_psbt_outputs).strip()
+    return buyer_psbt
 
+
+def first_output_is_buyer(signed_transaction, buyer_address):
+    # Sanity check
+    decoded_tx = bitcoin_cli_json("decoderawtransaction", signed_transaction)
+    # Ensure first output is the seller's address
+    if decoded_tx["vout"][0]["scriptPubKey"]["address"] != buyer_address:
+        return False
+    return True
+
+
+def join_and_finalize_psbt(psbt_1, psbt_2):
     # Join Buyer and Seller PSBTs
-    pbsts = json.dumps([buyer_psbt, signed_seller_psbt])
+    pbsts = json.dumps([psbt_1, psbt_2])
     final_psbt = bitcoin_cli("joinpsbts", pbsts).strip()
     # Buyer signs final PSBT
     signed_final_psbt_json = bitcoin_cli_json("walletprocesspsbt", final_psbt)
     print(signed_final_psbt_json)
     # Finalize PSBT
     final_psbt_json = bitcoin_cli_json("finalizepsbt", signed_final_psbt_json["psbt"])
-    print(final_psbt_json)
-    signed_transaction = final_psbt_json["hex"]
+    # print(final_psbt_json)
+    return final_psbt_json["hex"]
+
+
+def atomic_swap(seller_address, utxo, price_btc, buyer_address):
+    decimal.getcontext().prec = 8
+
+    txid, vout = utxo.split(":")  # UTXO containing the asset(s) to be sold
+
+    # Seller generates PSBT
+    signed_seller_psbt = prepare_seller_signed_psbt(seller_address, txid, vout, price_btc)
+
+    # The buyer obtains the PSBT generated (signed_seller_psbt) by the seller somewhere and:
+
+    # Get Buyer UTXOs
+    buyer_utxos, change = get_utxos_and_change(buyer_address, price_btc)
+
+    # Buyer generates PSBT
+    buyer_psbt = prepare_buyer_unsigned_psbt(buyer_address, buyer_utxos, change)
+
+    # Join Buyer and Seller PSBTs
+    signed_transaction = join_and_finalize_psbt(buyer_psbt, signed_seller_psbt)
 
     # Sanity check
-    decoded_tx = bitcoin_cli_json("decoderawtransaction", signed_transaction)
-    # Ensure first output is the seller's address
-    assert decoded_tx["vout"][0]["scriptPubKey"]["address"] == buyer_address
-    # print("Decoded PSBT:", json.dumps(decoded_tx, indent=4))
+    if not first_output_is_buyer(signed_transaction, buyer_address):
+        # try with the other order
+        signed_transaction = join_and_finalize_psbt(signed_seller_psbt, buyer_psbt)
+    if not first_output_is_buyer(signed_transaction, buyer_address):
+        raise Exception("First output is not the buyer's address")
 
     return signed_transaction
 
@@ -96,10 +123,8 @@ if __name__ == "__main__":
     balances = api_call(f"addresses/{addresses[5]}/balances/MYASSETA")
 
     atomic_swap(
-        {
-            "seller": addresses[5],
-            "utxo": balances["result"]["utxo"],  # 15.00000000 MYASSETA
-            "price": 100000,  # for 100000 satoshis
-            "buyer": addresses[6],
-        }
+        addresses[5],
+        balances["result"]["utxo"],  # 15 MYASSETA
+        100000 / 1e8,  # for 0.001 BTC
+        addresses[6],
     )

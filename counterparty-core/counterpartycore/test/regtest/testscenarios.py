@@ -92,7 +92,12 @@ def run_item(node, item, context):
         item = prepare_item(item, node, context)
         try:
             if item["transaction"] == "atomic_swap":
-                signed_transaction = atomic_swap(item["params"])
+                signed_transaction = atomic_swap(
+                    item["params"]["seller"],
+                    item["params"]["utxo"],
+                    item["params"]["price"] / 1e8,
+                    item["params"]["buyer"],
+                )
                 tx_hash, block_hash, block_time = node.broadcast_transaction(signed_transaction)
             else:
                 tx_hash, block_hash, block_time = node.send_transaction(
@@ -143,7 +148,7 @@ def run_scenarios():
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        print(regtest_node_thread.node.server_out.getvalue())
+        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 
