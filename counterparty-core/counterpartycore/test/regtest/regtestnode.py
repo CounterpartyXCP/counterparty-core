@@ -196,7 +196,7 @@ class RegtestNode:
         self.counterparty_server_process = sh.counterparty_server(
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
-            "-vv",
+            "-vvv",
             "start",
             _bg=True,
             _out=self.server_out,
