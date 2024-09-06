@@ -123,7 +123,7 @@ RANDOM_ASSET_INT = None
 _generate_random_asset = util.generate_random_asset
 
 
-def generate_random_asset():
+def generate_random_asset(subasset_longname=None):
     if RANDOM_ASSET_INT is None:
         return _generate_random_asset()
     else:
