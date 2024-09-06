@@ -657,7 +657,9 @@ def resolve_subasset_longname(db, asset_name):
     if util.enabled("subassets"):
         subasset_longname = None
         try:
-            subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(asset_name)
+            _subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(
+                asset_name, util.enabled("allow_subassets_on_numerics")
+            )
         except Exception as e:  # noqa: F841
             logger.warning(f"Invalid subasset {asset_name}")
             subasset_longname = None
@@ -1717,7 +1719,7 @@ class OrdersCache(metaclass=util.SingletonMeta):
         select_orders_query = """
             SELECT * FROM (
                 SELECT *, MAX(rowid) FROM orders GROUP BY tx_hash
-            ) WHERE status != 'expired' 
+            ) WHERE status != 'expired'
         """
 
         with db:
