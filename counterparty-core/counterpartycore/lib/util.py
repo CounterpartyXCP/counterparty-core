@@ -300,7 +300,12 @@ def expand_subasset_longname(raw_bytes):
     return ret
 
 
-def generate_random_asset():
+def generate_random_asset(subasset_longname=None):
+    # deterministic random asset name for regtest
+    if config.REGTEST and subasset_longname:
+        return "A" + str(
+            int(hashlib.shake_256(bytes(subasset_longname, "utf8")).hexdigest(4), 16) + 26**12 + 1
+        )
     # Standard pseudo-random generators are suitable for our purpose.
     return "A" + str(random.randint(26**12 + 1, 2**64 - 1))  # nosec B311  # noqa: S311
 
