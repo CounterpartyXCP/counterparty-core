@@ -1806,6 +1806,7 @@ def compose_fairminter(
     asset: str,
     asset_parent: str = "",
     price: int = 0,
+    quantity_by_price: int = 1,
     max_mint_per_tx: int = 0,
     hard_cap: int = 0,
     premint_quantity: int = 0,
@@ -1827,6 +1828,7 @@ def compose_fairminter(
     :param asset: The asset to issue (e.g. MYASSET)
     :param asset_parent: The parent asset of the asset to issue
     :param price: The price in XCP of the asset to issue
+    :param quantity_by_price: The quantity of asset to mint per `price` paid
     :param max_mint_per_tx: Amount minted if price is equal to 0; otherwise, maximum amount of asset that can be minted in a single transaction; if 0, there is no limit
     :param hard_cap: The maximum amount of asset that can be minted; if 0 there is no limit
     :param premint_quantity: Amount of asset to be minted when the sale starts, if 0, no premint; preminted assets are sent to the source of the transaction

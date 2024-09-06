@@ -67,6 +67,11 @@ class RegtestNode:
         result = self.api_call(compose_url)
         # print(result)
         if "error" in result:
+            if result["error"] == "Counterparty not ready":
+                print("Counterparty not ready")
+                print("Sleeping for 5 seconds and retrying...")
+                time.sleep(5)
+                return self.send_transaction(source, tx_name, params, return_only_data)
             raise ComposeError(result["error"])
         if return_only_data:
             return result["result"]["data"]

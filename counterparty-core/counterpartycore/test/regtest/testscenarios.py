@@ -14,6 +14,7 @@ from scenarios import (
     scenario_5_atomicswap,
     scenario_6_issuance,
     scenario_7_orders,
+    scenario_8_fairminter,
 )
 from termcolor import colored
 
@@ -25,6 +26,7 @@ SCENARIOS += scenario_4_utxo.SCENARIO
 SCENARIOS += scenario_5_atomicswap.SCENARIO
 SCENARIOS += scenario_6_issuance.SCENARIO
 SCENARIOS += scenario_7_orders.SCENARIO
+SCENARIOS += scenario_8_fairminter.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -163,7 +165,7 @@ def run_scenarios():
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        # print(regtest_node_thread.node.server_out.getvalue())
+        print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

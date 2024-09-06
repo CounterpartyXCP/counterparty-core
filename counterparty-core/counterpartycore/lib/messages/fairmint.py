@@ -77,6 +77,12 @@ def validate(
         if quantity > config.MAX_INT:
             problems.append("quantity exceeds maximum allowed value")
             return problems
+        paid_quantity = (D(str(quantity)) / D(str(fairminter["quantity_by_price"]))) * D(
+            str(fairminter["price"])
+        )
+        paid_quantity = int(paid_quantity)
+        if paid_quantity <= 0:
+            problems.append("Quantity to low for the price")
         # check id we don't exceed the hard cap
         if fairminter["hard_cap"] > 0 and asset_supply + quantity > fairminter["hard_cap"]:
             problems.append("asset supply quantity exceeds hard cap")
@@ -185,7 +191,10 @@ def parse(db, tx, message):
     # we determine how many assets we need to send
     # and the price paid by the user
     if fairminter["price"] > 0:
-        paid_quantity = quantity * fairminter["price"]
+        paid_quantity = (D(str(quantity)) / D(str(fairminter["quantity_by_price"]))) * D(
+            str(fairminter["price"])
+        )
+        paid_quantity = int(paid_quantity)
         earn_quantity = quantity
     else:
         paid_quantity = 0
