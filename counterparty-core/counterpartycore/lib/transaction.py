@@ -1848,6 +1848,7 @@ def compose_fairminter(
         "asset": asset,
         "asset_parent": asset_parent,
         "price": price,
+        "quantity_by_price": quantity_by_price,
         "max_mint_per_tx": max_mint_per_tx,
         "hard_cap": hard_cap,
         "premint_quantity": premint_quantity,
