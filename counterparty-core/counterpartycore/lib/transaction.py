@@ -1309,9 +1309,9 @@ def compose(db, source, transaction_name, api_v1=False, **kwargs):
 
 
 def get_key_name(**construct_args):
-    if "return_only_data" in construct_args and construct_args["return_only_data"]:
+    if construct_args.get("return_only_data"):
         return "data"
-    if "return_psbt" in construct_args and construct_args["return_psbt"]:
+    if construct_args.get("return_psbt"):
         return "psbt"
     return "rawtransaction"
 

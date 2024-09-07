@@ -267,6 +267,7 @@ def compose(
 def unpack(message, return_dict=False):
     try:
         data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
+        arg_count = len(data_content)
         (
             asset,
             asset_parent,
@@ -284,9 +285,9 @@ def unpack(message, return_dict=False):
             lock_description,
             lock_quantity,
             divisible,
-        ) = data_content[0:16]
+        ) = data_content[0 : arg_count - 1]
         # The description is placed last to be able to contain `|`.
-        description = "|".join(data_content[16:]) if len(data_content) > 16 else ""
+        description = "|".join(data_content[arg_count - 1 :])
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 

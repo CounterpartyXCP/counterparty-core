@@ -574,9 +574,7 @@ def parse(db, tx, message):
             if util.enabled("btc_order_minimum_adjustment_1"):
                 min_btc_quantity = 0.00001 * config.UNIT  # 0.00001 BTC
             if util.enabled("fix_min_btc_quantity", tx["block_index"]):
-                min_btc_quantity = int(
-                    D("0.00001") * D(1e8)
-                )  # else min_btc_quantity==1000.0000000000001
+                min_btc_quantity = int(D("0.00001") * D(1e8))
 
             if (give_asset == config.BTC and give_quantity < min_btc_quantity) or (
                 get_asset == config.BTC and get_quantity < min_btc_quantity

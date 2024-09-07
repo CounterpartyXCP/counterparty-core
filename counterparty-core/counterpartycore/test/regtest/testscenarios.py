@@ -60,22 +60,22 @@ def control_result(item, node, context, block_hash, block_time, tx_hash):
         for i, address in enumerate(node.addresses):
             control_url = control_url.replace(f"$ADDRESS_{i+1}", address)
         result = node.api_call(control_url)
+
+        expected_result = control["result"]
+        expected_result = (
+            json.dumps(expected_result)
+            .replace("$TX_HASH", tx_hash)
+            .replace("$BLOCK_HASH", block_hash)
+            .replace('"$BLOCK_TIME"', str(block_time))
+        )
+        for i, address in enumerate(node.addresses):
+            expected_result = expected_result.replace(f"$ADDRESS_{i+1}", address)
+        for name, value in context.items():
+            expected_result = expected_result.replace(f"${name}", value)
+        expected_result = json.loads(expected_result)
+
         try:
-            expected_result = control["result"]
-            expected_result = (
-                json.dumps(expected_result)
-                .replace("$TX_HASH", tx_hash)
-                .replace("$BLOCK_HASH", block_hash)
-                .replace('"$BLOCK_TIME"', str(block_time))
-            )
-            for i, address in enumerate(node.addresses):
-                expected_result = expected_result.replace(f"$ADDRESS_{i+1}", address)
-            for name, value in context.items():
-                expected_result = expected_result.replace(f"${name}", value)
-            expected_result = json.loads(expected_result)
-
             assert result["result"] == expected_result
-
             print(f"{item['title']}: " + colored("Success", "green"))
         except AssertionError:
             print(colored(f"Failed: {item['title']}", "red"))
