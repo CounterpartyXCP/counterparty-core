@@ -35,6 +35,7 @@ This release includes a variety of protocol upgrades.
 * Subassets on Numeric Assets
     - PR: https://github.com/CounterpartyXCP/counterparty-core/pull/2195
     - Issue: https://github.com/CounterpartyXCP/counterparty-core/issues/1842
+* Fix minimum BTC amount in order contract
 
 ## Bugfixes
 
@@ -45,6 +46,8 @@ This release includes a variety of protocol upgrades.
 * New test suite with `regtest` network
 
 ## API
+
+* Add `return_only_data` argument for composition routes
 
 ## CLI
 

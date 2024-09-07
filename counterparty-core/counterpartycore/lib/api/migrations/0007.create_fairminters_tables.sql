@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS fairminters (
     asset_longname TEXT,
     description TEXT,
     price INTEGER,
+    quantity_by_price INTEGER,
     hard_cap INTEGER,
     burn_payment BOOL,
     max_mint_per_tx INTEGER,

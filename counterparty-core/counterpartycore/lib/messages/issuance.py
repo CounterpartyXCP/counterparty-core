@@ -435,7 +435,7 @@ def compose(
             else:
                 # this is a new issuance
                 #   generate a random numeric asset id which will map to this subasset
-                asset = util.generate_random_asset()
+                asset = util.generate_random_asset(subasset_longname)
 
     asset_id = ledger.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
     asset_name = ledger.generate_asset_name(

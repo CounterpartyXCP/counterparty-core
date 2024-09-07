@@ -49,8 +49,16 @@ class RegtestNode:
                 print("Waiting for bitcoind to start...")
                 time.sleep(1)
 
-    def send_transaction(self, source, tx_name, params):
+    def broadcast_transaction(self, signed_transaction, retry=0):
+        tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
+        block_hash, block_time = self.mine_blocks(1)
         self.wait_for_counterparty_server()
+        return tx_hash, block_hash, block_time
+
+    def send_transaction(self, source, tx_name, params, return_only_data=False, retry=0):
+        self.wait_for_counterparty_server()
+        if return_only_data:
+            params["return_only_data"] = True
         query_string = urllib.parse.urlencode(params)
         if tx_name in ["detach", "movetoutxo"]:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
@@ -59,15 +67,29 @@ class RegtestNode:
         result = self.api_call(compose_url)
         # print(result)
         if "error" in result:
+            if result["error"] == "Counterparty not ready":
+                print("Counterparty not ready")
+                print("Sleeping for 5 seconds and retrying...")
+                time.sleep(5)
+                return self.send_transaction(source, tx_name, params, return_only_data)
             raise ComposeError(result["error"])
+        if return_only_data:
+            return result["result"]["data"]
         raw_transaction = result["result"]["rawtransaction"]
         signed_transaction_json = self.bitcoin_wallet(
             "signrawtransactionwithwallet", raw_transaction
         ).strip()
         signed_transaction = json.loads(signed_transaction_json)["hex"]
-        tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction).strip()
-        block_hash, block_time = self.mine_blocks(1)
-        self.wait_for_counterparty_server()
+        try:
+            tx_hash, block_hash, block_time = self.broadcast_transaction(signed_transaction)
+        except sh.ErrorReturnCode_25 as e:
+            if retry < 6:
+                print("Error: bad-txns-inputs-missingorspent")
+                print("Sleeping for 5 seconds and retrying...")
+                time.sleep(10)
+                return self.send_transaction(source, tx_name, params, return_only_data, retry + 1)
+            else:
+                raise e
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
         return tx_hash, block_hash, block_time
 
@@ -115,10 +137,11 @@ class RegtestNode:
 
     def generate_addresses_with_btc(self):
         for i in range(10):
-            address = self.bitcoin_wallet("getnewaddress", "", "bech32").strip()
+            address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "bech32").strip()
             print(f"Address {i}: {address}")
             self.addresses.append(address)
             self.mine_blocks(1, address)
+        self.addresses.sort()
         self.mine_blocks(101)
 
     def generate_xcp(self):

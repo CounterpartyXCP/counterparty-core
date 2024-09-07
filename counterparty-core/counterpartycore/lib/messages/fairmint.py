@@ -1,14 +1,18 @@
 import decimal
 import logging
+import math
 import struct
 
 from counterpartycore.lib import config, database, exceptions, ledger
 from counterpartycore.lib.messages import fairminter as fairminter_mod
 
 logger = logging.getLogger(config.LOGGER_NAME)
-D = decimal.Decimal
 
 ID = 91
+
+
+def D(value):
+    return decimal.Decimal(str(value))
 
 
 def initialise(db):
@@ -185,7 +189,8 @@ def parse(db, tx, message):
     # we determine how many assets we need to send
     # and the price paid by the user
     if fairminter["price"] > 0:
-        paid_quantity = quantity * fairminter["price"]
+        paid_quantity = (D(quantity) / D(fairminter["quantity_by_price"])) * D(fairminter["price"])
+        paid_quantity = int(math.ceil(paid_quantity))
         earn_quantity = quantity
     else:
         paid_quantity = 0

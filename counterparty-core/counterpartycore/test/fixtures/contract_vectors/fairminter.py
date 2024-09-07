@@ -9,6 +9,7 @@ from ..params import DEFAULT_PARAMS as DP
 # asset
 # asset_parent,
 # price=0,
+# quantity_by_price=1,
 # max_mint_per_tx,
 # hard_cap=0,
 # premint_quantity=0,
@@ -32,6 +33,7 @@ FAIRMINTER_VECTOR = {
                     "FAIRMINTED",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                 ),
                 "out": ([]),
@@ -63,6 +65,7 @@ FAIRMINTER_VECTOR = {
                     "A1603612687792733727",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                 ),
                 "out": ([]),
@@ -73,6 +76,7 @@ FAIRMINTER_VECTOR = {
                     "A1603612687",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                 ),
                 "out": (["Invalid asset name: numeric asset name not in range"]),
@@ -83,6 +87,7 @@ FAIRMINTER_VECTOR = {
                     "FAIRMINTED",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     -10,  # max_mint_per_tx,
                 ),
                 "out": (["`max_mint_per_tx` must be >= 0."]),
@@ -93,6 +98,7 @@ FAIRMINTER_VECTOR = {
                     "FAIRMINTED",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     -10,  # max_mint_per_tx,
                     40,  # hard_cap=0,
                     50,  # premint_quantity=0,
@@ -121,6 +127,7 @@ FAIRMINTER_VECTOR = {
                     "LOCKEDPREV",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                 ),
                 "out": (
@@ -136,6 +143,7 @@ FAIRMINTER_VECTOR = {
                     "DIVISIBLE",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                 ),
                 "out": ([]),
@@ -146,6 +154,7 @@ FAIRMINTER_VECTOR = {
                     "DIVISIBLE",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                     DP["quantity"] * 900,  # hard_cap=0,
                 ),
@@ -157,6 +166,7 @@ FAIRMINTER_VECTOR = {
                     "SUBASSET",  # asset
                     "DIVISIBLE",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                 ),
                 "out": ([]),
@@ -167,6 +177,7 @@ FAIRMINTER_VECTOR = {
                     "SUBASSET",  # asset
                     "NOASSET",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                 ),
                 "out": (["Asset parent does not exist"]),
@@ -177,6 +188,7 @@ FAIRMINTER_VECTOR = {
                     "FREEFAIRMIN",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                 ),
                 "out": (["Fair minter already opened for `FREEFAIRMIN`."]),
@@ -189,12 +201,13 @@ FAIRMINTER_VECTOR = {
                     "FAIRMINTED",  # asset
                     "",  # asset_parent,
                     0,  # price=0,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                 ),
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                     [],
-                    b"ZFAIRMINTED||0|10|0|0|0|0|0|0|0|0|0|0|1|",
+                    b"ZFAIRMINTED||0|1|10|0|0|0|0|0|0|0|0|0|0|1|",
                 ),
             },
             {
@@ -203,6 +216,7 @@ FAIRMINTER_VECTOR = {
                     "FAIRMINTED",  # asset
                     "",  # asset_parent,
                     0,  # price,
+                    1,  # quantity_by_price,
                     10,  # max_mint_per_tx,
                     1000,  # hard_cap,
                     100,  # premint_quantity,
@@ -220,14 +234,14 @@ FAIRMINTER_VECTOR = {
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                     [],
-                    b"ZFAIRMINTED||0|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+                    b"ZFAIRMINTED||0|1|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
                 ),
             },
         ],
         "unpack": [
             {
                 "in": (
-                    b"FAIRMINTED||0|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+                    b"FAIRMINTED||0|1|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
                     True,
                 ),
                 "out": (
@@ -235,6 +249,7 @@ FAIRMINTER_VECTOR = {
                         "asset": "FAIRMINTED",
                         "asset_parent": "",
                         "price": 0,
+                        "quantity_by_price": 1,
                         "max_mint_per_tx": 10,
                         "hard_cap": 1000,
                         "premint_quantity": 100,
@@ -253,13 +268,14 @@ FAIRMINTER_VECTOR = {
             },
             {
                 "in": (
-                    b"FAIRMINTED||0|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+                    b"FAIRMINTED||0|1|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
                     False,
                 ),
                 "out": (
                     "FAIRMINTED",
                     "",
                     0,
+                    1,
                     10,
                     1000,
                     100,
@@ -283,7 +299,7 @@ FAIRMINTER_VECTOR = {
                     {
                         "fee": 10000,
                         "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
-                        "data": b"ZFAIRMINTED||0|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+                        "data": b"ZFAIRMINTED||0|1|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
                         "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                         "block_index": DP["default_block_index"],
                         "btc_amount": 5430,
@@ -303,6 +319,7 @@ FAIRMINTER_VECTOR = {
                             "asset": "FAIRMINTED",
                             "asset_parent": "",
                             "price": 0,
+                            "quantity_by_price": 1,
                             "max_mint_per_tx": 10,
                             "hard_cap": 1000,
                             "premint_quantity": 100,
@@ -370,7 +387,7 @@ FAIRMINTER_VECTOR = {
                     {
                         "fee": 10000,
                         "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
-                        "data": b"ZFAIRMINTED||0|10|1000|100|0|900000|50|850000|10000000|0|0|1|1|une asset super top",
+                        "data": b"ZFAIRMINTED||0|1|10|1000|100|0|900000|50|850000|10000000|0|0|1|1|une asset super top",
                         "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                         "block_index": DP["default_block_index"],
                         "btc_amount": 5430,
@@ -390,6 +407,7 @@ FAIRMINTER_VECTOR = {
                             "asset": "FAIRMINTED",
                             "asset_parent": "",
                             "price": 0,
+                            "quantity_by_price": 1,
                             "max_mint_per_tx": 10,
                             "hard_cap": 1000,
                             "premint_quantity": 100,
@@ -425,7 +443,7 @@ FAIRMINTER_VECTOR = {
                     {
                         "fee": 10000,
                         "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
-                        "data": b"ZFAIRMINTED||0|10|1000|100|0|900000|0|0|10000000|0|0|1|1|une asset super top",
+                        "data": b"ZFAIRMINTED||0|1|10|1000|100|0|900000|0|0|10000000|0|0|1|1|une asset super top",
                         "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                         "block_index": DP["default_block_index"],
                         "btc_amount": 5430,
@@ -446,6 +464,7 @@ FAIRMINTER_VECTOR = {
                             "asset": "FAIRMINTED",
                             "asset_parent": "",
                             "price": 0,
+                            "quantity_by_price": 1,
                             "max_mint_per_tx": 10,
                             "hard_cap": 1000,
                             "premint_quantity": 100,

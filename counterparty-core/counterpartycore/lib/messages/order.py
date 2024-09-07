@@ -573,6 +573,8 @@ def parse(db, tx, message):
             min_btc_quantity = 0.001 * config.UNIT  # 0.001 BTC
             if util.enabled("btc_order_minimum_adjustment_1"):
                 min_btc_quantity = 0.00001 * config.UNIT  # 0.00001 BTC
+            if util.enabled("fix_min_btc_quantity", tx["block_index"]):
+                min_btc_quantity = int(D("0.00001") * D(1e8))
 
             if (give_asset == config.BTC and give_quantity < min_btc_quantity) or (
                 get_asset == config.BTC and get_quantity < min_btc_quantity
@@ -762,6 +764,9 @@ def match(db, tx, block_index=None):
 
             if block_index >= 313900 or config.TESTNET or config.REGTEST:  # Protocol change.
                 min_btc_quantity = 0.001 * config.UNIT  # 0.001 BTC
+                if util.enabled("fix_min_btc_quantity", block_index):
+                    # we subtract 1 because the <= instead of < like when checking orders
+                    min_btc_quantity = int(D("0.00001") * D(1e8)) - 1
                 if (forward_asset == config.BTC and forward_quantity <= min_btc_quantity) or (
                     backward_asset == config.BTC and backward_quantity <= min_btc_quantity
                 ):
@@ -1015,9 +1020,9 @@ def expire_order_matches(db, block_index):
 
 
 def expire(db, block_index):
-    # if util.enabled("expire_order_matches_then_orders"):
-    #    expire_order_matches(db, block_index)
-    #    expire_orders(db, block_index)
-    # else:
-    expire_orders(db, block_index)
-    expire_order_matches(db, block_index)
+    if util.enabled("expire_order_matches_then_orders"):
+        expire_order_matches(db, block_index)
+        expire_orders(db, block_index)
+    else:
+        expire_orders(db, block_index)
+        expire_order_matches(db, block_index)

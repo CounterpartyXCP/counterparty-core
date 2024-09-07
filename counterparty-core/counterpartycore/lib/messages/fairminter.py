@@ -24,6 +24,7 @@ def initialise(db):
             asset_longname TEXT,
             description TEXT,
             price INTEGER,
+            quantity_by_price INTEGER,
             hard_cap INTEGER,
             burn_payment BOOL,
             max_mint_per_tx INTEGER,
@@ -63,6 +64,7 @@ def validate(
     asset,
     asset_parent="",
     price=0,
+    quantity_by_price=1,
     max_mint_per_tx=0,
     hard_cap=0,
     premint_quantity=0,
@@ -82,6 +84,7 @@ def validate(
     # check integer parameters
     for param_name, param_value in {
         "price": price,
+        "quantity_by_price": quantity_by_price,
         "max_mint_per_tx": max_mint_per_tx,
         "hard_cap": hard_cap,
         "premint_quantity": premint_quantity,
@@ -97,6 +100,8 @@ def validate(
                 problems.append(f"`{param_name}` must be >= 0.")
             elif param_value > config.MAX_INT:
                 problems.append(f"`{param_name}` exceeds maximum value")
+    if quantity_by_price < 1:
+        problems.append("quantity_by_price must be >= 1")
     # check boolean parameters
     for param_name, param_value in {
         "burn_payment": burn_payment,
@@ -184,6 +189,7 @@ def compose(
     asset,
     asset_parent="",
     price=0,
+    quantity_by_price=1,
     max_mint_per_tx=0,
     hard_cap=0,
     premint_quantity=0,
@@ -205,6 +211,7 @@ def compose(
         asset,
         asset_parent,
         price,
+        quantity_by_price,
         max_mint_per_tx,
         hard_cap,
         premint_quantity,
@@ -236,6 +243,7 @@ def compose(
                 asset,
                 asset_parent,
                 price,
+                quantity_by_price,
                 max_mint_per_tx,
                 hard_cap,
                 premint_quantity,
@@ -259,10 +267,12 @@ def compose(
 def unpack(message, return_dict=False):
     try:
         data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
+        arg_count = len(data_content)
         (
             asset,
             asset_parent,
             price,
+            quantity_by_price,
             max_mint_per_tx,
             hard_cap,
             premint_quantity,
@@ -275,9 +285,9 @@ def unpack(message, return_dict=False):
             lock_description,
             lock_quantity,
             divisible,
-        ) = data_content[0:15]
+        ) = data_content[0 : arg_count - 1]
         # The description is placed last to be able to contain `|`.
-        description = "|".join(data_content[15:]) if len(data_content) > 15 else ""
+        description = "|".join(data_content[arg_count - 1 :])
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
@@ -286,6 +296,7 @@ def unpack(message, return_dict=False):
                 "asset": asset,
                 "asset_parent": asset_parent,
                 "price": int(price),
+                "quantity_by_price": int(quantity_by_price),
                 "max_mint_per_tx": int(max_mint_per_tx),
                 "hard_cap": int(hard_cap),
                 "premint_quantity": int(premint_quantity),
@@ -305,6 +316,7 @@ def unpack(message, return_dict=False):
             asset,
             asset_parent,
             int(price),
+            int(quantity_by_price),
             int(max_mint_per_tx),
             int(hard_cap),
             int(premint_quantity),
@@ -328,6 +340,7 @@ def parse(db, tx, message):
         asset,
         asset_parent,
         price,
+        quantity_by_price,
         max_mint_per_tx,
         hard_cap,
         premint_quantity,
@@ -349,6 +362,7 @@ def parse(db, tx, message):
         asset,
         asset_parent,
         price,
+        quantity_by_price,
         max_mint_per_tx,
         hard_cap,
         premint_quantity,
@@ -424,6 +438,7 @@ def parse(db, tx, message):
         "asset_longname": asset_longname,
         "description": description,
         "price": price,
+        "quantity_by_price": quantity_by_price,
         "hard_cap": hard_cap,
         "burn_payment": burn_payment,
         "max_mint_per_tx": max_mint_per_tx,

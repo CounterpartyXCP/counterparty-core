@@ -235,13 +235,13 @@ UNITTEST_FIXTURE = [
     ],
     [
         "fairminter",
-        (ADDR[0], "FREEFAIRMIN", "", 0, 10),
+        (ADDR[0], "FREEFAIRMIN", "", 0, 1, 10),
         {"encoding": "opreturn"},
         {"short_tx_type_id": True, "fairminter": True},
     ],
     [
         "fairminter",
-        (ADDR[0], "PAIDFAIRMIN", "", 10, 0),
+        (ADDR[0], "PAIDFAIRMIN", "", 10, 1, 0),
         {"encoding": "opreturn"},
         {"short_tx_type_id": True, "fairminter": True},
     ],
@@ -258,6 +258,7 @@ UNITTEST_FIXTURE = [
             "RAIDFAIRMIN",  # asset
             "",  # asset_parent
             10,  # price
+            1,  # quantity_by_price
             10,  # max_mint_per_tx
             30,  # hard_cap
             20,  # premint_quantity
@@ -272,6 +273,7 @@ UNITTEST_FIXTURE = [
             "QAIDFAIRMIN",  # asset
             "",  # asset_parent,
             10,  # price=0,
+            1,  # quantity_by_price
             0,  # max_mint_per_tx,
             50,  # hard_cap=0,
             20,  # premint_quantity=0,
@@ -291,6 +293,7 @@ UNITTEST_FIXTURE = [
             "A160361285792733729",  # asset
             "",  # asset_parent,
             10,  # price=0,
+            1,  # quantity_by_price
             0,  # max_mint_per_tx,
             50,  # hard_cap=0,
             20,  # premint_quantity=0,

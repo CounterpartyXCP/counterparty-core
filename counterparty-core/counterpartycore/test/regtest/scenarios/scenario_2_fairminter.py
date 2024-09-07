@@ -28,6 +28,7 @@ SCENARIO = [
                         "asset_longname": "",
                         "description": "",
                         "price": 1,
+                        "quantity_by_price": 1,
                         "hard_cap": 100 * 10**8,
                         "burn_payment": False,
                         "max_mint_per_tx": 0,
