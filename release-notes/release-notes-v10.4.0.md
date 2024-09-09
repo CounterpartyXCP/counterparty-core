@@ -40,6 +40,7 @@ This release includes a variety of protocol upgrades.
 ## Bugfixes
 
 * Fix adding new transactions in unit test fixtures (`scenarios.py`)
+* Fix mempool parsing on testnet and regtest
 
 ## Codebase
 
