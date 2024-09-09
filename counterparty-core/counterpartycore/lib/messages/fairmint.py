@@ -308,7 +308,7 @@ def parse(db, tx, message):
 
     # we insert the new issuance
     del bindings["supply"]
-    ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+    ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE", {"asset_events": "fairmint"})
 
     # log
     logger.info(

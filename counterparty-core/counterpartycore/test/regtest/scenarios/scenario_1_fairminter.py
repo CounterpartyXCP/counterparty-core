@@ -83,6 +83,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTA",
                             "asset_longname": "",
+                            "asset_events": "open_fairminter",
                             "block_index": 122,
                             "call_date": 0,
                             "call_price": 0,
@@ -200,6 +201,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTA",
                             "asset_longname": "",
+                            "asset_events": "fairmint",
                             "block_index": 123,
                             "call_date": 0,
                             "call_price": 0.0,
@@ -428,6 +430,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTA",
                             "asset_longname": "",
+                            "asset_events": "fairmint",
                             "block_index": 124,
                             "call_date": 0,
                             "call_price": 0.0,
@@ -537,6 +540,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTA",
                             "asset_longname": "",
+                            "asset_events": "fairmint",
                             "block_index": 125,
                             "call_date": 0,
                             "call_price": 0.0,

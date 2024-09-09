@@ -958,7 +958,9 @@ def parse(db, tx, message, message_type_id):
                     "asset_longname": reissued_asset_longname,
                 }
 
-                ledger.insert_record(db, "issuances", bindings, "RESET_ISSUANCE")
+                ledger.insert_record(
+                    db, "issuances", bindings, "RESET_ISSUANCE", {"asset_events": "reset"}
+                )
 
                 logger.info("Reset issuance of %(asset)s [%(tx_hash)s] (%(status)s)", bindings)
 
@@ -975,6 +977,8 @@ def parse(db, tx, message, message_type_id):
                     )
 
     else:
+        asset_events = []
+
         if tx["destination"]:
             issuer = tx["destination"]
             transfer = True
@@ -1004,11 +1008,13 @@ def parse(db, tx, message, message_type_id):
             if description.lower() == "lock":
                 lock = True
                 description = _get_last_description(db, asset, description)
+                asset_events.append("lock")
             elif description.lower() == "lock_description" and util.enabled(
                 "lockable_issuance_descriptions", tx["block_index"]
             ):
                 description_locked = True
                 description = _get_last_description(db, asset, description)
+                asset_events.append("lock_description")
 
         if status == "valid" and not reissuance:
             # Add to table of assets.
@@ -1019,10 +1025,12 @@ def parse(db, tx, message, message_type_id):
                 "asset_longname": subasset_longname,
             }
             ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
+            asset_events.append("creation")
 
         if status == "valid" and reissuance:
             # when reissuing, add the asset_longname to the issuances table for API lookups
             asset_longname = reissued_asset_longname
+            asset_events.append("reissuance")
         else:
             asset_longname = subasset_longname
 
@@ -1052,7 +1060,13 @@ def parse(db, tx, message, message_type_id):
         if "cannot issue during fair minting" in status:
             bindings["fair_minting"] = True
         if "integer overflow" not in status:
-            ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+            ledger.insert_record(
+                db,
+                "issuances",
+                bindings,
+                "ASSET_ISSUANCE",
+                {"asset_events": " ".join(asset_events)},
+            )
 
         logger.info(
             "Issuance of %(quantity)s %(asset)s by %(source)s [%(tx_hash)s] (%(status)s)", bindings
