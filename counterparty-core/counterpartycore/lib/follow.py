@@ -161,7 +161,8 @@ class BlockchainWatcher:
                 # logger.trace("Adding transaction to mempool block: %s", item_hash)
                 # logger.trace("Mempool block size: %s", len(self.mempool_block))
                 self.mempool_block.append(raw_tx)
-                if len(self.mempool_block) == MEMPOOL_BLOCK_MAX_SIZE:
+                mempool_block_max_size = 100 if config.NETWORK_NAME == "mainnet" else 1
+                if len(self.mempool_block) == mempool_block_max_size:
                     # parse mempool block
                     mempool.parse_mempool_transactions(self.db, self.mempool_block)
                     # reset mempool block
