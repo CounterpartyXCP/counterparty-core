@@ -1008,7 +1008,7 @@ def parse(db, tx, message, message_type_id):
             if description.lower() == "lock":
                 lock = True
                 description = _get_last_description(db, asset, description)
-                asset_events.append("lock")
+                asset_events.append("lock_quantity")
             elif description.lower() == "lock_description" and util.enabled(
                 "lockable_issuance_descriptions", tx["block_index"]
             ):
