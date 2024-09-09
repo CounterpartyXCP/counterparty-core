@@ -48,6 +48,7 @@ This release includes a variety of protocol upgrades.
 ## API
 
 * Add `return_only_data` argument for composition routes
+* Add an `asset_events` field to the `issuances` table. This field contains one or more of the following values ​​separated by spaces: `creation`, `reissuance`, `reset`, `lock`, `lock_description`, `open_fairminter`, `close_fairminter`, `fairmint`.
 
 ## CLI
 
