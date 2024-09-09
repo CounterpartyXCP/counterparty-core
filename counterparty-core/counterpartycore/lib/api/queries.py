@@ -10,12 +10,8 @@ OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
 BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
 DispenserStatus = Literal["all", "open", "closed", "closing", "open_empty_address"]
-DispenserStatusNumber = {
-    "open": 0,
-    "closed": 10,
-    "closing": 11,
-    "open_empty_address": 1,
-}
+DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}
+DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}
 
 BetMatchesStatus = Literal[
     "dropped",
@@ -1711,18 +1707,24 @@ def get_receive_by_address_and_asset(
     )
 
 
-def preprare_dispenser_where(status, other_conditions=None):
+def prepare_dispenser_where(status, other_conditions=None):
     where = []
     statuses = status.split(",")
-    for status in statuses:
-        if status == "all":
+    for s in statuses:
+        if s.isdigit():
+            s = DispenserStatusNumberInverted.get(int(s), "all")  # noqa: PLW2901
+
+        if s == "all":
             where = other_conditions or {}
             break
-        if status in DispenserStatusNumber:
-            where_status = {"status": DispenserStatusNumber[status]}
+
+        if s in DispenserStatusNumber:
+            where_status = {"status": DispenserStatusNumber[s]}
             if other_conditions:
                 where_status.update(other_conditions)
+
             where.append(where_status)
+
     return where
 
 
@@ -1740,7 +1742,7 @@ def get_dispensers(
     return select_rows(
         db,
         "dispensers",
-        where=preprare_dispenser_where(status),
+        where=prepare_dispenser_where(status),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1766,7 +1768,7 @@ def get_dispensers_by_address(
     return select_rows(
         db,
         "dispensers",
-        where=preprare_dispenser_where(status, {"source": address}),
+        where=prepare_dispenser_where(status, {"source": address}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1792,7 +1794,7 @@ def get_dispensers_by_asset(
     return select_rows(
         db,
         "dispensers",
-        where=preprare_dispenser_where(status, {"asset": asset.upper()}),
+        where=prepare_dispenser_where(status, {"asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
