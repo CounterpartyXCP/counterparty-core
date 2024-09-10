@@ -113,6 +113,7 @@ ROUTES = util.prepare_routes(
         "/v2/orders/<order_hash>/btcpays": queries.get_btcpays_by_order,
         "/v2/orders/<asset1>/<asset2>": queries.get_orders_by_two_assets,
         "/v2/orders/<asset1>/<asset2>/matches": queries.get_order_matches_by_two_assets,
+        "/v2/order_matches": queries.get_all_order_matches,
         ### /bets ###
         "/v2/bets": queries.get_bets,
         "/v2/bets/<bet_hash>": queries.get_bet,

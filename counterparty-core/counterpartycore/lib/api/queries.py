@@ -2206,6 +2206,26 @@ def get_order(db, order_hash: str):
     )
 
 
+def get_all_order_matches(
+    db, status: OrderMatchesStatus = "all", cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns all the order matches
+    :param str status: The status of the order matches to return (e.g. completed)
+    :param int cursor: The last index of the order matches to return
+    :param int limit: The maximum number of order matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "order_matches",
+        where=prepare_order_matches_where(status),
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
 def get_order_matches_by_order(
     db,
     order_hash: str,

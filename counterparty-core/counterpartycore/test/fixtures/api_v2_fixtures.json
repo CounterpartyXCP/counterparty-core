@@ -5291,6 +5291,52 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/order_matches?verbose=true": {
+        "result": [
+            {
+                "id": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
+                "tx0_index": 492,
+                "tx0_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
+                "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "tx1_index": 493,
+                "tx1_hash": "1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
+                "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "forward_asset": "XCP",
+                "forward_quantity": 100000000,
+                "backward_asset": "BTC",
+                "backward_quantity": 800000,
+                "tx0_block_index": 310491,
+                "tx1_block_index": 310492,
+                "block_index": 310513,
+                "tx0_expiration": 2000,
+                "tx1_expiration": 2000,
+                "match_expire_index": 310512,
+                "fee_paid": 7200,
+                "status": "expired",
+                "confirmed": true,
+                "block_time": 310513000,
+                "forward_asset_info": {
+                    "divisible": true,
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "locked": true,
+                    "issuer": null
+                },
+                "backward_asset_info": {
+                    "divisible": true,
+                    "asset_longname": null,
+                    "description": "The Bitcoin cryptocurrency",
+                    "locked": false,
+                    "issuer": null
+                },
+                "forward_quantity_normalized": "1.00000000",
+                "backward_quantity_normalized": "0.00800000",
+                "fee_paid_normalized": "0.00007200"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 1
+    },
     "http://localhost:10009/v2/bets?verbose=true": {
         "result": [
             {
