@@ -1369,7 +1369,7 @@ def get_sweeps_by_block(
 ):
     """
     Returns the sweeps of a block
-    :param int block_index: The index of the block to return (e.g. 836519)
+    :param int block_index: The index of the block to return (e.g. $LAST_SWEEP_BLOCK)
     :param str cursor: The last index of the sweeps to return
     :param int limit: The maximum number of sweeps to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1387,7 +1387,7 @@ def get_sweeps_by_block(
 def get_sweep_by_transaction_hash(db, tx_hash: str):
     """
     Returns the sweeps of a transaction
-    :param str tx_hash: The hash of the transaction to return (e.g. 8cacf853c989393ce21e05e286958a3c650b94ac6f92807114552e1492e9c937)
+    :param str tx_hash: The hash of the transaction to return (e.g. $LAST_SWEEP_TX_HASH)
     """
     return select_rows(
         db,
@@ -1401,7 +1401,7 @@ def get_sweeps_by_address(
 ):
     """
     Returns the sweeps of an address
-    :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str address: The address to return (e.g. $ADDRESS_3)
     :param str cursor: The last index of the sweeps to return
     :param int limit: The maximum number of sweeps to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1620,7 +1620,7 @@ def get_broadcasts_by_source(
 def get_broadcast_by_transaction_hash(db, tx_hash: str):
     """
     Returns the broadcast of a transaction
-    :param str tx_hash: The hash of the transaction to return (e.g. 916944b5ae39289615ea55c91ada4605300d6213edf131db3913cf42f0f1b717)
+    :param str tx_hash: The hash of the transaction to return (e.g. $LAST_BROADCAST_TX_HASH)
     """
     return select_row(
         db,

@@ -1400,7 +1400,7 @@ def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
     """
     Composes a transaction to pay for a BTC order match.
     :param address: The address that will be sending the payment (e.g. $ADDRESS_1)
-    :param order_match_id: The ID of the order match to pay for (e.g. e470416a9500fb046835192da013f48e6468a07dba1bede4a0b68e666ed23c8d_4953bde3d9417b103615c2d3d4b284d4fcf7cbd820e5dd19ac0084e9ebd090b2)
+    :param order_match_id: The ID of the order match to pay for (e.g. $LAST_ORDER_MATCH_ID)
     """
     params = {"source": address, "order_match_id": order_match_id}
     rawtransaction = compose_transaction(
@@ -1606,15 +1606,15 @@ def compose_mpma(
     assets: str,
     destinations: str,
     quantities: str,
-    memo: str,
-    memo_is_hex: bool,
+    memo: str = None,
+    memo_is_hex: bool = False,
     **construct_args,
 ):
     """
     Composes a transaction to send multiple payments to multiple addresses.
     :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_1)
-    :param assets: comma-separated list of assets to send (e.g. XCP,$ASSET_1,$ASSET_2)
-    :param destinations: comma-separated list of addresses to send to (e.g. $ADDRESS_1,$ADDRESS_2,$ADDRESS_3)
+    :param assets: comma-separated list of assets to send (e.g. XCP,$ASSET_5)
+    :param destinations: comma-separated list of addresses to send to (e.g. $ADDRESS_1,$ADDRESS_2)
     :param quantities: comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2,3)
     :param memo: The Memo associated with this transaction (e.g. "Hello, world!")
     :param memo_is_hex: Whether the memo field is a hexadecimal string (e.g. False)

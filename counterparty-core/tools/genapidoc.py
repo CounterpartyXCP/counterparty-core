@@ -473,6 +473,30 @@ cursor.execute(
 row = cursor.fetchone()
 REGTEST_FIXTURES["$UTXO_WITH_BALANCE"] = row["utxo"]
 
+# block and tx with sweeps
+cursor.execute("SELECT block_index, tx_hash FROM sweeps ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_SWEEP_BLOCK"] = row["block_index"]
+REGTEST_FIXTURES["$LAST_SWEEP_TX_HASH"] = row["tx_hash"]
+
+# block and tx with btcpay
+cursor.execute("SELECT block_index, tx_hash FROM btcpays ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_BTCPAY_BLOCK"] = row["block_index"]
+REGTEST_FIXTURES["$LAST_BTCPAY_TX_HASH"] = row["tx_hash"]
+
+# block and tx with broadcasts
+cursor.execute("SELECT block_index, tx_hash FROM broadcasts ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_BROADCAST_BLOCK"] = row["block_index"]
+REGTEST_FIXTURES["$LAST_BROADCAST_TX_HASH"] = row["tx_hash"]
+
+# block and tx with order_matches
+cursor.execute("SELECT block_index, id FROM order_matches ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_ORDER_MATCH_BLOCK"] = row["block_index"]
+REGTEST_FIXTURES["$LAST_ORDER_MATCH_ID"] = row["id"]
+
 # print(REGTEST_FIXTURES)
 # exit()
 
