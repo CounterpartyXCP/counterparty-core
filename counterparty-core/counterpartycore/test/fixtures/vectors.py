@@ -1107,7 +1107,7 @@ UNITTEST_VECTOR = (
                     "out": None,
                 },
             ],
-            "get_next_tx_index": [{"in": (), "out": 510}],
+            "get_next_tx_index": [{"in": (), "out": 512}],
         },
         "cancel": {
             "compose": [
