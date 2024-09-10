@@ -1,5 +1,5 @@
 blueprint: apiary.apib
-endpoint: http://127.0.0.1:4000
+endpoint: http://127.0.0.1:24000
 loglevel: error
 only:
 - Blocks > Get Blocks > Get Blocks
@@ -61,6 +61,9 @@ only:
 - Addresses > Get Dividends Distributed By Address > Get Dividends Distributed By
   Address
 - Addresses > Get Orders By Address > Get Orders By Address
+- Addresses > Get Fairminters By Address > Get Fairminters By Address
+- Addresses > Get Fairmints By Address > Get Fairmints By Address
+- Addresses > Get Fairmints By Address And Asset > Get Fairmints By Address And Asset
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset > Get Asset
 - Assets > Get Asset Balances > Get Asset Balances
@@ -77,12 +80,16 @@ only:
 - Assets > Get Asset Holders > Get Asset Holders
 - Assets > Get Dispenses By Asset > Get Dispenses By Asset
 - Assets > Get Subassets By Asset > Get Subassets By Asset
+- Assets > Get Fairminters By Asset > Get Fairminters By Asset
+- Assets > Get Fairmints By Asset > Get Fairmints By Asset
+- Assets > Get Fairmints By Address And Asset > Get Fairmints By Address And Asset
 - Orders > Get Orders > Get Orders
 - Orders > Get Order > Get Order
 - Orders > Get Order Matches By Order > Get Order Matches By Order
 - Orders > Get BTCPays By Order > Get BTCPays By Order
 - Orders > Get Orders By Two Assets > Get Orders By Two Assets
 - Orders > Get Order Matches By Two Assets > Get Order Matches By Two Assets
+- Order_matches > Get All Order Matches > Get All Order Matches
 - Bets > Get Bets > Get Bets
 - Bets > Get Bet > Get Bet
 - Bets > Get Bet Matches By Bet > Get Bet Matches By Bet
@@ -102,6 +109,9 @@ only:
 - Sweeps > Get Sweep By Transaction Hash > Get Sweep By Transaction Hash
 - Broadcasts > Get Valid Broadcasts > Get Valid Broadcasts
 - Broadcasts > Get Broadcast By Transaction Hash > Get Broadcast By Transaction Hash
+- Fairminters > Get All Fairminters > Get All Fairminters
+- Fairminters > Get Fairminter > Get Fairminter
+- Fairminters > Get Fairmints By Fairminter > Get Fairmints By Fairminter
 - Z-pages > Check Server Health > Check Server Health
 - Z-pages > Check Server Health > Check Server Health
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1

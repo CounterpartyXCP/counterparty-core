@@ -160,7 +160,7 @@ SCENARIO = [
                         "params": {
                             "asset": "MYASSETB",
                             "asset_longname": None,
-                            "asset_events": "",
+                            "asset_events": "creation",
                             "block_index": 142,
                             "call_date": 0,
                             "call_price": 0.0,

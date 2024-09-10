@@ -3,14 +3,16 @@ import json
 import os
 
 import requests
+import sh
 import yaml
+from counterpartycore.lib import database
 from counterpartycore.lib.api import routes
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
 DREDD_FILE = os.path.join(CURR_DIR, "../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apidoc", "apicache.json")
-API_ROOT = "http://localhost:4000"
+API_ROOT = "http://localhost:24000"
 
 USE_API_CACHE = True
 API_CACHE = {}
@@ -123,7 +125,7 @@ DREDD_CONFIG = {
     "loglevel": "error",
     "path": [],
     "blueprint": "apiary.apib",
-    "endpoint": "http://127.0.0.1:4000",
+    "endpoint": "http://127.0.0.1:24000",
     "only": [],
 }
 
@@ -227,6 +229,12 @@ def gen_blueprint():
                     desc_arr = description.split("(e.g. ")
                     description = desc_arr[0].replace("\n", " ").strip()
                     example_args[arg["name"]] = desc_arr[1].replace(")", "")
+
+                    for key, value in REGTEST_FIXTURES.items():
+                        example_args[arg["name"]] = example_args[arg["name"]].replace(
+                            key, str(value)
+                        )
+
                     example_arg = f": `{example_args[arg['name']]}`"
                 elif arg["name"] == "verbose":
                     example_arg = ": `true`"
@@ -360,6 +368,115 @@ def update_doc():
         print(f"Cache file written to {CACHE_FILE}")
 
 
+REGTEST_FIXTURES = {}
+db = database.get_db_connection("regtestnode/counterparty.db", read_only=True, check_wal=False)
+cursor = db.cursor()
+
+# addresses
+cursor.execute("SELECT source FROM burns ORDER BY source")
+for i, row in enumerate(cursor.fetchall()):
+    REGTEST_FIXTURES[f"$ADDRESS_{i + 1}"] = row["source"]
+
+# assets
+cursor.execute(
+    "SELECT asset_name FROM assets WHERE asset_name not like 'A%' and asset_name not in ('BTC', 'XCP')"
+)
+for i, row in enumerate(cursor.fetchall()):
+    REGTEST_FIXTURES[f"$ASSET_{i + 1}"] = row["asset_name"]
+
+# dispensers
+cursor.execute("SELECT tx_hash, asset FROM dispensers ORDER BY rowid")
+for i, row in enumerate(cursor.fetchall()):
+    REGTEST_FIXTURES[f"$DISPENSER_TX_HASH_{i + 1}"] = row["tx_hash"]
+
+# last transaction
+cursor.execute("SELECT tx_hash, tx_index FROM transactions ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_TX_HASH"] = row["tx_hash"]
+REGTEST_FIXTURES["$LAST_TX_INDEX"] = row["tx_index"]
+
+# last block
+cursor.execute("SELECT block_hash, block_index FROM blocks ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_BLOCK_HASH"] = row["block_hash"]
+REGTEST_FIXTURES["$LAST_BLOCK_INDEX"] = row["block_index"]
+
+# last message
+cursor.execute("SELECT message_index FROM messages ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_EVENT_INDEX"] = row["message_index"]
+
+# blocks with sends
+cursor.execute("SELECT block_index FROM sends ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_SEND_BLOCK"] = row["block_index"]
+
+# transactions with sends
+cursor.execute("SELECT tx_hash FROM sends ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_SEND_TX_HASH"] = row["tx_hash"]
+
+# blocks with order expiration
+cursor.execute("SELECT block_index FROM order_expirations ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_ORDER_EXPIRATION_BLOCK"] = row["block_index"]
+
+# blocks with destructions
+cursor.execute("SELECT block_index FROM destructions ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_DESTRUCTION_BLOCK"] = row["block_index"]
+
+# block and tx with issuances
+cursor.execute("SELECT block_index, tx_hash FROM issuances ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_ISSUANCE_BLOCK"] = row["block_index"]
+REGTEST_FIXTURES["$LAST_ISSUANCE_TX_HASH"] = row["tx_hash"]
+
+# block and tx with dispenses
+cursor.execute("SELECT block_index, tx_hash FROM dispenses ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_DISPENSE_BLOCK"] = row["block_index"]
+REGTEST_FIXTURES["$LAST_DISPENSE_TX_HASH"] = row["tx_hash"]
+
+
+# block and tx with dividends
+cursor.execute("SELECT block_index, tx_hash FROM dividends ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_DIVIDEND_BLOCK"] = row["block_index"]
+REGTEST_FIXTURES["$LAST_DIVIDEND_TX_HASH"] = row["tx_hash"]
+
+# block and tx with orders
+cursor.execute("SELECT block_index, tx_hash FROM orders ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_ORDER_BLOCK"] = row["block_index"]
+REGTEST_FIXTURES["$LAST_ORDER_TX_HASH"] = row["tx_hash"]
+
+# block and tx with fairminter
+cursor.execute("SELECT block_index, tx_hash FROM fairminters ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_FAIRMINTER_BLOCK"] = row["block_index"]
+REGTEST_FIXTURES["$LAST_FAIRMINTER_TX_HASH"] = row["tx_hash"]
+
+# get utxo from bitcoin-cli
+utxo = json.loads(
+    sh.bitcoin_cli(
+        "-regtest", "listunspent", 0, 9999999, f'["{REGTEST_FIXTURES["$ADDRESS_1"]}"]'
+    ).strip()
+)[0]
+utxo = utxo["txid"] + ":" + str(utxo["vout"])
+REGTEST_FIXTURES["$UTXO_1_ADDRESS_1"] = utxo
+
+# get utxo with balance
+cursor.execute(
+    "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
+)
+row = cursor.fetchone()
+REGTEST_FIXTURES["$UTXO_WITH_BALANCE"] = row["utxo"]
+
+# print(REGTEST_FIXTURES)
+# exit()
+
 update_doc()
 
+print(REGTEST_FIXTURES)
 # gen_unpack_doc()

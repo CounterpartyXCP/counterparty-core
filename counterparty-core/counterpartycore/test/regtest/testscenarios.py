@@ -2,6 +2,7 @@
 
 import difflib
 import json
+import sys
 import time
 
 from regtestcli import atomic_swap
@@ -142,7 +143,15 @@ def run_item(node, item, context):
     return context
 
 
-def run_scenarios():
+def print_server_output(node, printed_line_count):
+    unprinted_lines = node.server_out.getvalue().splitlines()[printed_line_count:]
+    for line in unprinted_lines:
+        print(line)
+        printed_line_count += 1
+    return printed_line_count
+
+
+def run_scenarios(serve=False):
     try:
         regtest_node_thread = RegtestNodeThread()
         regtest_node_thread.start()
@@ -155,9 +164,14 @@ def run_scenarios():
         for item in SCENARIOS:
             context = run_item(regtest_node_thread.node, item, context)
 
-        # print("Server ready, ctrl-c to stop.")
-        # while True:
-        #    time.sleep(1)
+        if serve:
+            printed_line_count = 0
+            print("Server ready, ctrl-c to stop.")
+            while True:
+                printed_line_count = print_server_output(
+                    regtest_node_thread.node, printed_line_count
+                )
+                time.sleep(1)
 
     except KeyboardInterrupt:
         pass
@@ -170,4 +184,5 @@ def run_scenarios():
 
 
 if __name__ == "__main__":
-    run_scenarios()
+    serve = sys.argv[1] == "serve" if len(sys.argv) > 1 else False
+    run_scenarios(serve=serve)
