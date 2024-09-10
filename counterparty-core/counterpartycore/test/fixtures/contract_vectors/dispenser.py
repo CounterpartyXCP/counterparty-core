@@ -310,7 +310,10 @@ DISPENSER_VECTOR = {
                 "in": (ADDR[0], ADDR[5], 10000),
                 "error": (
                     exceptions.ComposeError,
-                    ["dispenser doesn't have enough asset to give"],
+                    [
+                        "dispenser doesn't have enough asset to give",
+                        "dispenser doesn't have enough asset to give",
+                    ],
                 ),
             },
             {

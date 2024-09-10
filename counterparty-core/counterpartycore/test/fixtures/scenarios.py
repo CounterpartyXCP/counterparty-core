@@ -340,6 +340,12 @@ UNITTEST_FIXTURE = [
         {"encoding": "multisig"},
         {"short_tx_type_id": True, "utxo_support": True},
     ],
+    [
+        "issuance",
+        (ADDR[5], "TESTDISP", 1000, None, False, None, None, "Test dispensers asset"),
+        {"encoding": "multisig"},
+    ],
+    ["dispenser", (ADDR[5], "TESTDISP", 100, 100, 100, 0), {"encoding": "opreturn"}],
     ["create_next_block", 703],
 ]
 

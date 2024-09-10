@@ -55,15 +55,15 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1729,
+                    "message_index": 1739,
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"810efa958965423c5a4a3c88c9a673936a8f52c56836e899889bced0f62d4723","messages_hash":"9310e21c04f0a334a85008d76ef3c07c3fcca90ef3f60b4419906e3b9d6fd646","transaction_count":0,"txlist_hash":"8746b71a3a23b409b9cb989b4c3ace826335299373a4237ecbc70d2792593b4b"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"cbc22749655ce8e7fb2eeb4d1737a04dec7bc096ce84b00bf83ca4c7040f448a","messages_hash":"82e79417c7ec1856ced190d3fe19150f1510992e5abfd326b92edd143260259d","transaction_count":0,"txlist_hash":"b5cae1a9f44982ed3dd38f90d95cba93efbe9fd1e55b0f367e45336f3e68f786"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "d935ae319bf4122f46f7f09f27a84713b7a0b1c085638682ef7212a99e35b519",
+                    "event_hash": "084f990c96dfcbc724458e54154757258c4b0ecc17255ab42a9c0db2dd4939de",
                 },
             }
         ],
@@ -191,11 +191,11 @@ LEDGER_VECTOR = {
             },
         ],
         "xcp_created": [{"in": (), "out": 604506847920}],
-        "xcp_destroyed": [{"in": (), "out": 675000020}],
+        "xcp_destroyed": [{"in": (), "out": 725000020}],
         "xcp_supply": [
             {
                 "in": (),
-                "out": 603831847900,
+                "out": 603781847900,
             }
         ],
         "creations": [
@@ -217,11 +217,12 @@ LEDGER_VECTOR = {
                     "PARENT": 100000000,
                     "QAIDFAIRMIN": 20,
                     "RAIDFAIRMIN": 20,
+                    "TESTDISP": 1000,
                     "A160361285792733729": 50,
                 },
             }
         ],
-        "destructions": [{"in": (), "out": {"XCP": 675000020}}],
+        "destructions": [{"in": (), "out": {"XCP": 725000020}}],
         "asset_supply": [
             {
                 "in": ("DIVISIBLE",),
@@ -232,7 +233,7 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "XCP": 603831847900,
+                    "XCP": 603781847900,
                     "A95428956661682277": 100000000,
                     "CALLABLE": 1000,
                     "DIVIDEND": 100,
@@ -248,6 +249,7 @@ LEDGER_VECTOR = {
                     "QAIDFAIRMIN": 20,
                     "RAIDFAIRMIN": 20,
                     "A160361285792733729": 50,
+                    "TESTDISP": 1000,
                 },
             }
         ],
@@ -286,7 +288,7 @@ LEDGER_VECTOR = {
                     },
                     {
                         "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
-                        "address_quantity": 92999130360,
+                        "address_quantity": 92949130360,
                         "escrow": None,
                     },
                     {

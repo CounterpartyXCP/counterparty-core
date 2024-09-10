@@ -40,6 +40,8 @@ This release includes a variety of protocol upgrades.
 ## Bugfixes
 
 * Fix adding new transactions in unit test fixtures (`scenarios.py`)
+* Fix mempool parsing on testnet and regtest
+* Fix `get_dispensers_by_asset` endpoint filtering by query parameter. Numeric statuses can now be used i.e. `status=0`
 
 ## Codebase
 
@@ -49,6 +51,7 @@ This release includes a variety of protocol upgrades.
 
 * Add `return_only_data` argument for composition routes
 * Add an `asset_events` field to the `issuances` table. This field contains one or more of the following values ​​separated by spaces: `creation`, `reissuance`, `reset`, `lock_quantity`, `lock_description`, `open_fairminter`, `close_fairminter`, `fairmint`.
+* Return only valid issuances
 
 ## CLI
 

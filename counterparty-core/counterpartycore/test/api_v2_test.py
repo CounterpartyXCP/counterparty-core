@@ -264,7 +264,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
-            "quantity": 92999130360,
+            "quantity": 92949130360,
         },
         {
             "address": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
@@ -444,3 +444,66 @@ def test_new_get_order_matches():
         "status": "expired",
         "confirmed": True,
     }
+
+
+@pytest.mark.usefixtures("api_server_v2")
+def test_asset_dispensers():
+    asset = "XCP"
+
+    url = f"{API_ROOT}/v2/assets/{asset}/dispensers?status=1"
+    result = requests.get(url)  # noqa: S113
+    assert result.json()["result"] == []
+
+    url = f"{API_ROOT}/v2/assets/{asset}/dispensers?status=0"
+    result = requests.get(url)  # noqa: S113
+    assert result.json()["result"] == [
+        {
+            "tx_index": 108,
+            "tx_hash": "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec",
+            "block_index": 310107,
+            "source": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+            "asset": "XCP",
+            "give_quantity": 100,
+            "escrow_quantity": 100,
+            "satoshirate": 100,
+            "status": 0,
+            "give_remaining": 100,
+            "oracle_address": None,
+            "last_status_tx_hash": None,
+            "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+            "dispense_count": 0,
+            "last_status_tx_source": None,
+            "close_block_index": None,
+            "confirmed": True,
+        }
+    ]
+
+    asset = "TESTDISP"
+
+    url = f"{API_ROOT}/v2/assets/{asset}/dispensers?status=1"
+    result = requests.get(url)  # noqa: S113
+    assert result.json()["result"] == []
+
+    url = f"{API_ROOT}/v2/assets/{asset}/dispensers?status=0"
+    result = requests.get(url)  # noqa: S113
+    assert result.json()["result"] == [
+        {
+            "tx_index": 511,
+            "tx_hash": "af67f6762d4b00b4bf5fb93a9d556e007a147aa80fbf6a84410df05a0182da9e",
+            "block_index": 310510,
+            "source": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+            "asset": "TESTDISP",
+            "give_quantity": 100,
+            "escrow_quantity": 100,
+            "satoshirate": 100,
+            "status": 0,
+            "give_remaining": 100,
+            "oracle_address": None,
+            "last_status_tx_hash": None,
+            "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+            "dispense_count": 0,
+            "last_status_tx_source": None,
+            "close_block_index": None,
+            "confirmed": True,
+        }
+    ]
