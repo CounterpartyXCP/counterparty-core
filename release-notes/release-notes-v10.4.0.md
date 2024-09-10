@@ -40,6 +40,7 @@ This release includes a variety of protocol upgrades.
 ## Bugfixes
 
 * Fix adding new transactions in unit test fixtures (`scenarios.py`)
+* Fix mempool parsing on testnet and regtest
 * Fix `get_dispensers_by_asset` endpoint filtering by query parameter. Numeric statuses can now be used i.e. `status=0`
 
 ## Codebase
