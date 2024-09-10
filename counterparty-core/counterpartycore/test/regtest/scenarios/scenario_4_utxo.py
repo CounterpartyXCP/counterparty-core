@@ -35,6 +35,7 @@ SCENARIO = [
                         "params": {
                             "asset": "MYASSETA",
                             "asset_longname": None,
+                            "asset_events": "",
                             "block_index": 134,
                             "call_date": 0,
                             "call_price": 0.0,

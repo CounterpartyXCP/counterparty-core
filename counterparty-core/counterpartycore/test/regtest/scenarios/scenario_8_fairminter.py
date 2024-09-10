@@ -37,6 +37,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTC",
                             "asset_longname": "",
+                            "asset_events": "open_fairminter",
                             "block_index": 170,
                             "call_date": 0,
                             "call_price": 0,
@@ -121,6 +122,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTC",
                             "asset_longname": "",
+                            "asset_events": "fairmint",
                             "block_index": 171,
                             "call_date": 0,
                             "call_price": 0.0,
@@ -230,6 +232,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTC",
                             "asset_longname": "",
+                            "asset_events": "fairmint",
                             "block_index": 172,
                             "call_date": 0,
                             "call_price": 0.0,
@@ -339,6 +342,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTC",
                             "asset_longname": "",
+                            "asset_events": "fairmint",
                             "block_index": 173,
                             "call_date": 0,
                             "call_price": 0.0,
@@ -468,6 +472,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTD",
                             "asset_longname": "",
+                            "asset_events": "open_fairminter",
                             "block_index": 174,
                             "call_date": 0,
                             "call_price": 0,
@@ -552,6 +557,7 @@ SCENARIO = [
                         "params": {
                             "asset": "FAIRMINTD",
                             "asset_longname": "",
+                            "asset_events": "fairmint",
                             "block_index": 175,
                             "call_date": 0,
                             "call_price": 0.0,
