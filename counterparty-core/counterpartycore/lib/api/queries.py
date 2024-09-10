@@ -1097,6 +1097,7 @@ def get_issuances(db, cursor: int = None, limit: int = 100, offset: int = None):
     return select_rows(
         db,
         "issuances",
+        where={"status": "valid"},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1116,7 +1117,7 @@ def get_issuances_by_block(
     return select_rows(
         db,
         "issuances",
-        where={"block_index": block_index},
+        where={"block_index": block_index, "status": "valid"},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1144,7 +1145,10 @@ def get_issuances_by_asset(
     return select_rows(
         db,
         "issuances",
-        where=[{"asset": asset.upper()}, {"UPPER(asset_longname)": asset.upper()}],
+        where=[
+            {"asset": asset.upper(), "status": "valid"},
+            {"UPPER(asset_longname)": asset.upper(), "status": "valid"},
+        ],
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1162,7 +1166,12 @@ def get_issuances_by_address(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        db, "issuances", where={"issuer": address}, last_cursor=cursor, limit=limit, offset=offset
+        db,
+        "issuances",
+        where={"issuer": address, "status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 

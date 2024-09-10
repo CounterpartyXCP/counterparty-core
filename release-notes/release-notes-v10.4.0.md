@@ -49,6 +49,7 @@ This release includes a variety of protocol upgrades.
 ## API
 
 * Add `return_only_data` argument for composition routes
+* Return only valid issuances
 
 ## CLI
 
