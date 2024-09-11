@@ -534,6 +534,11 @@ cursor.execute("SELECT tx_index FROM transactions WHERE tx_hash=?", (row["tx_has
 row = cursor.fetchone()
 REGTEST_FIXTURES["$LAST_EVENT_TX_INDEX"] = row["tx_index"]
 
+# transaction in mempool
+cursor.execute("SELECT tx_hash FROM mempool ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_MEMPOOL_TX_HASH"] = row["tx_hash"]
+
 # print(REGTEST_FIXTURES)
 # exit()
 

@@ -253,10 +253,8 @@ def select_rows(
         query = f"{query} OFFSET ?"
         bindings.append(offset)
 
-    print(query, bindings)
     cursor.execute(query, bindings)
     result = cursor.fetchall()
-    print(result)
 
     cursor.execute(query_count, bindings_count)
     result_count = cursor.fetchone()["count"]
@@ -699,7 +697,7 @@ def get_mempool_events_by_name(
 ):
     """
     Returns the mempool events filtered by event name
-    :param str event: The event to return (e.g. OPEN_ORDER)
+    :param str event: The event to return (e.g. CREDIT)
     :param str cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -726,7 +724,7 @@ def get_mempool_events_by_tx_hash(
 ):
     """
     Returns the mempool events filtered by transaction hash
-    :param str tx_hash: The hash of the transaction to return (e.g. 84b34b19d971adc2ad2dc6bfc5065ca976db1488f207df4887da976fbf2fd040)
+    :param str tx_hash: The hash of the transaction to return (e.g. $LAST_MEMPOOL_TX_HASH)
     :param str event_name: Comma separated list of events to return
     :param str cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
@@ -744,7 +742,7 @@ def get_mempool_events_by_tx_hash(
 def get_mempool_events_by_addresses(db, addresses: str, cursor: str = None, limit: int = 100):
     """
     Returns the mempool events of a list of addresses
-    :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_1,$ADDRESS_2)
+    :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_3,$ADDRESS_4)
     :param str cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     """

@@ -8711,11 +8711,6 @@
         "next_cursor": 65,
         "result_count": 10
     },
-    "/v2/addresses/mempool": {
-        "result": [],
-        "next_cursor": null,
-        "result_count": 0
-    },
     "/v2/addresses/<address>/bets": {
         "result": [],
         "next_cursor": null,
@@ -8738,21 +8733,6 @@
         "result_count": 0
     },
     "/v2/bets/<bet_hash>/resolutions": {
-        "result": [],
-        "next_cursor": null,
-        "result_count": 0
-    },
-    "/v2/mempool/events": {
-        "result": [],
-        "next_cursor": null,
-        "result_count": 0
-    },
-    "/v2/mempool/events/<event>": {
-        "result": [],
-        "next_cursor": null,
-        "result_count": 0
-    },
-    "/v2/mempool/transactions/<tx_hash>/events": {
         "result": [],
         "next_cursor": null,
         "result_count": 0
@@ -8816,5 +8796,392 @@
         "result": [],
         "next_cursor": null,
         "result_count": 0
+    },
+    "/v2/addresses/mempool": {
+        "result": [
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "ENHANCED_SEND",
+                "params": {
+                    "asset": "XCP",
+                    "block_index": 9999999,
+                    "destination": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                    "memo": null,
+                    "quantity": 10000,
+                    "source": "bcrt1qg6d48faed6ecjypz0dsqmr6r5v630zedu0289z",
+                    "status": "valid",
+                    "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "tx_index": 54,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "CREDIT",
+                "params": {
+                    "address": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                    "asset": "XCP",
+                    "block_index": 187,
+                    "calling_function": "send",
+                    "event": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "quantity": 10000,
+                    "tx_index": 54,
+                    "utxo": null,
+                    "utxo_address": null,
+                    "block_time": 1726061958,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "DEBIT",
+                "params": {
+                    "action": "send",
+                    "address": "bcrt1qg6d48faed6ecjypz0dsqmr6r5v630zedu0289z",
+                    "asset": "XCP",
+                    "block_index": 187,
+                    "event": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "quantity": 10000,
+                    "tx_index": 54,
+                    "utxo": null,
+                    "utxo_address": null,
+                    "block_time": 1726061958,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "NEW_TRANSACTION",
+                "params": {
+                    "block_hash": "mempool",
+                    "block_index": 9999999,
+                    "block_time": 1726061962.4239745,
+                    "btc_amount": 0,
+                    "data": "020000000000000001000000000000271080a5adb5e2e4dd1db9f5f3da4dfb7496e106cc9986",
+                    "destination": "",
+                    "fee": 33164,
+                    "source": "bcrt1qg6d48faed6ecjypz0dsqmr6r5v630zedu0289z",
+                    "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "tx_index": 54,
+                    "utxos_info": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620:1",
+                    "unpacked_data": {
+                        "message_type": "enhanced_send",
+                        "message_type_id": 2,
+                        "message_data": {
+                            "asset": "XCP",
+                            "quantity": 10000,
+                            "address": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                            "memo": null,
+                            "asset_info": {
+                                "divisible": true,
+                                "asset_longname": null,
+                                "description": "The Counterparty protocol native currency",
+                                "locked": true,
+                                "issuer": null
+                            },
+                            "quantity_normalized": "0.00010000"
+                        }
+                    },
+                    "btc_amount_normalized": "0.00000000"
+                }
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 4
+    },
+    "/v2/mempool/events": {
+        "result": [
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "tx_index": 54
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "ENHANCED_SEND",
+                "params": {
+                    "asset": "XCP",
+                    "block_index": 9999999,
+                    "destination": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                    "memo": null,
+                    "quantity": 10000,
+                    "source": "bcrt1qg6d48faed6ecjypz0dsqmr6r5v630zedu0289z",
+                    "status": "valid",
+                    "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "tx_index": 54,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "CREDIT",
+                "params": {
+                    "address": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                    "asset": "XCP",
+                    "block_index": 187,
+                    "calling_function": "send",
+                    "event": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "quantity": 10000,
+                    "tx_index": 54,
+                    "utxo": null,
+                    "utxo_address": null,
+                    "block_time": 1726061958,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "DEBIT",
+                "params": {
+                    "action": "send",
+                    "address": "bcrt1qg6d48faed6ecjypz0dsqmr6r5v630zedu0289z",
+                    "asset": "XCP",
+                    "block_index": 187,
+                    "event": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "quantity": 10000,
+                    "tx_index": 54,
+                    "utxo": null,
+                    "utxo_address": null,
+                    "block_time": 1726061958,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "NEW_TRANSACTION",
+                "params": {
+                    "block_hash": "mempool",
+                    "block_index": 9999999,
+                    "block_time": 1726061962.4239745,
+                    "btc_amount": 0,
+                    "data": "020000000000000001000000000000271080a5adb5e2e4dd1db9f5f3da4dfb7496e106cc9986",
+                    "destination": "",
+                    "fee": 33164,
+                    "source": "bcrt1qg6d48faed6ecjypz0dsqmr6r5v630zedu0289z",
+                    "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "tx_index": 54,
+                    "utxos_info": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620:1",
+                    "unpacked_data": {
+                        "message_type": "enhanced_send",
+                        "message_type_id": 2,
+                        "message_data": {
+                            "asset": "XCP",
+                            "quantity": 10000,
+                            "address": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                            "memo": null,
+                            "asset_info": {
+                                "divisible": true,
+                                "asset_longname": null,
+                                "description": "The Counterparty protocol native currency",
+                                "locked": true,
+                                "issuer": null
+                            },
+                            "quantity_normalized": "0.00010000"
+                        }
+                    },
+                    "btc_amount_normalized": "0.00000000"
+                }
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 5
+    },
+    "/v2/mempool/events/<event>": {
+        "result": [
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "CREDIT",
+                "params": {
+                    "address": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                    "asset": "XCP",
+                    "block_index": 187,
+                    "calling_function": "send",
+                    "event": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "quantity": 10000,
+                    "tx_index": 54,
+                    "utxo": null,
+                    "utxo_address": null,
+                    "block_time": 1726061958,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 1
+    },
+    "/v2/mempool/transactions/<tx_hash>/events": {
+        "result": [
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "TRANSACTION_PARSED",
+                "params": {
+                    "supported": true,
+                    "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "tx_index": 54
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "ENHANCED_SEND",
+                "params": {
+                    "asset": "XCP",
+                    "block_index": 9999999,
+                    "destination": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                    "memo": null,
+                    "quantity": 10000,
+                    "source": "bcrt1qg6d48faed6ecjypz0dsqmr6r5v630zedu0289z",
+                    "status": "valid",
+                    "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "tx_index": 54,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "CREDIT",
+                "params": {
+                    "address": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                    "asset": "XCP",
+                    "block_index": 187,
+                    "calling_function": "send",
+                    "event": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "quantity": 10000,
+                    "tx_index": 54,
+                    "utxo": null,
+                    "utxo_address": null,
+                    "block_time": 1726061958,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "DEBIT",
+                "params": {
+                    "action": "send",
+                    "address": "bcrt1qg6d48faed6ecjypz0dsqmr6r5v630zedu0289z",
+                    "asset": "XCP",
+                    "block_index": 187,
+                    "event": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "quantity": 10000,
+                    "tx_index": 54,
+                    "utxo": null,
+                    "utxo_address": null,
+                    "block_time": 1726061958,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "0.00010000"
+                }
+            },
+            {
+                "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                "event": "NEW_TRANSACTION",
+                "params": {
+                    "block_hash": "mempool",
+                    "block_index": 9999999,
+                    "block_time": 1726061962.4239745,
+                    "btc_amount": 0,
+                    "data": "020000000000000001000000000000271080a5adb5e2e4dd1db9f5f3da4dfb7496e106cc9986",
+                    "destination": "",
+                    "fee": 33164,
+                    "source": "bcrt1qg6d48faed6ecjypz0dsqmr6r5v630zedu0289z",
+                    "tx_hash": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620",
+                    "tx_index": 54,
+                    "utxos_info": "48332ee2e506d23d00ad9f0a6a9971930d6eb52d30309d22f86f4a6efac9d620:1",
+                    "unpacked_data": {
+                        "message_type": "enhanced_send",
+                        "message_type_id": 2,
+                        "message_data": {
+                            "asset": "XCP",
+                            "quantity": 10000,
+                            "address": "bcrt1q5kkmtchym5wmna0nmfxlkaykuyrvexvxqw256v",
+                            "memo": null,
+                            "asset_info": {
+                                "divisible": true,
+                                "asset_longname": null,
+                                "description": "The Counterparty protocol native currency",
+                                "locked": true,
+                                "issuer": null
+                            },
+                            "quantity_normalized": "0.00010000"
+                        }
+                    },
+                    "btc_amount_normalized": "0.00000000"
+                }
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 5
     }
 }

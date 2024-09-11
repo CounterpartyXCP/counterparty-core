@@ -22,6 +22,7 @@ from scenarios import (
     scenario_12_sweep,
     scenario_13_cancel,
     scenario_14_dispenser,
+    scenario_last_mempool,
 )
 from termcolor import colored
 
@@ -40,6 +41,8 @@ SCENARIOS += scenario_11_send.SCENARIO
 SCENARIOS += scenario_12_sweep.SCENARIO
 SCENARIOS += scenario_13_cancel.SCENARIO
 SCENARIOS += scenario_14_dispenser.SCENARIO
+# more scenarios before this one
+SCENARIOS += scenario_last_mempool.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -130,8 +133,12 @@ def run_item(node, item, context):
                 )
                 tx_hash, block_hash, block_time = node.broadcast_transaction(signed_transaction)
             else:
+                no_confirmation = item.get("no_confirmation", False)
                 tx_hash, block_hash, block_time = node.send_transaction(
-                    item["source"], item["transaction"], item["params"]
+                    item["source"],
+                    item["transaction"],
+                    item["params"],
+                    no_confirmation=no_confirmation,
                 )
         except ComposeError as e:
             if "expected_error" in item:
