@@ -9183,5 +9183,198 @@
         ],
         "next_cursor": null,
         "result_count": 5
+    },
+    "/v2/events/NEW_FAIRMINTER": {
+        "result": [
+            {
+                "event_index": 390,
+                "event": "NEW_FAIRMINTER",
+                "params": {
+                    "asset": "FAIRMINTD",
+                    "asset_longname": "",
+                    "asset_parent": "",
+                    "block_index": 174,
+                    "burn_payment": false,
+                    "description": "",
+                    "divisible": true,
+                    "end_block": 0,
+                    "hard_cap": 0,
+                    "lock_description": false,
+                    "lock_quantity": false,
+                    "max_mint_per_tx": 0,
+                    "minted_asset_commission_int": 0,
+                    "pre_minted": false,
+                    "premint_quantity": 0,
+                    "price": 50,
+                    "quantity_by_price": 60,
+                    "soft_cap": 0,
+                    "soft_cap_deadline_block": 0,
+                    "source": "bcrt1q6pcgjhcw2n6wj4wu2h5n79c8n88yzygv2naxaa",
+                    "start_block": 0,
+                    "status": "open",
+                    "tx_hash": "67d07e6203123e9086de9ee1ad84463f194c2bcb8d4ba89f96351d61f0c10eaa",
+                    "tx_index": 40,
+                    "block_time": 1726067738
+                },
+                "tx_hash": "67d07e6203123e9086de9ee1ad84463f194c2bcb8d4ba89f96351d61f0c10eaa",
+                "block_index": 174,
+                "block_time": 1726067738
+            }
+        ],
+        "next_cursor": 355,
+        "result_count": 4
+    },
+    "/v2/events/FAIRMINTER_UPDATE": {
+        "result": [
+            {
+                "event_index": 155,
+                "event": "FAIRMINTER_UPDATE",
+                "params": {
+                    "status": "closed",
+                    "tx_hash": "b9e8927cb78fb1fdc1b557af749e327feb9196b3006991297e580f43240942bf"
+                },
+                "tx_hash": null,
+                "block_index": 130,
+                "block_time": 1726067563
+            }
+        ],
+        "next_cursor": 110,
+        "result_count": 2
+    },
+    "/v2/events/NEW_FAIRMINT": {
+        "result": [
+            {
+                "event_index": 401,
+                "event": "NEW_FAIRMINT",
+                "params": {
+                    "asset": "FAIRMINTD",
+                    "block_index": 175,
+                    "commission": 0,
+                    "earn_quantity": 40,
+                    "fairminter_tx_hash": "67d07e6203123e9086de9ee1ad84463f194c2bcb8d4ba89f96351d61f0c10eaa",
+                    "paid_quantity": 34,
+                    "source": "bcrt1q8h3pzxgseatj4cj2f9c7f5uesg68xrh7ug0dkk",
+                    "status": "valid",
+                    "tx_hash": "8fce5326ab98b86368742beb99a6f8b743cc0efd22f1fa189c2dff65db096118",
+                    "tx_index": 41,
+                    "block_time": 1726067742,
+                    "asset_info": {
+                        "asset_longname": "",
+                        "description": "",
+                        "issuer": "bcrt1q6pcgjhcw2n6wj4wu2h5n79c8n88yzygv2naxaa",
+                        "divisible": true,
+                        "locked": false
+                    }
+                },
+                "tx_hash": "8fce5326ab98b86368742beb99a6f8b743cc0efd22f1fa189c2dff65db096118",
+                "block_index": 175,
+                "block_time": 1726067742
+            }
+        ],
+        "next_cursor": 384,
+        "result_count": 10
+    },
+    "/v2/events/ATTACH_TO_UTXO": {
+        "result": [
+            {
+                "event_index": 215,
+                "event": "ATTACH_TO_UTXO",
+                "params": {
+                    "asset": "MYASSETA",
+                    "block_index": 138,
+                    "destination": "3c54e14cbf18f88228241dc0010175f4d01b3f05859d58090afdf440cc876910:1",
+                    "fee_paid": 0,
+                    "msg_index": 0,
+                    "quantity": 1000000000,
+                    "source": "bcrt1q6pcgjhcw2n6wj4wu2h5n79c8n88yzygv2naxaa",
+                    "status": "valid",
+                    "tx_hash": "3c54e14cbf18f88228241dc0010175f4d01b3f05859d58090afdf440cc876910",
+                    "tx_index": 25,
+                    "block_time": 1726067597,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "My super asset A",
+                        "issuer": "bcrt1q6pcgjhcw2n6wj4wu2h5n79c8n88yzygv2naxaa",
+                        "divisible": true,
+                        "locked": false
+                    },
+                    "quantity_normalized": "10.00000000",
+                    "fee_paid_normalized": "0.00000000"
+                },
+                "tx_hash": "3c54e14cbf18f88228241dc0010175f4d01b3f05859d58090afdf440cc876910",
+                "block_index": 138,
+                "block_time": 1726067597
+            }
+        ],
+        "next_cursor": 194,
+        "result_count": 2
+    },
+    "/v2/events/DETACH_FROM_UTXO": {
+        "result": [
+            {
+                "event_index": 207,
+                "event": "DETACH_FROM_UTXO",
+                "params": {
+                    "asset": "MYASSETA",
+                    "block_index": 137,
+                    "destination": "bcrt1qdgk4qfha4lu6f329kcxwh8776v6mkuhd26e3pv",
+                    "fee_paid": 0,
+                    "msg_index": 0,
+                    "quantity": 500000000,
+                    "source": "8447bac096fecced6192447eff1c920795854540d250f36ce1db52554d0bd04c:0",
+                    "status": "valid",
+                    "tx_hash": "06a771b8d609b6a1aa28f4b77f74030e45c80bdc3285a61e21fcf5a8ab7f5e34",
+                    "tx_index": 24,
+                    "block_time": 1726067593,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "My super asset A",
+                        "issuer": "bcrt1q6pcgjhcw2n6wj4wu2h5n79c8n88yzygv2naxaa",
+                        "divisible": true,
+                        "locked": false
+                    },
+                    "quantity_normalized": "5.00000000",
+                    "fee_paid_normalized": "0.00000000"
+                },
+                "tx_hash": "06a771b8d609b6a1aa28f4b77f74030e45c80bdc3285a61e21fcf5a8ab7f5e34",
+                "block_index": 137,
+                "block_time": 1726067593
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 1
+    },
+    "/v2/events/UTXO_MOVE": {
+        "result": [
+            {
+                "event_index": 252,
+                "event": "UTXO_MOVE",
+                "params": {
+                    "asset": "XCP",
+                    "block_index": 142,
+                    "destination": "2c164404d1f2508ca9c25cfff034e40d523d907cb757baec3081203daa63d146:1",
+                    "msg_index": 1,
+                    "quantity": 1500000000,
+                    "source": "1e5a50d26559d97b90f19c86ea2088c3327eaddb6d3a0ec7873e4c990e9a813e:0",
+                    "status": "valid",
+                    "tx_hash": "2c164404d1f2508ca9c25cfff034e40d523d907cb757baec3081203daa63d146",
+                    "tx_index": 29,
+                    "block_time": 1726067615,
+                    "asset_info": {
+                        "divisible": true,
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "locked": true,
+                        "issuer": null
+                    },
+                    "quantity_normalized": "15.00000000"
+                },
+                "tx_hash": "2c164404d1f2508ca9c25cfff034e40d523d907cb757baec3081203daa63d146",
+                "block_index": 142,
+                "block_time": 1726067615
+            }
+        ],
+        "next_cursor": 249,
+        "result_count": 7
     }
 }

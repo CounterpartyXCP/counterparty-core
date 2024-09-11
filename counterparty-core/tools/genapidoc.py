@@ -22,22 +22,6 @@ if USE_API_CACHE and os.path.exists(CACHE_FILE):
         API_CACHE = json.load(f)
 
 
-GROUPS = [
-    "/blocks",
-    "/transactions",
-    "/addresses",
-    "/compose",
-    "/assets",
-    "/orders",
-    "/bets",
-    "/dispensers",
-    "/burns",
-    "/events",
-    "/mempool",
-    "/bitcoin",
-    "/v1",
-]
-
 EVENT_LIST = [
     {
         "group": "Blocks and Transactions",
@@ -101,18 +85,34 @@ EVENT_LIST = [
         ],
     },
     {
-        "group": "Bets",
+        "group": "Fair Minting",
         "events": [
-            "OPEN_BET",
-            "BET_UPDATE",
-            "BET_MATCH",
-            "BET_MATCH_UPDATE",
-            "BET_EXPIRATION",
-            "BET_MATCH_EXPIRATION",
-            "BET_MATCH_RESOLUTON",
-            "CANCEL_BET",
+            "NEW_FAIRMINTER",
+            "FAIRMINTER_UPDATE",
+            "NEW_FAIRMINT",
         ],
     },
+    {
+        "group": "UTXO Support",
+        "events": [
+            "ATTACH_TO_UTXO",
+            "DETACH_FROM_UTXO",
+            "UTXO_MOVE",
+        ],
+    },
+    # {
+    #    "group": "Bets",
+    #    "events": [
+    #        "OPEN_BET",
+    #        "BET_UPDATE",
+    #        "BET_MATCH",
+    #        "BET_MATCH_UPDATE",
+    #        "BET_EXPIRATION",
+    #        "BET_MATCH_EXPIRATION",
+    #        "BET_MATCH_RESOLUTON",
+    #        "CANCEL_BET",
+    #    ],
+    # },
     {
         "group": "Burns",
         "events": [
@@ -151,7 +151,7 @@ def get_example_output(path, args):
 
 
 def include_in_dredd(group, path):
-    if group in ["Compose", "bitcoin", "mempool"]:
+    if group in ["compose", "bitcoin", "mempool"]:
         return False
     if "/v2/events" in path:
         return False
@@ -161,10 +161,26 @@ def include_in_dredd(group, path):
 
 
 def gen_groups_toc():
+    groups = []
+    for path, _route in routes.ROUTES.items():
+        route_group = get_groupe_name(path)
+        if route_group not in groups:
+            groups.append(route_group)
+
     toc = ""
-    for group in GROUPS:
+    for group in groups:
         toc += f"- [`{group}`](#/reference{group})\n"
     return toc
+
+
+def get_groupe_name(path):
+    if "healthz" in path:
+        return "Z-Pages"
+    if "compose" in path:
+        return "compose"
+    if "v2/" in path:
+        return path.split("/")[2]
+    return "v1"
 
 
 def gen_blueprint(db):
@@ -172,15 +188,7 @@ def gen_blueprint(db):
     dredd = DREDD_CONFIG.copy()
     current_group = None
     for path, route in routes.ROUTES.items():
-        path_parts = path.split("/")
-        if "healthz" in path:
-            route_group = "Z-Pages"
-        elif path_parts[1] == "v2":
-            route_group = path.split("/")[2]
-        else:
-            route_group = "v1"
-        if "compose" in path:
-            route_group = "Compose"
+        route_group = get_groupe_name(path)
         if route_group != current_group:
             current_group = route_group
             md += f"\n## Group {current_group.capitalize()}\n"
