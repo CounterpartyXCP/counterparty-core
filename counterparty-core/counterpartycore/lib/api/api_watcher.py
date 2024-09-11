@@ -135,7 +135,11 @@ def get_event_to_parse_count(api_db, ledger_db):
 
 def get_event_bindings(event):
     event_bindings = json.loads(event["bindings"])
-    if "order_match_id" in event_bindings:
+    if (
+        "order_match_id" in event_bindings
+        and "id" in event_bindings
+        and event_bindings["order_match_id"] == event_bindings["id"]
+    ):
         del event_bindings["order_match_id"]
     return event_bindings
 

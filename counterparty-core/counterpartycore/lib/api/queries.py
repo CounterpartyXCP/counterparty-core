@@ -253,8 +253,10 @@ def select_rows(
         query = f"{query} OFFSET ?"
         bindings.append(offset)
 
+    print(query, bindings)
     cursor.execute(query, bindings)
     result = cursor.fetchall()
+    print(result)
 
     cursor.execute(query_count, bindings_count)
     result_count = cursor.fetchone()["count"]
