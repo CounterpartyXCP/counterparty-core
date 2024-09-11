@@ -1371,7 +1371,7 @@ def compose_broadcast(
     """
     Composes a transaction to broadcast textual and numerical information to the network.
     :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_1)
-    :param timestamp: The timestamp of the broadcast, in Unix time (e.g. 4003903983)
+    :param timestamp: The timestamp of the broadcast, in Unix time (e.g. 4003903985)
     :param value: Numerical value of the broadcast (e.g. 100)
     :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent) (e.g. 0.05)
     :param text: The textual part of the broadcast (e.g. "Hello, world!")
@@ -1441,7 +1441,7 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     """
     Composes a transaction to cancel an open order or bet.
     :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_1)
-    :param offer_hash: The hash of the order/bet to be cancelled (e.g. 8ce3335391bf71f8f12c0573b4f85b9adc4882a9955d9f8e5ababfdd0060279a)
+    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_ORDER_TX_HASH)
     """
     params = {"source": address, "offer_hash": offer_hash}
     rawtransaction = compose_transaction(
@@ -1615,7 +1615,7 @@ def compose_mpma(
     :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_1)
     :param assets: comma-separated list of assets to send (e.g. XCP,$ASSET_5)
     :param destinations: comma-separated list of addresses to send to (e.g. $ADDRESS_1,$ADDRESS_2)
-    :param quantities: comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2,3)
+    :param quantities: comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2)
     :param memo: The Memo associated with this transaction (e.g. "Hello, world!")
     :param memo_is_hex: Whether the memo field is a hexadecimal string (e.g. False)
     """
@@ -1748,7 +1748,7 @@ def compose_dispense(
     """
     Composes a transaction to send BTC to a dispenser.
     :param address: The address that will be sending (must have the necessary quantity of BTC) (e.g. $ADDRESS_2)
-    :param dispenser: The dispenser that will be receiving the asset (e.g. $ADDRESS_1)
+    :param dispenser: The dispenser that will be receiving the asset (e.g. $ADDRESS_4)
     :param quantity: The quantity of BTC to send (in satoshis, hence integer) (e.g. 1000)
     """
     params = {
@@ -1879,9 +1879,9 @@ def compose_fairminter(
 def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construct_args):
     """
     Composes a transaction to mint a quantity of an asset using the FairMinter protocol.
-    :param address: The address that will be minting the asset (e.g. $ADDRESS_2)
+    :param address: The address that will be minting the asset (e.g. $ADDRESS_1)
     :param asset: The asset to mint (e.g. $ASSET_3)
-    :param quantity: The quantity of the asset to mint (in satoshis, hence integer) (e.g. 1000)
+    :param quantity: The quantity of the asset to mint (in satoshis, hence integer) (e.g. 1)
     """
     params = {"source": address, "asset": asset, "quantity": quantity}
     rawtransaction = compose_transaction(
@@ -1960,7 +1960,7 @@ def compose_detach(
     """
     Detach assets from UTXO to an address.
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
-    :param destination: The address to detach the assets to
+    :param destination: The address to detach the assets to (e.g. $ADDRESS_1)
     :param asset: The asset or subasset to detach (e.g. XCP)
     :param quantity: The quantity of the asset to detach (in satoshis, hence integer) (e.g. 1000)
     """
@@ -2037,7 +2037,7 @@ def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
-    :param rawtransaction: Raw transaction in hex format (e.g. 01000000017828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986010000006b483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202ffffffff0200000000000000004d6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec3c2b0100000000001976a91443434cf159cc585fbd74daa9c4b833235b19761b88ac00000000)
+    :param rawtransaction: Raw transaction in hex format (e.g. $RAW_TRANSACTION_1)
     :param block_index: Block index mandatory for transactions before block 335000
     """
     decoded_tx = deserialize.deserialize_tx(

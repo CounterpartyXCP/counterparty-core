@@ -463,7 +463,9 @@ utxo = json.loads(
         "-regtest", "listunspent", 0, 9999999, f'["{REGTEST_FIXTURES["$ADDRESS_1"]}"]'
     ).strip()
 )[0]
+txid = utxo["txid"]
 utxo = utxo["txid"] + ":" + str(utxo["vout"])
+
 REGTEST_FIXTURES["$UTXO_1_ADDRESS_1"] = utxo
 
 # get utxo with balance
@@ -473,6 +475,11 @@ cursor.execute(
 row = cursor.fetchone()
 REGTEST_FIXTURES["$UTXO_WITH_BALANCE"] = row["utxo"]
 
+# rawtransaction
+REGTEST_FIXTURES["$RAW_TRANSACTION_1"] = sh.bitcoin_cli(
+    "-regtest", "getrawtransaction", txid
+).strip()
+
 # block and tx with sweeps
 cursor.execute("SELECT block_index, tx_hash FROM sweeps ORDER BY rowid DESC LIMIT 1")
 row = cursor.fetchone()
@@ -480,10 +487,13 @@ REGTEST_FIXTURES["$LAST_SWEEP_BLOCK"] = row["block_index"]
 REGTEST_FIXTURES["$LAST_SWEEP_TX_HASH"] = row["tx_hash"]
 
 # block and tx with btcpay
-cursor.execute("SELECT block_index, tx_hash FROM btcpays ORDER BY rowid DESC LIMIT 1")
+cursor.execute(
+    "SELECT block_index, tx_hash, order_match_id FROM btcpays ORDER BY rowid DESC LIMIT 1"
+)
 row = cursor.fetchone()
 REGTEST_FIXTURES["$LAST_BTCPAY_BLOCK"] = row["block_index"]
 REGTEST_FIXTURES["$LAST_BTCPAY_TX_HASH"] = row["tx_hash"]
+REGTEST_FIXTURES["$ORDER_WITH_BTCPAY_HASH"] = row["order_match_id"].split("_")[0]
 
 # block and tx with broadcasts
 cursor.execute("SELECT block_index, tx_hash FROM broadcasts ORDER BY rowid DESC LIMIT 1")
@@ -496,6 +506,33 @@ cursor.execute("SELECT block_index, id FROM order_matches ORDER BY rowid DESC LI
 row = cursor.fetchone()
 REGTEST_FIXTURES["$LAST_ORDER_MATCH_BLOCK"] = row["block_index"]
 REGTEST_FIXTURES["$LAST_ORDER_MATCH_ID"] = row["id"]
+REGTEST_FIXTURES["$ORDER_WITH_MATCH_HASH"] = row["id"].split("_")[0]
+
+# block with cancels
+cursor.execute("SELECT block_index FROM cancels ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_CANCEL_BLOCK"] = row["block_index"]
+
+# block with credits
+cursor.execute("SELECT block_index FROM credits ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_CREDIT_BLOCK"] = row["block_index"]
+
+# block with debits
+cursor.execute("SELECT block_index FROM debits ORDER BY rowid DESC LIMIT 1")
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_DEBIT_BLOCK"] = row["block_index"]
+
+# transactions with events
+cursor.execute(
+    "SELECT tx_hash, block_index FROM messages WHERE event='CREDIT' ORDER BY rowid DESC LIMIT 1"
+)
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_EVENT_TX_HASH"] = row["tx_hash"]
+REGTEST_FIXTURES["$LAST_EVENT_BLOCK"] = row["block_index"]
+cursor.execute("SELECT tx_index FROM transactions WHERE tx_hash=?", (row["tx_hash"],))
+row = cursor.fetchone()
+REGTEST_FIXTURES["$LAST_EVENT_TX_INDEX"] = row["tx_index"]
 
 # print(REGTEST_FIXTURES)
 # exit()

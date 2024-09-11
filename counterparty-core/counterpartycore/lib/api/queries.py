@@ -450,7 +450,7 @@ def get_events_by_block(
 ):
     """
     Returns the events of a block
-    :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
+    :param int block_index: The index of the block to return (e.g. $LAST_EVENT_BLOCK)
     :param str event_name: Comma separated list of events to return
     :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
@@ -481,7 +481,7 @@ def get_events_by_transaction_hash(
 ):
     """
     Returns the events of a transaction
-    :param str tx_hash: The hash of the transaction to return (e.g. $LAST_TX_HASH)
+    :param str tx_hash: The hash of the transaction to return (e.g. $LAST_EVENT_TX_HASH)
     :param str event_name: Comma separated list of events to return
     :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
@@ -507,7 +507,7 @@ def get_events_by_transaction_hash_and_event(
 ):
     """
     Returns the events of a transaction
-    :param str tx_hash: The hash of the transaction to return (e.g. $LAST_TX_HASH)
+    :param str tx_hash: The hash of the transaction to return (e.g. $LAST_EVENT_TX_HASH)
     :param str event: The event to filter by (e.g. CREDIT)
     :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
@@ -535,9 +535,9 @@ def get_events_by_transaction_index(
 ):
     """
     Returns the events of a transaction
-    :param str tx_index: The index of the transaction to return (e.g. $LAST_TX_INDEX)
+    :param str tx_index: The index of the transaction to return (e.g. $LAST_EVENT_TX_INDEX)
     :param str event_name: Comma separated list of events to return
-    :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
+    :param str cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -559,7 +559,7 @@ def get_events_by_transaction_index_and_event(
 ):
     """
     Returns the events of a transaction
-    :param str tx_index: The index of the transaction to return (e.g. $LAST_TX_INDEX)
+    :param str tx_index: The index of the transaction to return (e.g. $LAST_EVENT_TX_INDEX)
     :param str event: The event to filter by (e.g. CREDIT)
     :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
@@ -578,7 +578,7 @@ def get_events_by_block_and_event(
 ):
     """
     Returns the events of a block filtered by event
-    :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
+    :param int block_index: The index of the block to return (e.g. $LAST_EVENT_BLOCK)
     :param str event: The event to filter by (e.g. CREDIT)
     :param str cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
@@ -826,7 +826,7 @@ def get_credits_by_block(
 ):
     """
     Returns the credits of a block
-    :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
+    :param int block_index: The index of the block to return (e.g. $LAST_CREDIT_BLOCK)
     :param str action: The action to filter by
     :param str cursor: The last credit index to return
     :param int limit: The maximum number of credits to return (e.g. 5)
@@ -899,7 +899,7 @@ def get_debits_by_block(
 ):
     """
     Returns the debits of a block
-    :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
+    :param int block_index: The index of the block to return (e.g. $LAST_DEBIT_BLOCK)
     :param str action: The action to filter by
     :param str cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
@@ -1052,7 +1052,7 @@ def get_expirations(db, block_index: int, cursor: str = None, limit: int = 100, 
 def get_cancels(db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None):
     """
     Returns the cancels of a block
-    :param int block_index: The index of the block to return (e.g. 839746)
+    :param int block_index: The index of the block to return (e.g. $LAST_CANCEL_BLOCK)
     :param str cursor: The last index of the cancels to return
     :param int limit: The maximum number of cancels to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2236,7 +2236,7 @@ def get_order_matches_by_order(
 ):
     """
     Returns the order matches of an order
-    :param str order_hash: The hash of the transaction that created the order (e.g. $LAST_ORDER_TX_HASH)
+    :param str order_hash: The hash of the transaction that created the order (e.g. $ORDER_WITH_MATCH_HASH)
     :param str status: The status of the order matches to return
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
@@ -2332,7 +2332,7 @@ def get_btcpays_by_order(
 ):
     """
     Returns the BTC pays of an order
-    :param str order_hash: The hash of the transaction that created the order (e.g. $LAST_ORDER_TX_HASH)
+    :param str order_hash: The hash of the transaction that created the order (e.g. $ORDER_WITH_BTCPAY_HASH)
     :param str cursor: The last index of the resolutions to return
     :param int limit: The maximum number of resolutions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)

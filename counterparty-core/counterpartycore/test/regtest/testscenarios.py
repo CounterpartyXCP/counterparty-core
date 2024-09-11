@@ -20,6 +20,8 @@ from scenarios import (
     scenario_10_broadcast,
     scenario_11_send,
     scenario_12_sweep,
+    scenario_13_cancel,
+    scenario_14_dispenser,
 )
 from termcolor import colored
 
@@ -36,6 +38,8 @@ SCENARIOS += scenario_9_btcpay.SCENARIO
 SCENARIOS += scenario_10_broadcast.SCENARIO
 SCENARIOS += scenario_11_send.SCENARIO
 SCENARIOS += scenario_12_sweep.SCENARIO
+SCENARIOS += scenario_13_cancel.SCENARIO
+SCENARIOS += scenario_14_dispenser.SCENARIO
 
 
 def compare_strings(string1, string2):
