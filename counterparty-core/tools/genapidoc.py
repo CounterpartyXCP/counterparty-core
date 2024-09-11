@@ -313,26 +313,26 @@ def gen_events_doc():
 
 def gen_unpack_doc(db):
     message_type_names = [
-        # "bet",
         "broadcast",
         "btcpay",
         "cancel",
-        # "destroy",
+        "destroy",
         "dispenser",
         "dispense",
         "dividend",
         "issuance",
         "order",
-        # "send",
         "enhanced_send",
         "mpma_send",
         "sweep",
+        # "send",
+        # "bet",
     ]
     message_type_tx_index = {
         "cancel": 51,
         "dispenser": 18,
         "enhanced_send": 47,
-        # "destroy": "379d40c067f8ecfbbdc59e030a383d746b7f94e8a1a7e2cd8f66cd2bd3523d4b",
+        "destroy": 54,
         "dispense": 19,
         "issuance": 30,
         "order": 34,
@@ -341,8 +341,8 @@ def gen_unpack_doc(db):
         "dividend": 27,
         "sweep": 49,
         "btcpay": 44,
-        # "send": "4f9e6c847d414599adee5ea7ac46ddb337088da3669b7b4d0ebdd4979184b541",
-        # "bet": "6f2deeab17f2559edcdd952e8d942ac7adf2679df382bfdbf2a554beb32729cf",
+        # "send": ,
+        # "bet": ,
     }
 
     md = f"\nThere are {len(message_type_names)} types of transactions:\n\n"

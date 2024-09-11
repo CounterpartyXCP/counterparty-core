@@ -22,6 +22,7 @@ from scenarios import (
     scenario_12_sweep,
     scenario_13_cancel,
     scenario_14_dispenser,
+    scenario_15_destroy,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -41,6 +42,7 @@ SCENARIOS += scenario_11_send.SCENARIO
 SCENARIOS += scenario_12_sweep.SCENARIO
 SCENARIOS += scenario_13_cancel.SCENARIO
 SCENARIOS += scenario_14_dispenser.SCENARIO
+SCENARIOS += scenario_15_destroy.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
