@@ -22,6 +22,7 @@ BetMatchesStatus = Literal[
     "settled: liquidated for bear",
 ]
 DebitAction = Literal[
+    None,
     "bet",
     "destroy",
     "dividend",
@@ -40,6 +41,7 @@ DebitAction = Literal[
     "sweep fee",
 ]
 CreditAction = Literal[
+    None,
     "Closed: Max dispenses reached",
     "bet settled: for equal",
     "bet settled: for notequal",
@@ -863,7 +865,8 @@ def get_credits_by_address(
     """
     where = [{"address": address, "quantity__gt": 0}, {"utxo_address": address, "quantity__gt": 0}]
     if action:
-        where["calling_function"] = action
+        where[0]["calling_function"] = action
+        where[1]["calling_function"] = action
     return select_rows(db, "credits", where=where, last_cursor=cursor, limit=limit, offset=offset)
 
 
@@ -936,7 +939,8 @@ def get_debits_by_address(
     """
     where = [{"address": address, "quantity__gt": 0}, {"utxo_address": address, "quantity__gt": 0}]
     if action:
-        where["action"] = action
+        where[0]["action"] = action
+        where[1]["action"] = action
     return select_rows(db, "debits", where=where, last_cursor=cursor, limit=limit, offset=offset)
 
 

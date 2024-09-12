@@ -151,11 +151,7 @@ def get_example_output(path, args):
 
 
 def include_in_dredd(group, path):
-    if group in ["compose", "bitcoin", "mempool"]:
-        return False
-    if "/v2/events" in path:
-        return False
-    if "mempool" in path:
+    if "/bet" in path:
         return False
     return True
 
