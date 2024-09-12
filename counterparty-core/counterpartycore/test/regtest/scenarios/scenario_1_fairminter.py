@@ -335,7 +335,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/124/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT",
                 "result": [
                     {
                         "event": "CREDIT",
@@ -541,7 +541,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/125/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT,FAIRMINTER_UPDATE",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT,FAIRMINTER_UPDATE",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",

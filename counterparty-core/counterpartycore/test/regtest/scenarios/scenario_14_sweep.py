@@ -13,7 +13,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/183/events?event_name=SWEEP,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=SWEEP,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "SWEEP",

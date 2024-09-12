@@ -13,7 +13,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/141/events?event_name=UTXO_MOVE,DEBIT,CREDIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=UTXO_MOVE,DEBIT,CREDIT",
                 "result": [
                     {
                         "event": "UTXO_MOVE",
@@ -136,7 +136,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/142/events?event_name=UTXO_MOVE,DEBIT,CREDIT,ASSET_CREATION,ASSET_ISSUANCE",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=UTXO_MOVE,DEBIT,CREDIT,ASSET_CREATION,ASSET_ISSUANCE",
                 "result": [
                     {
                         "event": "CREDIT",

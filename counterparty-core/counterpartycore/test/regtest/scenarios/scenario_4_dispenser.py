@@ -15,7 +15,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/131/events?event_name=OPEN_DISPENSER,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=OPEN_DISPENSER,DEBIT",
                 "result": [
                     {
                         "event": "OPEN_DISPENSER",
@@ -67,7 +67,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/132/events?event_name=NEW_TRANSACTION,NEW_TRANSACTION_OUTPUT,CREDIT,DISPENSER_UPDATE,DISPENSE",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=NEW_TRANSACTION,NEW_TRANSACTION_OUTPUT,CREDIT,DISPENSER_UPDATE,DISPENSE",
                 "result": [
                     {
                         "event": "DISPENSE",
@@ -180,7 +180,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/133/events?event_name=NEW_TRANSACTION,NEW_TRANSACTION_OUTPUT,CREDIT,DISPENSER_UPDATE,DISPENSE",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=NEW_TRANSACTION,NEW_TRANSACTION_OUTPUT,CREDIT,DISPENSER_UPDATE,DISPENSE",
                 "result": [
                     {
                         "event": "DISPENSE",

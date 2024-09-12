@@ -10,7 +10,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/143/events?event_name=ASSET_ISSUANCE,CREDIT,DEBIT,ASSET_CREATION",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ASSET_ISSUANCE,CREDIT,DEBIT,ASSET_CREATION",
                 "result": [
                     {
                         "event": "CREDIT",
@@ -97,7 +97,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/144/events?event_name=ASSET_ISSUANCE,ASSET_CREATION,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ASSET_ISSUANCE,ASSET_CREATION,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
@@ -168,7 +168,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/145/events?event_name=ASSET_ISSUANCE,ASSET_CREATION,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ASSET_ISSUANCE,ASSET_CREATION,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
@@ -239,7 +239,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/146/events?event_name=ASSET_ISSUANCE,ASSET_CREATION,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ASSET_ISSUANCE,ASSET_CREATION,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "CREDIT",

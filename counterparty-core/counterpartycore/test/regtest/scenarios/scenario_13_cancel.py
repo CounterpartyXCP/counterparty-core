@@ -13,18 +13,19 @@ SCENARIO = [
         },
         "set_variables": {
             "ORDER_6_HASH": "$TX_HASH",
+            "ORDER_6_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 21",
         },
         "controls": [
             {
-                "url": "blocks/184/events?event_name=OPEN_ORDER,DEBIT,CREDIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=OPEN_ORDER,DEBIT,CREDIT",
                 "result": [
                     {
                         "event": "OPEN_ORDER",
-                        "event_index": 474,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "expiration": 21,
-                            "expire_index": 205,
+                            "expire_index": "$ORDER_6_EXPIRATION_BLOCK_INDEX",
                             "fee_provided": 22902,
                             "fee_provided_remaining": 22902,
                             "fee_required": 0,
@@ -44,7 +45,7 @@ SCENARIO = [
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": 473,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "action": "open order",
                             "address": "$ADDRESS_1",
@@ -71,11 +72,11 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/185/events?event_name=CANCEL_ORDER,CREDIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=CANCEL_ORDER,CREDIT,ORDER_UPDATE",
                 "result": [
                     {
                         "event": "CANCEL_ORDER",
-                        "event_index": 481,
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "offer_hash": "$ORDER_6_HASH",
@@ -88,7 +89,7 @@ SCENARIO = [
                     },
                     {
                         "event": "CREDIT",
-                        "event_index": 480,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "address": "$ADDRESS_1",
                             "asset": "XCP",
@@ -100,6 +101,12 @@ SCENARIO = [
                             "utxo": None,
                             "utxo_address": None,
                         },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "ORDER_UPDATE",
+                        "event_index": "$EVENT_INDEX_3",
+                        "params": {"status": "cancelled", "tx_hash": "$ORDER_6_HASH"},
                         "tx_hash": "$TX_HASH",
                     },
                 ],
@@ -120,10 +127,11 @@ SCENARIO = [
         },
         "set_variables": {
             "ORDER_7_HASH": "$TX_HASH",
+            "ORDER_7_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 21",
         },
         "controls": [
             {
-                "url": "blocks/186/events?event_name=OPEN_ORDER,DEBIT,CREDIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=OPEN_ORDER,DEBIT,CREDIT",
                 "result": [
                     {
                         "event": "OPEN_ORDER",
@@ -131,7 +139,7 @@ SCENARIO = [
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "expiration": 21,
-                            "expire_index": 207,
+                            "expire_index": "$ORDER_7_EXPIRATION_BLOCK_INDEX",
                             "fee_provided": 24931,
                             "fee_provided_remaining": 24931,
                             "fee_required": 0,

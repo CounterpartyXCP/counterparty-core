@@ -13,7 +13,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/188/events?event_name=ASSET_DESTRUCTION,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ASSET_DESTRUCTION,DEBIT",
                 "result": [
                     {
                         "event": "ASSET_DESTRUCTION",

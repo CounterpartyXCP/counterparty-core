@@ -13,7 +13,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/181/events?event_name=ENHANCED_SEND,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ENHANCED_SEND,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "ENHANCED_SEND",
@@ -81,7 +81,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/182/events?event_name=MPMA_SEND,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=MPMA_SEND,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "MPMA_SEND",

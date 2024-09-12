@@ -67,7 +67,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/127/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
@@ -181,7 +181,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/128/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT,NEW_TRANSACTION",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT,NEW_TRANSACTION",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
@@ -313,7 +313,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/129/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=CREDIT,DEBIT,ASSET_ISSUANCE,NEW_FAIRMINT",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
@@ -419,7 +419,7 @@ SCENARIO = [
         "params": {"blocks": 1},
         "controls": [
             {
-                "url": "blocks/130/events?event_name=ASSET_DESTRUCTION,ASSET_ISSUANCE,FAIRMINTER_UPDATE,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ASSET_DESTRUCTION,ASSET_ISSUANCE,FAIRMINTER_UPDATE,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "ASSET_DESTRUCTION",

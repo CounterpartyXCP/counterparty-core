@@ -13,7 +13,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/170/events?event_name=DEBIT,ASSET_ISSUANCE,ASSET_CREATION,NEW_FAIRMINTER,CREDIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=DEBIT,ASSET_ISSUANCE,ASSET_CREATION,NEW_FAIRMINTER,CREDIT",
                 "result": [
                     {
                         "event": "DEBIT",
@@ -114,7 +114,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/171/events?event_name=DEBIT,CREDIT,NEW_FAIRMINT,ASSET_ISSUANCE",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=DEBIT,CREDIT,NEW_FAIRMINT,ASSET_ISSUANCE",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
@@ -224,7 +224,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/172/events?event_name=DEBIT,CREDIT,NEW_FAIRMINT,ASSET_ISSUANCE",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=DEBIT,CREDIT,NEW_FAIRMINT,ASSET_ISSUANCE",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
@@ -334,7 +334,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/173/events?event_name=DEBIT,CREDIT,NEW_FAIRMINT,ASSET_ISSUANCE",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=DEBIT,CREDIT,NEW_FAIRMINT,ASSET_ISSUANCE",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
@@ -448,7 +448,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/174/events?event_name=DEBIT,ASSET_ISSUANCE,ASSET_CREATION,NEW_FAIRMINTER",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=DEBIT,ASSET_ISSUANCE,ASSET_CREATION,NEW_FAIRMINTER",
                 "result": [
                     {
                         "event": "DEBIT",
@@ -549,7 +549,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/175/events?event_name=DEBIT,CREDIT,NEW_FAIRMINT,ASSET_ISSUANCE",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=DEBIT,CREDIT,NEW_FAIRMINT,ASSET_ISSUANCE",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",

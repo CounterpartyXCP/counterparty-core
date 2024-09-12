@@ -14,7 +14,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/180/events?event_name=BROADCAST",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=BROADCAST",
                 "result": [
                     {
                         "event": "BROADCAST",

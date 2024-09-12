@@ -10,18 +10,18 @@ from regtestnode import ComposeError, RegtestNodeThread
 from scenarios import (
     scenario_1_fairminter,
     scenario_2_fairminter,
-    scenario_3_dispenser,
-    scenario_4_utxo,
-    scenario_5_atomicswap,
-    scenario_6_issuance,
-    scenario_7_orders,
-    scenario_8_fairminter,
-    scenario_9_btcpay,
-    scenario_10_broadcast,
-    scenario_11_send,
-    scenario_12_sweep,
+    scenario_3_fairminter,
+    scenario_4_dispenser,
+    scenario_5_dispenser,
+    scenario_6_utxo,
+    scenario_7_atomicswap,
+    scenario_8_issuance,
+    scenario_9_broadcast,
+    scenario_10_orders,
+    scenario_11_btcpay,
+    scenario_12_send,
     scenario_13_cancel,
-    scenario_14_dispenser,
+    scenario_14_sweep,
     scenario_15_destroy,
     scenario_last_mempool,
 )
@@ -30,18 +30,18 @@ from termcolor import colored
 SCENARIOS = []
 SCENARIOS += scenario_1_fairminter.SCENARIO
 SCENARIOS += scenario_2_fairminter.SCENARIO
-SCENARIOS += scenario_3_dispenser.SCENARIO
-SCENARIOS += scenario_4_utxo.SCENARIO
-SCENARIOS += scenario_5_atomicswap.SCENARIO
-SCENARIOS += scenario_6_issuance.SCENARIO
-SCENARIOS += scenario_7_orders.SCENARIO
-SCENARIOS += scenario_8_fairminter.SCENARIO
-SCENARIOS += scenario_9_btcpay.SCENARIO
-SCENARIOS += scenario_10_broadcast.SCENARIO
-SCENARIOS += scenario_11_send.SCENARIO
-SCENARIOS += scenario_12_sweep.SCENARIO
+SCENARIOS += scenario_3_fairminter.SCENARIO
+SCENARIOS += scenario_4_dispenser.SCENARIO
+SCENARIOS += scenario_5_dispenser.SCENARIO
+SCENARIOS += scenario_6_utxo.SCENARIO
+SCENARIOS += scenario_7_atomicswap.SCENARIO
+SCENARIOS += scenario_8_issuance.SCENARIO
+SCENARIOS += scenario_9_broadcast.SCENARIO
+SCENARIOS += scenario_10_orders.SCENARIO
+SCENARIOS += scenario_11_btcpay.SCENARIO
+SCENARIOS += scenario_12_send.SCENARIO
 SCENARIOS += scenario_13_cancel.SCENARIO
-SCENARIOS += scenario_14_dispenser.SCENARIO
+SCENARIOS += scenario_14_sweep.SCENARIO
 SCENARIOS += scenario_15_destroy.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
@@ -73,10 +73,13 @@ def prepare_item(item, node, context):
 
 
 def control_result(item, node, context, block_hash, block_time, tx_hash):
-    events = node.api_call(f"blocks/{str(node.block_count)}/events")["result"]
+    block_index = node.block_count
+    events = node.api_call(f"blocks/{block_index}/events")["result"]
     event_indexes = sorted([event["event_index"] for event in events])
     for control in item["controls"]:
-        control_url = control["url"].replace("$TX_HASH", tx_hash)
+        control_url = (
+            control["url"].replace("$TX_HASH", tx_hash).replace("$BLOCK_INDEX", str(block_index))
+        )
         for i, address in enumerate(node.addresses):
             control_url = control_url.replace(f"$ADDRESS_{i+1}", address)
         result = node.api_call(control_url)
@@ -86,7 +89,7 @@ def control_result(item, node, context, block_hash, block_time, tx_hash):
             json.dumps(expected_result)
             .replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
-            .replace('"$BLOCK_INDEX"', str(node.block_count))
+            .replace('"$BLOCK_INDEX"', str(block_index))
             .replace('"$TX_INDEX"', str(node.tx_index))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
@@ -164,15 +167,18 @@ def run_item(node, item, context):
             else:
                 raise e
 
-    if "controls" in item:
-        control_result(item, node, context, block_hash, block_time, tx_hash)
-
     for name, value in item.get("set_variables", {}).items():
         context[name] = (
             value.replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
             .replace("$TX_INDEX", str(node.tx_index))
+            .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
+            .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))  # TODO: make it more generic
+            .replace("$BLOCK_INDEX", str(node.block_count))
         )
+
+    if "controls" in item:
+        control_result(item, node, context, block_hash, block_time, tx_hash)
 
     return context
 

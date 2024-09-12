@@ -11,7 +11,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/134/events?event_name=CREDIT,ASSET_ISSUANCE,ASSET_CREATION,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=CREDIT,ASSET_ISSUANCE,ASSET_CREATION,DEBIT",
                 "result": [
                     {
                         "event": "CREDIT",
@@ -98,7 +98,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/135/events?event_name=ATTACH_TO_UTXO,INCREMENT_TRANSACTION_COUNT,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ATTACH_TO_UTXO,INCREMENT_TRANSACTION_COUNT,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "ATTACH_TO_UTXO",
@@ -175,7 +175,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/136/events?event_name=UTXO_MOVE,CREDIT,DEBIT,NEW_TRANSACTION",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=UTXO_MOVE,CREDIT,DEBIT,NEW_TRANSACTION",
                 "result": [
                     {
                         "event": "UTXO_MOVE",
@@ -259,7 +259,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/137/events?event_name=DETACH_FROM_UTXO,INCREMENT_TRANSACTION_COUNT,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=DETACH_FROM_UTXO,INCREMENT_TRANSACTION_COUNT,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "DETACH_FROM_UTXO",
@@ -327,7 +327,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/138/events?event_name=ATTACH_TO_UTXO,INCREMENT_TRANSACTION_COUNT,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ATTACH_TO_UTXO,INCREMENT_TRANSACTION_COUNT,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "ATTACH_TO_UTXO",
@@ -405,7 +405,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/139/events?event_name=UTXO_MOVE,CREDIT,DEBIT,NEW_TRANSACTION",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=UTXO_MOVE,CREDIT,DEBIT,NEW_TRANSACTION",
                 "result": [
                     {
                         "event": "UTXO_MOVE",
@@ -599,7 +599,7 @@ SCENARIO = [
                         "addresses": [
                             {
                                 "address": "$ADDRESS_1",
-                                "quantity": 84849988167,
+                                "quantity": 84749988206,
                                 "utxo": None,
                                 "utxo_address": None,
                             },
@@ -617,7 +617,7 @@ SCENARIO = [
                             },
                         ],
                         "asset": "XCP",
-                        "total": 234849983000,
+                        "total": 234749983039,
                     },
                 ],
             },
@@ -647,7 +647,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/140/events?event_name=ASSET_DIVIDEND,CREDIT,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ASSET_DIVIDEND,CREDIT,DEBIT",
                 "result": [
                     {
                         "event": "ASSET_DIVIDEND",

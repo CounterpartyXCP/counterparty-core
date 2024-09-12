@@ -15,7 +15,7 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/187/events?event_name=OPEN_DISPENSER,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=OPEN_DISPENSER,DEBIT",
                 "result": [
                     {
                         "event": "OPEN_DISPENSER",
