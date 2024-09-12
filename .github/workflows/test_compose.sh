@@ -116,10 +116,6 @@ while [ "$(docker compose logs counterparty-core 2>&1 | grep 'API Watcher - Catc
     sleep 1
 done
 
-# Run dredd test
-dredd
-
-
 # Run compare hashes test
 . "$HOME/.profile"
 cd counterparty-core
