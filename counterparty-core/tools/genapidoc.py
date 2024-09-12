@@ -169,7 +169,7 @@ def gen_groups_toc():
 
     toc = ""
     for group in groups:
-        toc += f"- [`{group}`](#/reference{group})\n"
+        toc += f"- [`{group}`](#/reference/{group})\n"
     return toc
 
 
