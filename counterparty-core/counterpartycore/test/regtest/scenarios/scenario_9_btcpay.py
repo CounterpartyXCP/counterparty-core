@@ -20,9 +20,9 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "OPEN_ORDER",
-                        "event_index": 408,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
-                            "block_index": 176,
+                            "block_index": "$BLOCK_INDEX",
                             "expiration": 21,
                             "expire_index": 197,
                             "fee_provided": 15579,
@@ -38,21 +38,21 @@ SCENARIO = [
                             "source": "$ADDRESS_1",
                             "status": "open",
                             "tx_hash": "$TX_HASH",
-                            "tx_index": 42,
+                            "tx_index": "$TX_INDEX",
                         },
                         "tx_hash": "$TX_HASH",
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": 407,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "action": "open order",
                             "address": "$ADDRESS_1",
                             "asset": "XCP",
-                            "block_index": 176,
+                            "block_index": "$BLOCK_INDEX",
                             "event": "$TX_HASH",
                             "quantity": 10000,
-                            "tx_index": 42,
+                            "tx_index": "$TX_INDEX",
                             "utxo": None,
                             "utxo_address": None,
                         },
@@ -83,11 +83,11 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "ORDER_MATCH",
-                        "event_index": 416,
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "backward_asset": "BTC",
                             "backward_quantity": 2000,
-                            "block_index": 177,
+                            "block_index": "$BLOCK_INDEX",
                             "fee_paid": 0,
                             "forward_asset": "XCP",
                             "forward_quantity": 2000,
@@ -109,7 +109,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 415,
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "fee_provided_remaining": 15579,
                             "fee_required_remaining": 0,
@@ -122,7 +122,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 414,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "fee_provided_remaining": 15579,
                             "fee_required_remaining": 0,
@@ -135,9 +135,9 @@ SCENARIO = [
                     },
                     {
                         "event": "OPEN_ORDER",
-                        "event_index": 413,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
-                            "block_index": 177,
+                            "block_index": "$BLOCK_INDEX",
                             "expiration": 21,
                             "expire_index": 198,
                             "fee_provided": 15579,
@@ -153,7 +153,7 @@ SCENARIO = [
                             "source": "$ADDRESS_2",
                             "status": "open",
                             "tx_hash": "$TX_HASH",
-                            "tx_index": 43,
+                            "tx_index": "$TX_INDEX",
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -177,28 +177,28 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "BTC_PAY",
-                        "event_index": 424,
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
-                            "block_index": 178,
+                            "block_index": "$BLOCK_INDEX",
                             "btc_amount": 2000,
                             "destination": "$ADDRESS_1",
                             "order_match_id": "$ORDER_3_HASH_$ORDER_4_HASH",
                             "source": "$ADDRESS_2",
                             "status": "valid",
                             "tx_hash": "$TX_HASH",
-                            "tx_index": 44,
+                            "tx_index": "$TX_INDEX",
                         },
                         "tx_hash": "$TX_HASH",
                     },
                     {
                         "event": "ORDER_FILLED",
-                        "event_index": 423,
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {"status": "filled", "tx_hash": "$ORDER_4_HASH"},
                         "tx_hash": "$TX_HASH",
                     },
                     {
                         "event": "ORDER_MATCH_UPDATE",
-                        "event_index": 422,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "id": "$ORDER_3_HASH_$ORDER_4_HASH",
                             "order_match_id": "$ORDER_3_HASH_$ORDER_4_HASH",
@@ -208,15 +208,15 @@ SCENARIO = [
                     },
                     {
                         "event": "CREDIT",
-                        "event_index": 421,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "address": "$ADDRESS_2",
                             "asset": "XCP",
-                            "block_index": 178,
+                            "block_index": "$BLOCK_INDEX",
                             "calling_function": "btcpay",
                             "event": "$TX_HASH",
                             "quantity": 2000,
-                            "tx_index": 44,
+                            "tx_index": "$TX_INDEX",
                             "utxo": None,
                             "utxo_address": None,
                         },
@@ -247,11 +247,11 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "ORDER_MATCH",
-                        "event_index": 432,
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "backward_asset": "BTC",
                             "backward_quantity": 3000,
-                            "block_index": 179,
+                            "block_index": "$BLOCK_INDEX",
                             "fee_paid": 0,
                             "forward_asset": "XCP",
                             "forward_quantity": 3000,
@@ -273,7 +273,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 431,
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "fee_provided_remaining": 22902,
                             "fee_required_remaining": 0,
@@ -286,7 +286,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 430,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "fee_provided_remaining": 15579,
                             "fee_required_remaining": 0,
@@ -299,9 +299,9 @@ SCENARIO = [
                     },
                     {
                         "event": "OPEN_ORDER",
-                        "event_index": 429,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
-                            "block_index": 179,
+                            "block_index": "$BLOCK_INDEX",
                             "expiration": 21,
                             "expire_index": 200,
                             "fee_provided": 22902,
@@ -317,7 +317,7 @@ SCENARIO = [
                             "source": "$ADDRESS_3",
                             "status": "open",
                             "tx_hash": "$TX_HASH",
-                            "tx_index": 45,
+                            "tx_index": "$TX_INDEX",
                         },
                         "tx_hash": "$TX_HASH",
                     },

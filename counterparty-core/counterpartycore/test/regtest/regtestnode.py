@@ -35,6 +35,7 @@ class RegtestNode:
         self.bitcoind_process = None
         self.addresses = []
         self.block_count = 0
+        self.tx_index = -1
         self.ready = False
 
     def api_call(self, url):
@@ -56,6 +57,7 @@ class RegtestNode:
         else:
             block_hash, block_time = "mempool", 9999999
             time.sleep(5)  # wait for mempool to update, find a better way to do this
+        self.tx_index += 1
         self.wait_for_counterparty_server()
         return tx_hash, block_hash, block_time
 

@@ -19,10 +19,10 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "OPEN_DISPENSER",
-                        "event_index": 493,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "asset": "XCP",
-                            "block_index": 187,
+                            "block_index": "$BLOCK_INDEX",
                             "dispense_count": 0,
                             "escrow_quantity": 10000,
                             "give_quantity": 1,
@@ -33,21 +33,21 @@ SCENARIO = [
                             "source": "$ADDRESS_4",
                             "status": 0,
                             "tx_hash": "$TX_HASH",
-                            "tx_index": 53,
+                            "tx_index": "$TX_INDEX",
                         },
                         "tx_hash": "$TX_HASH",
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": 492,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "action": "open dispenser",
                             "address": "$ADDRESS_4",
                             "asset": "XCP",
-                            "block_index": 187,
+                            "block_index": "$BLOCK_INDEX",
                             "event": "$TX_HASH",
                             "quantity": 10000,
-                            "tx_index": 53,
+                            "tx_index": "$TX_INDEX",
                             "utxo": None,
                             "utxo_address": None,
                         },

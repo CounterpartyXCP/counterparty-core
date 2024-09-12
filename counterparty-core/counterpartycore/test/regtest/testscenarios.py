@@ -73,6 +73,8 @@ def prepare_item(item, node, context):
 
 
 def control_result(item, node, context, block_hash, block_time, tx_hash):
+    events = node.api_call(f"blocks/{str(node.block_count)}/events")["result"]
+    event_indexes = sorted([event["event_index"] for event in events])
     for control in item["controls"]:
         control_url = control["url"].replace("$TX_HASH", tx_hash)
         for i, address in enumerate(node.addresses):
@@ -84,12 +86,19 @@ def control_result(item, node, context, block_hash, block_time, tx_hash):
             json.dumps(expected_result)
             .replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
+            .replace('"$BLOCK_INDEX"', str(node.block_count))
+            .replace('"$TX_INDEX"', str(node.tx_index))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
+        for i, event_index in enumerate(event_indexes):
+            expected_result = expected_result.replace(f'"$EVENT_INDEX_{i + 1}"', str(event_index))
         for i, address in enumerate(node.addresses):
-            expected_result = expected_result.replace(f"$ADDRESS_{i+1}", address)
+            expected_result = expected_result.replace(f"$ADDRESS_{i + 1}", address)
         for name, value in context.items():
-            expected_result = expected_result.replace(f"${name}", value)
+            if name.endswith("_INDEX"):
+                expected_result = expected_result.replace(f'"${name}"', value)
+            else:
+                expected_result = expected_result.replace(f"${name}", value)
         expected_result = json.loads(expected_result)
 
         try:
@@ -159,7 +168,11 @@ def run_item(node, item, context):
         control_result(item, node, context, block_hash, block_time, tx_hash)
 
     for name, value in item.get("set_variables", {}).items():
-        context[name] = value.replace("$TX_HASH", tx_hash).replace("$BLOCK_HASH", block_hash)
+        context[name] = (
+            value.replace("$TX_HASH", tx_hash)
+            .replace("$BLOCK_HASH", block_hash)
+            .replace("$TX_INDEX", str(node.tx_index))
+        )
 
     return context
 
@@ -200,7 +213,7 @@ def run_scenarios(serve=False):
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        print(regtest_node_thread.node.server_out.getvalue())
+        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 
