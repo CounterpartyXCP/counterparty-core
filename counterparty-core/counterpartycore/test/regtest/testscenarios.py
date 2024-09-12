@@ -72,7 +72,7 @@ def prepare_item(item, node, context):
     return item
 
 
-def control_result(item, node, context, block_hash, block_time, tx_hash):
+def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0):
     block_index = node.block_count
     events = node.api_call(f"blocks/{block_index}/events")["result"]
     event_indexes = sorted([event["event_index"] for event in events])
@@ -83,6 +83,17 @@ def control_result(item, node, context, block_hash, block_time, tx_hash):
         for i, address in enumerate(node.addresses):
             control_url = control_url.replace(f"$ADDRESS_{i+1}", address)
         result = node.api_call(control_url)
+
+        if (
+            "result" in result
+            and result["result"] == []
+            and control.get("retry", False)
+            and retry < 10
+        ):
+            time.sleep(2)
+            return control_result(
+                item, node, context, block_hash, block_time, tx_hash, retry=retry + 1
+            )
 
         expected_result = control["result"]
         expected_result = (

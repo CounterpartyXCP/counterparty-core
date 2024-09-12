@@ -56,7 +56,7 @@ class RegtestNode:
             block_hash, block_time = self.mine_blocks(1)
         else:
             block_hash, block_time = "mempool", 9999999
-            time.sleep(5)  # wait for mempool to update, find a better way to do this
+            time.sleep(5)
         self.tx_index += 1
         self.wait_for_counterparty_server()
         return tx_hash, block_hash, block_time

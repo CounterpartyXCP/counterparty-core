@@ -15,6 +15,7 @@ SCENARIO = [
         "controls": [
             {
                 "url": "mempool/events?event_name=ENHANCED_SEND,CREDIT,DEBIT",
+                "retry": True,
                 "result": [
                     {
                         "event": "ENHANCED_SEND",
