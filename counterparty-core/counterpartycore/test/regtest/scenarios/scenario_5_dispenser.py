@@ -70,6 +70,9 @@ SCENARIO = [
             "status": 1,
             "open_address": "$ADDRESS_11",
         },
+        "set_variables": {
+            "DISPENSER_4_TX_HASH": "$TX_HASH",
+        },
         "controls": [
             {
                 "url": "blocks/$BLOCK_INDEX/events?event_name=OPEN_DISPENSER,DEBIT,CREDIT",
@@ -79,7 +82,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "asset": "XCP",
-                            "block_index": "$BLOCK_HASH",
+                            "block_index": "$BLOCK_INDEX",
                             "dispense_count": 0,
                             "escrow_quantity": 10,
                             "give_quantity": 1,
@@ -101,7 +104,7 @@ SCENARIO = [
                             "action": "open dispenser empty addr",
                             "address": "$ADDRESS_11",
                             "asset": "XCP",
-                            "block_index": "$BLOCK_HASH",
+                            "block_index": "$BLOCK_INDEX",
                             "event": "$TX_HASH",
                             "quantity": 10,
                             "tx_index": "$TX_INDEX",
@@ -116,7 +119,7 @@ SCENARIO = [
                         "params": {
                             "address": "$ADDRESS_11",
                             "asset": "XCP",
-                            "block_index": "$BLOCK_HASH",
+                            "block_index": "$BLOCK_INDEX",
                             "calling_function": "open dispenser empty addr",
                             "event": "$TX_HASH",
                             "quantity": 10,
@@ -133,7 +136,7 @@ SCENARIO = [
                             "action": "open dispenser empty addr",
                             "address": "$ADDRESS_1",
                             "asset": "XCP",
-                            "block_index": "$BLOCK_HASH",
+                            "block_index": "$BLOCK_INDEX",
                             "event": "$TX_HASH",
                             "quantity": 10,
                             "tx_index": "$TX_INDEX",
@@ -160,8 +163,53 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/$BLOCK_INDEX/events",
-                "result": [],
+                "url": "blocks/$BLOCK_INDEX/events?event_name=REFILL_DISPENSER,DISPENSER_UPDATE,DEBIT",
+                "result": [
+                    {
+                        "event": "REFILL_DISPENSER",
+                        "event_index": "$EVENT_INDEX_5",
+                        "params": {
+                            "asset": "XCP",
+                            "block_index": "$BLOCK_INDEX",
+                            "destination": "$ADDRESS_11",
+                            "dispense_quantity": 10,
+                            "dispenser_tx_hash": "$DISPENSER_4_TX_HASH",
+                            "source": "$ADDRESS_1",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": "$TX_INDEX",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "DISPENSER_UPDATE",
+                        "event_index": "$EVENT_INDEX_4",
+                        "params": {
+                            "asset": "XCP",
+                            "dispense_count": 0,
+                            "give_remaining": 20,
+                            "source": "$ADDRESS_1",
+                            "status": 0,
+                            "tx_hash": "$DISPENSER_4_TX_HASH",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "DEBIT",
+                        "event_index": "$EVENT_INDEX_3",
+                        "params": {
+                            "action": "refill dispenser",
+                            "address": "$ADDRESS_1",
+                            "asset": "XCP",
+                            "block_index": "$BLOCK_INDEX",
+                            "event": "$TX_HASH",
+                            "quantity": 10,
+                            "tx_index": "$TX_INDEX",
+                            "utxo": None,
+                            "utxo_address": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                ],
             },
         ],
     },

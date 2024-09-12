@@ -599,7 +599,7 @@ SCENARIO = [
                         "addresses": [
                             {
                                 "address": "$ADDRESS_1",
-                                "quantity": 84749988206,
+                                "quantity": 84749988186,
                                 "utxo": None,
                                 "utxo_address": None,
                             },
@@ -617,7 +617,7 @@ SCENARIO = [
                             },
                         ],
                         "asset": "XCP",
-                        "total": 234749983039,
+                        "total": 234749983019,
                     },
                 ],
             },

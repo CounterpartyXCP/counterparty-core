@@ -37,7 +37,7 @@ SCENARIO = [
                         "params": {
                             "address": "$ADDRESS_3",
                             "asset": "XCP",
-                            "block_index": 188,
+                            "block_index": 190,
                             "calling_function": "send",
                             "event": "$TX_HASH",
                             "quantity": 10000,
@@ -53,7 +53,7 @@ SCENARIO = [
                             "action": "send",
                             "address": "$ADDRESS_4",
                             "asset": "XCP",
-                            "block_index": 188,
+                            "block_index": 190,
                             "event": "$TX_HASH",
                             "quantity": 10000,
                             "tx_index": "$TX_INDEX",
