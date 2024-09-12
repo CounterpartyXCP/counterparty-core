@@ -62,7 +62,8 @@ def compare_strings(string1, string2):
 
 
 def prepare_item(item, node, context):
-    for i, address in enumerate(node.addresses):
+    for i in reversed(range(11)):
+        address = node.addresses[i]
         if "source" in item:
             item["source"] = item["source"].replace(f"$ADDRESS_{i+1}", address)
         for key in item["params"]:
@@ -85,7 +86,8 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0
         control_url = (
             control["url"].replace("$TX_HASH", tx_hash).replace("$BLOCK_INDEX", str(block_index))
         )
-        for i, address in enumerate(node.addresses):
+        for i in reversed(range(11)):
+            address = node.addresses[i]
             control_url = control_url.replace(f"$ADDRESS_{i+1}", address)
         result = node.api_call(control_url)
 
@@ -111,7 +113,8 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0
         )
         for i, event_index in enumerate(event_indexes):
             expected_result = expected_result.replace(f'"$EVENT_INDEX_{i + 1}"', str(event_index))
-        for i, address in enumerate(node.addresses):
+        for i in reversed(range(11)):
+            address = node.addresses[i]
             expected_result = expected_result.replace(f"$ADDRESS_{i + 1}", address)
         for name, value in context.items():
             if name.endswith("_INDEX"):
@@ -135,6 +138,9 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0
 
 def run_item(node, item, context):
     print(f"Running: {item['title']}")
+
+    if "disable_protocol_changes" in item:
+        node.disable_protocol_changes(item["disable_protocol_changes"])
 
     if item["transaction"] == "mine_blocks":
         block_hash, block_time = node.mine_blocks(item["params"]["blocks"])
@@ -182,6 +188,8 @@ def run_item(node, item, context):
                     # raise e
             else:
                 raise e
+
+    node.enable_all_protocol_changes()
 
     for name, value in item.get("set_variables", {}).items():
         context[name] = (

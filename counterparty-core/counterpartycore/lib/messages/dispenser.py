@@ -240,7 +240,12 @@ def validate(
         and source != open_address
         and status != STATUS_CLOSED
     ):
-        problems.append("dispenser must be created by source")
+        query_address = open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source
+        open_dispensers = ledger.get_dispensers(
+            db, status_in=[0, 11], address=query_address, asset=asset
+        )
+        if len(open_dispensers) == 0:
+            problems.append("dispenser must be created by source")
     else:
         if status == STATUS_OPEN_EMPTY_ADDRESS and not open_address:
             open_address = source

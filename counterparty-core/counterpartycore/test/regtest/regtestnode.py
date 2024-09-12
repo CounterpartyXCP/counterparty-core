@@ -50,6 +50,16 @@ class RegtestNode:
                 print("Waiting for bitcoind to start...")
                 time.sleep(1)
 
+    def disable_protocol_changes(self, change_names):
+        regtest_protocole_file = os.path.join(self.datadir, "regtest_disabled_changes.json")
+        with open(regtest_protocole_file, "w") as f:
+            f.write(json.dumps(change_names))
+
+    def enable_all_protocol_changes(self):
+        regtest_protocole_file = os.path.join(self.datadir, "regtest_disabled_changes.json")
+        if os.path.exists(regtest_protocole_file):
+            os.remove(regtest_protocole_file)
+
     def broadcast_transaction(self, signed_transaction, no_confirmation=False, retry=0):
         tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
         if not no_confirmation:
@@ -157,11 +167,14 @@ class RegtestNode:
             self.addresses.append(address)
             self.mine_blocks(1, address)
         self.addresses.sort()
+        empty_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "legacy").strip()
+        self.addresses.append(empty_address)
+        print(f"Empty address: {empty_address}")
         self.mine_blocks(101)
 
     def generate_xcp(self):
         print("Generating XCP...")
-        for address in self.addresses:
+        for address in self.addresses[0:10]:
             self.send_transaction(address, "burn", {"quantity": 50000000})
 
     def start(self):
