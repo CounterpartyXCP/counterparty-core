@@ -113,6 +113,7 @@ ROUTES = util.prepare_routes(
         "/v2/orders/<order_hash>/btcpays": queries.get_btcpays_by_order,
         "/v2/orders/<asset1>/<asset2>": queries.get_orders_by_two_assets,
         "/v2/orders/<asset1>/<asset2>/matches": queries.get_order_matches_by_two_assets,
+        "/v2/order_matches": queries.get_all_order_matches,
         ### /bets ###
         "/v2/bets": queries.get_bets,
         "/v2/bets/<bet_hash>": queries.get_bet,
@@ -151,9 +152,6 @@ ROUTES = util.prepare_routes(
         "/v2/fairminters": queries.get_all_fairminters,
         "/v2/fairminters/<tx_hash>": queries.get_fairminter,
         "/v2/fairminters/<tx_hash>/mints": queries.get_fairmints_by_fairminter,
-        ### /healthz ###
-        "/v2/healthz": util.check_server_health,
-        "/healthz": util.check_server_health,
         ### /bitcoin ###
         "/v2/bitcoin/addresses/utxos": addrindexrs.get_unspent_txouts_by_addresses,
         "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
@@ -167,6 +165,9 @@ ROUTES = util.prepare_routes(
         "/v2/mempool/events": queries.get_all_mempool_events,
         "/v2/mempool/events/<event>": queries.get_mempool_events_by_name,
         "/v2/mempool/transactions/<tx_hash>/events": queries.get_mempool_events_by_tx_hash,
+        ### /healthz ###
+        "/v2/healthz": util.check_server_health,
+        "/healthz": util.check_server_health,
         ### API v1 ###
         "/": util.redirect_to_rpc_v1,
         "/v1/": util.redirect_to_rpc_v1,

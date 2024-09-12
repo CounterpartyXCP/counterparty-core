@@ -34,7 +34,7 @@ SCENARIO = [
                         "params": {
                             "asset": "TESTLOCKDESC",
                             "asset_longname": None,
-                            "asset_events": "",
+                            "asset_events": "creation",
                             "block_index": 143,
                             "call_date": 0,
                             "call_price": 0.0,
@@ -105,7 +105,7 @@ SCENARIO = [
                         "params": {
                             "asset": "A95428959745315388",
                             "asset_longname": "TESTLOCKDESC.MYSUBASSET",
-                            "asset_events": "",
+                            "asset_events": "creation",
                             "block_index": 144,
                             "call_date": 0,
                             "call_price": 0.0,
@@ -263,7 +263,7 @@ SCENARIO = [
                         "params": {
                             "asset": "A95428956980101314",
                             "asset_longname": "A95428959745315388.SUBNUMERIC",
-                            "asset_events": "",
+                            "asset_events": "creation",
                             "block_index": 146,
                             "call_date": 0,
                             "call_price": 0.0,

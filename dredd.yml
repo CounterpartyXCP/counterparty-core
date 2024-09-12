@@ -1,5 +1,5 @@
 blueprint: apiary.apib
-endpoint: http://127.0.0.1:4000
+endpoint: http://127.0.0.1:24000
 loglevel: error
 only:
 - Blocks > Get Blocks > Get Blocks
@@ -36,11 +36,11 @@ only:
 - Addresses > Get Balances By Addresses > Get Balances By Addresses
 - Addresses > Get Transactions By Addresses > Get Transactions By Addresses
 - Addresses > Get Events By Addresses > Get Events By Addresses
+- Addresses > Get Mempool Events By Addresses > Get Mempool Events By Addresses
 - Addresses > Get Address Balances > Get Address Balances
 - Addresses > Get Balance By Address And Asset > Get Balance By Address And Asset
 - Addresses > Get Credits By Address > Get Credits By Address
 - Addresses > Get Debits By Address > Get Debits By Address
-- Addresses > Get Bet By Feed > Get Bet By Feed
 - Addresses > Get Broadcasts By Source > Get Broadcasts By Source
 - Addresses > Get Burns By Address > Get Burns By Address
 - Addresses > Get Sends By Address > Get Sends By Address
@@ -61,6 +61,27 @@ only:
 - Addresses > Get Dividends Distributed By Address > Get Dividends Distributed By
   Address
 - Addresses > Get Orders By Address > Get Orders By Address
+- Addresses > Get Fairminters By Address > Get Fairminters By Address
+- Addresses > Get Fairmints By Address > Get Fairmints By Address
+- Addresses > Get Fairmints By Address And Asset > Get Fairmints By Address And Asset
+- Compose > Compose Broadcast > Compose Broadcast
+- Compose > Compose BTCPay > Compose BTCPay
+- Compose > Compose Burn > Compose Burn
+- Compose > Compose Cancel > Compose Cancel
+- Compose > Compose Destroy > Compose Destroy
+- Compose > Compose Dispenser > Compose Dispenser
+- Compose > Compose Dividend > Compose Dividend
+- Compose > Compose Issuance > Compose Issuance
+- Compose > Compose MPMA > Compose MPMA
+- Compose > Compose Order > Compose Order
+- Compose > Compose Send > Compose Send
+- Compose > Compose Sweep > Compose Sweep
+- Compose > Compose Dispense > Compose Dispense
+- Compose > Compose Fairminter > Compose Fairminter
+- Compose > Compose Fairmint > Compose Fairmint
+- Compose > Compose Attach > Compose Attach
+- Compose > Compose Detach > Compose Detach
+- Compose > Compose Movetoutxo > Compose Movetoutxo
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset > Get Asset
 - Assets > Get Asset Balances > Get Asset Balances
@@ -77,16 +98,16 @@ only:
 - Assets > Get Asset Holders > Get Asset Holders
 - Assets > Get Dispenses By Asset > Get Dispenses By Asset
 - Assets > Get Subassets By Asset > Get Subassets By Asset
+- Assets > Get Fairminters By Asset > Get Fairminters By Asset
+- Assets > Get Fairmints By Asset > Get Fairmints By Asset
+- Assets > Get Fairmints By Address And Asset > Get Fairmints By Address And Asset
 - Orders > Get Orders > Get Orders
 - Orders > Get Order > Get Order
 - Orders > Get Order Matches By Order > Get Order Matches By Order
 - Orders > Get BTCPays By Order > Get BTCPays By Order
 - Orders > Get Orders By Two Assets > Get Orders By Two Assets
 - Orders > Get Order Matches By Two Assets > Get Order Matches By Two Assets
-- Bets > Get Bets > Get Bets
-- Bets > Get Bet > Get Bet
-- Bets > Get Bet Matches By Bet > Get Bet Matches By Bet
-- Bets > Get Resolutions By Bet > Get Resolutions By Bet
+- Order_matches > Get All Order Matches > Get All Order Matches
 - Burns > Get All Burns > Get All Burns
 - Dispensers > Get Dispensers > Get Dispensers
 - Dispensers > Get Dispenser Info By Hash > Get Dispenser Info By Hash
@@ -94,6 +115,11 @@ only:
 - Dividends > Get Dividends > Get Dividends
 - Dividends > Get Dividend > Get Dividend
 - Dividends > Get Dividend Disribution > Get Dividend Disribution
+- Events > Get All Events > Get All Events
+- Events > Get Event By Index > Get Event By Index
+- Events > Get All Events Counts > Get All Events Counts
+- Events > Get Events By Name > Get Events By Name
+- Events > Get Event Count > Get Event Count
 - Dispenses > Get Dispenses > Get Dispenses
 - Sends > Get Sends > Get Sends
 - Issuances > Get Issuances > Get Issuances
@@ -102,6 +128,20 @@ only:
 - Sweeps > Get Sweep By Transaction Hash > Get Sweep By Transaction Hash
 - Broadcasts > Get Valid Broadcasts > Get Valid Broadcasts
 - Broadcasts > Get Broadcast By Transaction Hash > Get Broadcast By Transaction Hash
+- Fairminters > Get All Fairminters > Get All Fairminters
+- Fairminters > Get Fairminter > Get Fairminter
+- Fairminters > Get Fairmints By Fairminter > Get Fairmints By Fairminter
+- Bitcoin > Get Unspent Txouts By Addresses > Get Unspent Txouts By Addresses
+- Bitcoin > Get Transactions By Address > Get Transactions By Address
+- Bitcoin > Get Oldest Transaction By Address > Get Oldest Transaction By Address
+- Bitcoin > Get Unspent Txouts > Get Unspent Txouts
+- Bitcoin > PubKeyHash To Pubkey > PubKeyHash To Pubkey
+- Bitcoin > Get Transaction > Get Transaction
+- Bitcoin > Fee Per Kb > Fee Per Kb
+- Bitcoin > Sendrawtransaction > Sendrawtransaction
+- Mempool > Get All Mempool Events > Get All Mempool Events
+- Mempool > Get Mempool Events By Name > Get Mempool Events By Name
+- Mempool > Get Mempool Events By Tx Hash > Get Mempool Events By Tx Hash
 - Z-pages > Check Server Health > Check Server Health
 - Z-pages > Check Server Health > Check Server Health
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1

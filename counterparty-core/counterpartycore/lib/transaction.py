@@ -1331,8 +1331,8 @@ def compose_bet(
 ):
     """
     Composes a transaction to issue a bet against a feed.
-    :param address: The address that will make the bet (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
-    :param feed_address: The address that hosts the feed to be bet on (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
+    :param address: The address that will make the bet (e.g. $ADDRESS_1)
+    :param feed_address: The address that hosts the feed to be bet on (e.g. $ADDRESS_2)
     :param bet_type: Bet 0 for Bullish CFD (deprecated), 1 for Bearish CFD (deprecated), 2 for Equal, 3 for NotEqual (e.g. 2)
     :param deadline: The time at which the bet should be decided/settled, in Unix time (seconds since epoch) (e.g. 3000000000)
     :param wager_quantity: The quantities of XCP to wager (in satoshis, hence integer) (e.g. 1000)
@@ -1370,8 +1370,8 @@ def compose_broadcast(
 ):
     """
     Composes a transaction to broadcast textual and numerical information to the network.
-    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
-    :param timestamp: The timestamp of the broadcast, in Unix time (e.g. 4003903983)
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_1)
+    :param timestamp: The timestamp of the broadcast, in Unix time (e.g. 4003903985)
     :param value: Numerical value of the broadcast (e.g. 100)
     :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent) (e.g. 0.05)
     :param text: The textual part of the broadcast (e.g. "Hello, world!")
@@ -1399,8 +1399,8 @@ def compose_broadcast(
 def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
     """
     Composes a transaction to pay for a BTC order match.
-    :param address: The address that will be sending the payment (e.g. bc1qsteve3tfxfg9pcmvzw645sr9zy7es5rx645p6l)
-    :param order_match_id: The ID of the order match to pay for (e.g. e470416a9500fb046835192da013f48e6468a07dba1bede4a0b68e666ed23c8d_4953bde3d9417b103615c2d3d4b284d4fcf7cbd820e5dd19ac0084e9ebd090b2)
+    :param address: The address that will be sending the payment (e.g. $ADDRESS_1)
+    :param order_match_id: The ID of the order match to pay for (e.g. $LAST_ORDER_MATCH_ID)
     """
     params = {"source": address, "order_match_id": order_match_id}
     rawtransaction = compose_transaction(
@@ -1419,7 +1419,7 @@ def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
 def compose_burn(db, address: str, quantity: int, overburn: bool = False, **construct_args):
     """
     Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
-    :param address: The address with the BTC to burn (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param address: The address with the BTC to burn (e.g. $ADDRESS_1)
     :param quantity: The quantities of BTC to burn (in satoshis, hence integer) (1 BTC maximum burn per address) (e.g. 1000)
     :param overburn: Whether to allow the burn to exceed 1 BTC for the address
     """
@@ -1440,8 +1440,8 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
 def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     """
     Composes a transaction to cancel an open order or bet.
-    :param address: The address that placed the order/bet to be cancelled (e.g. 15e15ua6A3FJqjMevtrWcFSzKn9k6bMQeA)
-    :param offer_hash: The hash of the order/bet to be cancelled (e.g. 8ce3335391bf71f8f12c0573b4f85b9adc4882a9955d9f8e5ababfdd0060279a)
+    :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_1)
+    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_ORDER_TX_HASH)
     """
     params = {"source": address, "offer_hash": offer_hash}
     rawtransaction = compose_transaction(
@@ -1460,7 +1460,7 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
 def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **construct_args):
     """
     Composes a transaction to destroy a quantity of an asset.
-    :param address: The address that will be sending the asset to be destroyed (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param address: The address that will be sending the asset to be destroyed (e.g. $ADDRESS_1)
     :param asset: The asset to be destroyed (e.g. XCP)
     :param quantity: The quantity of the asset to be destroyed (in satoshis, hence integer) (e.g. 1000)
     :param tag: A tag for the destruction (e.g. "bugs!")
@@ -1493,7 +1493,7 @@ def compose_dispenser(
 ):
     """
     Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
-    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. $ADDRESS_1)
     :param asset: The asset or subasset to dispense (e.g. XCP)
     :param give_quantity: The quantity of the asset to dispense (in satoshis, hence integer) (e.g. 1000)
     :param escrow_quantity: The quantity of the asset to reserve for this dispenser (in satoshis, hence integer) (e.g. 1000)
@@ -1530,9 +1530,9 @@ def compose_dividend(
 ):
     """
     Composes a transaction to issue a dividend to holders of a given asset.
-    :param address: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on) (e.g. 1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD)
+    :param address: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on) (e.g. $ADDRESS_1)
     :param quantity_per_unit: The amount of dividend_asset rewarded (in satoshis, hence integer) (e.g. 1)
-    :param asset: The asset or subasset that the dividends are being rewarded on (e.g. PEPECASH)
+    :param asset: The asset or subasset that the dividends are being rewarded on (e.g. $ASSET_1)
     :param dividend_asset: The asset or subasset that the dividends are paid in (e.g. XCP)
     """
     params = {
@@ -1568,10 +1568,10 @@ def compose_issuance(
 ):
     """
     Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
-    :param address: The address that will be issuing or transfering the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param address: The address that will be issuing or transfering the asset (e.g. $ADDRESS_1)
     :param asset: The assets to issue or transfer. This can also be a subasset longname for new subasset issuances (e.g. XCPTEST)
     :param quantity: The quantity of the asset to issue (set to 0 if transferring an asset) (in satoshis, hence integer) (e.g. 1000)
-    :param transfer_destination: The address to receive the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param transfer_destination: The address to receive the asset (e.g. $ADDRESS_1)
     :param divisible: Whether this asset is divisible or not (if a transfer, this value must match the value specified when the asset was originally issued)
     :param lock: Whether this issuance should lock supply of this asset forever
     :param reset: Wether this issuance should reset any existing supply
@@ -1606,16 +1606,16 @@ def compose_mpma(
     assets: str,
     destinations: str,
     quantities: str,
-    memo: str,
-    memo_is_hex: bool,
+    memo: str = None,
+    memo_is_hex: bool = False,
     **construct_args,
 ):
     """
     Composes a transaction to send multiple payments to multiple addresses.
-    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1Fv87qmdtjQDP9d4p9E5ncBQvYB4a3Rhy6)
-    :param assets: comma-separated list of assets to send (e.g. BAABAABLKSHP,BADHAIRDAY,BADWOJAK)
-    :param destinations: comma-separated list of addresses to send to (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev,1GQhaWqejcGJ4GhQar7SjcCfadxvf5DNBD,1C3uGcoSGzKVgFqyZ3kM2DBq9CYttTMAVs)
-    :param quantities: comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2,3)
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_1)
+    :param assets: comma-separated list of assets to send (e.g. XCP,$ASSET_5)
+    :param destinations: comma-separated list of addresses to send to (e.g. $ADDRESS_1,$ADDRESS_2)
+    :param quantities: comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2)
     :param memo: The Memo associated with this transaction (e.g. "Hello, world!")
     :param memo_is_hex: Whether the memo field is a hexadecimal string (e.g. False)
     """
@@ -1665,10 +1665,10 @@ def compose_order(
 ):
     """
     Composes a transaction to place an order on the distributed exchange.
-    :param address: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param address: The address that will be issuing the order request (must have the necessary quantity of the specified asset to give) (e.g. $ADDRESS_1)
     :param give_asset: The asset that will be given in the trade (e.g. XCP)
     :param give_quantity: The quantity of the asset that will be given (in satoshis, hence integer) (e.g. 1000)
-    :param get_asset: The asset that will be received in the trade (e.g. PEPECASH)
+    :param get_asset: The asset that will be received in the trade (e.g. $ASSET_1)
     :param get_quantity: The quantity of the asset that will be received (in satoshis, hence integer) (e.g. 1000)
     :param expiration: The number of blocks for which the order should be valid (e.g. 100)
     :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though) (e.g. 100)
@@ -1708,8 +1708,8 @@ def compose_send(
 ):
     """
     Composes a transaction to send a quantity of an asset to another address.
-    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
-    :param destination: The address that will be receiving the asset (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_1)
+    :param destination: The address that will be receiving the asset (e.g. $ADDRESS_2)
     :param asset: The asset or subasset to send (e.g. XCP)
     :param quantity: The quantity of the asset to send (in satoshis, hence integer) (e.g. 1000)
     :param memo: The Memo associated with this transaction
@@ -1747,8 +1747,8 @@ def compose_dispense(
 ):
     """
     Composes a transaction to send BTC to a dispenser.
-    :param address: The address that will be sending (must have the necessary quantity of BTC) (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
-    :param dispenser: The dispenser that will be receiving the asset (e.g. 17SDWBrEVyJ2nisHDmozgw35R9Bgu8ewqo)
+    :param address: The address that will be sending (must have the necessary quantity of BTC) (e.g. $ADDRESS_2)
+    :param dispenser: The dispenser that will be receiving the asset (e.g. $ADDRESS_4)
     :param quantity: The quantity of BTC to send (in satoshis, hence integer) (e.g. 1000)
     """
     params = {
@@ -1772,8 +1772,8 @@ def compose_dispense(
 def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **construct_args):
     """
     Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
-    :param address: The address that will be sending (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
-    :param destination: The address to receive the assets and/or ownerships (e.g. 1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev)
+    :param address: The address that will be sending (e.g. $ADDRESS_1)
+    :param destination: The address to receive the assets and/or ownerships (e.g. $ADDRESS_2)
     :param flags: An OR mask of flags indicating how the sweep should be processed. Possible flags are:
                     - FLAG_BALANCES: (integer) 1, specifies that all balances should be transferred.
                     - FLAG_OWNERSHIP: (integer) 2, specifies that all ownerships should be transferred.
@@ -1824,10 +1824,10 @@ def compose_fairminter(
 ):
     """
     Composes a transaction to issue a new asset using the FairMinter protocol.
-    :param address: The address that will be issuing the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
+    :param address: The address that will be issuing the asset (e.g. $ADDRESS_1)
     :param asset: The asset to issue (e.g. MYASSET)
     :param asset_parent: The parent asset of the asset to issue
-    :param price: The price in XCP of the asset to issue
+    :param price: The price in XCP of the asset to issue (e.g. 10)
     :param quantity_by_price: The quantity of asset to mint per `price` paid
     :param max_mint_per_tx: Amount minted if price is equal to 0; otherwise, maximum amount of asset that can be minted in a single transaction; if 0, there is no limit
     :param hard_cap: The maximum amount of asset that can be minted; if 0 there is no limit
@@ -1879,9 +1879,9 @@ def compose_fairminter(
 def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construct_args):
     """
     Composes a transaction to mint a quantity of an asset using the FairMinter protocol.
-    :param address: The address that will be minting the asset (e.g. 1CounterpartyXXXXXXXXXXXXXXXUWLpVr)
-    :param asset: The asset to mint (e.g. MYASSET)
-    :param quantity: The quantity of the asset to mint (in satoshis, hence integer) (e.g. 1000)
+    :param address: The address that will be minting the asset (e.g. $ADDRESS_1)
+    :param asset: The asset to mint (e.g. $ASSET_3)
+    :param quantity: The quantity of the asset to mint (in satoshis, hence integer) (e.g. 1)
     """
     params = {"source": address, "asset": asset, "quantity": quantity}
     rawtransaction = compose_transaction(
@@ -1934,8 +1934,8 @@ def compose_attach(
 ):
     """
     Attach assets from an address to UTXO.
-    :param address: The address from which the assets are attached
-    :param destination: The utxo to attach the assets to
+    :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
+    :param destination: The utxo to attach the assets to (e.g. $UTXO_1_ADDRESS_1)
     :param asset: The asset or subasset to attach (e.g. XCP)
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
     """
@@ -1959,8 +1959,8 @@ def compose_detach(
 ):
     """
     Detach assets from UTXO to an address.
-    :param utxo: The utxo from which the assets are detached
-    :param destination: The address to detach the assets to
+    :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
+    :param destination: The address to detach the assets to (e.g. $ADDRESS_1)
     :param asset: The asset or subasset to detach (e.g. XCP)
     :param quantity: The quantity of the asset to detach (in satoshis, hence integer) (e.g. 1000)
     """
@@ -2037,16 +2037,18 @@ def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
-    :param rawtransaction: Raw transaction in hex format (e.g. 01000000017828697743c03aef6a3a8ba54b22bf579ffcab8161faf20e7b20c4ecd75cc986010000006b483045022100d1bd0531bb1ed2dd2cbf77d6933273e792a3dbfa84327d419169850ddd5976f502205d1ab0f7bcbf1a0cc183f0520c9aa8f711d41cb790c0c4ac39da6da4a093d798012103d3b1f711e907acb556e239f6cafb6a4f7fe40d8dd809b0e06e739c2afd73f202ffffffff0200000000000000004d6a4bf29880b93b0711524c7ef9c76835752088db8bd4113a3daf41fc45ffdc8867ebdbf26817fae377696f36790e52f51005806e9399a427172fedf348cf798ed86e548002ee96909eef0775ec3c2b0100000000001976a91443434cf159cc585fbd74daa9c4b833235b19761b88ac00000000)
+    :param rawtransaction: Raw transaction in hex format (e.g. $RAW_TRANSACTION_1)
     :param block_index: Block index mandatory for transactions before block 335000
     """
     decoded_tx = deserialize.deserialize_tx(
         rawtransaction, use_txid=util.enabled("correct_segwit_txids", block_index)
     )
-    source, destination, btc_amount, fee, data, _extra = gettxinfo.get_tx_info(
-        db,
-        decoded_tx,
-        block_index=block_index,
+    source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
+        gettxinfo.get_tx_info(
+            db,
+            decoded_tx,
+            block_index=block_index,
+        )
     )
     del decoded_tx["__data__"]
     result = {
@@ -2066,7 +2068,7 @@ def info(db, rawtransaction: str, block_index: int = None):
 def unpack(db, datahex: str, block_index: int = None):
     """
     Unpacks Counterparty data in hex format and returns the message type and data.
-    :param datahex: Data in hex format (e.g. 16010b9142801429a60000000000000001000000554e4e45474f544941424c45205745204d555354204245434f4d4520554e4e45474f544941424c4520574520415245)
+    :param datahex: Data in hex format (e.g. 020000000001016a65c1624e53f4d33ce02e726a6606faed60cc014d5b1a578ba3e09b4b3f8f890100000000ffffffff020000000000000000176a150d55e8b6118808b7b663b365473f142274028b8af60245092701000000160014a3df8a5a83d4e2827b59b43f5ce6ce5d2e52093f0247304402204b7a2859cbce34e725a1132fec2dd4b075503dadff0a0c407ae7c22a7712fe4d0220563ceb2ceebdf649343bb24819fc808639cce7781305b4588ffbe4a20390d2780121020ace9adf60fe4ec05dab922ccdc5727cbf664cafc7cdb845de534855266314c800000000)
     :param block_index: Block index of the transaction containing this data
     """
     data = binascii.unhexlify(datahex)

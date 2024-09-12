@@ -49,13 +49,19 @@ class RegtestNode:
                 print("Waiting for bitcoind to start...")
                 time.sleep(1)
 
-    def broadcast_transaction(self, signed_transaction, retry=0):
+    def broadcast_transaction(self, signed_transaction, no_confirmation=False, retry=0):
         tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
-        block_hash, block_time = self.mine_blocks(1)
+        if not no_confirmation:
+            block_hash, block_time = self.mine_blocks(1)
+        else:
+            block_hash, block_time = "mempool", 9999999
+            time.sleep(5)  # wait for mempool to update, find a better way to do this
         self.wait_for_counterparty_server()
         return tx_hash, block_hash, block_time
 
-    def send_transaction(self, source, tx_name, params, return_only_data=False, retry=0):
+    def send_transaction(
+        self, source, tx_name, params, return_only_data=False, no_confirmation=False, retry=0
+    ):
         self.wait_for_counterparty_server()
         if return_only_data:
             params["return_only_data"] = True
@@ -71,7 +77,9 @@ class RegtestNode:
                 print("Counterparty not ready")
                 print("Sleeping for 5 seconds and retrying...")
                 time.sleep(5)
-                return self.send_transaction(source, tx_name, params, return_only_data)
+                return self.send_transaction(
+                    source, tx_name, params, return_only_data, no_confirmation
+                )
             raise ComposeError(result["error"])
         if return_only_data:
             return result["result"]["data"]
@@ -81,13 +89,17 @@ class RegtestNode:
         ).strip()
         signed_transaction = json.loads(signed_transaction_json)["hex"]
         try:
-            tx_hash, block_hash, block_time = self.broadcast_transaction(signed_transaction)
+            tx_hash, block_hash, block_time = self.broadcast_transaction(
+                signed_transaction, no_confirmation
+            )
         except sh.ErrorReturnCode_25 as e:
             if retry < 6:
                 print("Error: bad-txns-inputs-missingorspent")
                 print("Sleeping for 5 seconds and retrying...")
                 time.sleep(10)
-                return self.send_transaction(source, tx_name, params, return_only_data, retry + 1)
+                return self.send_transaction(
+                    source, tx_name, params, return_only_data, no_confirmation, retry + 1
+                )
             else:
                 raise e
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")

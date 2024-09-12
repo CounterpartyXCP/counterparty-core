@@ -2,6 +2,7 @@
 
 import difflib
 import json
+import sys
 import time
 
 from regtestcli import atomic_swap
@@ -15,6 +16,14 @@ from scenarios import (
     scenario_6_issuance,
     scenario_7_orders,
     scenario_8_fairminter,
+    scenario_9_btcpay,
+    scenario_10_broadcast,
+    scenario_11_send,
+    scenario_12_sweep,
+    scenario_13_cancel,
+    scenario_14_dispenser,
+    scenario_15_destroy,
+    scenario_last_mempool,
 )
 from termcolor import colored
 
@@ -27,6 +36,15 @@ SCENARIOS += scenario_5_atomicswap.SCENARIO
 SCENARIOS += scenario_6_issuance.SCENARIO
 SCENARIOS += scenario_7_orders.SCENARIO
 SCENARIOS += scenario_8_fairminter.SCENARIO
+SCENARIOS += scenario_9_btcpay.SCENARIO
+SCENARIOS += scenario_10_broadcast.SCENARIO
+SCENARIOS += scenario_11_send.SCENARIO
+SCENARIOS += scenario_12_sweep.SCENARIO
+SCENARIOS += scenario_13_cancel.SCENARIO
+SCENARIOS += scenario_14_dispenser.SCENARIO
+SCENARIOS += scenario_15_destroy.SCENARIO
+# more scenarios before this one
+SCENARIOS += scenario_last_mempool.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -117,8 +135,12 @@ def run_item(node, item, context):
                 )
                 tx_hash, block_hash, block_time = node.broadcast_transaction(signed_transaction)
             else:
+                no_confirmation = item.get("no_confirmation", False)
                 tx_hash, block_hash, block_time = node.send_transaction(
-                    item["source"], item["transaction"], item["params"]
+                    item["source"],
+                    item["transaction"],
+                    item["params"],
+                    no_confirmation=no_confirmation,
                 )
         except ComposeError as e:
             if "expected_error" in item:
@@ -142,7 +164,15 @@ def run_item(node, item, context):
     return context
 
 
-def run_scenarios():
+def print_server_output(node, printed_line_count):
+    unprinted_lines = node.server_out.getvalue().splitlines()[printed_line_count:]
+    for line in unprinted_lines:
+        print(line)
+        printed_line_count += 1
+    return printed_line_count
+
+
+def run_scenarios(serve=False):
     try:
         regtest_node_thread = RegtestNodeThread()
         regtest_node_thread.start()
@@ -155,9 +185,14 @@ def run_scenarios():
         for item in SCENARIOS:
             context = run_item(regtest_node_thread.node, item, context)
 
-        # print("Server ready, ctrl-c to stop.")
-        # while True:
-        #    time.sleep(1)
+        if serve:
+            printed_line_count = 0
+            print("Server ready, ctrl-c to stop.")
+            while True:
+                printed_line_count = print_server_output(
+                    regtest_node_thread.node, printed_line_count
+                )
+                time.sleep(1)
 
     except KeyboardInterrupt:
         pass
@@ -165,9 +200,10 @@ def run_scenarios():
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        # print(regtest_node_thread.node.server_out.getvalue())
+        print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 
 if __name__ == "__main__":
-    run_scenarios()
+    serve = sys.argv[1] == "serve" if len(sys.argv) > 1 else False
+    run_scenarios(serve=serve)

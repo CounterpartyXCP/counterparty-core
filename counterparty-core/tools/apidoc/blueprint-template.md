@@ -5,7 +5,7 @@ HOST: https://api.counterparty.io:4000
 
 The Counterparty Core API is the recommended way to query the state of a Counterparty node. All other methods have no official support.
 
-API routes are divided into 11 groups:
+API routes are divided into groups:
 
 <GROUP_TOC>
 
