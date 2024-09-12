@@ -10,8 +10,8 @@ from counterpartycore.lib import database
 from counterpartycore.lib.api import routes
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../apiary.apib")
-DREDD_FILE = os.path.join(CURR_DIR, "../../dredd.yml")
+API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../apiary.apib")
+DREDD_FILE = os.path.join(CURR_DIR, "../../../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apidoc", "apicache.json")
 API_ROOT = "http://localhost:24000"
 
@@ -315,6 +315,16 @@ def gen_events_doc():
     return md
 
 
+def get_event_tx_hash(db, event_name):
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT tx_hash FROM messages WHERE event=? ORDER BY rowid DESC LIMIT 1",
+        (event_name,),
+    )
+    row = cursor.fetchone()
+    return row["tx_hash"]
+
+
 def gen_unpack_doc(db):
     message_type_names = [
         "broadcast",
@@ -332,19 +342,19 @@ def gen_unpack_doc(db):
         # "send",
         # "bet",
     ]
-    message_type_tx_index = {
-        "cancel": 51,
-        "dispenser": 18,
-        "enhanced_send": 47,
-        "destroy": 54,
-        "dispense": 19,
-        "issuance": 30,
-        "order": 34,
-        "mpma_send": 48,
-        "broadcast": 46,
-        "dividend": 27,
-        "sweep": 49,
-        "btcpay": 44,
+    message_type_tx_hash = {
+        "cancel": get_event_tx_hash(db, "CANCEL_ORDER"),
+        "dispenser": get_event_tx_hash(db, "OPEN_DISPENSER"),
+        "enhanced_send": get_event_tx_hash(db, "ENHANCED_SEND"),
+        "destroy": get_event_tx_hash(db, "ASSET_DESTRUCTION"),
+        "dispense": get_event_tx_hash(db, "DISPENSE"),
+        "issuance": get_event_tx_hash(db, "ASSET_CREATION"),
+        "order": get_event_tx_hash(db, "OPEN_ORDER"),
+        "mpma_send": get_event_tx_hash(db, "MPMA_SEND"),
+        "broadcast": get_event_tx_hash(db, "BROADCAST"),
+        "dividend": get_event_tx_hash(db, "ASSET_DIVIDEND"),
+        "sweep": get_event_tx_hash(db, "SWEEP"),
+        "btcpay": get_event_tx_hash(db, "BTC_PAY"),
         # "send": ,
         # "bet": ,
     }
@@ -353,13 +363,8 @@ def gen_unpack_doc(db):
     md += "\n".join([f"- `{message_name}`" for message_name in message_type_names])
     md += "\n\nHere is sample API output for each of these transactions:\n"
 
-    cursor = db.cursor()
     for message_name in message_type_names:
-        tx_hash = cursor.execute(
-            "SELECT tx_hash FROM transactions WHERE tx_index=?",
-            (message_type_tx_index[message_name],),
-        ).fetchone()["tx_hash"]
-        url = f"{API_ROOT}/v2/transactions/{tx_hash}"
+        url = f"{API_ROOT}/v2/transactions/{message_type_tx_hash[message_name]}"
         args = {"verbose": "true"}
         print(url)
         response = requests.get(url, params=args)  # noqa S113

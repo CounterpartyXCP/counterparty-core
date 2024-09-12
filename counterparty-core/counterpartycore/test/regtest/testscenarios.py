@@ -2,9 +2,11 @@
 
 import difflib
 import json
+import os
 import sys
 import time
 
+import sh
 from regtestcli import atomic_swap
 from regtestnode import ComposeError, RegtestNodeThread
 from scenarios import (
@@ -45,6 +47,9 @@ SCENARIOS += scenario_14_sweep.SCENARIO
 SCENARIOS += scenario_15_destroy.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
+
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
 
 def compare_strings(string1, string2):
@@ -223,7 +228,10 @@ def run_scenarios(serve=False):
                     regtest_node_thread.node, printed_line_count
                 )
                 time.sleep(1)
-
+        else:
+            os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
+            sh.python3(os.path.join(CURR_DIR, "genapidoc.py"), _out=sys.stdout, _err_to_out=True)
+            sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
     except KeyboardInterrupt:
         pass
     except Exception as e:
