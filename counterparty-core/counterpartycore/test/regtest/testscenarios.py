@@ -150,6 +150,7 @@ def run_item(node, item, context):
     else:
         item = prepare_item(item, node, context)
         try:
+            no_confirmation = item.get("no_confirmation", False)
             if item["transaction"] == "atomic_swap":
                 data = None
                 if "counterparty_tx" in item["params"]:
@@ -170,13 +171,17 @@ def run_item(node, item, context):
                 )
                 tx_hash, block_hash, block_time = node.broadcast_transaction(signed_transaction)
             else:
-                no_confirmation = item.get("no_confirmation", False)
                 tx_hash, block_hash, block_time = node.send_transaction(
                     item["source"],
                     item["transaction"],
                     item["params"],
                     no_confirmation=no_confirmation,
                 )
+            # test that the mempool is properly cleaned after each regtest transaction is confirmed
+            if not no_confirmation:
+                mempool_events = node.api_call("mempool/events")["result"]
+                if len(mempool_events) != 0:
+                    raise Exception(f"Mempool events not empty after transaction: {mempool_events}")
         except ComposeError as e:
             if "expected_error" in item:
                 try:
