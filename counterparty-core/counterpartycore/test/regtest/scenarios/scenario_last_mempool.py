@@ -15,6 +15,7 @@ SCENARIO = [
         "controls": [
             {
                 "url": "mempool/events?event_name=ENHANCED_SEND,CREDIT,DEBIT",
+                "retry": True,
                 "result": [
                     {
                         "event": "ENHANCED_SEND",
@@ -27,7 +28,7 @@ SCENARIO = [
                             "source": "$ADDRESS_4",
                             "status": "valid",
                             "tx_hash": "$TX_HASH",
-                            "tx_index": 55,
+                            "tx_index": "$TX_INDEX",
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -36,11 +37,11 @@ SCENARIO = [
                         "params": {
                             "address": "$ADDRESS_3",
                             "asset": "XCP",
-                            "block_index": 188,
+                            "block_index": 190,
                             "calling_function": "send",
                             "event": "$TX_HASH",
                             "quantity": 10000,
-                            "tx_index": 55,
+                            "tx_index": "$TX_INDEX",
                             "utxo": None,
                             "utxo_address": None,
                         },
@@ -52,10 +53,10 @@ SCENARIO = [
                             "action": "send",
                             "address": "$ADDRESS_4",
                             "asset": "XCP",
-                            "block_index": 188,
+                            "block_index": 190,
                             "event": "$TX_HASH",
                             "quantity": 10000,
-                            "tx_index": 55,
+                            "tx_index": "$TX_INDEX",
                             "utxo": None,
                             "utxo_address": None,
                         },

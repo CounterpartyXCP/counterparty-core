@@ -13,20 +13,23 @@ SCENARIO = [
         },
         "set_variables": {
             "ORDER_1_HASH": "$TX_HASH",
+            "ORDER_1_TX_INDEX": "$TX_INDEX",
+            "ORDER_1_BLOCK_INDEX": "$BLOCK_INDEX",
+            "ORDER_1_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 21",
         },
         "controls": [
             {
-                "url": "blocks/147/events?event_name=OPEN_ORDER,DEBIT,CREDIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=OPEN_ORDER,DEBIT,CREDIT",
                 "result": [
                     {
                         "event": "OPEN_ORDER",
-                        "event_index": 291,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
-                            "block_index": 147,
+                            "block_index": "$BLOCK_INDEX",
                             "expiration": 21,
-                            "expire_index": 168,
-                            "fee_provided": 14696,
-                            "fee_provided_remaining": 14696,
+                            "expire_index": "$ORDER_1_EXPIRATION_BLOCK_INDEX",
+                            "fee_provided": 10000,
+                            "fee_provided_remaining": 10000,
                             "fee_required": 0,
                             "fee_required_remaining": 0,
                             "get_asset": "BTC",
@@ -38,21 +41,21 @@ SCENARIO = [
                             "source": "$ADDRESS_1",
                             "status": "open",
                             "tx_hash": "$TX_HASH",
-                            "tx_index": 34,
+                            "tx_index": "$TX_INDEX",
                         },
                         "tx_hash": "$TX_HASH",
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": 290,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "action": "open order",
                             "address": "$ADDRESS_1",
                             "asset": "XCP",
-                            "block_index": 147,
+                            "block_index": "$BLOCK_INDEX",
                             "event": "$TX_HASH",
                             "quantity": 1000,
-                            "tx_index": 34,
+                            "tx_index": "$TX_INDEX",
                             "utxo": None,
                             "utxo_address": None,
                         },
@@ -76,42 +79,45 @@ SCENARIO = [
         },
         "set_variables": {
             "ORDER_2_HASH": "$TX_HASH",
+            "ORDER_2_TX_INDEX": "$TX_INDEX",
+            "ORDER_2_BLOCK_INDEX": "$BLOCK_INDEX",
+            "ORDER_2_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {
-                "url": "blocks/148/events?event_name=OPEN_ORDER,ORDER_MATCH,ORDER_UPDATE,DEBIT,CREDIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=OPEN_ORDER,ORDER_MATCH,ORDER_UPDATE,DEBIT,CREDIT",
                 "result": [
                     {
                         "event": "ORDER_MATCH",
-                        "event_index": 299,
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "backward_asset": "BTC",
                             "backward_quantity": 1000,
-                            "block_index": 148,
+                            "block_index": "$BLOCK_INDEX",
                             "fee_paid": 0,
                             "forward_asset": "XCP",
                             "forward_quantity": 1000,
                             "id": "$ORDER_1_HASH_$TX_HASH",
-                            "match_expire_index": 168,
+                            "match_expire_index": "$ORDER_2_EXPIRATION_BLOCK_INDEX",
                             "status": "pending",
                             "tx0_address": "$ADDRESS_1",
-                            "tx0_block_index": 147,
+                            "tx0_block_index": "$ORDER_1_BLOCK_INDEX",
                             "tx0_expiration": 21,
                             "tx0_hash": "$ORDER_1_HASH",
-                            "tx0_index": 34,
+                            "tx0_index": "$ORDER_1_TX_INDEX",
                             "tx1_address": "$ADDRESS_2",
-                            "tx1_block_index": 148,
+                            "tx1_block_index": "$BLOCK_INDEX",
                             "tx1_expiration": 20,
                             "tx1_hash": "$TX_HASH",
-                            "tx1_index": 35,
+                            "tx1_index": "$TX_INDEX",
                         },
                         "tx_hash": "$TX_HASH",
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 298,
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
-                            "fee_provided_remaining": 15590,
+                            "fee_provided_remaining": 10000,
                             "fee_required_remaining": 0,
                             "get_remaining": 0,
                             "give_remaining": 0,
@@ -122,9 +128,9 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 297,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
-                            "fee_provided_remaining": 14696,
+                            "fee_provided_remaining": 10000,
                             "fee_required_remaining": 0,
                             "get_remaining": 0,
                             "give_remaining": 0,
@@ -135,13 +141,13 @@ SCENARIO = [
                     },
                     {
                         "event": "OPEN_ORDER",
-                        "event_index": 296,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
-                            "block_index": 148,
+                            "block_index": "$BLOCK_INDEX",
                             "expiration": 20,
-                            "expire_index": 168,
-                            "fee_provided": 15590,
-                            "fee_provided_remaining": 15590,
+                            "expire_index": "$ORDER_2_EXPIRATION_BLOCK_INDEX",
+                            "fee_provided": 10000,
+                            "fee_provided_remaining": 10000,
                             "fee_required": 0,
                             "fee_required_remaining": 0,
                             "get_asset": "XCP",
@@ -153,7 +159,7 @@ SCENARIO = [
                             "source": "$ADDRESS_2",
                             "status": "open",
                             "tx_hash": "$TX_HASH",
-                            "tx_index": 35,
+                            "tx_index": "$TX_INDEX",
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -167,13 +173,13 @@ SCENARIO = [
         "params": {"blocks": 21},
         "controls": [
             {
-                "url": "blocks/169/events?event_name=ORDER_EXPIRATION,ORDER_UPDATE,CREDIT,ORDER_MATCH_EXPIRATION,ORDER_MATCH_UPDATE,DEBIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ORDER_EXPIRATION,ORDER_UPDATE,CREDIT,ORDER_MATCH_EXPIRATION,ORDER_MATCH_UPDATE,DEBIT",
                 "result": [
                     {
                         "event": "ORDER_EXPIRATION",
-                        "event_index": 351,
+                        "event_index": "$EVENT_INDEX_10",
                         "params": {
-                            "block_index": 169,
+                            "block_index": "$BLOCK_INDEX",
                             "order_hash": "$ORDER_2_HASH",
                             "source": "$ADDRESS_2",
                         },
@@ -181,15 +187,15 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 350,
+                        "event_index": "$EVENT_INDEX_9",
                         "params": {"status": "expired", "tx_hash": "$ORDER_2_HASH"},
                         "tx_hash": None,
                     },
                     {
                         "event": "ORDER_EXPIRATION",
-                        "event_index": 349,
+                        "event_index": "$EVENT_INDEX_8",
                         "params": {
-                            "block_index": 169,
+                            "block_index": "$BLOCK_INDEX",
                             "order_hash": "$ORDER_1_HASH",
                             "source": "$ADDRESS_1",
                         },
@@ -197,11 +203,11 @@ SCENARIO = [
                     },
                     {
                         "event": "CREDIT",
-                        "event_index": 348,
+                        "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "address": "$ADDRESS_1",
                             "asset": "XCP",
-                            "block_index": 169,
+                            "block_index": "$BLOCK_INDEX",
                             "calling_function": "cancel order",
                             "event": "$ORDER_1_HASH",
                             "quantity": 1000,
@@ -213,15 +219,15 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 347,
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {"status": "expired", "tx_hash": "$ORDER_1_HASH"},
                         "tx_hash": None,
                     },
                     {
                         "event": "ORDER_MATCH_EXPIRATION",
-                        "event_index": 346,
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
-                            "block_index": 169,
+                            "block_index": "$BLOCK_INDEX",
                             "order_match_id": "$ORDER_1_HASH_$ORDER_2_HASH",
                             "tx0_address": "$ADDRESS_1",
                             "tx1_address": "$ADDRESS_2",
@@ -230,7 +236,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 345,
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "fee_required_remaining": 0,
                             "get_remaining": 1000,
@@ -242,7 +248,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_UPDATE",
-                        "event_index": 344,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "fee_required_remaining": 0,
                             "get_remaining": 1000,
@@ -254,7 +260,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ORDER_MATCH_UPDATE",
-                        "event_index": 343,
+                        "event_index": "$EVENT_INDEX_2",
                         "params": {
                             "id": "$ORDER_1_HASH_$ORDER_2_HASH",
                             "order_match_id": "$ORDER_1_HASH_$ORDER_2_HASH",

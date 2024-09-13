@@ -2,26 +2,28 @@
 
 import difflib
 import json
+import os
 import sys
 import time
 
+import sh
 from regtestcli import atomic_swap
 from regtestnode import ComposeError, RegtestNodeThread
 from scenarios import (
     scenario_1_fairminter,
     scenario_2_fairminter,
-    scenario_3_dispenser,
-    scenario_4_utxo,
-    scenario_5_atomicswap,
-    scenario_6_issuance,
-    scenario_7_orders,
-    scenario_8_fairminter,
-    scenario_9_btcpay,
-    scenario_10_broadcast,
-    scenario_11_send,
-    scenario_12_sweep,
+    scenario_3_fairminter,
+    scenario_4_dispenser,
+    scenario_5_dispenser,
+    scenario_6_utxo,
+    scenario_7_atomicswap,
+    scenario_8_issuance,
+    scenario_9_broadcast,
+    scenario_10_orders,
+    scenario_11_btcpay,
+    scenario_12_send,
     scenario_13_cancel,
-    scenario_14_dispenser,
+    scenario_14_sweep,
     scenario_15_destroy,
     scenario_last_mempool,
 )
@@ -30,21 +32,24 @@ from termcolor import colored
 SCENARIOS = []
 SCENARIOS += scenario_1_fairminter.SCENARIO
 SCENARIOS += scenario_2_fairminter.SCENARIO
-SCENARIOS += scenario_3_dispenser.SCENARIO
-SCENARIOS += scenario_4_utxo.SCENARIO
-SCENARIOS += scenario_5_atomicswap.SCENARIO
-SCENARIOS += scenario_6_issuance.SCENARIO
-SCENARIOS += scenario_7_orders.SCENARIO
-SCENARIOS += scenario_8_fairminter.SCENARIO
-SCENARIOS += scenario_9_btcpay.SCENARIO
-SCENARIOS += scenario_10_broadcast.SCENARIO
-SCENARIOS += scenario_11_send.SCENARIO
-SCENARIOS += scenario_12_sweep.SCENARIO
+SCENARIOS += scenario_3_fairminter.SCENARIO
+SCENARIOS += scenario_4_dispenser.SCENARIO
+SCENARIOS += scenario_5_dispenser.SCENARIO
+SCENARIOS += scenario_6_utxo.SCENARIO
+SCENARIOS += scenario_7_atomicswap.SCENARIO
+SCENARIOS += scenario_8_issuance.SCENARIO
+SCENARIOS += scenario_9_broadcast.SCENARIO
+SCENARIOS += scenario_10_orders.SCENARIO
+SCENARIOS += scenario_11_btcpay.SCENARIO
+SCENARIOS += scenario_12_send.SCENARIO
 SCENARIOS += scenario_13_cancel.SCENARIO
-SCENARIOS += scenario_14_dispenser.SCENARIO
+SCENARIOS += scenario_14_sweep.SCENARIO
 SCENARIOS += scenario_15_destroy.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
+
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
 
 def compare_strings(string1, string2):
@@ -57,7 +62,8 @@ def compare_strings(string1, string2):
 
 
 def prepare_item(item, node, context):
-    for i, address in enumerate(node.addresses):
+    for i in reversed(range(11)):
+        address = node.addresses[i]
         if "source" in item:
             item["source"] = item["source"].replace(f"$ADDRESS_{i+1}", address)
         for key in item["params"]:
@@ -72,24 +78,49 @@ def prepare_item(item, node, context):
     return item
 
 
-def control_result(item, node, context, block_hash, block_time, tx_hash):
+def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0):
+    block_index = node.block_count
+    events = node.api_call(f"blocks/{block_index}/events")["result"]
+    event_indexes = sorted([event["event_index"] for event in events])
     for control in item["controls"]:
-        control_url = control["url"].replace("$TX_HASH", tx_hash)
-        for i, address in enumerate(node.addresses):
+        control_url = (
+            control["url"].replace("$TX_HASH", tx_hash).replace("$BLOCK_INDEX", str(block_index))
+        )
+        for i in reversed(range(11)):
+            address = node.addresses[i]
             control_url = control_url.replace(f"$ADDRESS_{i+1}", address)
         result = node.api_call(control_url)
+
+        if (
+            "result" in result
+            and result["result"] == []
+            and control.get("retry", False)
+            and retry < 10
+        ):
+            time.sleep(2)
+            return control_result(
+                item, node, context, block_hash, block_time, tx_hash, retry=retry + 1
+            )
 
         expected_result = control["result"]
         expected_result = (
             json.dumps(expected_result)
             .replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
+            .replace('"$BLOCK_INDEX"', str(block_index))
+            .replace('"$TX_INDEX"', str(node.tx_index))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
-        for i, address in enumerate(node.addresses):
-            expected_result = expected_result.replace(f"$ADDRESS_{i+1}", address)
+        for i, event_index in enumerate(event_indexes):
+            expected_result = expected_result.replace(f'"$EVENT_INDEX_{i + 1}"', str(event_index))
+        for i in reversed(range(11)):
+            address = node.addresses[i]
+            expected_result = expected_result.replace(f"$ADDRESS_{i + 1}", address)
         for name, value in context.items():
-            expected_result = expected_result.replace(f"${name}", value)
+            if name.endswith("_INDEX"):
+                expected_result = expected_result.replace(f'"${name}"', value)
+            else:
+                expected_result = expected_result.replace(f"${name}", value)
         expected_result = json.loads(expected_result)
 
         try:
@@ -107,6 +138,9 @@ def control_result(item, node, context, block_hash, block_time, tx_hash):
 
 def run_item(node, item, context):
     print(f"Running: {item['title']}")
+
+    if "disable_protocol_changes" in item:
+        node.disable_protocol_changes(item["disable_protocol_changes"])
 
     if item["transaction"] == "mine_blocks":
         block_hash, block_time = node.mine_blocks(item["params"]["blocks"])
@@ -155,11 +189,20 @@ def run_item(node, item, context):
             else:
                 raise e
 
-    if "controls" in item:
-        control_result(item, node, context, block_hash, block_time, tx_hash)
+    node.enable_all_protocol_changes()
 
     for name, value in item.get("set_variables", {}).items():
-        context[name] = value.replace("$TX_HASH", tx_hash).replace("$BLOCK_HASH", block_hash)
+        context[name] = (
+            value.replace("$TX_HASH", tx_hash)
+            .replace("$BLOCK_HASH", block_hash)
+            .replace("$TX_INDEX", str(node.tx_index))
+            .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
+            .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))  # TODO: make it more generic
+            .replace("$BLOCK_INDEX", str(node.block_count))
+        )
+
+    if "controls" in item:
+        control_result(item, node, context, block_hash, block_time, tx_hash)
 
     return context
 
@@ -193,14 +236,17 @@ def run_scenarios(serve=False):
                     regtest_node_thread.node, printed_line_count
                 )
                 time.sleep(1)
-
+        else:
+            os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
+            sh.python3(os.path.join(CURR_DIR, "genapidoc.py"), _out=sys.stdout, _err_to_out=True)
+            sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
     except KeyboardInterrupt:
         pass
     except Exception as e:
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        print(regtest_node_thread.node.server_out.getvalue())
+        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

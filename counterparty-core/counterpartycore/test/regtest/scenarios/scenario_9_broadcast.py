@@ -14,13 +14,13 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/180/events?event_name=BROADCAST",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=BROADCAST",
                 "result": [
                     {
                         "event": "BROADCAST",
-                        "event_index": 437,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
-                            "block_index": 180,
+                            "block_index": "$BLOCK_INDEX",
                             "fee_fraction_int": 0,
                             "locked": False,
                             "source": "$ADDRESS_1",
@@ -28,7 +28,7 @@ SCENARIO = [
                             "text": "Hello, world!",
                             "timestamp": 4003903983,
                             "tx_hash": "$TX_HASH",
-                            "tx_index": 46,
+                            "tx_index": "$TX_INDEX",
                             "value": 999.0,
                         },
                         "tx_hash": "$TX_HASH",

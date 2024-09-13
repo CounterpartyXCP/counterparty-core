@@ -541,6 +541,14 @@ with open(CURR_DIR + "/../protocol_changes.json") as f:
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
     if config.REGTEST:
+        regtest_protocole_file = os.path.join(
+            os.path.dirname(config.DATABASE), "regtest_disabled_changes.json"
+        )
+        if os.path.exists(regtest_protocole_file):
+            with open(regtest_protocole_file) as f:
+                regtest_disabled_changes = json.load(f)
+            if change_name in regtest_disabled_changes:
+                return False
         return True  # All changes are always enabled on REGTEST
 
     if config.TESTNET:

@@ -239,6 +239,15 @@ def validate(
         and open_address is not None
         and source != open_address
         and status != STATUS_CLOSED
+        and len(
+            ledger.get_dispensers(
+                db,
+                status_in=[0, 11],
+                address=open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source,
+                asset=asset,
+            )
+        )
+        == 0
     ):
         problems.append("dispenser must be created by source")
     else:
@@ -400,6 +409,7 @@ def compose(
 
     destination = []
     data = message_type.pack(ID)
+    print(FORMAT, assetid, give_quantity, escrow_quantity, mainchainrate, status)
     data += struct.pack(FORMAT, assetid, give_quantity, escrow_quantity, mainchainrate, status)
     if (status == STATUS_OPEN_EMPTY_ADDRESS and open_address) or (
         util.enabled("dispenser_origin_permission_extended")
