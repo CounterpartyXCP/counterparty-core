@@ -48,6 +48,7 @@ This release includes a variety of protocol upgrades.
 ## Codebase
 
 * New test suite with `regtest` network
+* Delete mempool events older than 24 hours
 
 ## API
 

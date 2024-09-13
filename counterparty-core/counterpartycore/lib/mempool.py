@@ -104,7 +104,7 @@ def clean_mempool(db):
         tx = ledger.get_transaction(db, event["tx_hash"])
         if tx:
             clean_transaction_events(db, event["tx_hash"])
-    # delete events older than 24 hours
+    # delete mempool events older than 24 hours
     cursor.execute(
         "DELETE FROM mempool WHERE timestamp < ?",
         (time.time() - 24 * 60 * 60,),
