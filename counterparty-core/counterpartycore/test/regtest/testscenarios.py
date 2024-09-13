@@ -13,12 +13,12 @@ from scenarios import (
     scenario_1_fairminter,
     scenario_2_fairminter,
     scenario_3_fairminter,
-    scenario_4_dispenser,
+    scenario_4_broadcast,
     scenario_5_dispenser,
-    scenario_6_utxo,
-    scenario_7_atomicswap,
-    scenario_8_issuance,
-    scenario_9_broadcast,
+    scenario_6_dispenser,
+    scenario_7_utxo,
+    scenario_8_atomicswap,
+    scenario_9_issuance,
     scenario_10_orders,
     scenario_11_btcpay,
     scenario_12_send,
@@ -33,12 +33,12 @@ SCENARIOS = []
 SCENARIOS += scenario_1_fairminter.SCENARIO
 SCENARIOS += scenario_2_fairminter.SCENARIO
 SCENARIOS += scenario_3_fairminter.SCENARIO
-SCENARIOS += scenario_4_dispenser.SCENARIO
+SCENARIOS += scenario_4_broadcast.SCENARIO
 SCENARIOS += scenario_5_dispenser.SCENARIO
-SCENARIOS += scenario_6_utxo.SCENARIO
-SCENARIOS += scenario_7_atomicswap.SCENARIO
-SCENARIOS += scenario_8_issuance.SCENARIO
-SCENARIOS += scenario_9_broadcast.SCENARIO
+SCENARIOS += scenario_6_dispenser.SCENARIO
+SCENARIOS += scenario_7_utxo.SCENARIO
+SCENARIOS += scenario_8_atomicswap.SCENARIO
+SCENARIOS += scenario_9_issuance.SCENARIO
 SCENARIOS += scenario_10_orders.SCENARIO
 SCENARIOS += scenario_11_btcpay.SCENARIO
 SCENARIOS += scenario_12_send.SCENARIO
@@ -111,7 +111,8 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0
             .replace('"$TX_INDEX"', str(node.tx_index))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
-        for i, event_index in enumerate(event_indexes):
+        for i in reversed(range(len(event_indexes))):
+            event_index = event_indexes[i]
             expected_result = expected_result.replace(f'"$EVENT_INDEX_{i + 1}"', str(event_index))
         for i in reversed(range(11)):
             address = node.addresses[i]

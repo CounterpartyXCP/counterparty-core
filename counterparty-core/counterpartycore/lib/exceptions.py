@@ -133,3 +133,7 @@ class InvalidUTXOError(Exception):
 
 class NoDispenserError(Exception):
     pass
+
+
+class NoPriceError(Exception):
+    pass

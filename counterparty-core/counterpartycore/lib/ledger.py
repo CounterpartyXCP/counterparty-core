@@ -1003,6 +1003,8 @@ def get_oracle_last_price(db, oracle_address, block_index):
     broadcasts = cursor.fetchall()
     cursor.close()
 
+    print(query, bindings, broadcasts)
+
     if len(broadcasts) == 0:
         return None, None, None, None
 
@@ -1109,7 +1111,7 @@ def last_db_index(db):
     if len(list(cursor.execute(query))) == 0:
         return 0
 
-    query = "SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1"
+    query = "SELECT block_index FROM blocks WHERE ledger_hash IS NOT NULL ORDER BY block_index DESC LIMIT 1"
     blocks = list(cursor.execute(query))
     if len(blocks) == 0:
         return 0
