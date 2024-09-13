@@ -116,8 +116,8 @@ def execute_command():
     result = api_call(route, params)
     print(json.dumps(result, indent=4))
 
-    print("Signing and sending transaction...")
     if sign_and_send:
+        print("Signing and sending transaction...")
         signed_transaction_json = bitcoin_wallet(
             "signrawtransactionwithwallet", result["result"]["rawtransaction"]
         ).strip()
