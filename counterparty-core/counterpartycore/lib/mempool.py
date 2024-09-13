@@ -80,6 +80,7 @@ def parse_mempool_transactions(db, raw_tx_list):
     except exceptions.MempoolError:
         # save events in the mempool table
         for event in transaction_events:
+            event["timestamp"] = now
             cursor.execute(
                 """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp, :event)""",
                 event,
@@ -103,3 +104,8 @@ def clean_mempool(db):
         tx = ledger.get_transaction(db, event["tx_hash"])
         if tx:
             clean_transaction_events(db, event["tx_hash"])
+    # delete mempool events older than 24 hours
+    cursor.execute(
+        "DELETE FROM mempool WHERE timestamp < ?",
+        (time.time() - 24 * 60 * 60,),
+    )

@@ -9,12 +9,17 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def get_must_give(db, dispenser, btc_amount, block_index=None):
+    print("Block index: ", block_index, util.CURRENT_BLOCK_INDEX)
     if (dispenser["oracle_address"] is not None) and util.enabled(  # noqa: E711
         "oracle_dispensers", block_index
     ):
         last_price, _last_fee, _last_fiat_label, _last_updated = ledger.get_oracle_last_price(
-            db, dispenser["oracle_address"], block_index
+            db, dispenser["oracle_address"], block_index or util.CURRENT_BLOCK_INDEX
         )
+        if last_price is None:
+            raise exceptions.NoPriceError(
+                f"No price available for this oracle {dispenser['oracle_address']} at block {block_index}"
+            )
         fiatrate = util.satoshirate_to_fiat(dispenser["satoshirate"])
         return int(floor(((btc_amount / config.UNIT) * last_price) / fiatrate))
 
@@ -34,10 +39,13 @@ def validate(db, _source, destination, quantity):
         if dispenser["give_remaining"] == 0:
             problems.append("dispenser is empty")
         else:
-            must_give = get_must_give(db, dispenser, quantity) * dispenser["give_quantity"]
-            logger.debug("must_give: %s", must_give)
-            if must_give > dispenser["give_remaining"]:
-                problems.append("dispenser doesn't have enough asset to give")
+            try:
+                must_give = get_must_give(db, dispenser, quantity) * dispenser["give_quantity"]
+                logger.debug("must_give: %s", must_give)
+                if must_give > dispenser["give_remaining"]:
+                    problems.append("dispenser doesn't have enough asset to give")
+            except exceptions.NoPriceError as e:
+                problems.append(str(e))
     return problems
 
 
