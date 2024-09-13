@@ -2,6 +2,12 @@ from counterpartycore.lib import transaction
 from counterpartycore.lib.api import queries, util
 from counterpartycore.lib.backend import addrindexrs, bitcoind
 
+
+def get_routes():
+    """Return the API routes."""
+    return ROUTES
+
+
 # Define the API routes except root (`/`) defined in `api_server.py`
 ROUTES = util.prepare_routes(
     {
@@ -165,6 +171,8 @@ ROUTES = util.prepare_routes(
         "/v2/mempool/events": queries.get_all_mempool_events,
         "/v2/mempool/events/<event>": queries.get_mempool_events_by_name,
         "/v2/mempool/transactions/<tx_hash>/events": queries.get_mempool_events_by_tx_hash,
+        ### /routes ###
+        "/v2/routes": get_routes,
         ### /healthz ###
         "/v2/healthz": util.check_server_health,
         "/healthz": util.check_server_health,

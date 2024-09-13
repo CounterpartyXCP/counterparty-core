@@ -1492,7 +1492,7 @@ def compose_dispenser(
     **construct_args,
 ):
     """
-    Opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
+    Composes a transaction to opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
     :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. $ADDRESS_7)
     :param asset: The asset or subasset to dispense (e.g. XCP)
     :param give_quantity: The quantity of the asset to dispense (in satoshis, hence integer) (e.g. 1000)
@@ -1933,7 +1933,7 @@ def compose_attach(
     **construct_args,
 ):
     """
-    Attach assets from an address to UTXO.
+    Composes a transaction to attach assets from an address to UTXO.
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
     :param destination: The utxo to attach the assets to (e.g. $UTXO_1_ADDRESS_1)
     :param asset: The asset or subasset to attach (e.g. XCP)
@@ -1958,7 +1958,7 @@ def compose_detach(
     **construct_args,
 ):
     """
-    Detach assets from UTXO to an address.
+    Composes a transaction to detach assets from UTXO to an address.
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
     :param destination: The address to detach the assets to (e.g. $ADDRESS_1)
     :param asset: The asset or subasset to detach (e.g. XCP)
@@ -1976,7 +1976,7 @@ def compose_detach(
 
 def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
     """
-    Move assets from UTXO to another UTXO.
+    Composes a transaction to move assets from UTXO to another UTXO.
     :param utxo: The utxo from which the assets are moved
     :param destination: The address to move the assets to
     :param more_utxos: The additional utxos to fund the transaction

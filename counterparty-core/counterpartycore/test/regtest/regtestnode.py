@@ -22,7 +22,7 @@ class ComposeError(Exception):
 
 
 class RegtestNode:
-    def __init__(self, datadir="regtestnode"):
+    def __init__(self, datadir="regtestnode", show_output=False):
         self.datadir = datadir
         self.bitcoin_cli = sh.bitcoin_cli.bake(
             "-regtest",
@@ -37,6 +37,7 @@ class RegtestNode:
         self.block_count = 0
         self.tx_index = -1
         self.ready = False
+        self.show_output = show_output
 
     def api_call(self, url):
         return json.loads(sh.curl(f"http://localhost:24000/v2/{url}").strip())
@@ -246,6 +247,13 @@ class RegtestNode:
         print("Regtest node ready")
         self.ready = True
 
+        if self.show_output:
+            printed_line_count = 0
+            print("Server ready, ctrl-c to stop.")
+            while True:
+                printed_line_count = print_server_output(self, printed_line_count)
+                time.sleep(1)
+
         self.counterparty_server_process.wait()
 
     def stop(self):
@@ -286,9 +294,17 @@ class RegtestNodeThread(threading.Thread):
         return False
 
 
+def print_server_output(node, printed_line_count):
+    unprinted_lines = node.server_out.getvalue().splitlines()[printed_line_count:]
+    for line in unprinted_lines:
+        print(line)
+        printed_line_count += 1
+    return printed_line_count
+
+
 if __name__ == "__main__":
     try:
-        node = RegtestNode()
+        node = RegtestNode(show_output=True)
         node.start()
     except KeyboardInterrupt:
         pass
