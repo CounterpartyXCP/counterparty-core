@@ -43,6 +43,7 @@ This release includes a variety of protocol upgrades.
 * Fix mempool parsing on testnet and regtest
 * Fix `get_dispensers_by_asset` endpoint filtering by query parameter. Numeric statuses can now be used i.e. `status=0`
 * Fix `cursor` type in API routes
+* Fix `ledger.get_last_db_index()` (server is ready on `BLOCK_PARSED` not on `NEW_BLOCK`)
 
 ## Codebase
 
