@@ -8,7 +8,7 @@ import time
 
 import sh
 from regtestcli import atomic_swap
-from regtestnode import ComposeError, RegtestNodeThread
+from regtestnode import ComposeError, RegtestNodeThread, print_server_output
 from scenarios import (
     scenario_1_fairminter,
     scenario_2_fairminter,
@@ -211,14 +211,6 @@ def run_item(node, item, context):
         control_result(item, node, context, block_hash, block_time, tx_hash)
 
     return context
-
-
-def print_server_output(node, printed_line_count):
-    unprinted_lines = node.server_out.getvalue().splitlines()[printed_line_count:]
-    for line in unprinted_lines:
-        print(line)
-        printed_line_count += 1
-    return printed_line_count
 
 
 def run_scenarios(serve=False):

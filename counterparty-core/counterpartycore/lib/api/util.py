@@ -276,6 +276,8 @@ class ApiJsonEncoder(json.JSONEncoder):
             return "{0:.8f}".format(o)
         if isinstance(o, bytes):
             return o.hex()
+        if callable(o):
+            return o.__name__
         return super().default(o)
 
 
