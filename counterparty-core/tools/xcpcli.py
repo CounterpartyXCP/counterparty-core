@@ -4,19 +4,26 @@ import argparse
 import json
 import urllib
 
+import rich
 import sh
 from termcolor import colored
 
 WALLET_NAME = "xcpwallet"
 COUNTERPARTY_SERVER = "http://localhost:24000"  # regtest
-REGTEST = True  # mine block after sending tx
+BITCOIN_HOST = "localhost"
+BITCOIN_NETWORK = "regtest"  # mine block after sending tx
+BITCOIN_RPC_USER = "rpc"
+BITCOIN_RPC_PASSWORD = "rpc"  # noqa S105
 
 bitcoin_cli = sh.bitcoin_cli.bake(
-    "-regtest",
-    "-rpcuser=rpc",
-    "-rpcpassword=rpc",
-    "-rpcconnect=localhost",
+    f"-rpcuser={BITCOIN_RPC_USER}",
+    f"-rpcpassword={BITCOIN_RPC_PASSWORD}",
+    f"-rpcconnect={BITCOIN_HOST}",
 )
+if BITCOIN_NETWORK == "regtest":
+    bitcoin_cli = bitcoin_cli.bake("-regtest")
+if BITCOIN_NETWORK == "testnet":
+    bitcoin_cli = bitcoin_cli.bake("-testnet")
 
 bitcoin_wallet = bitcoin_cli.bake(f"-rpcwallet={WALLET_NAME}")
 
@@ -51,6 +58,19 @@ def get_action(arg):
     return "store"
 
 
+def add_command_parser(subparsers, route_info):
+    route_parser = subparsers.add_parser(route_info["function"], help=route_info["description"])
+    for arg in route_info["args"]:
+        route_parser.add_argument(
+            f"--{arg['name']}",
+            action=get_action(arg),
+            required=arg.get("required", False),
+            default=get_default(arg),
+            help=arg.get("description", ""),
+        )
+    return route_parser
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         prog="xcpcli", description="A basic counterparty-server and Bitcoin Core client"
@@ -59,39 +79,19 @@ def parse_args():
     subparsers = parser.add_subparsers(dest="apicall", help="the API call to make")
     routes = api_call("/v2/routes")["result"]
     route_by_function = {}
-    compose_routes = []
 
     for route, route_info in routes.items():
         if not route.startswith("/v2/"):
             continue
-        route_parser = subparsers.add_parser(route_info["function"], help=route_info["description"])
-        for arg in route_info["args"]:
-            route_parser.add_argument(
-                f"--{arg['name']}",
-                action=get_action(arg),
-                required=arg.get("required", False),
-                default=get_default(arg),
-                help=arg.get("description", ""),
-            )
-            route_by_function[route_info["function"]] = route
+        add_command_parser(subparsers, route_info)
+        route_by_function[route_info["function"]] = route
         if route_info["function"].startswith("compose_"):
-            compose_routes.append((route, route_info))
-
-    for route, route_info in compose_routes:
-        function_name = route_info["function"].replace("compose_", "send_")
-        description = route_info["description"].replace(
-            "Composes a transaction", "Composes, sign and send a transaction"
-        )
-        route_parser = subparsers.add_parser(function_name, help=description)
-        for arg in route_info["args"]:
-            route_parser.add_argument(
-                f"--{arg['name']}",
-                action=get_action(arg),
-                required=arg.get("required", False),
-                default=get_default(arg),
-                help=arg.get("description", ""),
+            route_info["function"] = route_info["function"].replace("compose_", "send_")
+            route_info["description"] = route_info["description"].replace(
+                "Composes a transaction", "Composes, signs and sends a transaction"
             )
-            route_by_function[function_name] = route
+            add_command_parser(subparsers, route_info)
+            route_by_function[route_info["function"]] = route
 
     args = parser.parse_args()
     if not args.apicall:
@@ -114,9 +114,12 @@ def execute_command():
     route, params, sign_and_send = parse_args()
 
     result = api_call(route, params)
-    print(json.dumps(result, indent=4))
+    rich.print_json(json.dumps(result, indent=4))
 
     if sign_and_send:
+        if "error" in result:
+            print(colored(f"Error: {result['error']}", "red"))
+            return
         print("Signing and sending transaction...")
         signed_transaction_json = bitcoin_wallet(
             "signrawtransactionwithwallet", result["result"]["rawtransaction"]
@@ -124,7 +127,7 @@ def execute_command():
         signed_transaction = json.loads(signed_transaction_json)["hex"]
         tx_hash = bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
         print(colored(f"Transaction sent: {tx_hash}", "green"))
-        if REGTEST:
+        if BITCOIN_NETWORK == "regtest":
             reward_address = bitcoin_wallet("getnewaddress", WALLET_NAME, "bech32").strip()
             bitcoin_cli("generatetoaddress", 1, reward_address)
             print("Block mined")
