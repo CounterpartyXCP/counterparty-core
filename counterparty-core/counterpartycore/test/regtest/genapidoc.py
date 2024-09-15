@@ -559,6 +559,8 @@ def generate_regtest_fixtures(db):
 
 
 if __name__ == "__main__":
+    print("Generating API documentation...")
     data_dir = sys.argv[1] if len(sys.argv) > 1 else "regtestnode"
+    print(f"Using data directory: {data_dir}")
     db = database.get_db_connection(f"{data_dir}/counterparty.db", read_only=True, check_wal=False)
     update_doc(db)

@@ -236,7 +236,12 @@ def run_scenarios(serve=False):
                 time.sleep(1)
         else:
             os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
-            sh.python3(os.path.join(CURR_DIR, "genapidoc.py"), _out=sys.stdout, _err_to_out=True)
+            sh.python3(
+                os.path.join(CURR_DIR, "genapidoc.py"),
+                os.path.abspath("regtestnode"),
+                _out=sys.stdout,
+                _err_to_out=True,
+            )
             sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
     except KeyboardInterrupt:
         pass
