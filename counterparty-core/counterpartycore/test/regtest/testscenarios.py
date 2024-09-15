@@ -241,12 +241,13 @@ def run_scenarios(serve=False):
                 os.path.abspath("regtestnode"),
                 _out=sys.stdout,
                 _err_to_out=True,
+                _cwd=CURR_DIR,
             )
             sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        print(regtest_node_thread.node.server_out.getvalue())
+        # print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
         # print(regtest_node_thread.node.server_out.getvalue())

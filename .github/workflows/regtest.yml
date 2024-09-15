@@ -25,9 +25,9 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y libgirepository1.0-dev libleveldb-dev
+        sudo apt-get install -y libgirepository1.0-dev libleveldb-dev nodejs npm
         python -m pip install --upgrade pip
-        pip install scanner maturin sh rich
+        pip install maturin sh rich pyyaml
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
         pip install evdev
@@ -39,6 +39,7 @@ jobs:
         sudo cp bitcoin-27.1/bin/bitcoin-cli /usr/local/bin/bitcoin-cli
         sudo cp bitcoin-27.1/bin/bitcoind /usr/local/bin/bitcoind
         sudo cp bitcoin-27.1/bin/bitcoin-wallet /usr/local/bin/bitcoin-wallet
+        npm install dredd --global
     - name: Run regtest tests
       run: |
         cd counterparty-core
