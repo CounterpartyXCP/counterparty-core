@@ -1,0 +1,42 @@
+name: Regtest test
+
+on:
+  push:
+    branches: "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        default: true
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y libgirepository1.0-dev libleveldb-dev snapd
+        sudo snap install bitcoin-core
+        python -m pip install --upgrade pip
+        pip install scanner maturin sh rich
+        cd counterparty-rs && pip install -e . && cd ..
+        cd counterparty-core && pip install -e . && cd ..
+        pip install evdev
+        git clone https://github.com/CounterpartyXCP/addrindexrs.git
+        cd addrindexrs
+        cargo install --path=.
+    - name: Run regtest tests
+      run: |
+        alias bitcoin-cli='bitcoin-core.cli'
+        cd counterparty-core
+        python3 counterpartycore/test/regtest/testscenarios.py
