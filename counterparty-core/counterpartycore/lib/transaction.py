@@ -1201,13 +1201,16 @@ def compose_transaction(
                 # params[address_name] = pkhshs
                 pass
             else:
-                provided_pubkeys += script.extract_pubkeys(address)
-                params[address_name] = script.make_pubkeyhash(address)
+                try:
+                    provided_pubkeys += script.extract_pubkeys(address)
+                    params[address_name] = script.make_pubkeyhash(address)
+                except Exception as e:
+                    raise exceptions.ComposeError(f"invalid address: {address}") from e
 
     # Check validity of collected pubkeys.
     for pubkey in provided_pubkeys:
         if not script.is_fully_valid(binascii.unhexlify(pubkey)):
-            raise script.AddressError(f"invalid public key: {pubkey}")
+            raise exceptions.ComposeError(f"invalid public key: {pubkey}")
 
     compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
