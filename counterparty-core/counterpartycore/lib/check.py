@@ -647,6 +647,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "0e594ca2b3b36b66475b1c53d9b02d9fe4726e28f6f61db8fdf8103a787e6c3e",
         "txlist_hash": "993c980296307d38656b4458a9b3913a8028adc02630fb6a8c55bea009008dd7",
     },
+    861500: {
+        "ledger_hash": "76ca4415a24ae04579b05b517f41441b7cb45eb881db71d1b59de5d373a4bc28",
+        "txlist_hash": "b05b906391cf96d5b4b5893c5fda13fb64635d26785ee3ad1330fe701eb41cb4",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET = 7
