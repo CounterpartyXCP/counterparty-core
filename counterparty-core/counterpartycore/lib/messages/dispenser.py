@@ -409,7 +409,6 @@ def compose(
 
     destination = []
     data = message_type.pack(ID)
-    print(FORMAT, assetid, give_quantity, escrow_quantity, mainchainrate, status)
     data += struct.pack(FORMAT, assetid, give_quantity, escrow_quantity, mainchainrate, status)
     if (status == STATUS_OPEN_EMPTY_ADDRESS and open_address) or (
         util.enabled("dispenser_origin_permission_extended")

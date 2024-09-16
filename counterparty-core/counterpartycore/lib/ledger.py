@@ -1003,8 +1003,6 @@ def get_oracle_last_price(db, oracle_address, block_index):
     broadcasts = cursor.fetchall()
     cursor.close()
 
-    print(query, bindings, broadcasts)
-
     if len(broadcasts) == 0:
         return None, None, None, None
 
