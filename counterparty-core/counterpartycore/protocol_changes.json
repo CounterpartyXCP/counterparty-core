@@ -546,7 +546,7 @@
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,
-    "block_index": 870000,
+    "block_index": 866000,
     "testnet_block_index": 2925800
   },
   "dispenser_must_be_created_by_source": {
