@@ -59,6 +59,7 @@ This release includes a variety of protocol upgrades.
 * Run Dredd tests on regtest node
 * Add the new following routes:
     - `/v2/order_matches`
+    - `/v2/bitcoin/getmempoolinfo`
 
 ## CLI
 
