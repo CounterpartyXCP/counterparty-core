@@ -539,71 +539,71 @@
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,
-    "block_index": 900000,
-    "testnet_block_index": 2815000
+    "block_index": 866000,
+    "testnet_block_index": 2925800
   },
   "disable_vanilla_btc_dispense": {
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,
-    "block_index": 925000,
-    "testnet_block_index": 2815000
+    "block_index": 870000,
+    "testnet_block_index": 2925800
   },
   "dispenser_must_be_created_by_source": {
     "minimum_version_major": 10,
       "minimum_version_minor": 2,
       "minimum_version_revision": 0,
-      "block_index": 900000,
-      "testnet_block_index": 2815000
+      "block_index": 866000,
+      "testnet_block_index": 2925800
   },
   "expire_order_matches_then_orders": {
       "minimum_version_major": 10,
       "minimum_version_minor": 4,
       "minimum_version_revision": 0,
-      "block_index": 900000,
-      "testnet_block_index": 2815000
+      "block_index": 866000,
+      "testnet_block_index": 2925800
   },
   "fairminter": {
       "minimum_version_major": 10,
       "minimum_version_minor": 4,
       "minimum_version_revision": 0,
-      "block_index": 900000,
-      "testnet_block_index": 2815000
+      "block_index": 866000,
+      "testnet_block_index": 2925800
   },
   "lockable_issuance_descriptions": {
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,
-    "block_index": 900000,
-    "testnet_block_index": 2815000
+    "block_index": 866000,
+    "testnet_block_index": 2925800
   },
   "utxo_support": {
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,
-    "block_index": 900000,
-    "testnet_block_index": 2815000
+    "block_index": 866000,
+    "testnet_block_index": 2925800
   },
   "free_subassets": {
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,
-    "block_index": 900000,
-    "testnet_block_index": 2815000
+    "block_index": 866000,
+    "testnet_block_index": 2925800
   },
   "allow_subassets_on_numerics": {
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,
-    "block_index": 900000,
-    "testnet_block_index": 2815000
+    "block_index": 866000,
+    "testnet_block_index": 2925800
   },
   "fix_min_btc_quantity": {
     "minimum_version_major": 10,
     "minimum_version_minor": 4,
     "minimum_version_revision": 0,
-    "block_index": 900000,
-    "testnet_block_index": 2815000
+    "block_index": 866000,
+    "testnet_block_index": 2925800
   },
   "fee_parameters": {
     "minimum_version_major": 0,
@@ -611,7 +611,7 @@
       "1": {
         "value": null 
       },
-      "900000": {
+      "866000": {
         "value": {
           "100": {
             "fee_lower_threshold": 3,
@@ -626,7 +626,7 @@
       "1": {
         "value": null
       },    
-      "2815000": {
+      "2925800": {
         "value": {
           "100": {
             "fee_lower_threshold": 3,
