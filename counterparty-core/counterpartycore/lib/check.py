@@ -163,6 +163,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "ab9f9c1aafdfc816a19aa403775c56b0b63e4c977685427f8fcee85db449cb15",
         "txlist_hash": "c8c7b8c0a86d601274e047d7038d47cd20f7147d9245f0d22449102b4b0c6fbf",
     },
+    650000: {
+        "ledger_hash": "7e4d5af885d20a68eb78d939f3b56f10c3e4defbb797297754579122e9611679",
+        "txlist_hash": "14405c618a97fb2fc8b5640f84ad8a4aece924474a5b4ffc4e67c46914676ba6",
+    },
     700000: {
         "ledger_hash": "4e84538d7bde57bbea518563f2a50f4245597bf5e5619fc4cbe9d981ab9d0adc",
         "txlist_hash": "abb48c10d692c159180a376b4a9002abcf582fab1b5652ba3ccdc73f4b5e0d8a",
