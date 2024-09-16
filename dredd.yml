@@ -139,6 +139,7 @@ only:
 - Bitcoin > Get Transaction > Get Transaction
 - Bitcoin > Fee Per Kb > Fee Per Kb
 - Bitcoin > Sendrawtransaction > Sendrawtransaction
+- Bitcoin > Get Mempool Info > Get Mempool Info
 - Mempool > Get All Mempool Events > Get All Mempool Events
 - Mempool > Get Mempool Events By Name > Get Mempool Events By Name
 - Mempool > Get Mempool Events By Tx Hash > Get Mempool Events By Tx Hash
