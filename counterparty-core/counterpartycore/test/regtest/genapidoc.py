@@ -386,6 +386,13 @@ def update_doc(db):
 
 
 def generate_regtest_fixtures(db):
+    bitcoin_cli = sh.bitcoin_cli.bake(
+        "-regtest",
+        "-rpcuser=rpc",
+        "-rpcpassword=rpc",
+        "-rpcconnect=localhost",
+    )
+
     regtest_fixtures = {}
     cursor = db.cursor()
 
@@ -475,7 +482,7 @@ def generate_regtest_fixtures(db):
 
     # get utxo from bitcoin-cli
     utxo = json.loads(
-        sh.bitcoin_cli(
+        bitcoin_cli(
             "-regtest", "listunspent", 0, 9999999, f'["{regtest_fixtures["$ADDRESS_1"]}"]'
         ).strip()
     )[0]
@@ -492,7 +499,7 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$UTXO_WITH_BALANCE"] = row["utxo"]
 
     # rawtransaction
-    regtest_fixtures["$RAW_TRANSACTION_1"] = sh.bitcoin_cli(
+    regtest_fixtures["$RAW_TRANSACTION_1"] = bitcoin_cli(
         "-regtest", "getrawtransaction", txid
     ).strip()
 
@@ -559,6 +566,8 @@ def generate_regtest_fixtures(db):
 
 
 if __name__ == "__main__":
+    print("Generating API documentation...")
     data_dir = sys.argv[1] if len(sys.argv) > 1 else "regtestnode"
+    print(f"Using data directory: {data_dir}")
     db = database.get_db_connection(f"{data_dir}/counterparty.db", read_only=True, check_wal=False)
     update_doc(db)

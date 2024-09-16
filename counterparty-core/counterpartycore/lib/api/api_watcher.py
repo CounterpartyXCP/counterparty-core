@@ -301,7 +301,7 @@ def update_balances(api_db, event):
 
     field_name = "address"
     address_or_utxo = event_bindings["address"]
-    if event_bindings["utxo"]:
+    if "utxo" in event_bindings and event_bindings["utxo"]:
         field_name = "utxo"
         address_or_utxo = event_bindings["utxo"]
     event_bindings["address_or_utxo"] = address_or_utxo
@@ -320,10 +320,13 @@ def update_balances(api_db, event):
             INSERT INTO balances ({field_name}, asset, quantity, utxo_address)
             VALUES (:address_or_utxo, :asset, :quantity, :utxo_address)
             """  # noqa: S608
+    utxo_address = None
+    if "utxo_address" in event_bindings:
+        utxo_address = event_bindings["utxo_address"]
     insert_bindings = {
         "address_or_utxo": address_or_utxo,
         "asset": event_bindings["asset"],
-        "utxo_address": event_bindings["utxo_address"],
+        "utxo_address": utxo_address,
         "quantity": quantity,
     }
     cursor.execute(sql, insert_bindings)

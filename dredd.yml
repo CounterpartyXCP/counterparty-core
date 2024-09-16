@@ -142,6 +142,7 @@ only:
 - Mempool > Get All Mempool Events > Get All Mempool Events
 - Mempool > Get Mempool Events By Name > Get Mempool Events By Name
 - Mempool > Get Mempool Events By Tx Hash > Get Mempool Events By Tx Hash
+- Routes > Get Routes > Get Routes
 - Z-pages > Check Server Health > Check Server Health
 - Z-pages > Check Server Health > Check Server Health
 - V1 > Redirect To Rpc V1 > Redirect To Rpc V1
