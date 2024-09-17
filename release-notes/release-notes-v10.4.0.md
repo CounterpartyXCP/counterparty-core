@@ -44,6 +44,8 @@ This release includes a variety of protocol upgrades.
 * Fix `get_dispensers_by_asset` endpoint filtering by query parameter. Numeric statuses can now be used i.e. `status=0`
 * Fix `cursor` type in API routes
 * Fix `ledger.get_last_db_index()` (server is ready on `BLOCK_PARSED` not on `NEW_BLOCK`)
+* Fix `ledger.get_block(block_index)` function
+* Check that the previous block is present when a block is received with ZMQ
 
 ## Codebase
 
