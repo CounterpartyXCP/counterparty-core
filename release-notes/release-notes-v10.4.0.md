@@ -46,6 +46,7 @@ This release includes a variety of protocol upgrades.
 * Fix `ledger.get_last_db_index()` (server is ready on `BLOCK_PARSED` not on `NEW_BLOCK`)
 * Fix `ledger.get_block(block_index)` function
 * Check that the previous block is present when a block is received with ZMQ
+* Log API v1 responses
 
 ## Codebase
 
