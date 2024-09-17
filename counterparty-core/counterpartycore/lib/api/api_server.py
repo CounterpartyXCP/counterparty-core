@@ -143,26 +143,46 @@ def return_result(
     result_count=None,
     start_time=None,
     query_args=None,
+    raw_content=None,
+    content_type=None,
+    headers=None,
 ):
     assert result is None or error is None
-    api_result = {}
-    if result is not None:
-        api_result["result"] = result
-        if isinstance(result, list):
-            api_result["next_cursor"] = next_cursor
-            api_result["result_count"] = result_count
-    if error is not None:
-        api_result["error"] = error
-    response = flask.make_response(to_json(api_result), http_code)
+
+    if raw_content is not None:
+        # Use the raw content and content type provided
+        response = flask.make_response(raw_content, http_code)
+        response.headers["Content-Type"] = content_type or 'text/plain'
+    else:
+        # Build the API result
+        api_result = {}
+        if result is not None:
+            api_result["result"] = result
+            if isinstance(result, list):
+                api_result["next_cursor"] = next_cursor
+                api_result["result_count"] = result_count
+        if error is not None:
+            api_result["error"] = error
+        response = flask.make_response(to_json(api_result), http_code)
+        response.headers["Content-Type"] = "application/json"
+
+    # Set common headers
     response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
-    response.headers["Content-Type"] = "application/json"
     if not config.API_NO_ALLOW_CORS:
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Headers"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "*"
 
+    # Include any additional headers provided
+    if headers:
+        for key, value in headers.items():
+            # Avoid overwriting existing headers
+            if key not in response.headers:
+                response.headers[key] = value
+
+    # Logging
     if http_code != 404:
         message = get_log_prefix(query_args)
     else:
@@ -295,7 +315,7 @@ def handle_route(**kwargs):
 
     route = ROUTES.get(rule)
 
-    # parse args
+    # Parse args
     try:
         function_args = prepare_args(route, **kwargs)
     except ValueError as e:
@@ -303,7 +323,7 @@ def handle_route(**kwargs):
 
     logger.trace(f"API Request - Arguments: {function_args}")
 
-    # call the function
+    # Call the function
     try:
         with APIDBConnectionPool().connection() as db:
             result = execute_api_function(db, rule, route, function_args)
@@ -322,17 +342,30 @@ def handle_route(**kwargs):
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        import traceback
-
-        print(traceback.format_exc())  # for debugging
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )
 
     if isinstance(result, requests.Response):
-        return result.content, result.status_code, result.headers.items()
+        # Extract content, headers, and status code
+        http_code = result.status_code
+        content_type = result.headers.get('Content-Type', 'application/json')
+        raw_content = result.content
+        # Exclude certain headers if necessary
+        headers = {k: v for k, v in result.headers.items() if k not in [
+            'Content-Type', 'Content-Length'
+        ]}
 
-    # clean up and return the result
+        return return_result(
+            http_code=http_code,
+            raw_content=raw_content,
+            content_type=content_type,
+            start_time=start_time,
+            query_args=query_args,
+            headers=headers,
+        )
+
+    # Clean up and return the result
     if result is None:
         return return_result(404, error="Not found", start_time=start_time, query_args=query_args)
 
@@ -345,7 +378,7 @@ def handle_route(**kwargs):
 
     result = clean_rowids_and_confirmed_fields(result)
 
-    # inject details
+    # Inject details
     verbose = request.args.get("verbose", "False")
     if verbose.lower() in ["true", "1"]:
         result = inject_details(db, result)
