@@ -10055,6 +10055,13 @@
                         "required": false
                     },
                     {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -10231,6 +10238,13 @@
                         "required": false
                     },
                     {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -10386,6 +10400,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
                     {
@@ -10554,6 +10575,13 @@
                         "required": false
                     },
                     {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -10709,6 +10737,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
                     {
@@ -10879,6 +10914,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
                     {
@@ -11078,6 +11120,13 @@
                         "required": false
                     },
                     {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11245,6 +11294,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
                     {
@@ -11447,6 +11503,13 @@
                         "required": false
                     },
                     {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11628,6 +11691,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
                     {
@@ -11816,6 +11886,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
                     {
@@ -12010,6 +12087,13 @@
                         "required": false
                     },
                     {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12180,6 +12264,13 @@
                         "required": false
                     },
                     {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12341,6 +12432,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
                     {
@@ -12614,6 +12712,13 @@
                         "required": false
                     },
                     {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12776,6 +12881,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
                     {
@@ -12950,6 +13062,13 @@
                         "required": false
                     },
                     {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13117,6 +13236,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "custom_inputs",
+                        "type": "str",
+                        "default": "",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
                     {
