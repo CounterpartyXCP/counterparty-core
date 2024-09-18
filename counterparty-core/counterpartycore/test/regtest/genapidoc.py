@@ -254,7 +254,10 @@ def gen_blueprint(db):
                         md += f"            + `{member}`\n"
 
         if (
-            example_args != {} or len(route["args"]) == 1 or "healthz" in path
+            example_args != {}
+            or len(route["args"]) == 1
+            or "healthz" in path
+            or "getmempoolinfo" in path
         ):  # min 1 for verbose arg
             if not USE_API_CACHE or path not in API_CACHE:
                 example_output = get_example_output(path, example_args)

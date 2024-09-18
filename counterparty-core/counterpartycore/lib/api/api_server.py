@@ -329,6 +329,10 @@ def handle_route(**kwargs):
         )
 
     if isinstance(result, requests.Response):
+        message = f"API Request - {request.remote_addr} {request.method} {request.url}"
+        message += f" - Response {result.status_code}"
+        message += f" - {int((time.time() - start_time) * 1000)}ms"
+        logger.debug(message)
         return result.content, result.status_code, result.headers.items()
 
     # clean up and return the result

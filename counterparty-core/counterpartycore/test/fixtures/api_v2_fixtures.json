@@ -15825,6 +15825,26 @@
                     }
                 ]
             },
+            "/v2/bitcoin/getmempoolinfo": {
+                "function": "get_mempool_info",
+                "description": "Get the current mempool info.",
+                "args": [
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
             "/v2/mempool/events": {
                 "function": "get_all_mempool_events",
                 "description": "Returns all mempool events",

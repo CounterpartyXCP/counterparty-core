@@ -213,6 +213,13 @@ def get_zmq_notifications():
     return rpc("getzmqnotifications", [])
 
 
+def get_mempool_info():
+    """
+    Get the current mempool info.
+    """
+    return rpc("getmempoolinfo", [])
+
+
 def wait_for_block(block_index):
     block_count = getblockcount()
     while block_count < block_index:
