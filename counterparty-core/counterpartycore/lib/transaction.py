@@ -1120,6 +1120,11 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "Return only the data part of the transaction",
     ),
+    "custom_inputs": (
+        str,
+        "",
+        "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+    ),
 }
 
 
@@ -1187,6 +1192,19 @@ def compose_transaction(
         provided_pubkeys = []
     else:
         raise exceptions.TransactionError("Invalid pubkey.")
+
+    if isinstance(custom_inputs, str):
+        new_custom_inputs = []
+        for str_input in custom_inputs.split(","):
+            if not util.is_utxo_format(str_input):
+                raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
+            new_custom_inputs.append(
+                {
+                    "txid": str_input.split(":")[0],
+                    "vout": int(str_input.split(":")[1]),
+                }
+            )
+        custom_inputs = new_custom_inputs
 
     # Get additional pubkeys from `source` and `destination` params.
     # Convert `source` and `destination` to pubkeyhash form.
