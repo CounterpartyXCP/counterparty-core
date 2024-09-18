@@ -171,16 +171,61 @@ Issuance of 100000000 PARENT by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [076ae3d8eeb7
 TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Issuance of 100000000 A95428956661682277 by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf] (valid)
+TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+Fair minter opened for FREEFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+Fair minter opened for PAIDFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+10 FREEFAIRMIN minted for 0 XCP by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
+TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+Fair minter opened for RAIDFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+Fair minter opened for QAIDFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Constructing `MULTISIG` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
+TX Construct - Transaction constructed.
+Fair minter opened for A160361285792733729 by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
+TX Construct - Constructing `OPRETURN` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
+TX Construct - Transaction constructed.
+10 A160361285792733729 minted for 100 XCP by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+TX Construct - Constructing `OPRETURN` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
+TX Construct - Transaction constructed.
+20 A160361285792733729 minted for 200 XCP by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
+TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+Attach XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883) [valid]
+TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
+TX Construct - Transaction constructed.
+Attach DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e) [valid]
+TX Construct - Constructing `MULTISIG` transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
+TX Construct - Transaction constructed.
+Issuance of 1000 TESTDISP by munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b [01e52e3770a932827a4b4e5db193eef916fcf69bda1a7944298210a74f1633a1] (valid)
+TX Construct - Constructing `OPRETURN` transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
+TX Construct - Transaction constructed.
+Dispenser opened for TESTDISP at munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b (af67f6762d4b00b4bf5fb93a9d556e007a147aa80fbf6a84410df05a0182da9e) [valid]
+Order match cancelled XCP / BTC (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81) [expired]
+Bet 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef canceled [expired]
+Bet Expiration 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef
 Checking for conservation of assets.
-XCP has been conserved (6040.3184792 XCP both issued and held)
+XCP has been conserved (6037.818479 XCP both issued and held)
+A160361285792733729 has been conserved (0.0000005 A160361285792733729 both issued and held)
 A95428956661682277 has been conserved (1.0 A95428956661682277 both issued and held)
 CALLABLE has been conserved (0.00001 CALLABLE both issued and held)
 DIVIDEND has been conserved (0.000001 DIVIDEND both issued and held)
 DIVISIBLE has been conserved (1000.0 DIVISIBLE both issued and held)
+FREEFAIRMIN has been conserved (0.0000001 FREEFAIRMIN both issued and held)
 LOCKED has been conserved (0.00001 LOCKED both issued and held)
 LOCKEDPREV has been conserved (0.00001 LOCKEDPREV both issued and held)
 MAXI has been conserved (92233720368.54775807 MAXI both issued and held)
 NODIVISIBLE has been conserved (1000 NODIVISIBLE both issued and held)
+PAIDFAIRMIN has been conserved (0.0 PAIDFAIRMIN both issued and held)
 PARENT has been conserved (1.0 PARENT both issued and held)
 PAYTOSCRIPT has been conserved (1000 PAYTOSCRIPT both issued and held)
+QAIDFAIRMIN has been conserved (0.0000002 QAIDFAIRMIN both issued and held)
+RAIDFAIRMIN has been conserved (0.0000002 RAIDFAIRMIN both issued and held)
+TESTDISP has been conserved (1000 TESTDISP both issued and held)
 All assets have been conserved.

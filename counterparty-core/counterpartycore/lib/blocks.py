@@ -19,6 +19,7 @@ from counterpartycore.lib import (  # noqa: E402
     config,
     database,
     exceptions,
+    gas,
     ledger,
     log,
     message_type,
@@ -34,14 +35,18 @@ from .messages import (  # noqa: E402
     burn,
     cancel,
     destroy,
+    dispense,
     dispenser,
     dividend,
+    fairmint,
+    fairminter,
     issuance,
     order,
     rps,
     rpsresolve,
     send,
     sweep,
+    utxo,
 )
 from .messages.versions import enhanced_send, mpma  # noqa: E402
 
@@ -80,6 +85,9 @@ TABLES = ["balances", "credits", "debits", "messages"] + [
     "dispensers",
     "dispenses",
     "dispenser_refills",
+    "fairminters",
+    "fairmints",
+    "transaction_count",
 ]
 
 MAINNET_BURNS = {}
@@ -97,6 +105,12 @@ def parse_tx(db, tx):
 
     try:
         with db:
+            if "utxos_info" in tx and tx["utxos_info"]:
+                utxo.move_assets(db, tx)
+
+            if not tx["source"]:  # utxos move only
+                return
+
             # Only one source and one destination allowed for now.
             if len(tx["source"].split("-")) > 1:
                 return
@@ -178,7 +192,19 @@ def parse_tx(db, tx):
             elif message_type_id == dispenser.DISPENSE_ID and util.enabled(
                 "dispensers", block_index=tx["block_index"]
             ):
-                dispenser.dispense(db, tx)
+                dispense.parse(db, tx)
+            elif message_type_id == fairminter.ID and util.enabled(
+                "fairminter", block_index=tx["block_index"]
+            ):
+                fairminter.parse(db, tx, message)
+            elif message_type_id == fairmint.ID and util.enabled(
+                "fairminter", block_index=tx["block_index"]
+            ):
+                fairmint.parse(db, tx, message)
+            elif message_type_id == utxo.ID and util.enabled(
+                "utxo_support", block_index=tx["block_index"]
+            ):
+                utxo.parse(db, tx, message)
             else:
                 supported = False
 
@@ -203,14 +229,17 @@ def parse_tx(db, tx):
                     {"supported": False, "tx_hash": tx["tx_hash"]},
                 )
                 if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
-                    logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
+                    logger.info(
+                        f"Unsupported transaction: hash {tx['tx_hash']}; ID: {message_type_id}; data {tx['data']}"
+                    )
                 cursor.close()
+                util.CURRENT_TX_HASH = None
                 return False
 
             # NOTE: for debugging (check asset conservation after every `N` transactions).
             # if not tx['tx_index'] % N:
             #     check.asset_conservation(db)
-
+            util.CURRENT_TX_HASH = None
             return True
     except Exception as e:
         raise exceptions.ParseTransactionError(f"{e}")  # noqa: B904
@@ -234,6 +263,7 @@ def replay_transactions_events(db, transactions):
             "btc_amount": tx["btc_amount"],
             "fee": tx["fee"],
             "data": tx["data"],
+            "utxos_info": tx["utxos_info"],
         }
         ledger.add_to_journal(
             db,
@@ -308,6 +338,9 @@ def parse_block(
     # Close dispensers
     dispenser.close_pending(db, block_index)
 
+    # Fairminters operations
+    fairminter.before_block(db, block_index)
+
     txlist = []
     for tx in transactions:
         try:
@@ -320,6 +353,9 @@ def parse_block(
             logger.warning(f"ParseTransactionError for tx {tx['tx_hash']}: {e}")
             raise e
             # pass
+
+    # Fairminters operations
+    fairminter.after_block(db, block_index)
 
     if block_index != config.MEMPOOL_BLOCK_INDEX:
         # Calculate consensus hashes.
@@ -478,10 +514,18 @@ def initialise(db):
                       fee INTEGER,
                       data BLOB,
                       supported BOOL DEFAULT 1,
+                      utxos_info TEXT,
                       FOREIGN KEY (block_index, block_hash) REFERENCES blocks(block_index, block_hash),
                       PRIMARY KEY (tx_index, tx_hash, block_index))
                     """
     )
+
+    transactions_columns = [
+        column["name"] for column in cursor.execute("""PRAGMA table_info(transactions)""")
+    ]
+    if "utxos_info" not in transactions_columns:
+        cursor.execute("""ALTER TABLE transactions ADD COLUMN utxos_info TEXT""")
+
     database.create_indexes(
         cursor,
         "transactions",
@@ -515,6 +559,9 @@ def initialise(db):
     debits_columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(debits)""")]
     if "tx_index" not in debits_columns:
         cursor.execute("""ALTER TABLE debits ADD COLUMN tx_index INTEGER""")
+    if "utxo" not in debits_columns:
+        cursor.execute("""ALTER TABLE debits ADD COLUMN utxo TEXT""")
+        cursor.execute("""ALTER TABLE debits ADD COLUMN utxo_address TEXT""")
 
     database.create_indexes(
         cursor,
@@ -526,6 +573,8 @@ def initialise(db):
             ["event"],
             ["action"],
             ["quantity"],
+            ["utxo"],
+            ["utxo_address"],
         ],
     )
 
@@ -547,6 +596,9 @@ def initialise(db):
     ]
     if "tx_index" not in credits_columns:
         cursor.execute("""ALTER TABLE credits ADD COLUMN tx_index INTEGER""")
+    if "utxo" not in credits_columns:
+        cursor.execute("""ALTER TABLE credits ADD COLUMN utxo TEXT""")
+        cursor.execute("""ALTER TABLE credits ADD COLUMN utxo_address TEXT""")
 
     database.create_indexes(
         cursor,
@@ -558,6 +610,8 @@ def initialise(db):
             ["event"],
             ["calling_function"],
             ["quantity"],
+            ["utxo"],
+            ["utxo_address"],
         ],
     )
 
@@ -578,6 +632,9 @@ def initialise(db):
         cursor.execute("""ALTER TABLE balances ADD COLUMN block_index INTEGER""")
     if "tx_index" not in balances_columns:
         cursor.execute("""ALTER TABLE balances ADD COLUMN tx_index INTEGER""")
+    if "utxo" not in balances_columns:
+        cursor.execute("""ALTER TABLE balances ADD COLUMN utxo TEXT""")
+        cursor.execute("""ALTER TABLE balances ADD COLUMN utxo_address TEXT""")
 
     database.create_indexes(
         cursor,
@@ -588,6 +645,8 @@ def initialise(db):
             ["asset"],
             ["block_index"],
             ["quantity"],
+            ["utxo"],
+            ["utxo_address"],
         ],
     )
 
@@ -670,6 +729,10 @@ def initialise(db):
     rpsresolve.initialise(db)
     sweep.initialise(db)
     dispenser.initialise(db)
+    fairminter.initialise(db)
+    fairmint.initialise(db)
+
+    gas.initialise(db)
 
     # Messages
     cursor.execute(
@@ -899,7 +962,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
     util.CURRENT_TX_HASH = tx_hash
     cursor = db.cursor()
 
-    source, destination, btc_amount, fee, data, dispensers_outs = get_tx_info(
+    source, destination, btc_amount, fee, data, dispensers_outs, utxos_info = get_tx_info(
         db, decoded_tx, block_index
     )
 
@@ -910,7 +973,9 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
     else:
         assert block_index == util.CURRENT_BLOCK_INDEX
 
-    if source and (data or destination == config.UNSPENDABLE or dispensers_outs):
+    if (source and (data or destination == config.UNSPENDABLE or dispensers_outs)) or len(
+        utxos_info
+    ) > 1:
         transaction_bindings = {
             "tx_index": tx_index,
             "tx_hash": tx_hash,
@@ -922,24 +987,26 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             "btc_amount": btc_amount,
             "fee": fee,
             "data": data,
+            "utxos_info": " ".join(utxos_info),
         }
         ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
 
-        for next_out in dispensers_outs:
-            transaction_outputs_bindings = {
-                "tx_index": tx_index,
-                "tx_hash": tx_hash,
-                "block_index": block_index,
-                "out_index": next_out["out_index"],
-                "destination": next_out["destination"],
-                "btc_amount": next_out["btc_amount"],
-            }
-            ledger.insert_record(
-                db,
-                "transaction_outputs",
-                transaction_outputs_bindings,
-                "NEW_TRANSACTION_OUTPUT",
-            )
+        if dispensers_outs:
+            for next_out in dispensers_outs:
+                transaction_outputs_bindings = {
+                    "tx_index": tx_index,
+                    "tx_hash": tx_hash,
+                    "block_index": block_index,
+                    "out_index": next_out["out_index"],
+                    "destination": next_out["destination"],
+                    "btc_amount": next_out["btc_amount"],
+                }
+                ledger.insert_record(
+                    db,
+                    "transaction_outputs",
+                    transaction_outputs_bindings,
+                    "NEW_TRANSACTION_OUTPUT",
+                )
 
         cursor.close()
 
@@ -1228,6 +1295,7 @@ def check_database_version(db):
 
 
 def catch_up(db, check_asset_conservation=True):
+    util.BLOCK_PARSER_STATUS = "catching up"
     # update the current block index
     util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
     if util.CURRENT_BLOCK_INDEX == 0:

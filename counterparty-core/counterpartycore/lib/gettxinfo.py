@@ -2,7 +2,7 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import arc4, backend, config, script, util
+from counterpartycore.lib import arc4, backend, config, ledger, message_type, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
@@ -250,6 +250,8 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
     dispenser_source = sources.split("-")[0]
     out_index = 0
     for out in dispensers_outputs:
+        if out[0] is None or out[1] is None:
+            continue
         if out[0] != dispenser_source:
             source = dispenser_source
             destination = out[0]
@@ -345,7 +347,6 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-
     # Ignore coinbase transactions.
     if decoded_tx["coinbase"]:
         raise DecodeError("coinbase transaction")
@@ -382,6 +383,9 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if not data and destinations != [
         config.UNSPENDABLE,
     ]:
+        if util.enabled("disable_vanilla_btc_dispense", block_index):
+            raise BTCOnlyError("no data and not unspendable")
+
         if util.enabled("dispensers", block_index) and not composing:
             dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
             if len(dispensers_outputs) == 0:
@@ -408,6 +412,21 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         return get_dispensers_tx_info(sources, dispensers_outputs)
 
     destinations = "-".join(destinations)
+
+    try:
+        message_type_id, _ = message_type.unpack(data, block_index)
+    except struct.error:  # Deterministically raised.
+        message_type_id = None
+
+    if message_type_id == dispenser.DISPENSE_ID and util.enabled(
+        "enable_dispense_tx", block_index=block_index
+    ):
+        # if there is a dispense prefix we assume all potential_dispensers are dispensers
+        # that's mean we don't need to call get_dispensers_outputs()
+        # and so we avoid a db query (dispenser.is_dispensable()).
+        # If one of them is not a dispenser `dispenser.dispense()` will silently skip it
+        return get_dispensers_tx_info(sources, potential_dispensers)
+
     return sources, destinations, btc_amount, round(fee), data, []
 
 
@@ -529,11 +548,45 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False):
         return get_tx_info_legacy(decoded_tx, block_index)
 
 
+def get_utxos_info(db, decoded_tx):
+    """
+    Get the UTXO move info.
+    Returns a list of UTXOs. Last UTXO is the destination, previous UTXOs are the sources.
+    """
+    sources = []
+    # we check that each vin does not contain assets..
+    for vin in decoded_tx["vin"]:
+        if isinstance(vin["hash"], str):
+            vin_hash = vin["hash"]
+        else:
+            vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
+        utxo = vin_hash + ":" + str(vin["n"])
+        utxo_balances = ledger.get_utxo_balances(db, utxo)
+        if len(utxo_balances) > 0:
+            sources.append(utxo)
+    destination = None
+    # the destination is the first non-OP_RETURN vout
+    for n, vout in enumerate(decoded_tx["vout"]):
+        asm = script.script_to_asm(vout["script_pub_key"])
+        if asm[0] == OP_RETURN:  # noqa: F405
+            continue
+        destination = decoded_tx["tx_hash"] + ":" + str(n)
+        return sources + [destination]
+    return []
+
+
 def get_tx_info(db, decoded_tx, block_index):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
+    if util.enabled("utxo_support", block_index=block_index):
+        utxos_info = get_utxos_info(db, decoded_tx)
+    else:
+        utxos_info = []
     try:
-        return _get_tx_info(db, decoded_tx, block_index)
+        source, destination, btc_amount, fee, data, dispensers_outs = _get_tx_info(
+            db, decoded_tx, block_index
+        )
+        return source, destination, btc_amount, fee, data, dispensers_outs, utxos_info
     except DecodeError as e:  # noqa: F841
-        return b"", None, None, None, None, None
+        return b"", None, None, None, None, None, utxos_info
     except BTCOnlyError as e:  # noqa: F841
-        return b"", None, None, None, None, None
+        return b"", None, None, None, None, None, utxos_info

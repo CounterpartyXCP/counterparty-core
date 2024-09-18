@@ -102,23 +102,23 @@ CURRENT_HEIGHT=$(curl http://localhost:4000/v2/ --silent | jq '.result.counterpa
 REPARSE_FROM=$(($CURRENT_HEIGHT-50))
 
 # Stop, reparse and start counterparty-core mainnet
+echo "" > $(docker inspect --format='{{.LogPath}}' counterparty-core-counterparty-core-1)
 docker compose --profile mainnet stop counterparty-core
 docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
    --backend-connect=bitcoind \
    --indexd-connect=addrindexrs \
    --rpc-host=0.0.0.0 \
    --api-host=0.0.0.0
+
+echo "" > $(docker inspect --format='{{.LogPath}}' counterparty-core-counterparty-core-1)
+
 docker compose --profile mainnet up -d counterparty-core
 
 # wait for counterparty-core to be ready
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'API Watcher - Catch up completed')" = "" ]; do
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Watching for new blocks...')" = "" ]; do
     echo "Waiting for counterparty-core mainnet to be ready"
     sleep 1
 done
-
-# Run dredd test
-dredd
-
 
 # Run compare hashes test
 . "$HOME/.profile"

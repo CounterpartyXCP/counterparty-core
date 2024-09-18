@@ -68,12 +68,15 @@ def test_p2sh_encoding(server_db):
 
     with util_test.ConfigContext(
         DISABLE_ARC4_MOCKING=True, OLD_STYLE_API=True
-    ), util_test.MockProtocolChangesContext(enhanced_sends=True, p2sh_encoding=True):
+    ), util_test.MockProtocolChangesContext(
+        enhanced_sends=True, p2sh_encoding=True, short_tx_type_id=False
+    ):
         utxos = dict(
             ((utxo["txid"], utxo["vout"]), utxo)
             for utxo in backend.addrindexrs.get_unspent_txouts(source)
         )
 
+        transaction.initialise()
         fee = 20000
         fee_per_kb = 50000
         result = transaction.compose_transaction(
@@ -245,7 +248,7 @@ def test_p2sh_encoding_long_data(server_db):
     destination = ADDR[1]  # noqa: F841
 
     with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(
-        enhanced_sends=True, p2sh_encoding=True
+        enhanced_sends=True, p2sh_encoding=True, short_tx_type_id=False
     ):
         utxos = dict(
             ((utxo["txid"], utxo["vout"]), utxo)
@@ -431,7 +434,7 @@ def test_p2sh_encoding_p2sh_source_not_supported(server_db):
     destination = ADDR[1]
 
     with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(
-        enhanced_sends=True, p2sh_encoding=True
+        enhanced_sends=True, p2sh_encoding=True, short_tx_type_id=False
     ):
         fee = 20000
         fee_per_kb = 50000
@@ -456,7 +459,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
     destination = ADDR[1]
 
     with util_test.ConfigContext(OLD_STYLE_API=True), util_test.MockProtocolChangesContext(
-        enhanced_sends=True, p2sh_encoding=True
+        enhanced_sends=True, p2sh_encoding=True, short_tx_type_id=False
     ):
         p2sh_source_multisig_pubkeys_binary = [
             binascii.unhexlify(p)

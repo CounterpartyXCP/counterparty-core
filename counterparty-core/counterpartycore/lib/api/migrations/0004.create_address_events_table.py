@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0002.add_default_values_to_issuances.py
+# file: counterpartycore/lib/api/migrations/0004.create_address_events_table.py
 #
 import logging
 import os

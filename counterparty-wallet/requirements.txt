@@ -5,4 +5,4 @@ colorlog==6.8.0
 python-dateutil==2.8.2
 requests==2.32.0
 termcolor==2.4.0
-counterparty-core==10.3.2
+counterparty-core==10.4.0

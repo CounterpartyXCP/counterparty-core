@@ -234,9 +234,33 @@ def validate(
         problems.append(
             f"address doesn't has enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})"
         )
+    elif (
+        util.enabled("dispenser_must_be_created_by_source")
+        and open_address is not None
+        and source != open_address
+        and status != STATUS_CLOSED
+        and len(
+            ledger.get_dispensers(
+                db,
+                status_in=[0, 11],
+                address=open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source,
+                asset=asset,
+            )
+        )
+        == 0
+    ):
+        problems.append("dispenser must be created by source")
     else:
-        if status == STATUS_OPEN_EMPTY_ADDRESS and not (open_address):
+        if status == STATUS_OPEN_EMPTY_ADDRESS and not open_address:
             open_address = source
+            status = STATUS_OPEN
+
+        # status == STATUS_OPEN_EMPTY_ADDRESS means open_address != source
+        if (
+            util.enabled("dispenser_must_be_created_by_source")
+            and status == STATUS_OPEN_EMPTY_ADDRESS
+            and open_address == source
+        ):
             status = STATUS_OPEN
 
         open_dispensers = []
@@ -841,156 +865,6 @@ def is_dispensable(db, address, amount):
                 return True
 
     return False
-
-
-def dispense(db, tx):
-    cursor = db.cursor()
-
-    outs = []
-    if util.enabled("multiple_dispenses"):
-        outs = ledger.get_vouts(db, tx["tx_hash"])
-    else:
-        outs = [tx]
-
-    # if len(outs) == 0:
-    #    outs = [tx]
-    # or
-    # assert len(outs) > 0 ?
-
-    dispense_index = 0
-
-    for next_out in outs:
-        dispensers = []
-        if next_out["destination"] is not None:
-            dispensers = ledger.get_dispensers(
-                db, address=next_out["destination"], status_in=[0, 11], order_by="asset"
-            )
-
-        for dispenser in dispensers:
-            satoshirate = dispenser["satoshirate"]
-            give_quantity = dispenser["give_quantity"]
-
-            if satoshirate > 0 and give_quantity > 0:
-                if (dispenser["oracle_address"] != None) and util.enabled(  # noqa: E711
-                    "oracle_dispensers", next_out["block_index"]
-                ):
-                    last_price, last_fee, last_fiat_label, last_updated = (
-                        ledger.get_oracle_last_price(
-                            db, dispenser["oracle_address"], next_out["block_index"]
-                        )
-                    )
-                    fiatrate = util.satoshirate_to_fiat(satoshirate)
-                    must_give = int(
-                        floor(((next_out["btc_amount"] / config.UNIT) * last_price) / fiatrate)
-                    )
-                else:
-                    must_give = int(floor(next_out["btc_amount"] / satoshirate))
-
-                remaining = int(floor(dispenser["give_remaining"] / give_quantity))
-                actually_given = min(must_give, remaining) * give_quantity
-                give_remaining = dispenser["give_remaining"] - actually_given
-
-                assert give_remaining >= 0
-
-                # Skip dispense if quantity is 0
-                if util.enabled("zero_quantity_value_adjustment_1") and actually_given == 0:
-                    continue
-
-                ledger.credit(
-                    db,
-                    next_out["source"],
-                    dispenser["asset"],
-                    actually_given,
-                    tx["tx_index"],
-                    action="dispense",
-                    event=next_out["tx_hash"],
-                )
-
-                # Checking if the dispenser reach its max dispenses limit
-                max_dispenses_limit = util.get_value_by_block_index(
-                    "max_dispenses_limit", next_out["block_index"]
-                )
-                max_dispenser_limit_hit = False
-
-                if (
-                    max_dispenses_limit > 0
-                    and dispenser["dispense_count"] + 1 >= max_dispenses_limit
-                ):
-                    max_dispenser_limit_hit = True
-
-                dispenser["give_remaining"] = give_remaining
-                if give_remaining < dispenser["give_quantity"] or max_dispenser_limit_hit:
-                    # close the dispenser
-                    dispenser["give_remaining"] = 0
-                    if give_remaining > 0:
-                        if max_dispenser_limit_hit:
-                            credit_action = "Closed: Max dispenses reached"
-                            dispenser["closing_reason"] = "max_dispenses_reached"
-                        else:
-                            credit_action = "dispenser close"
-                            dispenser["closing_reason"] = "no_more_to_give"
-
-                        # return the remaining to the owner
-                        ledger.credit(
-                            db,
-                            dispenser["source"],
-                            dispenser["asset"],
-                            give_remaining,
-                            tx["tx_index"],
-                            action=credit_action,
-                            event=next_out["tx_hash"],
-                        )
-                    else:
-                        dispenser["closing_reason"] = "depleted"
-                    dispenser["status"] = STATUS_CLOSED
-
-                dispenser["block_index"] = next_out["block_index"]
-                dispenser["prev_status"] = STATUS_OPEN
-
-                set_data = {
-                    "give_remaining": dispenser["give_remaining"],
-                    "status": dispenser["status"],
-                    "dispense_count": dispenser["dispense_count"] + 1,
-                }
-                ledger.update_dispenser(
-                    db,
-                    dispenser["rowid"],
-                    set_data,
-                    {
-                        "source": dispenser["source"],
-                        "asset": dispenser["asset"],
-                        "tx_hash": dispenser["tx_hash"],
-                    },
-                )
-
-                bindings = {
-                    "tx_index": next_out["tx_index"],
-                    "tx_hash": next_out["tx_hash"],
-                    "dispense_index": dispense_index,
-                    "block_index": next_out["block_index"],
-                    "source": next_out["destination"],
-                    "destination": next_out["source"],
-                    "asset": dispenser["asset"],
-                    "dispense_quantity": actually_given,
-                    "dispenser_tx_hash": dispenser["tx_hash"],
-                }
-                ledger.insert_record(
-                    db,
-                    "dispenses",
-                    bindings,
-                    "DISPENSE",
-                    {
-                        "btc_amount": next_out["btc_amount"],
-                    },
-                )
-                dispense_index += 1
-
-                logger.info(
-                    "Dispense %(dispense_quantity)s %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [valid]",
-                    bindings,
-                )
-
-    cursor.close()
 
 
 def close_pending(db, block_index):

@@ -2,6 +2,12 @@ from counterpartycore.lib import transaction
 from counterpartycore.lib.api import queries, util
 from counterpartycore.lib.backend import addrindexrs, bitcoind
 
+
+def get_routes():
+    """Return the API routes."""
+    return ROUTES
+
+
 # Define the API routes except root (`/`) defined in `api_server.py`
 ROUTES = util.prepare_routes(
     {
@@ -63,6 +69,9 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/transactions": queries.get_transactions_by_address,
         "/v2/addresses/<address>/dividends": queries.get_dividends_distributed_by_address,
         "/v2/addresses/<address>/orders": queries.get_orders_by_address,
+        "/v2/addresses/<address>/fairminters": queries.get_fairminters_by_address,
+        "/v2/addresses/<address>/fairmints": queries.get_fairmints_by_address,
+        "/v2/addresses/<address>/fairmints/<asset>": queries.get_fairmints_by_address_and_asset,
         ### /addresses/<address>/compose/ ###
         "/v2/addresses/<address>/compose/bet": transaction.compose_bet,
         "/v2/addresses/<address>/compose/broadcast": transaction.compose_broadcast,
@@ -77,6 +86,12 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/order": transaction.compose_order,
         "/v2/addresses/<address>/compose/send": transaction.compose_send,
         "/v2/addresses/<address>/compose/sweep": transaction.compose_sweep,
+        "/v2/addresses/<address>/compose/dispense": transaction.compose_dispense,
+        "/v2/addresses/<address>/compose/fairminter": transaction.compose_fairminter,
+        "/v2/addresses/<address>/compose/fairmint": transaction.compose_fairmint,
+        "/v2/addresses/<address>/compose/attach": transaction.compose_attach,
+        "/v2/utxos/<utxo>/compose/detach": transaction.compose_detach,
+        "/v2/utxos/<utxo>/compose/movetoutxo": transaction.compose_movetoutxo,
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
         "/v2/assets/<asset>": queries.get_asset,
@@ -94,6 +109,9 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/holders": queries.get_asset_holders,
         "/v2/assets/<asset>/dispenses": queries.get_dispenses_by_asset,
         "/v2/assets/<asset>/subassets": queries.get_subassets_by_asset,
+        "/v2/assets/<asset>/fairminters": queries.get_fairminters_by_asset,
+        "/v2/assets/<asset>/fairmints": queries.get_fairmints_by_asset,
+        "/v2/assets/<asset>/fairmints/<address>": queries.get_fairmints_by_address_and_asset,
         ### /orders ###
         "/v2/orders": queries.get_orders,
         "/v2/orders/<order_hash>": queries.get_order,
@@ -101,6 +119,7 @@ ROUTES = util.prepare_routes(
         "/v2/orders/<order_hash>/btcpays": queries.get_btcpays_by_order,
         "/v2/orders/<asset1>/<asset2>": queries.get_orders_by_two_assets,
         "/v2/orders/<asset1>/<asset2>/matches": queries.get_order_matches_by_two_assets,
+        "/v2/order_matches": queries.get_all_order_matches,
         ### /bets ###
         "/v2/bets": queries.get_bets,
         "/v2/bets/<bet_hash>": queries.get_bet,
@@ -135,9 +154,10 @@ ROUTES = util.prepare_routes(
         ### /broadcasts ###
         "/v2/broadcasts": queries.get_valid_broadcasts,
         "/v2/broadcasts/<tx_hash>": queries.get_broadcast_by_transaction_hash,
-        ### /healthz ###
-        "/v2/healthz": util.check_server_health,
-        "/healthz": util.check_server_health,
+        ### /fairminters ###
+        "/v2/fairminters": queries.get_all_fairminters,
+        "/v2/fairminters/<tx_hash>": queries.get_fairminter,
+        "/v2/fairminters/<tx_hash>/mints": queries.get_fairmints_by_fairminter,
         ### /bitcoin ###
         "/v2/bitcoin/addresses/utxos": addrindexrs.get_unspent_txouts_by_addresses,
         "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
@@ -147,10 +167,16 @@ ROUTES = util.prepare_routes(
         "/v2/bitcoin/transactions/<tx_hash>": util.get_transaction,
         "/v2/bitcoin/estimatesmartfee": bitcoind.fee_per_kb,
         "/v2/bitcoin/transactions": bitcoind.sendrawtransaction,
+        "/v2/bitcoin/getmempoolinfo": bitcoind.get_mempool_info,
         ### /mempool ###
         "/v2/mempool/events": queries.get_all_mempool_events,
         "/v2/mempool/events/<event>": queries.get_mempool_events_by_name,
         "/v2/mempool/transactions/<tx_hash>/events": queries.get_mempool_events_by_tx_hash,
+        ### /routes ###
+        "/v2/routes": get_routes,
+        ### /healthz ###
+        "/v2/healthz": util.check_server_health,
+        "/healthz": util.check_server_health,
         ### API v1 ###
         "/": util.redirect_to_rpc_v1,
         "/v1/": util.redirect_to_rpc_v1,

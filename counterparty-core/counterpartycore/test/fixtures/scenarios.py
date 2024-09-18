@@ -233,11 +233,124 @@ UNITTEST_FIXTURE = [
         ),
         {"encoding": "opreturn"},
     ],
-    ["create_next_block", 500],
+    [
+        "fairminter",
+        (ADDR[0], "FREEFAIRMIN", "", 0, 1, 10),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairminter",
+        (ADDR[0], "PAIDFAIRMIN", "", 10, 1, 0),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairmint",
+        (ADDR[0], "FREEFAIRMIN", 0),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairminter",
+        (
+            ADDR[0],  # source
+            "RAIDFAIRMIN",  # asset
+            "",  # asset_parent
+            10,  # price
+            1,  # quantity_by_price
+            10,  # max_mint_per_tx
+            30,  # hard_cap
+            20,  # premint_quantity
+        ),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairminter",
+        (
+            ADDR[0],  # source
+            "QAIDFAIRMIN",  # asset
+            "",  # asset_parent,
+            10,  # price=0,
+            1,  # quantity_by_price
+            0,  # max_mint_per_tx,
+            50,  # hard_cap=0,
+            20,  # premint_quantity=0,
+            0,  # start_block=0,
+            0,  # end_block=0,
+            20,  # soft_cap=0,
+            400000,  # soft_cap_deadline_block=0,
+            0.5,  # minted_asset_commission=0.0,
+        ),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairminter",
+        (
+            ADDR[1],  # source
+            "A160361285792733729",  # asset
+            "",  # asset_parent,
+            10,  # price=0,
+            1,  # quantity_by_price
+            0,  # max_mint_per_tx,
+            50,  # hard_cap=0,
+            20,  # premint_quantity=0,
+            0,  # start_block=0,
+            0,  # end_block=0,
+            20,  # soft_cap=0,
+            310520,  # soft_cap_deadline_block=0,
+            0.3,  # minted_asset_commission=0.0,
+            False,  # burn_payment=False,
+            True,  # lock_description=False,
+            True,  # lock_quantity
+            True,  # divisible
+            "softcap description",
+        ),
+        {"encoding": "multisig"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairmint",
+        (ADDR[1], "A160361285792733729", 10),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "fairmint",
+        (ADDR[1], "A160361285792733729", 20),
+        {"encoding": "opreturn"},
+        {"short_tx_type_id": True, "fairminter": True},
+    ],
+    [
+        "utxo",
+        (ADDR[0], "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1", "XCP", 100),
+        {"encoding": "multisig"},
+        {"short_tx_type_id": True, "utxo_support": True},
+    ],
+    [
+        "utxo",
+        (
+            ADDR[0],
+            "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "DIVISIBLE",
+            1,
+        ),
+        {"encoding": "multisig"},
+        {"short_tx_type_id": True, "utxo_support": True},
+    ],
+    [
+        "issuance",
+        (ADDR[5], "TESTDISP", 1000, None, False, None, None, "Test dispensers asset"),
+        {"encoding": "multisig"},
+    ],
+    ["dispenser", (ADDR[5], "TESTDISP", 100, 100, 100, 0), {"encoding": "opreturn"}],
+    ["create_next_block", 703],
 ]
 
 PARSEBLOCKS_FIXTURE = UNITTEST_FIXTURE + [
-    ["create_next_block", 501, False]  # parse_block=False so we can unittest blocks.parse_block
+    ["create_next_block", 704, False]  # parse_block=False so we can unittest blocks.parse_block
 ]
 
 

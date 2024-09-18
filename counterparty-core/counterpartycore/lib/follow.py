@@ -17,6 +17,7 @@ from counterpartycore.lib import (
     ledger,
     mempool,
     sentry,
+    util,
 )
 from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
@@ -117,7 +118,12 @@ class BlockchainWatcher:
         # check if already parsed by block.catch_up()
         existing_block = ledger.get_block_by_hash(self.db, decoded_block["block_hash"])
         if existing_block is None:
-            blocks.parse_new_block(self.db, decoded_block)
+            previous_block = ledger.get_block_by_hash(self.db, decoded_block["hash_prev"])
+            if previous_block is None:
+                # catch up with rpc if previous block is missing
+                blocks.catch_up(self.db, check_asset_conservation=False)
+            else:
+                blocks.parse_new_block(self.db, decoded_block)
             mempool.clean_mempool(self.db)
             if not config.NO_TELEMETRY:
                 TelemetryOneShot().submit()
@@ -160,7 +166,8 @@ class BlockchainWatcher:
                 # logger.trace("Adding transaction to mempool block: %s", item_hash)
                 # logger.trace("Mempool block size: %s", len(self.mempool_block))
                 self.mempool_block.append(raw_tx)
-                if len(self.mempool_block) == MEMPOOL_BLOCK_MAX_SIZE:
+                mempool_block_max_size = 100 if config.NETWORK_NAME == "mainnet" else 1
+                if len(self.mempool_block) == mempool_block_max_size:
                     # parse mempool block
                     mempool.parse_mempool_transactions(self.db, self.mempool_block)
                     # reset mempool block
@@ -203,11 +210,13 @@ class BlockchainWatcher:
             self.receive_message(topic, body, seq)
         except Exception as e:
             logger.error("Error processing message: %s", e)
+            # print(traceback.format_exc())  # for debugging
             capture_exception(e)
             raise e
 
     async def handle(self):
         self.check_software_version_if_needed()
+        util.BLOCK_PARSER_STATUS = "following"
 
         # sequence topic
         await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")

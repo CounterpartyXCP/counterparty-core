@@ -937,10 +937,12 @@ class APIServer(threading.Thread):
             # block_index mandatory for transactions before block 335000
             use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
             with self.connection_pool.connection() as db:
-                source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
-                    db,
-                    deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
-                    block_index=block_index,
+                source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
+                    gettxinfo.get_tx_info(
+                        db,
+                        deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
+                        block_index=block_index,
+                    )
                 )
             return (
                 source,

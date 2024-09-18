@@ -129,7 +129,7 @@ def clean_rowids_and_confirmed_fields(query_result):
 def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
     """
     Get pubkey for an address.
-    :param address: Address to get pubkey for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param address: Address to get pubkey for. (e.g. $ADDRESS_1)
     :param provided_pubkeys: Comma separated list of provided pubkeys.
     """
     if provided_pubkeys:
@@ -142,7 +142,7 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
 def get_transaction(tx_hash: str, format: str = "json"):
     """
     Get a transaction from the blockchain
-    :param tx_hash: The transaction hash (e.g. 3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018)
+    :param tx_hash: The transaction hash (e.g. $LAST_TX_HASH)
     :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
     return backend.bitcoind.getrawtransaction(tx_hash, verbose=format == "json")
@@ -151,7 +151,7 @@ def get_transaction(tx_hash: str, format: str = "json"):
 def get_oldest_transaction_by_address(address: str, block_index: int = None):
     """
     Get the oldest transaction for an address.
-    :param address: The address to search for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param address: The address to search for. (e.g. $ADDRESS_9)
     :param block_index: The block index to search from.
     """
     return backend.addrindexrs.get_oldest_tx(
@@ -276,6 +276,8 @@ class ApiJsonEncoder(json.JSONEncoder):
             return "{0:.8f}".format(o)
         if isinstance(o, bytes):
             return o.hex()
+        if callable(o):
+            return o.__name__
         return super().default(o)
 
 
@@ -674,6 +676,8 @@ def inject_unpacked_data(db, result_list):
 
 
 def inject_details(db, result, rule=None):
+    if isinstance(result, (int, str)):
+        return result
     # let's work with a list
     result_list = result
     result_is_dict = False

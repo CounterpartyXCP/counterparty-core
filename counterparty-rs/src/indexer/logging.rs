@@ -33,21 +33,35 @@ pub fn setup_logging(config: &Config) {
 
         let file_layer = layer()
             .json()
+            .with_timer(custom_time_format())
             .with_writer(file_writer)
             .with_filter(LevelFilter::TRACE);
 
-        let stderr_layer = layer()
-            .event_format(CustomFormatter {
-                timer: ChronoLocal::new("%Y-%m-%dT%H:%M:%S%.3f%:z".to_string()),
-            })
-            .with_writer(stderr_writer)
-            .with_filter(LevelFilter::from_level(Level::from(config.log_level)));
+        let stderr_layer: Box<dyn Layer<_> + Send + Sync> = if config.json_format {
+            Box::new(
+                layer()
+                    .json()
+                    .with_timer(custom_time_format())
+                    .with_writer(stderr_writer)
+                    .with_filter(LevelFilter::from_level(Level::from(config.log_level))),
+            )
+        } else {
+            Box::new(
+                layer()
+                    .event_format(new_custom_formatter())
+                    .with_writer(stderr_writer)
+                    .with_filter(LevelFilter::from_level(Level::from(config.log_level))),
+            )
+        };
 
         let subscriber = Registry::default().with(file_layer).with(stderr_layer);
-
         tracing::subscriber::set_global_default(subscriber)
             .expect("Failed to set global subscriber");
     });
+}
+
+fn custom_time_format() -> ChronoLocal {
+    ChronoLocal::new("%Y-%m-%dT%H:%M:%S%.3f%:z".to_string())
 }
 
 struct CustomFormatter {
@@ -86,5 +100,11 @@ where
         )?;
         ctx.field_format().format_fields(writer.by_ref(), event)?;
         writeln!(writer)
+    }
+}
+
+fn new_custom_formatter() -> CustomFormatter {
+    CustomFormatter {
+        timer: custom_time_format(),
     }
 }

@@ -29,6 +29,7 @@ UPDATE_EVENTS_ID_FIELDS = {
     "RPS_MATCH_UPDATE": ["id"],
     "RPS_UPDATE": ["tx_hash"],
     "ADDRESS_OPTIONS_UPDATE": ["address"],
+    "FAIRMINTER_UPDATE": ["tx_hash"],
 }
 
 EXPIRATION_EVENTS_OBJECT_ID = {
@@ -134,7 +135,11 @@ def get_event_to_parse_count(api_db, ledger_db):
 
 def get_event_bindings(event):
     event_bindings = json.loads(event["bindings"])
-    if "order_match_id" in event_bindings:
+    if (
+        "order_match_id" in event_bindings
+        and "id" in event_bindings
+        and event_bindings["order_match_id"] == event_bindings["id"]
+    ):
         del event_bindings["order_match_id"]
     return event_bindings
 
@@ -262,6 +267,7 @@ def rollback_event(api_db, event):
         rollback_assets_info(api_db, event)
         rollback_xcp_supply(api_db, event)
         rollback_address_events(api_db, event)
+        rollback_fairminters(api_db, event)
 
         sql = "DELETE FROM messages WHERE message_index = ?"
         delete_all(api_db, sql, (event["message_index"],))
@@ -293,23 +299,34 @@ def update_balances(api_db, event):
     if event["event"] == "DEBIT":
         quantity = -quantity
 
-    sql = "SELECT * FROM balances WHERE address = :address AND asset = :asset"
+    field_name = "address"
+    address_or_utxo = event_bindings["address"]
+    if "utxo" in event_bindings and event_bindings["utxo"]:
+        field_name = "utxo"
+        address_or_utxo = event_bindings["utxo"]
+    event_bindings["address_or_utxo"] = address_or_utxo
+
+    sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608
     existing_balance = fetch_one(api_db, sql, event_bindings)
 
     if existing_balance is not None:
-        sql = """
+        sql = f"""
             UPDATE balances
             SET quantity = quantity + :quantity
-            WHERE address = :address AND asset = :asset
-            """
+            WHERE {field_name} = :address_or_utxo AND asset = :asset
+            """  # noqa: S608
     else:
-        sql = """
-            INSERT INTO balances (address, asset, quantity)
-            VALUES (:address, :asset, :quantity)
-            """
+        sql = f"""
+            INSERT INTO balances ({field_name}, asset, quantity, utxo_address)
+            VALUES (:address_or_utxo, :asset, :quantity, :utxo_address)
+            """  # noqa: S608
+    utxo_address = None
+    if "utxo_address" in event_bindings:
+        utxo_address = event_bindings["utxo_address"]
     insert_bindings = {
-        "address": event_bindings["address"],
+        "address_or_utxo": address_or_utxo,
         "asset": event_bindings["asset"],
+        "utxo_address": utxo_address,
         "quantity": quantity,
     }
     cursor.execute(sql, insert_bindings)
@@ -584,6 +601,40 @@ def rollback_address_events(api_db, event):
     cursor.execute(sql, event)
 
 
+def update_fairminters(api_db, event):
+    if event["event"] != "NEW_FAIRMINT":
+        return
+    event_bindings = json.loads(event["bindings"])
+    if event_bindings["status"] != "valid":
+        return
+    cursor = api_db.cursor()
+    sql = """
+        UPDATE fairminters SET
+            earned_quantity = earned_quantity + :earn_quantity,
+            commission = commission + :commission,
+            paid_quantity = paid_quantity + :paid_quantity
+        WHERE tx_hash = :fairminter_tx_hash
+    """
+    cursor.execute(sql, event_bindings)
+
+
+def rollback_fairminters(api_db, event):
+    if event["event"] != "NEW_FAIRMINT":
+        return
+    if event["status"] != "valid":
+        return
+    event_bindings = json.loads(event["bindings"])
+    cursor = api_db.cursor()
+    sql = """
+        UPDATE fairminters SET
+            earned_quantity = earned_quantity - :earn_quantity,
+            commission = commission - :commission,
+            paid_quantity = paid_quantity - :paid_quantity
+        WHERE tx_hash = :fairminter_tx_hash
+    """
+    cursor.execute(sql, event_bindings)
+
+
 def parse_event(api_db, event, catching_up=False):
     if event["event"] in SKIP_EVENTS:
         event["insert_rowid"] = None
@@ -599,6 +650,7 @@ def parse_event(api_db, event, catching_up=False):
         update_assets_info(api_db, event)
         update_xcp_supply(api_db, event)
         update_address_events(api_db, event)
+        update_fairminters(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
         if event["event"] == "BLOCK_PARSED" and not catching_up:

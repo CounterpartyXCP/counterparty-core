@@ -42,7 +42,7 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
         "allow_always_latest": True,
     },  # override to be true only at block 310495
     "short_tx_type_id": {
-        "block_index": 310502,
+        "block_index": DEFAULT_PARAMS["default_block_index"] + 1,
         "allow_always_latest": False,
     },  # override to be true only at block 310502
     "enhanced_sends": {
@@ -50,7 +50,7 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
         "allow_always_latest": False,
     },  # override to be true only at block 310999
     "issuance_lock_fix": {
-        "block_index": 310502,
+        "block_index": DEFAULT_PARAMS["default_block_index"] + 1,
         "allow_always_latest": False,
     },  # override to be true only at block 310502
     "segwit_support": {
@@ -58,7 +58,10 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
         "allow_always_latest": False,
     },  # override to be true only at block 310999,
     "dispensers": {"block_index": 0, "allow_always_latest": True},
-    "multisig_addresses": {"block_index": 310502, "allow_always_latest": True},
+    "multisig_addresses": {
+        "block_index": DEFAULT_PARAMS["default_block_index"] + 1,
+        "allow_always_latest": True,
+    },
 }
 DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = (
     False  # if true, never look at MOCK_PROTOCOL_CHANGES_AT_BLOCK
@@ -120,7 +123,7 @@ RANDOM_ASSET_INT = None
 _generate_random_asset = util.generate_random_asset
 
 
-def generate_random_asset():
+def generate_random_asset(subasset_longname=None):
     if RANDOM_ASSET_INT is None:
         return _generate_random_asset()
     else:
@@ -240,7 +243,7 @@ def api_server(request, cp_server):
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
 
-    # print(config.DATABASE, config.API_DATABASE)
+    print("api_server", config.DATABASE, config.API_DATABASE)
 
     # start RPC server and wait for server to be ready
     api_server = api.APIServer()
@@ -345,7 +348,8 @@ def api_server_v2(request, cp_server):
             if result.status_code != 200:
                 raise requests.exceptions.RequestException
             result = result.json()
-            if result["result"]["counterparty_height"] < 310500:
+            print(DEFAULT_PARAMS["default_block_index"])
+            if result["result"]["counterparty_height"] < DEFAULT_PARAMS["default_block_index"] - 1:
                 raise requests.exceptions.RequestException
             break
         except requests.exceptions.RequestException:
@@ -582,6 +586,15 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def rps_expire(db, block_index):
         pass
 
+    def is_valid_utxo(value):
+        return util.is_utxo_format(value)
+
+    def get_utxo_address_and_value(value):
+        return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 100
+
+    def get_transaction_fee(db, transaction_type, block_index):
+        return 10
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
@@ -594,6 +607,11 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction", mocked_getrawtransaction
+    )
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.is_valid_utxo", is_valid_utxo)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_utxo_address_and_value",
+        get_utxo_address_and_value,
     )
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
@@ -616,3 +634,5 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
     )
+
+    monkeypatch.setattr("counterpartycore.lib.gas.get_transaction_fee", get_transaction_fee)

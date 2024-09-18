@@ -25,11 +25,19 @@ def parse_mempool_transactions(db, raw_tx_list):
             )
             # get the last tx_index
             cursor.execute("SELECT tx_index FROM transactions ORDER BY tx_index DESC LIMIT 1")
-            mempool_tx_index = cursor.fetchone()["tx_index"] + 1
+            last_tx = cursor.fetchone()
+            if last_tx:
+                mempool_tx_index = last_tx["tx_index"] + 1
+            else:
+                mempool_tx_index = 0
 
             # get message index before parsing the block
             cursor.execute("SELECT MAX(message_index) as message_index FROM messages")
-            message_index_before = cursor.fetchone()["message_index"]
+            last_message = cursor.fetchone()
+            if last_message:
+                message_index_before = last_message["message_index"]
+            else:
+                message_index_before = -1
 
             # list_tx
             decoded_tx_count = 0
@@ -72,6 +80,7 @@ def parse_mempool_transactions(db, raw_tx_list):
     except exceptions.MempoolError:
         # save events in the mempool table
         for event in transaction_events:
+            event["timestamp"] = now
             cursor.execute(
                 """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp, :event)""",
                 event,
@@ -95,3 +104,8 @@ def clean_mempool(db):
         tx = ledger.get_transaction(db, event["tx_hash"])
         if tx:
             clean_transaction_events(db, event["tx_hash"])
+    # delete mempool events older than 24 hours
+    cursor.execute(
+        "DELETE FROM mempool WHERE timestamp < ?",
+        (time.time() - 24 * 60 * 60,),
+    )
