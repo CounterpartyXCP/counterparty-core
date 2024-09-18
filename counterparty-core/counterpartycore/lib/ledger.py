@@ -1003,8 +1003,6 @@ def get_oracle_last_price(db, oracle_address, block_index):
     broadcasts = cursor.fetchall()
     cursor.close()
 
-    print(query, bindings, broadcasts)
-
     if len(broadcasts) == 0:
         return None, None, None, None
 
@@ -1221,6 +1219,21 @@ def get_addresses(db, address=None):
     query = f"""SELECT *, MAX(rowid) AS rowid FROM addresses WHERE ({" AND ".join(where)}) GROUP BY address"""  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
+
+
+def get_send_msg_index(db, tx_hash):
+    cursor = db.cursor()
+    last_msg_index = cursor.execute(
+        """
+        SELECT MAX(msg_index) as msg_index FROM sends WHERE tx_hash = ?
+    """,
+        (tx_hash,),
+    ).fetchone()
+    if last_msg_index and last_msg_index["msg_index"] is not None:
+        msg_index = last_msg_index["msg_index"] + 1
+    else:
+        msg_index = 0
+    return msg_index
 
 
 #####################

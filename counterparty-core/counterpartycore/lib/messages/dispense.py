@@ -9,7 +9,6 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def get_must_give(db, dispenser, btc_amount, block_index=None):
-    print("Block index: ", block_index, util.CURRENT_BLOCK_INDEX)
     if (dispenser["oracle_address"] is not None) and util.enabled(  # noqa: E711
         "oracle_dispensers", block_index
     ):

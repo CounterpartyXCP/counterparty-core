@@ -27,17 +27,21 @@ def validate(db, source, destination, asset, quantity, block_index=None):
 
     source_is_address = True
     destination_is_address = True
+    # check if source is an address
     try:
         script.validate(source)
     except script.AddressError:
         source_is_address = False
+    # check if destination is an address
     if destination:
         try:
             script.validate(destination)
         except script.AddressError:
             destination_is_address = False
 
+    # check if source is a UTXO
     source_is_utxo = util.is_utxo_format(source)
+    # check if destination is a UTXO
     if destination:
         destination_is_utxo = util.is_utxo_format(destination)
     else:
@@ -50,14 +54,16 @@ def validate(db, source, destination, asset, quantity, block_index=None):
     if source_is_utxo and not destination_is_address:
         problems.append("If source is a UTXO, destination must be an address")
 
+    # fee only for attach to utxo
     if source_is_address:
         fee = gas.get_transaction_fee(db, ID, block_index or util.CURRENT_BLOCK_INDEX)
     else:
         fee = 0
 
+    # check if source has enough funds
     asset_balance = ledger.get_balance(db, source, asset)
-
     if asset == config.XCP:
+        # fee is always paid in XCP
         if asset_balance < quantity + fee:
             problems.append("insufficient funds for transfer and fee")
     else:
@@ -111,6 +117,7 @@ def compose(db, source, destination, asset, quantity):
     data += struct.pack(f">{len(data_content)}s", data_content)
 
     source_address = source
+    # if source is a UTXO, we get the corresponding address
     if util.is_utxo_format(source):
         source_address, _value = backend.bitcoind.get_utxo_address_and_value(source)
 
@@ -142,15 +149,19 @@ def parse(db, tx, message):
     problems = validate(db, source, destination, asset, quantity, tx["block_index"])
 
     recipient = destination
+    # if no destination, we assume the destination is the first non-OP_RETURN output
+    # that's mean the last element of the UTXOs info in `transactions` table
     if not recipient:
         recipient = tx["utxos_info"].split(" ")[-1]
 
+    # detach if source is a UTXO
     if util.is_utxo_format(source):
         source_address, _value = backend.bitcoind.get_utxo_address_and_value(source)
         if source_address != tx["source"]:
             problems.append("source does not match the UTXO source")
         action = "detach from utxo"
         event = "DETACH_FROM_UTXO"
+    # attach if source is an address
     else:
         if source != tx["source"]:
             problems.append("source does not match the source address")
@@ -161,28 +172,17 @@ def parse(db, tx, message):
     if problems:
         status = "invalid: " + "; ".join(problems)
 
-    cursor = db.cursor()
-    last_msg_index = cursor.execute(
-        """
-        SELECT MAX(msg_index) as msg_index FROM sends WHERE tx_hash = ?
-    """,
-        (tx["tx_hash"],),
-    ).fetchone()
-    if last_msg_index and last_msg_index["msg_index"] is not None:
-        msg_index = last_msg_index["msg_index"] + 1
-    else:
-        msg_index = 0
-
+    # prepare bindings
     bindings = {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
-        "msg_index": msg_index,
+        "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
         "block_index": tx["block_index"],
         "status": status,
     }
 
     if status == "valid":
-        # fee payment
+        # fee payment only for attach to utxo
         if action == "attach to utxo":
             fee = gas.get_transaction_fee(db, ID, tx["block_index"])
         else:
@@ -242,6 +242,7 @@ def parse(db, tx, message):
 
     ledger.insert_record(db, "sends", bindings, event)
 
+    # log valid transactions
     if status == "valid":
         if util.is_utxo_format(source):
             logger.info(
@@ -255,20 +256,26 @@ def parse(db, tx, message):
             )
 
 
+# call on each block
 def move_assets(db, tx):
     utxos = tx["utxos_info"].split(" ")
+    # do nothing if there is only one UTXO (it's the first non-OP_RETURN output)
     if len(utxos) < 2:
         return
+    # if there are more than one UTXO in the `utxos_info` field,
+    # we move all assets from the first UTXO to the last one
     destination = utxos.pop()
     sources = utxos
     action = "utxo move"
 
     msg_index = 0
+    # we move all assets from each source to the destination
     for source in sources:
         balances = ledger.get_utxo_balances(db, source)
         for balance in balances:
             if balance["quantity"] == 0:
                 continue
+            # debit asset from source
             ledger.debit(
                 db,
                 source,
@@ -278,6 +285,7 @@ def move_assets(db, tx):
                 action=action,
                 event=tx["tx_hash"],
             )
+            # credit asset to destination
             ledger.credit(
                 db,
                 destination,
@@ -287,6 +295,7 @@ def move_assets(db, tx):
                 action=action,
                 event=tx["tx_hash"],
             )
+            # store the move in the `sends` table
             bindings = {
                 "tx_index": tx["tx_index"],
                 "tx_hash": tx["tx_hash"],
@@ -302,6 +311,7 @@ def move_assets(db, tx):
             ledger.insert_record(db, "sends", bindings, "UTXO_MOVE")
             msg_index += 1
 
+            # log the move
             logger.info(
                 f"Move {balance['asset']} from utxo: {source} to utxo: {destination} ({tx['tx_hash']})"
             )

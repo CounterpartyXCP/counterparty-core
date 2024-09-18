@@ -163,6 +163,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "ab9f9c1aafdfc816a19aa403775c56b0b63e4c977685427f8fcee85db449cb15",
         "txlist_hash": "c8c7b8c0a86d601274e047d7038d47cd20f7147d9245f0d22449102b4b0c6fbf",
     },
+    650000: {
+        "ledger_hash": "7e4d5af885d20a68eb78d939f3b56f10c3e4defbb797297754579122e9611679",
+        "txlist_hash": "14405c618a97fb2fc8b5640f84ad8a4aece924474a5b4ffc4e67c46914676ba6",
+    },
     700000: {
         "ledger_hash": "4e84538d7bde57bbea518563f2a50f4245597bf5e5619fc4cbe9d981ab9d0adc",
         "txlist_hash": "abb48c10d692c159180a376b4a9002abcf582fab1b5652ba3ccdc73f4b5e0d8a",
@@ -642,6 +646,10 @@ CHECKPOINTS_MAINNET = {
     850500: {
         "ledger_hash": "0e594ca2b3b36b66475b1c53d9b02d9fe4726e28f6f61db8fdf8103a787e6c3e",
         "txlist_hash": "993c980296307d38656b4458a9b3913a8028adc02630fb6a8c55bea009008dd7",
+    },
+    861500: {
+        "ledger_hash": "76ca4415a24ae04579b05b517f41441b7cb45eb881db71d1b59de5d373a4bc28",
+        "txlist_hash": "b05b906391cf96d5b4b5893c5fda13fb64635d26785ee3ad1330fe701eb41cb4",
     },
 }
 
