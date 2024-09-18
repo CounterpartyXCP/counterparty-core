@@ -263,6 +263,7 @@ def replay_transactions_events(db, transactions):
             "btc_amount": tx["btc_amount"],
             "fee": tx["fee"],
             "data": tx["data"],
+            "utxos_info": tx["utxos_info"],
         }
         ledger.add_to_journal(
             db,
