@@ -60,7 +60,6 @@ from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
-from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
 from werkzeug.serving import make_server
 from xmltodict import unparse as serialize_to_xml
@@ -1105,8 +1104,7 @@ class APIServer(threading.Thread):
                     and request_data["method"]
                 )
                 # params may be omitted
-            except Exception as error:  # noqa: E722
-                capture_exception(error)
+            except Exception:  # noqa: E722
                 obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                     data="Invalid JSON-RPC 2.0 request format"
                 )
