@@ -1,10 +1,16 @@
-# Release Notes - Counterparty Core v10.4.0 (2024-09-17)
+# Release Notes - Counterparty Core v10.4.0 (2024-09-18)
 
-This release includes a variety of protocol upgrades.
+This is a major release with including numerous protocol upgrades that will dramatically increase the functionality of the Counterparty Protocol as well as resolve some long-standing security issues, in addition to a number of bugfixes and quality-of-life improvements. 
 
 # Upgrading
 
-This release does not require any reparsing. 
+**If you run a Counterparty Node, be sure to upgrade your node as soon as possible. Your node *must* be upgraded by block 866,000, which should be mined around October 16th, 2024, approximately four weeks from today.**
+
+The upgrade procedure should be straightforward: the API remains backwards-compatible, and the node will not have to perform a reparse. There are, however, two notable changes in this release that will require attention:
+
+1. It will no longer be possible to create a dispenser from an address that you don’t control. You will have to create the dispenser from the `source` address of the transaction, like all other Counterparty transactions.
+
+2. It will no longer be possible to trigger dispensers using vanilla Bitcoin wallets. The `create_send` API call has been modified so that it will automatically turn any BTC send to a dispenser into a `create_dispense` transaction.
 
 # ChangeLog
 
@@ -43,11 +49,11 @@ This release does not require any reparsing.
 
 * Fix adding new transactions in unit test fixtures (`scenarios.py`)
 * Fix mempool parsing on testnet and regtest
-* Fix `get_dispensers_by_asset` endpoint filtering by query parameter. Numeric statuses can now be used i.e. `status=0`
+* Fix `get_dispensers_by_asset` endpoint filtering by query parameter. Numeric statuses can now be used, e.g. `status=0`.
 * Fix `cursor` type in API routes
 * Fix `ledger.get_last_db_index()` (server is ready on `BLOCK_PARSED` not on `NEW_BLOCK`)
 * Fix `ledger.get_block(block_index)` function
-* Check that the previous block is present when a block is received with ZMQ
+* Check that the previous block is present when a block is received with ZeroMQ
 * Log API v1 responses
 
 ## Codebase
