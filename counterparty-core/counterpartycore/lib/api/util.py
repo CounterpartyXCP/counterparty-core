@@ -287,7 +287,7 @@ def to_json(obj, indent=None):
 
 def divide(value1, value2):
     decimal.getcontext().prec = 8
-    if value2 == 0:
+    if value2 == 0 or value1 == 0:
         return D(0)
     return D(value1) / D(value2)
 
