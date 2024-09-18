@@ -1813,8 +1813,9 @@ def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
 
 
 def get_matching_orders(db, tx_hash, give_asset, get_asset):
-    # return get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset)
-    return OrdersCache(db).get_matching_orders(tx_hash, give_asset, get_asset)
+    if util.BLOCK_PARSER_STATUS == "catching up":
+        return OrdersCache(db).get_matching_orders(tx_hash, give_asset, get_asset)
+    return get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset)
 
 
 def insert_order(db, order):

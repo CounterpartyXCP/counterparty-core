@@ -26,6 +26,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 CURRENT_BLOCK_INDEX = None
 CURRENT_TX_HASH = None
 PARSING_MEMPOOL = False
+BLOCK_PARSER_STATUS = "starting"
 
 D = decimal.Decimal
 B26_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

@@ -1295,6 +1295,7 @@ def check_database_version(db):
 
 
 def catch_up(db, check_asset_conservation=True):
+    util.BLOCK_PARSER_STATUS = "catching up"
     # update the current block index
     util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
     if util.CURRENT_BLOCK_INDEX == 0:

@@ -52,6 +52,7 @@ This release includes a variety of protocol upgrades.
 
 * New test suite with `regtest` network
 * Delete mempool events older than 24 hours
+* Use order caching only during catch-up
 
 ## API
 

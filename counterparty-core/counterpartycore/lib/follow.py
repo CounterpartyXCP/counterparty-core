@@ -18,6 +18,7 @@ from counterpartycore.lib import (
     ledger,
     mempool,
     sentry,
+    util,
 )
 from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
@@ -216,6 +217,7 @@ class BlockchainWatcher:
 
     async def handle(self):
         self.check_software_version_if_needed()
+        util.BLOCK_PARSER_STATUS = "following"
 
         # sequence topic
         await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
