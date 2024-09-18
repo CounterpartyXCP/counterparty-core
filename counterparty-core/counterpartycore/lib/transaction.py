@@ -2061,9 +2061,13 @@ def info(db, rawtransaction: str, block_index: int = None):
     :param rawtransaction: Raw transaction in hex format (e.g. $RAW_TRANSACTION_1)
     :param block_index: Block index mandatory for transactions before block 335000
     """
-    decoded_tx = deserialize.deserialize_tx(
-        rawtransaction, use_txid=util.enabled("correct_segwit_txids", block_index)
-    )
+    try:
+        decoded_tx = deserialize.deserialize_tx(
+            rawtransaction, use_txid=util.enabled("correct_segwit_txids", block_index)
+        )
+    except Exception as e:
+        raise exceptions.ComposeError("Invalid rawtransaction") from e
+
     source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
         gettxinfo.get_tx_info(
             db,
