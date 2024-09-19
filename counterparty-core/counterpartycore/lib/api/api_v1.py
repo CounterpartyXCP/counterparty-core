@@ -31,6 +31,7 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
+from counterpartycore.lib.api import compose as api_compose
 from counterpartycore.lib.api import util as api_util
 from counterpartycore.lib.database import APIDBConnectionPool
 from counterpartycore.lib.messages import (
@@ -562,7 +563,7 @@ class APIServer(threading.Thread):
             def create_method(**kwargs):
                 try:
                     transaction_args, common_args, private_key_wif = (
-                        transaction.split_compose_params(**kwargs)
+                        api_compose.split_compose_params(**kwargs)
                     )
                     with self.connection_pool.connection() as db:
                         rawtransaction, data = transaction.compose_transaction(
@@ -585,7 +586,7 @@ class APIServer(threading.Thread):
 
             return create_method
 
-        for tx in transaction.COMPOSABLE_TRANSACTIONS:
+        for tx in api_compose.COMPOSABLE_TRANSACTIONS:
             create_method = generate_create_method(tx)
             create_method.__name__ = f"create_{tx}"
             dispatcher.add_method(create_method)
@@ -1162,7 +1163,7 @@ class APIServer(threading.Thread):
                 error = "No query_type provided."
                 return flask.Response(error, 400, mimetype="application/json")
             # Check if message type or table name are valid.
-            if (compose and query_type not in transaction.COMPOSABLE_TRANSACTIONS) or (
+            if (compose and query_type not in api_compose.COMPOSABLE_TRANSACTIONS) or (
                 not compose and query_type not in API_TABLES
             ):
                 error = f'No such query type in supported queries: "{query_type}".'
@@ -1173,7 +1174,7 @@ class APIServer(threading.Thread):
             query_data = {}
 
             if compose:
-                transaction_args, common_args, private_key_wif = transaction.split_compose_params(
+                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
                     **extra_args
                 )
 

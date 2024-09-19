@@ -78,7 +78,7 @@ def prepare_item(item, node, context):
     return item
 
 
-def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0):
+def control_result(item, node, context, block_hash, block_time, tx_hash, data, retry=0):
     block_index = node.block_count
     events = node.api_call(f"blocks/{block_index}/events")["result"]
     event_indexes = sorted([event["event_index"] for event in events])
@@ -99,7 +99,7 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0
         ):
             time.sleep(2)
             return control_result(
-                item, node, context, block_hash, block_time, tx_hash, retry=retry + 1
+                item, node, context, block_hash, block_time, tx_hash, data, retry=retry + 1
             )
 
         expected_result = control["result"]
@@ -111,6 +111,8 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0
             .replace('"$TX_INDEX"', str(node.tx_index))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
+        if data:
+            expected_result = expected_result.replace("$TX_DATA", data[16:])  # strip the prefix
         for i in reversed(range(len(event_indexes))):
             event_index = event_indexes[i]
             expected_result = expected_result.replace(f'"$EVENT_INDEX_{i + 1}"', str(event_index))
@@ -122,6 +124,7 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0
                 expected_result = expected_result.replace(f'"${name}"', value)
             else:
                 expected_result = expected_result.replace(f"${name}", value)
+        # print(f"Expected result: {expected_result}")
         expected_result = json.loads(expected_result)
 
         if isinstance(expected_result, dict) and "decoded_tx" in expected_result:
@@ -146,6 +149,7 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0
 
 def run_item(node, item, context):
     print(f"Running: {item['title']}")
+    tx_data = None
 
     if "disable_protocol_changes" in item:
         node.disable_protocol_changes(item["disable_protocol_changes"])
@@ -178,7 +182,7 @@ def run_item(node, item, context):
                 )
                 tx_hash, block_hash, block_time = node.broadcast_transaction(signed_transaction)
             else:
-                tx_hash, block_hash, block_time = node.send_transaction(
+                tx_hash, block_hash, block_time, tx_data = node.send_transaction(
                     item["source"],
                     item["transaction"],
                     item["params"],
@@ -215,7 +219,7 @@ def run_item(node, item, context):
         )
 
     if "controls" in item:
-        control_result(item, node, context, block_hash, block_time, tx_hash)
+        control_result(item, node, context, block_hash, block_time, tx_hash, tx_data)
 
     return context
 

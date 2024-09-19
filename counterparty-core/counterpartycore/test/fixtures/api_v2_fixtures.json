@@ -7948,6 +7948,32 @@
                     }
                 ]
             },
+            "/v2/transactions/<tx_hash>/info": {
+                "function": "info_by_tx_hash",
+                "description": "Returns Counterparty information from a transaction hash.",
+                "args": [
+                    {
+                        "name": "tx_hash",
+                        "required": true,
+                        "type": "str",
+                        "description": "Transaction hash (e.g. $LAST_MEMPOOL_TX_HASH)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
             "/v2/transactions/unpack": {
                 "function": "unpack",
                 "description": "Unpacks Counterparty data in hex format and returns the message type and data.",
@@ -10043,7 +10069,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10057,7 +10083,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10226,7 +10252,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10240,7 +10266,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10391,7 +10417,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10405,7 +10431,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10563,7 +10589,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10577,7 +10603,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10728,7 +10754,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10742,7 +10768,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10905,7 +10931,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -10919,7 +10945,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11108,7 +11134,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11122,7 +11148,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11285,7 +11311,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11299,7 +11325,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11491,7 +11517,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11505,7 +11531,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11682,7 +11708,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11696,7 +11722,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11877,7 +11903,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -11891,7 +11917,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12075,7 +12101,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12089,7 +12115,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12252,7 +12278,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12266,7 +12292,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12423,7 +12449,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12437,7 +12463,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12700,7 +12726,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12714,7 +12740,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12872,7 +12898,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -12886,7 +12912,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -13050,7 +13076,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -13064,7 +13090,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -13227,7 +13253,7 @@
                     {
                         "name": "exclude_utxos",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
                         "required": false
                     },
@@ -13241,7 +13267,7 @@
                     {
                         "name": "custom_inputs",
                         "type": "str",
-                        "default": "",
+                        "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
                         "required": false
                     },

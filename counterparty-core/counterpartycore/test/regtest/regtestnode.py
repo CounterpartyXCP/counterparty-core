@@ -117,7 +117,7 @@ class RegtestNode:
             else:
                 raise e
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
-        return tx_hash, block_hash, block_time
+        return tx_hash, block_hash, block_time, result["result"]["data"]
 
     def wait_for_counterparty_server(self, block=None):
         while True:

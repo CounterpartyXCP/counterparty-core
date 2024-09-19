@@ -12,6 +12,7 @@ import flask
 import requests
 import werkzeug
 from counterpartycore.lib import backend, config, exceptions, ledger, transaction, util
+from counterpartycore.lib.api import compose
 from docstring_parser import parse as parse_docstring
 
 D = decimal.Decimal
@@ -204,7 +205,7 @@ def prepare_route_args(function):
     args_description = get_args_description(function)
     for arg_name, arg in function_args.items():
         if arg_name == "construct_args":
-            for carg_name, carg_info in transaction.COMPOSE_COMMONS_ARGS.items():
+            for carg_name, carg_info in compose.COMPOSE_COMMONS_ARGS.items():
                 args.append(
                     {
                         "name": carg_name,
@@ -660,8 +661,9 @@ def inject_dispensers(db, result_list):
 def inject_unpacked_data_in_dict(db, item):
     if "data" in item:
         data = binascii.hexlify(item["data"]) if isinstance(item["data"], bytes) else item["data"]
-        block_index = item.get("block_index")
-        item["unpacked_data"] = transaction.unpack(db, data, block_index=block_index)
+        if data:
+            block_index = item.get("block_index")
+            item["unpacked_data"] = compose.unpack(db, data, block_index=block_index)
     return item
 
 
