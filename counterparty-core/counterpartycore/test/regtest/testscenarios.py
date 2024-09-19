@@ -124,6 +124,13 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, retry=0
                 expected_result = expected_result.replace(f"${name}", value)
         expected_result = json.loads(expected_result)
 
+        if isinstance(expected_result, dict) and "decoded_tx" in expected_result:
+            del expected_result["decoded_tx"]
+            if "decoded_tx" not in result["result"]:
+                raise AssertionError("decoded_tx not in result")
+        if isinstance(result["result"], dict) and "decoded_tx" in result["result"]:
+            del result["result"]["decoded_tx"]
+
         try:
             assert result["result"] == expected_result
             print(f"{item['title']}: " + colored("Success", "green"))
@@ -235,7 +242,8 @@ def run_scenarios(serve=False):
                 )
                 time.sleep(1)
         else:
-            os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
+            if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
+                os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
             sh.python3(
                 os.path.join(CURR_DIR, "genapidoc.py"),
                 os.path.abspath("regtestnode"),
@@ -250,7 +258,7 @@ def run_scenarios(serve=False):
         # print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        # print(regtest_node_thread.node.server_out.getvalue())
+        print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

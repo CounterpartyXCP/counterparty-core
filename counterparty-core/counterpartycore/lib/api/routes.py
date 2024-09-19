@@ -32,6 +32,7 @@ ROUTES = util.prepare_routes(
         ### /transactions ###
         "/v2/transactions": queries.get_transactions,
         "/v2/transactions/info": transaction.info,
+        "/v2/transactions/<tx_hash>/info": transaction.info_by_tx_hash,
         "/v2/transactions/unpack": transaction.unpack,
         "/v2/transactions/<int:tx_index>": queries.get_transaction_by_tx_index,
         "/v2/transactions/<tx_hash>": queries.get_transaction_by_hash,

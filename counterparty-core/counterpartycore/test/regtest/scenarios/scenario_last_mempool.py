@@ -64,6 +64,57 @@ SCENARIO = [
                     },
                 ],
             },
+            {
+                "url": "transactions/$TX_HASH/info",
+                "result": {
+                    "btc_amount": 0,
+                    "data": "0200000000000000010000000000002710809668fa89c3fb02c8b7a891003a3773f6eed4a656",
+                    "decoded_tx": {
+                        "coinbase": False,
+                        "lock_time": 0,
+                        "segwit": True,
+                        "tx_hash": "$TX_HASH",
+                        "tx_id": "$TX_HASH",
+                        "version": 2,
+                        "vin": [
+                            {
+                                "coinbase": False,
+                                "hash": "$DESTROY_1_TX_HASH",
+                                "n": 1,
+                                "script_sig": "",
+                                "sequence": 4294967295,
+                            }
+                        ],
+                        "vout": [
+                            {
+                                "script_pub_key": "6a2e547ea24ed06a615893c16ff8e59a84444825e1af612ae2be0a26b09d39295552fef91497fd4146e8613d6be321c7",
+                                "value": 0,
+                            },
+                            {
+                                "script_pub_key": "0014dde33a51e649066e7add6dcf0963892c4fe5d653",
+                                "value": 4999955000,
+                            },
+                        ],
+                        "vtxinwit": [
+                            "304402206145e076eabf0de3e5b4edfea8be33c9b22f47d258d7d4c5682b3d0f6e3c648e022037f3e5451f4257e4ecfaa7c34016e00e5fb73cacb81eff875017d24a62b0a5bc01",
+                            "0355f42b0e4c7b6e73addef75deab673b9727225a3d529511ef28f5df36472826c",
+                        ],
+                    },
+                    "destination": None,
+                    "fee": 10000,
+                    "source": "$ADDRESS_4",
+                    "unpacked_data": {
+                        "message_data": {
+                            "address": "$ADDRESS_3",
+                            "asset": "XCP",
+                            "memo": None,
+                            "quantity": 10000,
+                        },
+                        "message_type": "enhanced_send",
+                        "message_type_id": 2,
+                    },
+                },
+            },
         ],
     },
 ]

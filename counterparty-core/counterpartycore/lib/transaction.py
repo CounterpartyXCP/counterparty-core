@@ -1202,10 +1202,17 @@ def compose_transaction(
         for str_input in custom_inputs.split(","):
             if not util.is_utxo_format(str_input):
                 raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
+            try:
+                amount = backend.bitcoind.get_tx_out_amount(
+                    str_input.split(":")[0], int(str_input.split(":")[1])
+                )
+            except Exception as e:
+                raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
             new_custom_inputs.append(
                 {
                     "txid": str_input.split(":")[0],
                     "vout": int(str_input.split(":")[1]),
+                    "amount": amount,
                 }
             )
         custom_inputs = new_custom_inputs
@@ -2057,6 +2064,18 @@ def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
         },
         "name": "movetoutxo",
     }
+
+
+def info_by_tx_hash(db, tx_hash: str):
+    """
+    Returns Counterparty information from a transaction hash.
+    :param tx_hash: Transaction hash (e.g. $LAST_MEMPOOL_TX_HASH)
+    """
+    try:
+        rawtransaction = backend.bitcoind.getrawtransaction(tx_hash)
+    except Exception as e:
+        raise exceptions.ComposeError("Invalid transaction") from e
+    return info(db, rawtransaction)
 
 
 def info(db, rawtransaction: str, block_index: int = None):

@@ -21,6 +21,7 @@ only:
 - Blocks > Get Sweeps By Block > Get Sweeps By Block
 - Transactions > Get Transactions > Get Transactions
 - Transactions > Info > Info
+- Transactions > Info By Tx Hash > Info By Tx Hash
 - Transactions > Unpack > Unpack
 - Transactions > Get Transaction By Tx Index > Get Transaction By Tx Index
 - Transactions > Get Transaction By Hash > Get Transaction By Hash
