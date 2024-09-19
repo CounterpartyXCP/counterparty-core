@@ -1879,6 +1879,8 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
             "ORDER_FILLED",
             {"tx_hash": order["tx_hash"]},
         )
+        if not util.PARSING_MEMPOOL:
+            OrdersCache(db).update_order(order["tx_hash"], update_data)
 
 
 def update_order_match_status(db, id, status):
