@@ -385,7 +385,11 @@ class TransactionService:
                     make_outkey(output) not in filter_unspents_utxo_locks
                     and self.make_outkey_vin_txid(output["txid"], output["vout"])
                     not in filter_unspents_p2sh_locks
-                    and f"{output['txid']}:{output['vout']}" not in exclude_utxos.split(",")
+                    and (
+                        not exclude_utxos
+                        or not isinstance(exclude_utxos, str)
+                        or f"{output['txid']}:{output['vout']}" not in exclude_utxos.split(",")
+                    )
                 ):
                     filtered_unspent.append(output)
             unspent = filtered_unspent
@@ -1112,7 +1116,7 @@ COMPOSE_COMMONS_ARGS = {
     ),
     "exclude_utxos": (
         str,
-        "",
+        None,
         "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
     ),
     "return_only_data": (
@@ -1122,7 +1126,7 @@ COMPOSE_COMMONS_ARGS = {
     ),
     "custom_inputs": (
         str,
-        "",
+        None,
         "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
     ),
 }
@@ -1193,7 +1197,7 @@ def compose_transaction(
     else:
         raise exceptions.TransactionError("Invalid pubkey.")
 
-    if isinstance(custom_inputs, str):
+    if isinstance(custom_inputs, str) and custom_inputs:
         new_custom_inputs = []
         for str_input in custom_inputs.split(","):
             if not util.is_utxo_format(str_input):
