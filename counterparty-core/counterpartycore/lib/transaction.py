@@ -1278,8 +1278,9 @@ def compose_transaction(
 
     tx_info = compose_method(db, **params)
 
+    data = config.PREFIX + tx_info[2]
     if return_only_data:
-        return config.PREFIX + tx_info[2]
+        return data
 
     raw_transaction = construct(
         db,
@@ -1310,7 +1311,7 @@ def compose_transaction(
     if return_psbt:
         psbt = backend.bitcoind.convert_to_psbt(raw_transaction)
         return psbt
-    return raw_transaction
+    return raw_transaction, data
 
 
 COMPOSABLE_TRANSACTIONS = [
@@ -1384,7 +1385,7 @@ def compose_bet(
         "leverage": leverage,
         "expiration": expiration,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="bet",
         params=params,
@@ -1394,6 +1395,7 @@ def compose_bet(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "bet",
+        "data": data,
     }
 
 
@@ -1415,7 +1417,7 @@ def compose_broadcast(
         "fee_fraction": fee_fraction,
         "text": text,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="broadcast",
         params=params,
@@ -1425,6 +1427,7 @@ def compose_broadcast(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "broadcast",
+        "data": data,
     }
 
 
@@ -1435,7 +1438,7 @@ def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
     :param order_match_id: The ID of the order match to pay for (e.g. $LAST_ORDER_MATCH_ID)
     """
     params = {"source": address, "order_match_id": order_match_id}
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="btcpay",
         params=params,
@@ -1445,6 +1448,7 @@ def compose_btcpay(db, address: str, order_match_id: str, **construct_args):
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "btcpay",
+        "data": data,
     }
 
 
@@ -1456,7 +1460,7 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
     :param overburn: Whether to allow the burn to exceed 1 BTC for the address
     """
     params = {"source": address, "quantity": quantity, "overburn": overburn}
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="burn",
         params=params,
@@ -1466,6 +1470,7 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "burn",
+        "data": data,
     }
 
 
@@ -1476,7 +1481,7 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_ORDER_TX_HASH)
     """
     params = {"source": address, "offer_hash": offer_hash}
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="cancel",
         params=params,
@@ -1486,6 +1491,7 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "cancel",
+        "data": data,
     }
 
 
@@ -1498,7 +1504,7 @@ def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **con
     :param tag: A tag for the destruction (e.g. "bugs!")
     """
     params = {"source": address, "asset": asset, "quantity": quantity, "tag": tag}
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="destroy",
         params=params,
@@ -1508,6 +1514,7 @@ def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **con
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "destroy",
+        "data": data,
     }
 
 
@@ -1544,7 +1551,7 @@ def compose_dispenser(
         "open_address": open_address,
         "oracle_address": oracle_address,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="dispenser",
         params=params,
@@ -1554,6 +1561,7 @@ def compose_dispenser(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "dispenser",
+        "data": data,
     }
 
 
@@ -1573,7 +1581,7 @@ def compose_dividend(
         "asset": asset,
         "dividend_asset": dividend_asset,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="dividend",
         params=params,
@@ -1583,6 +1591,7 @@ def compose_dividend(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "dividend",
+        "data": data,
     }
 
 
@@ -1619,7 +1628,7 @@ def compose_issuance(
         "reset": reset,
         "description": description,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="issuance",
         params=params,
@@ -1629,6 +1638,7 @@ def compose_issuance(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "issuance",
+        "data": data,
     }
 
 
@@ -1671,7 +1681,7 @@ def compose_mpma(
         "memo_is_hex": memo_is_hex,
     }
 
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="versions.mpma",
         params=params,
@@ -1681,6 +1691,7 @@ def compose_mpma(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "mpma",
+        "data": data,
     }
 
 
@@ -1714,7 +1725,7 @@ def compose_order(
         "expiration": expiration,
         "fee_required": fee_required,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="order",
         params=params,
@@ -1724,6 +1735,7 @@ def compose_order(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "order",
+        "data": data,
     }
 
 
@@ -1757,7 +1769,7 @@ def compose_send(
         "memo_is_hex": memo_is_hex,
         "use_enhanced_send": use_enhanced_send,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="send",
         params=params,
@@ -1767,6 +1779,7 @@ def compose_send(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "send",
+        "data": data,
     }
 
 
@@ -1788,7 +1801,7 @@ def compose_dispense(
         "destination": dispenser,
         "quantity": quantity,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="dispense",
         params=params,
@@ -1798,6 +1811,7 @@ def compose_dispense(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "dispense",
+        "data": data,
     }
 
 
@@ -1819,7 +1833,7 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
         "flags": flags,
         "memo": memo,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="sweep",
         params=params,
@@ -1829,6 +1843,7 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "sweep",
+        "data": data,
     }
 
 
@@ -1895,7 +1910,7 @@ def compose_fairminter(
         "divisible": divisible,
         "description": description,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="fairminter",
         params=params,
@@ -1905,6 +1920,7 @@ def compose_fairminter(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "fairminter",
+        "data": data,
     }
 
 
@@ -1916,7 +1932,7 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     :param quantity: The quantity of the asset to mint (in satoshis, hence integer) (e.g. 1)
     """
     params = {"source": address, "asset": asset, "quantity": quantity}
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="fairmint",
         params=params,
@@ -1926,6 +1942,7 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "fairmint",
+        "data": data,
     }
 
 
@@ -1943,7 +1960,7 @@ def compose_utxo(
         "asset": asset,
         "quantity": quantity,
     }
-    rawtransaction = compose_transaction(
+    rawtransaction, data = compose_transaction(
         db,
         name="utxo",
         params=params,
@@ -1953,6 +1970,7 @@ def compose_utxo(
         get_key_name(**construct_args): rawtransaction,
         "params": params,
         "name": "utxo",
+        "data": data,
     }
 
 

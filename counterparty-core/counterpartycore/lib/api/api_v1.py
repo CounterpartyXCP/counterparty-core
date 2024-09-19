@@ -565,9 +565,10 @@ class APIServer(threading.Thread):
                         transaction.split_compose_params(**kwargs)
                     )
                     with self.connection_pool.connection() as db:
-                        return transaction.compose_transaction(
+                        rawtransaction, data = transaction.compose_transaction(
                             db, name=tx, params=transaction_args, api_v1=True, **common_args
                         )
+                        return rawtransaction
                 except (
                     TypeError,
                     script.AddressError,
@@ -1184,7 +1185,7 @@ class APIServer(threading.Thread):
                 # Compose the transaction.
                 try:
                     with self.connection_pool.connection() as db:
-                        query_data = transaction.compose_transaction(
+                        query_data, data = transaction.compose_transaction(
                             db, name=query_type, params=transaction_args, **common_args
                         )
                 except (
