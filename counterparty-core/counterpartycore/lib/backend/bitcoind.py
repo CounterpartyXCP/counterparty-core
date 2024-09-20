@@ -288,3 +288,8 @@ def sendrawtransaction(signedhex: str):
     :param signedhex: The signed transaction hex.
     """
     return rpc("sendrawtransaction", [signedhex])
+
+
+def get_tx_out_amount(tx_hash, vout):
+    raw_tx = getrawtransaction(tx_hash, True)
+    return raw_tx["vout"][vout]["value"]
