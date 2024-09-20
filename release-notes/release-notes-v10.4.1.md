@@ -15,7 +15,7 @@
 
 ## API
 
-* Add support for `input_set` parameter
+* Add support for `inputs_set` parameter
 
 ## CLI
 
