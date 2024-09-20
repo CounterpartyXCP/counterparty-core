@@ -76,7 +76,7 @@ COMPOSE_COMMONS_ARGS = {
     "unspent_tx_hash": (
         str,
         None,
-        "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+        "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
     ),
     "dust_return_pubkey": (
         str,
@@ -119,7 +119,7 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "Return only the data part of the transaction",
     ),
-    "custom_inputs": (
+    "inputs_set": (
         str,
         None,
         "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",

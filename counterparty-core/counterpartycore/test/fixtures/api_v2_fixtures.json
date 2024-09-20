@@ -10014,7 +10014,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -10081,7 +10081,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -10197,7 +10197,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -10264,7 +10264,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -10362,7 +10362,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -10429,7 +10429,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -10534,7 +10534,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -10601,7 +10601,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -10699,7 +10699,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -10766,7 +10766,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -10876,7 +10876,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -10943,7 +10943,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -11079,7 +11079,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -11146,7 +11146,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -11256,7 +11256,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -11323,7 +11323,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -11462,7 +11462,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -11529,7 +11529,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -11653,7 +11653,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -11720,7 +11720,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -11848,7 +11848,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -11915,7 +11915,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -12046,7 +12046,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -12113,7 +12113,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -12223,7 +12223,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -12290,7 +12290,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -12394,7 +12394,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -12461,7 +12461,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -12671,7 +12671,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -12738,7 +12738,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -12843,7 +12843,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -12910,7 +12910,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -13021,7 +13021,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -13088,7 +13088,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
@@ -13198,7 +13198,7 @@
                         "name": "unspent_tx_hash",
                         "type": "str",
                         "default": null,
-                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying custom_inputs",
+                        "description": "When compiling the UTXOs to use as inputs for the transaction being created, only consider unspent outputs from this specific transaction hash. Defaults to null to consider all UTXOs for the address. Do not use this parameter if you are specifying inputs_set",
                         "required": false
                     },
                     {
@@ -13265,7 +13265,7 @@
                         "required": false
                     },
                     {
-                        "name": "custom_inputs",
+                        "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",

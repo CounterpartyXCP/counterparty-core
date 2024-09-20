@@ -55,6 +55,8 @@ D = decimal.Decimal
 
 TRANSACTION_SERVICE_SINGLETON = None
 
+MAX_INPUTS_SET = 100
+
 
 def initialise(force=False):
     global TRANSACTION_SERVICE_SINGLETON  # noqa: PLW0603
@@ -98,7 +100,7 @@ def construct(
     dust_return_pubkey=None,
     allow_unconfirmed_inputs=False,
     unspent_tx_hash=None,
-    custom_inputs=None,
+    inputs_set=None,
     disable_utxo_locks=False,
     extended_tx_info=False,
     old_style_api=None,
@@ -106,7 +108,7 @@ def construct(
     p2sh_source_multisig_pubkeys=None,
     p2sh_source_multisig_pubkeys_required=None,
     p2sh_pretx_txid=None,
-    exclude_utxos="",
+    exclude_utxos=None,
 ):
     if TRANSACTION_SERVICE_SINGLETON is None:
         raise Exception("Transaction not initialized")
@@ -127,7 +129,7 @@ def construct(
         dust_return_pubkey,
         allow_unconfirmed_inputs,
         unspent_tx_hash,
-        custom_inputs,
+        inputs_set,
         disable_utxo_locks,
         extended_tx_info,
         old_style_api,
@@ -338,7 +340,7 @@ class TransactionService:
         source,
         allow_unconfirmed_inputs,
         unspent_tx_hash,
-        custom_inputs,
+        inputs_set,
         fee_per_kb,
         estimate_fee_per_kb,
         estimate_fee_per_kb_nblocks,
@@ -352,8 +354,8 @@ class TransactionService:
         exclude_utxos,
     ):
         # Array of UTXOs, as retrieved by listunspent function from bitcoind
-        if custom_inputs:
-            use_inputs = unspent = custom_inputs
+        if inputs_set:
+            use_inputs = unspent = inputs_set
         else:
             if unspent_tx_hash is not None:
                 unspent = self.backend.addrindexrs.get_unspent_txouts(
@@ -564,7 +566,7 @@ class TransactionService:
         dust_return_pubkey=None,
         allow_unconfirmed_inputs=False,
         unspent_tx_hash=None,
-        custom_inputs=None,
+        inputs_set=None,
         disable_utxo_locks=False,
         extended_tx_info=False,
         old_style_api=None,
@@ -572,7 +574,7 @@ class TransactionService:
         p2sh_source_multisig_pubkeys=None,
         p2sh_source_multisig_pubkeys_required=None,
         p2sh_pretx_txid=None,
-        exclude_utxos="",
+        exclude_utxos=None,
     ):
         if estimate_fee_per_kb is None:
             estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
@@ -777,7 +779,7 @@ class TransactionService:
                 source,
                 allow_unconfirmed_inputs,
                 unspent_tx_hash,
-                custom_inputs,
+                inputs_set,
                 fee_per_kb,
                 estimate_fee_per_kb,
                 estimate_fee_per_kb_nblocks,
@@ -1064,7 +1066,7 @@ def compose_transaction(
     fee=None,
     fee_provided=0,
     unspent_tx_hash=None,
-    custom_inputs=None,
+    inputs_set=None,
     dust_return_pubkey=None,
     disable_utxo_locks=False,
     extended_tx_info=False,
@@ -1075,7 +1077,7 @@ def compose_transaction(
     segwit=False,
     api_v1=False,
     return_psbt=False,
-    exclude_utxos="",
+    exclude_utxos=None,
     return_only_data=False,
 ):
     """Create and return a transaction."""
@@ -1090,9 +1092,14 @@ def compose_transaction(
     else:
         raise exceptions.TransactionError("Invalid pubkey.")
 
-    if isinstance(custom_inputs, str) and custom_inputs:
-        new_custom_inputs = []
-        for str_input in custom_inputs.split(","):
+    if isinstance(inputs_set, str) and inputs_set:
+        new_inputs_set = []
+        utxos_list = inputs_set.split(",")
+        if len(utxos_list) > MAX_INPUTS_SET:
+            raise exceptions.ComposeError(
+                f"too many UTXOs in inputs_set (max. {MAX_INPUTS_SET}): {len(utxos_list)}"
+            )
+        for str_input in utxos_list:
             if not util.is_utxo_format(str_input):
                 raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
             try:
@@ -1101,14 +1108,14 @@ def compose_transaction(
                 )
             except Exception as e:
                 raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
-            new_custom_inputs.append(
+            new_inputs_set.append(
                 {
                     "txid": str_input.split(":")[0],
                     "vout": int(str_input.split(":")[1]),
                     "amount": amount,
                 }
             )
-        custom_inputs = new_custom_inputs
+        inputs_set = new_inputs_set
 
     # Get additional pubkeys from `source` and `destination` params.
     # Convert `source` and `destination` to pubkeyhash form.
@@ -1189,7 +1196,7 @@ def compose_transaction(
         exact_fee=fee,
         fee_provided=fee_provided,
         unspent_tx_hash=unspent_tx_hash,
-        custom_inputs=custom_inputs,
+        inputs_set=inputs_set,
         dust_return_pubkey=dust_return_pubkey,
         disable_utxo_locks=disable_utxo_locks,
         extended_tx_info=extended_tx_info,
