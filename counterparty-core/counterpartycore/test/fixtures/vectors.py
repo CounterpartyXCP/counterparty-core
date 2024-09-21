@@ -6349,9 +6349,9 @@ UNITTEST_VECTOR = (
         },
         "transaction": {
             "get_dust_return_pubkey": [
-                {"in": (ADDR[1], None, "multisig"), "out": None},
+                {"in": (ADDR[1], None), "out": None},
                 {
-                    "in": (ADDR[1], [], "multisig"),
+                    "in": (ADDR[1], []),
                     "out": b"\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9w",
                 },
             ],
