@@ -642,6 +642,7 @@ def run_scenario(scenario):
                 unsigned_tx_hex = transaction.construct(
                     db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2]
                 )
+                unsigned_tx_hex = unsigned_tx_hex["unsigned_tx_hex"]
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
                 insert_raw_transaction(unsigned_tx_hex, db)
         else:

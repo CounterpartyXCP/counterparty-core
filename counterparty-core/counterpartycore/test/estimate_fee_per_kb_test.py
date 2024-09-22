@@ -40,13 +40,15 @@ def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch
     )
 
     with util_test.ConfigContext(ESTIMATE_FEE_PER_KB=True):
-        txhex, _data = transaction.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "send",
             {"source": ADDR[0], "destination": ADDR[1], "asset": "XCP", "quantity": 100},
         )
 
-        pretx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        pretx = bitcoinlib.core.CTransaction.deserialize(
+            binascii.unhexlify(txhex["unsigned_tx_hex"])
+        )
         sumvin = sum(
             [
                 int(utxos[(bitcoinlib.core.b2lx(vin.prevout.hash), vin.prevout.n)]["amount"] * 1e8)
@@ -59,7 +61,7 @@ def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch
 
         fee = int((signedsize / 1000) * (fee_per_kb_used or fee_per_kb))
 
-        assert len(txhex) / 2 == unsignedsize
+        assert len(txhex["unsigned_tx_hex"]) / 2 == unsignedsize
         assert sumvin == 199909140
         assert sumvout < sumvin
         assert sumvout == sumvin - fee

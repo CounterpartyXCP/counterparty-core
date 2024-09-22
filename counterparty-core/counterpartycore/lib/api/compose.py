@@ -88,11 +88,6 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs",
     ),
-    "extended_tx_info": (
-        bool,
-        False,
-        "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-    ),
     "p2sh_pretx_txid": (
         str,
         None,
@@ -104,25 +99,40 @@ COMPOSE_COMMONS_ARGS = {
         config.ESTIMATE_FEE_CONF_TARGET,
         "The number of blocks to target for confirmation",
     ),
-    "return_psbt": (
-        bool,
-        False,
-        "Construct a PSBT instead of a raw transaction hex",
-    ),
     "exclude_utxos": (
         str,
         None,
         "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
     ),
-    "return_only_data": (
-        bool,
-        False,
-        "Return only the data part of the transaction",
-    ),
     "inputs_set": (
         str,
         None,
         "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+    ),
+    "accept_missing_params": (
+        bool,
+        False,
+        "Accept missing parameters with no default value (True by default for API v1)",
+    ),
+    "return_psbt": (
+        bool,
+        False,
+        "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+    ),
+    "return_only_data": (
+        bool,
+        False,
+        "(API v2 only) Return only the data part of the transaction",
+    ),
+    "extended_tx_info": (
+        bool,
+        False,
+        "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+    ),
+    "old_style_api": (
+        bool,
+        False,
+        "(API v1 only) Returns a single hex-encoded string instead of an array",
     ),
 }
 
@@ -141,31 +151,37 @@ def split_compose_params(**kwargs):
     return transaction_args, common_args, private_key_wif
 
 
-def get_key_name(**construct_args):
-    if construct_args.get("return_only_data"):
-        return "data"
-    if construct_args.get("return_psbt"):
-        return "psbt"
-    return "rawtransaction"
-
-
 def compose(db, name, params, **construct_args):
     if name not in COMPOSABLE_TRANSACTIONS:
         raise exceptions.TransactionError("Transaction type not composable.")
-    rawtransaction, data = transaction.compose_transaction(
+    return_only_data = construct_args.pop("return_only_data", False)
+    return_psbt = construct_args.pop("return_psbt", False)
+    for v1_args in ["extended_tx_info", "old_style_api"]:
+        construct_args.pop(v1_args)
+    transaction_info = transaction.compose_transaction(
         db,
         name=name,
         params=params,
         **construct_args,
     )
-    if construct_args.get("return_only_data"):
-        return {"data": data}
-    return {
-        get_key_name(**construct_args): rawtransaction,
+    if return_only_data:
+        return {"data": transaction_info["data"]}
+    result = {
         "params": params,
         "name": name.split(".")[-1],
-        "data": data,
+        "data": transaction_info["data"],
+        "btc_in": transaction_info["btc_in"],
+        "btc_out": transaction_info["btc_out"],
+        "btc_change": transaction_info["btc_change"],
+        "btc_fee": transaction_info["btc_fee"],
     }
+    if return_psbt:
+        result["psbt"] = backend.bitcoind.convert_to_psbt(transaction_info["unsigned_tx_hex"])
+    else:
+        result["rawtransaction"] = transaction_info["unsigned_tx_hex"]
+    if transaction_info.get("unsigned_pretx_hex"):
+        result["unsigned_pretx_hex"] = transaction_info["unsigned_pretx_hex"]
+    return result
 
 
 def compose_bet(

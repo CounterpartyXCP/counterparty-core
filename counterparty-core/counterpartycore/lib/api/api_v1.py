@@ -565,11 +565,42 @@ class APIServer(threading.Thread):
                     transaction_args, common_args, private_key_wif = (
                         api_compose.split_compose_params(**kwargs)
                     )
+                    extended_tx_info = old_style_api = False
+                    if "extended_tx_info" in common_args:
+                        extended_tx_info = common_args["extended_tx_info"]
+                        del common_args["extended_tx_info"]
+                    if "old_style_api" in common_args:
+                        old_style_api = common_args["old_style_api"]
+                        del common_args["old_style_api"]
+                    common_args["accept_missing_params"] = common_args.get(
+                        "accept_missing_params", True
+                    )
+                    for v2_arg in ["return_only_data", "return_psbt"]:
+                        common_args.pop(v2_arg, None)
                     with self.connection_pool.connection() as db:
-                        rawtransaction, data = transaction.compose_transaction(
-                            db, name=tx, params=transaction_args, api_v1=True, **common_args
+                        transaction_info = transaction.compose_transaction(
+                            db, name=tx, params=transaction_args, **common_args
                         )
-                        return rawtransaction
+                        if extended_tx_info:
+                            return transaction_info
+                        tx_hexes = list(
+                            filter(
+                                None,
+                                [
+                                    transaction_info["unsigned_tx_hex"],
+                                    transaction_info["unsigned_pretx_hex"],
+                                ],
+                            )
+                        )  # filter out None
+                        if old_style_api:
+                            if len(tx_hexes) != 1:
+                                raise Exception("Can't do 2 TXs with old_style_api")
+                            return tx_hexes[0]
+                        else:
+                            if len(tx_hexes) == 1:
+                                return tx_hexes[0]
+                            else:
+                                return tx_hexes
                 except (
                     TypeError,
                     script.AddressError,

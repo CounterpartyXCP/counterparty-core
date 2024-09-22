@@ -37,10 +37,10 @@ def test_utxolocks(server_db):
         server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns"
     )
 
-    tx1f = BytesIO(binascii.unhexlify(tx1hex))
+    tx1f = BytesIO(binascii.unhexlify(tx1hex["unsigned_tx_hex"]))
     tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
 
-    tx2f = BytesIO(binascii.unhexlify(tx2hex))
+    tx2f = BytesIO(binascii.unhexlify(tx2hex["unsigned_tx_hex"]))
     tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
 
     assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) != (
@@ -78,10 +78,10 @@ def test_utxolocks_custom_input(server_db):
         inputs_set=inputs_set,
     )
 
-    tx1f = BytesIO(binascii.unhexlify(tx1hex))
+    tx1f = BytesIO(binascii.unhexlify(tx1hex["unsigned_tx_hex"]))
     tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
 
-    tx2f = BytesIO(binascii.unhexlify(tx2hex))
+    tx2f = BytesIO(binascii.unhexlify(tx2hex["unsigned_tx_hex"]))
     tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
 
     assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) == (
@@ -107,10 +107,10 @@ def test_disable_utxolocks(server_db):
         disable_utxo_locks=True,
     )
 
-    tx1f = BytesIO(binascii.unhexlify(tx1hex))
+    tx1f = BytesIO(binascii.unhexlify(tx1hex["unsigned_tx_hex"]))
     tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
 
-    tx2f = BytesIO(binascii.unhexlify(tx2hex))
+    tx2f = BytesIO(binascii.unhexlify(tx2hex["unsigned_tx_hex"]))
     tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
 
     assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) == (

@@ -78,7 +78,7 @@ def test_p2sh_encoding(server_db):
 
         fee = 20000
         fee_per_kb = 50000
-        result, _data = transaction.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "send",
             {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
@@ -87,7 +87,7 @@ def test_p2sh_encoding(server_db):
             fee=fee,
         )
         assert not isinstance(result, list)
-        pretxhex = result
+        pretxhex = result["unsigned_pretx_hex"]
 
         pretx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(pretxhex))
 
@@ -150,12 +150,14 @@ def test_p2sh_encoding(server_db):
         logger.debug(f"pretxid {pretxid}")
 
         # check that when we do another, unrelated, send that it won't use our UTXO
-        result, _data = transaction.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "send",
             {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
         )
-        othertx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(result))
+        othertx = bitcoinlib.core.CTransaction.deserialize(
+            binascii.unhexlify(result["unsigned_tx_hex"])
+        )
         othertxid = bitcoinlib.core.lx(
             bitcoinlib.core.b2x(othertx.vin[0].prevout.hash)
         )  # reverse hash
@@ -164,7 +166,7 @@ def test_p2sh_encoding(server_db):
         )
 
         # now compose the data transaction
-        result, _data = transaction.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "send",
             {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
@@ -173,7 +175,7 @@ def test_p2sh_encoding(server_db):
             fee_per_kb=fee_per_kb,
         )
         assert not isinstance(result, list)
-        datatxhex = result
+        datatxhex = result["unsigned_tx_hex"]
 
         datatx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(datatxhex))
         sumvin = sum([pretx.vout[n].nValue for n, vin in enumerate(datatx.vin)])
@@ -257,7 +259,7 @@ def test_p2sh_encoding_long_data(server_db):
         # pprint.pprint(utxos)
 
         fee_per_kb = 50000
-        result, _data = transaction.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "broadcast",
             {
@@ -271,7 +273,7 @@ def test_p2sh_encoding_long_data(server_db):
             fee_per_kb=fee_per_kb,
         )
         assert not isinstance(result, list)
-        pretxhex = result
+        pretxhex = result["unsigned_pretx_hex"]
 
         pretx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(pretxhex))
         actual_fee = int(len(pretxhex) / 2 * fee_per_kb / 1000)  # noqa: F841
@@ -334,7 +336,7 @@ def test_p2sh_encoding_long_data(server_db):
         logger.debug(f"pretxid {pretxid}")
 
         # now compose the data transaction
-        result, _data = transaction.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "broadcast",
             {
@@ -349,7 +351,7 @@ def test_p2sh_encoding_long_data(server_db):
             fee_per_kb=fee_per_kb,
         )
         assert not isinstance(result, list)
-        datatxhex = result
+        datatxhex = result["unsigned_tx_hex"]
 
         datatx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(datatxhex))
         sumvin = sum([pretx.vout[n].nValue for n, vin in enumerate(datatx.vin)])
@@ -439,7 +441,7 @@ def test_p2sh_encoding_p2sh_source_not_supported(server_db):
         fee_per_kb = 50000
 
         with pytest.raises(exceptions.TransactionError):
-            result, _data = transaction.compose_transaction(  # noqa: F841
+            result = transaction.compose_transaction(  # noqa: F841
                 server_db,
                 "send",
                 {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
@@ -481,7 +483,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         # setup transaction
         fee = 20000
         fee_per_kb = 50000
-        pretxhex, _data = transaction.compose_transaction(
+        pretxhex = transaction.compose_transaction(
             server_db,
             "send",
             {
@@ -500,6 +502,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
             fee_per_kb=fee_per_kb,
             fee=fee,
         )
+        pretxhex = pretxhex["unsigned_pretx_hex"]
         # debugTransaction = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(pretxhex))
 
         # store transaction
@@ -507,7 +510,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
         logger.debug(f"pretxid {pretxid}")
 
         # now compose the data transaction
-        result, _data = transaction.compose_transaction(
+        result = transaction.compose_transaction(
             server_db,
             "send",
             {"source": source, "destination": destination, "asset": "XCP", "quantity": 100},
@@ -522,7 +525,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
             fee_per_kb=fee_per_kb,
         )
         assert not isinstance(result, list)
-        datatxhex = result
+        datatxhex = result["unsigned_tx_hex"]
 
         datatx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(datatxhex))  # noqa: F841
 

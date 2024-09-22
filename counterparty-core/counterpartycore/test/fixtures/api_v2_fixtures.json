@@ -10032,13 +10032,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -10060,13 +10053,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -10074,17 +10060,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -10215,13 +10229,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -10243,13 +10250,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -10257,17 +10257,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -10380,13 +10408,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -10408,13 +10429,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -10422,17 +10436,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -10552,13 +10594,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -10580,13 +10615,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -10594,17 +10622,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -10717,13 +10773,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -10745,13 +10794,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -10759,17 +10801,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -10894,13 +10964,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -10922,13 +10985,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -10936,17 +10992,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -11097,13 +11181,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -11125,13 +11202,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -11139,17 +11209,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -11274,13 +11372,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -11302,13 +11393,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -11316,17 +11400,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -11480,13 +11592,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -11508,13 +11613,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -11522,17 +11620,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -11671,13 +11797,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -11699,13 +11818,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -11713,17 +11825,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -11866,13 +12006,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -11894,13 +12027,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -11908,17 +12034,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -12064,13 +12218,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -12092,13 +12239,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -12106,17 +12246,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -12241,13 +12409,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -12269,13 +12430,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -12283,17 +12437,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -12412,13 +12594,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -12440,13 +12615,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -12454,17 +12622,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -12689,13 +12885,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -12717,13 +12906,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -12731,17 +12913,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -12861,13 +13071,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -12889,13 +13092,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -12903,17 +13099,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -13039,13 +13263,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -13067,13 +13284,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -13081,17 +13291,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {
@@ -13216,13 +13454,6 @@
                         "required": false
                     },
                     {
-                        "name": "extended_tx_info",
-                        "type": "bool",
-                        "default": false,
-                        "description": "When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
-                        "required": false
-                    },
-                    {
                         "name": "p2sh_pretx_txid",
                         "type": "str",
                         "default": null,
@@ -13244,13 +13475,6 @@
                         "required": false
                     },
                     {
-                        "name": "return_psbt",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Construct a PSBT instead of a raw transaction hex",
-                        "required": false
-                    },
-                    {
                         "name": "exclude_utxos",
                         "type": "str",
                         "default": null,
@@ -13258,17 +13482,45 @@
                         "required": false
                     },
                     {
-                        "name": "return_only_data",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Return only the data part of the transaction",
-                        "required": false
-                    },
-                    {
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "required": false
+                    },
+                    {
+                        "name": "accept_missing_params",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Accept missing parameters with no default value (True by default for API v1)",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Construct a PSBT instead of a raw transaction hex",
+                        "required": false
+                    },
+                    {
+                        "name": "return_only_data",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v2 only) Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) When this is not specified or false, the create_ calls return only a hex-encoded string. If this is true, the create_ calls return a data object with the following keys: tx_hex, btc_in, btc_out, btc_change, and btc_fee",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
                         "required": false
                     },
                     {

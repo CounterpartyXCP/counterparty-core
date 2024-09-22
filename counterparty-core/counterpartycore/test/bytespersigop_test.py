@@ -23,7 +23,7 @@ def test_bytespersigop(server_db):
         assert util.enabled("bytespersigop") == False  # noqa: E712
 
         # ADDR[0], bytespersigop=False, desc 41 bytes, opreturn
-        txhex, _data = transaction.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {
@@ -36,14 +36,16 @@ def test_bytespersigop(server_db):
             },
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
+
+        print("test_bytespersigop 4")
 
         assert len(tx.vin) == 1
         assert len(tx.vout) == 2
         assert "OP_RETURN" in repr(tx.vout[0].scriptPubKey)
 
         # ADDR[0], bytespersigop=False, desc 42 bytes, multisig
-        txhex, _data = transaction.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {
@@ -56,7 +58,7 @@ def test_bytespersigop(server_db):
             },
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
 
         assert len(tx.vin) == 1
         # assert len(tx.vout) == 3
@@ -68,7 +70,7 @@ def test_bytespersigop(server_db):
         assert util.enabled("bytespersigop") == True  # noqa: E712
 
         # ADDR[0], bytespersigop=True, desc 41 bytes, opreturn
-        txhex, _data = transaction.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {
@@ -81,14 +83,14 @@ def test_bytespersigop(server_db):
             },
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
 
         assert len(tx.vin) == 1
         assert len(tx.vout) == 2
         assert "OP_RETURN" in repr(tx.vout[0].scriptPubKey)
 
         # ADDR[1], bytespersigop=True, desc 41 bytes, opreturn encoding
-        txhex, _data = transaction.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {
@@ -101,7 +103,7 @@ def test_bytespersigop(server_db):
             },
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
 
         assert len(tx.vin) == 1
         assert len(tx.vout) == 2
@@ -109,7 +111,7 @@ def test_bytespersigop(server_db):
 
         # ADDR[1], bytespersigop=True, desc 20 bytes, FORCED encoding=multisig
         #  will use 2 UTXOs to make the bytes:sigop ratio in our favor
-        txhex, _data = transaction.compose_transaction(
+        txhex = transaction.compose_transaction(
             server_db,
             "issuance",
             {
@@ -123,7 +125,7 @@ def test_bytespersigop(server_db):
             encoding="multisig",
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
 
         assert len(tx.vin) == 2
         assert len(tx.vout) == 2

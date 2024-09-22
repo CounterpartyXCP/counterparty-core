@@ -48,6 +48,7 @@ MAX_INPUTS_SET = 100
 
 
 def construct_coin_selection(
+    size_for_fee,
     encoding,
     data_array,
     source,
@@ -55,10 +56,8 @@ def construct_coin_selection(
     unspent_tx_hash,
     inputs_set,
     fee_per_kb,
-    estimate_fee_per_kb,
     estimate_fee_per_kb_nblocks,
     exact_fee,
-    size_for_fee,
     fee_provided,
     destination_btc_out,
     data_btc_out,
@@ -97,6 +96,16 @@ def construct_coin_selection(
         unspent = sort_unspent_txouts(unspent, dust_size=dust)
         # self.logger.debug(f"Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}")
         use_inputs = unspent
+
+    # dont override fee_per_kb if specified
+    estimate_fee_per_kb = None
+    if fee_per_kb is not None:
+        estimate_fee_per_kb = False
+    else:
+        fee_per_kb = config.DEFAULT_FEE_PER_KB
+
+    if estimate_fee_per_kb is None:
+        estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
 
     # use backend estimated fee_per_kb
     if estimate_fee_per_kb:
@@ -266,22 +275,18 @@ def get_dust_return_pubkey(source, provided_pubkeys):
 
 def determine_encoding(
     data,
-    prefix,
     desired_encoding="auto",
     op_return_max_size=config.OP_RETURN_MAX_SIZE,
-    old_style_api=None,
 ):
     # Data encoding methods (choose and validate).
     if not data:
         return None
 
     if desired_encoding == "auto":
-        if len(data) + len(prefix) <= op_return_max_size:
+        if len(data) + len(config.PREFIX) <= op_return_max_size:
             encoding = "opreturn"
         else:
-            encoding = (
-                "p2sh" if not old_style_api and util.enabled("p2sh_encoding") else "multisig"
-            )  # p2sh is not possible with old_style_api
+            encoding = "multisig"
     else:
         encoding = desired_encoding
 
@@ -296,22 +301,20 @@ def determine_encoding(
 
 def prepare_inputs(
     encoding,
-    prefix,
     data,
     destination_outputs,
     data_array,
+    destination_btc_out,
+    data_btc_out,
     source,
     p2sh_pretx_txid,
     allow_unconfirmed_inputs,
     unspent_tx_hash,
     inputs_set,
     fee_per_kb,
-    estimate_fee_per_kb,
     estimate_fee_per_kb_nblocks,
     exact_fee,
     fee_provided,
-    destination_btc_out,
-    data_btc_out,
     regular_dust_size,
     multisig_dust_size,
     disable_utxo_locks,
@@ -325,7 +328,7 @@ def prepare_inputs(
         data_output_size = 81  # 71 for the data
     elif encoding == "opreturn":
         # prefix + data + 10 bytes script overhead
-        data_output_size = len(prefix) + 10
+        data_output_size = len(config.PREFIX) + 10
         if data is not None:
             data_output_size = data_output_size + len(data)
     else:
@@ -344,6 +347,7 @@ def prepare_inputs(
 
     if not (encoding == "p2sh" and p2sh_pretx_txid):
         inputs, change_quantity, n_btc_in, n_final_fee = construct_coin_selection(
+            size_for_fee,
             encoding,
             data_array,
             source,
@@ -351,10 +355,8 @@ def prepare_inputs(
             unspent_tx_hash,
             inputs_set,
             fee_per_kb,
-            estimate_fee_per_kb,
             estimate_fee_per_kb_nblocks,
             exact_fee,
-            size_for_fee,
             fee_provided,
             destination_btc_out,
             data_btc_out,
@@ -407,13 +409,12 @@ def compute_destinations_and_values(
 def prepare_data_output(
     data,
     source,
+    source_is_p2sh,
     ps2h_dust_return_pubkey,
-    prefix,
     encoding,
     multisig_dust_size,
     regular_dust_size,
     provided_pubkeys,
-    source_is_p2sh,
     dust_return_pubkey,
     op_return_value,
 ):
@@ -446,7 +447,7 @@ def prepare_data_output(
         elif encoding == "multisig":
             # Two pubkeys, minus length byte, minus prefix, minus two nonces,
             # minus two sign bytes.
-            chunk_size = (33 * 2) - 1 - 8 - 2 - 2
+            chunk_size = (33 * 2) - 1 - len(config.PREFIX) - 2 - 2
         elif encoding == "p2sh":
             pubkeylength = -1
             if dust_return_pubkey is not None:
@@ -455,7 +456,7 @@ def prepare_data_output(
             chunk_size = p2sh_encoding.maximum_data_chunk_size(pubkeylength)
         elif encoding == "opreturn":
             chunk_size = config.OP_RETURN_MAX_SIZE
-            if len(data) + len(prefix) > chunk_size:
+            if len(data) + len(config.PREFIX) > chunk_size:
                 raise exceptions.TransactionError("One `OP_RETURN` output per transaction.")
         data_array = list(chunks(data, chunk_size))
 
@@ -531,7 +532,6 @@ def construct(
     tx_info,
     encoding="auto",
     fee_per_kb=config.DEFAULT_FEE_PER_KB,
-    estimate_fee_per_kb=None,
     estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_CONF_TARGET,
     regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
     multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
@@ -544,8 +544,6 @@ def construct(
     unspent_tx_hash=None,
     inputs_set=None,
     disable_utxo_locks=False,
-    extended_tx_info=False,
-    old_style_api=None,
     segwit=False,
     p2sh_source_multisig_pubkeys=None,
     p2sh_source_multisig_pubkeys_required=None,
@@ -553,15 +551,7 @@ def construct(
     exclude_utxos=None,
     op_return_max_size=config.OP_RETURN_MAX_SIZE,
 ):
-    prefix = config.PREFIX
     ps2h_dust_return_pubkey = config.P2SH_DUST_RETURN_PUBKEY
-
-    if estimate_fee_per_kb is None:
-        estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
-
-    # lazy assign from config, because when set as default it's evaluated before it's configured
-    if old_style_api is None:
-        old_style_api = config.OLD_STYLE_API
 
     (source, destination_outputs, data) = tx_info
 
@@ -594,7 +584,7 @@ def construct(
 
     """Determine encoding method"""
 
-    encoding = determine_encoding(data, prefix, encoding, op_return_max_size, old_style_api)
+    encoding = determine_encoding(data, encoding, op_return_max_size)
     if encoding:
         logger.debug(f"TX Construct - Constructing `{encoding.upper()}` transaction from {source}.")
     else:
@@ -612,13 +602,12 @@ def construct(
     data_value, data_array, dust_return_pubkey = prepare_data_output(
         data,
         source,
+        source_is_p2sh,
         ps2h_dust_return_pubkey,
-        prefix,
         encoding,
         multisig_dust_size,
         regular_dust_size,
         provided_pubkeys,
-        source_is_p2sh,
         dust_return_pubkey,
         op_return_value,
     )
@@ -641,22 +630,20 @@ def construct(
 
     inputs, change_quantity, btc_in, final_fee = prepare_inputs(
         encoding,
-        prefix,
         data,
         destination_outputs,
         data_array,
+        destination_btc_out,
+        data_btc_out,
         source,
         p2sh_pretx_txid,
         allow_unconfirmed_inputs,
         unspent_tx_hash,
         inputs_set,
         fee_per_kb,
-        estimate_fee_per_kb,
         estimate_fee_per_kb_nblocks,
         exact_fee,
         fee_provided,
-        destination_btc_out,
-        data_btc_out,
         regular_dust_size,
         multisig_dust_size,
         disable_utxo_locks,
@@ -706,20 +693,16 @@ def construct(
     if (encoding == "p2sh" and pretx_txid) or encoding != "p2sh":
         check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inputs)
 
-    if extended_tx_info:
-        return {
-            "btc_in": btc_in,
-            "btc_out": destination_btc_out + data_btc_out,
-            "btc_change": change_quantity,
-            "btc_fee": final_fee,
-            "tx_hex": unsigned_tx_hex,
-        }
-
     logger.debug("TX Construct - Transaction constructed.")
-    if unsigned_pretx_hex:
-        return return_result([unsigned_pretx_hex, unsigned_tx_hex], old_style_api=old_style_api)
-    else:
-        return return_result([unsigned_tx_hex], old_style_api=old_style_api)
+
+    return {
+        "btc_in": btc_in,
+        "btc_out": destination_btc_out + data_btc_out,
+        "btc_change": change_quantity,
+        "btc_fee": final_fee,
+        "unsigned_tx_hex": unsigned_tx_hex,
+        "unsigned_pretx_hex": unsigned_pretx_hex,
+    }
 
 
 def print_coin(coin):
@@ -730,21 +713,6 @@ def chunks(l, n):  # noqa: E741
     """Yield successive n‐sized chunks from l."""
     for i in range(0, len(l), n):
         yield l[i : i + n]
-
-
-def return_result(tx_hexes, old_style_api):
-    tx_hexes = list(filter(None, tx_hexes))  # filter out None
-
-    if old_style_api:
-        if len(tx_hexes) != 1:
-            raise Exception("Can't do 2 TXs with old_style_api")
-
-        return tx_hexes[0]
-    else:
-        if len(tx_hexes) == 1:
-            return tx_hexes[0]
-        else:
-            return tx_hexes
 
 
 def get_default_args(func):
@@ -762,10 +730,8 @@ def compose_transaction(
     params,
     encoding="auto",
     fee_per_kb=None,
-    estimate_fee_per_kb=None,
     regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
     multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-    op_return_value=config.DEFAULT_OP_RETURN_VALUE,
     confirmation_target=config.ESTIMATE_FEE_CONF_TARGET,
     pubkey=None,
     allow_unconfirmed_inputs=False,
@@ -773,18 +739,14 @@ def compose_transaction(
     fee_provided=0,
     unspent_tx_hash=None,
     inputs_set=None,
+    exclude_utxos=None,
     dust_return_pubkey=None,
     disable_utxo_locks=False,
-    extended_tx_info=False,
     p2sh_source_multisig_pubkeys=None,
     p2sh_source_multisig_pubkeys_required=None,
     p2sh_pretx_txid=None,
-    old_style_api=True,
     segwit=False,
-    api_v1=False,
-    return_psbt=False,
-    exclude_utxos=None,
-    return_only_data=False,
+    accept_missing_params=False,
 ):
     """Create and return a transaction."""
 
@@ -828,12 +790,7 @@ def compose_transaction(
     for address_name in ["source", "destination"]:
         if address_name in params:
             address = params[address_name]
-            if isinstance(address, list) or address is None or util.is_utxo_format(address):
-                # pkhshs = []
-                # for addr in address:
-                #    provided_pubkeys += script.extract_pubkeys(addr)
-                #    pkhshs.append(script.make_pubkeyhash(addr))
-                # params[address_name] = pkhshs
+            if address is None or util.is_utxo_format(address):
                 pass
             else:
                 try:
@@ -850,7 +807,7 @@ def compose_transaction(
     compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != "db"]
-    if api_v1:
+    if accept_missing_params:
         for param in missing_params:
             params[param] = None
     else:
@@ -864,39 +821,15 @@ def compose_transaction(
                         f"missing parameters: {', '.join(missing_params)}"
                     )
 
-    # dont override fee_per_kb if specified
-    if fee_per_kb is not None:
-        estimate_fee_per_kb = False
-    else:
-        fee_per_kb = config.DEFAULT_FEE_PER_KB
-
-    if "extended_tx_info" in params:
-        extended_tx_info = params["extended_tx_info"]
-        del params["extended_tx_info"]
-
-    if "old_style_api" in params:
-        old_style_api = params["old_style_api"]
-        del params["old_style_api"]
-
-    if "segwit" in params:
-        segwit = params["segwit"]
-        del params["segwit"]
-
     tx_info = compose_method(db, **params)
 
-    data = config.PREFIX + tx_info[2] if tx_info[2] else None
-    if return_only_data:
-        return None, data
-
-    raw_transaction = construct(
+    transaction_info = construct(
         db,
         tx_info,
         encoding=encoding,
         fee_per_kb=fee_per_kb,
-        estimate_fee_per_kb=estimate_fee_per_kb,
         regular_dust_size=regular_dust_size,
         multisig_dust_size=multisig_dust_size,
-        op_return_value=op_return_value,
         provided_pubkeys=provided_pubkeys,
         allow_unconfirmed_inputs=allow_unconfirmed_inputs,
         exact_fee=fee,
@@ -905,16 +838,12 @@ def compose_transaction(
         inputs_set=inputs_set,
         dust_return_pubkey=dust_return_pubkey,
         disable_utxo_locks=disable_utxo_locks,
-        extended_tx_info=extended_tx_info,
         p2sh_source_multisig_pubkeys=p2sh_source_multisig_pubkeys,
         p2sh_source_multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
         p2sh_pretx_txid=p2sh_pretx_txid,
-        old_style_api=old_style_api,
         segwit=segwit,
         estimate_fee_per_kb_nblocks=confirmation_target,
         exclude_utxos=exclude_utxos,
     )
-    if return_psbt:
-        psbt = backend.bitcoind.convert_to_psbt(raw_transaction)
-        return psbt, data
-    return raw_transaction, data
+    transaction_info["data"] = config.PREFIX + tx_info[2] if tx_info[2] else None
+    return transaction_info
