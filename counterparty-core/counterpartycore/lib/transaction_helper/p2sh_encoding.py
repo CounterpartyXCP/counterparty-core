@@ -3,13 +3,22 @@ This module contains p2sh data encoding functions
 """
 
 import binascii
+import io
 import logging
 import struct
 
 import bitcoin as bitcoinlib
+from bitcoin.core import CTransaction
 from bitcoin.core.script import CScript
 
-from counterpartycore.lib import config, exceptions, script
+from counterpartycore.lib import arc4, backend, config, exceptions, script
+from counterpartycore.lib.transaction_helper.serializer import (
+    OP_RETURN,
+    get_script,
+    op_push,
+    var_int,
+)
+from counterpartycore.lib.transaction_helper.utxo_locks import UTXOLocks, sort_unspent_txouts
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -301,3 +310,284 @@ def make_standard_p2sh_multisig_script(multisig_pubkeys, multisig_pubkeys_requir
         bitcoinlib.core.script.OP_CHECKMULTISIG,
     ]
     return multisig_script
+
+
+def select_any_coin_from_source(
+    source,
+    allow_unconfirmed_inputs=True,
+    disable_utxo_locks=False,
+    exclude_utxos=None,
+):
+    """Get the first (biggest) input from the source address"""
+
+    # Array of UTXOs, as retrieved by listunspent function from bitcoind
+    unspent = backend.addrindexrs.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
+
+    unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
+
+    # sort
+    unspent = sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE)
+
+    # use the first input
+    input = unspent[0]
+    if input is None:
+        return None
+
+    if not disable_utxo_locks:
+        UTXOLocks().lock_utxos(source, [input])
+
+    return input
+
+
+def serialise_p2sh_pretx(
+    inputs,
+    source,
+    source_value,
+    data_output,
+    change_output=None,
+    pubkey=None,
+    multisig_pubkeys=None,
+    multisig_pubkeys_required=None,
+):
+    assert data_output  # we don't do this unless there's data
+
+    data_array, data_value = data_output
+
+    s = (1).to_bytes(4, byteorder="little")  # Version
+
+    # Number of inputs.
+    s += var_int(int(len(inputs)))
+
+    # List of Inputs.
+    for i in range(len(inputs)):
+        txin = inputs[i]
+        s += binascii.unhexlify(bytes(txin["txid"], "utf-8"))[::-1]  # TxOutHash
+        s += txin["vout"].to_bytes(4, byteorder="little")  # TxOutIndex
+
+        tx_script = binascii.unhexlify(bytes(txin["script_pub_key"], "utf-8"))
+        s += var_int(int(len(tx_script)))  # Script length
+        s += tx_script  # Script
+        s += b"\xff" * 4  # Sequence
+
+    # Number of outputs.
+    n = len(data_array)
+    if change_output:
+        n += 1
+
+    # encode number of outputs
+    s += var_int(n)
+
+    # P2SH for data encodeded inputs
+    for n, data_chunk in enumerate(data_array):
+        data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk  # noqa: PLW2901
+
+        # get the scripts
+        script_sig, redeem_script, output_script = make_p2sh_encoding_redeemscript(
+            data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required
+        )
+
+        # if data_value is an array, then every output fee is specified in it
+        if type(data_value) == list:  # noqa: E721
+            s += data_value[n].to_bytes(8, byteorder="little")  # Value
+        else:
+            s += data_value.to_bytes(8, byteorder="little")  # Value
+        s += var_int(int(len(output_script)))  # Script length
+        s += output_script  # Script
+
+    # Change output.
+    if change_output:
+        change_address, change_value = change_output
+        tx_script, witness_script = get_script(change_address)
+
+        s += change_value.to_bytes(8, byteorder="little")  # Value
+        s += var_int(int(len(tx_script)))  # Script length
+        s += tx_script  # Script
+
+    s += (0).to_bytes(4, byteorder="little")  # LockTime
+
+    return s
+
+
+def serialize_p2sh(
+    inputs,
+    source,
+    source_address,
+    destination_outputs,
+    data_output,
+    change_output,
+    dust_return_pubkey,
+    p2sh_source_multisig_pubkeys,
+    p2sh_source_multisig_pubkeys_required,
+    p2sh_pretx_txid,
+    segwit,
+    exclude_utxos,
+):
+    pretx_txid = None
+    unsigned_pretx_hex = None
+    unsigned_tx_hex = None
+
+    assert not (segwit and p2sh_pretx_txid)  # shouldn't do old style with segwit enabled
+
+    if p2sh_pretx_txid:
+        pretx_txid = (
+            p2sh_pretx_txid
+            if isinstance(p2sh_pretx_txid, bytes)
+            else binascii.unhexlify(p2sh_pretx_txid)
+        )
+        unsigned_pretx = None
+    else:
+        destination_value_sum = sum([value for (_destination, value) in destination_outputs])
+        source_value = destination_value_sum
+
+        if change_output:
+            # add the difference between source and destination to the change
+            change_value = change_output[1] + (destination_value_sum - source_value)
+            change_output = (change_output[0], change_value)
+
+        unsigned_pretx = serialise_p2sh_pretx(
+            inputs,
+            source=source_address,
+            source_value=source_value,
+            data_output=data_output,
+            change_output=change_output,
+            pubkey=dust_return_pubkey,
+            multisig_pubkeys=p2sh_source_multisig_pubkeys,
+            multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
+        )
+        unsigned_pretx_hex = binascii.hexlify(unsigned_pretx).decode("utf-8")
+
+    # with segwit we already know the txid and can return both
+    if segwit:
+        # pretx_txid = hashlib.sha256(unsigned_pretx).digest()  # this should be segwit txid
+        ptx = CTransaction.stream_deserialize(
+            io.BytesIO(unsigned_pretx)
+        )  # could be a non-segwit tx anyways
+        txid_ba = bytearray(ptx.GetTxid())
+        txid_ba.reverse()
+        pretx_txid = bytes(txid_ba)  # gonna leave the malleability problem to upstream
+        logger.debug(f"pretx_txid {pretx_txid}")
+
+    if unsigned_pretx:
+        # we set a long lock on this, don't want other TXs to spend from it
+        UTXOLocks().lock_p2sh_utxos(unsigned_pretx)
+
+    # only generate the data TX if we have the pretx txId
+    if pretx_txid:
+        source_input = None
+        if script.is_p2sh(source):
+            source_input = select_any_coin_from_source(source, exclude_utxos=exclude_utxos)
+            if not source_input:
+                raise exceptions.TransactionError(
+                    "Unable to select source input for p2sh source address"
+                )
+
+        unsigned_datatx = serialise_p2sh_datatx(
+            pretx_txid,
+            source=source_address,
+            source_input=source_input,
+            destination_outputs=destination_outputs,
+            data_output=data_output,
+            pubkey=dust_return_pubkey,
+            multisig_pubkeys=p2sh_source_multisig_pubkeys,
+            multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
+        )
+        unsigned_datatx_hex = binascii.hexlify(unsigned_datatx).decode("utf-8")
+
+        # let the rest of the code work it's magic on the data tx
+        unsigned_tx_hex = unsigned_datatx_hex
+        return pretx_txid, unsigned_pretx_hex, unsigned_tx_hex
+    else:
+        # we're just gonna return the pretx, it doesn't require any of the further checks
+        return pretx_txid, unsigned_pretx_hex, None
+
+
+def serialise_p2sh_datatx(
+    txid,
+    source,
+    source_input,
+    destination_outputs,
+    data_output,
+    pubkey=None,
+    multisig_pubkeys=None,
+    multisig_pubkeys_required=None,
+):
+    assert data_output  # we don't do this unless there's data
+
+    txhash = bitcoinlib.core.lx(bitcoinlib.core.b2x(txid))  # reverse txId
+    data_array, value = data_output
+
+    # version
+    s = (1).to_bytes(4, byteorder="little")
+
+    # number of inputs is the length of data_array (+1 if a source_input exists)
+    number_of_inputs = len(data_array)
+    if source_input is not None:
+        number_of_inputs += 1
+    s += var_int(number_of_inputs)
+
+    # Handle a source input here for a P2SH source
+    if source_input is not None:
+        s += binascii.unhexlify(bytes(source_input["txid"], "utf-8"))[::-1]  # TxOutHash
+        s += source_input["vout"].to_bytes(4, byteorder="little")  # TxOutIndex
+
+        # since pubkey is not returned from indexd, add it from bitcoind
+        source_inputs = script.ensure_script_pub_key_for_inputs([source_input])
+        source_input = source_inputs[0]
+        tx_script = binascii.unhexlify(bytes(source_input["script_pub_key"], "utf-8"))
+        s += var_int(int(len(tx_script)))  # Script length
+        s += tx_script  # Script
+        s += b"\xff" * 4  # Sequence
+
+    # list of inputs
+    for n, data_chunk in enumerate(data_array):
+        data_chunk = config.PREFIX + data_chunk  # prefix the data_chunk  # noqa: PLW2901
+
+        # get the scripts
+        script_sig, redeem_script, output_script = make_p2sh_encoding_redeemscript(
+            data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required
+        )
+        # substituteScript = script_sig + output_script
+
+        s += txhash  # TxOutHash
+        s += (n).to_bytes(4, byteorder="little")  # TxOutIndex (assumes 0-based)
+
+        # s += var_int(len(substituteScript))                      # Script length
+        # s += substituteScript                                    # Script
+
+        s += var_int(len(script_sig))  # + len(output_script))                      # Script length
+        s += script_sig  # Script
+        # s += output_script                                    # Script
+
+        s += b"\xff" * 4  # Sequence
+
+    # number of outputs, always 1 for the opreturn
+    n = 1
+    n += len(destination_outputs)
+
+    # encode output length
+    s += var_int(n)
+
+    # destination outputs
+    for destination, value in destination_outputs:
+        tx_script, witness_script = get_script(destination)
+
+        s += value.to_bytes(8, byteorder="little")  # Value
+        s += var_int(int(len(tx_script)))  # Script length
+        s += tx_script  # Script
+
+    # opreturn to signal P2SH encoding
+    key = arc4.init_arc4(txid)
+    data_chunk = config.PREFIX + b"P2SH"
+    data_chunk = key.encrypt(data_chunk)
+    tx_script = OP_RETURN  # OP_RETURN
+    tx_script += op_push(len(data_chunk))  # Push bytes of data chunk
+    tx_script += data_chunk  # Data
+
+    # add opreturn
+    s += (0).to_bytes(8, byteorder="little")  # Value
+    s += var_int(int(len(tx_script)))  # Script length
+    s += tx_script  # Script
+
+    s += (0).to_bytes(4, byteorder="little")  # LockTime
+
+    return s

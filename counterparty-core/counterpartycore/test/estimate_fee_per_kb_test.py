@@ -40,8 +40,6 @@ def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch
     )
 
     with util_test.ConfigContext(ESTIMATE_FEE_PER_KB=True):
-        transaction.initialise()
-
         txhex, _data = transaction.compose_transaction(
             server_db,
             "send",

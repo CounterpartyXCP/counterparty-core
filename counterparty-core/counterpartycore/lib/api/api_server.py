@@ -17,7 +17,6 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
     sentry,
-    transaction,
     util,
 )
 from counterpartycore.lib.api import api_watcher, queries
@@ -382,7 +381,6 @@ def run_api_server(args, interruped_value, server_ready_value):
 
     logger.info("Starting API Server...")
     app = Flask(config.APP_NAME)
-    transaction.initialise()
     with app.app_context():
         # Initialise the API access log
         init_api_access_log(app)

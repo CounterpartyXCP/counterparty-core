@@ -76,7 +76,6 @@ def test_p2sh_encoding(server_db):
             for utxo in backend.addrindexrs.get_unspent_txouts(source)
         )
 
-        transaction.initialise()
         fee = 20000
         fee_per_kb = 50000
         result, _data = transaction.compose_transaction(

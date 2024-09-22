@@ -22,8 +22,6 @@ def test_bytespersigop(server_db):
     with util_test.MockProtocolChangesContext(short_tx_type_id=False):
         assert util.enabled("bytespersigop") == False  # noqa: E712
 
-        transaction.initialise()
-
         # ADDR[0], bytespersigop=False, desc 41 bytes, opreturn
         txhex, _data = transaction.compose_transaction(
             server_db,

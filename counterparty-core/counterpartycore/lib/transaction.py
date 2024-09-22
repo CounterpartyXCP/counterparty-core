@@ -6,16 +6,9 @@ This module contains no consensus‐critical code.
 
 import binascii
 import decimal
-import hashlib
 import inspect
-import io
 import logging
 import sys
-import threading
-
-import bitcoin as bitcoinlib
-import cachetools
-from bitcoin.core import CTransaction
 
 from counterpartycore.lib import (
     arc4,  # noqa: F401 # TODO: need for test: clean that up
@@ -30,6 +23,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.backend import addrindexrs
 from counterpartycore.lib.messages import dispense  # noqa: F401
 from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer
+from counterpartycore.lib.transaction_helper.utxo_locks import UTXOLocks, sort_unspent_txouts
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -50,165 +44,7 @@ OP_EQUAL = b"\x87"
 D = decimal.Decimal
 
 
-# FILE AS SINGLETON API
-#
-# We eventually neet to rip this out and just instantiate the TransactionService
-# when we explcitly build up a dependency tree.
-
-TRANSACTION_SERVICE_SINGLETON = None
-
 MAX_INPUTS_SET = 100
-
-
-def initialise(force=False):
-    global TRANSACTION_SERVICE_SINGLETON  # noqa: PLW0603
-
-    if not force and TRANSACTION_SERVICE_SINGLETON:
-        return TRANSACTION_SERVICE_SINGLETON
-
-    utxo_locks = None
-    if config.UTXO_LOCKS_MAX_ADDRESSES > 0:
-        utxo_locks = util.DictCache(size=config.UTXO_LOCKS_MAX_ADDRESSES)
-
-    TRANSACTION_SERVICE_SINGLETON = TransactionService(
-        backend=backend,
-        prefix=config.PREFIX,
-        ps2h_dust_return_pubkey=config.P2SH_DUST_RETURN_PUBKEY,
-        utxo_locks_max_age=config.UTXO_LOCKS_MAX_AGE,
-        utxo_locks_max_addresses=config.UTXO_LOCKS_MAX_ADDRESSES,
-        default_regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
-        default_multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-        estimate_fee_mode=config.ESTIMATE_FEE_MODE,
-        op_return_max_size=config.OP_RETURN_MAX_SIZE,
-        utxo_locks=utxo_locks,
-        utxo_p2sh_encoding_locks=ThreadSafeTTLCache(10000, 180),
-        utxo_p2sh_encoding_locks_cache=ThreadSafeTTLCache(1000, 600),
-    )
-
-
-def construct(
-    db,
-    tx_info,
-    encoding="auto",
-    fee_per_kb=config.DEFAULT_FEE_PER_KB,
-    estimate_fee_per_kb=None,
-    estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_CONF_TARGET,
-    regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
-    multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-    op_return_value=config.DEFAULT_OP_RETURN_VALUE,
-    exact_fee=None,
-    fee_provided=0,
-    provided_pubkeys=None,
-    dust_return_pubkey=None,
-    allow_unconfirmed_inputs=False,
-    unspent_tx_hash=None,
-    inputs_set=None,
-    disable_utxo_locks=False,
-    extended_tx_info=False,
-    old_style_api=None,
-    segwit=False,
-    p2sh_source_multisig_pubkeys=None,
-    p2sh_source_multisig_pubkeys_required=None,
-    p2sh_pretx_txid=None,
-    exclude_utxos=None,
-    op_return_max_size=config.OP_RETURN_MAX_SIZE,
-):
-    if TRANSACTION_SERVICE_SINGLETON is None:
-        raise Exception("Transaction not initialized")
-
-    return construct_transaction(
-        db,
-        tx_info,
-        TRANSACTION_SERVICE_SINGLETON,
-        encoding,
-        fee_per_kb,
-        estimate_fee_per_kb,
-        estimate_fee_per_kb_nblocks,
-        regular_dust_size,
-        multisig_dust_size,
-        op_return_value,
-        exact_fee,
-        fee_provided,
-        provided_pubkeys,
-        dust_return_pubkey,
-        allow_unconfirmed_inputs,
-        unspent_tx_hash,
-        inputs_set,
-        disable_utxo_locks,
-        extended_tx_info,
-        old_style_api,
-        segwit,
-        p2sh_source_multisig_pubkeys,
-        p2sh_source_multisig_pubkeys_required,
-        p2sh_pretx_txid,
-        exclude_utxos,
-        op_return_max_size,
-    )
-
-
-class BaseThreadSafeCache:
-    def __init__(self, *args, **kwargs):
-        # Note: reading is thread safe out of the box
-        self.lock = threading.Lock()
-        self.__cache = self.create_cache(*args, **kwargs)
-
-    def create_cache(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def get(self, key, default=None):
-        return self.__cache.get(key, default)
-
-    def pop(self, key, default=None):
-        with self.lock:
-            return self.__cache.pop(key, default)
-
-    def delete(self, key):
-        with self.lock:
-            try:
-                del self.__cache[key]
-            except KeyError:
-                pass
-
-    def _get_cache(self):
-        return self.__cache
-
-    def set(self, key, value):
-        with self.lock:
-            try:
-                self.__cache[key] = value
-            except KeyError:
-                pass
-
-    def keys(self):
-        return self.__cache.keys()
-
-    def __len__(self):
-        return len(self.__cache)
-
-    def __iter__(self):
-        return iter(self.__cache)
-
-    def __contains__(self, key):
-        return key in self.__cache
-
-
-class ThreadSafeTTLCache(BaseThreadSafeCache):
-    def create_cache(self, *args, **kwargs):
-        return cachetools.TTLCache(*args, **kwargs)
-
-
-def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
-    # Filter out all dust amounts to avoid bloating the resultant transaction
-    unspent = list(filter(lambda x: x["value"] > dust_size, unspent))
-    # Sort by amount, using the largest UTXOs available
-    if config.REGTEST:
-        # REGTEST has a lot of coinbase inputs that can't be spent due to maturity
-        # this doesn't usually happens on mainnet or testnet because most fednodes aren't mining
-        unspent = sorted(unspent, key=lambda x: (x["confirmations"], x["value"]), reverse=True)
-    else:
-        unspent = sorted(unspent, key=lambda x: x["value"], reverse=True)
-
-    return unspent
 
 
 def construct_coin_selection(
@@ -230,7 +66,6 @@ def construct_coin_selection(
     multisig_dust_size,
     disable_utxo_locks,
     exclude_utxos,
-    lock_utxos_instance,
 ):
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
     if inputs_set:
@@ -252,7 +87,7 @@ def construct_coin_selection(
                 f"Insufficient {config.BTC} at address {source}: no unspent outputs."
             )
 
-        unspent = lock_utxos_instance.filter_unspents(source, unspent, exclude_utxos)
+        unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
 
         if encoding == "multisig":
             dust = multisig_dust_size
@@ -346,41 +181,13 @@ def construct_coin_selection(
         raise exceptions.BalanceError(error_message)
 
     if not disable_utxo_locks:
-        lock_utxos_instance.lock_utxos(source, inputs)
+        UTXOLocks().lock_utxos(source, inputs)
 
     # ensure inputs have scriptPubKey
     #   this is not provided by indexd
     inputs = script.ensure_script_pub_key_for_inputs(inputs)
 
     return inputs, change_quantity, btc_in, final_fee
-
-
-def select_any_coin_from_source(
-    source,
-    lock_utxos_instance,
-    allow_unconfirmed_inputs=True,
-    disable_utxo_locks=False,
-    exclude_utxos=None,
-):
-    """Get the first (biggest) input from the source address"""
-
-    # Array of UTXOs, as retrieved by listunspent function from bitcoind
-    unspent = backend.addrindexrs.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
-
-    unspent = lock_utxos_instance.filter_unspents(source, unspent, exclude_utxos)
-
-    # sort
-    unspent = sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE)
-
-    # use the first input
-    input = unspent[0]
-    if input is None:
-        return None
-
-    if not disable_utxo_locks:
-        lock_utxos_instance.lock_utxos(source, [input])
-
-    return input
 
 
 def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
@@ -509,7 +316,6 @@ def prepare_inputs(
     multisig_dust_size,
     disable_utxo_locks,
     exclude_utxos,
-    utxo_locks_instance,
 ):
     btc_in = 0
     final_fee = 0
@@ -556,7 +362,6 @@ def prepare_inputs(
             multisig_dust_size,
             disable_utxo_locks,
             exclude_utxos,
-            utxo_locks_instance,
         )
         btc_in = n_btc_in
         final_fee = n_final_fee
@@ -670,105 +475,7 @@ def prepare_data_output(
     return data_value, data_array, dust_return_pubkey
 
 
-def serialize_p2sh(
-    inputs,
-    source,
-    source_address,
-    destination_outputs,
-    data_output,
-    change_output,
-    dust_return_pubkey,
-    p2sh_source_multisig_pubkeys,
-    p2sh_source_multisig_pubkeys_required,
-    p2sh_pretx_txid,
-    segwit,
-    exclude_utxos,
-    utxo_locks_instance,
-):
-    pretx_txid = None
-    unsigned_pretx_hex = None
-    unsigned_tx_hex = None
-
-    assert not (segwit and p2sh_pretx_txid)  # shouldn't do old style with segwit enabled
-
-    if p2sh_pretx_txid:
-        pretx_txid = (
-            p2sh_pretx_txid
-            if isinstance(p2sh_pretx_txid, bytes)
-            else binascii.unhexlify(p2sh_pretx_txid)
-        )
-        unsigned_pretx = None
-    else:
-        destination_value_sum = sum([value for (_destination, value) in destination_outputs])
-        source_value = destination_value_sum
-
-        if change_output:
-            # add the difference between source and destination to the change
-            change_value = change_output[1] + (destination_value_sum - source_value)
-            change_output = (change_output[0], change_value)
-
-        unsigned_pretx = serializer.serialise_p2sh_pretx(
-            inputs,
-            source=source_address,
-            source_value=source_value,
-            data_output=data_output,
-            change_output=change_output,
-            pubkey=dust_return_pubkey,
-            multisig_pubkeys=p2sh_source_multisig_pubkeys,
-            multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
-        )
-        unsigned_pretx_hex = binascii.hexlify(unsigned_pretx).decode("utf-8")
-
-    # with segwit we already know the txid and can return both
-    if segwit:
-        # pretx_txid = hashlib.sha256(unsigned_pretx).digest()  # this should be segwit txid
-        ptx = CTransaction.stream_deserialize(
-            io.BytesIO(unsigned_pretx)
-        )  # could be a non-segwit tx anyways
-        txid_ba = bytearray(ptx.GetTxid())
-        txid_ba.reverse()
-        pretx_txid = bytes(txid_ba)  # gonna leave the malleability problem to upstream
-        logger.debug(f"pretx_txid {pretx_txid}")
-
-    if unsigned_pretx:
-        # we set a long lock on this, don't want other TXs to spend from it
-        utxo_locks_instance.lock_p2sh_utxos(unsigned_pretx)
-
-    # only generate the data TX if we have the pretx txId
-    if pretx_txid:
-        source_input = None
-        if script.is_p2sh(source):
-            source_input = select_any_coin_from_source(
-                source, utxo_locks_instance, exclude_utxos=exclude_utxos
-            )
-            if not source_input:
-                raise exceptions.TransactionError(
-                    "Unable to select source input for p2sh source address"
-                )
-
-        unsigned_datatx = serializer.serialise_p2sh_datatx(
-            pretx_txid,
-            source=source_address,
-            source_input=source_input,
-            destination_outputs=destination_outputs,
-            data_output=data_output,
-            pubkey=dust_return_pubkey,
-            multisig_pubkeys=p2sh_source_multisig_pubkeys,
-            multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
-        )
-        unsigned_datatx_hex = binascii.hexlify(unsigned_datatx).decode("utf-8")
-
-        # let the rest of the code work it's magic on the data tx
-        unsigned_tx_hex = unsigned_datatx_hex
-        return pretx_txid, unsigned_pretx_hex, unsigned_tx_hex
-    else:
-        # we're just gonna return the pretx, it doesn't require any of the further checks
-        return pretx_txid, unsigned_pretx_hex, None
-
-
-def check_transaction_sanity(
-    db, source, tx_info, unsigned_tx_hex, encoding, inputs, utxo_locks_instance
-):
+def check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inputs):
     (desired_source, desired_destination_outputs, desired_data) = tx_info
     desired_source = script.make_canonical(desired_source)
     desired_destination = (
@@ -812,17 +519,16 @@ def check_transaction_sanity(
     desired = (desired_source, desired_destination, desired_data)
     parsed = (parsed_source, parsed_destination, parsed_data)
     if desired != parsed:
-        utxo_locks_instance.unlock_utxos(source, inputs)
+        UTXOLocks().unlock_utxos(source, inputs)
 
         raise exceptions.TransactionError(
             f"Constructed transaction does not parse correctly: {desired} ≠ {parsed}"
         )
 
 
-def construct_transaction(
+def construct(
     db,
     tx_info,
-    utxo_locks_instance,
     encoding="auto",
     fee_per_kb=config.DEFAULT_FEE_PER_KB,
     estimate_fee_per_kb=None,
@@ -955,7 +661,6 @@ def construct_transaction(
         multisig_dust_size,
         disable_utxo_locks,
         exclude_utxos,
-        utxo_locks_instance,
     )
 
     """Finish"""
@@ -970,7 +675,7 @@ def construct_transaction(
 
     pretx_txid = None
     if encoding == "p2sh":
-        pretx_txid, unsigned_pretx_hex, unsigned_tx_hex = serialize_p2sh(
+        pretx_txid, unsigned_pretx_hex, unsigned_tx_hex = p2sh_encoding.serialize_p2sh(
             inputs,
             source,
             source_address,
@@ -983,7 +688,6 @@ def construct_transaction(
             p2sh_pretx_txid,
             segwit,
             exclude_utxos,
-            utxo_locks_instance,
         )
     else:
         # Serialise inputs and outputs.
@@ -1000,9 +704,7 @@ def construct_transaction(
     """Sanity Check"""
 
     if (encoding == "p2sh" and pretx_txid) or encoding != "p2sh":
-        check_transaction_sanity(
-            db, source, tx_info, unsigned_tx_hex, encoding, inputs, utxo_locks_instance
-        )
+        check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inputs)
 
     if extended_tx_info:
         return {
@@ -1020,99 +722,6 @@ def construct_transaction(
         return return_result([unsigned_tx_hex], old_style_api=old_style_api)
 
 
-# set higher than the max number of UTXOs we should expect to
-# manage in an aging cache for any one source address, at any one period
-# UTXO_P2SH_ENCODING_LOCKS is TTLCache for UTXOs that are used for chaining p2sh encoding
-#  instead of a simple (txid, vout) key we use [(vin.prevout.hash, vin.prevout.n) for vin tx1.vin]
-# we cache the make_outkey_vin to avoid having to fetch raw txs too often
-
-
-class TransactionService:
-    def __init__(
-        self,
-        backend,
-        prefix,
-        utxo_locks_max_age=3.0,
-        utxo_locks_max_addresses=1000,
-        utxo_locks_per_address_maxsize=5000,
-        default_regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
-        default_multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-        estimate_fee_mode=config.ESTIMATE_FEE_MODE,
-        op_return_max_size=config.OP_RETURN_MAX_SIZE,
-        utxo_p2sh_encoding_locks=None,
-        utxo_p2sh_encoding_locks_cache=None,
-        utxo_locks=None,
-        ps2h_dust_return_pubkey=None,
-    ):
-        self.logger = logging.getLogger(
-            config.LOGGER_NAME
-        )  # has to be config.LOGGER_NAME or integration tests fail
-        self.backend = backend
-
-        self.utxo_p2sh_encoding_locks = utxo_p2sh_encoding_locks or ThreadSafeTTLCache(10000, 180)
-        self.utxo_p2sh_encoding_locks_cache = utxo_p2sh_encoding_locks_cache or ThreadSafeTTLCache(
-            1000, 600
-        )
-        self.utxo_locks = utxo_locks
-
-        self.utxo_locks_max_age = utxo_locks_max_age
-        self.utxo_locks_max_addresses = utxo_locks_max_addresses
-        self.utxo_locks_per_address_maxsize = utxo_locks_per_address_maxsize
-
-        self.default_regular_dust_size = default_regular_dust_size
-        self.default_multisig_dust_size = default_multisig_dust_size
-        self.estimate_fee_mode = estimate_fee_mode
-
-        self.prefix = prefix
-        self.op_return_max_size = op_return_max_size
-        self.ps2h_dust_return_pubkey = ps2h_dust_return_pubkey or config.P2SH_DUST_RETURN_PUBKEY
-
-    def make_outkey_vin_txid(self, txid, vout):
-        if (txid, vout) not in self.utxo_p2sh_encoding_locks_cache:
-            txhex = self.backend.bitcoind.getrawtransaction(txid, verbose=False)
-            self.utxo_p2sh_encoding_locks_cache.set((txid, vout), make_outkey_vin(txhex, vout))
-
-        return self.utxo_p2sh_encoding_locks_cache.get((txid, vout))
-
-    def filter_unspents(self, source, unspent, exclude_utxos):
-        filter_unspents_utxo_locks = []
-        if self.utxo_locks is not None and source in self.utxo_locks:
-            filter_unspents_utxo_locks = self.utxo_locks[source].keys()
-        filter_unspents_p2sh_locks = self.utxo_p2sh_encoding_locks.keys()  # filter out any locked UTXOs to prevent creating transactions that spend the same UTXO when they're created at the same time
-        filtered_unspent = []
-        for output in unspent:
-            if (
-                make_outkey(output) not in filter_unspents_utxo_locks
-                and self.make_outkey_vin_txid(output["txid"], output["vout"])
-                not in filter_unspents_p2sh_locks
-                and (
-                    not exclude_utxos
-                    or not isinstance(exclude_utxos, str)
-                    or f"{output['txid']}:{output['vout']}" not in exclude_utxos.split(",")
-                )
-            ):
-                filtered_unspent.append(output)
-        return filtered_unspent
-
-    def lock_utxos(self, source, inputs):
-        # Lock the source's inputs (UTXOs) chosen for this transaction
-        if self.utxo_locks is not None:
-            if source not in self.utxo_locks:
-                self.utxo_locks[source] = ThreadSafeTTLCache(
-                    self.utxo_locks_per_address_maxsize, self.utxo_locks_max_age
-                )
-            for input in inputs:
-                self.utxo_locks[source].set(make_outkey(input), input)
-
-    def lock_p2sh_utxos(self, unsigned_pretx):
-        self.utxo_p2sh_encoding_locks.set(make_outkey_vin(unsigned_pretx, 0), True)
-
-    def unlock_utxos(self, source, inputs):
-        if self.utxo_locks is not None and inputs:
-            for input in inputs:
-                self.utxo_locks[source].pop(make_outkey(input), None)
-
-
 def print_coin(coin):
     return f"amount: {coin['amount']:.8f}; txid: {coin['txid']}; vout: {coin['vout']}; confirmations: {coin.get('confirmations', '?')}"  # simplify and make deterministic
 
@@ -1121,21 +730,6 @@ def chunks(l, n):  # noqa: E741
     """Yield successive n‐sized chunks from l."""
     for i in range(0, len(l), n):
         yield l[i : i + n]
-
-
-def make_outkey(output):
-    return f"{output['txid']}{output['vout']}"
-
-
-def make_outkey_vin(txhex, vout):
-    txbin = binascii.unhexlify(txhex) if isinstance(txhex, str) else txhex
-    assert isinstance(vout, int)
-
-    tx = bitcoinlib.core.CTransaction.deserialize(txbin)
-    outkey = [(vin.prevout.hash, vin.prevout.n) for vin in tx.vin]
-    outkey = hashlib.sha256((f"{outkey}{vout}").encode("ascii")).digest()
-
-    return outkey
 
 
 def return_result(tx_hexes, old_style_api):

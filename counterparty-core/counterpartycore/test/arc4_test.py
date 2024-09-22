@@ -124,9 +124,6 @@ def test_transaction_arc4_mocked(server_db):
     by default init_arc4 should be mocked in the test suite to always use `'00' * 32` as seed.
     """
 
-    # TODO, use explicit backend mock
-    transaction.initialise()
-
     v = int(100 * 1e8)
     tx_info = send.compose(server_db, ADDR[0], ADDR[1], "XCP", v)
     send1hex = transaction.construct(db=server_db, tx_info=tx_info, regular_dust_size=5430)
@@ -143,9 +140,6 @@ def test_transaction_arc4_unmocked(server_db):
     by default init_arc4 should be mocked in the test suite to always use `'00' * 32` as seed
      but with DISABLE_ARC4_MOCKING=True it should be disabled and actually produce different results
     """
-
-    # TODO, use explicit backend mock
-    transaction.initialise()
 
     with util_test.ConfigContext(DISABLE_ARC4_MOCKING=True):
         v = int(100 * 1e8)
