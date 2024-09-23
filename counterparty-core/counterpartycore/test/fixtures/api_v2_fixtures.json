@@ -9206,6 +9206,13 @@
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
                     },
                     {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)"
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13588,20 +13595,20 @@
                 ]
             },
             "/v2/assets/<asset>/balances/<address>": {
-                "function": "get_balance_by_address_and_asset",
+                "function": "get_balance_by_asset_and_address",
                 "description": "Returns the balance of an address and asset",
                 "args": [
-                    {
-                        "name": "address",
-                        "required": true,
-                        "type": "str",
-                        "description": "The address to return (e.g. $ADDRESS_1)"
-                    },
                     {
                         "name": "asset",
                         "required": true,
                         "type": "str",
                         "description": "The asset to return (e.g. XCP)"
+                    },
+                    {
+                        "name": "address",
+                        "required": true,
+                        "type": "str",
+                        "description": "The address to return (e.g. $ADDRESS_1)"
                     },
                     {
                         "name": "verbose",
@@ -14096,6 +14103,13 @@
                         "required": false,
                         "type": "int",
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)"
                     },
                     {
                         "name": "verbose",
@@ -15103,6 +15117,13 @@
                         "required": false,
                         "type": "int",
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)"
                     },
                     {
                         "name": "verbose",
