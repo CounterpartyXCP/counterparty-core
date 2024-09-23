@@ -12,7 +12,6 @@ import sys
 
 from counterpartycore.lib import (
     arc4,  # noqa: F401 # TODO: need for test: clean that up
-    backend,
     config,
     deserialize,
     exceptions,
@@ -22,8 +21,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.backend import addrindexrs
 from counterpartycore.lib.messages import dispense  # noqa: F401
-from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer
-from counterpartycore.lib.transaction_helper.utxo_locks import UTXOLocks, sort_unspent_txouts
+from counterpartycore.lib.transaction_helper import p2sh_encoding, serializer, transaction_inputs
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -42,161 +40,6 @@ OP_CHECKMULTISIG = b"\xae"
 OP_EQUAL = b"\x87"
 
 D = decimal.Decimal
-
-
-MAX_INPUTS_SET = 100
-
-
-def construct_coin_selection(
-    size_for_fee,
-    encoding,
-    data_array,
-    source,
-    allow_unconfirmed_inputs,
-    unspent_tx_hash,
-    inputs_set,
-    fee_per_kb,
-    estimate_fee_per_kb_nblocks,
-    exact_fee,
-    fee_provided,
-    destination_btc_out,
-    data_btc_out,
-    regular_dust_size,
-    multisig_dust_size,
-    disable_utxo_locks,
-    exclude_utxos,
-):
-    # Array of UTXOs, as retrieved by listunspent function from bitcoind
-    if inputs_set:
-        use_inputs = unspent = inputs_set
-    else:
-        if unspent_tx_hash is not None:
-            unspent = backend.addrindexrs.get_unspent_txouts(
-                source,
-                unconfirmed=allow_unconfirmed_inputs,
-                unspent_tx_hash=unspent_tx_hash,
-            )
-        else:
-            unspent = backend.addrindexrs.get_unspent_txouts(
-                source, unconfirmed=allow_unconfirmed_inputs
-            )
-        logger.trace(f"TX Construct - Unspent UTXOs: {[print_coin(coin) for coin in unspent]}")
-        if len(unspent) == 0:
-            raise exceptions.BalanceError(
-                f"Insufficient {config.BTC} at address {source}: no unspent outputs."
-            )
-
-        unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
-
-        if encoding == "multisig":
-            dust = multisig_dust_size
-        else:
-            dust = regular_dust_size
-
-        unspent = sort_unspent_txouts(unspent, dust_size=dust)
-        # self.logger.debug(f"Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}")
-        use_inputs = unspent
-
-    # dont override fee_per_kb if specified
-    estimate_fee_per_kb = None
-    if fee_per_kb is not None:
-        estimate_fee_per_kb = False
-    else:
-        fee_per_kb = config.DEFAULT_FEE_PER_KB
-
-    if estimate_fee_per_kb is None:
-        estimate_fee_per_kb = config.ESTIMATE_FEE_PER_KB
-
-    # use backend estimated fee_per_kb
-    if estimate_fee_per_kb:
-        estimated_fee_per_kb = backend.bitcoind.fee_per_kb(
-            estimate_fee_per_kb_nblocks, config.ESTIMATE_FEE_MODE
-        )
-        if estimated_fee_per_kb is not None:
-            fee_per_kb = max(
-                estimated_fee_per_kb, fee_per_kb
-            )  # never drop below the default fee_per_kb
-
-    logger.trace(f"TX Construct - Fee/KB {fee_per_kb / config.UNIT:.8f}")
-
-    inputs = []
-    btc_in = 0
-    change_quantity = 0
-    sufficient_funds = False
-    final_fee = fee_per_kb
-    desired_input_count = 1
-
-    if encoding == "multisig" and data_array and util.enabled("bytespersigop"):
-        desired_input_count = len(data_array) * 2
-
-    # pop inputs until we can pay for the fee
-    use_inputs_index = 0
-    for coin in use_inputs:
-        logger.trace(f"TX Construct - New input: {print_coin(coin)}")
-        inputs.append(coin)
-        btc_in += round(coin["amount"] * config.UNIT)
-
-        # If exact fee is specified, use that. Otherwise, calculate size of tx
-        # and base fee on that (plus provide a minimum fee for selling BTC).
-        size = 181 * len(inputs) + size_for_fee + 10
-        if exact_fee:
-            final_fee = exact_fee
-        else:
-            necessary_fee = int(size / 1000 * fee_per_kb)
-            final_fee = max(fee_provided, necessary_fee)
-            logger.trace(
-                f"TX Construct - final_fee inputs: {len(inputs)} size: {size} final_fee {final_fee}"
-            )
-
-        # Check if good.
-        btc_out = destination_btc_out + data_btc_out
-        change_quantity = btc_in - (btc_out + final_fee)
-        logger.trace(
-            f"TX Construct - Size: {size} Fee: {final_fee / config.UNIT:.8f} Change quantity: {change_quantity / config.UNIT:.8f} BTC"
-        )
-
-        # If after the sum of all the utxos the change is dust, then it will be added to the miners instead of returning an error
-        if (
-            (use_inputs_index == len(use_inputs) - 1)
-            and (change_quantity > 0)
-            and (change_quantity < regular_dust_size)
-        ):
-            sufficient_funds = True
-            final_fee = final_fee + change_quantity
-            change_quantity = 0
-        # If change is necessary, must not be a dust output.
-        elif change_quantity == 0 or change_quantity >= regular_dust_size:
-            sufficient_funds = True
-            if len(inputs) >= desired_input_count:
-                break
-
-        use_inputs_index = use_inputs_index + 1
-
-    if not sufficient_funds:
-        # Approximate needed change, fee by with most recently calculated
-        # quantities.
-        btc_out = destination_btc_out + data_btc_out
-        total_btc_out = btc_out + max(change_quantity, 0) + final_fee
-
-        need = f"{D(total_btc_out) / D(config.UNIT)} {config.BTC}"
-        include_fee = f"{D(final_fee) / D(config.UNIT)} {config.BTC}"
-        available = f"{D(btc_in) / D(config.UNIT)} {config.BTC}"
-        error_message = f"Insufficient {config.BTC} at address {source}. Need: {need} (Including fee: {include_fee}), available: {available}."
-        error_message += f" These fees are estimated for a confirmation target of {estimate_fee_per_kb_nblocks} blocks, you can reduce them by using the `confirmation_target` parameter with a higher value or by manually setting the fees with the `fee` parameter."
-
-        if not allow_unconfirmed_inputs:
-            error_message += " To spend unconfirmed coins, use the flag `--unconfirmed`. (Unconfirmed coins cannot be spent from multi‐sig addresses.)"
-
-        raise exceptions.BalanceError(error_message)
-
-    if not disable_utxo_locks:
-        UTXOLocks().lock_utxos(source, inputs)
-
-    # ensure inputs have scriptPubKey
-    #   this is not provided by indexd
-    inputs = script.ensure_script_pub_key_for_inputs(inputs)
-
-    return inputs, change_quantity, btc_in, final_fee
 
 
 def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
@@ -297,81 +140,6 @@ def determine_encoding(
         raise exceptions.TransactionError("Unknown encoding‐scheme.")
 
     return encoding
-
-
-def prepare_inputs(
-    encoding,
-    data,
-    destination_outputs,
-    data_array,
-    destination_btc_out,
-    data_btc_out,
-    source,
-    p2sh_pretx_txid,
-    allow_unconfirmed_inputs,
-    unspent_tx_hash,
-    inputs_set,
-    fee_per_kb,
-    estimate_fee_per_kb_nblocks,
-    exact_fee,
-    fee_provided,
-    regular_dust_size,
-    multisig_dust_size,
-    disable_utxo_locks,
-    exclude_utxos,
-):
-    btc_in = 0
-    final_fee = 0
-    # Calculate collective size of outputs, for fee calculation
-    p2pkhsize = 25 + 9
-    if encoding == "multisig":
-        data_output_size = 81  # 71 for the data
-    elif encoding == "opreturn":
-        # prefix + data + 10 bytes script overhead
-        data_output_size = len(config.PREFIX) + 10
-        if data is not None:
-            data_output_size = data_output_size + len(data)
-    else:
-        data_output_size = p2pkhsize  # Pay‐to‐PubKeyHash (25 for the data?)
-
-    if encoding == "p2sh":
-        # calculate all the p2sh outputs
-        size_for_fee, datatx_necessary_fee, data_value, data_btc_out = (
-            p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb, exact_fee)
-        )
-        # replace the data value
-        # data_output = (data_array, data_value)
-    else:
-        sum_data_output_size = len(data_array) * data_output_size
-        size_for_fee = ((25 + 9) * len(destination_outputs)) + sum_data_output_size
-
-    if not (encoding == "p2sh" and p2sh_pretx_txid):
-        inputs, change_quantity, n_btc_in, n_final_fee = construct_coin_selection(
-            size_for_fee,
-            encoding,
-            data_array,
-            source,
-            allow_unconfirmed_inputs,
-            unspent_tx_hash,
-            inputs_set,
-            fee_per_kb,
-            estimate_fee_per_kb_nblocks,
-            exact_fee,
-            fee_provided,
-            destination_btc_out,
-            data_btc_out,
-            regular_dust_size,
-            multisig_dust_size,
-            disable_utxo_locks,
-            exclude_utxos,
-        )
-        btc_in = n_btc_in
-        final_fee = n_final_fee
-    else:
-        # when encoding is P2SH and the pretx txid is passed we can skip coinselection
-        inputs, change_quantity = None, None
-
-    return inputs, change_quantity, btc_in, final_fee
 
 
 def compute_destinations_and_values(
@@ -520,40 +288,60 @@ def check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inp
     desired = (desired_source, desired_destination, desired_data)
     parsed = (parsed_source, parsed_destination, parsed_data)
     if desired != parsed:
-        UTXOLocks().unlock_utxos(source, inputs)
+        transaction_inputs.UTXOLocks().unlock_utxos(source, inputs)
 
         raise exceptions.TransactionError(
             f"Constructed transaction does not parse correctly: {desired} ≠ {parsed}"
         )
 
 
+def collect_public_keys(pubkeys):
+    # Get provided pubkeys.
+    if isinstance(pubkeys, str):
+        provided_pubkeys = pubkeys.split(",")
+    elif isinstance(pubkeys, list):
+        provided_pubkeys = pubkeys
+    elif pubkeys is None:
+        provided_pubkeys = []
+    else:
+        raise exceptions.TransactionError("Invalid pubkeys.")
+
+    for pubkey in provided_pubkeys:
+        if not script.is_fully_valid(binascii.unhexlify(pubkey)):
+            raise exceptions.ComposeError(f"invalid public key: {pubkey}")
+    return provided_pubkeys
+
+
 def construct(
     db,
     tx_info,
+    pubkeys=None,
     encoding="auto",
-    fee_per_kb=config.DEFAULT_FEE_PER_KB,
-    estimate_fee_per_kb_nblocks=config.ESTIMATE_FEE_CONF_TARGET,
+    fee_per_kb=None,
+    fee=None,
+    fee_provided=0,
+    confirmation_target=config.ESTIMATE_FEE_CONF_TARGET,
     regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
     multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
     op_return_value=config.DEFAULT_OP_RETURN_VALUE,
-    exact_fee=None,
-    fee_provided=0,
-    provided_pubkeys=None,
-    dust_return_pubkey=None,
+    op_return_max_size=config.OP_RETURN_MAX_SIZE,
     allow_unconfirmed_inputs=False,
     unspent_tx_hash=None,
+    exclude_utxos=None,
     inputs_set=None,
     disable_utxo_locks=False,
     segwit=False,
+    dust_return_pubkey=None,
     p2sh_source_multisig_pubkeys=None,
     p2sh_source_multisig_pubkeys_required=None,
     p2sh_pretx_txid=None,
-    exclude_utxos=None,
-    op_return_max_size=config.OP_RETURN_MAX_SIZE,
 ):
+    exact_fee = fee
     ps2h_dust_return_pubkey = config.P2SH_DUST_RETURN_PUBKEY
 
     (source, destination_outputs, data) = tx_info
+
+    provided_pubkeys = collect_public_keys(pubkeys)
 
     if dust_return_pubkey:
         dust_return_pubkey = binascii.unhexlify(dust_return_pubkey)
@@ -628,7 +416,7 @@ def construct(
 
     """Inputs"""
 
-    inputs, change_quantity, btc_in, final_fee = prepare_inputs(
+    inputs, change_quantity, btc_in, final_fee = transaction_inputs.prepare_inputs(
         encoding,
         data,
         destination_outputs,
@@ -641,7 +429,7 @@ def construct(
         unspent_tx_hash,
         inputs_set,
         fee_per_kb,
-        estimate_fee_per_kb_nblocks,
+        confirmation_target,
         exact_fee,
         fee_provided,
         regular_dust_size,
@@ -702,11 +490,8 @@ def construct(
         "btc_fee": final_fee,
         "unsigned_tx_hex": unsigned_tx_hex,
         "unsigned_pretx_hex": unsigned_pretx_hex,
+        "data": config.PREFIX + data if data else None,
     }
-
-
-def print_coin(coin):
-    return f"amount: {coin['amount']:.8f}; txid: {coin['txid']}; vout: {coin['vout']}; confirmations: {coin.get('confirmations', '?')}"  # simplify and make deterministic
 
 
 def chunks(l, n):  # noqa: E741
@@ -724,90 +509,11 @@ def get_default_args(func):
     }
 
 
-def compose_transaction(
-    db,
-    name,
-    params,
-    encoding="auto",
-    fee_per_kb=None,
-    regular_dust_size=config.DEFAULT_REGULAR_DUST_SIZE,
-    multisig_dust_size=config.DEFAULT_MULTISIG_DUST_SIZE,
-    confirmation_target=config.ESTIMATE_FEE_CONF_TARGET,
-    pubkey=None,
-    allow_unconfirmed_inputs=False,
-    fee=None,
-    fee_provided=0,
-    unspent_tx_hash=None,
-    inputs_set=None,
-    exclude_utxos=None,
-    dust_return_pubkey=None,
-    disable_utxo_locks=False,
-    p2sh_source_multisig_pubkeys=None,
-    p2sh_source_multisig_pubkeys_required=None,
-    p2sh_pretx_txid=None,
-    segwit=False,
-    accept_missing_params=False,
-):
-    """Create and return a transaction."""
-
-    # Get provided pubkeys.
-    if isinstance(pubkey, str):
-        provided_pubkeys = [pubkey]
-    elif isinstance(pubkey, list):
-        provided_pubkeys = pubkey
-    elif pubkey is None:
-        provided_pubkeys = []
-    else:
-        raise exceptions.TransactionError("Invalid pubkey.")
-
-    if isinstance(inputs_set, str) and inputs_set:
-        new_inputs_set = []
-        utxos_list = inputs_set.split(",")
-        if len(utxos_list) > MAX_INPUTS_SET:
-            raise exceptions.ComposeError(
-                f"too many UTXOs in inputs_set (max. {MAX_INPUTS_SET}): {len(utxos_list)}"
-            )
-        for str_input in utxos_list:
-            if not util.is_utxo_format(str_input):
-                raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
-            try:
-                amount = backend.bitcoind.get_tx_out_amount(
-                    str_input.split(":")[0], int(str_input.split(":")[1])
-                )
-            except Exception as e:
-                raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
-            new_inputs_set.append(
-                {
-                    "txid": str_input.split(":")[0],
-                    "vout": int(str_input.split(":")[1]),
-                    "amount": amount,
-                }
-            )
-        inputs_set = new_inputs_set
-
-    # Get additional pubkeys from `source` and `destination` params.
-    # Convert `source` and `destination` to pubkeyhash form.
-    for address_name in ["source", "destination"]:
-        if address_name in params:
-            address = params[address_name]
-            if address is None or util.is_utxo_format(address):
-                pass
-            else:
-                try:
-                    provided_pubkeys += script.extract_pubkeys(address)
-                    params[address_name] = script.make_pubkeyhash(address)
-                except Exception as e:
-                    raise exceptions.ComposeError(f"invalid address: {address}") from e
-
-    # Check validity of collected pubkeys.
-    for pubkey in provided_pubkeys:
-        if not script.is_fully_valid(binascii.unhexlify(pubkey)):
-            raise exceptions.ComposeError(f"invalid public key: {pubkey}")
-
+def compose_data(db, name, params, accept_missing_params=False):
     compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != "db"]
-    if accept_missing_params:
+    if accept_missing_params:  # for API v1 backward compatibility
         for param in missing_params:
             params[param] = None
     else:
@@ -820,30 +526,11 @@ def compose_transaction(
                     raise exceptions.ComposeError(
                         f"missing parameters: {', '.join(missing_params)}"
                     )
+    return compose_method(db, **params)
 
-    tx_info = compose_method(db, **params)
 
-    transaction_info = construct(
-        db,
-        tx_info,
-        encoding=encoding,
-        fee_per_kb=fee_per_kb,
-        regular_dust_size=regular_dust_size,
-        multisig_dust_size=multisig_dust_size,
-        provided_pubkeys=provided_pubkeys,
-        allow_unconfirmed_inputs=allow_unconfirmed_inputs,
-        exact_fee=fee,
-        fee_provided=fee_provided,
-        unspent_tx_hash=unspent_tx_hash,
-        inputs_set=inputs_set,
-        dust_return_pubkey=dust_return_pubkey,
-        disable_utxo_locks=disable_utxo_locks,
-        p2sh_source_multisig_pubkeys=p2sh_source_multisig_pubkeys,
-        p2sh_source_multisig_pubkeys_required=p2sh_source_multisig_pubkeys_required,
-        p2sh_pretx_txid=p2sh_pretx_txid,
-        segwit=segwit,
-        estimate_fee_per_kb_nblocks=confirmation_target,
-        exclude_utxos=exclude_utxos,
-    )
-    transaction_info["data"] = config.PREFIX + tx_info[2] if tx_info[2] else None
+def compose_transaction(db, name, params, accept_missing_params=False, **construct_kwargs):
+    """Create and return a transaction."""
+    tx_info = compose_data(db, name, params, accept_missing_params)
+    transaction_info = construct(db, tx_info, **construct_kwargs)
     return transaction_info

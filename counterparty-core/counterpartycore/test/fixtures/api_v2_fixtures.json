@@ -9983,10 +9983,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -10064,13 +10064,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -10180,10 +10173,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -10261,13 +10254,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -10359,10 +10345,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -10440,13 +10426,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -10545,10 +10524,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -10626,13 +10605,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -10724,10 +10696,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -10805,13 +10777,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -10915,10 +10880,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -10996,13 +10961,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -11132,10 +11090,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -11213,13 +11171,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -11323,10 +11274,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -11404,13 +11355,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -11543,10 +11487,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -11624,13 +11568,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -11748,10 +11685,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -11829,13 +11766,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -11957,10 +11887,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -12038,13 +11968,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -12169,10 +12092,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -12250,13 +12173,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -12360,10 +12276,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -12441,13 +12357,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -12545,10 +12454,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -12626,13 +12535,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -12836,10 +12738,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -12917,13 +12819,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -13022,10 +12917,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -13103,13 +12998,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -13214,10 +13102,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -13295,13 +13183,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {
@@ -13405,10 +13286,10 @@
                         "required": false
                     },
                     {
-                        "name": "pubkey",
+                        "name": "pubkeys",
                         "type": "str",
                         "default": null,
-                        "description": "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+                        "description": "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
                         "required": false
                     },
                     {
@@ -13486,13 +13367,6 @@
                         "type": "str",
                         "default": null,
                         "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-                        "required": false
-                    },
-                    {
-                        "name": "accept_missing_params",
-                        "type": "bool",
-                        "default": false,
-                        "description": "Accept missing parameters with no default value (True by default for API v1)",
                         "required": false
                     },
                     {

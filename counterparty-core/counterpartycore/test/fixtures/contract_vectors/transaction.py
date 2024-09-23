@@ -23,7 +23,7 @@ TRANSACTION_VECTOR = {
                         [("mvCounterpartyXXXXXXXXXXXXXXW24Hef", 62000000)],
                         None,
                     ),
-                    {"encoding": "multisig", "exact_fee": 1.0},
+                    {"encoding": "multisig", "fee": 1.0},
                 ),
                 "error": (exceptions.TransactionError, "Exact fees must be in satoshis."),
             },
@@ -121,6 +121,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "opreturn"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
                     "btc_change": 37992125,
                     "btc_fee": 7875,
                     "btc_in": 100000000,
@@ -140,6 +141,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": None,
                     "btc_change": 37994375,
                     "btc_fee": 5625,
                     "btc_in": 100000000,
@@ -155,6 +157,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig", "regular_dust_size": DP["regular_dust_size"]},
                 ),
                 "out": {
+                    "data": None,
                     "btc_change": 37994375,
                     "btc_fee": 5625,
                     "btc_in": 100000000,
@@ -174,6 +177,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": None,
                     "btc_change": 49994375,
                     "btc_fee": 5625,
                     "btc_in": 100000000,
@@ -193,6 +197,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig", "regular_dust_size": DP["regular_dust_size"]},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80",
                     "btc_change": 199895060,
                     "btc_fee": 7650,
                     "btc_in": 199909140,
@@ -257,6 +262,7 @@ TRANSACTION_VECTOR = {
                     },
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80",
                     "btc_change": 199895060,
                     "btc_fee": 7650,
                     "btc_in": 199909140,
@@ -277,6 +283,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig", "regular_dust_size": DP["regular_dust_size"]},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80",
                     "btc_change": 111103058,
                     "btc_fee": 12175,
                     "btc_in": 111121663,
@@ -300,6 +307,7 @@ TRANSACTION_VECTOR = {
                     },
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80",
                     "btc_change": 199895060,
                     "btc_fee": 7650,
                     "btc_in": 199909140,
@@ -323,6 +331,7 @@ TRANSACTION_VECTOR = {
                     },
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80",
                     "btc_change": 199895060,
                     "btc_fee": 7650,
                     "btc_in": 199909140,
@@ -346,6 +355,7 @@ TRANSACTION_VECTOR = {
                     },
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80",
                     "btc_change": 99985920,
                     "btc_fee": 7650,
                     "btc_in": 100000000,
@@ -365,6 +375,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig", "regular_dust_size": DP["regular_dust_size"]},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80",
                     "btc_change": 199895060,
                     "btc_fee": 7650,
                     "btc_in": 199909140,
@@ -389,6 +400,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00",
                     "btc_change": 199899490,
                     "btc_fee": 7650,
                     "btc_in": 199909140,
@@ -410,9 +422,10 @@ TRANSACTION_VECTOR = {
                         ],
                         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00",
                     ),
-                    {"encoding": "multisig", "exact_fee": 1},
+                    {"encoding": "multisig", "fee": 1},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00",
                     "btc_change": 199907139,
                     "btc_fee": 1,
                     "btc_in": 199909140,
@@ -437,6 +450,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "opreturn"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00",
                     "btc_change": 199901565,
                     "btc_fee": 6575,
                     "btc_in": 199909140,
@@ -461,6 +475,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "pubkeyhash", "regular_dust_size": DP["regular_dust_size"]},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00",
                     "btc_change": 199889955,
                     "btc_fee": 7325,
                     "btc_in": 199909140,
@@ -492,6 +507,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig", "regular_dust_size": DP["regular_dust_size"]},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00",
                     "btc_change": 99985920,
                     "btc_fee": 7650,
                     "btc_in": 100000000,
@@ -516,6 +532,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00",
                     "btc_change": 99990350,
                     "btc_fee": 7650,
                     "btc_in": 100000000,
@@ -535,6 +552,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig", "regular_dust_size": DP["regular_dust_size"]},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff",
                     "btc_change": 199895060,
                     "btc_fee": 7650,
                     "btc_in": 199909140,
@@ -554,6 +572,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL",
                     "btc_change": 199901340,
                     "btc_fee": 6800,
                     "btc_in": 199909140,
@@ -573,6 +592,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig", "regular_dust_size": DP["regular_dust_size"]},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL",
                     "btc_change": 199895060,
                     "btc_fee": 7650,
                     "btc_in": 199909140,
@@ -592,6 +612,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL",
                     "btc_change": 99992200,
                     "btc_fee": 6800,
                     "btc_in": 100000000,
@@ -611,6 +632,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x16\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL",
                     "btc_change": 199901340,
                     "btc_fee": 6800,
                     "btc_in": 199909140,
@@ -635,6 +657,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL",
                     "btc_change": 199899490,
                     "btc_fee": 7650,
                     "btc_in": 199909140,
@@ -654,6 +677,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig", "fee_provided": DP["fee_provided"]},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00",
                     "btc_change": 198908140,
                     "btc_fee": 1000000,
                     "btc_in": 199909140,
@@ -673,6 +697,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig", "fee_provided": DP["fee_provided"]},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00",
                     "btc_change": 98999000,
                     "btc_fee": 1000000,
                     "btc_in": 100000000,
@@ -692,6 +717,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x06B,@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0",
                     "btc_change": 99992200,
                     "btc_fee": 6800,
                     "btc_in": 100000000,
@@ -711,6 +737,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\n\x00\x00\x00\x00\x00\x03:>\x7f\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\n\x00\x00\x00\x00\x00\r\xbb\xa0",
                     "btc_change": 199901340,
                     "btc_fee": 6800,
                     "btc_in": 199909140,
@@ -730,6 +757,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x002\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x01",
                     "btc_change": 199901340,
                     "btc_fee": 6800,
                     "btc_in": 199909140,
@@ -749,6 +777,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x002\x00\x00\x00\x00\x00\x00\x00\x01\x00\x06\xca\xd8\xdc\x7f\x0bf\x00\x00\x00\x00\x00\x00\x00\x01",
                     "btc_change": 199901340,
                     "btc_fee": 6800,
                     "btc_in": 199909140,
@@ -768,6 +797,7 @@ TRANSACTION_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x16\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0NULL",
                     "btc_change": 199901340,
                     "btc_fee": 6800,
                     "btc_in": 199909140,
@@ -787,6 +817,7 @@ TRANSACTION_VECTOR = {
                     {},
                 ),
                 "out": {
+                    "data": b"TESTXXXX\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@lOver 80 characters test test test test test test test test test test test test test test test test test test",
                     "btc_change": 199895290,
                     "btc_fee": 10850,
                     "btc_in": 199909140,

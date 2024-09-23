@@ -18,7 +18,10 @@ from counterpartycore.lib.transaction_helper.serializer import (
     op_push,
     var_int,
 )
-from counterpartycore.lib.transaction_helper.utxo_locks import UTXOLocks, sort_unspent_txouts
+from counterpartycore.lib.transaction_helper.transaction_inputs import (
+    UTXOLocks,
+    sort_unspent_txouts,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

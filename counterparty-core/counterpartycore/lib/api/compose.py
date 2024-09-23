@@ -53,10 +53,10 @@ COMPOSE_COMMONS_ARGS = {
         config.DEFAULT_MULTISIG_DUST_SIZE,
         "Specify (in satoshis) to override the (dust) amount of BTC used for each (bare) multisig output",
     ),
-    "pubkey": (
+    "pubkeys": (
         str,
         None,
-        "The hexadecimal public key of the source address (or a list of the keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
+        "The hexadecimal public key of the source address (or a comma separated list of keys, if multi-sig). Required when using encoding parameter values of multisig or pubkeyhash.",
     ),
     "allow_unconfirmed_inputs": (
         bool,
@@ -108,11 +108,6 @@ COMPOSE_COMMONS_ARGS = {
         str,
         None,
         "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
-    ),
-    "accept_missing_params": (
-        bool,
-        False,
-        "Accept missing parameters with no default value (True by default for API v1)",
     ),
     "return_psbt": (
         bool,

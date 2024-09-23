@@ -572,14 +572,15 @@ class APIServer(threading.Thread):
                     if "old_style_api" in common_args:
                         old_style_api = common_args["old_style_api"]
                         del common_args["old_style_api"]
-                    common_args["accept_missing_params"] = common_args.get(
-                        "accept_missing_params", True
-                    )
                     for v2_arg in ["return_only_data", "return_psbt"]:
                         common_args.pop(v2_arg, None)
                     with self.connection_pool.connection() as db:
                         transaction_info = transaction.compose_transaction(
-                            db, name=tx, params=transaction_args, **common_args
+                            db,
+                            name=tx,
+                            params=transaction_args,
+                            accept_missing_params=True,
+                            **common_args,
                         )
                         if extended_tx_info:
                             return transaction_info
