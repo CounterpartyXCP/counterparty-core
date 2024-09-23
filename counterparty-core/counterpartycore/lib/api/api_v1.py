@@ -575,6 +575,8 @@ class APIServer(threading.Thread):
                         del common_args["old_style_api"]
                     for v2_arg in ["return_only_data", "return_psbt"]:
                         common_args.pop(v2_arg, None)
+                    if "fee" in transaction_args and "exact_fee" not in common_args:
+                        common_args["exact_fee"] = transaction_args.pop("fee")
                     with self.connection_pool.connection() as db:
                         transaction_info = transaction.compose_transaction(
                             db,
