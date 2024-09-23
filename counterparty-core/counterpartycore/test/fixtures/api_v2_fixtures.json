@@ -9741,6 +9741,13 @@
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
                     },
                     {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)"
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13658,6 +13665,13 @@
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
                     },
                     {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)"
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13716,6 +13730,13 @@
                         "required": false,
                         "type": "int",
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)"
                     },
                     {
                         "name": "verbose",
@@ -14443,6 +14464,13 @@
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
                     },
                     {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)"
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14527,6 +14555,13 @@
                         "required": false,
                         "type": "int",
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)"
                     },
                     {
                         "name": "verbose",
@@ -14643,6 +14678,13 @@
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
                     },
                     {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)"
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14709,6 +14751,13 @@
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
                     },
                     {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)"
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14761,6 +14810,13 @@
                         "required": false,
                         "type": "int",
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)"
                     },
                     {
                         "name": "verbose",

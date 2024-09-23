@@ -73,6 +73,15 @@ CreditAction = Literal[
 
 SUPPORTED_SORT_FIELDS = {
     "balances": ["address", "asset", "quantity"],
+    "order_matches": [
+        "forward_asset",
+        "forward_quantity",
+        "backward_asset",
+        "backward_quantity",
+        "match_expire_index",
+    ],
+    "orders": ["give_asset", "give_quantity", "get_asset", "get_quantity", "expiration"],
+    "dispensers": ["asset", "give_quantity", "give_remaining", "dispense_count", "satoshirate"],
 }
 
 ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
@@ -1742,7 +1751,12 @@ def prepare_dispenser_where(status, other_conditions=None):
 
 
 def get_dispensers(
-    db, status: DispenserStatus = "all", cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    status: DispenserStatus = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns all dispensers
@@ -1750,6 +1764,7 @@ def get_dispensers(
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)
     """
 
     return select_rows(
@@ -1759,6 +1774,7 @@ def get_dispensers(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1769,6 +1785,7 @@ def get_dispensers_by_address(
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispensers of an address
@@ -1777,6 +1794,7 @@ def get_dispensers_by_address(
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)
     """
     return select_rows(
         db,
@@ -1785,6 +1803,7 @@ def get_dispensers_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1795,6 +1814,7 @@ def get_dispensers_by_asset(
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispensers of an asset
@@ -1803,6 +1823,7 @@ def get_dispensers_by_asset(
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)
     """
     return select_rows(
         db,
@@ -1811,6 +1832,7 @@ def get_dispensers_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2058,7 +2080,12 @@ def prepare_order_matches_where(status, other_conditions=None):
 
 
 def get_orders(
-    db, status: OrderStatus = "all", cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    status: OrderStatus = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns all the orders
@@ -2066,6 +2093,7 @@ def get_orders(
     :param str cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
     """
     return select_rows(
         db,
@@ -2075,6 +2103,7 @@ def get_orders(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2085,6 +2114,7 @@ def get_orders_by_asset(
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the orders of an asset
@@ -2093,6 +2123,7 @@ def get_orders_by_asset(
     :param str cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
     """
     where = prepare_order_where(status, {"give_asset": asset.upper()}) + prepare_order_where(
         status, {"get_asset": asset.upper()}
@@ -2106,6 +2137,7 @@ def get_orders_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2116,6 +2148,7 @@ def get_orders_by_address(
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the orders of an address
@@ -2124,6 +2157,7 @@ def get_orders_by_address(
     :param str cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
     """
     return select_rows(
         db,
@@ -2133,6 +2167,7 @@ def get_orders_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2144,6 +2179,7 @@ def get_orders_by_two_assets(
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the orders to exchange two assets
@@ -2153,6 +2189,7 @@ def get_orders_by_two_assets(
     :param str cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
     """
     where = prepare_order_where(
         status, {"give_asset": asset1.upper(), "get_asset": asset2.upper()}
@@ -2165,6 +2202,7 @@ def get_orders_by_two_assets(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
     for order in query_result.result:
         order["market_pair"] = f"{asset1}/{asset2}"
@@ -2211,7 +2249,12 @@ def get_order(db, order_hash: str):
 
 
 def get_all_order_matches(
-    db, status: OrderMatchesStatus = "all", cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    status: OrderMatchesStatus = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns all the order matches
@@ -2219,6 +2262,7 @@ def get_all_order_matches(
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
     return select_rows(
         db,
@@ -2227,6 +2271,7 @@ def get_all_order_matches(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2237,6 +2282,7 @@ def get_order_matches_by_order(
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the order matches of an order
@@ -2245,6 +2291,7 @@ def get_order_matches_by_order(
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
     where = prepare_order_matches_where(
         status, {"tx0_hash": order_hash}
@@ -2256,6 +2303,7 @@ def get_order_matches_by_order(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2266,6 +2314,7 @@ def get_order_matches_by_asset(
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the orders of an asset
@@ -2274,6 +2323,7 @@ def get_order_matches_by_asset(
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
     where = prepare_order_matches_where(
         status, {"forward_asset": asset.upper()}
@@ -2286,6 +2336,7 @@ def get_order_matches_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2297,6 +2348,7 @@ def get_order_matches_by_two_assets(
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the orders to exchange two assets
@@ -2306,6 +2358,7 @@ def get_order_matches_by_two_assets(
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
     where = prepare_order_matches_where(
         status, {"forward_asset": asset1.upper(), "backward_asset": asset2.upper()}
@@ -2319,6 +2372,7 @@ def get_order_matches_by_two_assets(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
     for order in query_result.result:
         order["market_pair"] = f"{asset1}/{asset2}"
