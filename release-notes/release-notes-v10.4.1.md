@@ -13,6 +13,7 @@
 * Fix typo in `protocol_changes.json`
 * Fix division by zero in `api.util.divide()`
 * Catch invalid raw transaction in `/v2/transactions/info` endpoint
+* Fix duplicate command in `xcpcli.py`
 
 ## Codebase
 

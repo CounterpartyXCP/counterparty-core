@@ -1536,6 +1536,15 @@ def get_balance_by_address_and_asset(db, address: str, asset: str):
     )
 
 
+def get_balance_by_asset_and_address(db, asset: str, address: str):
+    """
+    Returns the balance of an address and asset
+    :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str asset: The asset to return (e.g. XCP)
+    """
+    return get_balance_by_address_and_asset(db, address, asset)
+
+
 def get_bets(
     db, status: BetStatus = "open", cursor: str = None, limit: int = 100, offset: int = None
 ):
