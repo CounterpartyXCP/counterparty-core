@@ -259,10 +259,10 @@ def run_scenarios(serve=False):
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        # print(regtest_node_thread.node.server_out.getvalue())
+        print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        print(regtest_node_thread.node.server_out.getvalue())
+        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

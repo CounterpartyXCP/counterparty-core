@@ -20,11 +20,12 @@
 * Use `trace` instead of `warning` for "Prefetch queue is empty." message
 * Use debug for expected and handled `yoyo` migration error
 * Support Python 3.10 and 3.11 only
-* Move Compose API to `api/compose.py` module
+* Refactoring and cleanup of `transaction.py`. The contents of this file are now distributed between `lib/api/compose.py`, `lib/transaction_helper/transaction_outputs.py`, and `lib/transaction_helper/transaction_inputs.py`.
 
 ## API
 
 * Add support for `inputs_set` parameter
+* Rename `fee` argument to `exact_fee`
 * Add the following route:
     - `/v2/transactions/<tx_hash>/info` (This route works if the tx is in the mempool of the queried node)
 

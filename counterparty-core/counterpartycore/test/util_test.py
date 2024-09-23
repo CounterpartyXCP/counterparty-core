@@ -814,7 +814,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         in [
             "script",
             "transaction",
-            "transaction_helper.serializer",
+            "transaction_helper.common_serializer",
+            "transaction_helper.transaction_outputs",
             "backend",
             "message_type",
             "address",

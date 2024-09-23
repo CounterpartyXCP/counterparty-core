@@ -63,7 +63,7 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs",
     ),
-    "fee": (
+    "exact_fee": (
         int,
         None,
         "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",

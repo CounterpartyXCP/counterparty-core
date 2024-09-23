@@ -622,10 +622,11 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         mocked_search_raw_transactions,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.transaction.pubkeyhash_to_pubkey", pubkeyhash_to_pubkey
+        "counterpartycore.lib.transaction_helper.transaction_outputs.pubkeyhash_to_pubkey",
+        pubkeyhash_to_pubkey,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.transaction.multisig_pubkeyhashes_to_pubkeys",
+        "counterpartycore.lib.transaction_helper.transaction_outputs.multisig_pubkeyhashes_to_pubkeys",
         multisig_pubkeyhashes_to_pubkeys,
     )
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)

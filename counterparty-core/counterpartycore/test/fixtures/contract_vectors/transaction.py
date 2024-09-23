@@ -7,7 +7,7 @@ from ..params import (
 )
 
 TRANSACTION_VECTOR = {
-    "transaction": {
+    "transaction_helper.transaction_outputs": {
         "get_dust_return_pubkey": [
             {"in": (ADDR[1], None), "out": None},
             {
@@ -15,6 +15,8 @@ TRANSACTION_VECTOR = {
                 "out": b"\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9w",
             },
         ],
+    },
+    "transaction": {
         "construct": [
             {
                 "in": (
@@ -23,7 +25,7 @@ TRANSACTION_VECTOR = {
                         [("mvCounterpartyXXXXXXXXXXXXXXW24Hef", 62000000)],
                         None,
                     ),
-                    {"encoding": "multisig", "fee": 1.0},
+                    {"encoding": "multisig", "exact_fee": 1.0},
                 ),
                 "error": (exceptions.TransactionError, "Exact fees must be in satoshis."),
             },
@@ -422,7 +424,7 @@ TRANSACTION_VECTOR = {
                         ],
                         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00",
                     ),
-                    {"encoding": "multisig", "fee": 1},
+                    {"encoding": "multisig", "exact_fee": 1},
                 ),
                 "out": {
                     "data": b"TESTXXXX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00",

@@ -8,7 +8,7 @@ import bitcoin as bitcoinlib
 import cachetools
 
 from counterpartycore.lib import backend, config, exceptions, script, util
-from counterpartycore.lib.transaction_helper import p2sh_encoding
+from counterpartycore.lib.transaction_helper import p2sh_serializer, transaction_outputs
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -349,13 +349,14 @@ def construct_coin_selection(
 
 
 def prepare_inputs(
-    encoding,
+    source,
     data,
     destination_outputs,
-    data_array,
     destination_btc_out,
+    data_array,
     data_btc_out,
-    source,
+    provided_pubkeys,
+    encoding,
     p2sh_pretx_txid,
     allow_unconfirmed_inputs,
     unspent_tx_hash,
@@ -386,7 +387,9 @@ def prepare_inputs(
     if encoding == "p2sh":
         # calculate all the p2sh outputs
         size_for_fee, datatx_necessary_fee, data_value, data_btc_out = (
-            p2sh_encoding.calculate_outputs(destination_outputs, data_array, fee_per_kb, exact_fee)
+            p2sh_serializer.calculate_outputs(
+                destination_outputs, data_array, fee_per_kb, exact_fee
+            )
         )
         # replace the data value
         # data_output = (data_array, data_value)
@@ -420,4 +423,17 @@ def prepare_inputs(
         # when encoding is P2SH and the pretx txid is passed we can skip coinselection
         inputs, change_quantity = None, None
 
-    return inputs, change_quantity, btc_in, final_fee
+    # Normalize source
+    if script.is_multisig(source):
+        source_address = transaction_outputs.multisig_pubkeyhashes_to_pubkeys(
+            source, provided_pubkeys
+        )
+    else:
+        source_address = source
+
+    if change_quantity:
+        change_output = (source_address, change_quantity)
+    else:
+        change_output = None
+
+    return inputs, change_output, btc_in, final_fee

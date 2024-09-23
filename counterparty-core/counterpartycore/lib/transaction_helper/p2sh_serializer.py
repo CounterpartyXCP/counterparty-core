@@ -12,7 +12,8 @@ from bitcoin.core import CTransaction
 from bitcoin.core.script import CScript
 
 from counterpartycore.lib import arc4, backend, config, exceptions, script
-from counterpartycore.lib.transaction_helper.serializer import (
+from counterpartycore.lib.transaction_helper import transaction_outputs
+from counterpartycore.lib.transaction_helper.common_serializer import (
     OP_RETURN,
     get_script,
     op_push,
@@ -414,7 +415,7 @@ def serialise_p2sh_pretx(
 def serialize_p2sh(
     inputs,
     source,
-    source_address,
+    provided_pubkeys,
     destination_outputs,
     data_output,
     change_output,
@@ -428,6 +429,17 @@ def serialize_p2sh(
     pretx_txid = None
     unsigned_pretx_hex = None
     unsigned_tx_hex = None
+
+    # Normalize source
+    if script.is_multisig(source):
+        source_address = transaction_outputs.multisig_pubkeyhashes_to_pubkeys(
+            source, provided_pubkeys
+        )
+    else:
+        source_address = source
+
+    if p2sh_source_multisig_pubkeys:
+        p2sh_source_multisig_pubkeys = [binascii.unhexlify(p) for p in p2sh_source_multisig_pubkeys]
 
     assert not (segwit and p2sh_pretx_txid)  # shouldn't do old style with segwit enabled
 

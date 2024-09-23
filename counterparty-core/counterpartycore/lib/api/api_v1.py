@@ -29,6 +29,7 @@ from counterpartycore.lib import (
     message_type,
     script,
     transaction,
+    transaction_helper,
     util,
 )
 from counterpartycore.lib.api import compose as api_compose
@@ -1003,7 +1004,9 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
-            return transaction.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
+            return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
+                pubkeyhash, provided_pubkeys=provided_pubkeys
+            )
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):

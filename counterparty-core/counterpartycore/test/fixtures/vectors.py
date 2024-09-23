@@ -6216,7 +6216,7 @@ UNITTEST_VECTOR = (
                 },
             ],
         },
-        "transaction_helper.serializer": {
+        "transaction_helper.common_serializer": {
             "var_int": [
                 {"in": (252,), "out": b"\xfc"},
                 {"in": (65535,), "out": b"\xfd\xff\xff"},

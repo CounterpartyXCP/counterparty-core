@@ -9997,7 +9997,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -10187,7 +10187,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -10359,7 +10359,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -10538,7 +10538,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -10710,7 +10710,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -10894,7 +10894,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -11104,7 +11104,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -11288,7 +11288,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -11501,7 +11501,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -11699,7 +11699,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -11901,7 +11901,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -12106,7 +12106,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -12290,7 +12290,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -12468,7 +12468,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -12752,7 +12752,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -12931,7 +12931,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -13116,7 +13116,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",
@@ -13300,7 +13300,7 @@
                         "required": false
                     },
                     {
-                        "name": "fee",
+                        "name": "exact_fee",
                         "type": "int",
                         "default": null,
                         "description": "If you'd like to specify a custom miners' fee, specify it here (in satoshis). Leave as default for the server to automatically choose",

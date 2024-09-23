@@ -11,7 +11,15 @@ from logging import handlers as logging_handlers
 import flask
 import requests
 import werkzeug
-from counterpartycore.lib import backend, config, exceptions, ledger, transaction, util
+from counterpartycore.lib import (
+    backend,
+    config,
+    exceptions,
+    ledger,
+    transaction,
+    transaction_helper,
+    util,
+)
 from counterpartycore.lib.api import compose
 from docstring_parser import parse as parse_docstring
 
@@ -137,7 +145,9 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
         provided_pubkeys_list = provided_pubkeys.split(",")
     else:
         provided_pubkeys_list = None
-    return transaction.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
+    return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
+        address, provided_pubkeys=provided_pubkeys_list
+    )
 
 
 def get_transaction(tx_hash: str, format: str = "json"):
