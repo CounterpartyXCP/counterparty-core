@@ -26,6 +26,7 @@
 
 * Add support for `inputs_set` parameter
 * Rename `fee` argument to `exact_fee`
+* The composition API returns, in addition to a `rawtransaction` or a `psbt`, the following fields: `data`, `btc_in`, `btc_out`, `btc_change`, and `btc_fee`
 * Add the following route:
     - `/v2/transactions/<tx_hash>/info` (This route works if the tx is in the mempool of the queried node)
 
