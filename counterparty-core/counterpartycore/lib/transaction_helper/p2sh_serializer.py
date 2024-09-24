@@ -333,14 +333,14 @@ def select_any_coin_from_source(
     unspent = sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE)
 
     # use the first input
-    input = unspent[0]
-    if input is None:
+    tx_input = unspent[0]
+    if tx_input is None:
         return None
 
     if not disable_utxo_locks:
-        UTXOLocks().lock_utxos(source, [input])
+        UTXOLocks().lock_utxos(source, [tx_input])
 
-    return input
+    return tx_input
 
 
 def serialise_p2sh_pretx(
@@ -363,8 +363,7 @@ def serialise_p2sh_pretx(
     s += var_int(int(len(inputs)))
 
     # List of Inputs.
-    for i in range(len(inputs)):
-        txin = inputs[i]
+    for txin in inputs:
         s += binascii.unhexlify(bytes(txin["txid"], "utf-8"))[::-1]  # TxOutHash
         s += txin["vout"].to_bytes(4, byteorder="little")  # TxOutIndex
 
@@ -391,7 +390,7 @@ def serialise_p2sh_pretx(
         )
 
         # if data_value is an array, then every output fee is specified in it
-        if type(data_value) == list:  # noqa: E721
+        if isinstance(data_value, list):  # noqa: E721
             s += data_value[n].to_bytes(8, byteorder="little")  # Value
         else:
             s += data_value.to_bytes(8, byteorder="little")  # Value
@@ -561,17 +560,12 @@ def serialise_p2sh_datatx(
         script_sig, redeem_script, output_script = make_p2sh_encoding_redeemscript(
             data_chunk, n, pubkey, multisig_pubkeys, multisig_pubkeys_required
         )
-        # substituteScript = script_sig + output_script
 
         s += txhash  # TxOutHash
         s += (n).to_bytes(4, byteorder="little")  # TxOutIndex (assumes 0-based)
 
-        # s += var_int(len(substituteScript))                      # Script length
-        # s += substituteScript                                    # Script
-
         s += var_int(len(script_sig))  # + len(output_script))                      # Script length
         s += script_sig  # Script
-        # s += output_script                                    # Script
 
         s += b"\xff" * 4  # Sequence
 

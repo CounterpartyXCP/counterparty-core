@@ -562,21 +562,21 @@ class APIServer(threading.Thread):
         # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
             def create_method(**kwargs):
+                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
+                    **kwargs
+                )
+                extended_tx_info = old_style_api = False
+                if "extended_tx_info" in common_args:
+                    extended_tx_info = common_args["extended_tx_info"]
+                    del common_args["extended_tx_info"]
+                if "old_style_api" in common_args:
+                    old_style_api = common_args["old_style_api"]
+                    del common_args["old_style_api"]
+                for v2_arg in ["return_only_data", "return_psbt"]:
+                    common_args.pop(v2_arg, None)
+                if "fee" in transaction_args and "exact_fee" not in common_args:
+                    common_args["exact_fee"] = transaction_args.pop("fee")
                 try:
-                    transaction_args, common_args, private_key_wif = (
-                        api_compose.split_compose_params(**kwargs)
-                    )
-                    extended_tx_info = old_style_api = False
-                    if "extended_tx_info" in common_args:
-                        extended_tx_info = common_args["extended_tx_info"]
-                        del common_args["extended_tx_info"]
-                    if "old_style_api" in common_args:
-                        old_style_api = common_args["old_style_api"]
-                        del common_args["old_style_api"]
-                    for v2_arg in ["return_only_data", "return_psbt"]:
-                        common_args.pop(v2_arg, None)
-                    if "fee" in transaction_args and "exact_fee" not in common_args:
-                        common_args["exact_fee"] = transaction_args.pop("fee")
                     with self.connection_pool.connection() as db:
                         transaction_info = transaction.compose_transaction(
                             db,

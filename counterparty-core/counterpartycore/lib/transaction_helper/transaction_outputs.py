@@ -22,7 +22,7 @@ def chunks(l, n):  # noqa: E741
 def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
     # Search provided pubkeys.
     if provided_pubkeys:
-        if type(provided_pubkeys) != list:  # noqa: E721
+        if not isinstance(provided_pubkeys, list):  # noqa: E721
             provided_pubkeys = [provided_pubkeys]
         for pubkey in provided_pubkeys:
             if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
@@ -107,7 +107,7 @@ def compute_destinations_and_values(
                 dust_size = multisig_dust_size
             else:
                 dust_size = regular_dust_size
-            if value == None:  # noqa: E711
+            if value is None:  # noqa: E711
                 value = dust_size  # noqa: PLW2901
             elif value < dust_size:
                 raise exceptions.TransactionError("Destination output is dust.")

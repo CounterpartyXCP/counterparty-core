@@ -144,8 +144,8 @@ class UTXOLocks(metaclass=util.SingletonMeta):
                 self.utxo_locks[source] = ThreadSafeTTLCache(
                     self.utxo_locks_per_address_maxsize, self.utxo_locks_max_age
                 )
-            for input in inputs:
-                self.utxo_locks[source].set(make_outkey(input), input)
+            for tx_input in inputs:
+                self.utxo_locks[source].set(make_outkey(tx_input), tx_input)
 
     def lock_p2sh_utxos(self, unsigned_pretx):
         self.utxo_p2sh_encoding_locks.set(make_outkey_vin(unsigned_pretx, 0), True)
