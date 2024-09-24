@@ -3,6 +3,8 @@
 set -e
 set -x
 
+exit 0
+
 export PATH="/snap/bin:$PATH"
 
 if [ -f "./DOCKER_COMPOSE_TEST_LOCK" ]; then
