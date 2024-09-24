@@ -15123,7 +15123,7 @@
                         "default": null,
                         "required": false,
                         "type": "str",
-                        "description": "The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)"
+                        "description": "The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. block_index:asc)"
                     },
                     {
                         "name": "verbose",

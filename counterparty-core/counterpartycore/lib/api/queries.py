@@ -74,14 +74,29 @@ CreditAction = Literal[
 SUPPORTED_SORT_FIELDS = {
     "balances": ["address", "asset", "quantity"],
     "order_matches": [
+        "block_index",
         "forward_asset",
         "forward_quantity",
         "backward_asset",
         "backward_quantity",
         "match_expire_index",
     ],
-    "orders": ["give_asset", "give_quantity", "get_asset", "get_quantity", "expiration"],
-    "dispensers": ["asset", "give_quantity", "give_remaining", "dispense_count", "satoshirate"],
+    "orders": [
+        "block_index",
+        "give_asset",
+        "give_quantity",
+        "get_asset",
+        "get_quantity",
+        "expiration",
+    ],
+    "dispensers": [
+        "block_index",
+        "asset",
+        "give_quantity",
+        "give_remaining",
+        "dispense_count",
+        "satoshirate",
+    ],
 }
 
 ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
@@ -1773,7 +1788,7 @@ def get_dispensers(
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)
+    :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. block_index:asc)
     """
 
     return select_rows(
