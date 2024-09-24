@@ -272,6 +272,11 @@ def get_decoded_transaction(tx_hash, block_index=None):
     return tx
 
 
+def get_tx_out_amount(tx_hash, vout):
+    raw_tx = getrawtransaction(tx_hash, True)
+    return raw_tx["vout"][vout]["value"]
+
+
 class BlockFetcher:
     def __init__(self, first_block) -> None:
         self.current_block = first_block

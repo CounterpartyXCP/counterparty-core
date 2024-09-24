@@ -43,6 +43,7 @@ from counterpartycore.lib import (  # noqa: E402
     transaction,
     util,
 )
+from counterpartycore.lib.api.util import to_json  # noqa: E402
 from counterpartycore.lib.messages import fairminter, utxo  # noqa
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
@@ -633,8 +634,6 @@ def run_scenario(scenario):
 
     raw_transactions = []
 
-    transaction.initialise(force=True)
-
     for tx in scenario:
         if tx[0] != "create_next_block":
             mock_protocol_changes = tx[3] if len(tx) == 4 else {}
@@ -644,6 +643,7 @@ def run_scenario(scenario):
                 unsigned_tx_hex = transaction.construct(
                     db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2]
                 )
+                unsigned_tx_hex = unsigned_tx_hex["unsigned_tx_hex"]
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
                 insert_raw_transaction(unsigned_tx_hex, db)
         else:
@@ -814,7 +814,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         in [
             "script",
             "transaction",
-            "transaction_helper.serializer",
+            "transaction_helper.common_serializer",
+            "transaction_helper.transaction_outputs",
             "backend",
             "message_type",
             "address",
@@ -912,9 +913,7 @@ def check_outputs(
                     )
                 else:
                     msg = f"expected outputs don't match test_outputs: expected_outputs={outputs} test_outputs={test_outputs}"
-                import json
-
-                print(json.dumps(test_outputs, indent=4))
+                print(to_json(test_outputs))
                 raise Exception(msg)  # noqa: B904
         if records is not None:
             for record in records:

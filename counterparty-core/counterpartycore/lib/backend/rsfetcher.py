@@ -88,7 +88,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
             logger.debug(f"Looking for Block {height} in prefetch queue...")
             while height not in self.prefetch_queue:
                 if self.prefetch_queue_size == 0 and self.prefetch_queue_initialized:
-                    logger.warning("Prefetch queue is empty.")
+                    logger.trace("Prefetch queue is empty.")
                 logger.debug(f"Block {height} not found in prefetch queue. Waiting...")
                 time.sleep(0.1)
             block = self.prefetch_queue.pop(height)

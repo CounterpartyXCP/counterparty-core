@@ -693,7 +693,7 @@ def apply_migration():
             # Apply any outstanding migrations
             backend.apply_migrations(backend.to_apply(migrations))
     except LockTimeout:
-        logger.error("API Watcher - Migration lock timeout. Breaking lock and retrying...")
+        logger.debug("API Watcher - Migration lock timeout. Breaking lock and retrying...")
         backend.break_lock()
         backend.apply_migrations(backend.to_apply(migrations))
     backend.connection.close()

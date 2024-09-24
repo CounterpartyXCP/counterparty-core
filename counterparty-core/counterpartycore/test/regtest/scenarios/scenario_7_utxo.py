@@ -175,11 +175,11 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/$BLOCK_INDEX/events?event_name=UTXO_MOVE,CREDIT,DEBIT,NEW_TRANSACTION",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=UTXO_MOVE,CREDIT,DEBIT,DISPENSER_UPDATE,NEW_TRANSACTION",
                 "result": [
                     {
                         "event": "UTXO_MOVE",
-                        "event_index": "$EVENT_INDEX_5",
+                        "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "MYASSETA",
                             "block_index": "$BLOCK_INDEX",
@@ -195,7 +195,7 @@ SCENARIO = [
                     },
                     {
                         "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_4",
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "address": None,
                             "asset": "MYASSETA",
@@ -211,7 +211,7 @@ SCENARIO = [
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "action": "utxo move",
                             "address": None,
@@ -222,6 +222,34 @@ SCENARIO = [
                             "tx_index": "$TX_INDEX",
                             "utxo": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
                             "utxo_address": "$ADDRESS_3",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "DISPENSER_UPDATE",
+                        "event_index": "$EVENT_INDEX_4",
+                        "params": {
+                            "asset": "XCP",
+                            "give_remaining": 0,
+                            "source": "$ADDRESS_11",
+                            "status": 10,
+                            "tx_hash": "$DISPENSER_4_TX_HASH",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "CREDIT",
+                        "event_index": "$EVENT_INDEX_3",
+                        "params": {
+                            "address": "$ADDRESS_1",
+                            "asset": "XCP",
+                            "block_index": 150,
+                            "calling_function": "close dispenser",
+                            "event": "$DISPENSER_4_CLOSE_TX_HASH",
+                            "quantity": 20,
+                            "tx_index": 0,
+                            "utxo": None,
+                            "utxo_address": None,
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -599,7 +627,7 @@ SCENARIO = [
                         "addresses": [
                             {
                                 "address": "$ADDRESS_1",
-                                "quantity": 84749988186,
+                                "quantity": 84749988206,
                                 "utxo": None,
                                 "utxo_address": None,
                             },
@@ -617,7 +645,7 @@ SCENARIO = [
                             },
                         ],
                         "asset": "XCP",
-                        "total": 234749973019,
+                        "total": 234749973039,
                     },
                 ],
             },

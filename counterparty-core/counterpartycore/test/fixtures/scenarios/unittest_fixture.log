@@ -1,69 +1,48 @@
 Creating connection to `:memory:`...
 Initializing database...
-TX Construct - Constructing transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 62000000 BTC for 93000000000 XCP (6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Issuance of 100000000000 DIVISIBLE by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Issuance of 1000 NODIVISIBLE by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Issuance of 1000 CALLABLE by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Issuance of 1000 LOCKED by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Issuance of 0 LOCKED by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Initialising orders cache...
 Creating connection to `:memory:`...
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8) [open]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Send DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Send XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (4fd55abadfdbe77c3bda2431749cca934a29994a179620a62c1b57f28bd62a43) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 BUMP TXID 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (21460d5c07284f9be9baf824927d0d4e4eb790e297f3162305841607b672349b) [open]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a) [open]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Order opened for 666667 BTC at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (a1768d7db2db3b9732b26df8c04db4b9a8535a1e5cf684a680e81e7c06f394b6) [open]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Send XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (698e97e507da8623cf38ab42701853443c8f7fe0d93b4674aabb42f9800ee9d6) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Send DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (0cfeeb559ed794d067557df0376a6c213b48b174b80cdb2c3c6d365cf538e132) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Send NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (1facb0072f16f6bdca64ea859c82b850f58f0ec7ff410d901679772a4727515a) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Send NODIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (e3b6667b7baa515048a7fcf2be7818e3e7622371236b78e19b4b08e2d7e7818c) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Issuance of 9223372036854775807 MAXI by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Broadcast from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (d14388b74b63d93e4477b1fe8426028bb8ab20656703e3ce8deeb23c2fe0b8af) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 TX Construct - Transaction constructed.
 Broadcast from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH (f9e0527c85a9084d7eda91fc30a49993370d029efea031a8ccccdf846146a660) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Open Bet (2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1) [open]
-TX Construct - Constructing `MULTISIG` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 TX Construct - Transaction constructed.
 Open Bet (5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93) [open]
 Considering: 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1
@@ -74,137 +53,94 @@ Backward Quantity: 9
 Bet 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1 updated (5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93) [filled]
 Bet 5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93 updated (5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93) [filled]
 Bet match 20 for 9 XCP against 9 XCP on mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-TX Construct - Constructing `MULTISIG` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 TX Construct - Transaction constructed.
 Open Bet (db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e) [open]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Broadcast from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (16462eac6c795cea6e5985ee063867d8c61ae24373df02048186d28118d25bae) [valid]
 Bet Match 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93 resolved
 Bet Match 2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93 updated [settled]
-TX Construct - Constructing transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 TX Construct - Transaction constructed.
 myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM burned 62000000 BTC for 92999138821 XCP (65d4048700fb8ae03f321be93c6669b8497f506a1f43920f96d994f43358c35b) [valid]
-TX Construct - Constructing transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
 TX Construct - Transaction constructed.
 munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b burned 62000000 BTC for 92999130460 XCP (95332a7e3e2b04f2c10e3027327bfc31b686947fb05381e28903e3ff569bd4ff) [valid]
-TX Construct - Constructing transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 TX Construct - Transaction constructed.
 mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 burned 62000000 BTC for 92999122099 XCP (e062d1ebf4cb71bd22d80c949b956f5286080838a7607ccf87945b2b3abfcafa) [valid]
-TX Construct - Constructing transaction from mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK.
 TX Construct - Transaction constructed.
 mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK burned 10000 BTC for 14999857 XCP (bbf0b9f6992755a3e371fb0c0b72f6828831e81c6f7ada6f95ba1104fb901ac3) [valid]
-TX Construct - Constructing `OPRETURN` transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
 TX Construct - Transaction constructed.
 Initialising Dispensable Cache...
 Dispenser opened for XCP at munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b (9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec) [valid]
-TX Construct - Constructing transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 TX Construct - Transaction constructed.
 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy burned 31000000 BTC for 46499548508 XCP (93c6d2499a0536c31c77a3db3fc9fc8456fbd0726c45b8f716af16f938727a73) [valid]
-TX Construct - Constructing `MULTISIG` transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 TX Construct - Transaction constructed.
 Issuance of 1000 PAYTOSCRIPT by 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy [e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Send DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy (f6a0f819e899b407cbfa07b4eff3d58902af3899abfbaa47d5f31d5b398e76e7) [valid]
-TX Construct - Constructing `OPRETURN` transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 TX Construct - Transaction constructed.
 Broadcast from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy (510f6feb902159622d83f64eae590a4fec88989869a20caf5804c313aa5e0186) [valid]
-TX Construct - Constructing `OPRETURN` transaction from 2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy.
 TX Construct - Transaction constructed.
 Open Bet (d79b590e4ec3e74cbc3eb4d0f956ce7abb0e3af2ccac85ff90ed8acf13f2e048) [open]
-TX Construct - Constructing `MULTISIG` transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 TX Construct - Transaction constructed.
 Issuance of 1000 LOCKEDPREV by mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 [34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 TX Construct - Transaction constructed.
 Issuance of 0 LOCKEDPREV by mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 [025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 TX Construct - Transaction constructed.
 Issuance of 0 LOCKEDPREV by mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 [4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb] (valid)
-TX Construct - Constructing transaction from tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx.
 TX Construct - Transaction constructed.
 tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx burned 62000000 BTC for 92999030129 XCP (27929c4fcad307a76ea7da34dd2691084f678a22ee43ce7f3842b78730ee08f9) [valid]
-TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Send (Enhanced) XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5) [valid]
-TX Construct - Constructing `OPRETURN` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 TX Construct - Transaction constructed.
 Send (Enhanced) XCP from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns to mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34) [valid]
-TX Construct - Constructing `MULTISIG` transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 TX Construct - Transaction constructed.
 Broadcast from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM (3b95e07a2194174ac020de27e8b2b6ee24d5fc120f118df516ba28495657cf14) [valid]
-TX Construct - Constructing `MULTISIG` transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 TX Construct - Transaction constructed.
 Open Bet (41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef) [open]
-TX Construct - Constructing `MULTISIG` transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 TX Construct - Transaction constructed.
 Broadcast from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM (870fb08b373705423f31ccd91fdbcabe135ad92d74e709a959dfa2e12f9a6638) [valid]
-TX Construct - Constructing `MULTISIG` transaction from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM.
 TX Construct - Transaction constructed.
 Broadcast from myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM (685d7f99fa76a05201c3239a4e0d9060ea53307b171f6ad7d482a26c73e9c0d1) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42.
 TX Construct - Transaction constructed.
 Broadcast from mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42 (7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498) [open]
-TX Construct - Constructing `MULTISIG` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 TX Construct - Transaction constructed.
 Order opened for 800000 BTC at mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81) [open]
 Order match for 100000000 XCP against 800000 BTC (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81) [pending]
-TX Construct - Constructing transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 TX Construct - Transaction constructed.
 mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH burned 62000000 BTC for 92995878046 XCP (c0733e1287afb1bb3d2fdacd1db7c74ea84f14362f3a8d1c038e662e1d0b1b1a) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 TX Construct - Transaction constructed.
 Issuance of 100 DIVIDEND by mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH [321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503] (valid)
-TX Construct - Constructing `MULTISIG` transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 TX Construct - Transaction constructed.
 Send DIVIDEND from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (02156b9a1f643fb48330396274a37620c8abbbe5eddb2f8b53dadd135f5d2e2e) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH.
 TX Construct - Transaction constructed.
 Send XCP from mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH to mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj (a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba) [valid]
-TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Issuance of 100000000 PARENT by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f] (valid)
-TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Issuance of 100000000 A95428956661682277 by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf] (valid)
-TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Fair minter opened for FREEFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
-TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Fair minter opened for PAIDFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
-TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 10 FREEFAIRMIN minted for 0 XCP by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc
-TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Fair minter opened for RAIDFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
-TX Construct - Constructing `OPRETURN` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Fair minter opened for QAIDFAIRMIN by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
-TX Construct - Constructing `MULTISIG` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 TX Construct - Transaction constructed.
 Fair minter opened for A160361285792733729 by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
-TX Construct - Constructing `OPRETURN` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 TX Construct - Transaction constructed.
 10 A160361285792733729 minted for 100 XCP by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
-TX Construct - Constructing `OPRETURN` transaction from mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns.
 TX Construct - Transaction constructed.
 20 A160361285792733729 minted for 200 XCP by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Attach XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883) [valid]
-TX Construct - Constructing `MULTISIG` transaction from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc.
 TX Construct - Transaction constructed.
 Attach DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e) [valid]
-TX Construct - Constructing `MULTISIG` transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
 TX Construct - Transaction constructed.
 Issuance of 1000 TESTDISP by munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b [01e52e3770a932827a4b4e5db193eef916fcf69bda1a7944298210a74f1633a1] (valid)
-TX Construct - Constructing `OPRETURN` transaction from munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b.
 TX Construct - Transaction constructed.
 Dispenser opened for TESTDISP at munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b (af67f6762d4b00b4bf5fb93a9d556e007a147aa80fbf6a84410df05a0182da9e) [valid]
 Order match cancelled XCP / BTC (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81) [expired]

@@ -25,7 +25,6 @@ from counterpartycore.lib import (
     exceptions,
     follow,
     log,
-    transaction,
     util,
 )
 from counterpartycore.lib.api import api_server as api_v2
@@ -694,10 +693,6 @@ def start_all(args):
 
         # Backend.
         connect_to_backend()
-
-        # Reset UTXO_LOCKS.  This previously was done in
-        # initilise_config
-        transaction.initialise()
 
         # API Status Poller.
         api_status_poller = api_v1.APIStatusPoller()

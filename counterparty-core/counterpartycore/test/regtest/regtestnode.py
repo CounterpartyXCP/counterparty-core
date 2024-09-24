@@ -78,7 +78,7 @@ class RegtestNode:
         self.wait_for_counterparty_server()
         if return_only_data:
             params["return_only_data"] = True
-        params["fee"] = 10000  # fixed fee
+        params["exact_fee"] = 10000  # fixed fee
         query_string = urllib.parse.urlencode(params)
         if tx_name in ["detach", "movetoutxo"]:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
@@ -117,7 +117,7 @@ class RegtestNode:
             else:
                 raise e
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
-        return tx_hash, block_hash, block_time
+        return tx_hash, block_hash, block_time, result["result"]["data"]
 
     def wait_for_counterparty_server(self, block=None):
         while True:

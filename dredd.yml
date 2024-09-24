@@ -21,6 +21,7 @@ only:
 - Blocks > Get Sweeps By Block > Get Sweeps By Block
 - Transactions > Get Transactions > Get Transactions
 - Transactions > Info > Info
+- Transactions > Info By Tx Hash > Info By Tx Hash
 - Transactions > Unpack > Unpack
 - Transactions > Get Transaction By Tx Index > Get Transaction By Tx Index
 - Transactions > Get Transaction By Hash > Get Transaction By Hash
@@ -85,7 +86,7 @@ only:
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset > Get Asset
 - Assets > Get Asset Balances > Get Asset Balances
-- Assets > Get Balance By Address And Asset > Get Balance By Address And Asset
+- Assets > Get Balance By Asset And Address > Get Balance By Asset And Address
 - Assets > Get Orders By Asset > Get Orders By Asset
 - Assets > Get Order Matches By Asset > Get Order Matches By Asset
 - Assets > Get Credits By Asset > Get Credits By Asset
