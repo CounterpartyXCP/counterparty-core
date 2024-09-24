@@ -1,7 +1,10 @@
 # Release Notes - Counterparty Core v10.4.1 (2024-??-??)
 
+This release is a minor update with some bugfixes.
 
 # Upgrading
+
+This release is not a protocol change and does not require any reparsing.
 
 # ChangeLog
 
