@@ -14,6 +14,7 @@
 * Fix division by zero in `api.util.divide()`
 * Catch invalid raw transaction in `/v2/transactions/info` endpoint
 * Fix duplicate command in `xcpcli.py`
+* Fix `source` field when refilling a dispenser created by a different source
 
 ## Codebase
 
