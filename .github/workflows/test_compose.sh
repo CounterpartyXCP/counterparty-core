@@ -3,6 +3,8 @@
 set -e
 set -x
 
+export PATH="/snap/bin:$PATH"
+
 if [ -f "./DOCKER_COMPOSE_TEST_LOCK" ]; then
     echo "A test is already running or the last one failed. Exiting."
     exit 1
