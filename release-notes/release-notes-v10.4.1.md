@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.4.1 (2024-??-??)
+# Release Notes - Counterparty Core v10.4.1 (2024-09-24)
 
 This release is a minor update with miscellaneous bugfixes.
 
