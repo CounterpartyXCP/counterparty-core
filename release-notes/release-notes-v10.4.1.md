@@ -4,7 +4,7 @@ This release is a minor update with miscellaneous bugfixes.
 
 # Upgrading
 
-This release is not a protocol change and does not require any reparsing.
+This release fixes an old bug leading to potential undefined behavior for dispenser refills. No database reparse is required.
 
 # ChangeLog
 
