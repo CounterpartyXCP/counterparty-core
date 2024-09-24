@@ -29,8 +29,10 @@ from counterpartycore.lib import (
     message_type,
     script,
     transaction,
+    transaction_helper,
     util,
 )
+from counterpartycore.lib.api import compose as api_compose
 from counterpartycore.lib.api import util as api_util
 from counterpartycore.lib.database import APIDBConnectionPool
 from counterpartycore.lib.messages import (
@@ -60,7 +62,6 @@ from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
-from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
 from werkzeug.serving import make_server
 from xmltodict import unparse as serialize_to_xml
@@ -561,14 +562,49 @@ class APIServer(threading.Thread):
         # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
             def create_method(**kwargs):
+                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
+                    **kwargs
+                )
+                extended_tx_info = old_style_api = False
+                if "extended_tx_info" in common_args:
+                    extended_tx_info = common_args["extended_tx_info"]
+                    del common_args["extended_tx_info"]
+                if "old_style_api" in common_args:
+                    old_style_api = common_args["old_style_api"]
+                    del common_args["old_style_api"]
+                for v2_arg in ["return_only_data", "return_psbt"]:
+                    common_args.pop(v2_arg, None)
+                if "fee" in transaction_args and "exact_fee" not in common_args:
+                    common_args["exact_fee"] = transaction_args.pop("fee")
                 try:
-                    transaction_args, common_args, private_key_wif = (
-                        transaction.split_compose_params(**kwargs)
-                    )
                     with self.connection_pool.connection() as db:
-                        return transaction.compose_transaction(
-                            db, name=tx, params=transaction_args, api_v1=True, **common_args
+                        transaction_info = transaction.compose_transaction(
+                            db,
+                            name=tx,
+                            params=transaction_args,
+                            accept_missing_params=True,
+                            **common_args,
                         )
+                        if extended_tx_info:
+                            return transaction_info
+                        tx_hexes = list(
+                            filter(
+                                None,
+                                [
+                                    transaction_info["unsigned_tx_hex"],
+                                    transaction_info["unsigned_pretx_hex"],
+                                ],
+                            )
+                        )  # filter out None
+                        if old_style_api:
+                            if len(tx_hexes) != 1:
+                                raise Exception("Can't do 2 TXs with old_style_api")
+                            return tx_hexes[0]
+                        else:
+                            if len(tx_hexes) == 1:
+                                return tx_hexes[0]
+                            else:
+                                return tx_hexes
                 except (
                     TypeError,
                     script.AddressError,
@@ -585,7 +621,7 @@ class APIServer(threading.Thread):
 
             return create_method
 
-        for tx in transaction.COMPOSABLE_TRANSACTIONS:
+        for tx in api_compose.COMPOSABLE_TRANSACTIONS:
             create_method = generate_create_method(tx)
             create_method.__name__ = f"create_{tx}"
             dispatcher.add_method(create_method)
@@ -970,7 +1006,9 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
-            return transaction.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
+            return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
+                pubkeyhash, provided_pubkeys=provided_pubkeys
+            )
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
@@ -1105,8 +1143,7 @@ class APIServer(threading.Thread):
                     and request_data["method"]
                 )
                 # params may be omitted
-            except Exception as error:  # noqa: E722
-                capture_exception(error)
+            except Exception:  # noqa: E722
                 obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                     data="Invalid JSON-RPC 2.0 request format"
                 )
@@ -1163,7 +1200,7 @@ class APIServer(threading.Thread):
                 error = "No query_type provided."
                 return flask.Response(error, 400, mimetype="application/json")
             # Check if message type or table name are valid.
-            if (compose and query_type not in transaction.COMPOSABLE_TRANSACTIONS) or (
+            if (compose and query_type not in api_compose.COMPOSABLE_TRANSACTIONS) or (
                 not compose and query_type not in API_TABLES
             ):
                 error = f'No such query type in supported queries: "{query_type}".'
@@ -1174,7 +1211,7 @@ class APIServer(threading.Thread):
             query_data = {}
 
             if compose:
-                transaction_args, common_args, private_key_wif = transaction.split_compose_params(
+                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
                     **extra_args
                 )
 
@@ -1186,7 +1223,7 @@ class APIServer(threading.Thread):
                 # Compose the transaction.
                 try:
                     with self.connection_pool.connection() as db:
-                        query_data = transaction.compose_transaction(
+                        query_data, data = transaction.compose_transaction(
                             db, name=query_type, params=transaction_args, **common_args
                         )
                 except (

@@ -22,8 +22,6 @@ def test_bytespersigop(server_db):
     with util_test.MockProtocolChangesContext(short_tx_type_id=False):
         assert util.enabled("bytespersigop") == False  # noqa: E712
 
-        transaction.initialise()
-
         # ADDR[0], bytespersigop=False, desc 41 bytes, opreturn
         txhex = transaction.compose_transaction(
             server_db,
@@ -38,7 +36,9 @@ def test_bytespersigop(server_db):
             },
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
+
+        print("test_bytespersigop 4")
 
         assert len(tx.vin) == 1
         assert len(tx.vout) == 2
@@ -58,7 +58,7 @@ def test_bytespersigop(server_db):
             },
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
 
         assert len(tx.vin) == 1
         # assert len(tx.vout) == 3
@@ -83,7 +83,7 @@ def test_bytespersigop(server_db):
             },
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
 
         assert len(tx.vin) == 1
         assert len(tx.vout) == 2
@@ -103,7 +103,7 @@ def test_bytespersigop(server_db):
             },
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
 
         assert len(tx.vin) == 1
         assert len(tx.vout) == 2
@@ -125,7 +125,7 @@ def test_bytespersigop(server_db):
             encoding="multisig",
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
 
         assert len(tx.vin) == 2
         assert len(tx.vout) == 2

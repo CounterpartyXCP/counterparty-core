@@ -7,6 +7,7 @@ import bitcoin
 
 from counterpartycore.lib import transaction
 from counterpartycore.lib.messages import send
+from counterpartycore.lib.transaction_helper import transaction_inputs
 from counterpartycore.test import (
     conftest,  # noqa: F401
 )
@@ -27,7 +28,7 @@ def construct_tx(db, source, destination, disable_utxo_locks=False, inputs_set=N
 
 
 def test_utxolocks(server_db):
-    transaction.initialise(force=True)  # reset UTXO_LOCKS
+    transaction_inputs.UTXOLocks().init(utxo_locks_max_addresses=10)  # reset UTXO_LOCKS
 
     """it shouldn't use the same UTXO"""
     tx1hex = construct_tx(
@@ -37,10 +38,10 @@ def test_utxolocks(server_db):
         server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns"
     )
 
-    tx1f = BytesIO(binascii.unhexlify(tx1hex))
+    tx1f = BytesIO(binascii.unhexlify(tx1hex["unsigned_tx_hex"]))
     tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
 
-    tx2f = BytesIO(binascii.unhexlify(tx2hex))
+    tx2f = BytesIO(binascii.unhexlify(tx2hex["unsigned_tx_hex"]))
     tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
 
     assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) != (
@@ -50,7 +51,7 @@ def test_utxolocks(server_db):
 
 
 def test_utxolocks_custom_input(server_db):
-    transaction.initialise(force=True)  # reset UTXO_LOCKS
+    transaction_inputs.UTXOLocks().init(utxo_locks_max_addresses=10)  # reset UTXO_LOCKS
 
     """it should use the same UTXO"""
     inputs_set = [
@@ -78,10 +79,10 @@ def test_utxolocks_custom_input(server_db):
         inputs_set=inputs_set,
     )
 
-    tx1f = BytesIO(binascii.unhexlify(tx1hex))
+    tx1f = BytesIO(binascii.unhexlify(tx1hex["unsigned_tx_hex"]))
     tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
 
-    tx2f = BytesIO(binascii.unhexlify(tx2hex))
+    tx2f = BytesIO(binascii.unhexlify(tx2hex["unsigned_tx_hex"]))
     tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
 
     assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) == (
@@ -91,7 +92,7 @@ def test_utxolocks_custom_input(server_db):
 
 
 def test_disable_utxolocks(server_db):
-    transaction.initialise(force=True)  # reset UTXO_LOCKS
+    transaction_inputs.UTXOLocks().init(utxo_locks_max_addresses=10)  # reset UTXO_LOCKS
 
     """with `disable_utxo_locks=True` it should use the same UTXO"""
     tx1hex = construct_tx(
@@ -107,10 +108,10 @@ def test_disable_utxolocks(server_db):
         disable_utxo_locks=True,
     )
 
-    tx1f = BytesIO(binascii.unhexlify(tx1hex))
+    tx1f = BytesIO(binascii.unhexlify(tx1hex["unsigned_tx_hex"]))
     tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
 
-    tx2f = BytesIO(binascii.unhexlify(tx2hex))
+    tx2f = BytesIO(binascii.unhexlify(tx2hex["unsigned_tx_hex"]))
     tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
 
     assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) == (

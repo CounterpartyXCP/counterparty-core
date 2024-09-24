@@ -11,7 +11,16 @@ from logging import handlers as logging_handlers
 import flask
 import requests
 import werkzeug
-from counterpartycore.lib import backend, config, exceptions, ledger, transaction, util
+from counterpartycore.lib import (
+    backend,
+    config,
+    exceptions,
+    ledger,
+    transaction,
+    transaction_helper,
+    util,
+)
+from counterpartycore.lib.api import compose
 from docstring_parser import parse as parse_docstring
 
 D = decimal.Decimal
@@ -136,7 +145,9 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
         provided_pubkeys_list = provided_pubkeys.split(",")
     else:
         provided_pubkeys_list = None
-    return transaction.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
+    return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
+        address, provided_pubkeys=provided_pubkeys_list
+    )
 
 
 def get_transaction(tx_hash: str, format: str = "json"):
@@ -204,7 +215,7 @@ def prepare_route_args(function):
     args_description = get_args_description(function)
     for arg_name, arg in function_args.items():
         if arg_name == "construct_args":
-            for carg_name, carg_info in transaction.COMPOSE_COMMONS_ARGS.items():
+            for carg_name, carg_info in compose.COMPOSE_COMMONS_ARGS.items():
                 args.append(
                     {
                         "name": carg_name,
@@ -287,7 +298,7 @@ def to_json(obj, indent=None):
 
 def divide(value1, value2):
     decimal.getcontext().prec = 8
-    if value2 == 0:
+    if value2 == 0 or value1 == 0:
         return D(0)
     return D(value1) / D(value2)
 
@@ -660,8 +671,9 @@ def inject_dispensers(db, result_list):
 def inject_unpacked_data_in_dict(db, item):
     if "data" in item:
         data = binascii.hexlify(item["data"]) if isinstance(item["data"], bytes) else item["data"]
-        block_index = item.get("block_index")
-        item["unpacked_data"] = transaction.unpack(db, data, block_index=block_index)
+        if data:
+            block_index = item.get("block_index")
+            item["unpacked_data"] = compose.unpack(db, data, block_index=block_index)
     return item
 
 
