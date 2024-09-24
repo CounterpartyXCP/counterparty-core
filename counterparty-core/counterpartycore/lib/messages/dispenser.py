@@ -708,7 +708,12 @@ def parse(db, tx, message):
                                     existing[0]["rowid"],
                                     set_data,
                                     {
-                                        "source": tx["source"],
+                                        "source": tx["source"]
+                                        if not util.enabled(
+                                            "dispenser_origin_permission_extended",
+                                            tx["block_index"],
+                                        )
+                                        else action_address,
                                         "asset": asset,
                                         "status": STATUS_OPEN,
                                         "tx_hash": existing[0]["tx_hash"],

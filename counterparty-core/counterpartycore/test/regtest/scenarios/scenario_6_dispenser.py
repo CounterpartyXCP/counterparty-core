@@ -187,7 +187,7 @@ SCENARIO = [
                             "asset": "XCP",
                             "dispense_count": 0,
                             "give_remaining": 20,
-                            "source": "$ADDRESS_1",
+                            "source": "$ADDRESS_11",
                             "status": 0,
                             "tx_hash": "$DISPENSER_4_TX_HASH",
                         },
@@ -209,6 +209,43 @@ SCENARIO = [
                         },
                         "tx_hash": "$TX_HASH",
                     },
+                ],
+            },
+        ],
+    },
+    {
+        "title": "Close Dispenser 4 with different source",
+        "transaction": "dispenser",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "XCP",
+            "give_quantity": 1,
+            "escrow_quantity": 10,
+            "mainchainrate": 1,  # 1 BTC for 1 XCP
+            "status": 10,
+            "open_address": "$ADDRESS_11",
+        },
+        "set_variables": {
+            "DISPENSER_4_CLOSE_TX_HASH": "$TX_HASH",
+        },
+        "controls": [
+            {
+                "url": "blocks/$BLOCK_INDEX/events?event_name=DISPENSER_UPDATE",
+                "result": [
+                    {
+                        "event": "DISPENSER_UPDATE",
+                        "event_index": 266,
+                        "params": {
+                            "asset": "XCP",
+                            "close_block_index": 150,
+                            "last_status_tx_hash": "$TX_HASH",
+                            "last_status_tx_source": "$ADDRESS_1",
+                            "source": "$ADDRESS_1",
+                            "status": 11,
+                            "tx_hash": "$DISPENSER_4_TX_HASH",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    }
                 ],
             },
         ],
