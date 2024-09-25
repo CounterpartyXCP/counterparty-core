@@ -3,7 +3,7 @@
 set -e
 set -x
 
-exit 0
+#exit 0
 
 export PATH="/snap/bin:$PATH"
 
@@ -106,7 +106,10 @@ CURRENT_HEIGHT=$(curl http://localhost:4000/v2/ --silent | jq '.result.counterpa
 REPARSE_FROM=$(($CURRENT_HEIGHT-50))
 
 # Stop, reparse and start counterparty-core mainnet
-echo "" > $(docker inspect --format='{{.LogPath}}' counterparty-core-counterparty-core-1)
+LOG_PATH=$(docker inspect --format='{{.LogPath}}' counterparty-core-counterparty-core-1)
+sudo rm -f $LOG_PATH
+sudo touch $LOG_PATH
+
 docker compose --profile mainnet stop counterparty-core
 docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
    --backend-connect=bitcoind \
@@ -114,7 +117,8 @@ docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
    --rpc-host=0.0.0.0 \
    --api-host=0.0.0.0
 
-echo "" > $(docker inspect --format='{{.LogPath}}' counterparty-core-counterparty-core-1)
+sudo rm -f $LOG_PATH
+sudo touch $LOG_PATH
 
 docker compose --profile mainnet up -d counterparty-core
 
