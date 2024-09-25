@@ -1169,7 +1169,7 @@ class APIServer(threading.Thread):
             jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
 
             response = flask.Response(
-                jsonrpc_response.json.encode(), 200, mimetype="application/json"
+                api_util.to_json(jsonrpc_response.data), 200, mimetype="application/json"
             )
             _set_cors_headers(response)
             # response.headers["X-API-WARN"] = "Deprecated API"
