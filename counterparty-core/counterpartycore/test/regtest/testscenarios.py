@@ -234,6 +234,7 @@ def run_scenarios(serve=False):
 
         context = {}
 
+        # run all scenarios
         for item in SCENARIOS:
             context = run_item(regtest_node_thread.node, item, context)
 
@@ -248,6 +249,7 @@ def run_scenarios(serve=False):
         else:
             if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
                 os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
+            print("Generating API documentation...")
             sh.python3(
                 os.path.join(CURR_DIR, "genapidoc.py"),
                 os.path.abspath("regtestnode"),
@@ -255,7 +257,12 @@ def run_scenarios(serve=False):
                 _err_to_out=True,
                 _cwd=CURR_DIR,
             )
+            print("Running Dredd...")
             sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
+            print("Tesing reparse...")
+            regtest_node_thread.node.reparse()
+            print("Testing rollback...")
+            regtest_node_thread.node.rollback()
     except KeyboardInterrupt:
         pass
     except Exception as e:

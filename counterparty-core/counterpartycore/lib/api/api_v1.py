@@ -515,8 +515,10 @@ class APIServer(threading.Thread):
 
     def stop(self):
         logger.info("Stopping API Server v1...")
-        self.connection_pool.close()
-        self.server.shutdown()
+        if self.connection_pool:
+            self.connection_pool.close()
+        if self.server:
+            self.server.shutdown()
         self.join()
 
     def run(self):
