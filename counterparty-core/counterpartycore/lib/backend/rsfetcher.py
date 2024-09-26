@@ -37,16 +37,6 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.fetcher = None
         self.prefetch_task = None
 
-    def start_fetcher(self):
-        self.start()
-        # prefetching
-        self.stopped = False
-        self.prefetch_queue = {}
-        self.prefetch_queue_size = 0
-        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
-        self.prefetch_task = self.executor.submit(self.prefetch_blocks)
-        self.prefetch_queue_initialized = False
-
     def start(self):
         logger.debug("Starting Prefetcher...")
         try:
@@ -67,6 +57,13 @@ class RSFetcher(metaclass=util.SingletonMeta):
         except Exception as e:
             logger.error(f"Failed to initialize fetcher: {e}. Retrying in 5 seconds...")
             raise e
+        # prefetching
+        self.stopped = False
+        self.prefetch_queue = {}
+        self.prefetch_queue_size = 0
+        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
+        self.prefetch_task = self.executor.submit(self.prefetch_blocks)
+        self.prefetch_queue_initialized = False
 
     def get_block(self):
         logger.trace("Fetching block with Rust backend.")
