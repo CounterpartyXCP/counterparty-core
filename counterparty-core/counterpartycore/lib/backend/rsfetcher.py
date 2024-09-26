@@ -36,6 +36,8 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.next_height = start_height
         self.fetcher = None
         self.prefetch_task = None
+
+    def start_fetcher(self):
         self.start()
         # prefetching
         self.stopped = False
