@@ -1321,8 +1321,8 @@ def catch_up(db, check_asset_conservation=True):
         # Get block information and transactions
         fetch_time_start = time.time()
         if fetcher is None:
-            fetcher = rsfetcher.RSFetcher(util.CURRENT_BLOCK_INDEX + 1)
-
+            fetcher = rsfetcher.RSFetcher()
+            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
         decoded_block = fetcher.get_block()
         block_height = decoded_block.get("height")
         fetch_time_end = time.time()

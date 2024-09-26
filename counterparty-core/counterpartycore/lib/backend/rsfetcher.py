@@ -16,7 +16,7 @@ PREFETCH_QUEUE_SIZE = 20
 class RSFetcher(metaclass=util.SingletonMeta):
     thread_index_counter = 0  # Add a thread index counter
 
-    def __init__(self, start_height=0, indexer_config=None):
+    def __init__(self, indexer_config=None):
         RSFetcher.thread_index_counter += 1
         if indexer_config is None:
             self.config = {
@@ -27,27 +27,18 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 "log_file": config.FETCHER_LOG,
                 "log_level": config.LOG_LEVEL_STRING,
                 "json_format": config.JSON_LOGS,
-                "start_height": start_height,
             }
         else:
-            self.config = indexer_config | {"start_height": start_height}
+            self.config = indexer_config
         self.config["network"] = "testnet" if config.TESTNET else "mainnet"
-        self.start_height = start_height
-        self.next_height = start_height
         self.fetcher = None
         self.prefetch_task = None
-        self.start()
-        # prefetching
-        self.stopped = False
-        self.prefetch_queue = {}
-        self.prefetch_queue_size = 0
-        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
-        self.prefetch_task = self.executor.submit(self.prefetch_blocks)
-        self.prefetch_queue_initialized = False
 
-    def start(self):
+    def start(self, start_height=0):
         logger.debug("Starting Prefetcher...")
         try:
+            self.config["start_height"] = start_height
+            self.next_height = start_height
             self.fetcher = indexer.Indexer(self.config)
             # check fetcher version
             fetcher_version = self.fetcher.get_version()
@@ -65,6 +56,13 @@ class RSFetcher(metaclass=util.SingletonMeta):
         except Exception as e:
             logger.error(f"Failed to initialize fetcher: {e}. Retrying in 5 seconds...")
             raise e
+        # prefetching
+        self.stopped = False
+        self.prefetch_queue = {}
+        self.prefetch_queue_size = 0
+        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
+        self.prefetch_task = self.executor.submit(self.prefetch_blocks)
+        self.prefetch_queue_initialized = False
 
     def get_block(self):
         logger.trace("Fetching block with Rust backend.")
