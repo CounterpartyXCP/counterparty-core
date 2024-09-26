@@ -145,7 +145,7 @@ class RegtestNode:
 
     def wait_for_counterparty_follower(self):
         while True:
-            if "Version check passed." in self.server_out.getvalue():
+            if "Starting blockchain watcher..." in self.server_out.getvalue():
                 print("Server ready")
                 return
             print("Waiting for counterparty server...")
@@ -292,6 +292,7 @@ class RegtestNode:
             _err_to_out=True,
         )
         self.wait_for_counterparty_follower()
+        time.sleep(2)
         state = self.get_node_state()
         if state["last_block"] != previous_state["last_block"]:
             raise Exception("Reparse failed, last block is different")

@@ -127,12 +127,22 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
         # print(f"Expected result: {expected_result}")
         expected_result = json.loads(expected_result)
 
+        # don't compare decoded_tx because it's not deterministic
         if isinstance(expected_result, dict) and "decoded_tx" in expected_result:
             del expected_result["decoded_tx"]
             if "decoded_tx" not in result["result"]:
                 raise AssertionError("decoded_tx not in result")
         if isinstance(result["result"], dict) and "decoded_tx" in result["result"]:
             del result["result"]["decoded_tx"]
+        # don't compare timestamp because it's not deterministic
+        if isinstance(expected_result, list):
+            for event in expected_result:
+                if "timestamp" in event:
+                    del event["timestamp"]
+        if isinstance(result["result"], list):
+            for event in result["result"]:
+                if "timestamp" in event:
+                    del event["timestamp"]
 
         try:
             assert result["result"] == expected_result
