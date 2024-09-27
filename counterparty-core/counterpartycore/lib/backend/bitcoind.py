@@ -182,6 +182,17 @@ def fee_per_kb(
     return int(max(feeperkb["feerate"] * config.UNIT, config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART))
 
 
+def satoshis_per_vbyte(
+    conf_target: int = config.ESTIMATE_FEE_CONF_TARGET, mode: str = config.ESTIMATE_FEE_MODE
+):
+    feeperkb = rpc("estimatesmartfee", [conf_target, mode])
+
+    if "errors" in feeperkb and feeperkb["errors"][0] == "Insufficient data or no feerate found":
+        return config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART
+
+    return (feeperkb["feerate"] * config.UNIT) / 1024
+
+
 def get_btc_supply(normalize=False):
     f"""returns the total supply of {config.BTC} (based on what Bitcoin Core says the current block height is)"""  # noqa: B021
     block_count = getblockcount()
@@ -275,6 +286,10 @@ def get_decoded_transaction(tx_hash, block_index=None):
 def get_tx_out_amount(tx_hash, vout):
     raw_tx = getrawtransaction(tx_hash, True)
     return raw_tx["vout"][vout]["value"]
+
+
+def get_tx_out_value(tx_hash, vout):
+    return get_tx_out_amount(tx_hash, vout)
 
 
 class BlockFetcher:
