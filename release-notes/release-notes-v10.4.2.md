@@ -13,6 +13,7 @@
 
 * Fix bytes JSON serialization in API v1
 * Fix Docker Compose test
+* Fix RSFetcher startup
 
 ## Codebase
 
