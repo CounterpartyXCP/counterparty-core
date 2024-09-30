@@ -88,7 +88,8 @@ class BlockchainWatcher:
         self.hash_by_sequence = {}
         self.last_block_check_time = 0
         self.last_software_version_check_time = 0
-        # clean mempool before starting
+        # catch up and clean mempool before starting
+        mempool.parse_raw_mempool(self.db)
         mempool.clean_mempool(self.db)
 
     def connect_to_zmq(self):

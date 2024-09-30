@@ -515,8 +515,10 @@ class APIServer(threading.Thread):
 
     def stop(self):
         logger.info("Stopping API Server v1...")
-        self.connection_pool.close()
-        self.server.shutdown()
+        if self.connection_pool:
+            self.connection_pool.close()
+        if self.server:
+            self.server.shutdown()
         self.join()
 
     def run(self):
@@ -586,6 +588,10 @@ class APIServer(threading.Thread):
                             **common_args,
                         )
                         if extended_tx_info:
+                            transaction_info["tx_hex"] = transaction_info["unsigned_tx_hex"]
+                            transaction_info["pretx_hex"] = transaction_info["unsigned_pretx_hex"]
+                            del transaction_info["unsigned_tx_hex"]
+                            del transaction_info["unsigned_pretx_hex"]
                             return transaction_info
                         tx_hexes = list(
                             filter(
@@ -1169,7 +1175,7 @@ class APIServer(threading.Thread):
             jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
 
             response = flask.Response(
-                jsonrpc_response.json.encode(), 200, mimetype="application/json"
+                api_util.to_json(jsonrpc_response.data), 200, mimetype="application/json"
             )
             _set_cors_headers(response)
             # response.headers["X-API-WARN"] = "Deprecated API"
