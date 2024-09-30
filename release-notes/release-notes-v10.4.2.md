@@ -14,6 +14,7 @@
 * Fix bytes JSON serialization in API v1
 * Fix Docker Compose test
 * Fix RSFetcher startup
+* Fix API v1 regression (rename `unsigned_tx_hex` to `tx_hexh` in `create_*` result)
 
 ## Codebase
 

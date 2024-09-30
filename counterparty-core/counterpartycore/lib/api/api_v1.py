@@ -588,6 +588,10 @@ class APIServer(threading.Thread):
                             **common_args,
                         )
                         if extended_tx_info:
+                            transaction_info["tx_hex"] = transaction_info["unsigned_tx_hex"]
+                            transaction_info["pretx_hex"] = transaction_info["unsigned_pretx_hex"]
+                            del transaction_info["unsigned_tx_hex"]
+                            del transaction_info["unsigned_pretx_hex"]
                             return transaction_info
                         tx_hexes = list(
                             filter(
