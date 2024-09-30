@@ -820,6 +820,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "message_type",
             "address",
         ]
+        or (tx_name == "composer" and method != "compose_transaction")
         or (
             tx_name
             in [

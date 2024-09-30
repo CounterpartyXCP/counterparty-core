@@ -17,6 +17,7 @@ from counterpartycore.lib.api.api_v1 import APIError
 from counterpartycore.lib.messages import issuance
 from counterpartycore.lib.util import RPCError
 
+from .contract_vectors.composer import COMPOSER_VECTOR
 from .contract_vectors.dispenser import DISPENSER_VECTOR
 from .contract_vectors.fairmint import FAIRMINT_VECTOR
 from .contract_vectors.fairminter import FAIRMINTER_VECTOR
@@ -36,9 +37,9 @@ from .params import (
     DEFAULT_PARAMS as DP,
 )
 
-UNITTEST_VECTOR_ = TRANSACTION_VECTOR
+UNITTEST_VECTOR = COMPOSER_VECTOR
 
-UNITTEST_VECTOR = (
+UNITTEST_VECTOR_ = (
     FAIRMINTER_VECTOR
     | FAIRMINT_VECTOR
     | LEDGER_VECTOR
@@ -47,6 +48,7 @@ UNITTEST_VECTOR = (
     | DISPENSER_VECTOR
     | GAS_VECTOR
     | TRANSACTION_VECTOR
+    | COMPOSER_VECTOR
     | {
         "bet": {
             "validate": [

@@ -288,7 +288,7 @@ def get_tx_out_amount(tx_hash, vout):
     return raw_tx["vout"][vout]["value"]
 
 
-def get_tx_out_value(tx_hash, vout):
+def get_utxo_value(tx_hash, vout):
     return get_tx_out_amount(tx_hash, vout)
 
 
