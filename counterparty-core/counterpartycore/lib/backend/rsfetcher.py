@@ -33,6 +33,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.config["network"] = "testnet" if config.TESTNET else "mainnet"
         self.fetcher = None
         self.prefetch_task = None
+        self.running = False
 
     def start(self, start_height=0):
         logger.debug("Starting Prefetcher...")
@@ -106,6 +107,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         logger.debug("Starting prefetching blocks...")
         expected_height = self.next_height
         while not self.stopped:
+            self.running = True
             try:
                 while self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE and not self.stopped:
                     time.sleep(0.1)  # Wait until there is space in the queue
@@ -135,8 +137,13 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     logger.debug("No block fetched. Waiting before next fetch.")
                     time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
             except Exception as e:
-                logger.error(f"Error prefetching block: {e}")
-                time.sleep(random.uniform(0.8, 2.0))  # noqa: S311; longer wait on error
+                if str(e) == "Stopped error":
+                    logger.warning("RSFetcher stopped. Restarting in 5 seconds.")
+                    time.sleep(5)
+                    self.restart()
+                else:
+                    raise e
+        self.running = False
         logger.debug("Prefetching blocks stopped.")
 
     def stop(self):
@@ -160,6 +167,12 @@ class RSFetcher(metaclass=util.SingletonMeta):
             self.fetcher = None
             self.prefetch_task = None
             logger.debug("Prefetcher shutdown complete.")
+
+    def restart(self):
+        self.stop()
+        while self.running:
+            time.sleep(0.1)
+        self.start(self.next_height)
 
 
 def stop():
