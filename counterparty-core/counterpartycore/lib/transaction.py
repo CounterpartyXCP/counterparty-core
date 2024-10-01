@@ -102,6 +102,7 @@ def check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inp
         if encoding == "p2sh":
             # make_canonical can't determine the address, so we blindly change the desired to the parsed
             desired_source = parsed_source
+            # desired_destination = parsed_destination
     except exceptions.BTCOnlyError:
         # Skip BTC‐only transactions.
         return
