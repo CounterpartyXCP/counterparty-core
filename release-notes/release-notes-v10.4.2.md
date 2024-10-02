@@ -3,8 +3,10 @@
 
 # Upgrading
 
+This release is not a protocol change and does not require any reparsing.
 
 # ChangeLog
+
 
 ## Protocol Changes
 
@@ -20,11 +22,13 @@
 
 ## Codebase
 
-## API
-
 * No longer expire mempool entries after 24 hours
 * Fetch old mempool entries from Bitcoin Core after node startup
+
+## API
+
 * Expose timestamp field for "first seen in mempool" (for client-side filtering)
+* Disable `p2sh` encoding
 
 ## CLI
 
