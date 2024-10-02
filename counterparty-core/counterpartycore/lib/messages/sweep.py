@@ -284,7 +284,13 @@ def parse(db, tx, message):
                             "asset_longname": last_issuance["asset_longname"],
                             "reset": False,
                         }
-                        ledger.insert_record(db, "issuances", bindings, "ASSET_TRANSFER")
+                        ledger.insert_record(
+                            db,
+                            "issuances",
+                            bindings,
+                            "ASSET_TRANSFER",
+                            {"asset_events": "transfer"},
+                        )
                         sweep_pos += 1
 
         bindings = {
