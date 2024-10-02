@@ -145,11 +145,12 @@ time.sleep(10)
 
 # generate unsigned pretx
 unsigned_pretx_hex = api_call(
-    f"addresses/{str(address)}/compose/send",
+    f"addresses/{str(address)}/compose/broadcast",
     {
-        "asset": "XCP",
-        "quantity": 5000,
-        "destination": destination_address,
+        "value": 1,
+        "fee_fraction": 0.5,
+        "timestamp": 4003903985,
+        "text": "un broadcast avec une transaction p2sh",
         "encoding": "p2sh",
         "fee_per_kb": 1000,
         "pubkeys": secret_key.pub.hex(),
@@ -172,11 +173,12 @@ time.sleep(10)
 
 # generate final tx
 unsigned_finaltx_hex = api_call(
-    f"addresses/{str(address)}/compose/send",
+    f"addresses/{str(address)}/compose/broadcast",
     {
-        "asset": "XCP",
-        "quantity": 5000,
-        "destination": destination_address,
+        "value": 1,
+        "fee_fraction": 0.5,
+        "timestamp": 4003903985,
+        "text": "un broadcast avec une transaction p2sh",
         "encoding": "p2sh",
         "fee_per_kb": 1000,
         "pubkeys": secret_key.pub.hex(),
