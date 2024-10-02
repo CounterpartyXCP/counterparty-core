@@ -184,9 +184,10 @@ def sign_and_send_transaction(result):
         return
     check_bitcoin_cli_is_installed()
     bitcoin_cli, bitcoin_wallet = bake_bitcoin_clients()
-    signed_transaction_json = bitcoin_wallet(
-        "signrawtransactionwithwallet", result["result"]["rawtransaction"]
-    ).strip()
+    rawtransaction = result["result"].get("rawtransaction") or result["result"].get(
+        "unsigned_pretx_hex"
+    )
+    signed_transaction_json = bitcoin_wallet("signrawtransactionwithwallet", rawtransaction).strip()
     signed_transaction = json.loads(signed_transaction_json)["hex"]
     tx_hash = bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
     cprint(f"Transaction sent: {tx_hash}", "green")
