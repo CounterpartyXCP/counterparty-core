@@ -67,7 +67,7 @@ def get_new_address(seed: str):
     return address, secret_key
 
 
-def sign_rawtransaction(rawtransaction, address, secret_key, amount=None):
+def sign_p2wpkh_rawtransaction(rawtransaction, address, secret_key, amount=None):
     tx = CMutableTransaction.deserialize(bytes.fromhex(rawtransaction))
     txin_index = 0
     redeem_script = address.to_redeemScript()
@@ -75,8 +75,6 @@ def sign_rawtransaction(rawtransaction, address, secret_key, amount=None):
     if not amount:
         amount = get_tx_out_amount(prev_txid, tx.vin[txin_index].prevout.n)
         amount = int(amount * 10e8)
-    # amount = int(10 * 10e8)
-    print("AMount", amount)
     sighash = SignatureHash(
         redeem_script, tx, txin_index, SIGHASH_ALL, amount=amount, sigversion=SIGVERSION_WITNESS_V0
     )
@@ -87,6 +85,18 @@ def sign_rawtransaction(rawtransaction, address, secret_key, amount=None):
     vins = [CTxIn(tx.vin[0].prevout, CScript())]
     signed_tx = CMutableTransaction(vins, tx.vout)
     signed_tx.wit = CTxWitness(ctxinwitnesses)
+    return signed_tx.serialize().hex()
+
+
+def sign_p2sh_rawtransaction(rawtransaction, secret_key):
+    tx = CMutableTransaction.deserialize(bytes.fromhex(rawtransaction))
+    txin_index = 0
+    txin_redeemScript = tx.vin[txin_index].scriptSig
+    sighash = SignatureHash(txin_redeemScript, tx, txin_index, SIGHASH_ALL)
+    sig = secret_key.sign(sighash) + bytes([SIGHASH_ALL])
+    # set scriptSig
+    vins = [CTxIn(tx.vin[0].prevout, CScript([sig, txin_redeemScript]))]
+    signed_tx = CMutableTransaction(vins, tx.vout)
     return signed_tx.serialize().hex()
 
 
@@ -148,7 +158,9 @@ unsigned_pretx_hex = api_call(
 print("unsigned_pretx_hex:", unsigned_pretx_hex)
 
 # sign pretx
-signed_pretx_hex = sign_rawtransaction(unsigned_pretx_hex, address, secret_key, int(10 * 10e8))
+signed_pretx_hex = sign_p2wpkh_rawtransaction(
+    unsigned_pretx_hex, address, secret_key, int(10 * 10e8)
+)
 print("signed_pretx_hex:", signed_pretx_hex)
 
 # broadcast pretx and get pretx_txid
@@ -174,6 +186,7 @@ unsigned_finaltx_hex = api_call(
 print("unsigned_finaltx_hex:", unsigned_finaltx_hex)
 
 # sign and broadcast final tx
-signed_finaltx_hex = sign_rawtransaction(unsigned_finaltx_hex, address, secret_key)
+signed_finaltx_hex = sign_p2sh_rawtransaction(unsigned_finaltx_hex, secret_key)
 print("signed_finaltx_hex:", signed_finaltx_hex)
 txid = bitcoin_cli("sendrawtransaction", signed_finaltx_hex).strip()
+bitcoin_cli("generatetoaddress", 1, destination_address)
