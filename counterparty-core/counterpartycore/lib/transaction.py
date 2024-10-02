@@ -66,10 +66,10 @@ def determine_encoding(
     else:
         encoding = desired_encoding
 
-    if encoding == "p2sh" and not util.enabled("p2sh_encoding"):
-        raise exceptions.TransactionError("P2SH encoding not enabled yet")
+    if encoding == "p2sh":
+        raise exceptions.TransactionError("`P2SH` encoding deprecated, please use `multisig`")
 
-    elif encoding not in ("pubkeyhash", "multisig", "opreturn", "p2sh"):
+    elif encoding not in ("pubkeyhash", "multisig", "opreturn"):
         raise exceptions.TransactionError("Unknown encoding‐scheme.")
 
     return encoding
