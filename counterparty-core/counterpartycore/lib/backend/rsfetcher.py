@@ -138,7 +138,9 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
             except Exception as e:
                 if str(e) == "Stopped error":
-                    logger.warning("RSFetcher found stopped due to an error. Restarting in 5 seconds...")
+                    logger.warning(
+                        "RSFetcher found stopped due to an error. Restarting in 5 seconds..."
+                    )
                     time.sleep(5)
                     self.restart()
                 else:
