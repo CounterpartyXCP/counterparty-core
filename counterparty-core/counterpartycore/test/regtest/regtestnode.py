@@ -196,6 +196,7 @@ class RegtestNode:
             "-zmqpubsequence=tcp://0.0.0.0:29332",
             "-zmqpubrawblock=tcp://0.0.0.0:29333",
             "-fallbackfee=0.0002",
+            "-acceptnonstdtxn",
             f"-datadir={self.datadir}",
             _bg=True,
             _out=sys.stdout,
