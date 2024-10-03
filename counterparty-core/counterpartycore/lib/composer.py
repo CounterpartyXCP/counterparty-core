@@ -44,17 +44,15 @@ def get_script(address, pubkeys=None):
         pubkeys = [search_pubkey(address, pubkeys) for address in addresses]
         pubkeys = [bytes.fromhex(pubkey) for pubkey in pubkeys]
         return CScript([signatures_required] + pubkeys + [signatures_possible] + [OP_CHECKMULTISIG])
-    elif script.is_bech32(address):
+    if script.is_bech32(address):
         return P2WPKHBitcoinAddress(address).to_scriptPubKey()
-    else:
-        return CBitcoinAddress(address).to_scriptPubKey()
+    return CBitcoinAddress(address).to_scriptPubKey()
 
 
 def get_default_value(address):
     if script.is_multisig(address):
         return config.DEFAULT_MULTISIG_DUST_SIZE
-    else:
-        return config.DEFAULT_REGULAR_DUST_SIZE
+    return config.DEFAULT_REGULAR_DUST_SIZE
 
 
 def perpare_non_data_outputs(destinations, pubkeys=None):
@@ -194,15 +192,13 @@ def get_needed_fee(tx, satoshis_per_vbyte=None):
     virtual_size = get_virtual_size(weight)
     if satoshis_per_vbyte:
         return satoshis_per_vbyte * virtual_size
-    else:
-        return backend.bitcoind.satoshis_per_vbyte() * virtual_size
+    return backend.bitcoind.satoshis_per_vbyte() * virtual_size
 
 
 def get_minimum_change(source):
     if script.is_multisig(source):
         return config.MULTISIG_DUST_SIZE
-    else:
-        return config.REGULAR_DUST_SIZE
+    return config.REGULAR_DUST_SIZE
 
 
 def prepare_transaction(source, outputs, pubkeys, unspent_list, desired_fee):
