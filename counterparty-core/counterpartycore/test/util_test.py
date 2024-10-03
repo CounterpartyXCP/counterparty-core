@@ -22,6 +22,7 @@ import apsw
 import bitcoin as bitcoinlib
 import pycoin
 import pytest
+from bitcoinutils.transactions import TxInput, TxOutput
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 CURR_DIR = os.path.dirname(
@@ -34,6 +35,7 @@ from counterpartycore.lib import (  # noqa: E402
     backend,
     blocks,
     check,
+    composer,  # noqa
     config,
     database,
     deserialize,
@@ -820,6 +822,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "message_type",
             "address",
         ]
+        or (tx_name == "composer" and method != "compose_transaction")
         or (
             tx_name
             in [
@@ -902,7 +905,13 @@ def check_outputs(
 
         if outputs is not None:
             try:
-                assert outputs == test_outputs
+                if isinstance(outputs, (TxOutput, TxInput)):
+                    assert outputs.to_bytes() == test_outputs.to_bytes()
+                elif isinstance(outputs, list) and isinstance(outputs[0], (TxOutput, TxInput)):
+                    for i, output in enumerate(outputs):
+                        assert output.to_bytes() == test_outputs[i].to_bytes()
+                else:
+                    assert outputs == test_outputs
             except AssertionError:
                 if pytest_config.getoption("verbose") >= 2:
                     msg = (
