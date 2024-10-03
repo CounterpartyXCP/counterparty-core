@@ -176,13 +176,8 @@ def utxos_to_txins(utxos: list):
     return inputs
 
 
-def get_virtual_size(weight):
-    return (weight + 3) // 4
-
-
 def get_needed_fee(tx, satoshis_per_vbyte=None):
-    weight = tx.calc_weight()
-    virtual_size = get_virtual_size(weight)
+    virtual_size = tx.get_vsize()
     if satoshis_per_vbyte:
         return satoshis_per_vbyte * virtual_size
     return backend.bitcoind.satoshis_per_vbyte() * virtual_size
