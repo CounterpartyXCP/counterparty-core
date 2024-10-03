@@ -76,7 +76,8 @@ def api_root():
         "backend_height": BACKEND_HEIGHT,
         "counterparty_height": counterparty_height,
         "documentation": "https://counterpartycore.docs.apiary.io/",
-        "blueprint": f"{request.url_root}v2/blueprint",
+        "routes": f"{request.url_root}v2/routes",
+        "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
     }
 
 
