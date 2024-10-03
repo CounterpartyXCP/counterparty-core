@@ -1,6 +1,6 @@
 from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress
 from bitcoinutils.script import Script, b_to_h
-from bitcoinutils.transactions import TxOutput
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 
 from counterpartycore.lib import config, exceptions
 
@@ -546,6 +546,145 @@ COMPOSER_VECTOR = {
                     exceptions.ComposeError,
                     "Insufficient funds for the target amount: 3000",
                 ),
+            },
+        ],
+        "utxos_to_txins": [
+            {
+                "in": (
+                    [
+                        {
+                            "txid": UTXO_1.split(":")[0],
+                            "vout": int(UTXO_1.split(":")[1]),
+                            "value": 999,
+                        },
+                        {
+                            "txid": UTXO_2.split(":")[0],
+                            "vout": int(UTXO_2.split(":")[1]),
+                            "value": 999,
+                        },
+                        {
+                            "txid": UTXO_3.split(":")[0],
+                            "vout": int(UTXO_3.split(":")[1]),
+                            "value": 999,
+                        },
+                    ],
+                ),
+                "out": [
+                    TxInput(UTXO_1.split(":")[0], int(UTXO_1.split(":")[1])),
+                    TxInput(UTXO_2.split(":")[0], int(UTXO_2.split(":")[1])),
+                    TxInput(UTXO_3.split(":")[0], int(UTXO_3.split(":")[1])),
+                ],
+            }
+        ],
+        "get_needed_fee": [
+            {
+                "in": (
+                    Transaction(
+                        [
+                            TxInput(UTXO_1.split(":")[0], int(UTXO_1.split(":")[1])),
+                            TxInput(UTXO_2.split(":")[0], int(UTXO_2.split(":")[1])),
+                            TxInput(UTXO_3.split(":")[0], int(UTXO_3.split(":")[1])),
+                        ],
+                        [
+                            TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+                            TxOutput(
+                                config.DEFAULT_MULTISIG_DUST_SIZE,
+                                Script(
+                                    [
+                                        1,
+                                        "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
+                                        "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
+                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                                        3,
+                                        "OP_CHECKMULTISIG",
+                                    ]
+                                ),
+                            ),
+                            TxOutput(
+                                config.DEFAULT_MULTISIG_DUST_SIZE,
+                                Script(
+                                    [
+                                        1,
+                                        "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
+                                        "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
+                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                                        3,
+                                        "OP_CHECKMULTISIG",
+                                    ]
+                                ),
+                            ),
+                            TxOutput(
+                                config.DEFAULT_MULTISIG_DUST_SIZE,
+                                Script(
+                                    [
+                                        1,
+                                        "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
+                                        "03000000000000000000000000000000000000000000000000000000000000000c",
+                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                                        3,
+                                        "OP_CHECKMULTISIG",
+                                    ]
+                                ),
+                            ),
+                        ],
+                    ),
+                ),
+                "out": 1527,
+            },
+            {
+                "in": (
+                    Transaction(
+                        [
+                            TxInput(UTXO_1.split(":")[0], int(UTXO_1.split(":")[1])),
+                            TxInput(UTXO_2.split(":")[0], int(UTXO_2.split(":")[1])),
+                            TxInput(UTXO_3.split(":")[0], int(UTXO_3.split(":")[1])),
+                        ],
+                        [
+                            TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+                            TxOutput(
+                                config.DEFAULT_MULTISIG_DUST_SIZE,
+                                Script(
+                                    [
+                                        1,
+                                        "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
+                                        "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
+                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                                        3,
+                                        "OP_CHECKMULTISIG",
+                                    ]
+                                ),
+                            ),
+                            TxOutput(
+                                config.DEFAULT_MULTISIG_DUST_SIZE,
+                                Script(
+                                    [
+                                        1,
+                                        "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
+                                        "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
+                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                                        3,
+                                        "OP_CHECKMULTISIG",
+                                    ]
+                                ),
+                            ),
+                            TxOutput(
+                                config.DEFAULT_MULTISIG_DUST_SIZE,
+                                Script(
+                                    [
+                                        1,
+                                        "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
+                                        "03000000000000000000000000000000000000000000000000000000000000000c",
+                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                                        3,
+                                        "OP_CHECKMULTISIG",
+                                    ]
+                                ),
+                            ),
+                        ],
+                    ),
+                    6,
+                ),
+                "out": 3054,
             },
         ],
     }

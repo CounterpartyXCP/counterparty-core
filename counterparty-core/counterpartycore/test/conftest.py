@@ -598,6 +598,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def mocked_get_utxo_value(txid, vout):
         return 999
 
+    def satoshis_per_vbyte():
+        return 3
+
     def determine_encoding(
         data, desired_encoding="auto", op_return_max_size=config.OP_RETURN_MAX_SIZE
     ):
@@ -661,3 +664,6 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.backend.bitcoind.get_utxo_value", mocked_get_utxo_value
     )
     monkeypatch.setattr("counterpartycore.lib.transaction.determine_encoding", determine_encoding)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.satoshis_per_vbyte", satoshis_per_vbyte
+    )
