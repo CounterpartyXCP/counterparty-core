@@ -127,12 +127,22 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
         # print(f"Expected result: {expected_result}")
         expected_result = json.loads(expected_result)
 
+        # don't compare decoded_tx because it's not deterministic
         if isinstance(expected_result, dict) and "decoded_tx" in expected_result:
             del expected_result["decoded_tx"]
             if "decoded_tx" not in result["result"]:
                 raise AssertionError("decoded_tx not in result")
         if isinstance(result["result"], dict) and "decoded_tx" in result["result"]:
             del result["result"]["decoded_tx"]
+        # don't compare timestamp because it's not deterministic
+        if isinstance(expected_result, list):
+            for event in expected_result:
+                if "timestamp" in event:
+                    del event["timestamp"]
+        if isinstance(result["result"], list):
+            for event in result["result"]:
+                if "timestamp" in event:
+                    del event["timestamp"]
 
         try:
             assert result["result"] == expected_result
@@ -234,6 +244,7 @@ def run_scenarios(serve=False):
 
         context = {}
 
+        # run all scenarios
         for item in SCENARIOS:
             context = run_item(regtest_node_thread.node, item, context)
 
@@ -248,6 +259,7 @@ def run_scenarios(serve=False):
         else:
             if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
                 os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
+            print("Generating API documentation...")
             sh.python3(
                 os.path.join(CURR_DIR, "genapidoc.py"),
                 os.path.abspath("regtestnode"),
@@ -255,7 +267,12 @@ def run_scenarios(serve=False):
                 _err_to_out=True,
                 _cwd=CURR_DIR,
             )
+            print("Running Dredd...")
             sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
+            print("Tesing reparse...")
+            regtest_node_thread.node.reparse()
+            print("Testing rollback...")
+            regtest_node_thread.node.rollback()
     except KeyboardInterrupt:
         pass
     except Exception as e:

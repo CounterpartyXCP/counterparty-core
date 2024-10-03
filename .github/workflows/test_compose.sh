@@ -3,7 +3,7 @@
 set -e
 set -x
 
-exit 0
+#exit 0
 
 export PATH="/snap/bin:$PATH"
 
@@ -27,10 +27,9 @@ sed -i 's/#- "--verbose"/-  "-vv"/g' docker-compose.yml
 
 # stop the running containers
 docker compose --profile mainnet stop counterparty-core
-#docker compose --profile testnet stop counterparty-core-testnet
+docker compose --profile testnet stop counterparty-core-testnet
 
 # remove counterparty-core container
-#docker rm counterparty-core-counterparty-core-1
 docker container prune -f
 
 # remove counterparty-core image
@@ -43,7 +42,7 @@ cat build.txt
 
 # re-start containers
 docker compose --profile mainnet up -d
-#docker compose --profile testnet up -d
+docker compose --profile testnet up -d
 
 # wait for counterparty-core to be ready
 while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Watching for new blocks')" = "" ]; do
@@ -51,10 +50,10 @@ while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Watching for new b
     sleep 1
 done
 
-#while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Watching for new blocks')" = "" ]; do
-#    echo "Waiting for counterparty-core testnet to be ready"
-#    sleep 1
-#done
+while [ "$(docker compose logs counterparty-core-testnet 2>&1 | grep 'Watching for new blocks')" = "" ]; do
+    echo "Waiting for counterparty-core testnet to be ready"
+    sleep 1
+done
 
 
 # check running info with API v1 mainnet
@@ -71,17 +70,17 @@ if [ "$response_v1_mainnet" -ne 200 ]; then
 fi
 
 # check running info with API v1 testnet
-#response_v1_testnet=$(curl -X POST http://127.0.0.1:14100/v1/ \
-#                        --user rpc:rpc \
-#                        -H 'Content-Type: application/json; charset=UTF-8'\
-#                        -H 'Accept: application/json, text/javascript' \
-#                        --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "get_running_info" }' \
-#                        --write-out '%{http_code}' --silent --output /dev/null)
+response_v1_testnet=$(curl -X POST http://127.0.0.1:14100/v1/ \
+                        --user rpc:rpc \
+                        -H 'Content-Type: application/json; charset=UTF-8'\
+                        -H 'Accept: application/json, text/javascript' \
+                        --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "get_running_info" }' \
+                        --write-out '%{http_code}' --silent --output /dev/null)
 
-#if [ "$response_v1_testnet" -ne 200 ]; then
-#    echo "Failed to get_running_info testnet"
-#    exit 1
-#fi
+if [ "$response_v1_testnet" -ne 200 ]; then
+    echo "Failed to get_running_info testnet"
+    exit 1
+fi
 
 # check running info with API v2 mainnet
 response_v2_mainnet=$(curl http://localhost:4000/v2/ \
@@ -93,20 +92,23 @@ if [ "$response_v2_mainnet" -ne 200 ]; then
 fi
 
 # check running info with API v2 testnet
-#response_v2_testnet=$(curl http://localhost:14000/v2/ \
-#                        --write-out '%{http_code}' --silent --output /dev/null)
+response_v2_testnet=$(curl http://localhost:14000/v2/ \
+                        --write-out '%{http_code}' --silent --output /dev/null)
 
-#if [ "$response_v2_testnet" -ne 200 ]; then
-#    echo "Failed to get API v2 root testnet"
-#    exit 1
-#fi
+if [ "$response_v2_testnet" -ne 200 ]; then
+    echo "Failed to get API v2 root testnet"
+    exit 1
+fi
 
 # Let's reparse 50 blocks before Dredd and compare hashes tests
 CURRENT_HEIGHT=$(curl http://localhost:4000/v2/ --silent | jq '.result.counterparty_height')
 REPARSE_FROM=$(($CURRENT_HEIGHT-50))
 
 # Stop, reparse and start counterparty-core mainnet
-echo "" > $(docker inspect --format='{{.LogPath}}' counterparty-core-counterparty-core-1)
+LOG_PATH=$(docker inspect --format='{{.LogPath}}' counterparty-core-counterparty-core-1)
+sudo rm -f $LOG_PATH
+sudo touch $LOG_PATH
+
 docker compose --profile mainnet stop counterparty-core
 docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
    --backend-connect=bitcoind \
@@ -114,7 +116,8 @@ docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
    --rpc-host=0.0.0.0 \
    --api-host=0.0.0.0
 
-echo "" > $(docker inspect --format='{{.LogPath}}' counterparty-core-counterparty-core-1)
+sudo rm -f $LOG_PATH
+sudo touch $LOG_PATH
 
 docker compose --profile mainnet up -d counterparty-core
 

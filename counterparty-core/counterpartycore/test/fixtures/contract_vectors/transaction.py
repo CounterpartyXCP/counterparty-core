@@ -52,7 +52,7 @@ TRANSACTION_VECTOR = {
                         ],
                         None,
                     ),
-                    {"encoding": "singlesig", "regular_dust_size": DP["regular_dust_size"]},
+                    {"encoding": "opreturn", "regular_dust_size": DP["regular_dust_size"]},
                 ),
                 "error": (exceptions.TransactionError, "Destination output is dust."),
             },

@@ -16,7 +16,7 @@ PREFETCH_QUEUE_SIZE = 20
 class RSFetcher(metaclass=util.SingletonMeta):
     thread_index_counter = 0  # Add a thread index counter
 
-    def __init__(self, start_height=0, indexer_config=None):
+    def __init__(self, indexer_config=None):
         RSFetcher.thread_index_counter += 1
         if indexer_config is None:
             self.config = {
@@ -27,27 +27,19 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 "log_file": config.FETCHER_LOG,
                 "log_level": config.LOG_LEVEL_STRING,
                 "json_format": config.JSON_LOGS,
-                "start_height": start_height,
             }
         else:
-            self.config = indexer_config | {"start_height": start_height}
+            self.config = indexer_config
         self.config["network"] = "testnet" if config.TESTNET else "mainnet"
-        self.start_height = start_height
-        self.next_height = start_height
         self.fetcher = None
         self.prefetch_task = None
-        self.start()
-        # prefetching
-        self.stopped = False
-        self.prefetch_queue = {}
-        self.prefetch_queue_size = 0
-        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
-        self.prefetch_task = self.executor.submit(self.prefetch_blocks)
-        self.prefetch_queue_initialized = False
+        self.running = False
 
-    def start(self):
+    def start(self, start_height=0):
         logger.debug("Starting Prefetcher...")
         try:
+            self.config["start_height"] = start_height
+            self.next_height = start_height
             self.fetcher = indexer.Indexer(self.config)
             # check fetcher version
             fetcher_version = self.fetcher.get_version()
@@ -65,6 +57,13 @@ class RSFetcher(metaclass=util.SingletonMeta):
         except Exception as e:
             logger.error(f"Failed to initialize fetcher: {e}. Retrying in 5 seconds...")
             raise e
+        # prefetching
+        self.stopped = False
+        self.prefetch_queue = {}
+        self.prefetch_queue_size = 0
+        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
+        self.prefetch_task = self.executor.submit(self.prefetch_blocks)
+        self.prefetch_queue_initialized = False
 
     def get_block(self):
         logger.trace("Fetching block with Rust backend.")
@@ -108,6 +107,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         logger.debug("Starting prefetching blocks...")
         expected_height = self.next_height
         while not self.stopped:
+            self.running = True
             try:
                 while self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE and not self.stopped:
                     time.sleep(0.1)  # Wait until there is space in the queue
@@ -137,8 +137,15 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     logger.debug("No block fetched. Waiting before next fetch.")
                     time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
             except Exception as e:
-                logger.error(f"Error prefetching block: {e}")
-                time.sleep(random.uniform(0.8, 2.0))  # noqa: S311; longer wait on error
+                if str(e) == "Stopped error":
+                    logger.warning(
+                        "RSFetcher found stopped due to an error. Restarting in 5 seconds..."
+                    )
+                    time.sleep(5)
+                    self.restart()
+                else:
+                    raise e
+        self.running = False
         logger.debug("Prefetching blocks stopped.")
 
     def stop(self):
@@ -162,6 +169,12 @@ class RSFetcher(metaclass=util.SingletonMeta):
             self.fetcher = None
             self.prefetch_task = None
             logger.debug("Prefetcher shutdown complete.")
+
+    def restart(self):
+        self.stop()
+        while self.running:
+            time.sleep(0.1)
+        self.start(self.next_height)
 
 
 def stop():

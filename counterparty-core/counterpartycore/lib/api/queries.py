@@ -712,7 +712,7 @@ def get_all_mempool_events(
     where = None
     if event_name:
         where = [{"event": event} for event in event_name.split(",")]
-    select = "tx_hash, event, bindings AS params"
+    select = "tx_hash, event, bindings AS params, timestamp"
     return select_rows(
         db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset, select=select
     )
@@ -728,7 +728,7 @@ def get_mempool_events_by_name(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    select = "tx_hash, event, bindings AS params"
+    select = "tx_hash, event, bindings AS params, timestamp"
     return select_rows(
         db,
         "mempool",
@@ -759,7 +759,7 @@ def get_mempool_events_by_tx_hash(
     where = {"tx_hash": tx_hash}
     if event_name:
         where = [{"event": event, "tx_hash": tx_hash} for event in event_name.split(",")]
-    select = "tx_hash, event, bindings AS params"
+    select = "tx_hash, event, bindings AS params, timestamp"
     return select_rows(
         db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset, select=select
     )
@@ -775,7 +775,7 @@ def get_mempool_events_by_addresses(db, addresses: str, cursor: str = None, limi
     where = []
     for address in addresses.split(","):
         where.append({"addresses__like": f"%{address}%"})
-    select = "tx_hash, event, bindings AS params"
+    select = "tx_hash, event, bindings AS params, timestamp"
     result = select_rows(
         db,
         "mempool",

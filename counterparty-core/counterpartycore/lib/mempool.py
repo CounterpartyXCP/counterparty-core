@@ -1,12 +1,12 @@
 import logging
 import time
 
-from counterpartycore.lib import blocks, config, deserialize, exceptions, ledger, util
+from counterpartycore.lib import backend, blocks, config, deserialize, exceptions, ledger, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def parse_mempool_transactions(db, raw_tx_list):
+def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     util.PARSING_MEMPOOL = True
 
     logger.debug(f"Parsing {len(raw_tx_list)} raw transactions from mempool...")
@@ -80,7 +80,10 @@ def parse_mempool_transactions(db, raw_tx_list):
     except exceptions.MempoolError:
         # save events in the mempool table
         for event in transaction_events:
-            event["timestamp"] = now
+            if timestamps:
+                event["timestamp"] = timestamps.get(event["tx_hash"], now)
+            else:
+                event["timestamp"] = now
             cursor.execute(
                 """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp, :event)""",
                 event,
@@ -104,8 +107,27 @@ def clean_mempool(db):
         tx = ledger.get_transaction(db, event["tx_hash"])
         if tx:
             clean_transaction_events(db, event["tx_hash"])
-    # delete mempool events older than 24 hours
-    cursor.execute(
-        "DELETE FROM mempool WHERE timestamp < ?",
-        (time.time() - 24 * 60 * 60,),
-    )
+
+
+def parse_raw_mempool(db):
+    logger.debug("Parsing raw mempool...")
+    raw_mempool = backend.bitcoind.getrawmempool(verbose=True)
+    raw_tx_list = []
+    timestamps = {}
+    cursor = db.cursor()
+    for txid, tx_info in raw_mempool.items():
+        existing_tx_in_mempool = cursor.execute(
+            "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (txid,)
+        ).fetchone()
+        if existing_tx_in_mempool:
+            continue
+        try:
+            raw_tx = backend.bitcoind.getrawtransaction(txid)
+            raw_tx_list.append(raw_tx)
+            timestamps[txid] = tx_info["time"]
+        except exceptions.BitcoindRPCError as e:
+            if "No such mempool or blockchain transaction" in str(e):
+                pass
+            else:
+                raise e
+    parse_mempool_transactions(db, raw_tx_list, timestamps)
