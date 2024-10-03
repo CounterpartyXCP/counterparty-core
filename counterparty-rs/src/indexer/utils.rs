@@ -84,7 +84,10 @@ where
         stopper,
         &mut operation,
         error_message,
-        RetryConfig::default(),
+        RetryConfig {
+            timeout: Duration::MAX,
+            ..RetryConfig::default()
+        },
     )
 }
 
