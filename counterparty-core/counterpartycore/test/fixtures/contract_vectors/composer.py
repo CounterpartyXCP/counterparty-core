@@ -1,7 +1,6 @@
-from bitcoin import SelectParams
-from bitcoin.core import CTxOut
-from bitcoin.core.script import OP_CHECKMULTISIG, OP_RETURN, CScript
-from bitcoin.wallet import CBitcoinAddress, P2WPKHBitcoinAddress
+from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress
+from bitcoinutils.script import Script, b_to_h
+from bitcoinutils.transactions import TxOutput
 
 from counterpartycore.lib import config, exceptions
 
@@ -11,8 +10,6 @@ from ..params import (
     MULTISIGADDR,
     P2WPKH_ADDR,
 )
-
-SelectParams("testnet")
 
 PROVIDED_PUBKEYS = [DEFAULT_PARAMS["pubkey"][ADDR[0]], DEFAULT_PARAMS["pubkey"][ADDR[1]]]
 ARC4_KEY = "0000000000000000000000000000000000000000000000000000000000000000"
@@ -26,23 +23,23 @@ COMPOSER_VECTOR = {
             {
                 "comment": "P2PKH address",
                 "in": (ADDR[0],),
-                "out": CBitcoinAddress(ADDR[0]).to_scriptPubKey(),
+                "out": P2pkhAddress(ADDR[0]).to_script_pub_key(),
             },
             {
                 "comment": "P2WPKH address",
                 "in": (P2WPKH_ADDR[0],),
-                "out": P2WPKHBitcoinAddress(P2WPKH_ADDR[0]).to_scriptPubKey(),
+                "out": P2wpkhAddress(P2WPKH_ADDR[0]).to_script_pub_key(),
             },
             {
                 "comment": "multisig address",
                 "in": (MULTISIGADDR[0], PROVIDED_PUBKEYS),
-                "out": CScript(
+                "out": Script(
                     [
                         1,
-                        bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
-                        bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[1]]),
+                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                        DEFAULT_PARAMS["pubkey"][ADDR[1]],
                         2,
-                        OP_CHECKMULTISIG,
+                        "OP_CHECKMULTISIG",
                     ]
                 ),
             },
@@ -50,20 +47,20 @@ COMPOSER_VECTOR = {
         "perpare_non_data_outputs": [
             {
                 "in": ([(ADDR[0], 0)],),
-                "out": [CTxOut(546, CBitcoinAddress(ADDR[0]).to_scriptPubKey())],
+                "out": [TxOutput(546, P2pkhAddress(ADDR[0]).to_script_pub_key())],
             },
             {
                 "in": ([(MULTISIGADDR[0], 0)], PROVIDED_PUBKEYS),
                 "out": [
-                    CTxOut(
+                    TxOutput(
                         1000,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[1]]),
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                                DEFAULT_PARAMS["pubkey"][ADDR[1]],
                                 2,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     )
@@ -71,7 +68,7 @@ COMPOSER_VECTOR = {
             },
             {
                 "in": ([(ADDR[0], 2024)],),
-                "out": [CTxOut(2024, CBitcoinAddress(ADDR[0]).to_scriptPubKey())],
+                "out": [TxOutput(2024, P2pkhAddress(ADDR[0]).to_script_pub_key())],
             },
         ],
         "determine_encoding": [
@@ -102,12 +99,14 @@ COMPOSER_VECTOR = {
             {
                 "in": (b"Hello, World!", ARC4_KEY),
                 "out": [
-                    CTxOut(
+                    TxOutput(
                         0,
-                        CScript(
+                        Script(
                             [
-                                OP_RETURN,
-                                b"\x8a]\xda\x15\xfbo\x05b\xc2cr\x0b8B\xb2:\xa8h\x13\xc7\xd1",
+                                "OP_RETURN",
+                                b_to_h(
+                                    b"\x8a]\xda\x15\xfbo\x05b\xc2cr\x0b8B\xb2:\xa8h\x13\xc7\xd1"
+                                ),
                             ]
                         ),
                     )
@@ -115,7 +114,7 @@ COMPOSER_VECTOR = {
             },
             {
                 "in": (b"Hello, World!",),
-                "out": [CTxOut(0, CScript([OP_RETURN, b"TESTXXXXHello, World!"]))],
+                "out": [TxOutput(0, Script(["OP_RETURN", b_to_h(b"TESTXXXXHello, World!")]))],
             },
         ],
         "data_to_pubkey_pairs": [
@@ -123,16 +122,16 @@ COMPOSER_VECTOR = {
                 "in": (b"Hello, World!" * 10,),
                 "out": [
                     (
-                        b"\x025Hello, World!Hello, World!Hell\x9b",
-                        b"\x03o, World!Hello, World!H\x00\x00\x00\x00\x00\x00\x00\x00\x94",
+                        "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
+                        "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
                     ),
                     (
-                        b"\x025ello, World!Hello, World!Hello<",
-                        b"\x03, World!Hello, World!He\x00\x00\x00\x00\x00\x00\x00\x00\t",
+                        "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
+                        "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
                     ),
                     (
-                        b"\x02\x18llo, World!Hello, World!\x00\x00\x00\x00\x00\x00G",
-                        b"\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c",
+                        "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
+                        "03000000000000000000000000000000000000000000000000000000000000000c",
                     ),
                 ],
             },
@@ -140,16 +139,16 @@ COMPOSER_VECTOR = {
                 "in": (b"Hello, World!" * 10, ARC4_KEY),
                 "out": [
                     (
-                        b"\x03\xebP\xec-\xcfXq\x1a\xddil\x0b3O\xda\x08\xabv\x10\x8f\xd0\x9b\x84\xe5)OlzB\xfa33",
-                        b'\x02\xf1\x84\xec"h\x1f\xf3\xdd\xe4\t\x1f\xc9\xa7_\xd0\x02N\xe4F\xf4I\x9a*\x9e\xc0KO\x8b\x05\xa0q\xda',
+                        "03eb50ec2dcf58711add696c0b334fda08ab76108fd09b84e5294f6c7a42fa3333",
+                        "02f184ec22681ff3dde4091fc9a75fd0024ee446f4499a2a9ec04b4f8b05a071da",
                     ),
                     (
-                        b"\x02\xeb}\xe5-\xcc\x1b}m\xe5tr\x03v&\xf7\x01\xabuS\x83\xa7\xa3\x99\xfb!\n\x05WK\xfa0\r",
-                        b"\x02\xb2\x88\x9b\x1au\x01\xfb\x98\x8d$\x16\xc9\xa4\x1c\xdcuv\xf9X\xfc\x0c\xf3\x07\x9e\xc0KO\x8b\x05\xa0q\xa2",
+                        "02eb7de52dcc1b7d6de57472037626f701ab755383a7a399fb210a05574bfa300d",
+                        "02b2889b1a7501fb988d2416c9a41cdc7576f958fc0cf3079ec04b4f8b05a071a2",
                     ),
                     (
-                        b"\x03\xc6t\xe5.\x8f\x17\nU\xf8jzF\x1f\x0b\xfe\x01\xa86_\xf4\x9f\xbe\x87\xf3d+M2'\x96_\x81",
-                        b'\x02\x9e\xa8\xccu\x07m\x9f\xb9\xc5Az\xa5\xcb0\xfc"\x19\x8b4\x98-\xbbb\x9e\xc0KO\x8b\x05\xa0q4',
+                        "03c674e52e8f170a55f86a7a461f0bfe01a8365ff49fbe87f3642b4d3227965f81",
+                        "029ea8cc75076d9fb9c5417aa5cb30fc22198b34982dbb629ec04b4f8b05a07134",
                     ),
                 ],
             },
@@ -159,42 +158,42 @@ COMPOSER_VECTOR = {
                 "comment": "No encryption",
                 "in": (b"Hello, World!" * 10, ADDR[0], PROVIDED_PUBKEYS),
                 "out": [
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x025Hello, World!Hello, World!Hell\x9b",
-                                b"\x03o, World!Hello, World!H\x00\x00\x00\x00\x00\x00\x00\x00\x94",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
+                                "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x025ello, World!Hello, World!Hello<",
-                                b"\x03, World!Hello, World!He\x00\x00\x00\x00\x00\x00\x00\x00\t",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
+                                "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x02\x18llo, World!Hello, World!\x00\x00\x00\x00\x00\x00G",
-                                b"\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
+                                "03000000000000000000000000000000000000000000000000000000000000000c",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
@@ -204,42 +203,42 @@ COMPOSER_VECTOR = {
                 "comment": "Encrypted",
                 "in": (b"Hello, World!" * 10, ADDR[0], PROVIDED_PUBKEYS, ARC4_KEY),
                 "out": [
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x03\xebP\xec-\xcfXq\x1a\xddil\x0b3O\xda\x08\xabv\x10\x8f\xd0\x9b\x84\xe5)OlzB\xfa33",
-                                b'\x02\xf1\x84\xec"h\x1f\xf3\xdd\xe4\t\x1f\xc9\xa7_\xd0\x02N\xe4F\xf4I\x9a*\x9e\xc0KO\x8b\x05\xa0q\xda',
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "03eb50ec2dcf58711add696c0b334fda08ab76108fd09b84e5294f6c7a42fa3333",
+                                "02f184ec22681ff3dde4091fc9a75fd0024ee446f4499a2a9ec04b4f8b05a071da",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x02\xeb}\xe5-\xcc\x1b}m\xe5tr\x03v&\xf7\x01\xabuS\x83\xa7\xa3\x99\xfb!\n\x05WK\xfa0\r",
-                                b"\x02\xb2\x88\x9b\x1au\x01\xfb\x98\x8d$\x16\xc9\xa4\x1c\xdcuv\xf9X\xfc\x0c\xf3\x07\x9e\xc0KO\x8b\x05\xa0q\xa2",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "02eb7de52dcc1b7d6de57472037626f701ab755383a7a399fb210a05574bfa300d",
+                                "02b2889b1a7501fb988d2416c9a41cdc7576f958fc0cf3079ec04b4f8b05a071a2",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x03\xc6t\xe5.\x8f\x17\nU\xf8jzF\x1f\x0b\xfe\x01\xa86_\xf4\x9f\xbe\x87\xf3d+M2'\x96_\x81",
-                                b'\x02\x9e\xa8\xccu\x07m\x9f\xb9\xc5Az\xa5\xcb0\xfc"\x19\x8b4\x98-\xbbb\x9e\xc0KO\x8b\x05\xa0q4',
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "03c674e52e8f170a55f86a7a461f0bfe01a8365ff49fbe87f3642b4d3227965f81",
+                                "029ea8cc75076d9fb9c5417aa5cb30fc22198b34982dbb629ec04b4f8b05a07134",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
@@ -249,7 +248,7 @@ COMPOSER_VECTOR = {
         "prepare_data_outputs": [
             {
                 "in": ("opreturn", b"Hello, World!", ADDR[0], None),
-                "out": [CTxOut(0, CScript([OP_RETURN, b"TESTXXXXHello, World!"]))],
+                "out": [TxOutput(0, Script(["OP_RETURN", b_to_h(b"TESTXXXXHello, World!")]))],
             },
             {
                 "in": ("opreturn", b"Hello, World!" * 10, ADDR[0], PROVIDED_PUBKEYS),
@@ -258,42 +257,42 @@ COMPOSER_VECTOR = {
             {
                 "in": ("multisig", b"Hello, World!" * 10, ADDR[0], PROVIDED_PUBKEYS),
                 "out": [
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x025Hello, World!Hello, World!Hell\x9b",
-                                b"\x03o, World!Hello, World!H\x00\x00\x00\x00\x00\x00\x00\x00\x94",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
+                                "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x025ello, World!Hello, World!Hello<",
-                                b"\x03, World!Hello, World!He\x00\x00\x00\x00\x00\x00\x00\x00\t",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
+                                "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x02\x18llo, World!Hello, World!\x00\x00\x00\x00\x00\x00G",
-                                b"\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
+                                "03000000000000000000000000000000000000000000000000000000000000000c",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
@@ -308,20 +307,22 @@ COMPOSER_VECTOR = {
             {
                 "in": (ADDR[0], [(ADDR[0], 9999)], b"Hello, World!", None, "opreturn"),
                 "out": [
-                    CTxOut(9999, CBitcoinAddress(ADDR[0]).to_scriptPubKey()),
-                    CTxOut(0, CScript([OP_RETURN, b"TESTXXXXHello, World!"])),
+                    TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+                    TxOutput(0, Script(["OP_RETURN", b_to_h(b"TESTXXXXHello, World!")])),
                 ],
             },
             {
                 "in": (ADDR[0], [(ADDR[0], 9999)], b"Hello, World!", None, "opreturn", ARC4_KEY),
                 "out": [
-                    CTxOut(9999, CBitcoinAddress(ADDR[0]).to_scriptPubKey()),
-                    CTxOut(
+                    TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+                    TxOutput(
                         0,
-                        CScript(
+                        Script(
                             [
-                                OP_RETURN,
-                                b"\x8a]\xda\x15\xfbo\x05b\xc2cr\x0b8B\xb2:\xa8h\x13\xc7\xd1",
+                                "OP_RETURN",
+                                b_to_h(
+                                    b"\x8a]\xda\x15\xfbo\x05b\xc2cr\x0b8B\xb2:\xa8h\x13\xc7\xd1"
+                                ),
                             ]
                         ),
                     ),
@@ -336,43 +337,43 @@ COMPOSER_VECTOR = {
                     "multisig",
                 ),
                 "out": [
-                    CTxOut(9999, CBitcoinAddress(ADDR[0]).to_scriptPubKey()),
-                    CTxOut(
+                    TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x025Hello, World!Hello, World!Hell\x9b",
-                                b"\x03o, World!Hello, World!H\x00\x00\x00\x00\x00\x00\x00\x00\x94",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
+                                "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x025ello, World!Hello, World!Hello<",
-                                b"\x03, World!Hello, World!He\x00\x00\x00\x00\x00\x00\x00\x00\t",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
+                                "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x02\x18llo, World!Hello, World!\x00\x00\x00\x00\x00\x00G",
-                                b"\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
+                                "03000000000000000000000000000000000000000000000000000000000000000c",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
@@ -388,43 +389,43 @@ COMPOSER_VECTOR = {
                     ARC4_KEY,
                 ),
                 "out": [
-                    CTxOut(9999, CBitcoinAddress(ADDR[0]).to_scriptPubKey()),
-                    CTxOut(
+                    TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x03\xebP\xec-\xcfXq\x1a\xddil\x0b3O\xda\x08\xabv\x10\x8f\xd0\x9b\x84\xe5)OlzB\xfa33",
-                                b'\x02\xf1\x84\xec"h\x1f\xf3\xdd\xe4\t\x1f\xc9\xa7_\xd0\x02N\xe4F\xf4I\x9a*\x9e\xc0KO\x8b\x05\xa0q\xda',
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "03eb50ec2dcf58711add696c0b334fda08ab76108fd09b84e5294f6c7a42fa3333",
+                                "02f184ec22681ff3dde4091fc9a75fd0024ee446f4499a2a9ec04b4f8b05a071da",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x02\xeb}\xe5-\xcc\x1b}m\xe5tr\x03v&\xf7\x01\xabuS\x83\xa7\xa3\x99\xfb!\n\x05WK\xfa0\r",
-                                b"\x02\xb2\x88\x9b\x1au\x01\xfb\x98\x8d$\x16\xc9\xa4\x1c\xdcuv\xf9X\xfc\x0c\xf3\x07\x9e\xc0KO\x8b\x05\xa0q\xa2",
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "02eb7de52dcc1b7d6de57472037626f701ab755383a7a399fb210a05574bfa300d",
+                                "02b2889b1a7501fb988d2416c9a41cdc7576f958fc0cf3079ec04b4f8b05a071a2",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),
-                    CTxOut(
+                    TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
-                        CScript(
+                        Script(
                             [
                                 1,
-                                b"\x03\xc6t\xe5.\x8f\x17\nU\xf8jzF\x1f\x0b\xfe\x01\xa86_\xf4\x9f\xbe\x87\xf3d+M2'\x96_\x81",
-                                b'\x02\x9e\xa8\xccu\x07m\x9f\xb9\xc5Az\xa5\xcb0\xfc"\x19\x8b4\x98-\xbbb\x9e\xc0KO\x8b\x05\xa0q4',
-                                bytes.fromhex(DEFAULT_PARAMS["pubkey"][ADDR[0]]),
+                                "03c674e52e8f170a55f86a7a461f0bfe01a8365ff49fbe87f3642b4d3227965f81",
+                                "029ea8cc75076d9fb9c5417aa5cb30fc22198b34982dbb629ec04b4f8b05a07134",
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
-                                OP_CHECKMULTISIG,
+                                "OP_CHECKMULTISIG",
                             ]
                         ),
                     ),

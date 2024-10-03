@@ -1,21 +1,8 @@
 import binascii
 
-from bitcoin.core import (
-    CTransaction,
-    CTxIn,
-    CTxOut,
-)
-from bitcoin.core.script import (
-    OP_CHECKMULTISIG,
-    OP_RETURN,
-    CScript,
-)
-from bitcoin.wallet import (
-    CBitcoinAddress,
-    CBitcoinAddressError,
-    P2PKHBitcoinAddress,
-    P2WPKHBitcoinAddress,
-)
+from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress, PublicKey
+from bitcoinutils.script import Script, b_to_h
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 
 from counterpartycore.lib import arc4, backend, config, exceptions, script, transaction, util
 from counterpartycore.lib.transaction_helper.common_serializer import make_fully_valid
@@ -31,9 +18,15 @@ def search_pubkey(address, provides_pubkeys=None):
         try:
             if not pubkey:
                 raise exceptions.ComposeError(f"invalid pubkey: {pubkey}")
-            if str(P2PKHBitcoinAddress.from_pubkey(bytes.fromhex(pubkey))) == address:
+            check_address = PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+            print(check_address)
+            if check_address == address:
                 return pubkey
-        except (ValueError, CBitcoinAddressError) as e:
+            check_address = PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
+            print(check_address)
+            if check_address == address:
+                return pubkey
+        except ValueError as e:
             raise exceptions.ComposeError(f"invalid pubkey: {pubkey}") from e
     raise exceptions.ComposeError(f"`{address}` pubkey not found in provided pubkeys")
 
@@ -42,11 +35,12 @@ def get_script(address, pubkeys=None):
     if script.is_multisig(address):
         signatures_required, addresses, signatures_possible = script.extract_array(address)
         pubkeys = [search_pubkey(address, pubkeys) for address in addresses]
-        pubkeys = [bytes.fromhex(pubkey) for pubkey in pubkeys]
-        return CScript([signatures_required] + pubkeys + [signatures_possible] + [OP_CHECKMULTISIG])
+        return Script(
+            [signatures_required] + pubkeys + [signatures_possible] + ["OP_CHECKMULTISIG"]
+        )
     if script.is_bech32(address):
-        return P2WPKHBitcoinAddress(address).to_scriptPubKey()
-    return CBitcoinAddress(address).to_scriptPubKey()
+        return P2wpkhAddress(address).to_script_pub_key()
+    return P2pkhAddress(address).to_script_pub_key()
 
 
 def get_default_value(address):
@@ -59,7 +53,7 @@ def perpare_non_data_outputs(destinations, pubkeys=None):
     outputs = []
     for address, value in destinations:
         output_value = value or get_default_value(address)
-        outputs.append(CTxOut(output_value, get_script(address, pubkeys)))
+        outputs.append(TxOutput(output_value, get_script(address, pubkeys)))
     return outputs
 
 
@@ -86,7 +80,7 @@ def prepare_opreturn_output(data, arc4_key=None):
     opreturn_data = config.PREFIX + data
     if arc4_key:
         opreturn_data = encrypt_data(opreturn_data, arc4_key)
-    return [CTxOut(0, CScript([OP_RETURN, opreturn_data]))]
+    return [TxOutput(0, Script(["OP_RETURN", b_to_h(opreturn_data)]))]
 
 
 def data_to_pubkey_pairs(data, arc4_key=None):
@@ -104,20 +98,19 @@ def data_to_pubkey_pairs(data, arc4_key=None):
             output_data = encrypt_data(output_data, arc4_key)
         data_pubkey_1 = make_fully_valid(output_data[:31])
         data_pubkey_2 = make_fully_valid(output_data[31:])
-        pubkey_pairs.append((data_pubkey_1, data_pubkey_2))
+        pubkey_pairs.append((b_to_h(data_pubkey_1), b_to_h(data_pubkey_2)))
     return pubkey_pairs
 
 
 def prepare_multisig_output(data, source, pubkeys, arc4_key=None):
     source_pubkey = search_pubkey(source, pubkeys)
-    dust_return_pubkey = binascii.unhexlify(source_pubkey)
     pubkey_pairs = data_to_pubkey_pairs(data, arc4_key)
     outputs = []
     for pubkey_pair in pubkey_pairs:
-        output_script = CScript(
-            [1, pubkey_pair[0], pubkey_pair[1], dust_return_pubkey, 3, OP_CHECKMULTISIG]
+        output_script = Script(
+            [1, pubkey_pair[0], pubkey_pair[1], source_pubkey, 3, "OP_CHECKMULTISIG"]
         )
-        outputs.append(CTxOut(config.DEFAULT_MULTISIG_DUST_SIZE, output_script))
+        outputs.append(TxOutput(config.DEFAULT_MULTISIG_DUST_SIZE, output_script))
     return outputs
 
 
@@ -179,7 +172,7 @@ def select_utxos(unspent_list, target_amount):
 def utxos_to_txins(utxos: list):
     inputs = []
     for utxo in utxos:
-        inputs.append(CTxIn(CScript([bytes.fromhex(utxo["txid"]), utxo["vout"]])))
+        inputs.append(TxInput(utxo["txid"], utxo["vout"]))
     return inputs
 
 
@@ -210,7 +203,7 @@ def prepare_transaction(source, outputs, pubkeys, unspent_list, desired_fee):
     change = input_total - target_amount
     change_outputs = []
     if change > get_minimum_change(source):
-        change_outputs.append(CTxOut(change, get_script(source, pubkeys)))
+        change_outputs.append(TxOutput(change, get_script(source, pubkeys)))
     else:
         change = 0
     return inputs, change_outputs, input_total
@@ -220,7 +213,7 @@ def construct_transaction(source, outputs, pubkeys, unspent_list, desired_fee):
     inputs, change_outputs, _input_total = prepare_transaction(
         source, outputs, pubkeys, unspent_list, desired_fee
     )
-    tx = CTransaction(inputs, outputs + change_outputs)
+    tx = Transaction(inputs, outputs + change_outputs)
     return tx
 
 
@@ -255,7 +248,7 @@ def compose_transaction(
     outputs = prepare_outputs(
         source, destinations, data, pubkeys, encoding, arc4_key=inputs[0]["txid"]
     )
-    tx = CTransaction(inputs, outputs + change_outputs)
+    tx = Transaction(inputs, outputs + change_outputs)
     btc_out = sum(output.nValue for output in outputs)
     btc_change = sum(change_output.nValue for change_output in change_outputs)
 

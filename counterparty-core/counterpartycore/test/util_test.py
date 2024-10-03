@@ -22,6 +22,7 @@ import apsw
 import bitcoin as bitcoinlib
 import pycoin
 import pytest
+from bitcoinutils.transactions import TxOutput
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 CURR_DIR = os.path.dirname(
@@ -904,7 +905,13 @@ def check_outputs(
 
         if outputs is not None:
             try:
-                assert outputs == test_outputs
+                if isinstance(outputs, TxOutput):
+                    assert outputs.to_bytes() == test_outputs.to_bytes()
+                elif isinstance(outputs, list) and isinstance(outputs[0], TxOutput):
+                    for i, output in enumerate(outputs):
+                        assert output.to_bytes() == test_outputs[i].to_bytes()
+                else:
+                    assert outputs == test_outputs
             except AssertionError:
                 if pytest_config.getoption("verbose") >= 2:
                     msg = (
