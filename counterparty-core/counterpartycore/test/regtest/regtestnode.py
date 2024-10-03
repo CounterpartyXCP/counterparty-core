@@ -42,6 +42,10 @@ class RegtestNode:
     def api_call(self, url):
         return json.loads(sh.curl(f"http://localhost:24000/v2/{url}").strip())
 
+    def get_mempool_event_count(self):
+        result = self.api_call("mempool/events")
+        return result["result_count"]
+
     def wait_for_bitcoind(self):
         while True:
             try:
@@ -62,12 +66,15 @@ class RegtestNode:
             os.remove(regtest_protocole_file)
 
     def broadcast_transaction(self, signed_transaction, no_confirmation=False, retry=0):
+        mempool_event_count_before = self.get_mempool_event_count()
         tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
         if not no_confirmation:
             block_hash, block_time = self.mine_blocks(1)
         else:
             block_hash, block_time = "mempool", 9999999
-            time.sleep(5)
+            while self.get_mempool_event_count() == mempool_event_count_before:
+                print("waiting for mempool event parsing...")
+                time.sleep(5)
         self.tx_index += 1
         self.wait_for_counterparty_server()
         return tx_hash, block_hash, block_time
