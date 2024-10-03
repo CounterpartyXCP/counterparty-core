@@ -134,6 +134,10 @@ def createrawtransaction(inputs, outputs):
     return rpc("createrawtransaction", [inputs, outputs])
 
 
+def getrawmempool(verbose=False):
+    return rpc("getrawmempool", [True if verbose else False])
+
+
 @functools.lru_cache(maxsize=1000)
 def get_utxo_address_and_value(utxo):
     tx_hash = utxo.split(":")[0]

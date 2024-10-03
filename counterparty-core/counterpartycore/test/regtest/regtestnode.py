@@ -196,6 +196,7 @@ class RegtestNode:
             "-zmqpubsequence=tcp://0.0.0.0:29332",
             "-zmqpubrawblock=tcp://0.0.0.0:29333",
             "-fallbackfee=0.0002",
+            "-acceptnonstdtxn",
             f"-datadir={self.datadir}",
             _bg=True,
             _out=sys.stdout,
@@ -254,7 +255,8 @@ class RegtestNode:
                 printed_line_count = print_server_output(self, printed_line_count)
                 time.sleep(1)
 
-        self.counterparty_server_process.wait()
+        while True:
+            time.sleep(1)
 
     def stop(self):
         print("Stopping...")
@@ -272,6 +274,54 @@ class RegtestNode:
         except Exception as e:
             print(e)
             pass
+
+    def get_node_state(self):
+        return {
+            "last_block": self.api_call("blocks/last")["result"],
+            "last_event": self.api_call("events?limit=1")["result"],
+        }
+
+    def check_node_state(self, previous_state):
+        self.server_out = StringIO()
+        self.counterparty_server_process = sh.counterparty_server(
+            "--regtest",
+            f"--database-file={self.datadir}/counterparty.db",
+            "-vv",
+            "start",
+            _bg=True,
+            _out=self.server_out,
+            _err_to_out=True,
+        )
+        self.wait_for_counterparty_follower()
+        time.sleep(2)
+        state = self.get_node_state()
+        if state["last_block"] != previous_state["last_block"]:
+            raise Exception("Reparse failed, last block is different")
+        if state["last_event"] != previous_state["last_event"]:
+            raise Exception("Reparse failed, last event is different")
+
+    def test_command(self, command):
+        state_before = self.get_node_state()
+        self.counterparty_server_process.terminate()  # noqa
+        self.counterparty_server_process.wait()
+        print(f"Running `{command}`...")
+        sh.counterparty_server(
+            "--regtest",
+            f"--database-file={self.datadir}/counterparty.db",
+            "-vv",
+            command,
+            0,
+            _out=sys.stdout,
+            _err_to_out=True,
+        )
+        self.check_node_state(state_before)
+        print(f"`{command}` successful")
+
+    def reparse(self):
+        self.test_command("reparse")
+
+    def rollback(self):
+        self.test_command("rollback")
 
 
 class RegtestNodeThread(threading.Thread):

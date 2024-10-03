@@ -15,7 +15,7 @@ x-addrindexrs-common: &addrindexrs-common
   restart: unless-stopped
 
 x-counterparty-common: &counterparty-common
-  image: counterparty/counterparty:v10.4.1
+  image: counterparty/counterparty:v10.4.2
   stop_grace_period: 1m
   volumes:
     - data:/root/.bitcoin

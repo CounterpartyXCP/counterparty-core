@@ -19,7 +19,7 @@ from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import arc4, config, database, ledger, log, script, util
+from counterpartycore.lib import arc4, config, database, exceptions, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.test import util_test
@@ -598,6 +598,22 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def mocked_get_utxo_value(txid, vout):
         return 999
 
+    def determine_encoding(
+        data, desired_encoding="auto", op_return_max_size=config.OP_RETURN_MAX_SIZE
+    ):
+        if desired_encoding == "auto":
+            if len(data) + len(config.PREFIX) <= op_return_max_size:
+                encoding = "opreturn"
+            else:
+                encoding = "multisig"
+        else:
+            encoding = desired_encoding
+
+        if encoding not in ("pubkeyhash", "multisig", "opreturn", "p2sh"):
+            raise exceptions.TransactionError("Unknown encoding‐scheme.")
+
+        return encoding
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
@@ -644,3 +660,4 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.get_utxo_value", mocked_get_utxo_value
     )
+    monkeypatch.setattr("counterpartycore.lib.transaction.determine_encoding", determine_encoding)
