@@ -1956,7 +1956,7 @@ def get_valid_assets_by_issuer(
     db, address: str, named: bool = None, cursor: str = None, limit: int = 100, offset: int = None
 ):
     """
-    Returns the valid assets of an issuer
+    Returns the valid assets issued by an address
     :param str address: The issuer to return (e.g. $ADDRESS_1)
     :param bool named: Whether to return only named assets (e.g. true)
     :param str cursor: The last index of the assets to return
@@ -1969,6 +1969,64 @@ def get_valid_assets_by_issuer(
             where["asset__notlike"] = "A%"
         else:
             where["asset__like"] = "A%"
+
+    return select_rows(
+        db,
+        "assets_info",
+        where=where,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_valid_assets_by_owner(
+    db, address: str, named: bool = None, cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the valid assets owned by an address
+    :param str address: The owner to return (e.g. $ADDRESS_1)
+    :param bool named: Whether to return only named assets (e.g. true)
+    :param str cursor: The last index of the assets to return
+    :param int limit: The maximum number of assets to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    where = {"owner": address}
+    if named is not None:
+        if named:
+            where["asset__notlike"] = "A%"
+        else:
+            where["asset__like"] = "A%"
+
+    return select_rows(
+        db,
+        "assets_info",
+        where=where,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_valid_assets_by_issuer_or_owner(
+    db, address: str, named: bool = None, cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the valid assets issued or owned by an address
+    :param str address: The issuer or owner to return (e.g. $ADDRESS_1)
+    :param bool named: Whether to return only named assets (e.g. true)
+    :param str cursor: The last index of the assets to return
+    :param int limit: The maximum number of assets to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    where = [{"issuer": address}, {"owner": address}]
+    if named is not None:
+        if named:
+            for p in where:
+                p["asset__notlike"] = "A%"
+        else:
+            for p in where:
+                p["asset__like"] = "A%"
 
     return select_rows(
         db,
