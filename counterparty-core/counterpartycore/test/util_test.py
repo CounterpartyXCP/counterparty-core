@@ -34,6 +34,7 @@ from counterpartycore.lib import (  # noqa: E402
     backend,
     blocks,
     check,
+    composer,  # noqa
     config,
     database,
     deserialize,
