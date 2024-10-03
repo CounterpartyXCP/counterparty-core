@@ -700,18 +700,35 @@ def get_events_by_addresses(
 
 
 def get_all_mempool_events(
-    db, event_name: str = None, cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    event_name: str = None,
+    addresses: str = None,
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns all mempool events
     :param str event_name: Comma separated list of events to return
+    :param str addresses: Comma separated list of addresses to return
     :param str cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    where = None
+    where = []
     if event_name:
-        where = [{"event": event} for event in event_name.split(",")]
+        if addresses:
+            for address in addresses.split(","):
+                where = [
+                    {"event": event, "addresses__like": f"%{address}%"}
+                    for event in event_name.split(",")
+                ]
+        else:
+            where = [{"event": event} for event in event_name.split(",")]
+    elif addresses:
+        for address in addresses.split(","):
+            where.append({"addresses__like": f"%{address}%"})
+
     select = "tx_hash, event, bindings AS params, timestamp"
     return select_rows(
         db, "mempool", where=where, last_cursor=cursor, limit=limit, offset=offset, select=select

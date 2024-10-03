@@ -16212,6 +16212,13 @@
                         "description": "Comma separated list of events to return"
                     },
                     {
+                        "name": "addresses",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "Comma separated list of addresses to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
