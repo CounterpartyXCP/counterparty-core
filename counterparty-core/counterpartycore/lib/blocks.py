@@ -22,6 +22,7 @@ from counterpartycore.lib import (  # noqa: E402
     gas,
     ledger,
     log,
+    mempool,
     message_type,
     util,
 )
@@ -41,7 +42,6 @@ from .messages import (  # noqa: E402
     fairmint,
     fairminter,
     issuance,
-    mempool,
     order,
     rps,
     rpsresolve,
