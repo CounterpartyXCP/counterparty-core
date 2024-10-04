@@ -534,9 +534,18 @@ def rollback_assets_info(api_db, event):
 
 
 def execute_event(api_db, event):
+    cursor = api_db.cursor()
     sql, sql_bindings = event_to_sql(event)
     if sql is not None:
-        cursor = api_db.cursor()
+        # check if the transaction is already here from the mempool
+        if event["event"] == "NEW_TRANSACTION":
+            check_tx_sql = "SELECT * FROM transactions WHERE tx_hash = :tx_hash"
+            if fetch_one(
+                api_db,
+                check_tx_sql,
+                {"tx_hash": event["tx_hash"], "block_index": config.MEMPOOL_BLOCK_INDEX},
+            ):
+                clean_mempool(api_db)
         cursor.execute(sql, sql_bindings)
         if event["command"] == "insert":
             cursor.execute("SELECT last_insert_rowid() AS rowid")
@@ -642,7 +651,7 @@ def parse_event(api_db, event, catching_up=False):
         return
     with api_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
-        if event["event"] == "NEW_BLOCK" and not catching_up:
+        if event["event"] == "NEW_BLOCK":
             clean_mempool(api_db)
         event["insert_rowid"] = execute_event(api_db, event)
         update_balances(api_db, event)
@@ -653,7 +662,7 @@ def parse_event(api_db, event, catching_up=False):
         update_fairminters(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
-        if event["event"] == "BLOCK_PARSED" and not catching_up:
+        if event["event"] == "BLOCK_PARSED":
             synchronize_mempool(api_db, api_db)
 
 
@@ -742,7 +751,7 @@ def parse_next_event(api_db, ledger_db):
         next_event_sql = "SELECT * FROM messages ORDER BY message_index ASC LIMIT 1"
         next_event = fetch_one(ledger_db, next_event_sql)
         parse_event(api_db, next_event)
-        return
+        return next_event
 
     if last_ledger_event["message_index"] > last_api_event["message_index"]:
         next_event_sql = (
@@ -750,7 +759,7 @@ def parse_next_event(api_db, ledger_db):
         )
         next_event = fetch_one(ledger_db, next_event_sql, (last_api_event["message_index"],))
         parse_event(api_db, next_event)
-        return
+        return next_event
 
     raise exceptions.NoEventToParse("No event to parse")
 
@@ -903,12 +912,16 @@ class APIWatcher(Thread):
     def follow(self):
         refresh_xcp_supply(self.ledger_db, self.api_db)
         while not self.stopping and not self.stopped:
+            last_parsed_event = None
             try:
-                parse_next_event(self.api_db, self.ledger_db)
+                last_parsed_event = parse_next_event(self.api_db, self.ledger_db)
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
                 time.sleep(1)
-            if time.time() - self.last_mempool_sync > 10:
+            # let's not sync the mempool when parsing a block
+            if time.time() - self.last_mempool_sync > 10 and (
+                last_parsed_event is None or last_parsed_event["event"] == "BLOCK_PARSED"
+            ):
                 synchronize_mempool(self.api_db, self.ledger_db)
                 self.last_mempool_sync = time.time()
         self.stopped = True

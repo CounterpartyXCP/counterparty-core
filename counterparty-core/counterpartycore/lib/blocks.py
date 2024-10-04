@@ -41,6 +41,7 @@ from .messages import (  # noqa: E402
     fairmint,
     fairminter,
     issuance,
+    mempool,
     order,
     rps,
     rpsresolve,
@@ -1334,6 +1335,7 @@ def catch_up(db, check_asset_conservation=True):
 
         # Parse the current block
         tx_index = parse_new_block(db, decoded_block, tx_index=tx_index)
+        mempool.clean_mempool(db)
 
         parsed_blocks += 1
         formatted_duration = util.format_duration(time.time() - start_time)
