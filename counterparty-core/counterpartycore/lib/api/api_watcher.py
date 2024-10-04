@@ -842,6 +842,12 @@ def synchronize_mempool(api_db, ledger_db):
         pass
 
 
+def refresh_xcp_supply(ledger_db, api_db):
+    xcp_supply = ledger.xcp_supply(ledger_db)
+    cursor = api_db.cursor()
+    cursor.execute("UPDATE assets_info SET supply = ? WHERE asset = 'XCP'", (xcp_supply,))
+
+
 class APIWatcher(Thread):
     def __init__(self):
         Thread.__init__(self)
@@ -895,6 +901,7 @@ class APIWatcher(Thread):
         self.last_mempool_sync = 0
 
     def follow(self):
+        refresh_xcp_supply(self.ledger_db, self.api_db)
         while not self.stopping and not self.stopped:
             try:
                 parse_next_event(self.api_db, self.ledger_db)
