@@ -149,6 +149,10 @@ SCENARIO = [
                     },
                 },
             },
+            {
+                "url": "healthz",
+                "result": {"status": "Healthy"},
+            },
         ],
     },
 ]
