@@ -116,7 +116,13 @@ class APSWConnectionPool:
             else:
                 # Too much connections in the pool: closing connection
                 logger.warning("Closing connection due to pool size limit (%s).", self.name)
-                db.close()
+                try:
+                    db.close()
+                except apsw.ThreadingViolationError:
+                    # This should never happen, and yet it has happened..
+                    # let's ignore this harmless error so as not to return a 500 error to the user.
+                    logger.trace("ThreadingViolationError occurred while closing connection.")
+                    pass
 
     def close(self):
         logger.trace(

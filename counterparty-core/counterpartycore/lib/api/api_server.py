@@ -158,6 +158,7 @@ def return_result(
     response = flask.make_response(to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
+    response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
     response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
     if not config.API_NO_ALLOW_CORS:
@@ -311,6 +312,7 @@ def handle_route(**kwargs):
             result = execute_api_function(db, rule, route, function_args)
     except (
         exceptions.JSONRPCInvalidRequest,
+        flask.wrappers.BadRequest,
         exceptions.TransactionError,
         exceptions.BalanceError,
         exceptions.UnknownPubKeyError,
