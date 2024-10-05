@@ -2,12 +2,14 @@ import argparse
 import logging
 import multiprocessing
 import os
+import sys
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
 from threading import Thread, Timer
 
 import flask
+import gunicorn.app.base
 import requests
 from bitcoin.wallet import CBitcoinAddressError
 from counterpartycore import server
@@ -32,9 +34,9 @@ from counterpartycore.lib.api.util import (
 from counterpartycore.lib.database import APIDBConnectionPool, get_db_connection
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
+from gunicorn.arbiter import Arbiter
 from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
-from werkzeug.serving import make_server
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -371,15 +373,7 @@ def handle_doc():
     return flask.send_file(BLUEPRINT_FILEPATH)
 
 
-def run_api_server(args, interruped_value, server_ready_value):
-    sentry.init()
-    # Initialise log and config
-    server.initialise_log_and_config(argparse.Namespace(**args))
-
-    watcher = api_watcher.APIWatcher()
-    watcher.start()
-
-    logger.info("Starting API Server...")
+def init_flask_app():
     app = Flask(config.APP_NAME)
     with app.app_context():
         # Initialise the API access log
@@ -402,35 +396,95 @@ def run_api_server(args, interruped_value, server_ready_value):
             app.add_url_rule(path, view_func=handle_route, methods=methods, strict_slashes=False)
 
         app.register_error_handler(404, handle_not_found)
+
+    return app
+
+
+class StandaloneApplication(gunicorn.app.base.BaseApplication):
+    def __init__(self, app, options=None, args=None):
+        self.options = options or {}
+        self.application = app
+        self.args = args
+        self.arbiter = None
+        self.timer_db = None
+        super().__init__()
+
+    def load_config(self):
+        config = {
+            key: value
+            for key, value in self.options.items()
+            if key in self.cfg.settings and value is not None
+        }
+        for key, value in config.items():
+            self.cfg.set(key.lower(), value)
+
+    def start_refresh_backend_height(self):
         # run the scheduler to refresh the backend height
         # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
-        timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
-        if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
-            refresh_backend_height(timer_db, start=True)
+        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        if (
+            "no_refresh_backend_height" not in self.args
+            or not self.args["no_refresh_backend_height"]
+        ):
+            refresh_backend_height(self.timer_db, start=True)
         else:
-            refresh_current_block(timer_db)
+            refresh_current_block(self.timer_db)
             global BACKEND_HEIGHT  # noqa F811
             BACKEND_HEIGHT = 0
+
+    def load(self):
+        self.start_refresh_backend_height()
+        return self.application
+
+    def run(self):
+        try:
+            self.arbiter = Arbiter(self)
+            self.arbiter.run()
+        except RuntimeError as e:
+            print("\nError: %s\n" % e, file=sys.stderr)
+            sys.stderr.flush()
+            sys.exit(1)
+
+    def stop(self):
+        if BACKEND_HEIGHT_TIMER:
+            BACKEND_HEIGHT_TIMER.cancel()
+        if self.timer_db:
+            self.timer_db.close()
+        print("Stopping Gunincorn Server...")
+        if self.arbiter:
+            self.arbiter.halt()
+
+
+def run_api_server(args, interruped_value, server_ready_value):
+    sentry.init()
+    # Initialise log and config
+    server.initialise_log_and_config(argparse.Namespace(**args))
+
+    watcher = api_watcher.APIWatcher()
+    watcher.start()
+
+    logger.info("Starting API Server...")
+    app = init_flask_app()
+
     try:
         # Init the HTTP Server.
-        werkzeug_server = make_server(config.API_HOST, config.API_PORT, app, threaded=True)
-        ParentProcessChecker(interruped_value, werkzeug_server).start()
+        options = {
+            "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
+            "workers": 1,
+        }
+        gunicorn_server = StandaloneApplication(app, options, args)
+        ParentProcessChecker(interruped_value, gunicorn_server).start()
         app.app_context().push()
         # Run app server (blocking)
         server_ready_value.value = 1
-        werkzeug_server.serve_forever()
+        gunicorn_server.run()
     except KeyboardInterrupt:
         logger.trace("Keyboard Interrupt!")
     finally:
         logger.trace("Shutting down API Server...")
         watcher.stop()
         watcher.join()
-        werkzeug_server.shutdown()
-        # ensure timer is cancelled
-        if BACKEND_HEIGHT_TIMER:
-            BACKEND_HEIGHT_TIMER.cancel()
-        if timer_db:
-            timer_db.close()
+        gunicorn_server.stop()
         APIDBConnectionPool().close()
 
 
@@ -464,10 +518,10 @@ def refresh_backend_height(db, start=False):
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
 class ParentProcessChecker(Thread):
-    def __init__(self, interruped_value, werkzeug_server):
+    def __init__(self, interruped_value, gunicorn_server):
         super().__init__()
         self.interruped_value = interruped_value
-        self.werkzeug_server = werkzeug_server
+        self.gunicorn_server = gunicorn_server
 
     def run(self):
         try:
@@ -477,7 +531,7 @@ class ParentProcessChecker(Thread):
                 else:
                     logger.trace("Parent process is dead. Exiting...")
                     break
-            self.werkzeug_server.shutdown()
+            self.gunicorn_server.stop()
         except KeyboardInterrupt:
             pass
 
