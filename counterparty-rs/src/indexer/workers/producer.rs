@@ -56,7 +56,7 @@ where
 pub fn new<C, D, B>(
     client: C,
     db: D,
-    start_height: u32,
+    initial_height: u32,
     reorg_window: u32,
 ) -> impl Fn(
     Receiver<Box<PipelineDataInitial>>,
@@ -70,6 +70,7 @@ where
     B: BlockHasPrevBlockHash,
 {
     move |_, tx, stopper| {
+        let mut start_height = initial_height;
         let mut height = start_height;
         let mut target_height = if height > 0 { height - 1 } else { 0 };
         let mut reorg_detection_enabled = false;
@@ -111,6 +112,7 @@ where
 
                     db.write_batch(|batch| db.rollback_to_height(batch, last_matching_height))?;
                     height = last_matching_height + 1;
+                    start_height = height;
                     target_height = height - 1;
                     reorg_detection_enabled = false;
                     continue;
