@@ -18,6 +18,7 @@ This release is not a protocol change and does not require a database reparse.
 - Tweak mempool cleaning in API Watcher
 - Fix `AttributeError` on `get_transactions` (API v1)
 - Catch `BadRequest` error (API v2)
+- Fix off-by-one error in RSFetcher reorg logic
 
 ## Codebase
 
