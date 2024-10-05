@@ -144,21 +144,4 @@ Order match cancelled XCP / BTC (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef3
 Bet 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef canceled [expired]
 Bet Expiration 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef
 Checking for conservation of assets.
-XCP has been conserved (6037.818479 XCP both issued and held)
-A160361285792733729 has been conserved (0.0000005 A160361285792733729 both issued and held)
-A95428956661682277 has been conserved (1.0 A95428956661682277 both issued and held)
-CALLABLE has been conserved (0.00001 CALLABLE both issued and held)
-DIVIDEND has been conserved (0.000001 DIVIDEND both issued and held)
-DIVISIBLE has been conserved (1000.0 DIVISIBLE both issued and held)
-FREEFAIRMIN has been conserved (0.0000001 FREEFAIRMIN both issued and held)
-LOCKED has been conserved (0.00001 LOCKED both issued and held)
-LOCKEDPREV has been conserved (0.00001 LOCKEDPREV both issued and held)
-MAXI has been conserved (92233720368.54775807 MAXI both issued and held)
-NODIVISIBLE has been conserved (1000 NODIVISIBLE both issued and held)
-PAIDFAIRMIN has been conserved (0.0 PAIDFAIRMIN both issued and held)
-PARENT has been conserved (1.0 PARENT both issued and held)
-PAYTOSCRIPT has been conserved (1000 PAYTOSCRIPT both issued and held)
-QAIDFAIRMIN has been conserved (0.0000002 QAIDFAIRMIN both issued and held)
-RAIDFAIRMIN has been conserved (0.0000002 RAIDFAIRMIN both issued and held)
-TESTDISP has been conserved (1000 TESTDISP both issued and held)
 All assets have been conserved.

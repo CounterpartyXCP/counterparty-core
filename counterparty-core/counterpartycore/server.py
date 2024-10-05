@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import _thread
 import binascii
 import decimal
 import logging
@@ -8,6 +9,7 @@ import signal
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import urllib
 from urllib.parse import quote_plus as urlencode
@@ -658,12 +660,44 @@ def connect_to_backend():
         backend.bitcoind.getblockcount()
 
 
+class AssetConservationChecker(threading.Thread):
+    def __init__(self):
+        self.last_check = 0
+        threading.Thread.__init__(self)
+        self.db = None
+        self.stopped = False
+        self.daemon = True
+        self.running = False
+
+    def run(self):
+        self.db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
+        while not self.stopped:
+            self.running = True
+            if time.time() - self.last_check > 60 * 60 * 12:
+                try:
+                    check.asset_conservation(self.db)
+                except check.SanityError as e:
+                    logger.error("Asset conservation check failed: %s" % e)
+                    _thread.interrupt_main()
+                self.last_check = time.time()
+            time.sleep(1)
+        self.running = False
+
+    def stop(self):
+        self.stopped = True
+        while self.running:
+            time.sleep(0.1)
+        if self.db:
+            self.db.close()
+
+
 def start_all(args):
     api_status_poller = None
     api_server_v1 = None
     api_server_v2 = None
     telemetry_daemon = None
     follower_daemon = None
+    asset_conservation_checker = None
     db = None
 
     try:
@@ -704,6 +738,10 @@ def start_all(args):
         api_server_v1.daemon = True
         api_server_v1.start()
 
+        # Asset conservation checker
+        asset_conservation_checker = AssetConservationChecker()
+        asset_conservation_checker.start()
+
         # catch up
         blocks.catch_up(db)
 
@@ -724,6 +762,8 @@ def start_all(args):
             api_status_poller.stop()
         if api_server_v1:
             api_server_v1.stop()
+        if asset_conservation_checker:
+            asset_conservation_checker.stop()
         if follower_daemon:
             follower_daemon.stop()
         if not config.NO_TELEMETRY:
