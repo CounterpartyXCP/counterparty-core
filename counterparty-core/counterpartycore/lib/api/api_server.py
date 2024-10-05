@@ -310,6 +310,7 @@ def handle_route(**kwargs):
             result = execute_api_function(db, rule, route, function_args)
     except (
         exceptions.JSONRPCInvalidRequest,
+        flask.wrappers.BadRequest,
         exceptions.TransactionError,
         exceptions.BalanceError,
         exceptions.UnknownPubKeyError,
