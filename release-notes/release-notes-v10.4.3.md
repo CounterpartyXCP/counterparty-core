@@ -1,12 +1,14 @@
-# Release Notes - Counterparty Core v10.4.3 (2024-??-??)
+# Release Notes - Counterparty Core v10.4.3 (2024-10-05)
+
+This is a minor release with a number of bugfixes and minor improvements to the API.
 
 
 # Upgrading
 
-This release is not a protocol change and does not require any reparsing. A regression in the v1 API has been resolved.
+This release is not a protocol change and does not require a database reparse.
+
 
 # ChangeLog
-
 
 ## Bugfixes
 
@@ -19,17 +21,17 @@ This release is not a protocol change and does not require any reparsing. A regr
 
 ## Codebase
 
-- Add `regtest` and `mainnet` test for `healthz` endpoint
-- Execute `check.asset_conservation()` in the background in a separate thread, at startup, and then every 12 hours
+- Add `regtest` and `mainnet` test for the `healthz` endpoint
+- Re-enable `check.asset_conservation()` and run it in the background, in a separate thread, both at startup and every 12 hours
 
 ## API
 
-- Use of the Github repository for the Blueprint URL
-- Addition of the `/v2/routes` route in the `/v2/` result
-- Addition of the `addresses` argument for the `/v2/mempool/events` route
-- `/v2/transactions/unpack` now supports prefixed data
-- `/v2/addresses/<address>/assets` now returns assets issued or owned by `<address>`
-- Addition of the following routes:
+- Use the GitHub repository for the Blueprint URL
+- Add the `/v2/routes` route in the `/v2/` result
+- Add the `addresses` argument to the `/v2/mempool/events` route
+- Support prefixed data for `/v2/transactions/unpack`
+- Return assets issued and owned by `<address>` in `/v2/addresses/<address>/assets`
+- Add the following routes:
     - `/v2/addresses/<address>/assets/issued`
     - `/v2/addresses/<address>/assets/owned`
 
