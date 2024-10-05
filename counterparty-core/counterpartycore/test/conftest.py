@@ -166,6 +166,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("skip", [not metafunc.config.getoption("comparehashes")])
     elif metafunc.function.__name__ == "test_mainnet_api_db":
         metafunc.parametrize("skip", [not metafunc.config.getoption("testapidb")])
+    elif metafunc.function.__name__ == "test_mainnet_healthz":
+        metafunc.parametrize("skip", [not metafunc.config.getoption("testapidb")])
 
 
 def pytest_addoption(parser):

@@ -3660,6 +3660,392 @@
         "next_cursor": null,
         "result_count": 11
     },
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/assets/issued?verbose=true": {
+        "result": [
+            {
+                "asset": "QAIDFAIRMIN",
+                "asset_id": "2260369790942965",
+                "asset_longname": "",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 20,
+                "description": "",
+                "first_issuance_block_index": 310503,
+                "last_issuance_block_index": 310503,
+                "confirmed": true,
+                "first_issuance_block_time": 310503000,
+                "last_issuance_block_time": 310503000,
+                "supply_normalized": "0.00000020"
+            },
+            {
+                "asset": "RAIDFAIRMIN",
+                "asset_id": "2401536886596341",
+                "asset_longname": "",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 20,
+                "description": "",
+                "first_issuance_block_index": 310502,
+                "last_issuance_block_index": 310502,
+                "confirmed": true,
+                "first_issuance_block_time": 310502000,
+                "last_issuance_block_time": 310502000,
+                "supply_normalized": "0.00000020"
+            },
+            {
+                "asset": "PAIDFAIRMIN",
+                "asset_id": "2119202695289589",
+                "asset_longname": "",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 0,
+                "description": "",
+                "first_issuance_block_index": 310500,
+                "last_issuance_block_index": 310500,
+                "confirmed": true,
+                "first_issuance_block_time": 310500000,
+                "last_issuance_block_time": 310500000,
+                "supply_normalized": "0.00000000"
+            },
+            {
+                "asset": "FREEFAIRMIN",
+                "asset_id": "799006024850293",
+                "asset_longname": "",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 10,
+                "description": "",
+                "first_issuance_block_index": 310499,
+                "last_issuance_block_index": 310501,
+                "confirmed": true,
+                "first_issuance_block_time": 310499000,
+                "last_issuance_block_time": 310501000,
+                "supply_normalized": "0.00000010"
+            },
+            {
+                "asset": "A95428956661682277",
+                "asset_id": "95428956661682277",
+                "asset_longname": "PARENT.already.issued",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 100000000,
+                "description": "Child of parent",
+                "first_issuance_block_index": 310498,
+                "last_issuance_block_index": 310498,
+                "confirmed": true,
+                "first_issuance_block_time": 310498000,
+                "last_issuance_block_time": 310498000,
+                "supply_normalized": "1.00000000"
+            },
+            {
+                "asset": "PARENT",
+                "asset_id": "178522493",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 100000000,
+                "description": "Parent asset",
+                "first_issuance_block_index": 310497,
+                "last_issuance_block_index": 310497,
+                "confirmed": true,
+                "first_issuance_block_time": 310497000,
+                "last_issuance_block_time": 310497000,
+                "supply_normalized": "1.00000000"
+            },
+            {
+                "asset": "MAXI",
+                "asset_id": "211518",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 9223372036854775807,
+                "description": "Maximum quantity",
+                "first_issuance_block_index": 310016,
+                "last_issuance_block_index": 310016,
+                "confirmed": true,
+                "first_issuance_block_time": 310016000,
+                "last_issuance_block_time": 310016000,
+                "supply_normalized": "92233720000.00000000"
+            },
+            {
+                "asset": "LOCKED",
+                "asset_id": "137134819",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": true,
+                "supply": 1000,
+                "description": "Locked asset",
+                "first_issuance_block_index": 310004,
+                "last_issuance_block_index": 310005,
+                "confirmed": true,
+                "first_issuance_block_time": 310004000,
+                "last_issuance_block_time": 310005000,
+                "supply_normalized": "0.00001000"
+            },
+            {
+                "asset": "CALLABLE",
+                "asset_id": "16199343190",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 1000,
+                "description": "Callable asset",
+                "first_issuance_block_index": 310003,
+                "last_issuance_block_index": 310003,
+                "confirmed": true,
+                "first_issuance_block_time": 310003000,
+                "last_issuance_block_time": 310003000,
+                "supply_normalized": "0.00001000"
+            },
+            {
+                "asset": "NODIVISIBLE",
+                "asset_id": "1911882621324134",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": false,
+                "locked": false,
+                "supply": 1000,
+                "description": "No divisible asset",
+                "first_issuance_block_index": 310002,
+                "last_issuance_block_index": 310002,
+                "confirmed": true,
+                "first_issuance_block_time": 310002000,
+                "last_issuance_block_time": 310002000,
+                "supply_normalized": "1000"
+            },
+            {
+                "asset": "DIVISIBLE",
+                "asset_id": "697326324582",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 100000000000,
+                "description": "Divisible asset",
+                "first_issuance_block_index": 310001,
+                "last_issuance_block_index": 310001,
+                "confirmed": true,
+                "first_issuance_block_time": 310001000,
+                "last_issuance_block_time": 310001000,
+                "supply_normalized": "1000.00000000"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 11
+    },
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/assets/owned?verbose=true": {
+        "result": [
+            {
+                "asset": "QAIDFAIRMIN",
+                "asset_id": "2260369790942965",
+                "asset_longname": "",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 20,
+                "description": "",
+                "first_issuance_block_index": 310503,
+                "last_issuance_block_index": 310503,
+                "confirmed": true,
+                "first_issuance_block_time": 310503000,
+                "last_issuance_block_time": 310503000,
+                "supply_normalized": "0.00000020"
+            },
+            {
+                "asset": "RAIDFAIRMIN",
+                "asset_id": "2401536886596341",
+                "asset_longname": "",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 20,
+                "description": "",
+                "first_issuance_block_index": 310502,
+                "last_issuance_block_index": 310502,
+                "confirmed": true,
+                "first_issuance_block_time": 310502000,
+                "last_issuance_block_time": 310502000,
+                "supply_normalized": "0.00000020"
+            },
+            {
+                "asset": "PAIDFAIRMIN",
+                "asset_id": "2119202695289589",
+                "asset_longname": "",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 0,
+                "description": "",
+                "first_issuance_block_index": 310500,
+                "last_issuance_block_index": 310500,
+                "confirmed": true,
+                "first_issuance_block_time": 310500000,
+                "last_issuance_block_time": 310500000,
+                "supply_normalized": "0.00000000"
+            },
+            {
+                "asset": "FREEFAIRMIN",
+                "asset_id": "799006024850293",
+                "asset_longname": "",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 10,
+                "description": "",
+                "first_issuance_block_index": 310499,
+                "last_issuance_block_index": 310501,
+                "confirmed": true,
+                "first_issuance_block_time": 310499000,
+                "last_issuance_block_time": 310501000,
+                "supply_normalized": "0.00000010"
+            },
+            {
+                "asset": "A95428956661682277",
+                "asset_id": "95428956661682277",
+                "asset_longname": "PARENT.already.issued",
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 100000000,
+                "description": "Child of parent",
+                "first_issuance_block_index": 310498,
+                "last_issuance_block_index": 310498,
+                "confirmed": true,
+                "first_issuance_block_time": 310498000,
+                "last_issuance_block_time": 310498000,
+                "supply_normalized": "1.00000000"
+            },
+            {
+                "asset": "PARENT",
+                "asset_id": "178522493",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 100000000,
+                "description": "Parent asset",
+                "first_issuance_block_index": 310497,
+                "last_issuance_block_index": 310497,
+                "confirmed": true,
+                "first_issuance_block_time": 310497000,
+                "last_issuance_block_time": 310497000,
+                "supply_normalized": "1.00000000"
+            },
+            {
+                "asset": "MAXI",
+                "asset_id": "211518",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 9223372036854775807,
+                "description": "Maximum quantity",
+                "first_issuance_block_index": 310016,
+                "last_issuance_block_index": 310016,
+                "confirmed": true,
+                "first_issuance_block_time": 310016000,
+                "last_issuance_block_time": 310016000,
+                "supply_normalized": "92233720000.00000000"
+            },
+            {
+                "asset": "LOCKED",
+                "asset_id": "137134819",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": true,
+                "supply": 1000,
+                "description": "Locked asset",
+                "first_issuance_block_index": 310004,
+                "last_issuance_block_index": 310005,
+                "confirmed": true,
+                "first_issuance_block_time": 310004000,
+                "last_issuance_block_time": 310005000,
+                "supply_normalized": "0.00001000"
+            },
+            {
+                "asset": "CALLABLE",
+                "asset_id": "16199343190",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 1000,
+                "description": "Callable asset",
+                "first_issuance_block_index": 310003,
+                "last_issuance_block_index": 310003,
+                "confirmed": true,
+                "first_issuance_block_time": 310003000,
+                "last_issuance_block_time": 310003000,
+                "supply_normalized": "0.00001000"
+            },
+            {
+                "asset": "NODIVISIBLE",
+                "asset_id": "1911882621324134",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": false,
+                "locked": false,
+                "supply": 1000,
+                "description": "No divisible asset",
+                "first_issuance_block_index": 310002,
+                "last_issuance_block_index": 310002,
+                "confirmed": true,
+                "first_issuance_block_time": 310002000,
+                "last_issuance_block_time": 310002000,
+                "supply_normalized": "1000"
+            },
+            {
+                "asset": "DIVISIBLE",
+                "asset_id": "697326324582",
+                "asset_longname": null,
+                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "divisible": true,
+                "locked": false,
+                "supply": 100000000000,
+                "description": "Divisible asset",
+                "first_issuance_block_index": 310001,
+                "last_issuance_block_index": 310001,
+                "confirmed": true,
+                "first_issuance_block_time": 310001000,
+                "last_issuance_block_time": 310001000,
+                "supply_normalized": "1000.00000000"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 11
+    },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/transactions?verbose=true": {
         "result": [
             {
@@ -4482,12 +4868,12 @@
                 "owner": null,
                 "divisible": true,
                 "locked": true,
-                "supply": 1207563695800,
+                "supply": 603781847900,
                 "description": "The Counterparty protocol native currency",
                 "first_issuance_block_index": 278319,
                 "last_issuance_block_index": 283810,
                 "confirmed": true,
-                "supply_normalized": "12075.63700000"
+                "supply_normalized": "6037.81850000"
             }
         ],
         "next_cursor": null,
@@ -9555,14 +9941,122 @@
                 ]
             },
             "/v2/addresses/<address>/assets": {
+                "function": "get_valid_assets_by_issuer_or_owner",
+                "description": "Returns the valid assets issued or owned by an address",
+                "args": [
+                    {
+                        "name": "address",
+                        "required": true,
+                        "type": "str",
+                        "description": "The issuer or owner to return (e.g. $ADDRESS_1)"
+                    },
+                    {
+                        "name": "named",
+                        "default": null,
+                        "required": false,
+                        "type": "bool",
+                        "description": "Whether to return only named assets (e.g. true)"
+                    },
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the assets to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of assets to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/addresses/<address>/assets/issued": {
                 "function": "get_valid_assets_by_issuer",
-                "description": "Returns the valid assets of an issuer",
+                "description": "Returns the valid assets issued by an address",
                 "args": [
                     {
                         "name": "address",
                         "required": true,
                         "type": "str",
                         "description": "The issuer to return (e.g. $ADDRESS_1)"
+                    },
+                    {
+                        "name": "named",
+                        "default": null,
+                        "required": false,
+                        "type": "bool",
+                        "description": "Whether to return only named assets (e.g. true)"
+                    },
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the assets to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of assets to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/addresses/<address>/assets/owned": {
+                "function": "get_valid_assets_by_owner",
+                "description": "Returns the valid assets owned by an address",
+                "args": [
+                    {
+                        "name": "address",
+                        "required": true,
+                        "type": "str",
+                        "description": "The owner to return (e.g. $ADDRESS_1)"
                     },
                     {
                         "name": "named",
@@ -16210,6 +16704,13 @@
                         "required": false,
                         "type": "str",
                         "description": "Comma separated list of events to return"
+                    },
+                    {
+                        "name": "addresses",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "Comma separated list of addresses to return"
                     },
                     {
                         "name": "cursor",

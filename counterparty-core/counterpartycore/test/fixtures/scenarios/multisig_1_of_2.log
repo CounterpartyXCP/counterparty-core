@@ -90,7 +90,4 @@ Bet Expiration 74062934f0a97c41851735fef2a7df4d9ad9945424f09a54281e145a5e32492f
 Send BBBC from 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 1_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (c576ecde0f86c86725b540c9f5e6ae57a378fe9694260f7859eca55613d9d341) [valid]
 Order cancelled BBBB / XCP (6cb08a1c0547ab0d0d37b74633c1c8a2fd2372d9fd72eb3abdea298f2b245fee) [expired]
 Checking for conservation of assets.
-XCP has been conserved (1498.99847262 XCP both issued and held)
-BBBB has been conserved (10.0 BBBB both issued and held)
-BBBC has been conserved (100000 BBBC both issued and held)
 All assets have been conserved.

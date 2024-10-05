@@ -781,6 +781,8 @@ def unpack(db, datahex: str, block_index: int = None):
     :param block_index: Block index of the transaction containing this data
     """
     data = binascii.unhexlify(datahex)
+    if data[: len(config.PREFIX)] == config.PREFIX:
+        data = data[len(config.PREFIX) :]
     message_type_id, message = message_type.unpack(data)
     block_index = block_index or util.CURRENT_BLOCK_INDEX
 

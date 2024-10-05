@@ -57,7 +57,10 @@ only:
   And Asset
 - Addresses > Get Sweeps By Address > Get Sweeps By Address
 - Addresses > Get Issuances By Address > Get Issuances By Address
+- Addresses > Get Valid Assets By Issuer Or Owner > Get Valid Assets By Issuer Or
+  Owner
 - Addresses > Get Valid Assets By Issuer > Get Valid Assets By Issuer
+- Addresses > Get Valid Assets By Owner > Get Valid Assets By Owner
 - Addresses > Get Transactions By Address > Get Transactions By Address
 - Addresses > Get Dividends Distributed By Address > Get Dividends Distributed By
   Address

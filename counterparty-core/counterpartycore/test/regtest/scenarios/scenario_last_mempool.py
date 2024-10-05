@@ -1,5 +1,39 @@
 SCENARIO = [
     {
+        "title": "Dispense in mempool",
+        "transaction": "dispense",
+        "source": "$ADDRESS_9",
+        "no_confirmation": True,
+        "params": {
+            "dispenser": "$ADDRESS_6",
+            "quantity": 1000,
+        },
+        "controls": [
+            {
+                "url": "mempool/events?event_name=DISPENSE",
+                "result": [
+                    {
+                        "tx_hash": "$TX_HASH",
+                        "event": "DISPENSE",
+                        "params": {
+                            "asset": "XCP",
+                            "block_index": 9999999,
+                            "btc_amount": 1000,
+                            "destination": "$ADDRESS_9",
+                            "dispense_index": 0,
+                            "dispense_quantity": 66,
+                            "dispenser_tx_hash": "$DISPENSER_5_TX_HASH",
+                            "source": "$ADDRESS_6",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": "$TX_INDEX",
+                        },
+                    }
+                ],
+            },
+        ],
+    },
+    {"title": "mint block", "transaction": "mine_blocks", "params": {"blocks": 1}, "controls": []},
+    {
         "title": "Send XCP no confirmation",
         "transaction": "send",
         "source": "$ADDRESS_4",
@@ -114,6 +148,10 @@ SCENARIO = [
                         "message_type_id": 2,
                     },
                 },
+            },
+            {
+                "url": "healthz",
+                "result": {"status": "Healthy"},
             },
         ],
     },
