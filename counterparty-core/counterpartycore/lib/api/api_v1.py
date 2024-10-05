@@ -427,7 +427,8 @@ def adjust_get_transactions_results(query_result):
     """Format the data field.  Try and decode the data from a utf-8 uncoded string. Invalid utf-8 strings return an empty data."""
     filtered_results = []
     for transaction_row in list(query_result):
-        transaction_row["data"] = transaction_row["data"].hex()
+        if isinstance(transaction_row["data"], bytes):
+            transaction_row["data"] = transaction_row["data"].hex()
         filtered_results.append(transaction_row)
     return filtered_results
 
