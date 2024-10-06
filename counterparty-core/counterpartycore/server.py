@@ -168,6 +168,8 @@ def initialise_config(
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
     db_connection_pool_size=None,
+    wsgi_server="gunicorn",
+    gunicorn_workers=2,
 ):
     # log config already initialized
 
@@ -589,6 +591,9 @@ def initialise_config(
     else:
         config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
 
+    config.WSGI_SERVER = wsgi_server
+    config.GUNICORN_WORKERS = gunicorn_workers
+
 
 def initialise_log_and_config(args):
     # Configuration
@@ -630,6 +635,8 @@ def initialise_log_and_config(args):
         "enable_zmq_publisher": args.enable_zmq_publisher,
         "zmq_publisher_port": args.zmq_publisher_port,
         "db_connection_pool_size": args.db_connection_pool_size,
+        "wsgi_server": args.wsgi_server,
+        "gunicorn_workers": args.gunicorn_workers,
     }
 
     initialise_log_config(

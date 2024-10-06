@@ -14,6 +14,7 @@ from flask import request
 from gunicorn import util as gunicorn_util
 from gunicorn.arbiter import Arbiter
 from gunicorn.errors import AppImportError
+from werkzeug.serving import make_server
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -164,8 +165,11 @@ class GunicornArbiter(Arbiter):
 
 
 class GunicornApplication(gunicorn.app.base.BaseApplication):
-    def __init__(self, app, options=None, args=None):
-        self.options = options or {}
+    def __init__(self, app, args=None):
+        self.options = {
+            "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
+            "workers": config.GUNICORN_WORKERS,
+        }
         self.application = app
         self.args = args
         self.arbiter = None
@@ -204,3 +208,35 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         if self.arbiter:
             # self.arbiter.stop(graceful=False)
             self.arbiter.kill_all_workers()
+
+
+class WerkzeugApplication:
+    def __init__(self, app, args=None):
+        self.app = app
+        self.args = args
+        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
+
+    def run(self):
+        start_refresh_backend_height(self.timer_db, self.args)
+        self.server.serve_forever()
+
+    def stop(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+class WSGIApplication:
+    def __init__(self, app, args=None):
+        self.app = app
+        self.args = args
+        if config.WSGI_SERVER == "gunicorn":
+            self.server = GunicornApplication(self.app, self.args)
+        else:
+            self.server = WerkzeugApplication(self.app, self.args)
+
+    def run(self):
+        self.server.run()
+
+    def stop(self):
+        self.server.stop()

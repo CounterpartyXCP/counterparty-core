@@ -309,6 +309,22 @@ CONFIG_ARGS = [
             "help": "show logs in JSON format",
         },
     ],
+    [
+        ("--wsgi-server",),
+        {
+            "default": "gunicorn",
+            "help": "WSGI server to use (gunicorn or werkzeug)",
+            "choices": ["gunicorn", "werkzeug"],
+        },
+    ],
+    [
+        ("--gunicorn-workers",),
+        {
+            "type": int,
+            "default": 2,
+            "help": "number of worker processes for gunicorn",
+        },
+    ],
 ]
 
 

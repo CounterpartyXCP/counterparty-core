@@ -379,23 +379,19 @@ def run_api_server(args, interruped_value, server_ready_value):
 
     try:
         # Init the HTTP Server.
-        options = {
-            "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
-            "workers": 1,
-        }
-        gunicorn_server = wsgi.GunicornApplication(app, options, args)
-        ParentProcessChecker(interruped_value, gunicorn_server).start()
+        wsgi_server = wsgi.WSGIApplication(app, args=args)
+        ParentProcessChecker(interruped_value, wsgi_server).start()
         app.app_context().push()
         # Run app server (blocking)
         server_ready_value.value = 1
-        gunicorn_server.run()
+        wsgi_server.run()
     except KeyboardInterrupt:
         logger.trace("Keyboard Interrupt!")
     finally:
         logger.trace("Shutting down API Server...")
         watcher.stop()
         watcher.join()
-        gunicorn_server.stop()
+        wsgi_server.stop()
         APIDBConnectionPool().close()
 
 
@@ -403,10 +399,10 @@ def run_api_server(args, interruped_value, server_ready_value):
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
 class ParentProcessChecker(Thread):
-    def __init__(self, interruped_value, gunicorn_server):
+    def __init__(self, interruped_value, wsgi_server):
         super().__init__()
         self.interruped_value = interruped_value
-        self.gunicorn_server = gunicorn_server
+        self.wsgi_server = wsgi_server
 
     def run(self):
         try:
@@ -416,7 +412,7 @@ class ParentProcessChecker(Thread):
                 else:
                     logger.trace("Parent process is dead. Exiting...")
                     break
-            self.gunicorn_server.stop()
+            self.wsgi_server.stop()
         except KeyboardInterrupt:
             pass
 
