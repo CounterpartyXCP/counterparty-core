@@ -2,43 +2,34 @@ import argparse
 import logging
 import multiprocessing
 import os
-import signal
-import sys
-import tempfile
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
-from threading import Thread, Timer
+from threading import Thread
 
 import flask
-import gunicorn.app.base
 import requests
 from bitcoin.wallet import CBitcoinAddressError
 from counterpartycore import server
 from counterpartycore.lib import (
-    backend,
     config,
     exceptions,
     ledger,
     sentry,
     util,
 )
-from counterpartycore.lib.api import api_watcher, queries
+from counterpartycore.lib.api import api_watcher, queries, wsgi
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
     clean_rowids_and_confirmed_fields,
     function_needs_db,
-    get_backend_height,
     init_api_access_log,
     inject_details,
     to_json,
 )
-from counterpartycore.lib.database import APIDBConnectionPool, get_db_connection
+from counterpartycore.lib.database import APIDBConnectionPool
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
-from gunicorn import util as gunicorn_util
-from gunicorn.arbiter import Arbiter
-from gunicorn.errors import AppImportError
 from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
 
@@ -47,10 +38,7 @@ multiprocessing.set_start_method("spawn", force=True)
 logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
-BACKEND_HEIGHT = None
-CURRENT_BLOCK_TIME = None
-REFRESH_BACKEND_HEIGHT_INTERVAL = 10
-BACKEND_HEIGHT_TIMER = None
+
 BLOCK_CACHE = OrderedDict()
 MAX_BLOCK_CACHE_SIZE = 1000
 
@@ -76,31 +64,15 @@ def api_root():
     elif config.TESTCOIN:
         network = "testcoin"
     return {
-        "server_ready": counterparty_height >= BACKEND_HEIGHT,
+        "server_ready": counterparty_height >= wsgi.BACKEND_HEIGHT,
         "network": network,
         "version": config.VERSION_STRING,
-        "backend_height": BACKEND_HEIGHT,
+        "backend_height": wsgi.BACKEND_HEIGHT,
         "counterparty_height": counterparty_height,
         "documentation": "https://counterpartycore.docs.apiary.io/",
         "routes": f"{request.url_root}v2/routes",
         "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
     }
-
-
-def is_server_ready():
-    # TODO: find a way to mock this function for testing
-    try:
-        if request.url_root == "http://localhost:10009/":
-            return True
-    except RuntimeError:
-        pass
-    if BACKEND_HEIGHT is None:
-        return False
-    if util.CURRENT_BLOCK_INDEX in [BACKEND_HEIGHT, BACKEND_HEIGHT - 1]:
-        return True
-    if time.time() - CURRENT_BLOCK_TIME < 60:
-        return True
-    return False
 
 
 def is_cachable(rule):
@@ -161,9 +133,9 @@ def return_result(
         api_result["error"] = error
     response = flask.make_response(to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
-    response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
+    response.headers["X-COUNTERPARTY-READY"] = wsgi.is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
-    response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
+    response.headers["X-BITCOIN-HEIGHT"] = wsgi.BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
     if not config.API_NO_ALLOW_CORS:
         response.headers["Access-Control-Allow-Origin"] = "*"
@@ -259,18 +231,6 @@ def get_transaction_name(rule):
     return "".join([part.capitalize() for part in ROUTES[rule]["function"].__name__.split("_")])
 
 
-def refresh_current_block(db):
-    # update the current block index
-    global CURRENT_BLOCK_TIME  # noqa F811
-    last_block = ledger.get_last_block(db)
-    if last_block:
-        util.CURRENT_BLOCK_INDEX = last_block["block_index"]
-        CURRENT_BLOCK_TIME = last_block["block_time"]
-    else:
-        util.CURRENT_BLOCK_INDEX = 0
-        CURRENT_BLOCK_TIME = 0
-
-
 @auth.login_required
 def handle_route(**kwargs):
     start_time = time.time()
@@ -279,7 +239,7 @@ def handle_route(**kwargs):
     logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
     logger.debug(get_log_prefix(query_args))
 
-    if BACKEND_HEIGHT is None:
+    if wsgi.BACKEND_HEIGHT is None:
         return return_result(
             503,
             error="Backend still not ready. Please try again later.",
@@ -292,7 +252,7 @@ def handle_route(**kwargs):
     with configure_sentry_scope() as scope:
         scope.set_transaction_name(get_transaction_name(rule))
 
-    if not is_server_ready() and not return_result_if_not_ready(rule):
+    if not wsgi.is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(
             503, error="Counterparty not ready", start_time=start_time, query_args=query_args
         )
@@ -406,138 +366,6 @@ def init_flask_app():
     return app
 
 
-class GArbiter(Arbiter):
-    def __init__(self, app):
-        super().__init__(app)
-        self.workers_pid_file = tempfile.NamedTemporaryFile()
-
-    def add_worker_to_pid_file(self, pid):
-        self.workers_pid_file.write(f"{pid}\n".encode())
-        self.workers_pid_file.flush()
-
-    def get_workers_pid(self):
-        self.workers_pid_file.seek(0)
-        return [
-            int(value)
-            for value in self.workers_pid_file.read().decode().strip().split("\n")
-            if value
-        ]
-
-    def spawn_worker(self):
-        self.worker_age += 1
-        worker = self.worker_class(
-            self.worker_age,
-            self.pid,
-            self.LISTENERS,
-            self.app,
-            self.timeout / 2.0,
-            self.cfg,
-            self.log,
-        )
-        self.cfg.pre_fork(self, worker)
-        pid = os.fork()
-        if pid != 0:
-            worker.pid = pid
-            self.WORKERS[pid] = worker
-            return pid
-
-        # Do not inherit the temporary files of other workers
-        for sibling in self.WORKERS.values():
-            sibling.tmp.close()
-
-        # Process Child
-        worker.pid = os.getpid()
-        try:
-            gunicorn_util._setproctitle("worker [%s]" % self.proc_name)
-            self.log.info("_Booting worker with pid: %s", worker.pid)
-            self.add_worker_to_pid_file(worker.pid)
-            self.cfg.post_fork(self, worker)
-            worker.init_process()
-            sys.exit(0)
-        except SystemExit:
-            raise
-        except AppImportError as e:
-            self.log.debug("Exception while loading the application", exc_info=True)
-            print("%s" % e, file=sys.stderr)
-            sys.stderr.flush()
-            sys.exit(self.APP_LOAD_ERROR)
-        except Exception:
-            self.log.exception("Exception in worker process")
-            if not worker.booted:
-                sys.exit(self.WORKER_BOOT_ERROR)
-            sys.exit(-1)
-        finally:
-            self.log.info("Worker exiting (pid: %s)", worker.pid)
-            try:
-                worker.tmp.close()
-                self.cfg.worker_exit(self, worker)
-            except Exception:
-                self.log.warning("Exception during worker exit")
-
-    def kill_all_workers(self):
-        for pid in self.get_workers_pid():
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-
-
-class StandaloneApplication(gunicorn.app.base.BaseApplication):
-    def __init__(self, app, options=None, args=None):
-        self.options = options or {}
-        self.application = app
-        self.args = args
-        self.arbiter = None
-        self.timer_db = None
-        super().__init__()
-
-    def load_config(self):
-        config = {
-            key: value
-            for key, value in self.options.items()
-            if key in self.cfg.settings and value is not None
-        }
-        for key, value in config.items():
-            self.cfg.set(key.lower(), value)
-
-    def start_refresh_backend_height(self):
-        # run the scheduler to refresh the backend height
-        # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
-        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
-        if (
-            "no_refresh_backend_height" not in self.args
-            or not self.args["no_refresh_backend_height"]
-        ):
-            refresh_backend_height(self.timer_db, start=True)
-        else:
-            refresh_current_block(self.timer_db)
-            global BACKEND_HEIGHT  # noqa F811
-            BACKEND_HEIGHT = 0
-
-    def load(self):
-        self.start_refresh_backend_height()
-        return self.application
-
-    def run(self):
-        try:
-            self.arbiter = GArbiter(self)
-            # self.arbiter.log = logger
-            self.arbiter.run()
-        except RuntimeError as e:
-            logger.error("Error in GUnicorn: %s", e)
-            sys.stderr.flush()
-            sys.exit(1)
-
-    def stop(self):
-        if BACKEND_HEIGHT_TIMER:
-            BACKEND_HEIGHT_TIMER.cancel()
-        if self.timer_db:
-            self.timer_db.close()
-        if self.arbiter:
-            # self.arbiter.stop(graceful=False)
-            self.arbiter.kill_all_workers()
-
-
 def run_api_server(args, interruped_value, server_ready_value):
     sentry.init()
     # Initialise log and config
@@ -555,7 +383,7 @@ def run_api_server(args, interruped_value, server_ready_value):
             "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
             "workers": 1,
         }
-        gunicorn_server = StandaloneApplication(app, options, args)
+        gunicorn_server = wsgi.GunicornApplication(app, options, args)
         ParentProcessChecker(interruped_value, gunicorn_server).start()
         app.app_context().push()
         # Run app server (blocking)
@@ -569,32 +397,6 @@ def run_api_server(args, interruped_value, server_ready_value):
         watcher.join()
         gunicorn_server.stop()
         APIDBConnectionPool().close()
-
-
-def refresh_backend_height(db, start=False):
-    global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
-    if not start:
-        BACKEND_HEIGHT = get_backend_height()
-        refresh_current_block(db)
-        backend.addrindexrs.clear_raw_transactions_cache()
-        if not is_server_ready():
-            if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
-                logger.debug(
-                    f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT})"
-                )
-            else:
-                logger.debug(
-                    f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {BACKEND_HEIGHT})"
-                )
-    else:
-        # starting the timer is not blocking in case of Addrindexrs is not ready
-        BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height, (db,))
-        BACKEND_HEIGHT_TIMER.start()
-        return
-    if BACKEND_HEIGHT_TIMER:
-        BACKEND_HEIGHT_TIMER.cancel()
-    BACKEND_HEIGHT_TIMER = Timer(REFRESH_BACKEND_HEIGHT_INTERVAL, refresh_backend_height, (db,))
-    BACKEND_HEIGHT_TIMER.start()
 
 
 # This thread is used for the following two reasons:
