@@ -2,7 +2,9 @@ import argparse
 import logging
 import multiprocessing
 import os
+import signal
 import sys
+import tempfile
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
@@ -34,7 +36,9 @@ from counterpartycore.lib.api.util import (
 from counterpartycore.lib.database import APIDBConnectionPool, get_db_connection
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
+from gunicorn import util as gunicorn_util
 from gunicorn.arbiter import Arbiter
+from gunicorn.errors import AppImportError
 from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
 
@@ -402,6 +406,82 @@ def init_flask_app():
     return app
 
 
+class GArbiter(Arbiter):
+    def __init__(self, app):
+        super().__init__(app)
+        self.workers_pid_file = tempfile.NamedTemporaryFile()
+
+    def add_worker_to_pid_file(self, pid):
+        self.workers_pid_file.write(f"{pid}\n".encode())
+        self.workers_pid_file.flush()
+
+    def get_workers_pid(self):
+        self.workers_pid_file.seek(0)
+        return [
+            int(value)
+            for value in self.workers_pid_file.read().decode().strip().split("\n")
+            if value
+        ]
+
+    def spawn_worker(self):
+        self.worker_age += 1
+        worker = self.worker_class(
+            self.worker_age,
+            self.pid,
+            self.LISTENERS,
+            self.app,
+            self.timeout / 2.0,
+            self.cfg,
+            self.log,
+        )
+        self.cfg.pre_fork(self, worker)
+        pid = os.fork()
+        if pid != 0:
+            worker.pid = pid
+            self.WORKERS[pid] = worker
+            return pid
+
+        # Do not inherit the temporary files of other workers
+        for sibling in self.WORKERS.values():
+            sibling.tmp.close()
+
+        # Process Child
+        worker.pid = os.getpid()
+        try:
+            gunicorn_util._setproctitle("worker [%s]" % self.proc_name)
+            self.log.info("_Booting worker with pid: %s", worker.pid)
+            self.add_worker_to_pid_file(worker.pid)
+            self.cfg.post_fork(self, worker)
+            worker.init_process()
+            sys.exit(0)
+        except SystemExit:
+            raise
+        except AppImportError as e:
+            self.log.debug("Exception while loading the application", exc_info=True)
+            print("%s" % e, file=sys.stderr)
+            sys.stderr.flush()
+            sys.exit(self.APP_LOAD_ERROR)
+        except Exception:
+            self.log.exception("Exception in worker process")
+            if not worker.booted:
+                sys.exit(self.WORKER_BOOT_ERROR)
+            sys.exit(-1)
+        finally:
+            self.log.info("Worker exiting (pid: %s)", worker.pid)
+            try:
+                worker.tmp.close()
+                self.cfg.worker_exit(self, worker)
+            except Exception:
+                self.log.warning("Exception during worker exit")
+
+    def kill_all_workers(self):
+        for pid in self.get_workers_pid():
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+
 class StandaloneApplication(gunicorn.app.base.BaseApplication):
     def __init__(self, app, options=None, args=None):
         self.options = options or {}
@@ -440,10 +520,11 @@ class StandaloneApplication(gunicorn.app.base.BaseApplication):
 
     def run(self):
         try:
-            self.arbiter = Arbiter(self)
+            self.arbiter = GArbiter(self)
+            # self.arbiter.log = logger
             self.arbiter.run()
         except RuntimeError as e:
-            print("\nError: %s\n" % e, file=sys.stderr)
+            logger.error("Error in GUnicorn: %s", e)
             sys.stderr.flush()
             sys.exit(1)
 
@@ -452,9 +533,9 @@ class StandaloneApplication(gunicorn.app.base.BaseApplication):
             BACKEND_HEIGHT_TIMER.cancel()
         if self.timer_db:
             self.timer_db.close()
-        print("Stopping Gunincorn Server...")
         if self.arbiter:
-            self.arbiter.halt()
+            # self.arbiter.stop(graceful=False)
+            self.arbiter.kill_all_workers()
 
 
 def run_api_server(args, interruped_value, server_ready_value):
