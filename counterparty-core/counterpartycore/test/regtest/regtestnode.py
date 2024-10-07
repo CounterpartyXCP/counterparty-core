@@ -238,6 +238,7 @@ class RegtestNode:
         self.counterparty_server_process = sh.counterparty_server(
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
+            "--wsgi-server=gunicorn",
             "-vv",
             "start",
             _bg=True,
@@ -293,6 +294,7 @@ class RegtestNode:
         self.counterparty_server_process = sh.counterparty_server(
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
+            "--wsgi-server=gunicorn",
             "-vv",
             "start",
             _bg=True,
@@ -317,6 +319,7 @@ class RegtestNode:
         sh.counterparty_server(
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
+            "--wsgi-server=gunicorn",
             "-vv",
             command,
             0,

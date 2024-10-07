@@ -312,7 +312,7 @@ CONFIG_ARGS = [
     [
         ("--wsgi-server",),
         {
-            "default": "gunicorn",
+            "default": "werkzeug",
             "help": "WSGI server to use (gunicorn or werkzeug)",
             "choices": ["gunicorn", "werkzeug"],
         },

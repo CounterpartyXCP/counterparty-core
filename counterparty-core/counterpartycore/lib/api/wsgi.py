@@ -200,6 +200,8 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
             "workers": config.GUNICORN_WORKERS,
             "worker_class": "gthread",
+            "threads": 2,
+            "daemon": True,
             # "loglevel": 'debug',
         }
         self.application = app
