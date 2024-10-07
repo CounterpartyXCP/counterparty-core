@@ -122,6 +122,7 @@ class GunicornArbiter(Arbiter):
     def __init__(self, app):
         super().__init__(app)
         self.workers_pid_file = tempfile.NamedTemporaryFile()
+        self.log = DummyLogger()
 
     def add_worker_to_pid_file(self, pid):
         self.workers_pid_file.write(f"{pid}\n".encode())
@@ -198,8 +199,8 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.options = {
             "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
             "workers": config.GUNICORN_WORKERS,
-            "threads": 2,
-            "preload": True,
+            "worker_class": "gthread",
+            # "loglevel": 'debug',
         }
         self.application = app
         self.args = args
@@ -224,7 +225,6 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
     def run(self):
         try:
             self.arbiter = GunicornArbiter(self)
-            self.arbiter.log = DummyLogger()
             self.arbiter.run()
         except RuntimeError as e:
             logger.error("Error in GUnicorn: %s", e)
