@@ -567,9 +567,15 @@ def get_utxos_info(db, decoded_tx):
     destination = None
     # the destination is the first non-OP_RETURN vout
     for n, vout in enumerate(decoded_tx["vout"]):
-        asm = script.script_to_asm(vout["script_pub_key"])
-        if asm[0] == OP_RETURN:  # noqa: F405
-            continue
+        try:
+            asm = script.script_to_asm(vout["script_pub_key"])
+            if asm[0] == OP_RETURN:  # noqa: F405
+                continue
+        except DecodeError:
+            # invalid script are considered as no-OP_RETURN
+            # and so can be considered as destination
+            # this is to be compatible with Ordinal's behavior
+            pass
         destination = decoded_tx["tx_hash"] + ":" + str(n)
         return sources + [destination]
     return []
