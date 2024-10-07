@@ -303,9 +303,7 @@ class RegtestNode:
         )
         self.wait_for_counterparty_follower()
         time.sleep(2)
-        print("get node state")
         state = self.get_node_state()
-        print("check node state")
         if state["last_block"] != previous_state["last_block"]:
             raise Exception("Reparse failed, last block is different")
         if state["last_event"] != previous_state["last_event"]:
