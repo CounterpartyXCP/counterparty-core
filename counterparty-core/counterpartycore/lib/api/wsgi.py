@@ -201,6 +201,9 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             "workers": config.GUNICORN_WORKERS,
             "worker_class": "gthread",
             "daemon": True,
+            "threads": 2,
+            # "loglevel": "debug",
+            # "access-logfile": "-",
         }
         self.application = app
         self.args = args
