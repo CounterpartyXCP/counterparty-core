@@ -810,6 +810,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             )
         )
         or method == "get_tx_info_legacy"
+        or method == "select_utxo_destination"
         or tx_name
         in [
             "script",

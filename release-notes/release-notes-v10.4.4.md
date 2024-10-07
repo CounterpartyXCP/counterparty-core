@@ -8,6 +8,7 @@
 
 ## Bugfixes
 
+- Properly handle invalid scripts in outputs
 
 ## Codebase
 

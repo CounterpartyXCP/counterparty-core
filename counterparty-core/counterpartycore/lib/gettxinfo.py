@@ -548,6 +548,21 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False):
         return get_tx_info_legacy(decoded_tx, block_index)
 
 
+def select_utxo_destination(vouts):
+    for n, vout in enumerate(vouts):
+        try:
+            asm = script.script_to_asm(vout["script_pub_key"])
+            if asm[0] == OP_RETURN:  # noqa: F405
+                continue
+        except DecodeError:
+            # invalid script are considered as no-OP_RETURN
+            # and so can be considered as destination
+            # this is to be compatible with Ordinal's behavior
+            pass
+        return n
+    return None
+
+
 def get_utxos_info(db, decoded_tx):
     """
     Get the UTXO move info.
@@ -566,10 +581,8 @@ def get_utxos_info(db, decoded_tx):
             sources.append(utxo)
     destination = None
     # the destination is the first non-OP_RETURN vout
-    for n, vout in enumerate(decoded_tx["vout"]):
-        asm = script.script_to_asm(vout["script_pub_key"])
-        if asm[0] == OP_RETURN:  # noqa: F405
-            continue
+    n = select_utxo_destination(decoded_tx["vout"])
+    if n is not None:
         destination = decoded_tx["tx_hash"] + ":" + str(n)
         return sources + [destination]
     return []
