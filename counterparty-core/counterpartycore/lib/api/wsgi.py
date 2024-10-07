@@ -89,6 +89,35 @@ def start_refresh_backend_height(timer_db, args):
         BACKEND_HEIGHT = 0
 
 
+class DummyLogger:
+    def __init__(self) -> None:
+        pass
+
+    def info(self, *args, **kwargs):
+        pass
+
+    def debug(self, *args, **kwargs):
+        pass
+
+    def exception(self, *args, **kwargs):
+        pass
+
+    def warning(self, *args, **kwargs):
+        pass
+
+    def error(self, *args, **kwargs):
+        pass
+
+    def critical(self, *args, **kwargs):
+        pass
+
+    def close_on_exec(self):
+        pass
+
+    def reopen_files(self):
+        pass
+
+
 class GunicornArbiter(Arbiter):
     def __init__(self, app):
         super().__init__(app)
@@ -169,6 +198,8 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.options = {
             "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
             "workers": config.GUNICORN_WORKERS,
+            "threads": 2,
+            "preload": True,
         }
         self.application = app
         self.args = args
@@ -193,7 +224,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
     def run(self):
         try:
             self.arbiter = GunicornArbiter(self)
-            # self.arbiter.log = logger
+            self.arbiter.log = DummyLogger()
             self.arbiter.run()
         except RuntimeError as e:
             logger.error("Error in GUnicorn: %s", e)
