@@ -8,6 +8,7 @@
 
 ## Bugfixes
 
+- Consider invalid outputs as "no-OP_RETURN"
 
 ## Codebase
 
