@@ -8,7 +8,7 @@
 
 ## Bugfixes
 
-- Consider invalid outputs as "no-OP_RETURN"
+- Properly handle invalid scripts in outputs
 
 ## Codebase
 
