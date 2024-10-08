@@ -24,6 +24,7 @@ def before_send(event, _hint):
     event["tags"].append(["docker", data["dockerized"]])
     event["tags"].append(["network", data["network"]])
     event["tags"].append(["force_enabled", data["force_enabled"]])
+    event["tags"].append(["network", config.NETWORK_NAME])
 
     event["extra"] = event.get("extra", {})
     event["extra"]["last_block"] = data["last_block"]
