@@ -9,6 +9,8 @@
 ## Bugfixes
 
 - Properly handle invalid scripts in outputs
+- Bump Minimum Version to v10.4.4 for Block Index >= 866,000
+- Fix `last_block` in `get_running_info` command (API v1)
 
 ## Codebase
 
