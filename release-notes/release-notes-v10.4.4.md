@@ -8,7 +8,7 @@
 
 ## Bugfixes
 
-- Properly handle invalid scripts in outputs
+- Handle invalid scripts in outputs properly
 - Fix `last_block` in `get_running_info` command (API v1)
 - Fix blockchain reorganization support
 
