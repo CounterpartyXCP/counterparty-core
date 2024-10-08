@@ -285,5 +285,5 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
 
 if __name__ == "__main__":
     serve = sys.argv[1] == "serve" if len(sys.argv) > 1 else False
-    wsgi_server = "werkzeug" if sys.argv[1] == "werkzeug" else "gunicorn"
+    wsgi_server = "werkzeug" if len(sys.argv) > 1 and sys.argv[1] == "werkzeug" else "gunicorn"
     run_scenarios(serve=serve, wsgi_server=wsgi_server)
