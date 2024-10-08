@@ -234,9 +234,9 @@ def run_item(node, item, context):
     return context
 
 
-def run_scenarios(serve=False):
+def run_scenarios(serve=False, wsgi_server="gunicorn"):
     try:
-        regtest_node_thread = RegtestNodeThread()
+        regtest_node_thread = RegtestNodeThread(wsgi_server=wsgi_server)
         regtest_node_thread.start()
 
         while not regtest_node_thread.ready():
@@ -285,4 +285,5 @@ def run_scenarios(serve=False):
 
 if __name__ == "__main__":
     serve = sys.argv[1] == "serve" if len(sys.argv) > 1 else False
-    run_scenarios(serve=serve)
+    wsgi_server = "werkzeug" if sys.argv[1] == "werkzeug" else "gunicorn"
+    run_scenarios(serve=serve, wsgi_server=wsgi_server)

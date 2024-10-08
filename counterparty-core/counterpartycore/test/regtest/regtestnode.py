@@ -23,7 +23,7 @@ class ComposeError(Exception):
 
 
 class RegtestNode:
-    def __init__(self, datadir="regtestnode", show_output=False):
+    def __init__(self, datadir="regtestnode", show_output=False, wsgi_server="gunicorn"):
         self.datadir = datadir
         self.bitcoin_cli = sh.bitcoin_cli.bake(
             "-regtest",
@@ -39,6 +39,13 @@ class RegtestNode:
         self.tx_index = -1
         self.ready = False
         self.show_output = show_output
+        self.counterparty_server = sh.counterparty_server.bake(
+            "--regtest",
+            f"--database-file={self.datadir}/counterparty.db",
+            f"--wsgi-server={wsgi_server}",
+            "--gunicorn-workers=1",
+            "-vv",
+        )
 
     def api_call(self, url):
         return json.loads(sh.curl(f"http://localhost:24000/v2/{url}").strip())
@@ -236,12 +243,7 @@ class RegtestNode:
         )
 
         self.server_out = StringIO()
-        self.counterparty_server_process = sh.counterparty_server(
-            "--regtest",
-            f"--database-file={self.datadir}/counterparty.db",
-            "--wsgi-server=gunicorn",
-            "--gunicorn-workers=1",
-            "-vv",
+        self.counterparty_server_process = self.counterparty_server(
             "start",
             _bg=True,
             _out=self.server_out,
@@ -298,12 +300,12 @@ class RegtestNode:
         except sh.ErrorReturnCode:
             pass
         try:
-            self.addrindexrs_process.terminate()  # noqa
+            self.stop_counterparty_server()  # noqa
         except Exception as e:
             print(e)
             pass
         try:
-            self.stop_counterparty_server()  # noqa
+            self.addrindexrs_process.terminate()  # noqa
         except Exception as e:
             print(e)
             pass
@@ -316,12 +318,7 @@ class RegtestNode:
 
     def check_node_state(self, previous_state):
         self.server_out = StringIO()
-        self.counterparty_server_process = sh.counterparty_server(
-            "--regtest",
-            f"--database-file={self.datadir}/counterparty.db",
-            "--wsgi-server=gunicorn",
-            "--gunicorn-workers=1",
-            "-vv",
+        self.counterparty_server_process = self.counterparty_server(
             "start",
             _bg=True,
             _out=self.server_out,
@@ -339,12 +336,7 @@ class RegtestNode:
         state_before = self.get_node_state()
         self.stop_counterparty_server()
         print(f"Running `{command}`...")
-        sh.counterparty_server(
-            "--regtest",
-            f"--database-file={self.datadir}/counterparty.db",
-            "--wsgi-server=gunicorn",
-            "--gunicorn-workers=1",
-            "-vv",
+        self.counterparty_server(
             command,
             0,
             _out=sys.stdout,
@@ -361,13 +353,14 @@ class RegtestNode:
 
 
 class RegtestNodeThread(threading.Thread):
-    def __init__(self):
+    def __init__(self, wsgi_server="gunicorn"):
         threading.Thread.__init__(self)
+        self.wsgi_server = wsgi_server
         self.daemon = True
         self.node = None
 
     def run(self):
-        self.node = RegtestNode()
+        self.node = RegtestNode(wsgi_server=self.wsgi_server)
         self.node.start()
 
     def stop(self):
