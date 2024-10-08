@@ -817,19 +817,7 @@ class APIServer(threading.Thread):
                 else:
                     caught_up = True
 
-                try:
-                    cursor = db.cursor()
-                    blocks = list(
-                        cursor.execute(
-                            """SELECT * FROM blocks WHERE block_index = ?""",
-                            (util.CURRENT_BLOCK_INDEX,),
-                        )
-                    )
-                    assert len(blocks) == 1
-                    last_block = blocks[0]
-                    cursor.close()
-                except:  # noqa: E722
-                    last_block = None
+                last_block = ledger.get_last_block(db)
 
                 try:
                     last_message = ledger.last_message(db)
