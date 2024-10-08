@@ -2,6 +2,7 @@
 
 import json
 import os
+import signal
 import sys
 import threading
 import time
@@ -239,6 +240,7 @@ class RegtestNode:
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
             "--wsgi-server=gunicorn",
+            "--gunicorn-workers=1",
             "-vv",
             "start",
             _bg=True,
@@ -266,6 +268,29 @@ class RegtestNode:
         while True:
             time.sleep(1)
 
+    def get_gunicorn_workers_pids(self):
+        logs = self.server_out.getvalue()
+        pids = []
+        for line in logs.splitlines():
+            if "Booting Gunicorn worker with pid: " in line:
+                pid = int(line.split("Booting Gunicorn worker with pid: ")[1].split(" ")[0])
+                pids.append(pid)
+        return pids
+
+    def kill_gunicorn_workers(self):
+        pids = self.get_gunicorn_workers_pids()
+        print(f"Killing Gunicorn workers: {pids}")
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+    def stop_counterparty_server(self):
+        self.counterparty_server_process.terminate()
+        self.counterparty_server_process.wait()
+        self.kill_gunicorn_workers()
+
     def stop(self):
         print("Stopping...")
         try:
@@ -278,7 +303,7 @@ class RegtestNode:
             print(e)
             pass
         try:
-            self.counterparty_server_process.terminate()  # noqa
+            self.stop_counterparty_server()  # noqa
         except Exception as e:
             print(e)
             pass
@@ -295,6 +320,7 @@ class RegtestNode:
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
             "--wsgi-server=gunicorn",
+            "--gunicorn-workers=1",
             "-vv",
             "start",
             _bg=True,
@@ -311,13 +337,13 @@ class RegtestNode:
 
     def test_command(self, command):
         state_before = self.get_node_state()
-        self.counterparty_server_process.terminate()  # noqa
-        self.counterparty_server_process.wait()
+        self.stop_counterparty_server()
         print(f"Running `{command}`...")
         sh.counterparty_server(
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
             "--wsgi-server=gunicorn",
+            "--gunicorn-workers=1",
             "-vv",
             command,
             0,
