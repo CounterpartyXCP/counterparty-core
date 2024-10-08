@@ -22,7 +22,6 @@
 
 - Add `wsgi-server` (`werkzeug` or `gunicorn`) and `gunicorn-workers` flags
 - Enable Sentry Caches and Queries pages
-- Add `network` Sentry tag (`mainnet`, `testnet` or `regtest`)
 
 # Credits
 
