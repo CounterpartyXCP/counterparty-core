@@ -51,6 +51,9 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
+# SCENARIOS = []
+# SCENARIOS += scenario_1_fairminter.SCENARIO
+
 
 def compare_strings(string1, string2):
     """Compare strings diff-style."""
@@ -272,14 +275,16 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             print("Tesing reparse...")
             regtest_node_thread.node.reparse()
             print("Testing rollback...")
-            regtest_node_thread.node.rollback()
+            # regtest_node_thread.node.rollback()
+            print("Testing reorg...")
+            regtest_node_thread.node.test_reorg()
     except KeyboardInterrupt:
         pass
     except Exception as e:
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        # print(regtest_node_thread.node.server_out.getvalue())
+        print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

@@ -122,6 +122,7 @@ class BlockchainWatcher:
             previous_block = ledger.get_block_by_hash(self.db, decoded_block["hash_prev"])
             if previous_block is None:
                 # catch up with rpc if previous block is missing
+                logger.debug("Previous block is missing. Catching up...")
                 blocks.catch_up(self.db, check_asset_conservation=False)
             else:
                 blocks.parse_new_block(self.db, decoded_block)
@@ -211,6 +212,7 @@ class BlockchainWatcher:
             self.receive_message(topic, body, seq)
         except Exception as e:
             logger.error("Error processing message: %s", e)
+            # import traceback
             # print(traceback.format_exc())  # for debugging
             capture_exception(e)
             raise e

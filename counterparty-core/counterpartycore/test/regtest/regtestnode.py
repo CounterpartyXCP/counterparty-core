@@ -32,6 +32,14 @@ class RegtestNode:
             "-rpcconnect=localhost",
             f"-datadir={self.datadir}",
         )
+        self.bitcoin_cli_2 = sh.bitcoin_cli.bake(
+            "-regtest",
+            "-rpcuser=rpc",
+            "-rpcpassword=rpc",
+            "-rpcconnect=localhost",
+            "-rpcport=28443",
+            f"-datadir={self.datadir}/node2",
+        )
         self.bitcoin_wallet = self.bitcoin_cli.bake(f"-rpcwallet={WALLET_NAME}")
         self.bitcoind_process = None
         self.addresses = []
@@ -54,10 +62,13 @@ class RegtestNode:
         result = self.api_call("mempool/events")
         return result["result_count"]
 
-    def wait_for_bitcoind(self):
+    def wait_for_bitcoind(self, node=1):
         while True:
             try:
-                self.bitcoin_cli("getblockchaininfo")
+                if node == 1:
+                    self.bitcoin_cli("getblockchaininfo")
+                else:
+                    self.bitcoin_cli_2("getblockchaininfo")
                 break
             except sh.ErrorReturnCode:
                 print("Waiting for bitcoind to start...")
@@ -193,11 +204,7 @@ class RegtestNode:
         for address in self.addresses[0:10]:
             self.send_transaction(address, "burn", {"quantity": 50000000})
 
-    def start(self):
-        if os.path.exists(self.datadir):
-            sh.rm("-rf", self.datadir)
-        sh.mkdir(self.datadir)
-
+    def start_bitcoin_node(self):
         self.bitcoind_process = sh.bitcoind(
             "-regtest",
             "-daemon",
@@ -216,8 +223,34 @@ class RegtestNode:
             _bg=True,
             _out=sys.stdout,
         )
-
         self.wait_for_bitcoind()
+
+    def start_bitcoin_node_2(self):
+        self.bitcoind_process_2 = sh.bitcoind(
+            "-regtest",
+            "-daemon",
+            "-server",
+            "-txindex",
+            "-rpcuser=rpc",
+            "-rpcpassword=rpc",
+            "-rpcallowip=0.0.0.0",
+            "-fallbackfee=0.0002",
+            "-acceptnonstdtxn",
+            f"-datadir={self.datadir}/node2",
+            "-port=28444",
+            "-rpcport=28443",
+            _bg=True,
+            _out=sys.stdout,
+        )
+        self.wait_for_bitcoind(node=2)
+
+    def start(self):
+        if os.path.exists(self.datadir):
+            sh.rm("-rf", self.datadir)
+        sh.mkdir(self.datadir)
+        sh.mkdir(f"{self.datadir}/node2")
+
+        self.start_bitcoin_node()
 
         self.bitcoin_cli(
             "createwallet",
@@ -289,26 +322,36 @@ class RegtestNode:
                 pass
 
     def stop_counterparty_server(self):
-        self.counterparty_server_process.terminate()
-        self.counterparty_server_process.wait()
-        self.kill_gunicorn_workers()
+        try:
+            self.counterparty_server_process.terminate()
+            self.counterparty_server_process.wait()
+            self.kill_gunicorn_workers()
+        except Exception as e:
+            print(e)
+            pass
+
+    def stop_bitcoin_node(self, node=1):
+        try:
+            if node == 1:
+                self.bitcoin_cli("stop", _out=sys.stdout)
+            else:
+                self.bitcoin_cli_2("stop", _out=sys.stdout)
+        except sh.ErrorReturnCode:
+            pass
+
+    def stop_addrindexrs(self):
+        try:
+            os.kill(self.addrindexrs_process.pid, signal.SIGKILL)
+        except Exception as e:
+            print(e)
+            pass
 
     def stop(self):
         print("Stopping...")
-        try:
-            self.bitcoin_cli("stop", _out=sys.stdout)
-        except sh.ErrorReturnCode:
-            pass
-        try:
-            self.stop_counterparty_server()  # noqa
-        except Exception as e:
-            print(e)
-            pass
-        try:
-            self.addrindexrs_process.terminate()  # noqa
-        except Exception as e:
-            print(e)
-            pass
+        self.stop_bitcoin_node()
+        self.stop_bitcoin_node(node=2)
+        self.stop_counterparty_server()
+        self.stop_addrindexrs()
 
     def get_node_state(self):
         return {
@@ -327,6 +370,7 @@ class RegtestNode:
         self.wait_for_counterparty_follower()
         time.sleep(2)
         state = self.get_node_state()
+        print(f"state: {state}")
         if state["last_block"] != previous_state["last_block"]:
             raise Exception("Reparse failed, last block is different")
         if state["last_event"] != previous_state["last_event"]:
@@ -334,6 +378,7 @@ class RegtestNode:
 
     def test_command(self, command):
         state_before = self.get_node_state()
+        print(f"state_before: {state_before}")
         self.stop_counterparty_server()
         print(f"Running `{command}`...")
         self.counterparty_server(
@@ -350,6 +395,66 @@ class RegtestNode:
 
     def rollback(self):
         self.test_command("rollback")
+
+    def wait_for_node_to_sync(self):
+        block_count_1 = self.bitcoin_cli("getblockcount").strip()
+        block_count_2 = self.bitcoin_cli_2("getblockcount").strip()
+        while block_count_1 != block_count_2:
+            print(f"Waiting for nodes to sync ({block_count_1} != {block_count_2})...")
+            block_count_1 = self.bitcoin_cli("getblockcount").strip()
+            block_count_2 = self.bitcoin_cli_2("getblockcount").strip()
+            time.sleep(1)
+        return int(block_count_1)
+
+    def get_burn_count(self, address):
+        return self.api_call(f"addresses/{address}/burns")["result_count"]
+
+    def test_reorg(self):
+        print("Start a second node...")
+        self.start_bitcoin_node_2()
+
+        print("Connect to the first node...")
+        self.bitcoin_cli_2(
+            "addnode",
+            "localhost:18444",
+            "add",
+            _out=sys.stdout,
+            _err=sys.stdout,
+        )
+
+        print("Wait for the two nodes to sync...")
+        self.wait_for_node_to_sync()
+
+        print("Disconnect from the first node...")
+        self.bitcoin_cli_2("disconnectnode", "localhost:18444")
+
+        print("Make a burn transaction on first node...")
+        self.mine_blocks(3)
+        self.send_transaction(self.addresses[0], "burn", {"quantity": 5000})
+
+        print("Burn count before reorganization: ", self.get_burn_count(self.addresses[0]))
+        assert self.get_burn_count(self.addresses[0]) == 2
+
+        print("Mine a longest chain on the second node...")
+        self.bitcoin_cli_2("generatetoaddress", 6, self.addresses[0])
+
+        print("Re-connect to the first node...")
+        self.bitcoin_cli_2(
+            "addnode",
+            "localhost:18444",
+            "onetry",
+            _out=sys.stdout,
+            _err=sys.stdout,
+        )
+
+        print("Wait for the two nodes to sync...")
+        last_block = self.wait_for_node_to_sync()
+
+        self.wait_for_counterparty_server(block=last_block)
+
+        print("Burn count after reorganization: ", self.get_burn_count(self.addresses[0]))
+        assert "Blockchain reorganization detected" in self.server_out.getvalue()
+        assert self.get_burn_count(self.addresses[0]) == 1
 
 
 class RegtestNodeThread(threading.Thread):

@@ -10,6 +10,7 @@
 
 - Properly handle invalid scripts in outputs
 - Fix `last_block` in `get_running_info` command (API v1)
+- Fix blockchain reorganization support
 
 ## Codebase
 
