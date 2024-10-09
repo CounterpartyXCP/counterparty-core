@@ -14,6 +14,7 @@
 
 ## Codebase
 
+- Add `regtest` support in RSFetcher
 
 ## API
 
