@@ -275,7 +275,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             print("Tesing reparse...")
             regtest_node_thread.node.reparse()
             print("Testing rollback...")
-            # regtest_node_thread.node.rollback()
+            regtest_node_thread.node.rollback()
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
     except KeyboardInterrupt:
@@ -284,7 +284,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        print(regtest_node_thread.node.server_out.getvalue())
+        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

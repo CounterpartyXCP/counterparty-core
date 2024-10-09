@@ -728,7 +728,6 @@ def check_event_hashes(api_db, ledger_db):
         return
     ledger_event = get_event(ledger_db, last_api_event["message_index"])
     while ledger_event is None:
-        print("ledger_event is None")
         rollback_event(api_db, last_api_event)
         last_api_event = get_last_event(api_db)
         ledger_event = get_event(ledger_db, last_api_event["message_index"])
@@ -737,7 +736,6 @@ def check_event_hashes(api_db, ledger_db):
         and ledger_event
         and last_api_event["event_hash"] != ledger_event["event_hash"]
     ):
-        print("hash_mismatch")
         rollback_event(api_db, last_api_event)
         last_api_event = get_last_event(api_db)
         ledger_event = get_event(ledger_db, last_api_event["message_index"])

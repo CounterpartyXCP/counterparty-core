@@ -177,6 +177,14 @@ class RegtestNode:
             print("Waiting for counterparty server...")
             time.sleep(2)
 
+    def wait_for_counterparty_watcher(self):
+        while True:
+            if "API Watcher - Catch up completed." in self.server_out.getvalue():
+                print("Server ready")
+                return
+            print("Waiting for counterparty server...")
+            time.sleep(2)
+
     def mine_blocks(self, blocks=1, address=None):
         reward_address = address or self.addresses[0]
         block_hashes_json = self.bitcoin_wallet("generatetoaddress", blocks, reward_address)
@@ -354,12 +362,17 @@ class RegtestNode:
         self.stop_addrindexrs()
 
     def get_node_state(self):
-        return {
-            "last_block": self.api_call("blocks/last")["result"],
-            "last_event": self.api_call("events?limit=1")["result"],
-        }
+        try:
+            return {
+                "last_block": self.api_call("blocks/last")["result"],
+                "last_event": self.api_call("events?limit=1")["result"],
+            }
+        except KeyError:
+            print("Error getting node state, retrying in 2 seconds...")
+            time.sleep(2)
+            return self.get_node_state()
 
-    def check_node_state(self, previous_state):
+    def check_node_state(self, command, previous_state):
         self.server_out = StringIO()
         self.counterparty_server_process = self.counterparty_server(
             "start",
@@ -368,26 +381,25 @@ class RegtestNode:
             _err_to_out=True,
         )
         self.wait_for_counterparty_follower()
+        self.wait_for_counterparty_watcher()
         time.sleep(2)
         state = self.get_node_state()
-        print(f"state: {state}")
         if state["last_block"] != previous_state["last_block"]:
-            raise Exception("Reparse failed, last block is different")
+            raise Exception(f"{command} failed, last block is different")
         if state["last_event"] != previous_state["last_event"]:
-            raise Exception("Reparse failed, last event is different")
+            raise Exception(f"{command} failed, last event is different")
 
     def test_command(self, command):
         state_before = self.get_node_state()
-        print(f"state_before: {state_before}")
         self.stop_counterparty_server()
         print(f"Running `{command}`...")
         self.counterparty_server(
             command,
-            0,
+            150,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
             _out=sys.stdout,
             _err_to_out=True,
         )
-        self.check_node_state(state_before)
+        self.check_node_state(command, state_before)
         print(f"`{command}` successful")
 
     def reparse(self):
