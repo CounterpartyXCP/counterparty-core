@@ -708,27 +708,39 @@ def apply_migration():
     backend.connection.close()
 
 
+def get_last_event(db):
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM messages ORDER BY message_index DESC LIMIT 1")
+    return cursor.fetchone()
+
+
+def get_event(db, message_index):
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM messages WHERE message_index = ?", (message_index,))
+    return cursor.fetchone()
+
+
 # checks that there is no divergence between the event in the API and ledger databases
 def check_event_hashes(api_db, ledger_db):
     logger.trace("API Watcher - Checking event hashes...")
-    last_api_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
-    ledger_event_sql = "SELECT * FROM messages WHERE message_index = ?"
-    last_api_event = fetch_one(api_db, last_api_event_sql)
+    last_api_event = get_last_event(api_db)
     if last_api_event is None:
         return
-    ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
+    ledger_event = get_event(ledger_db, last_api_event["message_index"])
+    while ledger_event is None:
+        print("ledger_event is None")
+        rollback_event(api_db, last_api_event)
+        last_api_event = get_last_event(api_db)
+        ledger_event = get_event(ledger_db, last_api_event["message_index"])
     while (
         last_api_event
         and ledger_event
         and last_api_event["event_hash"] != ledger_event["event_hash"]
     ):
-        logger.debug(
-            f"API Watcher - Event hash mismatch: {last_api_event['event_hash']} != {ledger_event['event_hash']}"
-        )
-        logger.debug(f"API Watcher - Rolling back event: {last_api_event['message_index']}")
+        print("hash_mismatch")
         rollback_event(api_db, last_api_event)
-        last_api_event = fetch_one(api_db, last_api_event_sql)
-        ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
+        last_api_event = get_last_event(api_db)
+        ledger_event = get_event(ledger_db, last_api_event["message_index"])
 
 
 def rollback(block_index):
