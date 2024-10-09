@@ -128,11 +128,6 @@ done
 # Run compare hashes test
 . "$HOME/.profile"
 cd counterparty-core
-
-cd ../counterparty-rs/
-sudo pip3 install -e .
-cd ../counterparty-core/
-sudo pip3 install -r requirements.txt
 sudo python3 -m pytest counterpartycore/test/mainnet_test.py --testapidb --comparehashes
 cd ..
 
