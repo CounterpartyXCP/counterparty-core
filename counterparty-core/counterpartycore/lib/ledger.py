@@ -1144,6 +1144,20 @@ def get_last_block(db):
     return block
 
 
+def get_block_hash(db, block_index):
+    query = """
+        SELECT block_hash FROM blocks
+        WHERE block_index = ?
+    """
+    bindings = (block_index,)
+    cursor = db.cursor()
+    cursor.execute(query, bindings)
+    block = cursor.fetchone()
+    if block is None:
+        return None
+    return block["block_hash"]
+
+
 def get_blocks_time(db, block_indexes):
     cursor = db.cursor()
     query = f"""

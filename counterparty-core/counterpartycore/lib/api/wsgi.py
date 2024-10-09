@@ -162,7 +162,7 @@ class GunicornArbiter(Arbiter):
         worker.pid = os.getpid()
         try:
             gunicorn_util._setproctitle("worker [%s]" % self.proc_name)
-            self.log.info("Booting worker with pid: %s", worker.pid)
+            logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
             self.add_worker_to_pid_file(worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()

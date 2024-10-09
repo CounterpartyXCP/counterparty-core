@@ -49,6 +49,7 @@ impl<'source> FromPyObject<'source> for LogLevel {
 pub enum Network {
     Mainnet,
     Testnet,
+    Regtest,
 }
 
 impl<'source> FromPyObject<'source> for Network {
@@ -57,6 +58,7 @@ impl<'source> FromPyObject<'source> for Network {
         match network_str.trim().to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
             "testnet" => Ok(Network::Testnet),
+            "regtest" => Ok(Network::Regtest),
             _ => Err(PyErr::new::<PyValueError, _>(
                 "'network' must be either 'mainnet' or 'testnet'",
             )),
@@ -69,6 +71,7 @@ impl ToString for Network {
         match self {
             Network::Mainnet => "mainnet".to_string(),
             Network::Testnet => "testnet".to_string(),
+            Network::Regtest => "regtest".to_string(),
         }
     }
 }
@@ -97,6 +100,13 @@ impl Heights {
                 p2sh_addresses: 0,
                 p2sh_dispensers: 2163328,
                 correct_segwit_txids: 1666625,
+                multisig_addresses: 0,
+            },
+            Network::Regtest => Heights {
+                segwit: 0,
+                p2sh_addresses: 0,
+                p2sh_dispensers: 0,
+                correct_segwit_txids: 0,
                 multisig_addresses: 0,
             },
         }
@@ -147,6 +157,7 @@ impl Config {
         match self.network {
             Network::Mainnet => "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
             Network::Testnet => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+            Network::Regtest => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
         }
         .into()
     }
@@ -218,6 +229,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => match network {
                 Network::Mainnet => vec![0x00],
                 Network::Testnet => vec![0x6F],
+                Network::Regtest => vec![0x6F],
             },
         };
 
@@ -226,6 +238,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => match network {
                 Network::Mainnet => vec![0x05],
                 Network::Testnet => vec![0xC4],
+                Network::Regtest => vec![0xC4],
             },
         };
 

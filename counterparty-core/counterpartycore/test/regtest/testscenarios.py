@@ -51,6 +51,9 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
+# SCENARIOS = []
+# SCENARIOS += scenario_1_fairminter.SCENARIO
+
 
 def compare_strings(string1, string2):
     """Compare strings diff-style."""
@@ -234,9 +237,9 @@ def run_item(node, item, context):
     return context
 
 
-def run_scenarios(serve=False):
+def run_scenarios(serve=False, wsgi_server="gunicorn"):
     try:
-        regtest_node_thread = RegtestNodeThread()
+        regtest_node_thread = RegtestNodeThread(wsgi_server=wsgi_server)
         regtest_node_thread.start()
 
         while not regtest_node_thread.ready():
@@ -273,6 +276,8 @@ def run_scenarios(serve=False):
             regtest_node_thread.node.reparse()
             print("Testing rollback...")
             regtest_node_thread.node.rollback()
+            print("Testing reorg...")
+            regtest_node_thread.node.test_reorg()
     except KeyboardInterrupt:
         pass
     except Exception as e:
@@ -285,4 +290,5 @@ def run_scenarios(serve=False):
 
 if __name__ == "__main__":
     serve = sys.argv[1] == "serve" if len(sys.argv) > 1 else False
-    run_scenarios(serve=serve)
+    wsgi_server = "werkzeug" if len(sys.argv) > 1 and sys.argv[1] == "werkzeug" else "gunicorn"
+    run_scenarios(serve=serve, wsgi_server=wsgi_server)

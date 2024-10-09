@@ -8,10 +8,13 @@
 
 ## Bugfixes
 
-- Properly handle invalid scripts in outputs
+- Handle invalid scripts in outputs properly
+- Fix `last_block` in `get_running_info` command (API v1)
+- Fix blockchain reorganization support
 
 ## Codebase
 
+- Add `regtest` support in RSFetcher
 
 ## API
 
@@ -20,6 +23,7 @@
 ## CLI
 
 - Add `wsgi-server` (`werkzeug` or `gunicorn`) and `gunicorn-workers` flags
+- Enable Sentry Caches and Queries pages
 
 # Credits
 
