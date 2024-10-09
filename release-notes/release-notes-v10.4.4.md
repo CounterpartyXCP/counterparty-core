@@ -1,8 +1,10 @@
-# Release Notes - Counterparty Core v10.4.4 (2024-10-??)
+# Release Notes - Counterparty Core v10.4.4 (2024-10-09)
 
+This is a minor release with a number of bugfixes and minor improvements to the API.
 
 # Upgrading
 
+This release is not a protocol change and does not require a database reparse.
 
 # ChangeLog
 
