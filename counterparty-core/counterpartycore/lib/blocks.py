@@ -18,6 +18,7 @@ from counterpartycore.lib import (  # noqa: E402
     check,
     config,
     database,
+    deserialize,
     exceptions,
     gas,
     ledger,
@@ -1204,10 +1205,19 @@ def parse_new_block(db, decoded_block, tx_index=None):
 
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
-            if "height" in decoded_block:
-                previous_block_index = decoded_block["height"] - 1
-            else:
-                previous_block_index = backend.bitcoind.get_block_height(decoded_block["hash_prev"])
+            # search last block with the correct hash
+            previous_block_index = util.CURRENT_BLOCK_INDEX - 1
+            while True:
+                bitcoin_block_hash = backend.bitcoind.getblockhash(previous_block_index)
+                counterparty_block_hash = ledger.get_block_hash(db, previous_block_index)
+                if bitcoin_block_hash != counterparty_block_hash:
+                    previous_block_index -= 1
+                else:
+                    break
+            current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
+            raw_current_block = backend.bitcoind.getblock(current_block_hash)
+            decoded_block = deserialize.deserialize_block(raw_current_block, use_txid=True)
+
             logger.warning("Blockchain reorganization detected at Block %s.", previous_block_index)
             # rollback to the previous block
             rollback(db, block_index=previous_block_index + 1)
@@ -1272,7 +1282,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
             },
         )
 
-    return tx_index
+    return tx_index, decoded_block["block_index"]
 
 
 def check_database_version(db):
@@ -1296,6 +1306,7 @@ def check_database_version(db):
 
 
 def catch_up(db, check_asset_conservation=True):
+    logger.info("Catching up...")
     util.BLOCK_PARSER_STATUS = "catching up"
     # update the current block index
     util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
@@ -1334,7 +1345,15 @@ def catch_up(db, check_asset_conservation=True):
         assert block_height <= util.CURRENT_BLOCK_INDEX + 1
 
         # Parse the current block
-        tx_index = parse_new_block(db, decoded_block, tx_index=tx_index)
+        tx_index, parsed_block_index = parse_new_block(db, decoded_block, tx_index=tx_index)
+        # check if the parsed block is the expected one
+        # if not that means a reorg happened
+        if parsed_block_index < block_height:
+            fetcher.stop()
+            fetcher = rsfetcher.RSFetcher()
+            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+        else:
+            assert parsed_block_index == block_height
         mempool.clean_mempool(db)
 
         parsed_blocks += 1

@@ -30,7 +30,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
             }
         else:
             self.config = indexer_config
-        self.config["network"] = "testnet" if config.TESTNET else "mainnet"
+        self.config["network"] = config.NETWORK_NAME
         self.fetcher = None
         self.prefetch_task = None
         self.running = False

@@ -36,9 +36,7 @@ docker container prune -f
 docker rmi counterparty/counterparty:$VERSION || true
 
 # build the counterparty-core new image
-docker build -t counterparty/counterparty:$VERSION . > build.txt 2>&1
-COUNTERPARTY_RS_CACHED=$(awk '/COPY \.\/counterparty-rs \/counterparty-rs/{getline; print}' build.txt | awk '{print $2}')
-cat build.txt
+docker build -t counterparty/counterparty:$VERSION .
 
 # re-start containers
 docker compose --profile mainnet up -d
@@ -130,11 +128,6 @@ done
 # Run compare hashes test
 . "$HOME/.profile"
 cd counterparty-core
-
-if [ "$COUNTERPARTY_RS_CACHED" != "CACHED" ]; then
-    hatch env prune
-fi
-
 sudo python3 -m pytest counterpartycore/test/mainnet_test.py --testapidb --comparehashes
 cd ..
 
