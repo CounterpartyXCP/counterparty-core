@@ -5,7 +5,7 @@ from io import BytesIO
 
 import bitcoin
 
-from counterpartycore.lib import transaction
+from counterpartycore.lib import exceptions, transaction
 from counterpartycore.lib.messages import send
 from counterpartycore.lib.transaction_helper import transaction_inputs
 from counterpartycore.test import (
@@ -53,7 +53,7 @@ def test_utxolocks(server_db):
 def test_utxolocks_custom_input(server_db):
     transaction_inputs.UTXOLocks().init(utxo_locks_max_addresses=10)  # reset UTXO_LOCKS
 
-    """it should use the same UTXO"""
+    """it should not use the same UTXO"""
     inputs_set = [
         {
             "txid": "b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985",
@@ -66,29 +66,23 @@ def test_utxolocks_custom_input(server_db):
         }
     ]
 
-    tx1hex = construct_tx(
+    construct_tx(
         server_db,
         "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         inputs_set=inputs_set,
     )
-    tx2hex = construct_tx(
-        server_db,
-        "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-        "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-        inputs_set=inputs_set,
-    )
+    try:
+        construct_tx(
+            server_db,
+            "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+            "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+            inputs_set=inputs_set,
+        )
+    except exceptions.BalanceError:
+        return
 
-    tx1f = BytesIO(binascii.unhexlify(tx1hex["unsigned_tx_hex"]))
-    tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
-
-    tx2f = BytesIO(binascii.unhexlify(tx2hex["unsigned_tx_hex"]))
-    tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
-
-    assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) == (
-        tx2.vin[0].prevout.hash,
-        tx2.vin[0].prevout.n,
-    )
+    raise Exception("Should have raised a BalanceError")
 
 
 def test_disable_utxolocks(server_db):
