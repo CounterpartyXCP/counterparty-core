@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import os
 import signal
 import sys
@@ -15,6 +16,8 @@ from gunicorn import util as gunicorn_util
 from gunicorn.arbiter import Arbiter
 from gunicorn.errors import AppImportError
 from werkzeug.serving import make_server
+
+multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -56,6 +59,7 @@ def refresh_backend_height(db, start=False):
     global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
     if not start:
         BACKEND_HEIGHT = get_backend_height()
+        # print(f"BACKEND_HEIGHT: {BACKEND_HEIGHT} ({os.getpid()})")
         refresh_current_block(db)
         backend.addrindexrs.clear_raw_transactions_cache()
         if not is_server_ready():
@@ -122,7 +126,7 @@ class GunicornArbiter(Arbiter):
     def __init__(self, app):
         super().__init__(app)
         self.workers_pid_file = tempfile.NamedTemporaryFile()
-        self.log = DummyLogger()
+        # self.log = DummyLogger()
 
     def add_worker_to_pid_file(self, pid):
         self.workers_pid_file.write(f"{pid}\n".encode())
@@ -202,7 +206,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             "worker_class": "gthread",
             "daemon": True,
             "threads": 2,
-            # "loglevel": "debug",
+            "loglevel": "debug",
             # "access-logfile": "-",
         }
         self.application = app
