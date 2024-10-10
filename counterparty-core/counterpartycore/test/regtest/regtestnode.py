@@ -51,7 +51,8 @@ class RegtestNode:
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
             f"--wsgi-server={wsgi_server}",
-            "--gunicorn-workers=3",
+            "--gunicorn-workers=2",
+            "--no-telemetry",
             "-vv",
         )
 
