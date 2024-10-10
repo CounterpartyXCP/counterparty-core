@@ -235,8 +235,6 @@ def construct_coin_selection(
                 f"Insufficient {config.BTC} at address {source}: no unspent outputs."
             )
 
-        unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
-
         if encoding == "multisig":
             dust = multisig_dust_size
         else:
@@ -245,6 +243,8 @@ def construct_coin_selection(
         unspent = sort_unspent_txouts(unspent, dust_size=dust)
         # self.logger.debug(f"Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}")
         use_inputs = unspent
+
+    use_inputs = unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
 
     # dont override fee_per_kb if specified
     estimate_fee_per_kb = None
