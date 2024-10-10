@@ -31,7 +31,7 @@ def is_server_ready():
             return True
     except RuntimeError:
         pass
-    if BACKEND_HEIGHT is None:
+    if BACKEND_HEIGHT is None or CURRENT_BLOCK_TIME is None:
         return False
     if util.CURRENT_BLOCK_INDEX in [BACKEND_HEIGHT, BACKEND_HEIGHT - 1]:
         return True
