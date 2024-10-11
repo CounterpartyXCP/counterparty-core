@@ -15,6 +15,7 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
+    script,
     sentry,
     util,
 )
@@ -294,6 +295,7 @@ def handle_route(**kwargs):
         exceptions.ComposeError,
         exceptions.UnpackError,
         CBitcoinAddressError,
+        script.AddressError,
     ) as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:

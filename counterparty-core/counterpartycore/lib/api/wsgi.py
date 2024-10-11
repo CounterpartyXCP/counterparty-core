@@ -128,7 +128,7 @@ class GunicornArbiter(Arbiter):
     def __init__(self, app):
         super().__init__(app)
         self.workers_pid_file = tempfile.NamedTemporaryFile()
-        # self.log = DummyLogger()
+        self.log = DummyLogger()
 
     def add_worker_to_pid_file(self, pid):
         self.workers_pid_file.write(f"{pid}\n".encode())
@@ -243,8 +243,8 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
     def stop(self):
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
-        if self.timer_db:
-            self.timer_db.close()
+        # if self.timer_db:
+        #    self.timer_db.close()
         if self.arbiter:
             # self.arbiter.stop(graceful=False)
             self.arbiter.kill_all_workers()
