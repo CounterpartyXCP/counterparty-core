@@ -128,7 +128,7 @@ class GunicornArbiter(Arbiter):
     def __init__(self, app):
         super().__init__(app)
         self.workers_pid_file = tempfile.NamedTemporaryFile()
-        # self.log = DummyLogger()
+        self.log = DummyLogger()
 
     def add_worker_to_pid_file(self, pid):
         self.workers_pid_file.write(f"{pid}\n".encode())
