@@ -90,7 +90,6 @@ services:
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
-      #- "--wsgi-server=gunicorn"
       #- "--verbose"
 
   ###################
@@ -158,7 +157,6 @@ services:
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
-      #- "--wsgi-server=gunicorn"
       #- "--verbose"
 
 volumes: 
