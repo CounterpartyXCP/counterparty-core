@@ -58,8 +58,6 @@ def refresh_current_block(db):
 
 
 def refresh_backend_height(db, start=False):
-    if db is None:  # shuttting down
-        return
     global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
     if not start:
         BACKEND_HEIGHT = get_backend_height()
@@ -245,8 +243,8 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
     def stop(self):
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
-        if self.timer_db:
-            self.timer_db.close()
+        # if self.timer_db:
+        #    self.timer_db.close()
         if self.arbiter:
             # self.arbiter.stop(graceful=False)
             self.arbiter.kill_all_workers()
