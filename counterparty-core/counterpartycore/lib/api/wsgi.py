@@ -58,6 +58,8 @@ def refresh_current_block(db):
 
 
 def refresh_backend_height(db, start=False):
+    if db is None:  # shuttting down
+        return
     global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
     if not start:
         BACKEND_HEIGHT = get_backend_height()
