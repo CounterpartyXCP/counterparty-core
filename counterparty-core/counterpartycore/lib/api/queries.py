@@ -211,7 +211,7 @@ def select_rows(
         bindings.append(last_cursor)
 
     if where_clause:
-        where_clause = f"WHERE {where_clause} "
+        where_clause = f"WHERE ({where_clause}) "
         if table not in no_block_index_tables:
             where_clause += f"AND block_index < {last_block} "
         elif table == "assets_info" and not include_unconfirmed:
