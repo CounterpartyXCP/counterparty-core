@@ -12,6 +12,7 @@ This release is not a protocol change and does not require a database reparse.
 
 - Fix `TypeError` in `is_server_ready()` function
 - Handle `AddressError` in API calls
+- Fix RSFetcher pre-fetcher queue
 
 ## Codebase
 
