@@ -1,5 +1,6 @@
 import logging
 import random
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -34,6 +35,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.fetcher = None
         self.prefetch_task = None
         self.running = False
+        self.lock = threading.Lock()
 
     def start(self, start_height=0):
         logger.debug("Starting Prefetcher...")
@@ -111,9 +113,11 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     time.sleep(0.1)  # Wait until there is space in the queue
                 if self.stopped:
                     break
+                self.lock.acquire()
                 block = self.fetcher.get_block_non_blocking()
                 if block is not None:
                     self.prefetch_queue.insert(0, block)
+                    self.lock.release()
                     self.prefetch_queue_size += 1
                     expected_height += 1
                     logger.debug(
@@ -132,6 +136,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                         logger.debug("Prefetch queue initialized.")
 
                 else:
+                    self.lock.release()
                     logger.debug("No block fetched. Waiting before next fetch.")
                     time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
             except Exception as e:
