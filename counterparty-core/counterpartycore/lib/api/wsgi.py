@@ -291,10 +291,10 @@ class WSGIApplication:
         self.args = args
         if config.WSGI_SERVER == "gunicorn":
             self.server = GunicornApplication(self.app, self.args)
-        if config.WSGI_SERVER == "waitress":
-            self.server = WaitressApplication(self.app, self.args)
-        else:
+        elif config.WSGI_SERVER == "werkzeug":
             self.server = WerkzeugApplication(self.app, self.args)
+        else:
+            self.server = WaitressApplication(self.app, self.args)
 
     def run(self):
         self.server.run()

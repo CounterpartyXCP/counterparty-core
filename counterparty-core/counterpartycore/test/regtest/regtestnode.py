@@ -23,7 +23,7 @@ class ComposeError(Exception):
 
 
 class RegtestNode:
-    def __init__(self, datadir="regtestnode", show_output=False, wsgi_server="gunicorn"):
+    def __init__(self, datadir="regtestnode", show_output=False, wsgi_server="waitress"):
         self.datadir = datadir
         self.bitcoin_cli = sh.bitcoin_cli.bake(
             "-regtest",

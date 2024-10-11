@@ -168,7 +168,7 @@ def initialise_config(
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
     db_connection_pool_size=None,
-    wsgi_server="werkzeug",
+    wsgi_server="waitress",
     gunicorn_workers=2,
 ):
     # log config already initialized
