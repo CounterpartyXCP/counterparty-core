@@ -314,7 +314,7 @@ CONFIG_ARGS = [
         {
             "default": "werkzeug",
             "help": "WSGI server to use (gunicorn or werkzeug)",
-            "choices": ["gunicorn", "werkzeug"],
+            "choices": ["gunicorn", "werkzeug", "waitress"],
         },
     ],
     [

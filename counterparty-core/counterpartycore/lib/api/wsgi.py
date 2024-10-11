@@ -8,6 +8,8 @@ import time
 from threading import Timer
 
 import gunicorn.app.base
+import waitress
+import waitress.server
 from counterpartycore.lib import backend, config, ledger, util
 from counterpartycore.lib.api.util import get_backend_height
 from counterpartycore.lib.database import get_db_connection
@@ -266,12 +268,31 @@ class WerkzeugApplication:
         self.server.server_close()
 
 
+class WaitressApplication:
+    def __init__(self, app, args=None):
+        self.app = app
+        self.args = args
+        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        self.server = waitress.server.create_server(
+            self.app, host=config.API_HOST, port=config.API_PORT
+        )
+
+    def run(self):
+        start_refresh_backend_height(self.timer_db, self.args)
+        self.server.run()
+
+    def stop(self):
+        self.server.close()
+
+
 class WSGIApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
         if config.WSGI_SERVER == "gunicorn":
             self.server = GunicornApplication(self.app, self.args)
+        if config.WSGI_SERVER == "waitress":
+            self.server = WaitressApplication(self.app, self.args)
         else:
             self.server = WerkzeugApplication(self.app, self.args)
 
