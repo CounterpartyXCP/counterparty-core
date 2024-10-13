@@ -512,7 +512,7 @@ def get_tx_info_legacy(decoded_tx, block_index):
             data_chunk = data_pubkey[1 : data_chunk_length + 1]
             data += data_chunk
         elif len(asm) == 5 and (
-            block_index >= 293000 or config.TESTNET or config.REGTEST
+            block_index >= 293000 or config.TESTNET or config.TESTNET4 or config.REGTEST
         ):  # Protocol change.
             # Be strict.
             pubkeyhash, address_version = get_pubkeyhash(script_pub_key, block_index)

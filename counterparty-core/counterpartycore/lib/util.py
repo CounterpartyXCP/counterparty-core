@@ -562,6 +562,8 @@ def enabled(change_name, block_index=None):
 
     if config.TESTNET:
         index_name = "testnet_block_index"
+    elif config.TESTNET:
+        index_name = "testnet4_block_index"
     else:
         index_name = "block_index"
 
@@ -604,6 +606,8 @@ def get_value_by_block_index(change_name, block_index=None):
 
     if config.TESTNET:
         index_name = "testnet"
+    elif config.TESTNET4:
+        index_name = "testnet4"
     else:
         index_name = "mainnet"
 

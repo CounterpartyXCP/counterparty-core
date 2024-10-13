@@ -172,7 +172,9 @@ def parse_tx(db, tx):
                 return
 
             # Protocol change.
-            rps_enabled = tx["block_index"] >= 308500 or config.TESTNET or config.REGTEST
+            rps_enabled = (
+                tx["block_index"] >= 308500 or config.TESTNET or config.TESTNET4 or config.REGTEST
+            )
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)

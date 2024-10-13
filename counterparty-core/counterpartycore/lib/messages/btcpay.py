@@ -82,7 +82,7 @@ def validate(db, source, order_match_id, block_index):
     # Check that source address is correct.
     if order_match["backward_asset"] == config.BTC:
         if source != order_match["tx1_address"] and not (
-            block_index >= 313900 or config.TESTNET or config.REGTEST
+            block_index >= 313900 or config.TESTNET or config.TESTNET4 or config.REGTEST
         ):  # Protocol change.
             problems.append("incorrect source address")
         destination = order_match["tx0_address"]
@@ -91,7 +91,7 @@ def validate(db, source, order_match_id, block_index):
         escrowed_quantity = order_match["forward_quantity"]
     elif order_match["forward_asset"] == config.BTC:
         if source != order_match["tx0_address"] and not (
-            block_index >= 313900 or config.TESTNET or config.REGTEST
+            block_index >= 313900 or config.TESTNET or config.TESTNET4 or config.REGTEST
         ):  # Protocol change.
             problems.append("incorrect source address")
         destination = order_match["tx1_address"]

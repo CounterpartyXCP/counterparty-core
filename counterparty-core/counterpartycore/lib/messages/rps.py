@@ -178,7 +178,7 @@ def initialise(db):
 
 
 def replay_events(db, key):
-    if config.TESTNET:
+    if config.TESTNET or config.TESTNET4:
         return
     events = RPS_EVENTS.get(key)
     if events:

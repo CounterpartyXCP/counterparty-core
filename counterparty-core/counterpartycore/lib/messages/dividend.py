@@ -71,7 +71,11 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         problems.append(f"cannot pay dividends to holders of {config.BTC}")
     if asset == config.XCP:
         if (
-            (not block_index >= 317500) or block_index >= 320000 or config.TESTNET or config.REGTEST
+            (not block_index >= 317500)
+            or block_index >= 320000
+            or config.TESTNET
+            or config.TESTNET4
+            or config.REGTEST
         ):  # Protocol change.
             problems.append(f"cannot pay dividends to holders of {config.XCP}")
 
@@ -90,7 +94,9 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         return None, None, problems, 0
 
     # Only issuer can pay dividends.
-    if block_index >= 320000 or config.TESTNET or config.REGTEST:  # Protocol change.
+    if (
+        block_index >= 320000 or config.TESTNET or config.TESTNET4 or config.REGTEST
+    ):  # Protocol change.
         issuer = ledger.get_asset_issuer(db, asset)
 
         if issuer != source:
@@ -120,7 +126,9 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         address = holder["address"]
         address_quantity = holder["address_quantity"]
 
-        if block_index >= 296000 or config.TESTNET or config.REGTEST:  # Protocol change.
+        if (
+            block_index >= 296000 or config.TESTNET or config.TESTNET4 or config.REGTEST
+        ):  # Protocol change.
             if address == source:
                 continue
 
@@ -156,7 +164,9 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     fee = 0
     if not problems and dividend_asset != config.BTC:
         holder_count = len(set(addresses))
-        if block_index >= 330000 or config.TESTNET or config.REGTEST:  # Protocol change.
+        if (
+            block_index >= 330000 or config.TESTNET or config.TESTNET4 or config.REGTEST
+        ):  # Protocol change.
             fee = int(0.0002 * config.UNIT * holder_count)
         if fee:
             balance = ledger.get_balance(db, source, config.XCP)
@@ -179,7 +189,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
     # preserve order with old queries
     # TODO: remove and update checkpoints
-    if not config.TESTNET and block_index in [313590, 313594]:
+    if not (config.TESTNET or config.TESTNET4) and block_index in [313590, 313594]:
         outputs.append(outputs.pop(-3))
 
     return dividend_total, outputs, problems, fee
@@ -222,7 +232,9 @@ def compose(
 
 def unpack(db, message, block_index, return_dict=False):
     try:
-        if (block_index > 288150 or config.TESTNET or config.REGTEST) and len(message) == LENGTH_2:
+        if (block_index > 288150 or config.TESTNET or config.TESTNET4 or config.REGTEST) and len(
+            message
+        ) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
             asset = ledger.get_asset_name(db, asset_id, block_index)
             dividend_asset = ledger.get_asset_name(db, dividend_asset_id, block_index)
@@ -285,7 +297,9 @@ def parse(db, tx, message):
             action="dividend",
             event=tx["tx_hash"],
         )
-        if tx["block_index"] >= 330000 or config.TESTNET or config.REGTEST:  # Protocol change.
+        if (
+            tx["block_index"] >= 330000 or config.TESTNET or config.TESTNET4 or config.REGTEST
+        ):  # Protocol change.
             ledger.debit(
                 db,
                 tx["source"],

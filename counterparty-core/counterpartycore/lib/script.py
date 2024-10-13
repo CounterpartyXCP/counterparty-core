@@ -467,6 +467,8 @@ def private_key_to_public_key(private_key_wif):
     """Convert private key to public key."""
     if config.TESTNET:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
+    elif config.TESTNET4:
+        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET4]
     elif config.REGTEST:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_REGTEST]
     else:

@@ -80,10 +80,10 @@ def api_root():
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
+    elif config.TESTNET4:
+        network = "testnet4"
     elif config.REGTEST:
         network = "regtest"
-    elif config.TESTCOIN:
-        network = "testcoin"
 
     with StateDBConnectionPool().connection() as state_db:
         counterparty_height = api_watcher.get_last_block_parsed(state_db)
