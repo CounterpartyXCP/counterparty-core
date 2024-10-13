@@ -867,7 +867,6 @@ class APIServer(threading.Thread):
                 "running_testnet": config.TESTNET,
                 "running_testnet4": config.TESTNET4,
                 "running_regtest": config.REGTEST,
-                "running_testcoin": config.TESTCOIN,
                 "version_major": config.VERSION_MAJOR,
                 "version_minor": config.VERSION_MINOR,
                 "version_revision": config.VERSION_REVISION,

@@ -272,7 +272,7 @@ def api_server(request, cp_server):
 def api_server_v2(request, cp_server):
     default_config = {
         "testnet": False,
-        "testcoin": False,
+        "testnet4": False,
         "regtest": False,
         "api_limit_rows": 1000,
         "backend_connect": None,
