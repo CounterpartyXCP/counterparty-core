@@ -598,6 +598,14 @@ def get_value_by_block_index(change_name, block_index=None):
     return PROTOCOL_CHANGES[change_name][index_name][max_block_index]["value"]
 
 
+def is_test_network():
+    return config.TESTNET or config.TESTNET4 or config.REGTEST
+
+
+def after_block_or_test_network(tx_block_index, target_block_index):
+    return tx_block_index >= target_block_index or is_test_network()
+
+
 class SingletonMeta(type):
     _instances = {}
 

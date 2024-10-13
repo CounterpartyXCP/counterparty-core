@@ -192,9 +192,7 @@ def exact_penalty(db, address, block_index, order_match_id, tx_index):
     for bad_order in bad_orders:
         cancel_order(db, bad_order, "expired", block_index, tx_index)
 
-    if not (
-        block_index >= 314250 or config.TESTNET or config.TESTNET4 or config.REGTEST
-    ):  # Protocol change.
+    if not util.after_block_or_test_network(block_index, 314250):  # Protocol change.
         # Order matches.
         bad_order_matches = ledger.get_pending_btc_order_matches(db, address)
         for bad_order_match in bad_order_matches:
@@ -249,9 +247,7 @@ def cancel_order(db, order, status, block_index, tx_index):
 def cancel_order_match(db, order_match, status, block_index, tx_index):
     """The only cancelling is an expiration."""
     # Skip order matches just expired as a penalty. (Not very efficient.)
-    if not (
-        block_index >= 314250 or config.TESTNET or config.TESTNET4 or config.REGTEST
-    ):  # Protocol change.
+    if not util.after_block_or_test_network(block_index, 314250):  # Protocol change.
         order_matches = ledger.get_order_match(db, id=order_match["id"])
         if order_matches and order_matches[0]["status"] == "expired":
             return
@@ -278,8 +274,8 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     else:
         tx0_give_remaining = tx0_order["give_remaining"] + order_match["forward_quantity"]
         tx0_get_remaining = tx0_order["get_remaining"] + order_match["backward_quantity"]
-        if tx0_order["get_asset"] == config.BTC and (
-            block_index >= 297000 or config.TESTNET or config.TESTNET4 or config.REGTEST
+        if tx0_order["get_asset"] == config.BTC and util.after_block_or_test_network(
+            block_index, 297000
         ):  # Protocol change.
             tx0_fee_required_remaining = (
                 tx0_order["fee_required_remaining"] + order_match["fee_paid"]
@@ -321,8 +317,8 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     else:
         tx1_give_remaining = tx1_order["give_remaining"] + order_match["backward_quantity"]
         tx1_get_remaining = tx1_order["get_remaining"] + order_match["forward_quantity"]
-        if tx1_order["get_asset"] == config.BTC and (
-            block_index >= 297000 or config.TESTNET or config.TESTNET4 or config.REGTEST
+        if tx1_order["get_asset"] == config.BTC and util.after_block_or_test_network(
+            block_index, 297000
         ):  # Protocol change.
             tx1_fee_required_remaining = (
                 tx1_order["fee_required_remaining"] + order_match["fee_paid"]
@@ -351,21 +347,15 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
         assert tx0_order_time_left or tx1_order_time_left
 
     # Penalize tardiness.
-    if (
-        block_index >= 313900 or config.TESTNET or config.TESTNET4 or config.REGTEST
-    ):  # Protocol change.
+    if util.after_block_or_test_network(block_index, 313900):  # Protocol change.
         if tx0_order["status"] == "expired" and order_match["forward_asset"] == config.BTC:
             exact_penalty(db, order_match["tx0_address"], block_index, order_match["id"], tx_index)
         if tx1_order["status"] == "expired" and order_match["backward_asset"] == config.BTC:
             exact_penalty(db, order_match["tx1_address"], block_index, order_match["id"], tx_index)
 
     # Re‐match.
-    if (
-        block_index >= 310000 or config.TESTNET or config.TESTNET4 or config.REGTEST
-    ):  # Protocol change.
-        if not (
-            block_index >= 315000 or config.TESTNET or config.TESTNET4 or config.REGTEST
-        ):  # Protocol change.
+    if util.after_block_or_test_network(block_index, 310000):  # Protocol change.
+        if not util.after_block_or_test_network(block_index, 315000):  # Protocol change.
             match(db, ledger.get_transactions(db, tx_hash=tx0_order["tx_hash"])[0], block_index)
             match(db, ledger.get_transactions(db, tx_hash=tx1_order["tx_hash"])[0], block_index)
 
@@ -438,8 +428,8 @@ def validate(
         problems.append("negative fee_required")
     if expiration < 0:
         problems.append("negative expiration")
-    if expiration == 0 and not (
-        block_index >= 317500 or config.TESTNET or config.TESTNET4 or config.REGTEST
+    if expiration == 0 and not util.after_block_or_test_network(
+        block_index, 317500
     ):  # Protocol change.
         problems.append("zero expiration")
 
@@ -665,9 +655,7 @@ def match(db, tx, block_index=None):
         db, tx1["tx_hash"], give_asset=tx1["give_asset"], get_asset=tx1["get_asset"]
     )
 
-    if (
-        tx["block_index"] > 284500 or config.TESTNET or config.TESTNET4 or config.REGTEST
-    ):  # Protocol change.
+    if util.after_block_or_test_network(tx["block_index"], 284501):  # Protocol change.
         order_matches = sorted(
             order_matches, key=lambda x: x["tx_index"]
         )  # Sort by tx index second.
@@ -715,17 +703,13 @@ def match(db, tx, block_index=None):
                 logger.trace("Skipping: negative give quantity remaining")
                 continue
             if (
-                block_index >= 292000
-                and block_index <= 310500
-                and not (config.TESTNET or config.TESTNET4 or config.REGTEST)
+                block_index >= 292000 and block_index <= 310500 and not util.is_test_network()
             ):  # Protocol changes
                 if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
                     logger.trace("Skipping: negative get quantity remaining")
                     continue
 
-            if (
-                block_index >= 294000 or config.TESTNET or config.TESTNET4 or config.REGTEST
-            ):  # Protocol change.
+            if util.after_block_or_test_network(block_index, 294000):  # Protocol change.
                 if tx0["fee_required_remaining"] < 0:
                     logger.trace("Skipping: negative tx0 fee required remaining")
                     continue
@@ -768,18 +752,14 @@ def match(db, tx, block_index=None):
             if not forward_quantity:
                 logger.trace("Skipping: zero forward quantity.")
                 continue
-            if (
-                block_index >= 286500 or config.TESTNET or config.TESTNET4 or config.REGTEST
-            ):  # Protocol change.
+            if util.after_block_or_test_network(block_index, 286500):  # Protocol change.
                 if not backward_quantity:
                     logger.trace("Skipping: zero backward quantity.")
                     continue
 
             forward_asset, backward_asset = tx1["get_asset"], tx1["give_asset"]
 
-            if (
-                block_index >= 313900 or config.TESTNET or config.TESTNET4 or config.REGTEST
-            ):  # Protocol change.
+            if util.after_block_or_test_network(block_index, 313900):  # Protocol change.
                 min_btc_quantity = 0.001 * config.UNIT  # 0.001 BTC
                 if util.enabled("fix_min_btc_quantity", block_index):
                     # we subtract 1 because the <= instead of < like when checking orders
@@ -792,13 +772,11 @@ def match(db, tx, block_index=None):
 
             # Check and update fee remainings.
             fee = 0
-            if (
-                block_index >= 286500 or config.TESTNET or config.TESTNET4 or config.REGTEST
+            if util.after_block_or_test_network(
+                block_index, 286500
             ):  # Protocol change. Deduct fee_required from provided_remaining, etc., if possible (else don’t match).
                 if tx1["get_asset"] == config.BTC:
-                    if (
-                        block_index >= 310500 or config.TESTNET or config.TESTNET4 or config.REGTEST
-                    ):  # Protocol change.
+                    if util.after_block_or_test_network(block_index, 310500):  # Protocol change.
                         fee = int(
                             tx1["fee_required"]
                             * ledger.price(backward_quantity, tx1["give_quantity"])
@@ -817,18 +795,13 @@ def match(db, tx, block_index=None):
                         continue
                     else:
                         tx0_fee_provided_remaining -= fee
-                        if (
-                            block_index >= 287800
-                            or config.TESTNET
-                            or config.TESTNET4
-                            or config.REGTEST
+                        if util.after_block_or_test_network(
+                            block_index, 287800
                         ):  # Protocol change.
                             tx1_fee_required_remaining -= fee
 
                 elif tx1["give_asset"] == config.BTC:
-                    if (
-                        block_index >= 310500 or config.TESTNET or config.TESTNET4 or config.REGTEST
-                    ):  # Protocol change.
+                    if util.after_block_or_test_network(block_index, 310500):  # Protocol change.
                         fee = int(
                             tx0["fee_required"]
                             * ledger.price(backward_quantity, tx0["give_quantity"])
@@ -847,11 +820,8 @@ def match(db, tx, block_index=None):
                         continue
                     else:
                         tx1_fee_provided_remaining -= fee
-                        if (
-                            block_index >= 287800
-                            or config.TESTNET
-                            or config.TESTNET4
-                            or config.REGTEST
+                        if util.after_block_or_test_network(
+                            block_index, 287800
                         ):  # Protocol change.
                             tx0_fee_required_remaining -= fee
 
@@ -899,8 +869,7 @@ def match(db, tx, block_index=None):
             # tx0
             tx0_status = "open"
             if tx0_give_remaining <= 0 or (
-                tx0_get_remaining <= 0
-                and (block_index >= 292000 or config.TESTNET or config.TESTNET4 or config.REGTEST)
+                tx0_get_remaining <= 0 and util.after_block_or_test_network(block_index, 292000)
             ):  # Protocol change
                 if tx0["give_asset"] != config.BTC and tx0["get_asset"] != config.BTC:
                     # Fill order, and recredit give_remaining.
@@ -925,8 +894,7 @@ def match(db, tx, block_index=None):
 
             # tx1
             if tx1_give_remaining <= 0 or (
-                tx1_get_remaining <= 0
-                and (block_index >= 292000 or config.TESTNET or config.TESTNET4 or config.REGTEST)
+                tx1_get_remaining <= 0 and util.after_block_or_test_network(block_index, 292000)
             ):  # Protocol change
                 if tx1["give_asset"] != config.BTC and tx1["get_asset"] != config.BTC:
                     # Fill order, and recredit give_remaining.
@@ -950,13 +918,9 @@ def match(db, tx, block_index=None):
             ledger.update_order(db, tx1["tx_hash"], set_data)
 
             # Calculate when the match will expire.
-            if (
-                block_index >= 308000 or config.TESTNET or config.TESTNET4 or config.REGTEST
-            ):  # Protocol change.
+            if util.after_block_or_test_network(block_index, 308000):  # Protocol change.
                 match_expire_index = block_index + 20
-            elif (
-                block_index >= 286500 or config.TESTNET or config.TESTNET4 or config.REGTEST
-            ):  # Protocol change.
+            elif util.after_block_or_test_network(block_index, 286500):  # Protocol change.
                 match_expire_index = block_index + 10
             else:
                 match_expire_index = min(tx0["expire_index"], tx1["expire_index"])
@@ -1039,9 +1003,7 @@ def expire_order_matches(db, block_index):
                         block_index,
                     )
 
-    if (
-        block_index >= 315000 or config.TESTNET or config.TESTNET4 or config.REGTEST
-    ):  # Protocol change.
+    if util.after_block_or_test_network(block_index, 315000):  # Protocol change.
         # Re‐match.
         for order_match in order_matches:
             match(db, ledger.get_order(db, order_hash=order_match["tx0_hash"])[0], block_index)

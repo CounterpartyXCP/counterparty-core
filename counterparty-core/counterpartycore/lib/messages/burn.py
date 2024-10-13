@@ -93,7 +93,7 @@ def compose(db, source: str, quantity: int, overburn: bool = False):
 def parse(db, tx, mainnet_burns, message=None):
     burn_parse_cursor = db.cursor()
 
-    if config.TESTNET or config.TESTNET4 or config.REGTEST:
+    if util.is_test_network():
         problems = []
         status = "valid"
 

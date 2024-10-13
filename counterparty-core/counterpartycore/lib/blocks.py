@@ -136,9 +136,7 @@ def parse_tx(db, tx):
                 message = None
 
             # Protocol change.
-            rps_enabled = (
-                tx["block_index"] >= 308500 or config.TESTNET or config.TESTNET4 or config.REGTEST
-            )
+            rps_enabled = util.after_block_or_test_network(tx["block_index"], 308500)
 
             supported = True
 
