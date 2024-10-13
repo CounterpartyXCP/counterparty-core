@@ -61,10 +61,10 @@ def api_root():
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
+    elif config.TESTNET4:
+        network = "testnet4"
     elif config.REGTEST:
         network = "regtest"
-    elif config.TESTCOIN:
-        network = "testcoin"
     return {
         "server_ready": counterparty_height >= wsgi.BACKEND_HEIGHT,
         "network": network,

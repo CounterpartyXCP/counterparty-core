@@ -44,6 +44,7 @@ class TestTelemetryCollectorBase:
         mock_config.__version__ = "1.2.3"
         mock_config.ADDRINDEXRS_VERSION = "4.5.6"
         mock_config.TESTNET = False
+        mock_config.TESTNET4 = False
         mock_config.FORCE = False
 
         collector = TelemetryCollectorBase(mock_db)
