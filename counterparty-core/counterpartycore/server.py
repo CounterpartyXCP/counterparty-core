@@ -170,6 +170,7 @@ def initialise_config(
     db_connection_pool_size=None,
     wsgi_server="waitress",
     gunicorn_workers=2,
+    electr_url=None,
 ):
     # log config already initialized
 
@@ -590,6 +591,16 @@ def initialise_config(
 
     config.WSGI_SERVER = wsgi_server
     config.GUNICORN_WORKERS = gunicorn_workers
+
+    if electr_url:
+        config.ELECTR_URL = electr_url
+    else:
+        if config.NETWORK_NAME == "testnet":
+            config.ELECTR_URL = config.DEFAULT_ELECTR_URL_TESTNET
+        elif config.NETWORK_NAME == "mainnet":
+            config.ELECTR_URL = config.DEFAULT_ELECTR_URL_MAINNET
+        else:
+            config.ELECTR_URL = None
 
 
 def initialise_log_and_config(args):

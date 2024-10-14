@@ -325,6 +325,12 @@ CONFIG_ARGS = [
             "help": "number of worker processes for gunicorn",
         },
     ],
+    [
+        ("--electr-url",),
+        {
+            "help": "the URL of the Electrum server",
+        },
+    ],
 ]
 
 
