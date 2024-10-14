@@ -959,9 +959,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
-            return backend.addrindexrs.getrawtransaction_batch(
-                txhash_list, verbose=verbose, skip_missing=skip_missing
-            )
+            return backend.bitcoind.getrawtransaction_batch(txhash_list)
 
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):

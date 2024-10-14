@@ -1,5 +1,3 @@
-import collections
-import concurrent.futures
 import hashlib
 import json
 import logging
@@ -11,8 +9,8 @@ import time
 
 import bitcoin.wallet
 
-from counterpartycore.lib import config, exceptions, util
-from counterpartycore.lib.backend.bitcoind import getblockcount, rpc_call
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.backend.bitcoind import getblockcount, getrawtransaction_batch
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -26,9 +24,6 @@ BACKOFF_MAX = 8
 BACKOFF_FACTOR = 2
 
 INDEXER_THREAD = None
-raw_transactions_cache = util.DictCache(
-    size=config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE
-)  # used in getrawtransaction_batch()
 
 
 class BackendRPCError(Exception):
@@ -41,122 +36,6 @@ class AddrIndexRsRPCError(Exception):
 
 class AddrIndexRsClientError(Exception):
     pass
-
-
-def rpc_batch(request_list):
-    responses = collections.deque()
-
-    def make_call(chunk):
-        # send a list of requests to bitcoind to be executed
-        # note that this is list executed serially, in the same thread in bitcoind
-        # e.g. see: https://github.com/bitcoin/bitcoin/blob/master/src/rpcserver.cpp#L939
-        responses.extend(rpc_call(chunk))
-
-    chunks = util.chunkify(request_list, config.RPC_BATCH_SIZE)
-    with concurrent.futures.ThreadPoolExecutor(
-        max_workers=config.BACKEND_RPC_BATCH_NUM_WORKERS
-    ) as executor:
-        for chunk in chunks:
-            executor.submit(make_call, chunk)
-    return list(responses)
-
-
-GETRAWTRANSACTION_MAX_RETRIES = 2
-MONOTONIC_CALL_ID = 0
-
-
-def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, _retry=0):
-    init()
-    if len(txhash_list) > config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE:
-        # don't try to load in more than BACKEND_RAW_TRANSACTIONS_CACHE_SIZE entries in a single call
-        txhash_list_chunks = util.chunkify(txhash_list, config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE)
-        txes = {}
-        for txhash_list_chunk in txhash_list_chunks:
-            txes.update(
-                getrawtransaction_batch(
-                    txhash_list_chunk, verbose=verbose, skip_missing=skip_missing
-                )
-            )
-        return txes
-
-    tx_hash_call_id = {}
-    payload = []
-    noncached_txhashes = set()
-
-    txhash_list = set(txhash_list)
-
-    # payload for transactions not in cache
-    for tx_hash in txhash_list:
-        if tx_hash not in raw_transactions_cache:
-            # call_id = binascii.hexlify(os.urandom(5)).decode('utf8') # Don't drain urandom
-            global MONOTONIC_CALL_ID  # noqa: PLW0603
-            MONOTONIC_CALL_ID = MONOTONIC_CALL_ID + 1
-            call_id = f"{MONOTONIC_CALL_ID}"
-            payload.append(
-                {
-                    "method": "getrawtransaction",
-                    "params": [tx_hash, 1],
-                    "jsonrpc": "2.0",
-                    "id": call_id,
-                }
-            )
-            noncached_txhashes.add(tx_hash)
-            tx_hash_call_id[call_id] = tx_hash
-    # refresh any/all cache entries that already exist in the cache,
-    # so they're not inadvertently removed by another thread before we can consult them
-    # (this assumes that the size of the working set for any given workload doesn't exceed the max size of the cache)
-    for tx_hash in txhash_list.difference(noncached_txhashes):
-        raw_transactions_cache.refresh(tx_hash)
-
-    # populate cache
-    if len(payload) > 0:
-        batch_responses = rpc_batch(payload)
-        for response in batch_responses:
-            if "error" not in response or response["error"] is None:
-                tx_hex = response["result"]
-                tx_hash = tx_hash_call_id[response["id"]]
-                raw_transactions_cache[tx_hash] = tx_hex
-            elif skip_missing and "error" in response and response["error"]["code"] == -5:
-                raw_transactions_cache[tx_hash] = None
-                # missing_tx_hash = tx_hash_call_id.get(response.get("id", "??"), "??")
-                # logger.debug(
-                #    f"Missing TX with no raw info skipped (txhash: {missing_tx_hash}): {response['error']}"
-                # )
-            else:
-                # TODO: this seems to happen for bogus transactions? Maybe handle it more gracefully than just erroring out?
-                raise BackendRPCError(
-                    f"{response['error']} (txhash:: {tx_hash_call_id.get(response.get('id', '??'), '??')})"
-                )
-
-    # get transactions from cache
-    result = {}
-    for tx_hash in txhash_list:
-        try:
-            if verbose:
-                result[tx_hash] = raw_transactions_cache[tx_hash]
-            else:
-                result[tx_hash] = (
-                    raw_transactions_cache[tx_hash]["hex"]
-                    if raw_transactions_cache[tx_hash] is not None
-                    else None
-                )
-        except KeyError:  # shows up most likely due to finickyness with addrindex not always returning results that we need...
-            logger.debug(f"tx missing in rawtx cache: {tx_hash}")
-            if _retry < GETRAWTRANSACTION_MAX_RETRIES:  # try again
-                time.sleep(
-                    0.05 * (_retry + 1)
-                )  # Wait a bit, hitting the index non-stop may cause it to just break down... TODO: Better handling
-                r = getrawtransaction_batch(
-                    [tx_hash],
-                    verbose=verbose,
-                    skip_missing=skip_missing,
-                    _retry=_retry + 1,
-                )
-                result[tx_hash] = r[tx_hash]
-            else:
-                raise  # already tried again, give up
-
-    return result
 
 
 class SocketManager:
@@ -710,8 +589,8 @@ def get_oldest_tx(address: str, block_index: int):
             ADDRINDEXRS_CLIENT = AddrindexrsSocket()
         result = ADDRINDEXRS_CLIENT.get_oldest_tx(address, block_index=current_block_index)
 
+    with open("oldest_tx.json", "a") as f:
+        line_data = {f"{address}-{block_index}": result}
+        f.write(json.dumps(line_data) + "\n")
+
     return result
-
-
-def clear_raw_transactions_cache():
-    raw_transactions_cache.clear()

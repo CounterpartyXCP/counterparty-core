@@ -634,7 +634,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         get_utxo_address_and_value,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction_batch",
         mocked_getrawtransaction_batch,
     )
     monkeypatch.setattr(

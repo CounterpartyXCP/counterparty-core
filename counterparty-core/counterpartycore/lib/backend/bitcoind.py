@@ -276,6 +276,39 @@ def get_decoded_transaction(tx_hash, block_index=None):
     return tx
 
 
+def getrawtransaction_batch(tx_hashes):
+    result = {}
+    payload = []
+    hash_by_id = {}
+
+    for tx_hash in tx_hashes:
+        if tx_hash in TRANSACTIONS_CACHE:
+            result[tx_hash] = TRANSACTIONS_CACHE[tx_hash]
+            continue
+        hash_by_id[len(payload)] = tx_hash
+        payload.append(
+            {
+                "method": "getrawtransaction",
+                "params": [tx_hash, 0],
+                "jsonrpc": "2.0",
+                "id": len(payload),
+            }
+        )
+
+    if len(payload) > 0:
+        payload_chunks = util.chunkify(payload, config.RPC_BATCH_SIZE)
+        for payload_chunk in payload_chunks:
+            batch_responses = rpc_call(payload_chunk)
+            for response in batch_responses:
+                if "result" in response and "error" not in response:
+                    tx_hash = hash_by_id[response["id"]]
+                    tx = deserialize.deserialize_tx(response["result"], use_txid=True)
+                    result[tx_hash] = tx
+                    add_transaction_in_cache(tx_hash, tx)
+
+    return result
+
+
 def get_tx_out_amount(tx_hash, vout):
     raw_tx = getrawtransaction(tx_hash, True)
     return raw_tx["vout"][vout]["value"]

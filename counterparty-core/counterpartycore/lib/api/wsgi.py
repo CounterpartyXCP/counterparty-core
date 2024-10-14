@@ -10,7 +10,7 @@ from threading import Timer
 import gunicorn.app.base
 import waitress
 import waitress.server
-from counterpartycore.lib import backend, config, ledger, util
+from counterpartycore.lib import config, ledger, util
 from counterpartycore.lib.api.util import get_backend_height
 from counterpartycore.lib.database import get_db_connection
 from flask import request
@@ -65,7 +65,6 @@ def refresh_backend_height(db, start=False):
         BACKEND_HEIGHT = get_backend_height()
         # print(f"BACKEND_HEIGHT: {BACKEND_HEIGHT} ({os.getpid()})")
         refresh_current_block(db)
-        backend.addrindexrs.clear_raw_transactions_cache()
         if not is_server_ready():
             if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
                 logger.debug(
