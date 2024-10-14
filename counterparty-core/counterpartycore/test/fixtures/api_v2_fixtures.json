@@ -16403,7 +16403,7 @@
                 ]
             },
             "/v2/bitcoin/addresses/utxos": {
-                "function": "get_unspent_txouts_by_addresses",
+                "function": "get_utxos_by_addresses",
                 "description": "Returns a list of unspent outputs for a list of addresses",
                 "args": [
                     {
@@ -16418,6 +16418,13 @@
                         "required": false,
                         "type": "bool",
                         "description": "Include unconfirmed transactions"
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "Filter by unspent_tx_hash"
                     },
                     {
                         "name": "verbose",
@@ -16436,7 +16443,7 @@
                 ]
             },
             "/v2/bitcoin/addresses/<address>/transactions": {
-                "function": "get_transactions_by_address",
+                "function": "get_history",
                 "description": "Returns all transactions involving a given address",
                 "args": [
                     {
@@ -16447,50 +16454,9 @@
                     },
                     {
                         "name": "unconfirmed",
-                        "default": true,
-                        "required": false,
-                        "type": "bool",
-                        "description": "Include unconfirmed transactions (e.g. True)"
-                    },
-                    {
-                        "name": "only_tx_hashes",
                         "default": false,
                         "required": false,
-                        "type": "bool",
-                        "description": "Return only the tx hashes (e.g. True)"
-                    },
-                    {
-                        "name": "verbose",
-                        "type": "bool",
-                        "default": "false",
-                        "description": "Include asset and dispenser info and normalized quantities in the response.",
-                        "required": false
-                    },
-                    {
-                        "name": "show_unconfirmed",
-                        "type": "bool",
-                        "default": "false",
-                        "description": "Include results from Mempool.",
-                        "required": false
-                    }
-                ]
-            },
-            "/v2/bitcoin/addresses/<address>/transactions/oldest": {
-                "function": "get_oldest_transaction_by_address",
-                "description": "Get the oldest transaction for an address.",
-                "args": [
-                    {
-                        "name": "address",
-                        "required": true,
-                        "type": "str",
-                        "description": "The address to search for. (e.g. $ADDRESS_9)"
-                    },
-                    {
-                        "name": "block_index",
-                        "default": null,
-                        "required": false,
-                        "type": "int",
-                        "description": "The block index to search from."
+                        "type": "bool"
                     },
                     {
                         "name": "verbose",
@@ -16509,15 +16475,9 @@
                 ]
             },
             "/v2/bitcoin/addresses/<address>/utxos": {
-                "function": "get_unspent_txouts",
+                "function": "get_utxos",
                 "description": "Returns a list of unspent outputs for a specific address",
                 "args": [
-                    {
-                        "name": "address",
-                        "required": true,
-                        "type": "str",
-                        "description": "The address to search for (e.g. $ADDRESS_7)"
-                    },
                     {
                         "name": "unconfirmed",
                         "default": false,

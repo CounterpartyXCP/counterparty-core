@@ -13,6 +13,8 @@ VERSION_MINOR = int(version[1])
 VERSION_REVISION = int(version[2])
 VERSION_PRE_RELEASE = "-".join(VERSION_STRING.split("-")[1:])
 
+ELECTR_URL = "https://api.counterparty.io:3000"
+
 ADDRINDEXRS_VERSION = "0.4.6"
 
 # When updating to a new verion, we are making a rollback if major version changes.

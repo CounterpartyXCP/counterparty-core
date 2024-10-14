@@ -234,9 +234,6 @@ def initialise_config(
     ##############
     # THINGS WE CONNECT TO
 
-    # Backend name
-    config.BACKEND_NAME = "addrindexrs"
-
     # Backend RPC host (Bitcoin Core)
     if backend_connect:
         config.BACKEND_CONNECT = backend_connect
@@ -777,7 +774,6 @@ def start_all(args):
             TelemetryOneShot().close()
         if db:
             database.close(db)
-        backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()
         try:
@@ -797,12 +793,10 @@ def start_all(args):
 
 
 def reparse(block_index):
-    backend.addrindexrs.init()
     db = database.initialise_db()
     try:
         blocks.reparse(db, block_index=block_index)
     finally:
-        backend.addrindexrs.stop()
         database.optimize(db)
         db.close()
 

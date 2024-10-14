@@ -75,7 +75,7 @@ def refresh_backend_height(db, start=False):
                     f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {BACKEND_HEIGHT})"
                 )
     else:
-        # starting the timer is not blocking in case of Addrindexrs is not ready
+        # starting the timer is not blocking in case of Bitcoin Core is not ready
         BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height, (db,))
         BACKEND_HEIGHT_TIMER.start()
         return

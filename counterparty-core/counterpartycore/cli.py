@@ -344,7 +344,6 @@ def welcome_message(action, server_configfile):
         pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
         cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
         cprint(f"Bitcoin Core: {cleaned_backend_url}", "light_grey")
-        cprint(f"AddrIndexRs: {config.INDEXD_URL}", "light_grey")
 
         api_url = "http://"
         if config.API_USER and config.API_PASSWORD:

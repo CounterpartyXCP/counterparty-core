@@ -554,7 +554,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
     return tx_hashes_addresses, tx_hashes_tx
 
 
-def search_raw_transactions(db, address, unconfirmed=False):
+def get_history(db, address, unconfirmed=False):
     cursor = db.cursor()
 
     try:

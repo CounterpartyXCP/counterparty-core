@@ -53,7 +53,6 @@ from counterpartycore.lib.messages import (
 )
 from counterpartycore.lib.messages.versions import enhanced_send  # noqa: E402
 from counterpartycore.lib.telemetry.util import (  # noqa: E402
-    get_addrindexrs_version,
     get_uptime,
     is_docker,
     is_force_enabled,
@@ -832,8 +831,6 @@ class APIServer(threading.Thread):
 
             server_ready = caught_up and indexd_caught_up
 
-            addrindexrs_version = get_addrindexrs_version().split(".")
-
             return {
                 "server_ready": server_ready,
                 "db_caught_up": caught_up,
@@ -849,9 +846,6 @@ class APIServer(threading.Thread):
                 "version_major": config.VERSION_MAJOR,
                 "version_minor": config.VERSION_MINOR,
                 "version_revision": config.VERSION_REVISION,
-                "addrindexrs_version_major": int(addrindexrs_version[0]),
-                "addrindexrs_version_minor": int(addrindexrs_version[1]),
-                "addrindexrs_version_revision": int(addrindexrs_version[2]),
                 "uptime": int(get_uptime()),
                 "dockerized": is_docker(),
                 "force_enabled": is_force_enabled(),
@@ -930,17 +924,13 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-            return backend.addrindexrs.search_raw_transactions(
+            return backend.electr.get_history(
                 address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes
             )
 
         @dispatcher.add_method
-        def get_oldest_tx(address):
-            return backend.addrindexrs.get_oldest_tx(address, block_index=util.CURRENT_BLOCK_INDEX)
-
-        @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
-            results = backend.addrindexrs.get_unspent_txouts(
+            results = backend.electr.get_utxos(
                 address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash
             )
             if order_by is None:
