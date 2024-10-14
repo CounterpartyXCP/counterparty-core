@@ -131,7 +131,7 @@ def check_backend_state():
     # check backend index
     blocks_behind = backend.bitcoind.get_blocks_behind()
     if blocks_behind > 5:
-        raise BackendError(f"Indexd is running {blocks_behind} blocks behind.")
+        raise BackendError(f"Bitcoind is running {blocks_behind} blocks behind.")
 
     logger.debug("API Status Poller - Backend state check passed.")
 
@@ -824,20 +824,20 @@ class APIServer(threading.Thread):
                     last_message = None
 
             try:
-                indexd_blocks_behind = backend.bitcoind.get_blocks_behind()
+                bitcoind_blocks_behind = backend.bitcoind.get_blocks_behind()
             except:  # noqa: E722
-                indexd_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
-            indexd_caught_up = indexd_blocks_behind <= 1
+                bitcoind_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
+            bitcoind_caught_up = bitcoind_blocks_behind <= 1
 
-            server_ready = caught_up and indexd_caught_up
+            server_ready = caught_up and bitcoind_caught_up
 
             return {
                 "server_ready": server_ready,
                 "db_caught_up": caught_up,
                 "bitcoin_block_count": latest_block_index,
                 "last_block": last_block,
-                "indexd_caught_up": indexd_caught_up,
-                "indexd_blocks_behind": indexd_blocks_behind,
+                "bitcoind_caught_up": bitcoind_caught_up,
+                "bitcoind_blocks_behind": bitcoind_blocks_behind,
                 "last_message_index": (last_message["message_index"] if last_message else -1),
                 "api_limit_rows": config.API_LIMIT_ROWS,
                 "running_testnet": config.TESTNET,

@@ -147,11 +147,6 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--indexd-connect",),
-        {"default": "localhost", "help": "the hostname or IP of the indexd server"},
-    ],
-    [("--indexd-port",), {"type": int, "help": "the indexd server port to connect to"}],
-    [
         ("--rpc-host",),
         {
             "default": "localhost",

@@ -337,7 +337,7 @@ def construct_coin_selection(
         UTXOLocks().lock_utxos(source, inputs)
 
     # ensure inputs have scriptPubKey
-    #   this is not provided by indexd
+    #   this is not provided by Bitcoin Core
     inputs = script.ensure_script_pub_key_for_inputs(inputs)
 
     return inputs, change_quantity, btc_in, final_fee

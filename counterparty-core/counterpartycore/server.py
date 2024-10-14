@@ -137,8 +137,6 @@ def initialise_config(
     backend_port=None,
     backend_user=None,
     backend_password=None,
-    indexd_connect=None,
-    indexd_port=None,
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
@@ -316,35 +314,6 @@ def initialise_config(
         config.BACKEND_URL = "https://" + config.BACKEND_URL
     else:
         config.BACKEND_URL = "http://" + config.BACKEND_URL
-
-    # Indexd RPC host
-    if indexd_connect:
-        config.INDEXD_CONNECT = indexd_connect
-    else:
-        config.INDEXD_CONNECT = "localhost"
-
-    # Indexd RPC port
-    if indexd_port:
-        config.INDEXD_PORT = indexd_port
-    else:
-        if config.TESTNET:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_TESTNET
-        elif config.REGTEST:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_REGTEST
-        else:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT
-
-    try:
-        config.INDEXD_PORT = int(config.INDEXD_PORT)
-        if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
-            raise ConfigurationError("invalid Indexd API port number")
-    except:  # noqa: E722
-        raise ConfigurationError(  # noqa: B904
-            "Please specific a valid port number indexd-port configuration parameter"
-        )
-
-    # Construct Indexd URL.
-    config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
 
     ##############
     # THINGS WE SERVE
@@ -619,8 +588,6 @@ def initialise_log_and_config(args):
         "backend_ssl": args.backend_ssl,
         "backend_ssl_no_verify": args.backend_ssl_no_verify,
         "backend_poll_interval": args.backend_poll_interval,
-        "indexd_connect": args.indexd_connect,
-        "indexd_port": args.indexd_port,
         "rpc_host": args.rpc_host,
         "rpc_port": args.rpc_port,
         "rpc_user": args.rpc_user,
