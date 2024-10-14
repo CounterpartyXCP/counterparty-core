@@ -302,7 +302,7 @@ def compose_dispenser(
     :param escrow_quantity: The quantity of the asset to reserve for this dispenser (in satoshis, hence integer) (e.g. 1000)
     :param mainchainrate: The quantity of the main chain asset (BTC) per dispensed portion (in satoshis, hence integer) (e.g. 100)
     :param status: The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed (e.g. 0)
-    :param open_address: The address that you would like to open the dispenser on; MUST be equal to `address` from block 900000 onwards
+    :param open_address: The address that you would like to open the dispenser on; MUST be equal to `address` from block 866000 onwards
     :param oracle_address: The address that you would like to use as a price oracle for this dispenser
     """
     params = {

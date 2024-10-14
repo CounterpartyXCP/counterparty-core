@@ -31,7 +31,6 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, "..")))
 
 from counterpartycore import server  # noqa: E402
 from counterpartycore.lib import (  # noqa: E402
-    backend,
     blocks,
     check,
     config,
@@ -44,7 +43,7 @@ from counterpartycore.lib import (  # noqa: E402
     util,
 )
 from counterpartycore.lib.api.util import to_json  # noqa: E402
-from counterpartycore.lib.messages import fairminter, utxo  # noqa
+from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
     INTEGRATION_SCENARIOS,
@@ -1021,7 +1020,7 @@ def reparse(testnet=True, checkpoint_count=5):
     """
 
     # mock the backend
-    backend.addrindexrs.get_oldest_tx = get_oldest_tx_mock
+    dispenser.get_oldest_tx = get_oldest_tx_mock
 
     # create a new in-memory DB
     options = dict(COUNTERPARTYD_OPTIONS)
