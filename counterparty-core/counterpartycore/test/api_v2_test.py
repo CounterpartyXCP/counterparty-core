@@ -103,6 +103,13 @@ def test_api_v2(request):
         else:
             url += "?verbose=true"
         print(url)
+        options_result = requests.options(url)  # noqa: S113
+        assert options_result.status_code == 204
+        print(options_result.headers)
+        assert options_result.headers["Access-Control-Allow-Origin"] == "*"
+        assert options_result.headers["Access-Control-Allow-Headers"] == "*"
+        assert options_result.headers["Access-Control-Allow-Methods"] == "*"
+
         result = requests.get(url)  # noqa: S113
         print(result)
         results[url] = result.json()

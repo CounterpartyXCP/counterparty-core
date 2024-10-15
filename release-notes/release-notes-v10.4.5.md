@@ -24,6 +24,7 @@ This release is not a protocol change and does not require a database reparse.
 - Add Waitress wsgi server support and make it the default
 - Fix missing parentheses in SQL queries
 - Fix `dispenser.close_block_index` type in API database
+- Set CORS in preflight requests
 
 ## CLI
 
