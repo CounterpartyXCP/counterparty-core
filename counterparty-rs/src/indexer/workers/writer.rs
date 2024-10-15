@@ -1,5 +1,6 @@
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender};
 use std::time::Duration;
+use tracing::debug;
 
 use crate::indexer::{
     database::DatabaseOps,
@@ -24,14 +25,14 @@ where
 {
     move |rx, tx, stopper| {
         let (_, done) = stopper.subscribe()?;
+        let mut height = start_height - 1;
+        let mut target_height = start_height;
         loop {
             if done.try_recv().is_ok() {
                 return Ok(());
             }
             let mut entries = Vec::new();
             let mut batch = Vec::new();
-            let mut height = start_height - 1;
-            let mut target_height = start_height;
 
             while entries.len() < max_num_entries {
                 match rx.recv_timeout(Duration::from_secs(1)) {
@@ -48,6 +49,12 @@ where
             }
 
             if !batch.is_empty() {
+                debug!(
+                    "Writing batch of length {} with max height {} and target height {}",
+                    batch.len(),
+                    height,
+                    target_height
+                );
                 let num_entries = entries.len();
                 db.write_batch(|batch| {
                     db.put_entries(
