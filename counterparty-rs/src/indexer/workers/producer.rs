@@ -111,7 +111,7 @@ where
 
                     db.write_batch(|batch| db.rollback_to_height(batch, last_matching_height))?;
                     height = last_matching_height + 1;
-                    target_height = height - 1;
+                    target_height = height;
                     reorg_detection_enabled = false;
                 }
             } else if reorg_detection_enabled {
