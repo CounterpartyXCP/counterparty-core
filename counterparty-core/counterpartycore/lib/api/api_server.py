@@ -115,6 +115,13 @@ def get_log_prefix(query_args=None):
     return message
 
 
+def set_cors_headers(response):
+    if not config.API_NO_ALLOW_CORS:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+
+
 def return_result(
     http_code,
     result=None,
@@ -139,10 +146,7 @@ def return_result(
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
     response.headers["X-BITCOIN-HEIGHT"] = wsgi.BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
-    if not config.API_NO_ALLOW_CORS:
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "*"
+    set_cors_headers(response)
 
     if http_code != 404:
         message = get_log_prefix(query_args)
@@ -243,6 +247,9 @@ def get_transaction_name(rule):
 
 @auth.login_required
 def handle_route(**kwargs):
+    if request.method == "OPTIONS":
+        return handle_options()
+
     start_time = time.time()
     query_args = request.args.to_dict() | kwargs
 
@@ -350,6 +357,12 @@ def handle_doc():
     return flask.send_file(BLUEPRINT_FILEPATH)
 
 
+def handle_options():
+    response = flask.Response("", 204)
+    set_cors_headers(response)
+    return response
+
+
 def init_flask_app():
     app = Flask(config.APP_NAME)
     with app.app_context():
@@ -365,11 +378,11 @@ def init_flask_app():
         )
 
         for path in ROUTES:
-            methods = ["GET"]
+            methods = ["OPTIONS", "GET"]
             if path == "/v2/bitcoin/transactions":
-                methods = ["POST"]
+                methods = ["OPTIONS", "POST"]
             if not path.startswith("/v2/"):
-                methods = ["GET", "POST"]
+                methods = ["OPTIONS", "GET", "POST"]
             app.add_url_rule(path, view_func=handle_route, methods=methods, strict_slashes=False)
 
         app.register_error_handler(404, handle_not_found)
