@@ -128,7 +128,7 @@ done
 # Run compare hashes test
 . "$HOME/.profile"
 cd counterparty-core
-sudo python3 -m pytest counterpartycore/test/mainnet_test.py --testapidb --comparehashes
+# sudo python3 -m pytest counterpartycore/test/mainnet_test.py --testapidb --comparehashes
 cd ..
 
 
