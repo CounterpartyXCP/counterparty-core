@@ -20,7 +20,7 @@ CHECK_SERVERS = [
     # ["http://rpc:1234@public.coindaddy.io:4000", "v1", "v9.61.3"],
     # ["https://api.xcp.dev/v9_61/", "xcpdev", "v9.61.3"],
     # ["https://api.xcp.dev/v10_1/", "xcpdev", "v10.1.2.CNTRPRTY"],
-    ["https://memepool.wtf/api/", "wtf", "v10.2.0"],
+    ["https://memepool.wtf/api/", "wtf", "v10.4.4"],
 ]
 
 
