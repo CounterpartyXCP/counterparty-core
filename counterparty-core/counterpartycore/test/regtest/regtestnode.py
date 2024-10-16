@@ -23,7 +23,7 @@ class ComposeError(Exception):
 
 
 class RegtestNode:
-    def __init__(self, datadir="regtestnode", show_output=False, wsgi_server="gunicorn"):
+    def __init__(self, datadir="regtestnode", show_output=False, wsgi_server="waitress"):
         self.datadir = datadir
         self.bitcoin_cli = sh.bitcoin_cli.bake(
             "-regtest",
@@ -51,7 +51,8 @@ class RegtestNode:
             "--regtest",
             f"--database-file={self.datadir}/counterparty.db",
             f"--wsgi-server={wsgi_server}",
-            "--gunicorn-workers=1",
+            "--gunicorn-workers=2",
+            "--no-telemetry",
             "-vv",
         )
 
@@ -419,7 +420,12 @@ class RegtestNode:
         return int(block_count_1)
 
     def get_burn_count(self, address):
-        return self.api_call(f"addresses/{address}/burns")["result_count"]
+        try:
+            return self.api_call(f"addresses/{address}/burns")["result_count"]
+        except KeyError:
+            print("Error getting burn count, retrying in 2 seconds...")
+            time.sleep(2)
+            return self.get_burn_count(address)
 
     def test_reorg(self):
         print("Start a second node...")

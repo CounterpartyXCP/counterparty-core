@@ -1,5 +1,6 @@
 import logging
 import random
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -34,6 +35,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.fetcher = None
         self.prefetch_task = None
         self.running = False
+        self.lock = threading.Lock()
 
     def start(self, start_height=0):
         logger.debug("Starting Prefetcher...")
@@ -59,7 +61,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
             raise e
         # prefetching
         self.stopped = False
-        self.prefetch_queue = {}
+        self.prefetch_queue = []
         self.prefetch_queue_size = 0
         self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
@@ -67,7 +69,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
     def get_block(self):
         logger.trace("Fetching block with Rust backend.")
-        block = self.get_prefetched_block(self.next_height)
+        block = self.get_prefetched_block()
 
         # Handle potentially out-of-order blocks
         if block["height"] != self.next_height:
@@ -82,19 +84,17 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
         return block
 
-    def get_prefetched_block(self, height):
+    def get_prefetched_block(self):
         try:
-            logger.debug(f"Looking for Block {height} in prefetch queue...")
-            while height not in self.prefetch_queue:
-                if self.prefetch_queue_size == 0 and self.prefetch_queue_initialized:
-                    logger.trace("Prefetch queue is empty.")
-                logger.debug(f"Block {height} not found in prefetch queue. Waiting...")
+            logger.debug("Looking for Block in prefetch queue...")
+            while len(self.prefetch_queue) == 0:
+                logger.trace("Prefetch queue is empty.")
                 time.sleep(0.1)
-            block = self.prefetch_queue.pop(height)
+            block = self.prefetch_queue.pop()
             self.prefetch_queue_size -= 1
             logger.debug(
                 "Block %s retrieved from queue. (Queue: %s/%s)",
-                height,
+                block["height"],
                 self.prefetch_queue_size,
                 PREFETCH_QUEUE_SIZE,
             )
@@ -113,9 +113,11 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     time.sleep(0.1)  # Wait until there is space in the queue
                 if self.stopped:
                     break
+                self.lock.acquire()
                 block = self.fetcher.get_block_non_blocking()
                 if block is not None:
-                    self.prefetch_queue[block["height"]] = block
+                    self.prefetch_queue.insert(0, block)
+                    self.lock.release()
                     self.prefetch_queue_size += 1
                     expected_height += 1
                     logger.debug(
@@ -134,6 +136,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                         logger.debug("Prefetch queue initialized.")
 
                 else:
+                    self.lock.release()
                     logger.debug("No block fetched. Waiting before next fetch.")
                     time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
             except Exception as e:

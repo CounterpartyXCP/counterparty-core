@@ -15,7 +15,7 @@ x-addrindexrs-common: &addrindexrs-common
   restart: unless-stopped
 
 x-counterparty-common: &counterparty-common
-  image: counterparty/counterparty:v10.4.4
+  image: counterparty/counterparty:v10.4.5
   stop_grace_period: 1m
   volumes:
     - data:/root/.bitcoin
@@ -90,7 +90,6 @@ services:
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
-      #- "--wsgi-server=gunicorn"
       #- "--verbose"
 
   ###################
@@ -158,7 +157,6 @@ services:
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
-      #- "--wsgi-server=gunicorn"
       #- "--verbose"
 
 volumes: 

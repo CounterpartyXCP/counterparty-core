@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use pyo3::{exceptions::PyValueError, types::PyDict, FromPyObject, PyAny, PyErr, PyResult};
 use tracing::Level;
 
@@ -66,13 +68,14 @@ impl<'source> FromPyObject<'source> for Network {
     }
 }
 
-impl ToString for Network {
-    fn to_string(&self) -> String {
-        match self {
-            Network::Mainnet => "mainnet".to_string(),
-            Network::Testnet => "testnet".to_string(),
-            Network::Regtest => "regtest".to_string(),
-        }
+impl Display for Network {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Network::Mainnet => "mainnet",
+            Network::Testnet => "testnet",
+            Network::Regtest => "regtest",
+        };
+        write!(f, "{}", s)
     }
 }
 

@@ -26,6 +26,7 @@ pub trait BlockHasPrevBlockHash {
 pub trait HasHeight {
     fn get_height(&self) -> u32;
     fn get_target_height(&self) -> u32;
+    fn get_rollback_height(&self) -> Option<u32>;
 }
 
 pub trait HasHash {
@@ -39,6 +40,7 @@ pub trait Transition<S, I, O> {
 pub struct PipelineDataInitial {
     pub height: u32,
     pub target_height: u32,
+    pub rollback_height: Option<u32>,
 }
 
 impl HasHeight for PipelineDataInitial {
@@ -48,6 +50,10 @@ impl HasHeight for PipelineDataInitial {
 
     fn get_target_height(&self) -> u32 {
         self.target_height
+    }
+
+    fn get_rollback_height(&self) -> Option<u32> {
+        self.rollback_height
     }
 }
 
@@ -82,6 +88,10 @@ impl<B> HasHeight for PipelineDataWithBlock<B> {
 
     fn get_target_height(&self) -> u32 {
         self.prev.get_target_height()
+    }
+
+    fn get_rollback_height(&self) -> Option<u32> {
+        self.prev.get_rollback_height()
     }
 }
 
@@ -126,6 +136,10 @@ impl<B> HasHeight for PipelineDataWithEntries<B> {
     fn get_target_height(&self) -> u32 {
         self.prev.get_target_height()
     }
+
+    fn get_rollback_height(&self) -> Option<u32> {
+        self.prev.get_rollback_height()
+    }
 }
 
 impl<B> HasHash for PipelineDataWithEntries<B> {
@@ -168,6 +182,10 @@ impl<B> HasHeight for PipelineDataWithoutEntries<B> {
 
     fn get_target_height(&self) -> u32 {
         self.prev.get_target_height()
+    }
+
+    fn get_rollback_height(&self) -> Option<u32> {
+        self.prev.get_rollback_height()
     }
 }
 

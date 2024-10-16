@@ -982,6 +982,7 @@ def parse(db, tx, message, message_type_id):
         if tx["destination"]:
             issuer = tx["destination"]
             transfer = True
+            asset_events.append("transfer")
             # quantity = 0
         else:
             issuer = tx["source"]
@@ -1005,16 +1006,18 @@ def parse(db, tx, message, message_type_id):
 
         description_locked = False
         if status == "valid" and description:
+            last_description = _get_last_description(db, asset, description)
             if description.lower() == "lock":
                 lock = True
-                description = _get_last_description(db, asset, description)
-                asset_events.append("lock_quantity")
+                description = last_description
             elif description.lower() == "lock_description" and util.enabled(
                 "lockable_issuance_descriptions", tx["block_index"]
             ):
                 description_locked = True
-                description = _get_last_description(db, asset, description)
+                description = last_description
                 asset_events.append("lock_description")
+            elif description != last_description:
+                asset_events.append("change_description")
 
         if status == "valid" and not reissuance:
             # Add to table of assets.
@@ -1030,9 +1033,14 @@ def parse(db, tx, message, message_type_id):
         if status == "valid" and reissuance:
             # when reissuing, add the asset_longname to the issuances table for API lookups
             asset_longname = reissued_asset_longname
-            asset_events.append("reissuance")
         else:
             asset_longname = subasset_longname
+
+        if lock:
+            asset_events.append("lock_quantity")
+
+        if reissuance and quantity > 0:
+            asset_events.append("reissuance")
 
         # Add parsed transaction to message-type–specific table.
         bindings = {

@@ -56,7 +56,7 @@ where
 pub fn new<C, D, B>(
     client: C,
     db: D,
-    initial_height: u32,
+    start_height: u32,
     reorg_window: u32,
 ) -> impl Fn(
     Receiver<Box<PipelineDataInitial>>,
@@ -70,7 +70,6 @@ where
     B: BlockHasPrevBlockHash,
 {
     move |_, tx, stopper| {
-        let mut start_height = initial_height;
         let mut height = start_height;
         let mut target_height = if height > 0 { height - 1 } else { 0 };
         let mut reorg_detection_enabled = false;
@@ -79,6 +78,8 @@ where
             if done.try_recv().is_ok() {
                 return Ok(());
             }
+
+            let mut rollback_height = None;
 
             if target_height < height {
                 target_height = with_retry(
@@ -111,11 +112,10 @@ where
                     );
 
                     db.write_batch(|batch| db.rollback_to_height(batch, last_matching_height))?;
+                    rollback_height = Some(last_matching_height);
                     height = last_matching_height + 1;
-                    start_height = height;
-                    target_height = height - 1;
+                    target_height = height;
                     reorg_detection_enabled = false;
-                    continue;
                 }
             } else if reorg_detection_enabled {
                 info!("Leaving reorg window");
@@ -126,6 +126,7 @@ where
                 .send(Box::new(PipelineDataInitial {
                     height,
                     target_height,
+                    rollback_height,
                 }))
                 .is_err()
             {

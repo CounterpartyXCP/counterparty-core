@@ -50,6 +50,8 @@ def rpc_call(payload):
                 raise exceptions.BitcoindRPCError(
                     f"Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}"
                 )
+            if response.status_code == 503:
+                raise ConnectionError("Received 503 error from backend")
             if response.status_code not in (200, 500):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             break
