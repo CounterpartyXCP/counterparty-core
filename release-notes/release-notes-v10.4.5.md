@@ -17,6 +17,8 @@ This release is not a protocol change and does not require a database reparse.
 
 ## Codebase
 
+- Retry when Bitcon Core returns a 503 error
+
 ## API
 
 - Use UTXOs locks when `unspents_set` is used (formerly `custom_inputs`)
