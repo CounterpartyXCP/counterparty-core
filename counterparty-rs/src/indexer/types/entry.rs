@@ -56,6 +56,7 @@ pub trait ToEntry: Debug + Send {
 
 pub trait FromEntry: Sized {
     fn from_entry(entry: Entry) -> Result<Self, Error>;
+    #[allow(dead_code)]
     fn from_index(entry: Entry) -> Result<Self, Error>;
 }
 

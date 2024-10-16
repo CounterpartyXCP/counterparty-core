@@ -79,6 +79,8 @@ where
                 return Ok(());
             }
 
+            let mut rollback_height = None;
+
             if target_height < height {
                 target_height = with_retry(
                     stopper.clone(),
@@ -110,6 +112,7 @@ where
                     );
 
                     db.write_batch(|batch| db.rollback_to_height(batch, last_matching_height))?;
+                    rollback_height = Some(last_matching_height);
                     height = last_matching_height + 1;
                     target_height = height;
                     reorg_detection_enabled = false;
@@ -123,6 +126,7 @@ where
                 .send(Box::new(PipelineDataInitial {
                     height,
                     target_height,
+                    rollback_height,
                 }))
                 .is_err()
             {
