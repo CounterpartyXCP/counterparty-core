@@ -30,6 +30,9 @@ pub fn new<T: HasHeight>(
                         Err(_) => return Ok(()),
                     };
                     let data_height = data.get_height();
+                    if let Some(rollback_height) = data.get_rollback_height() {
+                        next_index = rollback_height + 1;
+                    }
                     heap.push(Reverse(data_height));
                     pending_blocks.insert(data_height, data);
                     while let Some(&Reverse(maybe_next_index)) = heap.peek() {
@@ -63,6 +66,7 @@ mod tests {
     #[derive(Debug, Clone, PartialEq)]
     struct MockData {
         height: u32,
+        rollback_height: Option<u32>,
     }
 
     impl HasHeight for MockData {
@@ -73,6 +77,10 @@ mod tests {
         fn get_target_height(&self) -> u32 {
             unimplemented!()
         }
+
+        fn get_rollback_height(&self) -> Option<u32> {
+            self.rollback_height
+        }
     }
 
     #[derive(Debug, Clone, From, IntoIterator)]
@@ -81,7 +89,12 @@ mod tests {
     impl Arbitrary for MockDataVec {
         fn arbitrary(g: &mut Gen) -> Self {
             let len = usize::arbitrary(g) % 10 + 1;
-            let mut vec: Vec<MockData> = (1..=len as u32).map(|i| MockData { height: i }).collect();
+            let mut vec: Vec<MockData> = (1..=len as u32)
+                .map(|i| MockData {
+                    height: i,
+                    rollback_height: None,
+                })
+                .collect();
 
             let mut rng = rand::thread_rng();
             vec.shuffle(&mut rng);
@@ -106,5 +119,35 @@ mod tests {
         QuickCheck::new()
             .tests(100)
             .quickcheck(orderer_correctly_orders_heights as fn(MockDataVec) -> TestResult);
+    }
+
+    #[test]
+    fn test_orderer_worker_rollback() {
+        let inputs = [
+            MockData {
+                height: 1,
+                rollback_height: None,
+            },
+            MockData {
+                height: 2,
+                rollback_height: None,
+            },
+            MockData {
+                height: 3,
+                rollback_height: None,
+            },
+            MockData {
+                height: 4,
+                rollback_height: None,
+            },
+            MockData {
+                height: 3,
+                rollback_height: Some(2),
+            },
+        ]
+        .to_vec();
+
+        let outputs = test_worker(new(1), inputs.clone());
+        assert_eq!(inputs, outputs);
     }
 }
