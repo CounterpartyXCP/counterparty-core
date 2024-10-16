@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.4.4 (2024-10-09)
+# Release Notes - Counterparty Core v10.4.5 (2024-10-16)
 
 This is a minor release with a number of bugfixes and minor improvements to the API.
 
@@ -23,10 +23,10 @@ This release is not a protocol change and does not require a database reparse.
 
 - Use UTXOs locks when `unspents_set` is used (formerly `custom_inputs`)
 - Tweak and fix `asset_events` field (new events `transfer` and `change_description`; `reissuance` only if `quantity` greater than 0; `lock` also when locked with the `lock` argument)
-- Add Waitress wsgi server support and make it the default
+- Add Waitress WSGI server support and make it the default
 - Fix missing parentheses in SQL queries
 - Fix `dispenser.close_block_index` type in API database
-- Set CORS in preflight requests
+- Set CORS in pre-flight requests
 
 ## CLI
 
