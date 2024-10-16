@@ -11560,7 +11560,7 @@
                         "default": null,
                         "required": false,
                         "type": "str",
-                        "description": "The address that you would like to open the dispenser on; MUST be equal to `address` from block 900000 onwards"
+                        "description": "The address that you would like to open the dispenser on; MUST be equal to `address` from block 866000 onwards"
                     },
                     {
                         "name": "oracle_address",
