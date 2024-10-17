@@ -10,6 +10,7 @@ This is a hotfix release to fix a number of additional issues that arose with th
 
 - Fix fair minting rollback
 - Fix API server crash due to missing sanity check
+- Retry maximum 10 times on Bitcoin Core RPC call error
 
 ## Codebase
 
