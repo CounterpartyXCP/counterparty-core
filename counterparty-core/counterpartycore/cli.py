@@ -154,7 +154,7 @@ CONFIG_ARGS = [
     [
         ("--rpc-host",),
         {
-            "default": "localhost",
+            "default": "127.0.0.1",
             "help": "the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)",
         },
     ],
@@ -191,7 +191,7 @@ CONFIG_ARGS = [
     [
         ("--api-host",),
         {
-            "default": "localhost",
+            "default": "127.0.0.1",
             "help": "the IP of the interface to bind to for providing  API access (0.0.0.0 for all interfaces)",
         },
     ],
