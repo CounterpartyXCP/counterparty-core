@@ -452,18 +452,18 @@ class UTXOBalancesCache(metaclass=util.SingletonMeta):
         logger.debug("Initialising utxo balances cache...")
         self.cache_db = database.get_db_connection(":memory:", read_only=False, check_wal=False)
         sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
-        self.has_balance = {}
+        self.utxos_with_balance = {}
         cursor = db.cursor()
         cursor.execute(sql)
         utxo_balances = cursor.fetchall()
         for utxo_balance in utxo_balances:
-            self.has_balance[utxo_balance["utxo"]] = True
+            self.utxos_with_balance[utxo_balance["utxo"]] = True
 
     def has_balance(self, utxo):
-        return utxo in self.has_balance
+        return utxo in self.utxos_with_balance
 
     def add_balance(self, utxo):
-        self.has_balance[utxo] = True
+        self.utxos_with_balance[utxo] = True
 
 
 def utxo_has_balance(db, utxo):
