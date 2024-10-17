@@ -576,8 +576,7 @@ def get_utxos_info(db, decoded_tx):
         else:
             vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
         utxo = vin_hash + ":" + str(vin["n"])
-        utxo_balances = ledger.get_utxo_balances(db, utxo)
-        if len(utxo_balances) > 0:
+        if ledger.utxo_has_balance(db, utxo):
             sources.append(utxo)
     destination = None
     # the destination is the first non-OP_RETURN vout
