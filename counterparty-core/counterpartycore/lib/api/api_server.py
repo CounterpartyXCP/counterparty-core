@@ -401,6 +401,8 @@ def run_api_server(args, interruped_value, server_ready_value):
     logger.info("Starting API Server...")
     app = init_flask_app()
 
+    wsgi_server = None
+
     try:
         # Init the HTTP Server.
         wsgi_server = wsgi.WSGIApplication(app, args=args)
@@ -415,7 +417,8 @@ def run_api_server(args, interruped_value, server_ready_value):
         logger.trace("Shutting down API Server...")
         watcher.stop()
         watcher.join()
-        wsgi_server.stop()
+        if wsgi_server is not None:
+            wsgi_server.stop()
         APIDBConnectionPool().close()
 
 
