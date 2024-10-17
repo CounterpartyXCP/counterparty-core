@@ -7,12 +7,13 @@
 # It's a very simple but powerful semantic to allow swaps to operate on-chain.
 #
 
+import json
 import logging
+import os
 import struct
 from math import floor
 
 from counterpartycore.lib import (
-    backend,
     config,
     database,
     exceptions,
@@ -36,6 +37,17 @@ STATUS_OPEN_EMPTY_ADDRESS = 1
 # STATUS_OPEN_ORACLE_PRICE_EMPTY_ADDRESS = 21
 STATUS_CLOSED = 10
 STATUS_CLOSING = 11
+
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+with open(os.path.join(CURR_DIR, "data", "get_oldest_tx.json")) as f:
+    GET_OLDEST_TX_DATA = json.load(f)
+
+
+def get_oldest_tx(address: str, block_index: int):
+    key = f"{address}-{block_index}"
+    if key in GET_OLDEST_TX_DATA:
+        return GET_OLDEST_TX_DATA[key]
+    return {}
 
 
 def initialise(db):
@@ -333,7 +345,7 @@ def validate(
                             )
 
                         if util.enabled("dispenser_origin_permission_extended", block_index):
-                            address_oldest_transaction = backend.addrindexrs.get_oldest_tx(
+                            address_oldest_transaction = get_oldest_tx(
                                 query_address, block_index=util.CURRENT_BLOCK_INDEX
                             )
                             if (

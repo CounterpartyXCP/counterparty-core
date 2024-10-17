@@ -524,9 +524,7 @@ def ensure_script_pub_key_for_inputs(coins):
             txhash_set.add(coin["txid"])
 
     if len(txhash_set) > 0:
-        txs = backend.addrindexrs.getrawtransaction_batch(
-            list(txhash_set), verbose=True, skip_missing=False
-        )
+        txs = backend.bitcoind.getrawtransaction_batch(list(txhash_set))
         for coin in coins:
             if "script_pub_key" not in coin:
                 # get the scriptPubKey

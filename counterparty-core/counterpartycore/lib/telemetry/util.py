@@ -17,10 +17,6 @@ def get_version():
     return config.__version__
 
 
-def get_addrindexrs_version():
-    return config.ADDRINDEXRS_VERSION
-
-
 def get_uptime():
     return time.time() - start_time
 

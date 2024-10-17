@@ -25,7 +25,6 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
 
     def collect(self):
         version = util.get_version()
-        addrindexrs_version = util.get_addrindexrs_version()
         uptime = util.get_uptime()
         is_docker = util.is_docker()
         network = util.get_network()
@@ -43,7 +42,6 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
 
         return {
             "version": version,
-            "addrindexrs_version": addrindexrs_version,
             "uptime": int(uptime),
             "dockerized": is_docker,
             "network": network,

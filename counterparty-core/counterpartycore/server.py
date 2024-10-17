@@ -137,8 +137,6 @@ def initialise_config(
     backend_port=None,
     backend_user=None,
     backend_password=None,
-    indexd_connect=None,
-    indexd_port=None,
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
@@ -170,6 +168,7 @@ def initialise_config(
     db_connection_pool_size=None,
     wsgi_server="waitress",
     gunicorn_workers=2,
+    electr_url=None,
 ):
     # log config already initialized
 
@@ -233,9 +232,6 @@ def initialise_config(
 
     ##############
     # THINGS WE CONNECT TO
-
-    # Backend name
-    config.BACKEND_NAME = "addrindexrs"
 
     # Backend RPC host (Bitcoin Core)
     if backend_connect:
@@ -318,35 +314,6 @@ def initialise_config(
         config.BACKEND_URL = "https://" + config.BACKEND_URL
     else:
         config.BACKEND_URL = "http://" + config.BACKEND_URL
-
-    # Indexd RPC host
-    if indexd_connect:
-        config.INDEXD_CONNECT = indexd_connect
-    else:
-        config.INDEXD_CONNECT = "localhost"
-
-    # Indexd RPC port
-    if indexd_port:
-        config.INDEXD_PORT = indexd_port
-    else:
-        if config.TESTNET:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_TESTNET
-        elif config.REGTEST:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_REGTEST
-        else:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT
-
-    try:
-        config.INDEXD_PORT = int(config.INDEXD_PORT)
-        if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
-            raise ConfigurationError("invalid Indexd API port number")
-    except:  # noqa: E722
-        raise ConfigurationError(  # noqa: B904
-            "Please specific a valid port number indexd-port configuration parameter"
-        )
-
-    # Construct Indexd URL.
-    config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
 
     ##############
     # THINGS WE SERVE
@@ -594,6 +561,16 @@ def initialise_config(
     config.WSGI_SERVER = wsgi_server
     config.GUNICORN_WORKERS = gunicorn_workers
 
+    if electr_url:
+        config.ELECTR_URL = electr_url
+    else:
+        if config.NETWORK_NAME == "testnet":
+            config.ELECTR_URL = config.DEFAULT_ELECTR_URL_TESTNET
+        elif config.NETWORK_NAME == "mainnet":
+            config.ELECTR_URL = config.DEFAULT_ELECTR_URL_MAINNET
+        else:
+            config.ELECTR_URL = None
+
 
 def initialise_log_and_config(args):
     # Configuration
@@ -611,8 +588,6 @@ def initialise_log_and_config(args):
         "backend_ssl": args.backend_ssl,
         "backend_ssl_no_verify": args.backend_ssl_no_verify,
         "backend_poll_interval": args.backend_poll_interval,
-        "indexd_connect": args.indexd_connect,
-        "indexd_port": args.indexd_port,
         "rpc_host": args.rpc_host,
         "rpc_port": args.rpc_port,
         "rpc_user": args.rpc_user,
@@ -777,7 +752,6 @@ def start_all(args):
             TelemetryOneShot().close()
         if db:
             database.close(db)
-        backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()
         try:
@@ -797,12 +771,10 @@ def start_all(args):
 
 
 def reparse(block_index):
-    backend.addrindexrs.init()
     db = database.initialise_db()
     try:
         blocks.reparse(db, block_index=block_index)
     finally:
-        backend.addrindexrs.stop()
         database.optimize(db)
         db.close()
 

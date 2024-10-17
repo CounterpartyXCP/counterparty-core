@@ -31,22 +31,21 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
                 return pubkey
 
     # Search blockchain.
-    raw_transactions = backend.addrindexrs.search_raw_transactions(pubkeyhash, unconfirmed=True)
+    raw_transactions = backend.electr.get_history(pubkeyhash)
     for tx_id in raw_transactions:
         tx = raw_transactions[tx_id]
         for vin in tx["vin"]:
-            if "txinwitness" in vin:
-                if len(vin["txinwitness"]) >= 2:
+            if "witness" in vin:
+                if len(vin["witness"]) >= 2:
                     # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
                     try:
-                        pubkey = vin["txinwitness"][1]
+                        pubkey = vin["witness"][1]
                         if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
                             return pubkey
                     except binascii.Error:
                         pass
-            elif "coinbase" not in vin:
-                scriptsig = vin["scriptSig"]
-                asm = scriptsig["asm"].split(" ")
+            elif "is_coinbase" not in vin or not vin["is_coinbase"]:
+                asm = vin["scriptsig_asm"].split(" ")
                 if len(asm) >= 2:
                     # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
                     try:

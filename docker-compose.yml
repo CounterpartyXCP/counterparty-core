@@ -86,7 +86,6 @@ services:
     command:
       - start
       - "--backend-connect=bitcoind"
-      - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
@@ -153,7 +152,6 @@ services:
       - start
       - "--testnet"
       - "--backend-connect=bitcoind-testnet"
-      - "--indexd-connect=addrindexrs-testnet"
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"

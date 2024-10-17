@@ -17,7 +17,6 @@ class TelemetryCollectorInfluxDB(TelemetryCollectorBase):
                 "platform",
                 "force_enabled",
                 "dockerized",
-                "addrindexrs_version",
                 "version",
                 "uptime",
                 "block_hash",
