@@ -237,6 +237,50 @@ def run_item(node, item, context):
     return context
 
 
+def rpc_call(command, params=None):
+    if params is None:
+        params = []
+    curl_client = sh.curl.bake(
+        "-X",
+        "POST",
+        "http://localhost:24000/v1/",
+        "-H",
+        "Content-Type: application/json; charset=UTF-8",
+        "-H",
+        "Accept: application/json, text/javascript",
+        "--data-binary",
+    )
+    query = {
+        "method": command,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    result = json.loads(curl_client(json.dumps(query)).strip())
+    return result
+
+
+def check_api_v1(node):
+    running_info = rpc_call("get_running_info")
+
+    if not running_info["result"]["server_ready"]:
+        raise Exception("Server not ready")
+    if not running_info["result"]["db_caught_up"]:
+        raise Exception("DB not caught up")
+
+    tx = rpc_call(
+        "create_send",
+        {
+            "source": node.addresses[0],
+            "destination": node.addresses[1],
+            "asset": "XCP",
+            "quantity": 1,
+        },
+    )
+    # check that the hex transaction is generated
+    int(tx["result"], 16)
+
+
 def run_scenarios(serve=False, wsgi_server="gunicorn"):
     try:
         regtest_node_thread = RegtestNodeThread(wsgi_server=wsgi_server)
@@ -246,6 +290,8 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             time.sleep(1)
 
         context = {}
+
+        check_api_v1(regtest_node_thread.node)
 
         # run all scenarios
         for item in SCENARIOS:
