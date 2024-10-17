@@ -158,7 +158,7 @@ Returns server information and the list of documented routes in JSON format.
         "result": {
             "server_ready": true,
             "network": "mainnet",
-            "version": "10.4.5",
+            "version": "10.4.6",
             "backend_height": 850214,
             "counterparty_height": 850214,
             "documentation": "https://counterpartycore.docs.apiary.io/",
