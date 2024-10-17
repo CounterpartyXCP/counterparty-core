@@ -4,6 +4,9 @@ This is a hotfix release to fix a number of additional issues that arose with th
 
 # Upgrading
 
+This is not a protocol change, and no database reparsing is necessary.
+
+
 # ChangeLog
 
 ## Bugfixes
