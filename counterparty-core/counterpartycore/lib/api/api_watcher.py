@@ -402,6 +402,12 @@ def update_assets_info(api_db, event):
             "SELECT * FROM assets_info WHERE asset = :asset",
             {"asset": event_bindings["asset"]},
         )
+        if existing_asset is None and "asset_longname" in event_bindings:
+            existing_asset = fetch_one(
+                api_db,
+                "SELECT * FROM assets_info WHERE asset_longname = :asset_longname",
+                {"asset_longname": event_bindings["asset_longname"]},
+            )
         if existing_asset is not None and not event_bindings["confirmed"]:
             return
         set_data = []
@@ -630,9 +636,9 @@ def update_fairminters(api_db, event):
 def rollback_fairminters(api_db, event):
     if event["event"] != "NEW_FAIRMINT":
         return
-    if event["status"] != "valid":
-        return
     event_bindings = json.loads(event["bindings"])
+    if event_bindings["status"] != "valid":
+        return
     cursor = api_db.cursor()
     sql = """
         UPDATE fairminters SET

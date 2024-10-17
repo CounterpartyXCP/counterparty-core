@@ -18,7 +18,7 @@ TRANSACTIONS_CACHE = OrderedDict()
 TRANSACTIONS_CACHE_MAX_SIZE = 10000
 
 
-def rpc_call(payload):
+def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
     response = None
@@ -89,10 +89,15 @@ def rpc_call(payload):
     if response_json["error"]["code"] in [-28, -8, -2]:
         # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
         logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
+        logger.debug(f"Payload: {payload}")
+        if retry >= 10:
+            raise exceptions.BitcoindRPCError(
+                f"Backend not ready after {retry} retries. ({response_json['error']})"
+            )
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
         # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)
-        return rpc_call(payload)
+        return rpc_call(payload, retry=retry + 1)
     raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
 
