@@ -395,6 +395,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
         credit_address = None
         utxo = address
         utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
+        UTXOBalancesCache(db).add_balance(utxo)
 
     add_to_balance(db, address, asset, quantity, tx_index, utxo_address)
 
@@ -444,6 +445,29 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
     if not balances:
         return 0
     return balances[0]["quantity"]
+
+
+class UTXOBalancesCache(metaclass=util.SingletonMeta):
+    def __init__(self, db):
+        logger.debug("Initialising utxo balances cache...")
+        self.cache_db = database.get_db_connection(":memory:", read_only=False, check_wal=False)
+        sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
+        self.has_balance = {}
+        cursor = db.cursor()
+        cursor.execute(sql)
+        utxo_balances = cursor.fetchall()
+        for utxo_balance in utxo_balances:
+            self.has_balance[utxo_balance["utxo"]] = True
+
+    def has_balance(self, utxo):
+        return utxo in self.has_balance
+
+    def add_balance(self, utxo):
+        self.has_balance[utxo] = True
+
+
+def utxo_has_balance(db, utxo):
+    return UTXOBalancesCache(db).has_balance(utxo)
 
 
 def get_address_balances(db, address: str):
