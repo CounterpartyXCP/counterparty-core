@@ -319,7 +319,9 @@ def handle_route(**kwargs):
         message += f" - Response {result.status_code}"
         message += f" - {int((time.time() - start_time) * 1000)}ms"
         logger.debug(message)
-        return result.content, result.status_code, result.headers.items()
+        headers = dict(result.headers)
+        del headers["Connection"]  # remove "hop-by-hop" headers
+        return result.content, result.status_code, headers
 
     # clean up and return the result
     if result is None:
