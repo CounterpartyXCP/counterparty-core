@@ -319,7 +319,9 @@ def handle_route(**kwargs):
         message += f" - Response {result.status_code}"
         message += f" - {int((time.time() - start_time) * 1000)}ms"
         logger.debug(message)
-        return result.content, result.status_code, result.headers.items()
+        headers = dict(result.headers)
+        del headers["Connection"]  # remove "hop-by-hop" headers
+        return result.content, result.status_code, headers
 
     # clean up and return the result
     if result is None:
@@ -401,6 +403,8 @@ def run_api_server(args, interruped_value, server_ready_value):
     logger.info("Starting API Server...")
     app = init_flask_app()
 
+    wsgi_server = None
+
     try:
         # Init the HTTP Server.
         wsgi_server = wsgi.WSGIApplication(app, args=args)
@@ -415,7 +419,8 @@ def run_api_server(args, interruped_value, server_ready_value):
         logger.trace("Shutting down API Server...")
         watcher.stop()
         watcher.join()
-        wsgi_server.stop()
+        if wsgi_server is not None:
+            wsgi_server.stop()
         APIDBConnectionPool().close()
 
 

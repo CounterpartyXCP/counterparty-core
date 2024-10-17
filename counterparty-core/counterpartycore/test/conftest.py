@@ -315,7 +315,7 @@ def api_server_v2(request, cp_server):
         "zmq_publisher_port": None,
         "db_connection_pool_size": None,
         "json_logs": False,
-        "wsgi_server": "werkzeug",
+        "wsgi_server": "waitress",
         "gunicorn_workers": 2,
     }
     server_config = (
