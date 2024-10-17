@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v10.4.7 (2024-10-17)
 
-This is a Hotfix release to fix API v1 with Waitress.
+This is a hotfix release to fix API v1 with Waitress.
 
 # Upgrading
 
@@ -16,7 +16,7 @@ This is a Hotfix release to fix API v1 with Waitress.
 
 ## API
 
-- Use `120.0.0.1` instead `localhost` as default for `API_HOST` and `RPC_HOST` (to force IPv4)
+- Use `127.0.0.1` instead `localhost` as default for `API_HOST` and `RPC_HOST` (to force IPv4)
 
 ## CLI
 
