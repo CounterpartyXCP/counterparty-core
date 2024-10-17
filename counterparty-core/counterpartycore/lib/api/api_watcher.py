@@ -402,8 +402,9 @@ def update_assets_info(api_db, event):
             "SELECT * FROM assets_info WHERE asset = :asset",
             {"asset": event_bindings["asset"]},
         )
-        if existing_asset is not None and not event_bindings["confirmed"]:
+        if existing_asset is None or not event_bindings["confirmed"]:
             return
+
         set_data = []
         set_data.append("divisible = :divisible")
         set_data.append("description = :description")
