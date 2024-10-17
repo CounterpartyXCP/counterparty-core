@@ -355,7 +355,7 @@ def initialise_config(
     if rpc_host:
         config.RPC_HOST = rpc_host
     else:
-        config.RPC_HOST = "localhost"
+        config.RPC_HOST = "127.0.0.1"
 
     # The web root directory for API calls, eg. localhost:14000/rpc/
     config.RPC_WEBROOT = "/rpc/"
@@ -415,7 +415,7 @@ def initialise_config(
     if api_host:
         config.API_HOST = api_host
     else:
-        config.API_HOST = "localhost"
+        config.API_HOST = "127.0.0.1"
 
     # Server API port
     if api_port:
