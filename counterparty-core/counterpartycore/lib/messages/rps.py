@@ -26,6 +26,7 @@ from counterpartycore.lib import (  # noqa: F401
     database,
     ledger,
     log,
+    util,
 )
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -178,7 +179,7 @@ def initialise(db):
 
 
 def replay_events(db, key):
-    if config.TESTNET:
+    if util.is_test_network():
         return
     events = RPS_EVENTS.get(key)
     if events:

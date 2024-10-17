@@ -825,6 +825,14 @@ CHECKPOINTS_REGTEST = {
     },
 }
 
+CONSENSUS_HASH_VERSION_TESTNET4 = 1
+CHECKPOINTS_TESTNET4 = {
+    config.BLOCK_FIRST_TESTNET4: {
+        "ledger_hash": "",
+        "txlist_hash": "",
+    },
+}
+
 
 class ConsensusError(Exception):
     pass
@@ -857,6 +865,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     # Calculate current hash.
     if config.TESTNET:
         consensus_hash_version = CONSENSUS_HASH_VERSION_TESTNET
+    elif config.TESTNET4:
+        consensus_hash_version = CONSENSUS_HASH_VERSION_TESTNET4
     elif config.REGTEST:
         consensus_hash_version = CONSENSUS_HASH_VERSION_REGTEST
     else:
@@ -884,6 +894,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     # Check against checkpoints.
     if config.TESTNET:
         checkpoints = CHECKPOINTS_TESTNET
+    elif config.TESTNET4:
+        checkpoints = CHECKPOINTS_TESTNET4
     elif config.REGTEST:
         checkpoints = CHECKPOINTS_REGTEST
     else:
@@ -1017,11 +1029,12 @@ def database_version(db):
     elif version_minor != config.VERSION_MINOR:
         # Reparse transactions from the vesion block if minor version has changed.
         message = f"Client minor version number mismatch. Triggering a reparse... ({version_minor} ≠ {config.VERSION_MINOR})"
-        need_reparse_from = (
-            config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
-            if config.TESTNET
-            else config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
-        )
+        if config.TESTNET:
+            need_reparse_from = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
+        elif config.TESTNET4:
+            need_reparse_from = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET4
+        else:
+            need_reparse_from = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
         if need_reparse_from is not None:
             min_version_minor, min_version_block_index = need_reparse_from
             if version_minor < min_version_minor:
