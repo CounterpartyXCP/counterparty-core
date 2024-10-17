@@ -63,7 +63,7 @@ LEDGER_VECTOR = {
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "895d409a2e1c92470ac8745282bc80bc5317bc193413728450b4c097ff3d1e31",
+                    "event_hash": "72f12f8d9225bfe88c43e2561d6e34ff4bb061174f0b025fd2e8f37e204dbf2c",
                 },
             }
         ],
