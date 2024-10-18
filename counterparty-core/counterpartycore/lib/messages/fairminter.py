@@ -412,7 +412,7 @@ def parse(db, tx, message):
         # if the asset is a subasset and does not exist we generate a random numeric name
         # subassets are free
         if existing_asset is None:
-            asset_name = util.generate_random_asset()
+            asset_name = util.deterministic_random_asset_name(db, asset_longname)
         else:
             asset_name = existing_asset["asset"]
     else:
@@ -473,7 +473,7 @@ def parse(db, tx, message):
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
         "block_index": tx["block_index"],
-        "asset": asset,
+        "asset": asset_name,
         "quantity": premint_quantity,
         "divisible": divisible,
         "source": tx["source"],
