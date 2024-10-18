@@ -16,6 +16,7 @@ This update requires an automatic reparse from block 865999
 ## Codebase
 
 - Support several required reparsing by major version
+- Optimize database `rowtracer`
 
 ## API
 
