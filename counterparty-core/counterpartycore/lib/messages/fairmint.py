@@ -276,7 +276,7 @@ def parse(db, tx, message):
     ledger.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
 
     # we prepare the new issuance
-    last_issuance = ledger.get_asset(db, asset)
+    last_issuance = ledger.get_last_issuance(db, asset)
     bindings = last_issuance | {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
@@ -307,7 +307,6 @@ def parse(db, tx, message):
             ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance
-    del bindings["supply"]
     ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE", {"asset_events": "fairmint"})
 
     # log
