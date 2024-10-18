@@ -122,7 +122,14 @@ class CustomisedJSONFormatter(JSONFormatter):
         return super(CustomisedJSONFormatter, self).json_record(message, extra, record)
 
 
-def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
+def set_up(
+    verbose=0,
+    quiet=True,
+    log_file=None,
+    json_logs=False,
+    max_log_file_size=40 * 1024 * 1024,
+    max_log_file_rotations=20,
+):
     logging.Logger.trace = trace
     logging.Logger.event = event
 
@@ -150,8 +157,9 @@ def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
 
     # File Logging
     if log_file:
-        max_log_size = 20 * 1024 * 1024  # 20 MB
-        fileh = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
+        fileh = RotatingFileHandler(
+            log_file, maxBytes=max_log_file_size, backupCount=max_log_file_rotations
+        )
         fileh.setLevel(logging.TRACE)
         fileh.setFormatter(CustomisedJSONFormatter())
         logger.addHandler(fileh)

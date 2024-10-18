@@ -256,6 +256,14 @@ CONFIG_ARGS = [
         {"action": "store_true", "default": False, "help": "Don't write log files"},
     ],
     [
+        ("--max-log-file-size",),
+        {"type": int, "defaul": 40 * 1024 * 1024, "help": "maximum size of log files in bytes"},
+    ],
+    [
+        ("--max-log-file-rotations"),
+        {"type": int, "default": 20, "help": "maximum number of log file rotations"},
+    ],
+    [
         ("--utxo-locks-max-addresses",),
         {
             "type": int,
