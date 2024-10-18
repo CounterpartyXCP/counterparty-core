@@ -311,6 +311,32 @@ def generate_random_asset(subasset_longname=None):
     return "A" + str(random.randint(26**12 + 1, 2**64 - 1))  # nosec B311  # noqa: S311
 
 
+def gen_random_asset_name(seed, add=0):
+    return "A" + str(
+        int(hashlib.shake_256(bytes(seed, "utf8")).hexdigest(4), 16) + 26**12 + 1 + add
+    )
+
+
+def asset_exists(db, name):
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT * FROM issuances WHERE asset = ?",
+        (name,),
+    )
+    if cursor.fetchall():
+        return True
+    return False
+
+
+def deterministic_random_asset_name(db, seed):
+    asset_name = gen_random_asset_name(seed)
+    add = 0
+    while asset_exists(db, asset_name):
+        asset_name = gen_random_asset_name(seed, add=add)
+        add += 1
+    return asset_name
+
+
 def parse_options_from_string(string):
     """Parse options integer from string, if exists."""
     string_list = string.split(" ")
