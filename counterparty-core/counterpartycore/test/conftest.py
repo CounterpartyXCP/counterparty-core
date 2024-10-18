@@ -317,6 +317,8 @@ def api_server_v2(request, cp_server):
         "json_logs": False,
         "wsgi_server": "waitress",
         "gunicorn_workers": 2,
+        "max_log_file_size": 40 * 1024 * 1024,
+        "max_log_file_rotations": 20,
     }
     server_config = (
         default_config

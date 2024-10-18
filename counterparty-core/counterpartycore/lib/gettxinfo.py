@@ -359,7 +359,6 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
             raise DecodeError("unrecognised output type")
         destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
     else:
-        logger.trace("parsed_vouts not in decoded_tx")
         destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(
             decoded_tx
         )
