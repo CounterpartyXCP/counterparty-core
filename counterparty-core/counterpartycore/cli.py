@@ -260,7 +260,7 @@ CONFIG_ARGS = [
         {"type": int, "default": 40 * 1024 * 1024, "help": "maximum size of log files in bytes"},
     ],
     [
-        ("--max-log-file-rotations"),
+        ("--max-log-file-rotations",),
         {"type": int, "default": 20, "help": "maximum number of log file rotations"},
     ],
     [
