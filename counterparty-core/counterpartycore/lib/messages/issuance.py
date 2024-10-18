@@ -164,6 +164,7 @@ def initialise(db):
             ["source"],
             ["asset_longname"],
             ["status", "asset", "tx_index DESC"],
+            ["status", "asset_longname", "tx_index DESC"],
             ["issuer"],
         ],
     )
