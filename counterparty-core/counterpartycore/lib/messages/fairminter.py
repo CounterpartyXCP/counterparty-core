@@ -147,9 +147,8 @@ def validate(
         if existing_asset["issuer"] != source:
             problems.append(f"Asset `{asset_name}` is not issued by `{source}`.")
         # check if description is locked
-        # TODO
-        # if description != "" and existing_asset["description_locked"]:
-        #    problems.append(f"Description of asset `{asset_name}` is locked.")
+        if description != "" and existing_asset["description_locked"]:
+            problems.append(f"Description of asset `{asset_name}` is locked.")
         # check if hard cap is already reached
         if hard_cap and existing_asset["supply"] + premint_quantity >= hard_cap:
             problems.append(f"Hard cap of asset `{asset_name}` is already reached.")
