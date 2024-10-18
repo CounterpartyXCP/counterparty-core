@@ -15,10 +15,12 @@ This update requires an automatic reparse from block 865999.
 - Fix missing index on `address_events.event_index`
 - Fix missing balance checking when creating a fairminter
 - Fix missing check of locked description
+- Fix missing compound index on `status`, `tx_index` and `asset_longname`
 
 ## Codebase
 
 - Support several required reparsing by major version
+- Optimize database `rowtracer`
 
 ## API
 
