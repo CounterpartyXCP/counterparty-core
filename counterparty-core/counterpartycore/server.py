@@ -62,6 +62,8 @@ def initialise(*args, **kwargs):
         regtest=kwargs.get("regtest", False),
         action=kwargs.get("action", None),
         json_logs=kwargs.get("json_logs", False),
+        max_log_file_size=kwargs.get("max_log_file_size", None),
+        max_log_file_rotations=kwargs.get("max_log_file_rotations", None),
     )
     initialise_config(*args, **kwargs)
     return database.initialise_db()
@@ -78,6 +80,8 @@ def initialise_log_config(
     regtest=False,
     action=None,
     json_logs=False,
+    max_log_file_size=40 * 1024 * 1024,
+    max_log_file_rotations=20,
 ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -125,6 +129,9 @@ def initialise_log_config(
 
     config.LOG_IN_CONSOLE = action == "start" or config.VERBOSE > 0
     config.JSON_LOGS = json_logs
+
+    config.MAX_LOG_FILE_SIZE = max_log_file_size
+    config.MAX_LOG_FILE_ROTATIONS = max_log_file_rotations
 
 
 def initialise_config(
@@ -658,6 +665,8 @@ def initialise_log_and_config(args):
         quiet=config.QUIET,
         log_file=config.LOG,
         json_logs=config.JSON_LOGS,
+        max_log_file_size=config.MAX_LOG_FILE_SIZE,
+        max_log_file_rotations=config.MAX_LOG_FILE_ROTATIONS,
     )
     initialise_config(**init_args)
 
