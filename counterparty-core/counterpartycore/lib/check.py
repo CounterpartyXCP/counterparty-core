@@ -1023,11 +1023,11 @@ def database_version(db):
             else config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
         )
         if need_reparse_from is not None:
-            min_version_minor, min_version_block_index = need_reparse_from
-            if version_minor < min_version_minor:
-                raise DatabaseVersionError(
-                    message=message,
-                    required_action="reparse",
-                    from_block_index=min_version_block_index,
-                )
+            for min_version_minor, min_version_block_index in need_reparse_from:
+                if version_minor < min_version_minor:
+                    raise DatabaseVersionError(
+                        message=message,
+                        required_action="reparse",
+                        from_block_index=min_version_block_index,
+                    )
         raise DatabaseVersionError(message=message, required_action=None)
