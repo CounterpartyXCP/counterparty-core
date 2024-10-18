@@ -152,6 +152,8 @@ def validate(
         # check if hard cap is already reached
         if hard_cap and existing_asset["supply"] + premint_quantity >= hard_cap:
             problems.append(f"Hard cap of asset `{asset_name}` is already reached.")
+        if existing_asset["divisible"] != divisible:
+            problems.append(f"Divisibility of asset `{asset_name}` is different.")
     else:
         if premint_quantity > 0 and premint_quantity >= hard_cap:
             problems.append("Premint quantity must be < hard cap.")
