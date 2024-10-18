@@ -13,6 +13,7 @@ This update requires an automatic reparse from block 865999.
 - Fix non-deterministic bug in asset name generation
 - Fix sub-asset name in `issuances` table when created by a fairminter
 - Fix missing index on `address_events.event_index`
+- Fix missing balance checking when creating a fairminter
 
 ## Codebase
 
