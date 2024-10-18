@@ -147,9 +147,8 @@ def validate(
         if existing_asset["issuer"] != source:
             problems.append(f"Asset `{asset_name}` is not issued by `{source}`.")
         # check if description is locked
-        # TODO
-        # if description != "" and existing_asset["description_locked"]:
-        #    problems.append(f"Description of asset `{asset_name}` is locked.")
+        if description != "" and existing_asset["description_locked"]:
+            problems.append(f"Description of asset `{asset_name}` is locked.")
         # check if hard cap is already reached
         if hard_cap and existing_asset["supply"] + premint_quantity >= hard_cap:
             problems.append(f"Hard cap of asset `{asset_name}` is already reached.")
@@ -157,11 +156,17 @@ def validate(
         if premint_quantity > 0 and premint_quantity >= hard_cap:
             problems.append("Premint quantity must be < hard cap.")
 
-    if existing_asset is None and asset_parent != "":
-        # if the asset does not exist its parent must exist
-        existing_parent = ledger.get_asset(db, asset_parent)
-        if existing_parent is None:
-            problems.append("Asset parent does not exist")
+    if existing_asset is None:
+        if asset_parent != "":
+            # if the asset does not exist its parent must exist
+            existing_parent = ledger.get_asset(db, asset_parent)
+            if existing_parent is None:
+                problems.append("Asset parent does not exist")
+        elif not asset.startswith("A"):
+            fee = 0.5 * config.UNIT
+            balance = ledger.get_balance(db, source, config.XCP)
+            if balance < fee:
+                problems.append("insufficient XCP balance to pay fee")
 
     if price == 0 and max_mint_per_tx == 0:
         problems.append("Price or max_mint_per_tx must be > 0.")
