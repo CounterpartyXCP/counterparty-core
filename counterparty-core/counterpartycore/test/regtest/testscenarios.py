@@ -25,6 +25,7 @@ from scenarios import (
     scenario_13_cancel,
     scenario_14_sweep,
     scenario_15_destroy,
+    scenario_16_fairminter,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -37,6 +38,7 @@ SCENARIOS += scenario_4_broadcast.SCENARIO
 SCENARIOS += scenario_5_dispenser.SCENARIO
 SCENARIOS += scenario_6_dispenser.SCENARIO
 SCENARIOS += scenario_7_utxo.SCENARIO
+SCENARIOS += scenario_16_fairminter.SCENARIO
 SCENARIOS += scenario_8_atomicswap.SCENARIO
 SCENARIOS += scenario_9_issuance.SCENARIO
 SCENARIOS += scenario_10_orders.SCENARIO

@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.4.9 (2024-10-18)
+# Release Notes - Counterparty Core v10.5.0 (2024-10-18)
 
 This is a hotfix release to fix non-determinitic bug is asset name generation.
 
@@ -14,6 +14,8 @@ This update requires an automatic reparse from block 865999
 - Fix sub-asset name in `issuances` table when created by a fairminter
 
 ## Codebase
+
+- Support several required reparsing by major version
 
 ## API
 
