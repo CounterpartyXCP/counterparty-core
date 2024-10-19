@@ -3699,6 +3699,8 @@ CREATE INDEX issuances_issuer_idx ON issuances (issuer)
         ;
 CREATE INDEX issuances_source_idx ON issuances (source)
         ;
+CREATE INDEX issuances_status_asset_longname_tx_index_idx ON issuances (status, asset_longname, tx_index DESC)
+        ;
 CREATE INDEX issuances_status_asset_tx_index_idx ON issuances (status, asset, tx_index DESC)
         ;
 CREATE INDEX issuances_status_idx ON issuances (status)

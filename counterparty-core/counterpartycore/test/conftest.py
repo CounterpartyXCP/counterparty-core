@@ -660,3 +660,13 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
     monkeypatch.setattr("counterpartycore.lib.gas.get_transaction_fee", get_transaction_fee)
     monkeypatch.setattr("counterpartycore.lib.transaction.determine_encoding", determine_encoding)
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.asset_issued_total", ledger.asset_issued_total_no_cache
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.get_last_issuance", ledger.get_last_issuance_no_cache
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.asset_destroyed_total", ledger.asset_destroyed_total_no_cache
+    )
