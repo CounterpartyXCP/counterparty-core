@@ -36,11 +36,15 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
 
     with get_cursor(db) as cursor:
         cursor.execute(query, list(record.values()))
+        if table_name == "issuances" and not util.PARSING_MEMPOOL:
+            cursor.execute("SELECT last_insert_rowid() AS rowid")
+            inserted_rowid = cursor.fetchone()["rowid"]
+            new_issuance = cursor.execute(
+                "SELECT * FROM issuances WHERE rowid = ?", (inserted_rowid,)
+            ).fetchone()
+            AssetCache(db).add_issuance(new_issuance)
 
     add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
-
-    if table_name == "issuances":
-        AssetCache(db).add_issuance(record)
 
 
 # This function allows you to update a record using an INSERT.
@@ -1019,6 +1023,8 @@ class AssetCache(metaclass=util.SingletonMeta):
         logger.debug(f"Asset cache initialised in {duration:.2f} seconds")
 
     def add_issuance(self, issuance):
+        if "rowid" in issuance:
+            del issuance["rowid"]
         if issuance["asset_longname"] is not None:
             self.assets[issuance["asset_longname"]] = issuance
         self.assets[issuance["asset"]] = issuance
@@ -1027,17 +1033,13 @@ class AssetCache(metaclass=util.SingletonMeta):
         else:
             self.assets_total_issued[issuance["asset"]] = issuance["quantity"]
 
-    def last_issuance(self, asset):
-        logger.debug(f"Getting last issuance for {asset}")
-        return self.assets.get(asset)
-
 
 def get_last_issuance(db, asset):
-    return AssetCache(db).last_issuance(asset)
+    return AssetCache(db).assets.get(asset)
 
 
 def asset_issued_total(db, asset):
-    return AssetCache(db).assets_total_issued.get(asset)
+    return AssetCache(db).assets_total_issued.get(asset, 0)
 
 
 def get_asset(db, asset):
