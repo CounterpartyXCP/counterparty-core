@@ -22,7 +22,7 @@ This update requires an automatic reparse from block 865999.
 
 - Support several required reparsing by major version
 - Optimize database `rowtracer`
-- Optimize `ledger.get_last_issuance()` and `ledger.asset_issued_total()`
+- Optimize `ledger.get_last_issuance()`, `ledger.asset_issued_total()` and `ledger.asset_destroyed_total()`
 
 ## API
 
