@@ -1047,11 +1047,11 @@ def get_last_issuance_no_cache(db, asset):
 
 
 def get_last_issuance(db, asset):
-    return AssetCache(db).assets.get(asset, get_last_issuance_no_cache(db, asset))
+    return AssetCache(db).assets.get(asset)
 
 
 def asset_issued_total(db, asset):
-    return AssetCache(db).assets_total_issued.get(asset, asset_issued_total_no_cache(db, asset))
+    return AssetCache(db).assets_total_issued.get(asset, 0)
 
 
 def get_asset(db, asset):
