@@ -408,7 +408,8 @@ def run_api_server(args, interruped_value, server_ready_value):
     try:
         # Init the HTTP Server.
         wsgi_server = wsgi.WSGIApplication(app, args=args)
-        ParentProcessChecker(interruped_value, wsgi_server).start()
+        if config.WSGI_SERVER != "gunicorn":
+            ParentProcessChecker(interruped_value, wsgi_server).start()
         app.app_context().push()
         # Run app server (blocking)
         server_ready_value.value = 1
