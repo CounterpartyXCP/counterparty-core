@@ -992,6 +992,11 @@ def get_assets_by_longname(db, asset_longname):
 
 class AssetCache(metaclass=util.SingletonMeta):
     def __init__(self, db) -> None:
+        self.assets = {}
+        self.assets_total_issued = {}
+        self.init(db)
+
+    def init(self, db):
         start = time.time()
         logger.debug("Initialising asset cache...")
         sql = """
@@ -1028,18 +1033,25 @@ class AssetCache(metaclass=util.SingletonMeta):
         if issuance["asset_longname"] is not None:
             self.assets[issuance["asset_longname"]] = issuance
         self.assets[issuance["asset"]] = issuance
-        if issuance["asset"] in self.assets_total_issued:
-            self.assets_total_issued[issuance["asset"]] += issuance["quantity"]
-        else:
-            self.assets_total_issued[issuance["asset"]] = issuance["quantity"]
+        if issuance["quantity"] is not None:
+            if issuance["asset"] in self.assets_total_issued:
+                self.assets_total_issued[issuance["asset"]] += issuance["quantity"]
+            else:
+                self.assets_total_issued[issuance["asset"]] = issuance["quantity"]
+
+
+def get_last_issuance_no_cache(db, asset):
+    last_issuance = get_asset(db, asset)
+    del last_issuance["supply"]
+    return last_issuance
 
 
 def get_last_issuance(db, asset):
-    return AssetCache(db).assets.get(asset)
+    return AssetCache(db).assets.get(asset, get_last_issuance_no_cache(db, asset))
 
 
 def asset_issued_total(db, asset):
-    return AssetCache(db).assets_total_issued.get(asset, 0)
+    return AssetCache(db).assets_total_issued.get(asset, asset_issued_total_no_cache(db, asset))
 
 
 def get_asset(db, asset):
