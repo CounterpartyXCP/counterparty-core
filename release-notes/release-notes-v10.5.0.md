@@ -25,6 +25,8 @@ This update requires an automatic reparse from block 865999.
 
 ## API
 
+- Have `--force` bypass checks that node is caught up
+
 ## CLI
 
 - Add `--max-log-file-size` and `--max-log-file-rotations` flags
