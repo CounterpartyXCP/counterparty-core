@@ -107,8 +107,6 @@ class UTXOLocks(metaclass=util.SingletonMeta):
         self.utxo_locks = None
         if self.utxo_locks_max_addresses > 0:
             self.utxo_locks = util.DictCache(self.utxo_locks_max_addresses)
-        print("UTXOLocks initialized")
-        print(self.utxo_locks, self.utxo_locks_max_addresses)
 
     def make_outkey_vin_txid(self, txid, vout):
         if (txid, vout) not in self.utxo_p2sh_encoding_locks_cache:

@@ -979,7 +979,7 @@ def software_version():
         requests.exceptions.ReadTimeout,
         TimeoutError,
     ):
-        logger.warning("Unable to check Counterparty version.", exc_info=sys.exc_info())
+        logger.warning("Unable to check Counterparty version.")
         return False
 
     for change_name in versions:
@@ -987,7 +987,7 @@ def software_version():
         try:
             check_change(protocol_change, change_name)
         except VersionUpdateRequiredError:  # noqa: F841
-            logger.error("Version Update Required", exc_info=sys.exc_info())
+            logger.error("Version Update Required")
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     logger.debug("Version check passed.")

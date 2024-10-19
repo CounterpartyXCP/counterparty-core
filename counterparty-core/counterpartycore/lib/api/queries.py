@@ -152,6 +152,8 @@ def select_rows(
             elif key.endswith("__in"):
                 where_field.append(f"{key[:-4]} IN ({','.join(['?'] * len(value))})")
                 bindings += value
+            elif key.endswith("__notnull"):
+                where_field.append(f"{key[:-9]} IS NOT NULL")
             else:
                 if key in ADDRESS_FIELDS and len(value.split(",")) > 1:
                     where_field.append(f"{key} IN ({','.join(['?'] * len(value.split(',')))})")
@@ -344,7 +346,13 @@ def get_last_block(db):
     """
     Return the information of the last block
     """
-    return select_row(db, "blocks", where={})
+    return select_row(
+        db,
+        "blocks",
+        where={
+            "ledger_hash__notnull": None,
+        },
+    )
 
 
 def get_transactions(db, cursor: str = None, limit: int = 10, offset: int = None):

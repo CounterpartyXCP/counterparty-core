@@ -22,10 +22,12 @@ This update requires an automatic reparse from block 865999.
 
 - Support several required reparsing by major version
 - Optimize database `rowtracer`
+- Optimize `ledger.get_last_issuance()` and `ledger.asset_issued_total()`
 
 ## API
 
 - Have `--force` bypass checks that node is caught up
+- `/v2/blocks/last` returns the last parsed block and not the block currently being parsed
 
 ## CLI
 

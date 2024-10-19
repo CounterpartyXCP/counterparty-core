@@ -632,6 +632,8 @@ def run_scenario(scenario):
     db = database.get_connection(read_only=False)
     initialise_db(db)
 
+    ledger.AssetCache(db).init(db)
+
     raw_transactions = []
 
     for tx in scenario:
