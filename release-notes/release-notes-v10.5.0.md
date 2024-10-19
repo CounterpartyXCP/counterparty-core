@@ -14,6 +14,8 @@ This update requires an automatic reparse from block 865999.
 - Fix subasset name in `issuances` table when created by a fairminter
 - Fix missing balance check for fairminter creation
 - Fix missing check of locked description
+- Fix missing compound index on `status`, `tx_index` and `asset_longname`
+- Fix checking when a fairmint reach the hard cap
 - Fix divisibility check when creating a fairminter
 
 ## Codebase

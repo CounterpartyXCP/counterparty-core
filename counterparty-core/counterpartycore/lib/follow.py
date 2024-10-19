@@ -99,7 +99,8 @@ class BlockchainWatcher:
         self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "rawtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "hashtx")
-        self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "sequence")
+        if not config.NO_MEMPOOL:
+            self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "sequence")
         self.zmq_sub_socket_sequence.connect(self.zmq_sequence_address)
         self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
@@ -222,7 +223,8 @@ class BlockchainWatcher:
         util.BLOCK_PARSER_STATUS = "following"
 
         # sequence topic
-        await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
+        if not config.NO_MEMPOOL:
+            await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
         # check rawblock topic
         check_block_delay = 10 if config.NETWORK_NAME == "mainnet" else 0.5
         if time.time() - self.last_block_check_time > check_block_delay:
