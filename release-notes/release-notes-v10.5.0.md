@@ -27,6 +27,7 @@ This update requires an automatic reparse from block 865999.
 ## API
 
 - Have `--force` bypass checks that node is caught up
+- `/v2/blocks/last` returns the last parsed block and not the block currently being parsed
 
 ## CLI
 
