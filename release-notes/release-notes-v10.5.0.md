@@ -16,6 +16,7 @@ This update requires an automatic reparse from block 865999.
 - Fix missing balance checking when creating a fairminter
 - Fix missing check of locked description
 - Fix missing compound index on `status`, `tx_index` and `asset_longname`
+- Fix divisibility checking when creating a fairminter
 
 ## Codebase
 
@@ -23,6 +24,8 @@ This update requires an automatic reparse from block 865999.
 - Optimize database `rowtracer`
 
 ## API
+
+- Have `--force` bypass checks that node is caught up
 
 ## CLI
 
