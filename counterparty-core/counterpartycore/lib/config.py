@@ -161,8 +161,8 @@ API_LIMIT_ROWS = 1000
 
 MPMA_LIMIT = 1000
 
-# PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
-PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
+PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
+# PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
 
 BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
 BOOTSTRAP_URL_MAINNET_SIG = "https://bootstrap.counterparty.io/counterparty.latest.sig"
