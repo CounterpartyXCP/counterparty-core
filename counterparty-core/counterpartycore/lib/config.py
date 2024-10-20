@@ -184,5 +184,3 @@ INFLUX_DB_ORG = "counterparty"
 INFLUX_DB_BUCKET = "node-telemetry"
 
 LOG_IN_CONSOLE = False
-
-DEFAULT_DB_CONNECTION_POOL_SIZE = 10

@@ -175,8 +175,10 @@ def initialise_config(
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
     db_connection_pool_size=None,
-    wsgi_server="waitress",
-    gunicorn_workers=2,
+    wsgi_server=None,
+    waitress_threads=None,
+    gunicorn_workers=None,
+    gunicorn_threads_per_worker=None,
 ):
     # log config already initialized
 
@@ -593,13 +595,20 @@ def initialise_config(
 
     config.NO_TELEMETRY = no_telemetry
 
-    if db_connection_pool_size:
-        config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
-    else:
-        config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
-
+    config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
     config.WSGI_SERVER = wsgi_server
+    config.WAITRESS_THREADS = waitress_threads
+    config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
     config.GUNICORN_WORKERS = gunicorn_workers
+
+    # Log all config parameters, sorted by key
+    # Filter out default values #TODO: these should be set in a different way
+    custom_config = {
+        k: v
+        for k, v in sorted(config.__dict__.items())
+        if not k.startswith("__") and not k.startswith("DEFAULT_")
+    }
+    logger.debug(f"Config: {custom_config}")
 
 
 def initialise_log_and_config(args):
@@ -643,7 +652,9 @@ def initialise_log_and_config(args):
         "zmq_publisher_port": args.zmq_publisher_port,
         "db_connection_pool_size": args.db_connection_pool_size,
         "wsgi_server": args.wsgi_server,
+        "waitress_threads": args.waitress_threads,
         "gunicorn_workers": args.gunicorn_workers,
+        "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
     }
 
     initialise_log_config(

@@ -209,7 +209,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             "workers": config.GUNICORN_WORKERS,
             "worker_class": "gthread",
             "daemon": True,
-            "threads": 2,
+            "threads": config.GUNICORN_THREADS_PER_WORKER,
             "loglevel": "debug",
             # "access-logfile": "-",
         }
@@ -274,7 +274,7 @@ class WaitressApplication:
         self.args = args
         self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
         self.server = waitress.server.create_server(
-            self.app, host=config.API_HOST, port=config.API_PORT
+            self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )
 
     def run(self):
