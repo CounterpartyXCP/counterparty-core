@@ -456,9 +456,6 @@ class APIStatusPoller(threading.Thread):
     def stop(self):
         logger.info("Stopping API Status Poller thread...")
         self.stop_event.set()
-        if self.db is not None:
-            self.db.close()
-            self.db = None
         self.join()
         logger.info("API Status Poller thread stopped.")
 
@@ -501,7 +498,6 @@ class APIStatusPoller(threading.Thread):
                     CURRENT_API_STATUS_RESPONSE_JSON = None
                 self.stop_event.wait(timeout=0.5) 
         finally:
-            # Close the database connection in the thread
             if self.db is not None:
                 self.db.close()
                 self.db = None

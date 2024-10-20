@@ -228,7 +228,7 @@ def insert_event(api_db, event):
 
 
 def rollback_event(api_db, event):
-    logger.debug(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
+    logger.trace(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
     with api_db:  # all or
         if event["event"] in SKIP_EVENTS:
             sql = "DELETE FROM messages WHERE message_index = ?"
