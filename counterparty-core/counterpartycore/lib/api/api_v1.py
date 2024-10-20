@@ -454,16 +454,16 @@ class APIStatusPoller(threading.Thread):
         self.db = None
 
     def stop(self):
-        logger.info("Stopping API Status Poller...")
+        logger.info("Stopping API Status Poller thread...")
         self.stop_event.set()
         if self.db is not None:
             self.db.close()
             self.db = None
         self.join()
-        logger.debug("API Status Poller stopped.")
+        logger.info("API Status Poller thread stopped.")
 
     def run(self):
-        logger.debug("Starting API Status Poller...")
+        logger.info("Starting API Status Poller thread...")
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
         self.db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
 
@@ -505,7 +505,7 @@ class APIStatusPoller(threading.Thread):
             if self.db is not None:
                 self.db.close()
                 self.db = None
-            logger.debug("API Status Poller has stopped.")
+            logger.info("API Status Poller stopped.")
 
 
 class APIServer(threading.Thread):
@@ -520,7 +520,7 @@ class APIServer(threading.Thread):
         sentry.init()
 
     def stop(self):
-        logger.info("Stopping API Server v1...")
+        logger.info("Stopping API Server v1 thread...")
         if self.connection_pool:
             self.connection_pool.close()
         if self.server:
@@ -528,7 +528,7 @@ class APIServer(threading.Thread):
         self.join()
 
     def run(self):
-        logger.info("Starting API Server v1...")
+        logger.info("Starting API Server v1 thread...")
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
 

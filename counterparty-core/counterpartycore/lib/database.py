@@ -240,7 +240,7 @@ def update_version(db):
 
 
 def vacuum(db):
-    logger.info("Starting database VACUUM. This may take awhile...")
+    logger.info("Starting database VACUUM... this may take a while!")
     cursor = db.cursor()
     cursor.execute("VACUUM")
     logger.info("Database VACUUM completed.")

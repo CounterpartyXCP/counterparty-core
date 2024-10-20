@@ -930,7 +930,7 @@ class APIWatcher(threading.Thread):
         self.last_mempool_sync = 0
 
     def run(self):
-        logger.info("Starting API Watcher...")
+        logger.info("Starting API Watcher thread...")
         catch_up(self.api_db, self.ledger_db, self)
         if not self.stop_event.is_set():
             self.follow()
@@ -953,7 +953,7 @@ class APIWatcher(threading.Thread):
                 self.last_mempool_sync = time.time()
 
     def stop(self):
-        logger.info("Stopping API Watcher...")
+        logger.info("Stopping API Watcher thread...")
         self.stop_event.set()
         self.join()
         if self.api_db is not None:

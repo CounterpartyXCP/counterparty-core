@@ -297,9 +297,9 @@ class WSGIApplication:
             self.server = WaitressApplication(self.app, self.args)
 
     def run(self):
-        logger.debug("Starting WSGI Server...")
+        logger.info("Starting WSGI Server thread...")
         self.server.run()
 
     def stop(self):
-        logger.debug("Stopping WSGI Server...")
+        logger.info("Stopping WSGI Server thread...")
         self.server.stop()
