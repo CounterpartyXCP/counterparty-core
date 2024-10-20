@@ -17,6 +17,7 @@ This update requires an automatic reparse from block 865999.
 - Fix missing compound index on `status`, `tx_index` and `asset_longname`
 - Fix checking when a fairmint reach the hard cap
 - Fix divisibility check when creating a fairminter
+- Fix description checking when creating a fairminter
 
 ## Codebase
 
