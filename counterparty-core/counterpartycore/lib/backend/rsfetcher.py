@@ -38,7 +38,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.lock = threading.Lock()
 
     def start(self, start_height=0):
-        logger.debug("Starting Prefetcher...")
+        logger.info("Starting RSFetcher thread...")
         try:
             self.config["start_height"] = start_height
             self.next_height = start_height
@@ -86,7 +86,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
     def get_prefetched_block(self):
         try:
-            logger.debug("Looking for Block in prefetch queue...")
+            logger.debug("Looking for block in prefetch queue...")
             while len(self.prefetch_queue) == 0:
                 logger.trace("Prefetch queue is empty.")
                 time.sleep(0.1)
@@ -104,7 +104,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
             raise e
 
     def prefetch_blocks(self):
-        logger.debug("Starting prefetching blocks...")
+        logger.debug("Starting to prefetch blocks...")
         expected_height = self.next_height
         while not self.stopped:
             self.running = True
@@ -142,7 +142,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
             except Exception as e:
                 if str(e) == "Stopped error":
                     logger.warning(
-                        "RSFetcher found stopped due to an error. Restarting in 5 seconds..."
+                        "RSFetcher thread found stopped due to an error. Restarting in 5 seconds..."
                     )
                     time.sleep(5)
                     self.restart()
@@ -152,7 +152,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         logger.debug("Prefetching blocks stopped.")
 
     def stop(self):
-        logger.info("Stopping prefetcher...")
+        logger.info("Stopping RSFetcher thread...")
         self.stopped = True
         try:
             if self.prefetch_task:
@@ -171,7 +171,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         finally:
             self.fetcher = None
             self.prefetch_task = None
-            logger.debug("Prefetcher shutdown complete.")
+            logger.info("RSFetcher thread stopped.")
 
     def restart(self):
         self.stop()

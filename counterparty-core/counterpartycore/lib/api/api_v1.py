@@ -505,7 +505,7 @@ class APIStatusPoller(threading.Thread):
             if self.db is not None:
                 self.db.close()
                 self.db = None
-            logger.info("API Status Poller stopped.")
+            logger.info("API Status Poller thread stopped.")
 
 
 class APIServer(threading.Thread):

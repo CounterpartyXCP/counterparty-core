@@ -421,7 +421,7 @@ def run_api_server(args, interrupted_value, server_ready_value):
         capture_exception(e)
         logger.error("Error in API Server: %s", e)
     finally:
-        logger.info("Stopping API Server...")
+        logger.info("Stopping API Server threads...")
 
         watcher.stop()
         watcher.join()
@@ -485,7 +485,7 @@ class APIServer(object):
             time.sleep(0.5)
             logger.trace("Waiting 2 seconds for API Server to stop...")
             if time.time() - waiting_start_time > 2:
-                logger.error("API Server did not stop in time. Terminating...")
+                logger.error("API Server process did not stop in time. Terminating...")
                 self.process.kill()
                 break
         logger.info("API Server process stopped.")
