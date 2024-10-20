@@ -650,7 +650,7 @@ def rollback_fairminters(api_db, event):
     cursor.execute(sql, event_bindings)
 
 
-def parse_event(api_db, event, catching_up=False):
+def parse_event(api_db, event, watcher, catching_up=False):
     if event["event"] in SKIP_EVENTS:
         event["insert_rowid"] = None
         insert_event(api_db, event)
@@ -669,7 +669,7 @@ def parse_event(api_db, event, catching_up=False):
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
         if event["event"] == "BLOCK_PARSED":
-            synchronize_mempool(api_db, api_db)
+            synchronize_mempool(api_db, api_db, watcher.stop_event)
 
 
 def catch_up(api_db, ledger_db, watcher):
@@ -681,8 +681,8 @@ def catch_up(api_db, ledger_db, watcher):
         start_time = time.time()
         event_parsed = 0
         next_event = get_next_event_to_parse(api_db, ledger_db)
-        while next_event and not watcher.stopping and not watcher.stopped:
-            parse_event(api_db, next_event, catching_up=True)
+        while next_event and not watcher.stop_event.is_set():
+            parse_event(api_db, next_event, watcher, catching_up=True)
             event_parsed += 1
             if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
@@ -690,12 +690,12 @@ def catch_up(api_db, ledger_db, watcher):
                     f"API Watcher - {event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
                 )
             next_event = get_next_event_to_parse(api_db, ledger_db)
-        if not watcher.stopping and not watcher.stopped:
+        if not watcher.stop_event.is_set():
             duration = time.time() - start_time
             logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
     else:
         logger.info("API Watcher - Catch up completed.")
-    synchronize_mempool(api_db, api_db)
+    synchronize_mempool(api_db, api_db, watcher.stop_event)
 
 
 def apply_migration():
@@ -801,8 +801,8 @@ def gen_random_tx_index(event):
     return event
 
 
-def synchronize_mempool(api_db, ledger_db):
-    if config.NO_MEMPOOL:
+def synchronize_mempool(api_db, ledger_db, stop_event):
+    if config.NO_MEMPOOL or stop_event.is_set():
         return
     logger.trace("API Watcher - Synchronizing mempool...")
     global MEMPOOL_SKIP_EVENT_HASHES  # noqa: PLW0602
@@ -813,12 +813,15 @@ def synchronize_mempool(api_db, ledger_db):
             clean_mempool(api_db)
             cursor = api_db.cursor()
             for event in mempool_events:
+                if stop_event.is_set():
+                    logger.info("API Watcher - Stopping mempool synchronization due to stop event.")
+                    break
                 if event["event"] in SKIP_EVENTS + ["NEW_BLOCK", "BLOCK_PARSED"]:
                     continue
                 if event["tx_hash"] in MEMPOOL_SKIP_EVENT_HASHES:
                     continue
                 event_bindings = json.loads(event["bindings"])
-                # edge case: asset alredy created in another confirmed tx
+                # edge case: asset already created in another confirmed tx
                 if event["event"] == "ASSET_CREATION":
                     existing_asset = fetch_one(
                         api_db,
@@ -882,7 +885,6 @@ class APIWatcher(Thread):
         self.api_db = None
         self.ledger_db = None
         apply_migration()
-        self.stopped = False
         self.stop_event = threading.Event()  # Add stop event
         self.api_db = database.get_db_connection(
             config.API_DATABASE, read_only=False, check_wal=False
@@ -927,6 +929,12 @@ class APIWatcher(Thread):
         cursor.close()
         self.last_mempool_sync = 0
 
+    def run(self):
+        logger.info("Starting API Watcher...")
+        catch_up(self.api_db, self.ledger_db, self)
+        if not self.stop_event.is_set():
+            self.follow()
+
     def follow(self):
         refresh_xcp_supply(self.ledger_db, self.api_db)
         while not self.stop_event.is_set():
@@ -936,29 +944,21 @@ class APIWatcher(Thread):
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
                 self.stop_event.wait(timeout=0.1)
-            # let's not sync the mempool when parsing a block
+            if self.stop_event.is_set():
+                break
             if time.time() - self.last_mempool_sync > 10 and (
                 last_parsed_event is None or last_parsed_event["event"] == "BLOCK_PARSED"
             ):
-                synchronize_mempool(self.api_db, self.ledger_db)
+                synchronize_mempool(self.api_db, self.ledger_db, self.stop_event)
                 self.last_mempool_sync = time.time()
-        self.stopped = True
-
-    def run(self):
-        logger.info("Starting API Watcher...")
-        self.stopped = False
-        catch_up(self.api_db, self.ledger_db, self)
-        self.follow()
 
     def stop(self):
         logger.info("Stopping API Watcher...")
-        self.stop_event.set()  # Signal the stop event
-        while not self.stopped:
-            time.sleep(0.1)
+        self.stop_event.set()
+        self.join()
         if self.api_db is not None:
             self.api_db.close()
         if self.ledger_db is not None:
             self.ledger_db.close()
         logger.trace("API Watcher stopped.")
-
 

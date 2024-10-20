@@ -499,8 +499,7 @@ class APIStatusPoller(threading.Thread):
                 else:
                     CURRENT_API_STATUS_CODE = None
                     CURRENT_API_STATUS_RESPONSE_JSON = None
-                # Wait for up to 0.5 seconds or until the stop event is set
-                self.stop_event.wait(timeout=0.5)  # Replaces time.sleep(0.5)
+                self.stop_event.wait(timeout=0.5) 
         finally:
             # Close the database connection in the thread
             if self.db is not None:
