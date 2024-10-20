@@ -13444,7 +13444,7 @@
                         "default": "",
                         "required": false,
                         "type": "str",
-                        "description": "The description of the asset"
+                        "description": "The description of the asset. Overrides the current description if the asset already exists."
                     },
                     {
                         "name": "encoding",
