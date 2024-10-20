@@ -422,28 +422,19 @@ def run_api_server(args, interrupted_value, server_ready_value):
         logger.error("Error in API Server: %s", e)
     finally:
         logger.trace("Shutting down API Server...")
-        try:
-            watcher.stop()
-            watcher.join()
-        except Exception as e:
-            logger.error("Error stopping API Watcher: %s", e)
 
-        if wsgi_server is not None:
-            try:
-                wsgi_server.stop()
-            except Exception as e:
-                logger.error("Error stopping WSGI Server: %s", e)
+        watcher.stop()
+        watcher.join()
 
-        if parent_checker is not None:
-            try:
-                parent_checker.join()
-            except Exception as e:
-                logger.error("Error joining ParentProcessChecker: %s", e)
+        wsgi_server.stop()
+        wsgi_server.join()
 
-        try:
-            APIDBConnectionPool().close()
-        except Exception as e:
-            logger.error("Error closing DB connection pool: %s", e)
+        logger.debug("Stopping ParentProcessChecker...")
+        parent_checker.stop()
+        parent_checker.join()
+
+        logger.debug("Closing DB connection pool...")
+        APIDBConnectionPool().close()
 
 
 # This thread is used for the following two reasons:

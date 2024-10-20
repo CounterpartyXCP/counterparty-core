@@ -959,4 +959,4 @@ class APIWatcher(Thread):
             self.api_db.close()
         if self.ledger_db is not None:
             self.ledger_db.close()
-        logger.trace("API Watcher stopped")
+        logger.trace("API Watcher stopped.")
