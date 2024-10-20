@@ -725,40 +725,44 @@ def start_all(args):
     }
     logger.debug(f"Config: {custom_config}")
 
+    def handle_interrupt_signal(signum, frame):
+        logger.warning(f"Received signal {signal.strsignal(signum)}. Initiating shutdown...")
+        raise KeyboardInterrupt
+
     try:
-        # set signal handlers (needed for graceful shutdown on SIGINT/SIGTERM)
+        # Set signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, handle_interrupt_signal)
         signal.signal(signal.SIGTERM, handle_interrupt_signal)
 
-        # download bootstrap if necessary
+        # Download bootstrap if necessary
         if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
             bootstrap(no_confirm=True)
 
-        # initialise database
+        # Initialise database
         db = database.initialise_db()
         blocks.initialise(db)
         blocks.check_database_version(db)
         database.optimize(db)
 
-        # check software version
+        # Check software version
         check.software_version()
 
-        # API Server v2.
+        # API Server v2
         api_server_v2 = api_v2.APIServer()
         api_server_v2.start(args)
         while not api_server_v2.is_ready():
             logger.trace("Waiting for API server to start...")
             time.sleep(0.1)
 
-        # Backend.
+        # Backend
         connect_to_backend()
 
-        # API Status Poller.
+        # API Status Poller
         api_status_poller = api_v1.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
 
-        # API Server v1.
+        # API Server v1
         api_server_v1 = api_v1.APIServer()
         api_server_v1.daemon = True
         api_server_v1.start()
@@ -774,11 +778,16 @@ def start_all(args):
         logger.info("Watching for new blocks...")
         follower_daemon = follow.start_blockchain_watcher(db)
 
+        # Keep the main thread alive
+        while True:
+            time.sleep(1)
+
     except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt!")
+        logger.warning("Keyboard interrupt received. Shutting down...")
     except Exception as e:
         logger.error("Exception caught!", exc_info=e)
     finally:
+        # Ensure all services are stopped
         if api_server_v2:
             api_server_v2.stop()
         if telemetry_daemon:
@@ -802,7 +811,7 @@ def start_all(args):
             database.check_wal_file(config.DATABASE)
         except exceptions.WALFileFoundError:
             logger.warning(
-                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
+                "Database WAL file detected. To ensure no data corruption has occurred, run `counterparty-server check-db`."
             )
         except exceptions.DatabaseError:
             logger.warning(
@@ -990,5 +999,6 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
         "green",
     )
+
 
 
