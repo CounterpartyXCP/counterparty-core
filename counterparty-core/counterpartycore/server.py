@@ -965,8 +965,13 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     spinner.stop()
 
     with log.Spinner("Verifying signature..."):
-        if not any(util.verify_signature(k, sig_path, tarball_path) for k in PUBLIC_KEYS):
-            print("Snaptshot was not signed by any trusted keys")
+        signature_verified = False
+        for key in PUBLIC_KEYS:
+            if util.verify_signature(key, sig_path, tarball_path):
+                signature_verified = True
+                break
+        if not signature_verified:
+            print("Snapshot was not signed by any trusted keys")
             sys.exit(1)
 
     # TODO: check checksum, filenames, etc.

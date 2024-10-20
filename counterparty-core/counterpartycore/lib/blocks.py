@@ -972,6 +972,10 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
     if block_hash is None or block_hash == config.MEMPOOL_BLOCK_HASH:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
+        existing_tx = ledger.get_transaction(db, tx_hash)
+        if existing_tx:
+            util.CURRENT_TX_HASH = None
+            return tx_index
     else:
         assert block_index == util.CURRENT_BLOCK_INDEX
 

@@ -89,8 +89,9 @@ class BlockchainWatcher:
         self.last_block_check_time = 0
         self.last_software_version_check_time = 0
         # catch up and clean mempool before starting
-        mempool.parse_raw_mempool(self.db)
-        mempool.clean_mempool(self.db)
+        if not config.NO_MEMPOOL:
+            mempool.parse_raw_mempool(self.db)
+            mempool.clean_mempool(self.db)
 
     def connect_to_zmq(self):
         self.zmq_context = zmq.asyncio.Context()

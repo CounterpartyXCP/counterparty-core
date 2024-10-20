@@ -203,10 +203,39 @@ def version(db):
     return version_major, version_minor
 
 
+def init_config_table(db):
+    sql = """
+        CREATE TABLE IF NOT EXISTS config (
+            name TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """
+    cursor = db.cursor()
+    cursor.execute(sql)
+    cursor.execute("CREATE INDEX IF NOT EXISTS config_config_name_idx ON config (name)")
+
+
+def set_config_value(db, name, value):
+    init_config_table(db)
+    cursor = db.cursor()
+    cursor.execute("INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)", (name, value))
+
+
+def get_config_value(db, name):
+    init_config_table(db)
+    cursor = db.cursor()
+    cursor.execute("SELECT value FROM config WHERE name = ?", (name,))
+    rows = cursor.fetchall()
+    if rows:
+        return rows[0]["value"]
+    return None
+
+
 def update_version(db):
     cursor = db.cursor()
     user_version = (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR
     cursor.execute(f"PRAGMA user_version = {user_version}")  # Syntax?!
+    set_config_value(db, "VERSION_STRING", config.VERSION_STRING)
     logger.info("Database version number updated.")
 
 

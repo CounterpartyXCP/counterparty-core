@@ -563,7 +563,7 @@ def compose_fairminter(
     :param lock_description: If True, the description of the asset is locked
     :param lock_quantity: If True, the quantity of the asset cannot be changed after the minting
     :param divisible: If True, the asset is divisible
-    :param description: The description of the asset
+    :param description: The description of the asset. Overrides the current description if the asset already exists.
     """
     params = {
         "source": address,
