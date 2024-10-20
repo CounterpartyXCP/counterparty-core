@@ -603,7 +603,11 @@ def initialise_config(
 
     # Log all config parameters, sorted by key
     # Filter out default values #TODO: these should be set in a different way
-    custom_config = {k: v for k, v in sorted(config.__dict__.items()) if not k.startswith('__') and not k.startswith('DEFAULT_')}
+    custom_config = {
+        k: v
+        for k, v in sorted(config.__dict__.items())
+        if not k.startswith("__") and not k.startswith("DEFAULT_")
+    }
     logger.debug(f"Config: {custom_config}")
 
 
@@ -734,7 +738,6 @@ def start_all(args):
 
         # initialise database
         with database.initialise_db() as db:
-
             blocks.initialise(db)
             blocks.check_database_version(db)
             database.optimize(db)
@@ -982,4 +985,3 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
         "green",
     )
-

@@ -498,4 +498,3 @@ class APIServer(object):
                 self.process.kill()
                 break
         logger.trace("API Server stopped.")
-
