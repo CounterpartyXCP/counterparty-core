@@ -20,6 +20,7 @@ This update requires an automatic reparse from block 865999.
 
 ## Codebase
 
+- Mandatory reparse for all alphas and betas
 - Add missing index to `address_events` table
 - Add missing compound index to `issuances` table
 - Support several required reparsing by major version
