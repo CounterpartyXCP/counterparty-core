@@ -692,28 +692,23 @@ class AssetConservationChecker(threading.Thread):
         self.last_check = 0
         threading.Thread.__init__(self)
         self.db = None
-        self.stopped = False
         self.daemon = True
-        self.running = False
+        self.stop_event = threading.Event()
 
     def run(self):
         self.db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
-        while not self.stopped:
-            self.running = True
+        while not self.stop_event.is_set():
             if time.time() - self.last_check > 60 * 60 * 12:
                 try:
-                    check.asset_conservation(self.db)
+                    check.asset_conservation(self.db, self.stop_event)
                 except check.SanityError as e:
                     logger.error("Asset conservation check failed: %s" % e)
                     _thread.interrupt_main()
                 self.last_check = time.time()
             time.sleep(1)
-        self.running = False
 
     def stop(self):
-        self.stopped = True
-        while self.running:
-            time.sleep(0.1)
+        self.stop_event.set()
         if self.db:
             self.db.close()
 
@@ -992,3 +987,4 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
         "green",
     )
+
