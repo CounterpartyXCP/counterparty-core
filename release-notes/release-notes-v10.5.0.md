@@ -30,6 +30,9 @@ This update requires an automatic reparse from block 865999.
 
 - Have `--force` bypass checks that node is caught up
 - Have `/v2/blocks/last` return the last parsed block and not the block currently being parsed
+- Add the following new routes:
+    - `/v2/fairmints`
+    - `/v2/fairmints/<tx_hash>`
 
 ## CLI
 
