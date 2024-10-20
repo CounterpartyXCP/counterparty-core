@@ -25,6 +25,7 @@ This update requires an automatic reparse from block 865999.
 - Support several required reparsing by major version
 - Optimize database `rowtracer`
 - Optimize `ledger.get_last_issuance()`, `ledger.asset_issued_total()` and `ledger.asset_destroyed_total()`
+- Tweak thread handling logic
 
 ## API
 
@@ -34,6 +35,9 @@ This update requires an automatic reparse from block 865999.
 ## CLI
 
 - Add `--max-log-file-size` and `--max-log-file-rotations` flags
+- Make the number of Waitress threads configurable
+- Make the number of Gunicorn threads per worker configurable
+- Log all configuration options on startup at `DEBUG` level
 
 
 # Credits

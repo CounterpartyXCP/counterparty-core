@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 from urllib.parse import quote_plus as urlencode
 
 from termcolor import cprint
@@ -306,6 +307,7 @@ CONFIG_ARGS = [
         ("--db-connection-pool-size",),
         {
             "type": int,
+            "default": 20,
             "help": "size of the database connection pool",
         },
     ],
@@ -326,11 +328,27 @@ CONFIG_ARGS = [
         },
     ],
     [
+        ("--waitress-threads",),
+        {
+            "type": int,
+            "default": 10,
+            "help": "number of threads for the Waitress WSGI server (if enabled)",
+        },
+    ],
+    [
         ("--gunicorn-workers",),
         {
             "type": int,
+            "default": 2 * os.cpu_count() + 1,
+            "help": "number of worker processes for gunicorn (if enabled)",
+        },
+    ],
+    [
+        ("--gunicorn-threads-per-worker",),
+        {
+            "type": int,
             "default": 2,
-            "help": "number of worker processes for gunicorn",
+            "help": "number of threads per worker for the Gunicorn WSGI server (if enabled)",
         },
     ],
 ]
