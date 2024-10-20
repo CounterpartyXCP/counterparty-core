@@ -159,7 +159,7 @@ ROUTES = util.prepare_routes(
         ### /fairminters ###
         "/v2/fairminters": queries.get_all_fairminters,
         "/v2/fairminters/<tx_hash>": queries.get_fairminter,
-        "/v2/fairminters/<tx_hash>/mints": queries.get_fairmints_by_fairminter,
+        "/v2/fairminters/<tx_hash>/fairmints": queries.get_fairmints_by_fairminter,
         ### /fairmints ###
         "/v2/fairmints": queries.get_all_fairmints,
         "/v2/fairmints/<tx_hash>": queries.get_fairmint,

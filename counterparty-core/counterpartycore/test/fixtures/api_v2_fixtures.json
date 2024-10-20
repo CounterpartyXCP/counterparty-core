@@ -16588,7 +16588,7 @@
                     }
                 ]
             },
-            "/v2/fairminters/<tx_hash>/mints": {
+            "/v2/fairminters/<tx_hash>/fairmints": {
                 "function": "get_fairmints_by_fairminter",
                 "description": "Returns the mints by fairminter",
                 "args": [
