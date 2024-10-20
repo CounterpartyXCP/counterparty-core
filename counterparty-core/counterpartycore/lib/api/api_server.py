@@ -441,15 +441,15 @@ def run_api_server(args, interrupted_value, server_ready_value):
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
 class ParentProcessChecker(Thread):
-    def __init__(self, interruped_value, wsgi_server):
+    def __init__(self, interrupted_value, wsgi_server):
         super().__init__()
-        self.interruped_value = interruped_value
+        self.interrupted_value = interrupted_value
         self.wsgi_server = wsgi_server
 
     def run(self):
         try:
             while True:
-                if self.interruped_value.value == 0:
+                if self.interrupted_value.value == 0:
                     time.sleep(0.01)
                 else:
                     logger.debug("Parent process is dead. Exiting...")
@@ -489,3 +489,4 @@ class APIServer(object):
                 self.process.kill()
                 break
         logger.info("API Server process stopped.")
+
