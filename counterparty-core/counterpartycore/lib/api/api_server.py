@@ -416,7 +416,7 @@ def run_api_server(args, server_ready_value):
         server_ready_value.value = 1
         wsgi_server.run()
     except KeyboardInterrupt:
-        logger.warning("Keyboard Interrupt!")
+        logger.warning("Keyboard interrupt received. Shutting down...")
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API Server: %s", e)

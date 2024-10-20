@@ -726,7 +726,7 @@ def start_all(args):
     logger.debug(f"Config: {custom_config}")
 
     def handle_interrupt_signal(signum, frame):
-        logger.warning(f"Received signal {signal.strsignal(signum)}. Initiating shutdown...")
+        logger.warning("Keyboard interrupt received. Shutting down...")
         raise KeyboardInterrupt
 
     try:
@@ -783,7 +783,7 @@ def start_all(args):
             time.sleep(1)
 
     except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt received. Shutting down...")
+        pass
     except Exception as e:
         logger.error("Exception caught!", exc_info=e)
     finally:
