@@ -38,6 +38,7 @@ This update requires an automatic reparse from block 865999.
 ## CLI
 
 - Add `--max-log-file-size` and `--max-log-file-rotations` flags
+- Disable mempool synchronization when `--no-mempool` is passed
 
 
 # Credits
