@@ -649,6 +649,7 @@ def initialise_log_and_config(args):
         "zmq_publisher_port": args.zmq_publisher_port,
         "db_connection_pool_size": args.db_connection_pool_size,
         "wsgi_server": args.wsgi_server,
+        "waitress_threads": args.waitress_threads,
         "gunicorn_workers": args.gunicorn_workers,
     }
 
