@@ -175,9 +175,10 @@ def initialise_config(
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
     db_connection_pool_size=None,
-    wsgi_server="waitress",
-    waitress_threads=20,
-    gunicorn_workers=2,
+    wsgi_server=None,
+    waitress_threads=None,
+    gunicorn_workers=None,
+    gunicorn_threads_per_worker=None,
 ):
     # log config already initialized
 
@@ -594,18 +595,16 @@ def initialise_config(
 
     config.NO_TELEMETRY = no_telemetry
 
-    if db_connection_pool_size:
-        config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
-    else:
-        config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
-
-    if waitress_threads:
-        config.WAITRESS_THREADS = waitress_threads
-    else:
-        config.WAITRESS_THREADS = config.DEFAULT_WAITRESS_THREADS
-
+    config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
     config.WSGI_SERVER = wsgi_server
+    config.WAITRESS_THREADS = waitress_threads
+    config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
     config.GUNICORN_WORKERS = gunicorn_workers
+
+    # Log all config parameters, sorted by key
+    # Filter out default values #TODO: these should be set in a different way
+    custom_config = {k: v for k, v in sorted(config.__dict__.items()) if not k.startswith('__') and not k.startswith('DEFAULT_')}
+    logger.debug(f"Config: {custom_config}")
 
 
 def initialise_log_and_config(args):
@@ -651,6 +650,7 @@ def initialise_log_and_config(args):
         "wsgi_server": args.wsgi_server,
         "waitress_threads": args.waitress_threads,
         "gunicorn_workers": args.gunicorn_workers,
+        "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
     }
 
     initialise_log_config(
@@ -983,3 +983,4 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
         "green",
     )
+
