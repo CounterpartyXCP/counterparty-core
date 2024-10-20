@@ -737,44 +737,44 @@ def start_all(args):
             bootstrap(no_confirm=True)
 
         # initialise database
-        with database.initialise_db() as db:
-            blocks.initialise(db)
-            blocks.check_database_version(db)
-            database.optimize(db)
+        db = database.initialise_db()
+        blocks.initialise(db)
+        blocks.check_database_version(db)
+        database.optimize(db)
 
-            # check software version
-            check.software_version()
+        # check software version
+        check.software_version()
 
-            # API Server v2.
-            api_server_v2 = api_v2.APIServer()
-            api_server_v2.start(args)
-            while not api_server_v2.is_ready():
-                logger.trace("Waiting for API server to start...")
-                time.sleep(0.1)
+        # API Server v2.
+        api_server_v2 = api_v2.APIServer()
+        api_server_v2.start(args)
+        while not api_server_v2.is_ready():
+            logger.trace("Waiting for API server to start...")
+            time.sleep(0.1)
 
-            # Backend.
-            connect_to_backend()
+        # Backend.
+        connect_to_backend()
 
-            # API Status Poller.
-            api_status_poller = api_v1.APIStatusPoller()
-            api_status_poller.daemon = True
-            api_status_poller.start()
+        # API Status Poller.
+        api_status_poller = api_v1.APIStatusPoller()
+        api_status_poller.daemon = True
+        api_status_poller.start()
 
-            # API Server v1.
-            api_server_v1 = api_v1.APIServer()
-            api_server_v1.daemon = True
-            api_server_v1.start()
+        # API Server v1.
+        api_server_v1 = api_v1.APIServer()
+        api_server_v1.daemon = True
+        api_server_v1.start()
 
-            # Asset conservation checker
-            asset_conservation_checker = AssetConservationChecker()
-            asset_conservation_checker.start()
+        # Asset conservation checker
+        asset_conservation_checker = AssetConservationChecker()
+        asset_conservation_checker.start()
 
-            # catch up
-            blocks.catch_up(db)
+        # catch up
+        blocks.catch_up(db)
 
-            # Blockchain watcher
-            logger.info("Watching for new blocks...")
-            follower_daemon = follow.start_blockchain_watcher(db)
+        # Blockchain watcher
+        logger.info("Watching for new blocks...")
+        follower_daemon = follow.start_blockchain_watcher(db)
 
     except KeyboardInterrupt:
         logger.warning("Keyboard interrupt!")
