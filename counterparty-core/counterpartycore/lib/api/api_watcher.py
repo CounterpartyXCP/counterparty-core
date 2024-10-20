@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from random import randrange
-from threading import Thread
+import threading
 
 import apsw
 from counterpartycore.lib import blocks, config, database, exceptions, ledger
@@ -878,7 +878,7 @@ def refresh_xcp_supply(ledger_db, api_db):
     cursor.execute("UPDATE assets_info SET supply = ? WHERE asset = 'XCP'", (xcp_supply,))
 
 
-class APIWatcher(Thread):
+class APIWatcher(threading.Thread):
     def __init__(self):
         Thread.__init__(self)
         logger.debug("Initializing API Watcher...")
