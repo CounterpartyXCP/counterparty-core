@@ -482,9 +482,9 @@ class APIServer(object):
         self.interrupted.value = 1  # stop the thread
         waiting_start_time = time.time()
         while self.process.is_alive():
-            time.sleep(1)
-            logger.trace("Waiting 10 seconds for API Server to stop...")
-            if time.time() - waiting_start_time > 10:
+            time.sleep(0.5)
+            logger.trace("Waiting 2 seconds for API Server to stop...")
+            if time.time() - waiting_start_time > 2:
                 logger.error("API Server did not stop in time. Terminating...")
                 self.process.kill()
                 break

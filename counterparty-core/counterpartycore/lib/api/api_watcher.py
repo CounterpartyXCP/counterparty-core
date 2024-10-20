@@ -882,8 +882,8 @@ class APIWatcher(Thread):
         self.api_db = None
         self.ledger_db = None
         apply_migration()
-        self.stopping = False
-        self.stopped = True
+        self.stopped = False
+        self.stop_event = threading.Event()  # Add stop event
         self.api_db = database.get_db_connection(
             config.API_DATABASE, read_only=False, check_wal=False
         )
@@ -929,13 +929,13 @@ class APIWatcher(Thread):
 
     def follow(self):
         refresh_xcp_supply(self.ledger_db, self.api_db)
-        while not self.stopping and not self.stopped:
+        while not self.stop_event.is_set():
             last_parsed_event = None
             try:
                 last_parsed_event = parse_next_event(self.api_db, self.ledger_db)
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
-                time.sleep(1)
+                self.stop_event.wait(timeout=0.1)
             # let's not sync the mempool when parsing a block
             if time.time() - self.last_mempool_sync > 10 and (
                 last_parsed_event is None or last_parsed_event["event"] == "BLOCK_PARSED"
@@ -952,7 +952,7 @@ class APIWatcher(Thread):
 
     def stop(self):
         logger.info("Stopping API Watcher...")
-        self.stopping = True
+        self.stop_event.set()  # Signal the stop event
         while not self.stopped:
             time.sleep(0.1)
         if self.api_db is not None:
@@ -960,3 +960,5 @@ class APIWatcher(Thread):
         if self.ledger_db is not None:
             self.ledger_db.close()
         logger.trace("API Watcher stopped.")
+
+

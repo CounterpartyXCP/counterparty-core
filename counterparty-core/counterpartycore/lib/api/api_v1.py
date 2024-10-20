@@ -448,20 +448,19 @@ class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
 
     def __init__(self):
-        self.last_database_check = 0
         threading.Thread.__init__(self)
+        self.last_database_check = 0
         self.stop_event = threading.Event()
-        self.stopping = False
-        self.stopped = False
         self.db = None
 
     def stop(self):
         logger.info("Stopping API Status Poller...")
-        self.stopping = True
+        self.stop_event.set()
         if self.db is not None:
             self.db.close()
             self.db = None
         self.join()
+        logger.debug("API Status Poller stopped.")
 
     def run(self):
         logger.debug("Starting API Status Poller...")
@@ -469,38 +468,45 @@ class APIStatusPoller(threading.Thread):
         self.db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
 
         interval_if_ready = 5 * 60  # 5 minutes
-        interval_if_not_ready = 60  # 1 minutes
+        interval_if_not_ready = 60   # 1 minute
         interval = interval_if_not_ready
 
-        while not self.stopping:  # noqa: E712
-            try:
-                # Check that backend is running, communicable, and caught up with the blockchain.
-                # Check that the database has caught up with bitcoind.
-                if (
-                    time.time() - self.last_database_check > interval
-                ):  # Ten minutes since last check.
-                    self.last_database_check = time.time()
-                    if not config.FORCE and self.db is not None:
-                        code = 11
-                        check_backend_state()
-                        code = 12
-                        api_util.check_last_parsed_block(self.db, backend.bitcoind.getblockcount())
-                        interval = interval_if_ready
-            except (BackendError, exceptions.DatabaseError) as e:
-                interval = interval_if_not_ready
-                exception_name = e.__class__.__name__
-                exception_text = str(e)
-                logger.debug("API Status Poller: %s", exception_text)
-                jsonrpc_response = jsonrpc.exceptions.JSONRPCServerError(
-                    message=exception_name, data=exception_text
-                )
-                CURRENT_API_STATUS_CODE = code
-                CURRENT_API_STATUS_RESPONSE_JSON = jsonrpc_response.json.encode()
-            else:
-                CURRENT_API_STATUS_CODE = None
-                CURRENT_API_STATUS_RESPONSE_JSON = None
-            if not self.stopping:
-                time.sleep(0.5)  # sleep for 0.5 seconds
+        try:
+            while not self.stop_event.is_set():
+                try:
+                    # Check that backend is running, communicable, and caught up with the blockchain.
+                    # Check that the database has caught up with bitcoind.
+                    if (
+                        time.time() - self.last_database_check > interval
+                    ):
+                        self.last_database_check = time.time()
+                        if not config.FORCE and self.db is not None:
+                            code = 11
+                            check_backend_state()
+                            code = 12
+                            api_util.check_last_parsed_block(self.db, backend.bitcoind.getblockcount())
+                            interval = interval_if_ready
+                except (BackendError, exceptions.DatabaseError) as e:
+                    interval = interval_if_not_ready
+                    exception_name = e.__class__.__name__
+                    exception_text = str(e)
+                    logger.debug("API Status Poller: %s", exception_text)
+                    jsonrpc_response = jsonrpc.exceptions.JSONRPCServerError(
+                        message=exception_name, data=exception_text
+                    )
+                    CURRENT_API_STATUS_CODE = code
+                    CURRENT_API_STATUS_RESPONSE_JSON = jsonrpc_response.json.encode()
+                else:
+                    CURRENT_API_STATUS_CODE = None
+                    CURRENT_API_STATUS_RESPONSE_JSON = None
+                # Wait for up to 0.5 seconds or until the stop event is set
+                self.stop_event.wait(timeout=0.5)  # Replaces time.sleep(0.5)
+        finally:
+            # Close the database connection in the thread
+            if self.db is not None:
+                self.db.close()
+                self.db = None
+            logger.debug("API Status Poller has stopped.")
 
 
 class APIServer(threading.Thread):
