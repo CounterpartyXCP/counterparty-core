@@ -1041,7 +1041,7 @@ def database_version(db):
     elif version_minor != config.VERSION_MINOR:
         # Reparse transactions from the vesion block if minor version has changed.
         message = (
-            f"Client minor version number mismatch: ({version_minor} ≠ {config.VERSION_MINOR}). "
+            f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}. "
         )
         message += "Checking if a reparse is needed..."
         check_need_reparse(version_minor, message)
@@ -1050,8 +1050,12 @@ def database_version(db):
         version_string = database.get_config_value(db, "VERSION_STRING")
         if version_string:
             version_pre_release = "-".join(version_string.split("-")[1:])
-            if version_pre_release == config.VERSION_PRE_RELEASE:
-                return
+        else:
+            # if version_string is not set, that mean we are on a version before 10.5.0 and after 10.4.8
+            # let's assume it's a pre-release version
+            # and set an arbitrary value different from config.VERSION_PRE_RELEASE
+            version_pre_release = "xxxx"
+        if version_pre_release != config.VERSION_PRE_RELEASE:
             message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
             message += "Checking if a reparse is needed..."
             check_need_reparse(version_minor, message)
