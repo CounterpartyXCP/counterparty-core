@@ -880,7 +880,7 @@ def refresh_xcp_supply(ledger_db, api_db):
 
 class APIWatcher(threading.Thread):
     def __init__(self):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
         logger.debug("Initializing API Watcher...")
         self.api_db = None
         self.ledger_db = None
