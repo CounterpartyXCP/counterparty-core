@@ -5,7 +5,7 @@ import os
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
-from threading import Thread
+import threading
 
 import flask
 import requests
@@ -392,9 +392,9 @@ def init_flask_app():
     return app
 
 
-def run_api_server(args, interrupted_value, server_ready_value):
+def run_api_server(args, server_ready_value):
+    # Initialize Sentry, logging, config, etc.
     sentry.init()
-    # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
 
     watcher = api_watcher.APIWatcher()
@@ -409,7 +409,7 @@ def run_api_server(args, interrupted_value, server_ready_value):
     try:
         # Init the HTTP Server.
         wsgi_server = wsgi.WSGIApplication(app, args=args)
-        parent_checker = ParentProcessChecker(interrupted_value, wsgi_server)
+        parent_checker = ParentProcessChecker(wsgi_server)
         parent_checker.start()
         app.app_context().push()
         # Run app server (blocking)
@@ -440,36 +440,39 @@ def run_api_server(args, interrupted_value, server_ready_value):
 # This thread is used for the following two reasons:
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
-class ParentProcessChecker(Thread):
-    def __init__(self, interrupted_value, wsgi_server):
+class ParentProcessChecker(threading.Thread):
+    def __init__(self, wsgi_server):
         super().__init__()
-        self.interrupted_value = interrupted_value
+        self.daemon = True
         self.wsgi_server = wsgi_server
+        self._stop_event = threading.Event()
 
     def run(self):
+        parent_pid = os.getppid()
         try:
-            while True:
-                if self.interrupted_value.value == 0:
-                    time.sleep(0.01)
-                else:
+            while not self._stop_event.is_set():
+                if os.getppid() != parent_pid:
                     logger.debug("Parent process is dead. Exiting...")
+                    self.wsgi_server.stop()
                     break
-            self.wsgi_server.stop()
+                time.sleep(1)
         except KeyboardInterrupt:
             pass
+
+    def stop(self):
+        self._stop_event.set()
 
 
 class APIServer(object):
     def __init__(self):
         self.process = None
-        self.interrupted = Value("I", 0)
         self.server_ready_value = Value("I", 0)
 
     def start(self, args):
         if self.process is not None:
             raise Exception("API Server is already running")
         self.process = Process(
-            target=run_api_server, args=(vars(args), self.interrupted, self.server_ready_value)
+            target=run_api_server, args=(vars(args), self.server_ready_value)
         )
         self.process.start()
         return self.process
@@ -479,14 +482,11 @@ class APIServer(object):
 
     def stop(self):
         logger.info("Stopping API Server process...")
-        self.interrupted.value = 1  # stop the thread
-        waiting_start_time = time.time()
-        while self.process.is_alive():
-            time.sleep(0.5)
-            logger.trace("Waiting 2 seconds for API Server to stop...")
-            if time.time() - waiting_start_time > 2:
-                logger.error("API Server process did not stop in time. Terminating...")
+        if self.process.is_alive():
+            self.process.terminate()
+            self.process.join(timeout=2)
+            if self.process.is_alive():
+                logger.error("API Server process did not stop in time. Terminating forcefully...")
                 self.process.kill()
-                break
         logger.info("API Server process stopped.")
 
