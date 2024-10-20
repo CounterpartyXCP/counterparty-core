@@ -964,11 +964,7 @@ def check_change(protocol_change, change_name):
         explanation = f"Your version of {config.APP_NAME} is v{config.VERSION_STRING}, but, "
         explanation += f"as of block {protocol_change['block_index']}, the minimum version is "
         explanation += f"v{protocol_change['minimum_version_major']}.{protocol_change['minimum_version_minor']}.{protocol_change['minimum_version_revision']}. "
-        explanation += (
-            f"Reason: '
-{change_name}
-'. Please upgrade to the latest version and restart the server."
-        )
+        explanation += (f"Reason: ' {change_name} '. Please upgrade to the latest version and restart the server.")
         if util.CURRENT_BLOCK_INDEX >= protocol_change["block_index"]:
             raise VersionUpdateRequiredError(explanation)
         else:

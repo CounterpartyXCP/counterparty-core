@@ -601,16 +601,6 @@ def initialise_config(
     config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
     config.GUNICORN_WORKERS = gunicorn_workers
 
-    # Log all config parameters, sorted by key
-    # Filter out default values #TODO: these should be set in a different way
-    custom_config = {
-        k: v
-        for k, v in sorted(config.__dict__.items())
-        if not k.startswith("__") and not k.startswith("DEFAULT_")
-    }
-    logger.debug(f"Config: {custom_config}")
-
-
 def initialise_log_and_config(args):
     # Configuration
     init_args = {
@@ -721,6 +711,15 @@ def start_all(args):
     follower_daemon = None
     asset_conservation_checker = None
     db = None
+
+    # Log all config parameters, sorted by key
+    # Filter out default values #TODO: these should be set in a different way
+    custom_config = {
+        k: v
+        for k, v in sorted(config.__dict__.items())
+        if not k.startswith("__") and not k.startswith("DEFAULT_")
+    }
+    logger.debug(f"Config: {custom_config}")
 
     try:
         # set signal handlers (needed for graceful shutdown on SIGINT/SIGTERM)
