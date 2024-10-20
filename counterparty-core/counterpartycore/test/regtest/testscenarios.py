@@ -205,7 +205,13 @@ def run_item(node, item, context):
                 )
             # test that the mempool is properly cleaned after each regtest transaction is confirmed
             if not no_confirmation:
-                mempool_events = node.api_call("mempool/events")["result"]
+                while True:
+                    try:
+                        mempool_events = node.api_call("mempool/events")["result"]
+                        break
+                    except KeyError:
+                        print("Error getting mempool events, retrying...")
+                        time.sleep(1)
                 if len(mempool_events) != 0:
                     raise Exception(f"Mempool events not empty after transaction: {mempool_events}")
         except ComposeError as e:

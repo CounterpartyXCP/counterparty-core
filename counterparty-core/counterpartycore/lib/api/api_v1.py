@@ -621,7 +621,7 @@ class APIServer(threading.Thread):
                 ) as error:
                     # TypeError happens when unexpected keyword arguments are passed in
                     error_msg = f"Error composing {tx} transaction via API: {str(error)}"
-                    logging.warning(error_msg)
+                    logger.trace(error_msg)
                     raise JSONRPCDispatchException(  # noqa: B904
                         code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg
                     )
@@ -1227,7 +1227,7 @@ class APIServer(threading.Thread):
                     exceptions.TransactionError,
                     exceptions.BalanceError,
                 ) as error:
-                    error_msg = logging.warning(
+                    error_msg = logger.trace(
                         f"{error.__class__.__name__} -- error composing {query_type} transaction via API: {error}"
                     )
                     return flask.Response(error_msg, 400, mimetype="application/json")

@@ -18,9 +18,9 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.parseblock_unittest_fixture.db"
 def test_parse_block(server_db):
     test_outputs = blocks.parse_block(server_db, DP["default_block_index"], 1420914478)
     outputs = (
-        "43a41365f86dad22e5fd750f826435564f637d284edef60771239d3110a85625",
+        "d8df3ad79b55cb37b404222bf4ba7005107b902b3e5e7738e933c858acbaafde",
         "4faefbcea82c4bea47a948e61f544290ad80aae7786afe521c57e0ab007cea5b",
-        "14bf365035558df77ec4890cb113a4c52a5428baf41a8d9e4a2c4632ae94744e",
+        "8bdc6176426f1778fa9ee00bb7f83eac7d036a0ef523d8ad0fce46869e64edf1",
     )
     try:
         assert outputs == test_outputs

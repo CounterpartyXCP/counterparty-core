@@ -36,7 +36,7 @@ def test_api_v2(request):
     issuance_hash = "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf"
     broadcast_hash = "7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af"
     minter_hash = "83b96c0f72fea31403567852f2bdb4840ffdf18bda2e82df4f27aad633830e29"
-    # mint_hash = "d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67"
+    mint_hash = "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18"
     event = "CREDIT"
     event_index = 10
     tx_index = 2
@@ -88,6 +88,8 @@ def test_api_v2(request):
             url = url.replace("<tx_hash>", broadcast_hash)
         if "fairminters" in url:
             url = url.replace("<tx_hash>", minter_hash)
+        if "fairmints":
+            url = url.replace("<tx_hash>", mint_hash)
         url = url.replace("<tx_hash>", tx_hash)
         url = url.replace("<block_hash>", block_hash)
         url = url.replace("<dividend_hash>", dividend_hash)

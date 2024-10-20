@@ -2714,3 +2714,25 @@ def get_fairmints_by_address_and_asset(
         limit=limit,
         offset=offset,
     )
+
+
+def get_all_fairmints(db, cursor: str = None, limit: int = 100, offset: int = None):
+    """
+    Returns all fairmints
+    :param str cursor: The last index of the fairmint to return
+    :param int limit: The maximum number of fairmint to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(db, "fairmints", last_cursor=cursor, limit=limit, offset=offset)
+
+
+def get_fairmint(db, tx_hash: str):
+    """
+    Returns the fairmint by its hash
+    :param str tx_hash: The hash of the fairmint to return (e.g. $LAST_FAIRMINT_TX_HASH)
+    """
+    return select_row(
+        db,
+        "fairmints",
+        where={"tx_hash": tx_hash},
+    )

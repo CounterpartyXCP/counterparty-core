@@ -147,7 +147,11 @@ def validate(
         if existing_asset["issuer"] != source:
             problems.append(f"Asset `{asset_name}` is not issued by `{source}`.")
         # check if description is locked
-        if description != "" and existing_asset["description_locked"]:
+        if (
+            description != ""
+            and existing_asset["description_locked"]
+            and existing_asset["description"] != description
+        ):
             problems.append(f"Description of asset `{asset_name}` is locked.")
         # check if hard cap is already reached
         if hard_cap and existing_asset["supply"] + premint_quantity >= hard_cap:
@@ -433,6 +437,9 @@ def parse(db, tx, message):
     pre_minted = False
     if status == "open" and premint_quantity > 0 and soft_cap == 0:
         pre_minted = True
+
+    if existing_asset and description == "":
+        description = existing_asset["description"]
 
     # insert into fairminters table
     bindings = {

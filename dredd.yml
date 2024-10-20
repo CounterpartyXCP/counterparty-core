@@ -135,6 +135,8 @@ only:
 - Fairminters > Get All Fairminters > Get All Fairminters
 - Fairminters > Get Fairminter > Get Fairminter
 - Fairminters > Get Fairmints By Fairminter > Get Fairmints By Fairminter
+- Fairmints > Get All Fairmints > Get All Fairmints
+- Fairmints > Get Fairmint > Get Fairmint
 - Bitcoin > Get Unspent Txouts By Addresses > Get Unspent Txouts By Addresses
 - Bitcoin > Get Transactions By Address > Get Transactions By Address
 - Bitcoin > Get Oldest Transaction By Address > Get Oldest Transaction By Address

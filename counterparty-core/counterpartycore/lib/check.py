@@ -651,6 +651,14 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "76ca4415a24ae04579b05b517f41441b7cb45eb881db71d1b59de5d373a4bc28",
         "txlist_hash": "b05b906391cf96d5b4b5893c5fda13fb64635d26785ee3ad1330fe701eb41cb4",
     },
+    866000: {
+        "ledger_hash": "5bfa1fef4356b1326c8edfe1af582911461d86132dd768028511d20ed2d9e3f5",
+        "txlist_hash": "19d1621ea05abd741e05e361ce96708e8dc1b442fb89079af370abd2698549db",
+    },
+    866330: {
+        "ledger_hash": "1c5f82ee5009fbc3d94bb8ff88d644aa0b2ec42f21409b315f555f1006bca6fc",
+        "txlist_hash": "1f5db508a80205eaaa6d915402c7833a0851bb369bea54a600e2fdda7e1d7ff5",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET = 7
@@ -1001,6 +1009,22 @@ class DatabaseVersionError(Exception):
         self.from_block_index = from_block_index
 
 
+def check_need_reparse(version_minor, message):
+    need_reparse_from = (
+        config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
+        if config.TESTNET
+        else config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
+    )
+    if need_reparse_from is not None:
+        for min_version_minor, min_version_block_index in need_reparse_from:
+            if version_minor < min_version_minor:
+                raise DatabaseVersionError(
+                    message=message,
+                    required_action="reparse",
+                    from_block_index=min_version_block_index,
+                )
+
+
 def database_version(db):
     if config.FORCE:
         return
@@ -1016,18 +1040,22 @@ def database_version(db):
         )
     elif version_minor != config.VERSION_MINOR:
         # Reparse transactions from the vesion block if minor version has changed.
-        message = f"Client minor version number mismatch. Triggering a reparse... ({version_minor} ≠ {config.VERSION_MINOR})"
-        need_reparse_from = (
-            config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
-            if config.TESTNET
-            else config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
+        message = (
+            f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}. "
         )
-        if need_reparse_from is not None:
-            for min_version_minor, min_version_block_index in need_reparse_from:
-                if version_minor < min_version_minor:
-                    raise DatabaseVersionError(
-                        message=message,
-                        required_action="reparse",
-                        from_block_index=min_version_block_index,
-                    )
+        message += "Checking if a reparse is needed..."
+        check_need_reparse(version_minor, message)
         raise DatabaseVersionError(message=message, required_action=None)
+    else:
+        version_string = database.get_config_value(db, "VERSION_STRING")
+        if version_string:
+            version_pre_release = "-".join(version_string.split("-")[1:])
+        else:
+            # if version_string is not set, that mean we are on a version before 10.5.0 and after 10.4.8
+            # let's assume it's a pre-release version
+            # and set an arbitrary value different from config.VERSION_PRE_RELEASE
+            version_pre_release = "xxxx"
+        if version_pre_release != config.VERSION_PRE_RELEASE:
+            message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
+            message += "Checking if a reparse is needed..."
+            check_need_reparse(version_minor, message)

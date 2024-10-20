@@ -392,7 +392,7 @@ def init_flask_app():
     return app
 
 
-def run_api_server(args, interruped_value, server_ready_value):
+def run_api_server(args, interrupted_value, server_ready_value):
     sentry.init()
     # Initialise log and config
     server.initialise_log_and_config(argparse.Namespace(**args))
@@ -404,24 +404,46 @@ def run_api_server(args, interruped_value, server_ready_value):
     app = init_flask_app()
 
     wsgi_server = None
+    parent_checker = None
 
     try:
         # Init the HTTP Server.
         wsgi_server = wsgi.WSGIApplication(app, args=args)
-        ParentProcessChecker(interruped_value, wsgi_server).start()
+        parent_checker = ParentProcessChecker(interrupted_value, wsgi_server)
+        parent_checker.start()
         app.app_context().push()
         # Run app server (blocking)
         server_ready_value.value = 1
         wsgi_server.run()
     except KeyboardInterrupt:
         logger.trace("Keyboard Interrupt!")
+    except Exception as e:
+        capture_exception(e)
+        logger.error("Error in API Server: %s", e)
     finally:
         logger.trace("Shutting down API Server...")
-        watcher.stop()
-        watcher.join()
+        try:
+            watcher.stop()
+            watcher.join()
+        except Exception as e:
+            logger.error("Error stopping API Watcher: %s", e)
+
         if wsgi_server is not None:
-            wsgi_server.stop()
-        APIDBConnectionPool().close()
+            try:
+                wsgi_server.stop()
+            except Exception as e:
+                logger.error("Error stopping WSGI Server: %s", e)
+
+        if parent_checker is not None:
+            try:
+                parent_checker.join()
+            except Exception as e:
+                logger.error("Error joining ParentProcessChecker: %s", e)
+
+        try:
+            APIDBConnectionPool().close()
+        except Exception as e:
+            logger.error("Error closing DB connection pool: %s", e)
 
 
 # This thread is used for the following two reasons:
@@ -466,12 +488,12 @@ class APIServer(object):
 
     def stop(self):
         logger.info("Stopping API Server...")
-        self.interrupted.value = 1
+        self.interrupted.value = 1  # stop the thread
         waiting_start_time = time.time()
         while self.process.is_alive():
-            time.sleep(0.5)
-            logger.trace("Waiting for API Server to stop...")
-            if time.time() - waiting_start_time > 2:
+            time.sleep(1)
+            logger.trace("Waiting 10 seconds for API Server to stop...")
+            if time.time() - waiting_start_time > 10:
                 logger.error("API Server did not stop in time. Terminating...")
                 self.process.kill()
                 break

@@ -802,6 +802,8 @@ def gen_random_tx_index(event):
 
 
 def synchronize_mempool(api_db, ledger_db):
+    if config.NO_MEMPOOL:
+        return
     logger.trace("API Watcher - Synchronizing mempool...")
     global MEMPOOL_SKIP_EVENT_HASHES  # noqa: PLW0602
     try:
