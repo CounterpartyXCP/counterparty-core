@@ -310,6 +310,13 @@ CONFIG_ARGS = [
         },
     ],
     [
+        ("--waitress-threads",),
+        {
+            "type": int,
+            "help": "number of threads for the Waitress WSGI server (if enabled)",
+        },
+    ],
+    [
         ("--json-logs",),
         {
             "action": "store_true",

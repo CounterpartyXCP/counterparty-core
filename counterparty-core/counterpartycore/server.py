@@ -176,6 +176,7 @@ def initialise_config(
     zmq_publisher_port=None,
     db_connection_pool_size=None,
     wsgi_server="waitress",
+    waitress_threads=20,
     gunicorn_workers=2,
 ):
     # log config already initialized
@@ -597,6 +598,11 @@ def initialise_config(
         config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
     else:
         config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
+
+    if waitress_threads:
+        config.WAITRESS_THREADS = waitress_threads
+    else:
+        config.WAITRESS_THREADS = config.DEFAULT_WAITRESS_THREADS
 
     config.WSGI_SERVER = wsgi_server
     config.GUNICORN_WORKERS = gunicorn_workers
