@@ -190,6 +190,7 @@ def initialise_config(
         )
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, mode=0o755)
+    config.DATA_DIR = data_dir
 
     # testnet
     if testnet:
@@ -914,10 +915,6 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         if input(confirmation_message).lower() != "y":
             exit()
 
-    data_dir = appdirs.user_data_dir(
-        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
-    )
-
     # Set Constants.
     if snapshot_url is None:
         bootstrap_url = (
@@ -935,7 +932,7 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
     sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
 
-    ledger_database_path = os.path.join(data_dir, config.APP_NAME)
+    ledger_database_path = os.path.join(config.DATA_DIR, config.APP_NAME)
 
     if config.TESTNET:
         ledger_database_path += ".testnet"
@@ -943,8 +940,8 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     api_database_path = ledger_database_path.replace(".db", ".api.db")
 
     # Prepare Directory.
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir, mode=0o755)
+    if not os.path.exists(config.DATA_DIR):
+        os.makedirs(config.DATA_DIR, mode=0o755)
 
     for database_path in [ledger_database_path, api_database_path]:
         if os.path.exists(database_path):
@@ -984,9 +981,9 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
             sys.exit(1)
 
     # TODO: check checksum, filenames, etc.
-    with log.Spinner(f"Extracting database to {data_dir}..."):
+    with log.Spinner(f"Extracting database to {config.DATA_DIR}..."):
         with tarfile.open(tarball_path, "r:gz") as tar_file:
-            tar_file.extractall(path=data_dir)  # nosec B202  # noqa: S202
+            tar_file.extractall(path=config.DATA_DIR)  # nosec B202  # noqa: S202
 
     assert os.path.exists(ledger_database_path)
     assert os.path.exists(api_database_path)
