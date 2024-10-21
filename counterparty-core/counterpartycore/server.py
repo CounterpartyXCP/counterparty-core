@@ -174,7 +174,7 @@ def initialise_config(
     no_telemetry=False,
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
-    db_connection_pool_size=None,
+    db_connection_pool_size=config.DEFAULT_DB_CONNECTION_POOL_SIZE,
     wsgi_server=None,
     waitress_threads=None,
     gunicorn_workers=None,

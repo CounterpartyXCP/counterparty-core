@@ -26,7 +26,6 @@ This update requires an automatic reparse from block 865999.
 - Add missing compound index on `status`, `tx_index` and `asset_longname`
 - Optimize database `rowtracer`
 - Optimize `ledger.get_last_issuance()`, `ledger.asset_issued_total()` and `ledger.asset_destroyed_total()`
-- Tweak thread-handling logic
 
 ## API
 
@@ -44,6 +43,7 @@ This update requires an automatic reparse from block 865999.
 - Make the number of Waitress threads configurable
 - Make the number of Gunicorn threads per worker configurable
 - Log all configuration options on startup at the `DEBUG` level
+- Have `--force` skip mandatory reparses
 
 
 # Credits

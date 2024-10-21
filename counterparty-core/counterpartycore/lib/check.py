@@ -1010,6 +1010,8 @@ class DatabaseVersionError(Exception):
 
 
 def check_need_reparse(version_minor, message):
+    if config.FORCE:
+        return
     need_reparse_from = (
         config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
         if config.TESTNET

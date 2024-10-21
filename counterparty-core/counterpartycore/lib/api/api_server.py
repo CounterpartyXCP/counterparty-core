@@ -404,7 +404,6 @@ def run_api_server(args, interrupted_value, server_ready_value):
     app = init_flask_app()
 
     wsgi_server = None
-    parent_checker = None
 
     try:
         # Init the HTTP Server.
@@ -417,33 +416,15 @@ def run_api_server(args, interrupted_value, server_ready_value):
         wsgi_server.run()
     except KeyboardInterrupt:
         logger.trace("Keyboard Interrupt!")
-    except Exception as e:
-        capture_exception(e)
-        logger.error("Error in API Server: %s", e)
     finally:
         logger.trace("Shutting down API Server...")
-        try:
-            watcher.stop()
-            watcher.join()
-        except Exception as e:
-            logger.error("Error stopping API Watcher: %s", e)
 
-        if wsgi_server is not None:
-            try:
-                wsgi_server.stop()
-            except Exception as e:
-                logger.error("Error stopping WSGI Server: %s", e)
+        watcher.stop()
+        watcher.join()
 
-        if parent_checker is not None:
-            try:
-                parent_checker.join()
-            except Exception as e:
-                logger.error("Error joining ParentProcessChecker: %s", e)
-
-        try:
-            APIDBConnectionPool().close()
-        except Exception as e:
-            logger.error("Error closing DB connection pool: %s", e)
+        wsgi_server.stop()
+        parent_checker.join()
+        APIDBConnectionPool().close()
 
 
 # This thread is used for the following two reasons:
@@ -492,8 +473,8 @@ class APIServer(object):
         waiting_start_time = time.time()
         while self.process.is_alive():
             time.sleep(1)
-            logger.trace("Waiting 10 seconds for API Server to stop...")
-            if time.time() - waiting_start_time > 10:
+            logger.trace("Waiting for API Server to stop...")
+            if time.time() - waiting_start_time > 2:
                 logger.error("API Server did not stop in time. Terminating...")
                 self.process.kill()
                 break
