@@ -344,7 +344,11 @@ def inject_issuances_and_block_times(db, result_list):
             ):
                 block_indexes.append(result_item["params"][field_name])
 
-        if "asset_longname" in result_item and "description" in result_item:
+        if (
+            "asset_longname" in result_item
+            and "description" in result_item
+            and "max_mint_per_tx" not in result_item
+        ):
             continue
         item = result_item
         if "params" in item:
@@ -451,6 +455,16 @@ def inject_normalized_quantities(result_list):
         "fee_required_remaining": {"asset_field": None, "divisible": True},
         "fee_provided_remaining": {"asset_field": None, "divisible": True},
         "fee_fraction_int": {"asset_field": None, "divisible": True},
+        "price": {"asset_field": "asset_info", "divisible": None},
+        "hard_cap": {"asset_field": "asset_info", "divisible": None},
+        "soft_cap": {"asset_field": "asset_info", "divisible": None},
+        "quantity_by_price": {"asset_field": "asset_info", "divisible": None},
+        "max_mint_per_tx": {"asset_field": "asset_info", "divisible": None},
+        "premint_quantity": {"asset_field": "asset_info", "divisible": None},
+        "earned_quantity": {"asset_field": "asset_info", "divisible": None},
+        "earn_quantity": {"asset_field": "asset_info", "divisible": None},
+        "commission": {"asset_field": "asset_info", "divisible": None},
+        "paid_quantity": {"asset_field": "asset_info", "divisible": None},
     }
 
     enriched_result_list = []

@@ -82,6 +82,8 @@ EVENTS_ADDRESS_FIELDS = {
     "DISPENSE": ["source", "destination"],
     "BROADCAST": ["source"],
     "BURN": ["source"],
+    "NEW_FAIRMINT": ["source"],
+    "NEW_FAIRMINTER": ["source"],
 }
 
 SKIP_EVENTS = ["NEW_TRANSACTION_OUTPUT"]
@@ -625,9 +627,9 @@ def update_fairminters(api_db, event):
     cursor = api_db.cursor()
     sql = """
         UPDATE fairminters SET
-            earned_quantity = earned_quantity + :earn_quantity,
-            commission = commission + :commission,
-            paid_quantity = paid_quantity + :paid_quantity
+            earned_quantity = COALESCE(earned_quantity, 0) + :earn_quantity,
+            commission = COALESCE(commission, 0) + :commission,
+            paid_quantity = COALESCE(paid_quantity, 0) + :paid_quantity
         WHERE tx_hash = :fairminter_tx_hash
     """
     cursor.execute(sql, event_bindings)

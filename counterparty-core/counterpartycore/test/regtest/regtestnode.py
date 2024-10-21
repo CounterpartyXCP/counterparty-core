@@ -49,7 +49,7 @@ class RegtestNode:
         self.show_output = show_output
         self.counterparty_server = sh.counterparty_server.bake(
             "--regtest",
-            f"--database-file={self.datadir}/counterparty.db",
+            f"--data-dir={self.datadir}",
             f"--wsgi-server={wsgi_server}",
             "--gunicorn-workers=2",
             "--no-telemetry",

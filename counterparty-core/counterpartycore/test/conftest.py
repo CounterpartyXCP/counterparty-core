@@ -326,6 +326,7 @@ def api_server_v2(request, cp_server):
         default_config
         | util_test.COUNTERPARTYD_OPTIONS
         | {
+            "data_dir": os.path.dirname(request.module.FIXTURE_DB),
             "database_file": request.module.FIXTURE_DB,
             "api_port": TEST_RPC_PORT + 10,
         }

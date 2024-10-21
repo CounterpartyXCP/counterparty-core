@@ -105,6 +105,9 @@ class GunicornArbiter(Arbiter):
         self.max_requests = 1000
         self.max_requests_jitter = 50
 
+    def handle_winch(self):
+        pass
+
     def spawn_worker(self):
         self.worker_age += 1
         worker = self.worker_class(
