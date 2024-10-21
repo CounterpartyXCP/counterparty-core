@@ -18,6 +18,7 @@ This update requires an automatic reparse from block 865999.
 - Fix divisibility check for fairminter creation
 - Fix description check for fairminter creation
 - Use a different log file for each Gunicorn worker
+- Populate `address_events` table on new fairmint and fairminter
 
 ## Codebase
 
