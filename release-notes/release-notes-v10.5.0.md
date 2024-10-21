@@ -32,6 +32,7 @@ This update requires an automatic reparse from block 865999.
 - Add missing compound index on `status`, `tx_index` and `asset_longname`
 - Optimize database `rowtracer`
 - Optimize `ledger.get_last_issuance()`, `ledger.asset_issued_total()` and `ledger.asset_destroyed_total()`
+- Add checkpoint for block 866750
 
 ## API
 
