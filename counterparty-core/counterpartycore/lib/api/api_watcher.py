@@ -6,7 +6,7 @@ from random import randrange
 from threading import Thread
 
 import apsw
-from counterpartycore.lib import blocks, config, database, exceptions, ledger
+from counterpartycore.lib import blocks, check, config, database, exceptions, ledger
 from counterpartycore.lib.api import util
 from counterpartycore.lib.util import format_duration
 from yoyo import get_backend, read_migrations
@@ -273,15 +273,42 @@ def rollback_event(api_db, event):
         delete_all(api_db, sql, (event["message_index"],))
 
 
-def rollback_events(api_db, block_index):
-    logger.debug(f"API Watcher - Rolling back events to block {block_index}...")
-    # api_db.execute("""PRAGMA foreign_keys=OFF""")
+def rollback_table_events(api_db, table_name, block_index):
     cursor = api_db.cursor()
-    sql = "SELECT * FROM messages WHERE block_index >= ? ORDER BY message_index DESC"
-    cursor.execute(sql, (block_index,))
+    sql = (
+        "SELECT * FROM messages WHERE block_index >= ? AND category = ? ORDER BY message_index DESC"  # noqa: S608
+    )
+    cursor.execute(sql, (block_index, table_name))
     for event in cursor:
         rollback_event(api_db, event)
-    # api_db.execute("""PRAGMA foreign_keys=ON""")
+
+
+class TableRollbackThread(Thread):
+    def __init__(self, api_db, table_name, block_index):
+        Thread.__init__(self)
+        self.daemon = True
+        self.api_db = api_db
+        self.table_name = table_name
+        self.block_index = block_index
+
+    def run(self):
+        logger.debug(f"API Watcher - Rolling back events for table {self.table_name}...")
+        rollback_table_events(self.api_db, self.table_name, self.block_index)
+
+
+def rollback_events(api_db, block_index):
+    logger.debug(f"API Watcher - Rolling back events to block {block_index}...")
+    api_db.execute("""PRAGMA foreign_keys=OFF""")
+    threads = []
+    for table_name in blocks.TABLES + ["transactions"]:
+        thread = TableRollbackThread(api_db, table_name, block_index)
+        thread.start()
+        threads.append(thread)
+
+    for thread in threads:
+        thread.join()
+
+    api_db.execute("""PRAGMA foreign_keys=ON""")
     logger.debug(f"API Watcher - Events rolled back to block {block_index}")
 
 
@@ -890,6 +917,19 @@ class APIWatcher(Thread):
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )
+
+        try:
+            check.database_version(self.api_db)
+        except check.DatabaseVersionError as e:
+            logger.info(str(e))
+            # rollback or reparse the database
+            if e.required_action in ["rollback", "reparse"]:
+                rollback_events(self.api_db, e.from_block_index)
+            # refresh the current block index
+            util.CURRENT_BLOCK_INDEX = ledger.last_db_index(self.api_db)
+            # update the database version
+            database.update_version(self.api_db)
+
         # Temporarily disable foreign keys for mempool transactions
         self.api_db.execute("PRAGMA foreign_keys=OFF")
         # Create XCP and BTC assets if they don't exist
