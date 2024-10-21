@@ -462,6 +462,7 @@ def inject_normalized_quantities(result_list):
         "max_mint_per_tx": {"asset_field": "asset_info", "divisible": None},
         "premint_quantity": {"asset_field": "asset_info", "divisible": None},
         "earned_quantity": {"asset_field": "asset_info", "divisible": None},
+        "earn_quantity": {"asset_field": "asset_info", "divisible": None},
         "commission": {"asset_field": "asset_info", "divisible": None},
         "paid_quantity": {"asset_field": "asset_info", "divisible": None},
     }
