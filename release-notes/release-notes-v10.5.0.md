@@ -17,6 +17,7 @@ This update requires an automatic reparse from block 865999.
 - Fix missing balance check for fairminter creation
 - Fix divisibility check for fairminter creation
 - Fix description check for fairminter creation
+- Use a different log file for each Gunicorn worker
 
 ## Codebase
 
@@ -51,3 +52,6 @@ This update requires an automatic reparse from block 865999.
 
 * Ouziel Slama
 * Adam Krellenstein
+
+
+seq 1 30 | xargs -n1 -P10  curl "http://localhost:4000/v2/"
