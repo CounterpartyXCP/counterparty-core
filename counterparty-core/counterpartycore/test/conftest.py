@@ -313,10 +313,12 @@ def api_server_v2(request, cp_server):
         "no_telemetry": True,
         "enable_zmq_publisher": False,
         "zmq_publisher_port": None,
-        "db_connection_pool_size": None,
+        "db_connection_pool_size": 10,
         "json_logs": False,
         "wsgi_server": "waitress",
         "gunicorn_workers": 2,
+        "gunicorn_threads_per_worker": 1,
+        "waitress_threads": 1,
         "max_log_file_size": 40 * 1024 * 1024,
         "max_log_file_rotations": 20,
     }
