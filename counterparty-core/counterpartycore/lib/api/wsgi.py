@@ -112,7 +112,7 @@ class GunicornArbiter(Arbiter):
             self.worker_age,
             self.pid,
             self.LISTENERS,
-            self.app.application,
+            self.app,
             self.timeout / 2.0,
             self.cfg,
             self.log,
