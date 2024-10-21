@@ -490,4 +490,3 @@ class APIServer(object):
                 logger.error("API Server process did not stop in time. Terminating forcefully...")
                 self.process.kill()
         logger.info("API Server process stopped.")
-
