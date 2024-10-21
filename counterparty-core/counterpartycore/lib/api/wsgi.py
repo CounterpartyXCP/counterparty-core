@@ -3,7 +3,6 @@ import multiprocessing
 import os
 import signal
 import sys
-import tempfile
 import time
 from threading import Timer
 
@@ -258,4 +257,3 @@ class WSGIApplication:
 
     def stop(self):
         self.server.stop()
-
