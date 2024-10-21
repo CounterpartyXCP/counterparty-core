@@ -2,6 +2,8 @@ import logging
 import random
 import threading
 import time
+import os
+import fcntl
 from concurrent.futures import ThreadPoolExecutor
 
 from counterparty_rs import indexer
@@ -36,6 +38,8 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_task = None
         self.running = False
         self.lock = threading.Lock()
+        self.lockfile_path = os.path.join(self.config["db_dir"], "rocksdb.lock")
+        self.lockfile = None
 
         # Initialize additional attributes
         self.executor = None
@@ -45,7 +49,24 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_queue_initialized = False
         self.next_height = 0
 
+    def acquire_lockfile(self):
+        try:
+            self.lockfile = open(self.lockfile_path, 'w')
+            fcntl.flock(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            logger.debug("Lockfile acquired.")
+        except IOError as e:
+            logger.error(f"Unable to acquire lockfile: {e}")
+            raise RuntimeError("Another instance is already running.")
+
+    def release_lockfile(self):
+        if self.lockfile:
+            fcntl.flock(self.lockfile, fcntl.LOCK_UN)
+            self.lockfile.close()
+            os.remove(self.lockfile_path)
+            logger.debug("Lockfile released.")
+
     def start(self, start_height=0):
+        self.acquire_lockfile()
         logger.info("Starting RSFetcher thread...")
         try:
             self.config["start_height"] = start_height
@@ -179,6 +200,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         finally:
             self.fetcher = None
             self.prefetch_task = None
+            self.release_lockfile()
             logger.info("RSFetcher thread stopped.")
 
     def restart(self):
