@@ -43,6 +43,7 @@ This update requires an automatic reparse from block 865999.
 - Make the number of Waitress threads configurable
 - Make the number of Gunicorn threads per worker configurable
 - Log all configuration options on startup at the `DEBUG` level
+- Have `--force` skip mandatory reparses
 
 
 # Credits
