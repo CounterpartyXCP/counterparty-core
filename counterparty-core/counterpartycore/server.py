@@ -733,7 +733,9 @@ def start_all(args):
         signal.signal(signal.SIGTERM, handle_interrupt_signal)
 
         # download bootstrap if necessary
-        if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
+        if (
+            not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap"
+        ) or args.catch_up == "bootstrap-always":
             bootstrap(no_confirm=True)
 
         # initialise database
