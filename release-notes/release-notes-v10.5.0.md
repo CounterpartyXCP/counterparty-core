@@ -18,6 +18,11 @@ This update requires an automatic reparse from block 865999.
 - Fix divisibility check for fairminter creation
 - Fix description check for fairminter creation
 - Use a different log file for each Gunicorn worker
+- Populate `address_events` table on new fairmint and fairminter
+- Bootstrap respects `--data-dir` flag
+- Add normalized quantities to fairminters and fairmints API
+- Fix null fields in fairminters API (`earned_quantity`, `paid_quantity` and `commission`)
+- Fix Gunicorn stability issue due to bad signal handling 
 
 ## Codebase
 
@@ -46,6 +51,8 @@ This update requires an automatic reparse from block 865999.
 - Log all configuration options on startup at the `DEBUG` level
 - Have `--force` skip mandatory reparses
 - Add `bootstrap-always` option for the `--catch-up` flag
+- Replace `--database-file` flag by `--data-dir` flag
+- Have GUnicorn log `TRACE`
 
 
 # Credits
