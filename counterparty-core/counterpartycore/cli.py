@@ -238,7 +238,7 @@ CONFIG_ARGS = [
         ("--no-confirm",),
         {"action": "store_true", "default": False, "help": "don't ask for confirmation"},
     ],
-    [("--database-file",), {"default": None, "help": "the path to the SQLite3 database file"}],
+    [("--data-dir",), {"default": None, "help": "the path to the data directory"}],
     [
         ("--log-file",),
         {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},
