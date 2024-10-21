@@ -4,6 +4,7 @@ import threading
 import time
 import os
 import fcntl
+import errno
 from concurrent.futures import ThreadPoolExecutor
 
 from counterparty_rs import indexer
@@ -50,13 +51,22 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.next_height = 0
 
     def acquire_lockfile(self):
+        # Ensure the directory exists
+        os.makedirs(self.config['db_dir'], exist_ok=True)
+        logger.debug(f"Ensured that directory {self.config['db_dir']} exists for lockfile.")
+        
         try:
-            self.lockfile = open(self.lockfile_path, 'w')
+            fd = os.open(self.lockfile_path, os.O_CREAT | os.O_RDWR)
+            self.lockfile = os.fdopen(fd, 'w')
             fcntl.flock(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
             logger.debug("Lockfile acquired.")
         except IOError as e:
-            logger.error(f"Unable to acquire lockfile: {e}")
-            raise RuntimeError("Another instance is already running.")
+            if e.errno in (errno.EACCES, errno.EAGAIN):
+                logger.error(f"Another instance is running. Unable to acquire lockfile: {e}")
+                raise RuntimeError("Failed to acquire lockfile.")
+            else:
+                logger.error(f"Unexpected error acquiring lockfile: {e}")
+                raise
 
     def release_lockfile(self):
         if self.lockfile:
@@ -66,8 +76,8 @@ class RSFetcher(metaclass=util.SingletonMeta):
             logger.debug("Lockfile released.")
 
     def start(self, start_height=0):
-        self.acquire_lockfile()
         logger.info("Starting RSFetcher thread...")
+        self.acquire_lockfile()
         try:
             self.config["start_height"] = start_height
             self.next_height = start_height
