@@ -99,7 +99,7 @@ def start_refresh_backend_height(timer_db, args):
 
 class GunicornArbiter(Arbiter):
     def __init__(self, app):
-        super().__init__(app.cfg)
+        super().__init__(app)  # Pass 'app' instead of 'app.cfg'
         self.app = app
         self.timeout = 30
         self.graceful_timeout = 30
