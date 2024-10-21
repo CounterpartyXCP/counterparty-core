@@ -1648,7 +1648,7 @@
             }
         ],
         "next_cursor": 1362,
-        "result_count": 167
+        "result_count": 175
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
