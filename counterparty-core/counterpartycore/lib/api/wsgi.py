@@ -126,7 +126,7 @@ class GunicornArbiter(Arbiter):
         # Child process
         global logger  # noqa F811
         worker.pid = os.getpid()
-        logger = log.re_set_up(f".{worker.pid}")
+        logger = log.re_set_up(f".gunicorn.{worker.pid}")
         try:
             gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
             logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
