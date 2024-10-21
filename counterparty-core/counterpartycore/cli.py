@@ -429,7 +429,7 @@ def main():
     parser_server.add_argument("--config-file", help="the path to the configuration file")
     parser_server.add_argument(
         "--catch-up",
-        choices=["normal", "bootstrap"],
+        choices=["normal", "bootstrap", "bootstrap-always"],
         default="normal",
         help="Catch up mode (default: normal)",
     )
