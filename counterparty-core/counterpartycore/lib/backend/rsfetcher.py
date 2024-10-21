@@ -37,6 +37,14 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.running = False
         self.lock = threading.Lock()
 
+        # Initialize additional attributes
+        self.executor = None
+        self.stopped = True
+        self.prefetch_queue = []
+        self.prefetch_queue_size = 0
+        self.prefetch_queue_initialized = False
+        self.next_height = 0
+
     def start(self, start_height=0):
         logger.info("Starting RSFetcher thread...")
         try:
