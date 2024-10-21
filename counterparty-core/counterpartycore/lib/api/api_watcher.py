@@ -753,7 +753,7 @@ def rollback(block_index):
     api_db.close()
 
 
-def parse_next_event(api_db, ledger_db):
+def parse_next_event(api_db, ledger_db, watcher):
     check_event_hashes(api_db, ledger_db)
 
     last_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
@@ -766,7 +766,7 @@ def parse_next_event(api_db, ledger_db):
     if last_api_event is None:
         next_event_sql = "SELECT * FROM messages ORDER BY message_index ASC LIMIT 1"
         next_event = fetch_one(ledger_db, next_event_sql)
-        parse_event(api_db, next_event)
+        parse_event(api_db, next_event, watcher)
         return next_event
 
     if last_ledger_event["message_index"] > last_api_event["message_index"]:
@@ -774,7 +774,7 @@ def parse_next_event(api_db, ledger_db):
             "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
         )
         next_event = fetch_one(ledger_db, next_event_sql, (last_api_event["message_index"],))
-        parse_event(api_db, next_event)
+        parse_event(api_db, next_event, watcher)
         return next_event
 
     raise exceptions.NoEventToParse("No event to parse")
@@ -940,7 +940,7 @@ class APIWatcher(threading.Thread):
         while not self.stop_event.is_set():
             last_parsed_event = None
             try:
-                last_parsed_event = parse_next_event(self.api_db, self.ledger_db)
+                last_parsed_event = parse_next_event(self.api_db, self.ledger_db, self)
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
                 self.stop_event.wait(timeout=0.1)
@@ -961,3 +961,5 @@ class APIWatcher(threading.Thread):
         if self.ledger_db is not None:
             self.ledger_db.close()
         logger.info("API Watcher thread stopped.")
+
+
