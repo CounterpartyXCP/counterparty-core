@@ -40,6 +40,7 @@ This update requires an automatic reparse from block 865999.
 - Add the following new routes:
     - `/v2/fairmints`
     - `/v2/fairmints/<tx_hash>`
+- Fix Gunicorn stability issue due to bad signal handling 
 
 ## CLI
 
