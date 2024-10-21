@@ -82,6 +82,8 @@ EVENTS_ADDRESS_FIELDS = {
     "DISPENSE": ["source", "destination"],
     "BROADCAST": ["source"],
     "BURN": ["source"],
+    "NEW_FAIRMINT": ["source"],
+    "NEW_FAIRMINTER": ["source"],
 }
 
 SKIP_EVENTS = ["NEW_TRANSACTION_OUTPUT"]
