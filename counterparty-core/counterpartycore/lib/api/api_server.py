@@ -2,10 +2,10 @@ import argparse
 import logging
 import multiprocessing
 import os
+import threading
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
-import threading
 
 import flask
 import requests
@@ -471,9 +471,7 @@ class APIServer(object):
     def start(self, args):
         if self.process is not None:
             raise Exception("API Server is already running")
-        self.process = Process(
-            target=run_api_server, args=(vars(args), self.server_ready_value)
-        )
+        self.process = Process(target=run_api_server, args=(vars(args), self.server_ready_value))
         self.process.start()
         return self.process
 
@@ -489,4 +487,3 @@ class APIServer(object):
                 logger.error("API Server process did not stop in time. Terminating forcefully...")
                 self.process.kill()
         logger.info("API Server process stopped.")
-

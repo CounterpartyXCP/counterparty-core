@@ -1,9 +1,9 @@
 import json
 import logging
 import os
+import threading
 import time
 from random import randrange
-import threading
 
 import apsw
 from counterpartycore.lib import blocks, config, database, exceptions, ledger
@@ -961,4 +961,3 @@ class APIWatcher(threading.Thread):
         if self.ledger_db is not None:
             self.ledger_db.close()
         logger.info("API Watcher thread stopped.")
-

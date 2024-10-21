@@ -465,7 +465,7 @@ class APIStatusPoller(threading.Thread):
         self.db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
 
         interval_if_ready = 5 * 60  # 5 minutes
-        interval_if_not_ready = 60   # 1 minute
+        interval_if_not_ready = 60  # 1 minute
         interval = interval_if_not_ready
 
         try:
@@ -473,15 +473,15 @@ class APIStatusPoller(threading.Thread):
                 try:
                     # Check that backend is running, communicable, and caught up with the blockchain.
                     # Check that the database has caught up with bitcoind.
-                    if (
-                        time.time() - self.last_database_check > interval
-                    ):
+                    if time.time() - self.last_database_check > interval:
                         self.last_database_check = time.time()
                         if not config.FORCE and self.db is not None:
                             code = 11
                             check_backend_state()
                             code = 12
-                            api_util.check_last_parsed_block(self.db, backend.bitcoind.getblockcount())
+                            api_util.check_last_parsed_block(
+                                self.db, backend.bitcoind.getblockcount()
+                            )
                             interval = interval_if_ready
                 except (BackendError, exceptions.DatabaseError) as e:
                     interval = interval_if_not_ready
@@ -496,7 +496,7 @@ class APIStatusPoller(threading.Thread):
                 else:
                     CURRENT_API_STATUS_CODE = None
                     CURRENT_API_STATUS_RESPONSE_JSON = None
-                self.stop_event.wait(timeout=0.5) 
+                self.stop_event.wait(timeout=0.5)
         finally:
             if self.db is not None:
                 self.db.close()
