@@ -9,7 +9,7 @@ from threading import Timer
 import gunicorn.app.base
 import waitress
 import waitress.server
-from counterpartycore.lib import backend, config, ledger, util
+from counterpartycore.lib import backend, config, ledger, log, util
 from counterpartycore.lib.api.util import get_backend_height
 from counterpartycore.lib.database import get_db_connection
 from flask import request
@@ -124,7 +124,9 @@ class GunicornArbiter(Arbiter):
             return pid
 
         # Child process
+        global logger  # noqa F811
         worker.pid = os.getpid()
+        logger = log.re_set_up(f".gunicorn.{worker.pid}")
         try:
             gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
             logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
