@@ -97,52 +97,14 @@ def start_refresh_backend_height(timer_db, args):
         BACKEND_HEIGHT = 0
 
 
-class DummyLogger:
-    def __init__(self) -> None:
-        pass
-
-    def info(self, *args, **kwargs):
-        pass
-
-    def debug(self, *args, **kwargs):
-        pass
-
-    def exception(self, *args, **kwargs):
-        pass
-
-    def warning(self, *args, **kwargs):
-        pass
-
-    def error(self, *args, **kwargs):
-        pass
-
-    def critical(self, *args, **kwargs):
-        pass
-
-    def close_on_exec(self):
-        pass
-
-    def reopen_files(self):
-        pass
-
-
 class GunicornArbiter(Arbiter):
     def __init__(self, app):
-        super().__init__(app)
-        self.workers_pid_file = tempfile.NamedTemporaryFile()
-        self.log = DummyLogger()
-
-    def add_worker_to_pid_file(self, pid):
-        self.workers_pid_file.write(f"{pid}\n".encode())
-        self.workers_pid_file.flush()
-
-    def get_workers_pid(self):
-        self.workers_pid_file.seek(0)
-        return [
-            int(value)
-            for value in self.workers_pid_file.read().decode().strip().split("\n")
-            if value
-        ]
+        super().__init__(app.cfg)
+        self.app = app
+        self.timeout = 30
+        self.graceful_timeout = 30
+        self.max_requests = 1000
+        self.max_requests_jitter = 50
 
     def spawn_worker(self):
         self.worker_age += 1
@@ -150,7 +112,7 @@ class GunicornArbiter(Arbiter):
             self.worker_age,
             self.pid,
             self.LISTENERS,
-            self.app,
+            self.app.application,
             self.timeout / 2.0,
             self.cfg,
             self.log,
@@ -162,16 +124,11 @@ class GunicornArbiter(Arbiter):
             self.WORKERS[pid] = worker
             return pid
 
-        # Do not inherit the temporary files of other workers
-        for sibling in self.WORKERS.values():
-            sibling.tmp.close()
-
-        # Process Child
+        # Child process
         worker.pid = os.getpid()
         try:
-            gunicorn_util._setproctitle("worker [%s]" % self.proc_name)
+            gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
             logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
-            self.add_worker_to_pid_file(worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()
             sys.exit(0)
@@ -187,15 +144,15 @@ class GunicornArbiter(Arbiter):
                 sys.exit(self.WORKER_BOOT_ERROR)
             sys.exit(-1)
         finally:
-            self.log.info("Worker exiting (pid: %s)", worker.pid)
+            logger.info("Worker exiting (pid: %s)", worker.pid)
             try:
                 worker.tmp.close()
                 self.cfg.worker_exit(self, worker)
             except Exception:
-                self.log.warning("Exception during worker exit")
+                logger.warning("Exception during worker exit")
 
     def kill_all_workers(self):
-        for pid in self.get_workers_pid():
+        for pid in list(self.WORKERS.keys()):
             try:
                 os.kill(pid, signal.SIGKILL)
             except ProcessLookupError:
@@ -211,7 +168,9 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             "daemon": True,
             "threads": config.GUNICORN_THREADS_PER_WORKER,
             "loglevel": "debug",
-            # "access-logfile": "-",
+            "access-logfile": "-",
+            "errorlog": "-",
+            "capture_output": True,
         }
         self.application = app
         self.args = args
@@ -245,10 +204,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
     def stop(self):
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
-        # if self.timer_db:
-        #    self.timer_db.close()
         if self.arbiter:
-            # self.arbiter.stop(graceful=False)
             self.arbiter.kill_all_workers()
 
 
@@ -301,3 +257,4 @@ class WSGIApplication:
 
     def stop(self):
         self.server.stop()
+
