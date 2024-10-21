@@ -50,7 +50,16 @@ def check_wal_file(db_file):
 
 def get_db_connection(db_file, read_only=True, check_wal=False):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug(f"Creating connection to `{db_file}`...")
+
+    import traceback
+    traceback.print_stack()
+    if db_file == config.DATABASE:
+        db_file_name = "Ledger DB"
+    elif db_file == config.API_DATABASE:    
+        db_file_name = "API DB"
+    else:
+        db_file_name = db_file
+    logger.debug(f"Creating connection to {db_file_name}...")
 
     if not read_only and check_wal:
         try:

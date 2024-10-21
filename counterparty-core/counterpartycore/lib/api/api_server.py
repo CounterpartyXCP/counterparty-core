@@ -423,15 +423,18 @@ def run_api_server(args, server_ready_value):
     finally:
         logger.info("Stopping API Server threads...")
 
-        watcher.stop()
-        watcher.join()
+        if watcher is not None:
+            watcher.stop()
+            watcher.join()
 
-        wsgi_server.stop()
-        wsgi_server.join()
+        if wsgi_server is not None:
+            wsgi_server.stop()
+            wsgi_server.join()
 
-        logger.info("Stopping ParentProcessChecker thread...")
-        parent_checker.stop()
-        parent_checker.join()
+        if parent_checker is not None:
+            logger.info("Stopping ParentProcessChecker thread...")
+            parent_checker.stop()
+            parent_checker.join()
 
         logger.info("Closing DB connection pool...")
         APIDBConnectionPool().close()
@@ -487,3 +490,4 @@ class APIServer(object):
                 logger.error("API Server process did not stop in time. Terminating forcefully...")
                 self.process.kill()
         logger.info("API Server process stopped.")
+

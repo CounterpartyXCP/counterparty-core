@@ -818,7 +818,15 @@ def start_all(args):
             logger.warning(
                 "Database is in use by another process and was unable to be closed correctly."
             )
-        # Ensure that the last closed connection is not read-only in order to delete WAL and SHM files
+
+        # Wait for all DB connections to close
+        # Check the number of open DB connections
+        open_connections = len(database.DBConnectionPool().connections)
+        while open_connections > 0:
+            logger.debug(f"Waiting for {open_connections} DB connections to close...")
+            time.sleep(0.1)
+
+        logger.debug("Cleaning up WAL and SHM files...")
         api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
         api_db.close()
         logger.info("Shutdown complete.")
