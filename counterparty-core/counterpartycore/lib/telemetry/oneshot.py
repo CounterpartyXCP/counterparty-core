@@ -24,7 +24,7 @@ class TelemetryOneShot(metaclass=SingletonMeta):
                 self.client.send(data)
         except Exception as e:
             capture_exception(e)
-            logger.error(f"Error in telemetry one shot: {e}")
+            logger.warning(f"Error in telemetry one shot: {e}")
 
     def close(self):
         self.db.close()
