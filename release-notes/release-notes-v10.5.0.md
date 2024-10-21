@@ -22,6 +22,7 @@ This update requires an automatic reparse from block 865999.
 - Bootstrap respects `--data-dir` flag
 - Add normalized quantities to fairminters and fairmints API
 - Fix null fields in fairminters API (`earned_quantity`, `paid_quantity` and `commission`)
+- Fix Gunicorn stability issue due to bad signal handling 
 
 ## Codebase
 
@@ -40,7 +41,6 @@ This update requires an automatic reparse from block 865999.
 - Add the following new routes:
     - `/v2/fairmints`
     - `/v2/fairmints/<tx_hash>`
-- Fix Gunicorn stability issue due to bad signal handling 
 
 ## CLI
 
@@ -52,6 +52,7 @@ This update requires an automatic reparse from block 865999.
 - Have `--force` skip mandatory reparses
 - Add `bootstrap-always` option for the `--catch-up` flag
 - Replace `--database-file` flag by `--data-dir` flag
+- Have GUnicorn log `TRACE`
 
 
 # Credits

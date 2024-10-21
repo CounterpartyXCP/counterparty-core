@@ -132,14 +132,14 @@ class GunicornArbiter(Arbiter):
         logger = log.re_set_up(f".gunicorn.{worker.pid}")
         try:
             gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
-            logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
+            logger.trace("Booting Gunicorn worker with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()
             sys.exit(0)
         except SystemExit:
             raise
         except AppImportError:
-            self.log.debug("Exception while loading the application", exc_info=True)
+            self.log.warning("Exception while loading the application", exc_info=True)
             sys.stderr.flush()
             sys.exit(self.APP_LOAD_ERROR)
         except Exception:
@@ -171,7 +171,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             "worker_class": "gthread",
             "daemon": True,
             "threads": config.GUNICORN_THREADS_PER_WORKER,
-            "loglevel": "debug",
+            "loglevel": "trace",
             "access-logfile": "-",
             "errorlog": "-",
             "capture_output": True,
