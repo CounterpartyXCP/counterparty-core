@@ -202,6 +202,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             sys.exit(1)
 
     def stop(self):
+        logger.warning("Stopping Gunicorn")
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
         if self.arbiter:
