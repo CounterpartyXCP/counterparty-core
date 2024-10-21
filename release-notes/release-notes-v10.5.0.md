@@ -1,10 +1,11 @@
-# Release Notes - Counterparty Core v10.5.0 (2024-10-20)
+# Release Notes - Counterparty Core v10.5.0 (2024-10-21)
 
-This is a hotfix release and includes fixes for a number of critical stability bugs in the node software as well as significant performance optimizations for parsing Fair Mint transactions. We have also made numerous other bugfixes and tweaks to the API and CLI in response to user feedback.
+This release includes fixes for a number of critical stability bugs as well as significant performance optimizations for parsing Fair Mint transactions. We have also made many other bugfixes and tweaks to the API and CLI in response to user feedback.
 
 # Upgrading
 
-This update requires an automatic reparse from block 865999.
+IMPORTANT: This update requires an automatic reparse from block 865999. However, reparses have become very slow recently due to the high transaction volume. We recommend that users upgrade to this version (even if they were running a pre-release version) either by bootstrapping their databases or by rebuilding them from scratch. You can bootstrap either by running `counterparty-server bootstrap` (if your node is not Dockerized) or by temporarily adding `--catch-up=bootstrap-always` as an argument to `counterparty-server` in your Docker Compose file. If you would like to rebuild your node from scratch, simply delete your existing database and restart the server.
+
 
 # ChangeLog
 
@@ -17,12 +18,12 @@ This update requires an automatic reparse from block 865999.
 - Fix missing balance check for fairminter creation
 - Fix divisibility check for fairminter creation
 - Fix description check for fairminter creation
-- Use a different log file for each Gunicorn worker
-- Populate `address_events` table on new fairmint and fairminter
-- Bootstrap respects `--data-dir` flag
-- Add normalized quantities to fairminters and fairmints API
 - Fix null fields in fairminters API (`earned_quantity`, `paid_quantity` and `commission`)
 - Fix Gunicorn stability issue due to bad signal handling 
+- Use a different log file for each Gunicorn worker
+- Populate `address_events` table on new fairmint and fairminter
+- Have bootstrap respect the `--data-dir` flag
+- Add normalized quantities to fairminters and fairmints API
 
 ## Codebase
 
@@ -59,6 +60,3 @@ This update requires an automatic reparse from block 865999.
 
 * Ouziel Slama
 * Adam Krellenstein
-
-
-seq 1 30 | xargs -n1 -P10  curl "http://localhost:4000/v2/"
