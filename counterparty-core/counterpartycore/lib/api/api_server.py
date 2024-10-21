@@ -392,7 +392,7 @@ def init_flask_app():
     return app
 
 
-def run_api_server(args, server_ready_value):
+def run_api_server(args, server_ready_value, stop_event):
     # Initialize Sentry, logging, config, etc.
     sentry.init()
     server.initialise_log_and_config(argparse.Namespace(**args))
@@ -439,6 +439,9 @@ def run_api_server(args, server_ready_value):
         logger.info("Closing DB connection pool...")
         APIDBConnectionPool().close()
 
+        # Signal the main process that this process is stopping
+        stop_event.set()
+
 
 # This thread is used for the following two reasons:
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
@@ -470,11 +473,12 @@ class APIServer(object):
     def __init__(self):
         self.process = None
         self.server_ready_value = Value("I", 0)
+        self.stop_event = multiprocessing.Event()
 
     def start(self, args):
         if self.process is not None:
             raise Exception("API Server is already running")
-        self.process = Process(target=run_api_server, args=(vars(args), self.server_ready_value))
+        self.process = Process(target=run_api_server, args=(vars(args), self.server_ready_value, self.stop_event))
         self.process.start()
         return self.process
 
@@ -490,3 +494,6 @@ class APIServer(object):
                 logger.error("API Server process did not stop in time. Terminating forcefully...")
                 self.process.kill()
         logger.info("API Server process stopped.")
+
+    def has_stopped(self):
+        return self.stop_event.is_set()
