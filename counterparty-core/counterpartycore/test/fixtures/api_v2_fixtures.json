@@ -998,7 +998,10 @@
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
                         "locked": false
-                    }
+                    },
+                    "earn_quantity_normalized": "0.00000014",
+                    "commission_normalized": "0.00000006",
+                    "paid_quantity_normalized": "0.00000200"
                 },
                 "tx_hash": "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18",
                 "block_index": 310506,
@@ -4712,7 +4715,10 @@
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
                     "locked": false
-                }
+                },
+                "earn_quantity_normalized": "0.00000010",
+                "commission_normalized": "0.00000000",
+                "paid_quantity_normalized": "0.00000000"
             }
         ],
         "next_cursor": null,
@@ -7616,7 +7622,10 @@
                     "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                     "divisible": true,
                     "locked": false
-                }
+                },
+                "earn_quantity_normalized": "0.00000014",
+                "commission_normalized": "0.00000006",
+                "paid_quantity_normalized": "0.00000200"
             },
             {
                 "tx_hash": "6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8",
@@ -7637,7 +7646,10 @@
                     "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                     "divisible": true,
                     "locked": false
-                }
+                },
+                "earn_quantity_normalized": "0.00000007",
+                "commission_normalized": "0.00000003",
+                "paid_quantity_normalized": "0.00000100"
             },
             {
                 "tx_hash": "d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67",
@@ -7658,7 +7670,10 @@
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
                     "locked": false
-                }
+                },
+                "earn_quantity_normalized": "0.00000010",
+                "commission_normalized": "0.00000000",
+                "paid_quantity_normalized": "0.00000000"
             }
         ],
         "next_cursor": null,
@@ -7684,7 +7699,10 @@
                 "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                 "divisible": true,
                 "locked": false
-            }
+            },
+            "earn_quantity_normalized": "0.00000014",
+            "commission_normalized": "0.00000006",
+            "paid_quantity_normalized": "0.00000200"
         }
     },
     "http://localhost:10009/v2/routes?verbose=true": {
