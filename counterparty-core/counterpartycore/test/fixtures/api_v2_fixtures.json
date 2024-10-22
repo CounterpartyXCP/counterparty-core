@@ -1840,21 +1840,25 @@
         "result_count": 12
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances/NODIVISIBLE?verbose=true": {
-        "result": {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "NODIVISIBLE",
-            "quantity": 985,
-            "utxo": null,
-            "utxo_address": null,
-            "asset_info": {
-                "asset_longname": null,
-                "description": "No divisible asset",
-                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "divisible": false,
-                "locked": false
-            },
-            "quantity_normalized": "985"
-        }
+        "result": [
+            {
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "NODIVISIBLE",
+                "quantity": 985,
+                "utxo": null,
+                "utxo_address": null,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "No divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": false,
+                    "locked": false
+                },
+                "quantity_normalized": "985"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/credits?verbose=true": {
         "result": [
@@ -5093,21 +5097,25 @@
         "result_count": 3
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/balances/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc?verbose=true": {
-        "result": {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "NODIVISIBLE",
-            "quantity": 985,
-            "utxo": null,
-            "utxo_address": null,
-            "asset_info": {
-                "asset_longname": null,
-                "description": "No divisible asset",
-                "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "divisible": false,
-                "locked": false
-            },
-            "quantity_normalized": "985"
-        }
+        "result": [
+            {
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "NODIVISIBLE",
+                "quantity": 985,
+                "utxo": null,
+                "utxo_address": null,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "No divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": false,
+                    "locked": false
+                },
+                "quantity_normalized": "985"
+            }
+        ],
+        "next_cursor": null,
+        "result_count": 1
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/orders?verbose=true": {
         "result": [],
@@ -9250,8 +9258,8 @@
                 ]
             },
             "/v2/addresses/<address>/balances/<asset>": {
-                "function": "get_balance_by_address_and_asset",
-                "description": "Returns the balance of an address and asset",
+                "function": "get_balances_by_address_and_asset",
+                "description": "Returns the balances of an address and asset",
                 "args": [
                     {
                         "name": "address",
@@ -14336,8 +14344,8 @@
                 ]
             },
             "/v2/assets/<asset>/balances/<address>": {
-                "function": "get_balance_by_asset_and_address",
-                "description": "Returns the balance of an address and asset",
+                "function": "get_balances_by_asset_and_address",
+                "description": "Returns the balances of an address and asset",
                 "args": [
                     {
                         "name": "asset",
