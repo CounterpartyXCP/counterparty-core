@@ -70,10 +70,13 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
     def release_lockfile(self):
         if self.lockfile:
-            fcntl.flock(self.lockfile, fcntl.LOCK_UN)
-            self.lockfile.close()
+            if not self.lockfile.closed:
+                fcntl.flock(self.lockfile, fcntl.LOCK_UN)
+                self.lockfile.close()
+                logger.debug("Lockfile released.")
+            else:
+                logger.debug("Lockfile was already closed.")
             os.remove(self.lockfile_path)
-            logger.debug("Lockfile released.")
 
     def start(self, start_height=0):
         logger.info("Starting RSFetcher thread...")
