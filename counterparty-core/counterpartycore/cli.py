@@ -238,7 +238,7 @@ CONFIG_ARGS = [
         ("--no-confirm",),
         {"action": "store_true", "default": False, "help": "don't ask for confirmation"},
     ],
-    [("--database-file",), {"default": None, "help": "the path to the SQLite3 database file"}],
+    [("--data-dir",), {"default": None, "help": "the path to the data directory"}],
     [
         ("--log-file",),
         {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},
@@ -429,7 +429,7 @@ def main():
     parser_server.add_argument("--config-file", help="the path to the configuration file")
     parser_server.add_argument(
         "--catch-up",
-        choices=["normal", "bootstrap"],
+        choices=["normal", "bootstrap", "bootstrap-always"],
         default="normal",
         help="Catch up mode (default: normal)",
     )

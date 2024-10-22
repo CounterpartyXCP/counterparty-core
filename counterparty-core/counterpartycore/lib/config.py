@@ -5,7 +5,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "10.5.0-rc.1"  # for hatch
+__version__ = "10.5.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-")[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -184,3 +184,5 @@ INFLUX_DB_ORG = "counterparty"
 INFLUX_DB_BUCKET = "node-telemetry"
 
 LOG_IN_CONSOLE = False
+
+DEFAULT_DB_CONNECTION_POOL_SIZE = 10

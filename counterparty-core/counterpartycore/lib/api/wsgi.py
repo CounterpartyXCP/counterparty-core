@@ -3,14 +3,13 @@ import multiprocessing
 import os
 import signal
 import sys
-import tempfile
 import time
 from threading import Timer
 
 import gunicorn.app.base
 import waitress
 import waitress.server
-from counterpartycore.lib import backend, config, ledger, util
+from counterpartycore.lib import backend, config, ledger, log, util
 from counterpartycore.lib.api.util import get_backend_height
 from counterpartycore.lib.database import get_db_connection
 from flask import request
@@ -97,52 +96,17 @@ def start_refresh_backend_height(timer_db, args):
         BACKEND_HEIGHT = 0
 
 
-class DummyLogger:
-    def __init__(self) -> None:
-        pass
-
-    def info(self, *args, **kwargs):
-        pass
-
-    def debug(self, *args, **kwargs):
-        pass
-
-    def exception(self, *args, **kwargs):
-        pass
-
-    def warning(self, *args, **kwargs):
-        pass
-
-    def error(self, *args, **kwargs):
-        pass
-
-    def critical(self, *args, **kwargs):
-        pass
-
-    def close_on_exec(self):
-        pass
-
-    def reopen_files(self):
-        pass
-
-
 class GunicornArbiter(Arbiter):
     def __init__(self, app):
-        super().__init__(app)
-        self.workers_pid_file = tempfile.NamedTemporaryFile()
-        self.log = DummyLogger()
+        super().__init__(app)  # Pass 'app' instead of 'app.cfg'
+        self.app = app
+        self.timeout = 30
+        self.graceful_timeout = 30
+        self.max_requests = 1000
+        self.max_requests_jitter = 50
 
-    def add_worker_to_pid_file(self, pid):
-        self.workers_pid_file.write(f"{pid}\n".encode())
-        self.workers_pid_file.flush()
-
-    def get_workers_pid(self):
-        self.workers_pid_file.seek(0)
-        return [
-            int(value)
-            for value in self.workers_pid_file.read().decode().strip().split("\n")
-            if value
-        ]
+    def handle_winch(self):
+        pass
 
     def spawn_worker(self):
         self.worker_age += 1
@@ -162,23 +126,20 @@ class GunicornArbiter(Arbiter):
             self.WORKERS[pid] = worker
             return pid
 
-        # Do not inherit the temporary files of other workers
-        for sibling in self.WORKERS.values():
-            sibling.tmp.close()
-
-        # Process Child
+        # Child process
+        global logger  # noqa F811
         worker.pid = os.getpid()
+        logger = log.re_set_up(f".gunicorn.{worker.pid}")
         try:
-            gunicorn_util._setproctitle("worker [%s]" % self.proc_name)
-            logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
-            self.add_worker_to_pid_file(worker.pid)
+            gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
+            logger.trace("Booting Gunicorn worker with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()
             sys.exit(0)
         except SystemExit:
             raise
         except AppImportError:
-            self.log.debug("Exception while loading the application", exc_info=True)
+            self.log.warning("Exception while loading the application", exc_info=True)
             sys.stderr.flush()
             sys.exit(self.APP_LOAD_ERROR)
         except Exception:
@@ -187,15 +148,15 @@ class GunicornArbiter(Arbiter):
                 sys.exit(self.WORKER_BOOT_ERROR)
             sys.exit(-1)
         finally:
-            self.log.info("Worker exiting (pid: %s)", worker.pid)
+            logger.info("Worker exiting (pid: %s)", worker.pid)
             try:
                 worker.tmp.close()
                 self.cfg.worker_exit(self, worker)
             except Exception:
-                self.log.warning("Exception during worker exit")
+                logger.warning("Exception during worker exit")
 
     def kill_all_workers(self):
-        for pid in self.get_workers_pid():
+        for pid in list(self.WORKERS.keys()):
             try:
                 os.kill(pid, signal.SIGKILL)
             except ProcessLookupError:
@@ -210,8 +171,10 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             "worker_class": "gthread",
             "daemon": True,
             "threads": config.GUNICORN_THREADS_PER_WORKER,
-            "loglevel": "debug",
-            # "access-logfile": "-",
+            "loglevel": "trace",
+            "access-logfile": "-",
+            "errorlog": "-",
+            "capture_output": True,
         }
         self.application = app
         self.args = args
@@ -243,12 +206,10 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             sys.exit(1)
 
     def stop(self):
+        logger.warning("Stopping Gunicorn")
         if BACKEND_HEIGHT_TIMER:
             BACKEND_HEIGHT_TIMER.cancel()
-        # if self.timer_db:
-        #    self.timer_db.close()
         if self.arbiter:
-            # self.arbiter.stop(graceful=False)
             self.arbiter.kill_all_workers()
 
 
