@@ -282,6 +282,8 @@ def select_rows(
         query = f"{query} OFFSET ?"
         bindings.append(offset)
 
+    print(query, bindings)
+
     with start_sentry_span(op="db.sql.execute", description=query) as sql_span:
         sql_span.set_tag("db.system", "sqlite3")
         cursor.execute(query, bindings)
@@ -1570,7 +1572,7 @@ def get_balance_by_address_and_asset(db, address: str, asset: str):
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset: The asset to return (e.g. XCP)
     """
-    return select_row(
+    return select_rows(
         db,
         "balances",
         select="address, asset, quantity, utxo, utxo_address",
