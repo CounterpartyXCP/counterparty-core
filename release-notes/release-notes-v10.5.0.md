@@ -42,7 +42,6 @@ IMPORTANT: This update requires an automatic reparse from block 865999. However,
 - Add the following new routes:
     - `/v2/fairmints`
     - `/v2/fairmints/<tx_hash>`
-- `/v2/addresses/<address>/balances/<asset>` and `/v2/assets/<asset>/balances/<address>` now return a list that may include balances attached to UTXOs of `<address>`
 
 ## CLI
 
