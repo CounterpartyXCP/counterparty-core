@@ -181,6 +181,19 @@ def set_up(
 
     sys.excepthook = handle_exception
 
+    return logger
+
+
+def re_set_up(suffix=""):
+    return set_up(
+        verbose=config.VERBOSE,
+        quiet=config.QUIET,
+        log_file=config.LOG + suffix,
+        json_logs=config.JSON_LOGS,
+        max_log_file_size=config.MAX_LOG_FILE_SIZE,
+        max_log_file_rotations=config.MAX_LOG_FILE_ROTATIONS,
+    )
+
 
 def isodt(epoch_time):
     try:

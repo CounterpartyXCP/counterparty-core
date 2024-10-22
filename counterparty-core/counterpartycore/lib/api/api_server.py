@@ -397,50 +397,39 @@ def run_api_server(args, server_ready_value, stop_event):
     sentry.init()
     server.initialise_log_and_config(argparse.Namespace(**args))
 
-    watcher = api_watcher.APIWatcher()
-    watcher.start()
-
-    logger.info("Starting API Server process...")
     app = init_flask_app()
-
-    wsgi_server = None
-    parent_checker = None
+    watcher = api_watcher.APIWatcher()
+    wsgi_server = wsgi.WSGIApplication(app, args=args)
+    parent_checker = ParentProcessChecker(wsgi_server)
 
     try:
-        # Init the HTTP Server.
-        wsgi_server = wsgi.WSGIApplication(app, args=args)
-        parent_checker = ParentProcessChecker(wsgi_server)
-        parent_checker.start()
+        logger.info("Starting API Server process...")
+
         app.app_context().push()
-        # Run app server (blocking)
-        server_ready_value.value = 1
+
+        watcher.start()
         wsgi_server.run()
-    except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt received. Shutting down...")
-    except Exception as e:
-        capture_exception(e)
-        logger.error("Error in API Server: %s", e)
+        parent_checker.start()
+
     finally:
-        logger.info("Stopping API Server threads...")
+        logger.trace("Shutting down API Server...")
 
         if watcher is not None:
             watcher.stop()
             watcher.join()
 
         if wsgi_server is not None:
+            logger.trace("Stopping WSGI Server thread...")
             wsgi_server.stop()
             wsgi_server.join()
 
         if parent_checker is not None:
-            logger.info("Stopping ParentProcessChecker thread...")
+            logger.trace("Stopping Parent Process Checker thread...")
             parent_checker.stop()
             parent_checker.join()
 
-        logger.info("Closing DB connection pool...")
+        logger.trace("Closing API DB Connection Pool...")
         APIDBConnectionPool().close()
-
-        # Signal the main process that this process is stopping
-        stop_event.set()
 
 
 # This thread is used for the following two reasons:
