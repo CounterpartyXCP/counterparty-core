@@ -393,23 +393,35 @@ def init_flask_app():
 
 
 def run_api_server(args, server_ready_value, stop_event):
+    logger.info("Starting API Server process...")
+
     # Initialize Sentry, logging, config, etc.
     sentry.init()
     server.initialise_log_and_config(argparse.Namespace(**args))
 
-    app = init_flask_app()
     watcher = api_watcher.APIWatcher()
-    wsgi_server = wsgi.WSGIApplication(app, args=args)
-    parent_checker = ParentProcessChecker(wsgi_server)
+    watcher.start()
+
+    app = init_flask_app()
+
+    wsgi_server = None
+    parent_checker = None
 
     try:
-        logger.info("Starting API Server process...")
+        logger.info("Starting Parent Process Checker thread...")
+        parent_checker = ParentProcessChecker(wsgi_server)
+        parent_checker.start()
+
+        wsgi_server = wsgi.WSGIApplication(app, args=args)
 
         app.app_context().push()
+        server_ready_value.value = 1
 
-        watcher.start()
         wsgi_server.run()
-        parent_checker.start()
+
+    except Exception as e:
+        logger.error("Exception in API Server process!")
+        raise e
 
     finally:
         logger.trace("Shutting down API Server...")
@@ -421,7 +433,6 @@ def run_api_server(args, server_ready_value, stop_event):
         if wsgi_server is not None:
             logger.trace("Stopping WSGI Server thread...")
             wsgi_server.stop()
-            wsgi_server.join()
 
         if parent_checker is not None:
             logger.trace("Stopping Parent Process Checker thread...")

@@ -454,13 +454,13 @@ class APIStatusPoller(threading.Thread):
         self.db = None
 
     def stop(self):
-        logger.info("Stopping API Status Poller thread...")
+        logger.info("Stopping API v1 Status Poller thread...")
         self.stop_event.set()
         self.join()
-        logger.info("API Status Poller thread stopped.")
+        logger.info("API v1 Status Poller thread stopped.")
 
     def run(self):
-        logger.info("Starting API Status Poller thread...")
+        logger.info("Starting v1 API Status Poller thread...")
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
         self.db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
 
@@ -501,7 +501,7 @@ class APIStatusPoller(threading.Thread):
             if self.db is not None:
                 self.db.close()
                 self.db = None
-            logger.info("API Status Poller thread stopped.")
+            logger.info("API v1 Status Poller thread stopped.")
 
 
 class APIServer(threading.Thread):

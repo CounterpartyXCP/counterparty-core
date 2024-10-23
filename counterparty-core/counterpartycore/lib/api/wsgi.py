@@ -250,6 +250,7 @@ class WSGIApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
+        logger.info(f"Starting WSGI Server: {config.WSGI_SERVER}")
         if config.WSGI_SERVER == "gunicorn":
             self.server = GunicornApplication(self.app, self.args)
         elif config.WSGI_SERVER == "werkzeug":
