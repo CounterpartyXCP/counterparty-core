@@ -30,6 +30,7 @@ Backwards-incompatible change
 
 ## CLI
 
+- `start` command supports now `--bootstrap-url`
 
 # Credits
 
