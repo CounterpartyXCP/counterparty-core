@@ -30,6 +30,7 @@ Backwards-incompatible change
 - Made `/blocks/last` faster by adding an index to the `ledger_hash` field
 - `/v2/addresses/<address>/sweeps` now also searches by the `destination` field
 - Add `asset_events` argument for Issuances routes
+- Raise an error on fairmint compose when the fairminter is free and the quantity is not zero
 
 ## CLI
 

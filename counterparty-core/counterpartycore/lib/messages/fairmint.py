@@ -110,6 +110,11 @@ def compose(
     if len(problems) > 0:
         raise exceptions.ComposeError(problems)
 
+    if quantity != 0:
+        fairminter = ledger.get_fairminter_by_asset(db, asset)
+        if fairminter["price"] == 0:
+            raise exceptions.ComposeError("quantity is not allowed for free fairminters")
+
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
     # to optimize the data size (avoiding fixed sizes per parameter) we use a simple
