@@ -17,6 +17,7 @@ Backwards-incompatible change
 - Correctly catch invalid pubkey in compose API
 - Don't run reparse if unnecessary
 - Fix `message_data` when retrieving information about fairminter or fairmint transactions
+- Use `threading.Event()` to cleanly stop Threads and subprocesses started by `counterparty-server`
 
 ## Codebase
 
