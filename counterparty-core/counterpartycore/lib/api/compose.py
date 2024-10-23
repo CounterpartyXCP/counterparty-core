@@ -885,11 +885,11 @@ def unpack(db, datahex: str, block_index: int = None):
         # Fair Minter
         elif message_type_id == messages.fairminter.ID:
             message_type_name = "fairminter"
-            message_data = messages.fairminter.unpack(message)
+            message_data = messages.fairminter.unpack(message, return_dict=True)
         # Fair Mint
         elif message_type_id == messages.fairmint.ID:
             message_type_name = "fairmint"
-            message_data = messages.fairmint.unpack(message)
+            message_data = messages.fairmint.unpack(message, return_dict=True)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 
