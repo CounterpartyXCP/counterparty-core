@@ -28,6 +28,8 @@ ROUTES = util.prepare_routes(
         "/v2/blocks/<int:block_index>/sends": queries.get_sends_by_block,
         "/v2/blocks/<int:block_index>/dispenses": queries.get_dispenses_by_block,
         "/v2/blocks/<int:block_index>/sweeps": queries.get_sweeps_by_block,
+        "/v2/blocks/<int:block_index>/fairminters": queries.get_fairminters_by_block,
+        "/v2/blocks/<int:block_index>/fairmints": queries.get_fairmints_by_block,
         ### /transactions ###
         "/v2/transactions": queries.get_transactions,
         "/v2/transactions/info": compose.info,
