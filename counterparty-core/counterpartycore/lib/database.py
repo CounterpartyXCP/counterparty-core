@@ -4,38 +4,16 @@ from contextlib import contextmanager
 
 import apsw
 import apsw.bestpractice
-import apsw.ext  # Import apsw.ext to access log_sqlite
+import apsw.ext
 import psutil
 from termcolor import cprint
 
 from counterpartycore.lib import config, exceptions, ledger, util
 
-# Apply best practices except for `library_logging`
-best_practices = list(apsw.bestpractice.recommended)
-best_practices.remove(apsw.bestpractice.library_logging)
-apsw.bestpractice.apply(best_practices)
+apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-# Configure the APSW logger to forward SQLite logs and change all levels to DEBUG
-apsw_logger = logging.getLogger('apsw')
-apsw_logger.setLevel(logging.DEBUG)  # Set minimum level to DEBUG
-
-# Create a handler that changes all log levels to DEBUG
-class AllToDebugHandler(logging.StreamHandler):
-    def emit(self, record):
-        record.levelno = logging.DEBUG
-        record.levelname = 'DEBUG'
-        super().emit(record)
-
-# Add the handler to the apsw logger
-apsw_handler = AllToDebugHandler()
-apsw_formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
-apsw_handler.setFormatter(apsw_formatter)
-apsw_logger.addHandler(apsw_handler)
-
-# Manually set up SQLite logging to use our `apsw` logger
-apsw.ext.log_sqlite(logger=apsw_logger)
+apsw.ext.log_sqlite(logger=logger)
 
 
 def rowtracer(cursor, sql):
@@ -345,5 +323,3 @@ def table_exists(cursor, table):
         f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"  # nosec B608  # noqa: S608
     ).fetchone()
     return table_name is not None
-
-

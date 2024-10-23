@@ -122,6 +122,14 @@ class CustomisedJSONFormatter(JSONFormatter):
         return super(CustomisedJSONFormatter, self).json_record(message, extra, record)
 
 
+class SQLiteFilter(logging.Filter):
+    def filter(self, record):
+        if "SQLITE" in record.getMessage():
+            record.levelno = logging.DEBUG
+            record.levelname = "DEBUG"
+        return True
+
+
 def set_up(
     verbose=0,
     quiet=True,
@@ -140,6 +148,10 @@ def set_up(
         logger.propagate = False
 
     logger = logging.getLogger(config.LOGGER_NAME)
+
+    # Add the SQLite filter to the logger
+    sqlite_filter = SQLiteFilter()
+    logger.addFilter(sqlite_filter)
 
     log_level = logging.ERROR
     if quiet:
