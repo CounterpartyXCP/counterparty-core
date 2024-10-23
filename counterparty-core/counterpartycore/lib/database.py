@@ -54,9 +54,9 @@ def check_wal_file(db_file):
 def get_db_connection(db_file, read_only=True, check_wal=False):
     """Connects to the SQLite database, returning a db `Connection` object"""
 
-    if db_file == config.DATABASE:
+    if hasattr(config, "DATABASE") and db_file == config.DATABASE:
         db_file_name = "Ledger DB"
-    elif db_file == config.API_DATABASE:
+    elif hasattr(config, "API_DATABASE") and db_file == config.API_DATABASE:
         db_file_name = "API DB"
     else:
         db_file_name = db_file
