@@ -2,10 +2,11 @@ import json
 import typing
 from typing import Literal
 
-from counterpartycore.lib import config
-from counterpartycore.lib.api.util import divide
 from flask import request
 from sentry_sdk import start_span as start_sentry_span
+
+from counterpartycore.lib import config
+from counterpartycore.lib.api.util import divide
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]

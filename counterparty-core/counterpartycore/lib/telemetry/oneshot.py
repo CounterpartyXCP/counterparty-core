@@ -1,12 +1,13 @@
 import logging
 
+from sentry_sdk import capture_exception
+
 from counterpartycore.lib import config, database
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
 from counterpartycore.lib.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
 )
 from counterpartycore.lib.util import SingletonMeta
-from sentry_sdk import capture_exception
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

@@ -10,6 +10,12 @@ from multiprocessing import Process, Value
 import flask
 import requests
 from bitcoin.wallet import CBitcoinAddressError
+from flask import Flask, request
+from flask_httpauth import HTTPBasicAuth
+from sentry_sdk import capture_exception
+from sentry_sdk import configure_scope as configure_sentry_scope
+from sentry_sdk import start_span as start_sentry_span
+
 from counterpartycore import server
 from counterpartycore.lib import (
     config,
@@ -29,11 +35,6 @@ from counterpartycore.lib.api.util import (
     to_json,
 )
 from counterpartycore.lib.database import APIDBConnectionPool
-from flask import Flask, request
-from flask_httpauth import HTTPBasicAuth
-from sentry_sdk import capture_exception
-from sentry_sdk import configure_scope as configure_sentry_scope
-from sentry_sdk import start_span as start_sentry_span
 
 multiprocessing.set_start_method("spawn", force=True)
 

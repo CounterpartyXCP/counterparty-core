@@ -4,8 +4,9 @@
 import logging
 import os
 
-from counterpartycore.lib import config
 from yoyo import step
+
+from counterpartycore.lib import config
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

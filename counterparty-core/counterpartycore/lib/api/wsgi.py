@@ -9,14 +9,15 @@ from threading import Timer
 import gunicorn.app.base
 import waitress
 import waitress.server
-from counterpartycore.lib import backend, config, ledger, log, util
-from counterpartycore.lib.api.util import get_backend_height
-from counterpartycore.lib.database import get_db_connection
 from flask import request
 from gunicorn import util as gunicorn_util
 from gunicorn.arbiter import Arbiter
 from gunicorn.errors import AppImportError
 from werkzeug.serving import make_server
+
+from counterpartycore.lib import backend, config, ledger, log, util
+from counterpartycore.lib.api.util import get_backend_height
+from counterpartycore.lib.database import get_db_connection
 
 multiprocessing.set_start_method("spawn", force=True)
 

@@ -1016,5 +1016,3 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
         "green",
     )
-
-

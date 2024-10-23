@@ -2,10 +2,10 @@ import errno
 import fcntl
 import logging
 import os
+import queue
 import random
 import threading
 import time
-import queue
 from concurrent.futures import ThreadPoolExecutor
 
 from counterparty_rs import indexer
@@ -55,7 +55,9 @@ class RSFetcher(metaclass=util.SingletonMeta):
     def acquire_lockfile(self):
         # Ensure the directory exists
         os.makedirs(self.config["db_dir"], exist_ok=True)
-        logger.debug(f"RSFetcher - Ensured that directory {self.config['db_dir']} exists for lockfile.")
+        logger.debug(
+            f"RSFetcher - Ensured that directory {self.config['db_dir']} exists for lockfile."
+        )
 
         try:
             fd = os.open(self.lockfile_path, os.O_CREAT | os.O_RDWR)
@@ -64,7 +66,9 @@ class RSFetcher(metaclass=util.SingletonMeta):
             logger.debug("RSFetcher - Lockfile acquired.")
         except IOError as e:
             if e.errno in (errno.EACCES, errno.EAGAIN):
-                logger.error(f"RSFetcher - Another instance is running. Unable to acquire lockfile: {e}")
+                logger.error(
+                    f"RSFetcher - Another instance is running. Unable to acquire lockfile: {e}"
+                )
                 raise RuntimeError("Failed to acquire lockfile.") from e
             else:
                 logger.error(f"RSFetcher - Unexpected error acquiring lockfile: {e}")
@@ -227,6 +231,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         while self.running:
             time.sleep(0.1)
         self.start(self.next_height)
+
 
 def stop():
     if RSFetcher in RSFetcher._instances and RSFetcher._instances[RSFetcher] is not None:

@@ -11,6 +11,8 @@ from logging import handlers as logging_handlers
 import flask
 import requests
 import werkzeug
+from docstring_parser import parse as parse_docstring
+
 from counterpartycore.lib import (
     backend,
     config,
@@ -21,7 +23,6 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import compose
-from docstring_parser import parse as parse_docstring
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)

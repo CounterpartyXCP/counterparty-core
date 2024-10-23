@@ -4,9 +4,10 @@
 import logging
 import os
 
+from yoyo import step
+
 from counterpartycore.lib import config
 from counterpartycore.lib.api.api_watcher import update_address_events
-from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

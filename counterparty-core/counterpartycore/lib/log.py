@@ -1,11 +1,11 @@
 import decimal
 import logging
 import sys
+import threading
 import time
 import traceback
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
-import threading
 
 import zmq
 from dateutil.tz import tzlocal
