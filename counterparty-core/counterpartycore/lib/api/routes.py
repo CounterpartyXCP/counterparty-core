@@ -96,6 +96,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/attach": compose.compose_attach,
         "/v2/utxos/<utxo>/compose/detach": compose.compose_detach,
         "/v2/utxos/<utxo>/compose/movetoutxo": compose.compose_movetoutxo,
+        "/v2/compose/attach/estimatexcpfees": compose.get_attach_estimate_xcp_fee,
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
         "/v2/assets/<asset>": queries.get_asset,

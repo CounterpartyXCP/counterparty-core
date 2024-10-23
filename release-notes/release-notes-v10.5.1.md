@@ -25,6 +25,7 @@ Backwards-incompatible change
 - Add the following routes:
     * `/v2/blocks/<int:block_index>/fairminters`
     * `/v2/blocks/<int:block_index>/fairmints`
+    * `/v2/compose/attach/estimatexcpfees`
 - Add `status` argument for Fairminters routes
 - Made `/blocks/last` faster by adding an index to the `ledger_hash` field
 - `/v2/addresses/<address>/sweeps` now also searches by the `destination` field
