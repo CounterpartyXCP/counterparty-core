@@ -152,14 +152,14 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
         try:
             assert result["result"] == expected_result
             print(f"{item['title']}: " + colored("Success", "green"))
-        except AssertionError:
+        except AssertionError as e:
             print(colored(f"Failed: {item['title']}", "red"))
             expected_result_str = json.dumps(expected_result, indent=4, sort_keys=True)
             got_result_str = json.dumps(result["result"], indent=4, sort_keys=True)
             print(f"Expected: {expected_result_str}")
             print(f"Got: {got_result_str}")
             compare_strings(expected_result_str, got_result_str)
-            # raise e
+            raise e
 
 
 def run_item(node, item, context):

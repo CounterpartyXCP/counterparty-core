@@ -485,6 +485,11 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/blocks/310491/fairmints?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
     "http://localhost:10009/v2/transactions?verbose=true": {
         "result": [
             {
@@ -8338,6 +8343,25 @@
                         "description": "The index of the block to return (e.g. $LAST_ISSUANCE_BLOCK)"
                     },
                     {
+                        "name": "asset_events",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "creation",
+                            "reissuance",
+                            "lock_quantity",
+                            "reset",
+                            "change_description",
+                            "transfer",
+                            "open_fairminter",
+                            "fairmint",
+                            "lock_description"
+                        ],
+                        "description": "Filter result by one or several comma separated asset events"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -8491,6 +8515,113 @@
                         "required": false,
                         "type": "int",
                         "description": "The maximum number of sweeps to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/blocks/<int:block_index>/fairminters": {
+                "function": "get_fairminters_by_block",
+                "description": "Returns the fairminters by its block index",
+                "args": [
+                    {
+                        "name": "block_index",
+                        "required": true,
+                        "type": "int",
+                        "description": "The block index of the fairminter to return (e.g. $LAST_FAIRMINTER_BLOCK)"
+                    },
+                    {
+                        "name": "status",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "open",
+                            "closed",
+                            "pending"
+                        ],
+                        "description": "The status of the fairminters to return"
+                    },
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the fairminter to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of fairminter to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/blocks/<int:block_index>/fairmints": {
+                "function": "get_fairmints_by_block",
+                "description": "Returns the fairmints by its block index",
+                "args": [
+                    {
+                        "name": "block_index",
+                        "required": true,
+                        "type": "int",
+                        "description": "The block index of the fairmint to return (e.g. $LAST_FAIRMINT_BLOCK)"
+                    },
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the fairmint to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of fairmint to return (e.g. 5)"
                     },
                     {
                         "name": "offset",
@@ -10159,6 +10290,25 @@
                         "description": "The address to return (e.g. $ADDRESS_1)"
                     },
                     {
+                        "name": "asset_events",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "creation",
+                            "reissuance",
+                            "lock_quantity",
+                            "reset",
+                            "change_description",
+                            "transfer",
+                            "open_fairminter",
+                            "fairmint",
+                            "lock_description"
+                        ],
+                        "description": "Filter result by one or several comma separated asset events"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -10528,6 +10678,19 @@
                         "required": true,
                         "type": "str",
                         "description": "The source of the fairminter to return (e.g. $ADDRESS_1)"
+                    },
+                    {
+                        "name": "status",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "open",
+                            "closed",
+                            "pending"
+                        ],
+                        "description": "The status of the fairminters to return"
                     },
                     {
                         "name": "cursor",
@@ -14215,6 +14378,26 @@
                     }
                 ]
             },
+            "/v2/compose/attach/estimatexcpfees": {
+                "function": "get_attach_estimate_xcp_fee",
+                "description": "Returns the estimated fee for attaching assets to a UTXO.",
+                "args": [
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
             "/v2/assets": {
                 "function": "get_valid_assets",
                 "description": "Returns the valid assets",
@@ -14725,6 +14908,25 @@
                         "description": "The asset to return (e.g. $ASSET_1)"
                     },
                     {
+                        "name": "asset_events",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "creation",
+                            "reissuance",
+                            "lock_quantity",
+                            "reset",
+                            "change_description",
+                            "transfer",
+                            "open_fairminter",
+                            "fairmint",
+                            "lock_description"
+                        ],
+                        "description": "Filter result by one or several comma separated asset events"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -15058,6 +15260,19 @@
                         "required": true,
                         "type": "str",
                         "description": "The asset of the fairminter to return (e.g. $ASSET_1)"
+                    },
+                    {
+                        "name": "status",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "open",
+                            "closed",
+                            "pending"
+                        ],
+                        "description": "The status of the fairminters to return"
                     },
                     {
                         "name": "cursor",
@@ -16352,6 +16567,25 @@
                 "description": "Returns all the issuances",
                 "args": [
                     {
+                        "name": "asset_events",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "creation",
+                            "reissuance",
+                            "lock_quantity",
+                            "reset",
+                            "change_description",
+                            "transfer",
+                            "open_fairminter",
+                            "fairmint",
+                            "lock_description"
+                        ],
+                        "description": "Filter result by one or several comma separated asset events"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -16552,6 +16786,19 @@
                 "function": "get_all_fairminters",
                 "description": "Returns all fairminters",
                 "args": [
+                    {
+                        "name": "status",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "open",
+                            "closed",
+                            "pending"
+                        ],
+                        "description": "The status of the fairminters to return"
+                    },
                     {
                         "name": "cursor",
                         "default": null,

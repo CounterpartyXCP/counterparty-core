@@ -13,6 +13,19 @@ BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
 DispenserStatus = Literal["all", "open", "closed", "closing", "open_empty_address"]
 DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}
 DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}
+FairmintersStatus = Literal["all", "open", "closed", "pending"]
+IssuancesAssetEvents = Literal[
+    "all",
+    "creation",
+    "reissuance",
+    "lock_quantity",
+    "reset",
+    "change_description",
+    "transfer",
+    "open_fairminter",
+    "fairmint",
+    "lock_description",
+]
 
 BetMatchesStatus = Literal[
     "dropped",
@@ -281,8 +294,6 @@ def select_rows(
     if offset is not None:
         query = f"{query} OFFSET ?"
         bindings.append(offset)
-
-    print(query, bindings)
 
     with start_sentry_span(op="db.sql.execute", description=query) as sql_span:
         sql_span.set_tag("db.system", "sqlite3")
@@ -1147,17 +1158,40 @@ def get_destructions(
     )
 
 
-def get_issuances(db, cursor: str = None, limit: int = 100, offset: int = None):
+def prepare_issuance_where(asset_events, other_conditions=None):
+    where = []
+    asset_events_list = asset_events.split(",")
+    for asset_event in asset_events_list:
+        if asset_event == "all":
+            where = [other_conditions] if other_conditions else []
+            break
+        if asset_event in typing.get_args(IssuancesAssetEvents):
+            where_status = {"asset_events__like": f"%{asset_event}%"}
+            if other_conditions:
+                where_status.update(other_conditions)
+            where.append(where_status)
+    return where
+
+
+def get_issuances(
+    db,
+    asset_events: IssuancesAssetEvents = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+):
     """
     Returns all the issuances
     :param str cursor: The last index of the issuances to return
+    :param str asset_events: Filter result by one or several comma separated asset events
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = prepare_issuance_where(asset_events, {"status": "valid"})
     return select_rows(
         db,
         "issuances",
-        where={"status": "valid"},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1165,19 +1199,26 @@ def get_issuances(db, cursor: str = None, limit: int = 100, offset: int = None):
 
 
 def get_issuances_by_block(
-    db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    block_index: int,
+    asset_events: IssuancesAssetEvents = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the issuances of a block
     :param int block_index: The index of the block to return (e.g. $LAST_ISSUANCE_BLOCK)
+    :param str asset_events: Filter result by one or several comma separated asset events
     :param str cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = prepare_issuance_where(asset_events, {"block_index": block_index, "status": "valid"})
     return select_rows(
         db,
         "issuances",
-        where={"block_index": block_index, "status": "valid"},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1193,22 +1234,30 @@ def get_issuance_by_transaction_hash(db, tx_hash: str):
 
 
 def get_issuances_by_asset(
-    db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    asset: str,
+    asset_events: IssuancesAssetEvents = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the issuances of an asset
     :param str asset: The asset to return (e.g. $ASSET_1)
+    :param str asset_events: Filter result by one or several comma separated asset events
     :param str cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = prepare_issuance_where(
+        asset_events, {"asset": asset.upper(), "status": "valid"}
+    ) + prepare_issuance_where(
+        asset_events, {"UPPER(asset_longname)": asset.upper(), "status": "valid"}
+    )
     return select_rows(
         db,
         "issuances",
-        where=[
-            {"asset": asset.upper(), "status": "valid"},
-            {"UPPER(asset_longname)": asset.upper(), "status": "valid"},
-        ],
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1216,19 +1265,26 @@ def get_issuances_by_asset(
 
 
 def get_issuances_by_address(
-    db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    address: str,
+    asset_events: IssuancesAssetEvents = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the issuances of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str asset_events: Filter result by one or several comma separated asset events
     :param str cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = prepare_issuance_where(asset_events, {"issuer": address, "status": "valid"})
     return select_rows(
         db,
         "issuances",
-        where={"issuer": address, "status": "valid"},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1467,7 +1523,12 @@ def get_sweeps_by_address(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        db, "sweeps", where={"source": address}, last_cursor=cursor, limit=limit, offset=offset
+        db,
+        "sweeps",
+        where=[{"source": address}, {"destination": address}],
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -2170,7 +2231,7 @@ def get_asset_balances(
     )
 
 
-def prepare_order_where_status(status, arg_type, other_conditions=None):
+def prepare_where_status(status, arg_type, other_conditions=None):
     where = []
     statuses = status.split(",")
     for status in statuses:
@@ -2186,11 +2247,11 @@ def prepare_order_where_status(status, arg_type, other_conditions=None):
 
 
 def prepare_order_where(status, other_conditions=None):
-    return prepare_order_where_status(status, OrderStatus, other_conditions=other_conditions)
+    return prepare_where_status(status, OrderStatus, other_conditions=other_conditions)
 
 
 def prepare_order_matches_where(status, other_conditions=None):
-    return prepare_order_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
+    return prepare_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
 
 
 def get_orders(
@@ -2605,14 +2666,24 @@ def get_dispenser_info_by_hash(db, dispenser_hash: str):
     )
 
 
-def get_all_fairminters(db, cursor: str = None, limit: int = 100, offset: int = None):
+def prepare_fairminters_where(status, other_conditions=None):
+    return prepare_where_status(status, FairmintersStatus, other_conditions=other_conditions)
+
+
+def get_all_fairminters(
+    db, status: FairmintersStatus = "all", cursor: str = None, limit: int = 100, offset: int = None
+):
     """
     Returns all fairminters
+    :param str status: The status of the fairminters to return
     :param str cursor: The last index of the fairminter to return
     :param int limit: The maximum number of fairminter to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    return select_rows(db, "fairminters", last_cursor=cursor, limit=limit, offset=offset)
+    where = prepare_fairminters_where(status)
+    return select_rows(
+        db, "fairminters", where=where, last_cursor=cursor, limit=limit, offset=offset
+    )
 
 
 def get_fairminter(db, tx_hash: str):
@@ -2627,30 +2698,66 @@ def get_fairminter(db, tx_hash: str):
     )
 
 
+def get_fairminters_by_block(
+    db,
+    block_index: int,
+    status: FairmintersStatus = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns the fairminters by its block index
+    :param int block_index: The block index of the fairminter to return (e.g. $LAST_FAIRMINTER_BLOCK)
+    :param str status: The status of the fairminters to return
+    :param str cursor: The last index of the fairminter to return
+    :param int limit: The maximum number of fairminter to return (e.g. 5)
+    :param int offset: The number of lines to skip before
+    """
+    where = prepare_fairminters_where(status, {"block_index": block_index})
+    return select_rows(
+        db, "fairminters", where=where, last_cursor=cursor, limit=limit, offset=offset
+    )
+
+
 def get_fairminters_by_asset(
-    db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    asset: str,
+    status: FairmintersStatus = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the fairminter by its asset
     :param str asset: The asset of the fairminter to return (e.g. $ASSET_1)
+    :param str status: The status of the fairminters to return
     """
     where = {"asset": asset.upper()}
     if "." in asset:
         where = {"asset_longname": asset.upper()}
+    where = prepare_fairminters_where(status, where)
     return select_rows(
         db, "fairminters", where=where, last_cursor=cursor, limit=limit, offset=offset
     )
 
 
 def get_fairminters_by_address(
-    db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    address: str,
+    status: FairmintersStatus = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the fairminter by its source
     :param str address: The source of the fairminter to return (e.g. $ADDRESS_1)
+    :param str status: The status of the fairminters to return
     """
+    where = prepare_fairminters_where(status, {"source": address})
     return select_rows(
-        db, "fairminters", where={"source": address}, last_cursor=cursor, limit=limit, offset=offset
+        db, "fairminters", where=where, last_cursor=cursor, limit=limit, offset=offset
     )
 
 
@@ -2737,4 +2844,24 @@ def get_fairmint(db, tx_hash: str):
         db,
         "fairmints",
         where={"tx_hash": tx_hash},
+    )
+
+
+def get_fairmints_by_block(
+    db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the fairmints by its block index
+    :param int block_index: The block index of the fairmint to return (e.g. $LAST_FAIRMINT_BLOCK)
+    :param str cursor: The last index of the fairmint to return
+    :param int limit: The maximum number of fairmint to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "fairmints",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )

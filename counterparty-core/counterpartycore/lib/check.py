@@ -1063,6 +1063,9 @@ def database_version(db):
             # and set an arbitrary value different from config.VERSION_PRE_RELEASE
             version_pre_release = "xxxx"
         if version_pre_release != config.VERSION_PRE_RELEASE:
-            message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
+            if version_pre_release == "xxxx":
+                message = "`VERSION_STRING` not found in dataase. "
+            else:
+                message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
             message += "Checking if a reparse is needed..."
             check_need_reparse(version_minor, message)

@@ -6,6 +6,7 @@ from counterpartycore.lib import (
     config,
     deserialize,
     exceptions,
+    gas,
     gettxinfo,
     message_type,
     messages,
@@ -13,6 +14,7 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
+from counterpartycore.lib.messages.utxo import ID as UTXO_ID
 
 D = decimal.Decimal
 
@@ -641,6 +643,13 @@ def compose_attach(
     )
 
 
+def get_attach_estimate_xcp_fee(db):
+    """
+    Returns the estimated fee for attaching assets to a UTXO.
+    """
+    return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
+
+
 def compose_detach(
     db,
     utxo: str,
@@ -876,11 +885,11 @@ def unpack(db, datahex: str, block_index: int = None):
         # Fair Minter
         elif message_type_id == messages.fairminter.ID:
             message_type_name = "fairminter"
-            message_data = messages.fairminter.unpack(message)
+            message_data = messages.fairminter.unpack(message, return_dict=True)
         # Fair Mint
         elif message_type_id == messages.fairmint.ID:
             message_type_name = "fairmint"
-            message_data = messages.fairmint.unpack(message)
+            message_data = messages.fairmint.unpack(message, return_dict=True)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 
