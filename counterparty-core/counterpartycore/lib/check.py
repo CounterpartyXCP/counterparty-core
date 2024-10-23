@@ -916,13 +916,13 @@ class SanityError(Exception):
     pass
 
 
-def asset_conservation(db, stop_event):
+def asset_conservation(db, stop_event=None):
     logger.debug("Checking for conservation of assets.")
     with db:
         supplies = ledger.supplies(db)
         held = ledger.held(db)
         for asset in supplies.keys():
-            if stop_event.is_set():
+            if stop_event is not None and stop_event.is_set():
                 logger.debug("Stop event received. Exiting asset conservation check...")
                 return
             asset_issued = supplies[asset]
