@@ -60,7 +60,8 @@ def get_db_connection(db_file, read_only=True, check_wal=False):
         db_file_name = "API DB"
     else:
         db_file_name = db_file
-    logger.trace(f"Creating connection to {db_file_name}...")
+    if hasattr(logger, "trace"):
+        logger.trace(f"Creating connection to {db_file_name}...")
 
     if not read_only and check_wal:
         try:
