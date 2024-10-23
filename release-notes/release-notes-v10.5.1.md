@@ -14,6 +14,8 @@ Backwards-incompatible change
 
 ## Bugfixes
 
+- Correctly catch invalid pubkey in compose API
+
 ## Codebase
 
 
