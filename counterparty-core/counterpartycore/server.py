@@ -810,17 +810,17 @@ def start_all(args):
         if follower_daemon:
             follower_daemon.stop()
         if not config.NO_TELEMETRY:
-            TelemetryOneShot().close()
+            TelemetryOneShot.close_instance()
         if db:
             database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()
 
-        # Wait for all DB connections to close
+        # Wait for any leftover DB connections to close
         open_connections = len(database.DBConnectionPool().connections)
         while open_connections > 0:
-            logger.debug(f"Waiting for {open_connections} DB connections to close...")
+            logger.warning(f"Waiting for {open_connections} DB connections to close...")
             time.sleep(0.1)
             open_connections = len(database.DBConnectionPool().connections)  # Update count
 
@@ -1016,4 +1016,5 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
         "green",
     )
+
 

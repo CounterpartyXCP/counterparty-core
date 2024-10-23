@@ -22,6 +22,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
     thread_index_counter = 0  # Add a thread index counter
 
     def __init__(self, indexer_config=None):
+        logger.debug("Initializing RSFetcher...")
         RSFetcher.thread_index_counter += 1
         if indexer_config is None:
             self.config = {
@@ -226,7 +227,6 @@ class RSFetcher(metaclass=util.SingletonMeta):
         while self.running:
             time.sleep(0.1)
         self.start(self.next_height)
-
 
 def stop():
     if RSFetcher in RSFetcher._instances and RSFetcher._instances[RSFetcher] is not None:
