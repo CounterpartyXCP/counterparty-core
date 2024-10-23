@@ -19,6 +19,8 @@ only:
 - Blocks > Get Sends By Block > Get Sends By Block
 - Blocks > Get Dispenses By Block > Get Dispenses By Block
 - Blocks > Get Sweeps By Block > Get Sweeps By Block
+- Blocks > Get Fairminters By Block > Get Fairminters By Block
+- Blocks > Get Fairmints By Block > Get Fairmints By Block
 - Transactions > Get Transactions > Get Transactions
 - Transactions > Info > Info
 - Transactions > Info By Tx Hash > Info By Tx Hash
@@ -86,6 +88,7 @@ only:
 - Compose > Compose Attach > Compose Attach
 - Compose > Compose Detach > Compose Detach
 - Compose > Compose Movetoutxo > Compose Movetoutxo
+- Compose > Get Attach Estimate Xcp Fee > Get Attach Estimate Xcp Fee
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset > Get Asset
 - Assets > Get Asset Balances > Get Asset Balances

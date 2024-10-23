@@ -44,8 +44,11 @@ def collect_public_keys(pubkeys):
         raise exceptions.TransactionError("Invalid pubkeys.")
 
     for pubkey in provided_pubkeys:
-        if not script.is_fully_valid(binascii.unhexlify(pubkey)):
-            raise exceptions.ComposeError(f"invalid public key: {pubkey}")
+        try:
+            if not script.is_fully_valid(binascii.unhexlify(pubkey)):
+                raise exceptions.ComposeError(f"invalid public key: {pubkey}")
+        except binascii.Error as e:
+            raise exceptions.ComposeError(f"invalid public key: {pubkey}") from e
     return provided_pubkeys
 
 

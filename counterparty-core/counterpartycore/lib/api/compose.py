@@ -6,6 +6,7 @@ from counterpartycore.lib import (
     config,
     deserialize,
     exceptions,
+    gas,
     gettxinfo,
     message_type,
     messages,
@@ -13,6 +14,7 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
+from counterpartycore.lib.messages.utxo import ID as UTXO_ID
 
 D = decimal.Decimal
 
@@ -639,6 +641,13 @@ def compose_attach(
         quantity=quantity,
         **construct_args,
     )
+
+
+def get_attach_estimate_xcp_fee(db):
+    """
+    Returns the estimated fee for attaching assets to a UTXO.
+    """
+    return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
 
 
 def compose_detach(
