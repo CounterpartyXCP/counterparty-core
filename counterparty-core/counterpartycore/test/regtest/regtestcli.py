@@ -3,7 +3,6 @@ import decimal
 import json
 
 import sh
-
 from counterpartycore.lib import arc4
 
 D = decimal.Decimal

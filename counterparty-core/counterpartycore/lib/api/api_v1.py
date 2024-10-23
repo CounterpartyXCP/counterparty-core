@@ -15,17 +15,9 @@ import re
 import threading
 import time
 
+import counterpartycore.lib.sentry as sentry  # noqa: F401
 import flask
 import jsonrpc
-from flask import request
-from flask_httpauth import HTTPBasicAuth
-from jsonrpc import dispatcher
-from jsonrpc.exceptions import JSONRPCDispatchException
-from sentry_sdk import configure_scope as configure_sentry_scope
-from werkzeug.serving import make_server
-from xmltodict import unparse as serialize_to_xml
-
-import counterpartycore.lib.sentry as sentry  # noqa: F401
 from counterpartycore.lib import (
     backend,
     config,
@@ -66,6 +58,13 @@ from counterpartycore.lib.telemetry.util import (  # noqa: E402
     is_docker,
     is_force_enabled,
 )
+from flask import request
+from flask_httpauth import HTTPBasicAuth
+from jsonrpc import dispatcher
+from jsonrpc.exceptions import JSONRPCDispatchException
+from sentry_sdk import configure_scope as configure_sentry_scope
+from werkzeug.serving import make_server
+from xmltodict import unparse as serialize_to_xml
 
 D = decimal.Decimal
 

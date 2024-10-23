@@ -4,7 +4,6 @@ import time
 from uuid import uuid4
 
 import appdirs
-
 from counterpartycore.lib import config
 
 start_time = time.time()

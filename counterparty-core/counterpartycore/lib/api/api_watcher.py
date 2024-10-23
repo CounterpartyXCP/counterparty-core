@@ -6,12 +6,11 @@ import time
 from random import randrange
 
 import apsw
-from yoyo import get_backend, read_migrations
-from yoyo.exceptions import LockTimeout
-
 from counterpartycore.lib import blocks, config, database, exceptions, ledger
 from counterpartycore.lib.api import util
 from counterpartycore.lib.util import format_duration
+from yoyo import get_backend, read_migrations
+from yoyo.exceptions import LockTimeout
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
