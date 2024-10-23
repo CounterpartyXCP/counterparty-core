@@ -816,6 +816,15 @@ def start_all(args):
         backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()
+
+        # Wait for all DB connections to close
+        open_connections = len(database.DBConnectionPool().connections)
+        while open_connections > 0:
+            logger.debug(f"Waiting for {open_connections} DB connections to close...")
+            time.sleep(0.1)
+            open_connections = len(database.DBConnectionPool().connections)  # Update count
+
+        # Now it's safe to check for WAL files
         try:
             database.check_wal_file(config.DATABASE)
         except exceptions.WALFileFoundError:
@@ -826,13 +835,6 @@ def start_all(args):
             logger.warning(
                 "Database is in use by another process and was unable to be closed correctly."
             )
-
-        # Wait for all DB connections to close
-        # Check the number of open DB connections
-        open_connections = len(database.DBConnectionPool().connections)
-        while open_connections > 0:
-            logger.debug(f"Waiting for {open_connections} DB connections to close...")
-            time.sleep(0.1)
 
         logger.debug("Cleaning up WAL and SHM files...")
         api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
@@ -1014,3 +1016,4 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
         "green",
     )
+
