@@ -53,19 +53,19 @@ class RSFetcher(metaclass=util.SingletonMeta):
     def acquire_lockfile(self):
         # Ensure the directory exists
         os.makedirs(self.config["db_dir"], exist_ok=True)
-        logger.debug(f"Ensured that directory {self.config['db_dir']} exists for lockfile.")
+        logger.debug(f"RSFetcher - Ensured that directory {self.config['db_dir']} exists for lockfile.")
 
         try:
             fd = os.open(self.lockfile_path, os.O_CREAT | os.O_RDWR)
             self.lockfile = os.fdopen(fd, "w")
             fcntl.flock(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            logger.debug("Lockfile acquired.")
+            logger.debug("RSFetcher - Lockfile acquired.")
         except IOError as e:
             if e.errno in (errno.EACCES, errno.EAGAIN):
-                logger.error(f"Another instance is running. Unable to acquire lockfile: {e}")
+                logger.error(f"RSFetcher - Another instance is running. Unable to acquire lockfile: {e}")
                 raise RuntimeError("Failed to acquire lockfile.") from e
             else:
-                logger.error(f"Unexpected error acquiring lockfile: {e}")
+                logger.error(f"RSFetcher - Unexpected error acquiring lockfile: {e}")
                 raise
 
     def release_lockfile(self):
@@ -73,9 +73,9 @@ class RSFetcher(metaclass=util.SingletonMeta):
             if not self.lockfile.closed:
                 fcntl.flock(self.lockfile, fcntl.LOCK_UN)
                 self.lockfile.close()
-                logger.debug("Lockfile released.")
+                logger.debug("RSFetcher - Lockfile released.")
             else:
-                logger.debug("Lockfile was already closed.")
+                logger.debug("RSFetcher - Lockfile was already closed.")
             os.remove(self.lockfile_path)
 
     def start(self, start_height=0):
