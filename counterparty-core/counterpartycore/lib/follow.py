@@ -80,7 +80,8 @@ class BlockchainWatcher:
         sentry.init()
         self.zmq_sequence_address, self.zmq_rawblock_address = get_zmq_notifications_addresses()
         self.db = db
-        self.loop = asyncio.get_event_loop()
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
         self.connect_to_zmq()
         self.mempool_block = []
         self.mempool_block_hashes = []
@@ -223,24 +224,44 @@ class BlockchainWatcher:
         self.check_software_version_if_needed()
         util.BLOCK_PARSER_STATUS = "following"
 
-        # sequence topic
-        if not config.NO_MEMPOOL:
-            await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
-        # check rawblock topic
-        check_block_delay = 10 if config.NETWORK_NAME == "mainnet" else 0.5
-        if time.time() - self.last_block_check_time > check_block_delay:
-            await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
-            self.last_block_check_time = time.time()
+        while True:
+            try:
+                # sequence topic
+                if not config.NO_MEMPOOL:
+                    await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
+                # check rawblock topic
+                check_block_delay = 10 if config.NETWORK_NAME == "mainnet" else 0.5
+                if time.time() - self.last_block_check_time > check_block_delay:
+                    await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
+                    self.last_block_check_time = time.time()
 
-        # schedule ourselves to receive the next message
-        asyncio.ensure_future(self.handle())
+                # Yield control to the event loop to allow other tasks to run
+                await asyncio.sleep(0)
+            except asyncio.CancelledError:
+                logger.debug("BlockchainWatcher.handle() was cancelled.")
+                break  # Exit the loop if the task is cancelled
+            except Exception as e:
+                logger.error("Error in handle loop: %s", e)
+                capture_exception(e)
+                break  # Optionally break the loop on other exceptions
 
     def start(self):
         logger.debug("Starting blockchain watcher...")
-        self.loop.create_task(self.handle())
+        # Schedule the handle coroutine once
+        self.task = self.loop.create_task(self.handle())
         self.loop.run_forever()
 
     def stop(self):
         logger.debug("Stopping blockchain watcher...")
+        # Cancel the handle task
+        self.task.cancel()
+        try:
+            # Run the event loop until the task has been cancelled
+            self.loop.run_until_complete(self.task)
+        except asyncio.CancelledError:
+            logger.debug("BlockchainWatcher.handle() cancelled successfully.")
+        # Stop and close the event loop
         self.loop.stop()
+        self.loop.close()
+        # Clean up ZMQ context
         self.zmq_context.destroy()
