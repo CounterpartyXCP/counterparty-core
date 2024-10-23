@@ -14,6 +14,18 @@ DispenserStatus = Literal["all", "open", "closed", "closing", "open_empty_addres
 DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}
 DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}
 FairmintersStatus = Literal["all", "open", "closed", "pending"]
+IssuancesAssetEvents = Literal[
+    "all",
+    "creation",
+    "reissuance",
+    "lock_quantity",
+    "reset",
+    "change_description",
+    "transfer",
+    "open_fairminter",
+    "fairmint",
+    "lock_description",
+]
 
 BetMatchesStatus = Literal[
     "dropped",
@@ -1146,17 +1158,40 @@ def get_destructions(
     )
 
 
-def get_issuances(db, cursor: str = None, limit: int = 100, offset: int = None):
+def prepare_issuance_where(asset_events, other_conditions=None):
+    where = []
+    asset_events_list = asset_events.split(",")
+    for asset_event in asset_events_list:
+        if asset_event == "all":
+            where = [other_conditions] if other_conditions else []
+            break
+        if asset_event in typing.get_args(IssuancesAssetEvents):
+            where_status = {"asset_events__like": f"%{asset_event}%"}
+            if other_conditions:
+                where_status.update(other_conditions)
+            where.append(where_status)
+    return where
+
+
+def get_issuances(
+    db,
+    asset_events: IssuancesAssetEvents = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+):
     """
     Returns all the issuances
     :param str cursor: The last index of the issuances to return
+    :param str asset_events: Filter result by one or several comma separated asset events
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = prepare_issuance_where(asset_events, {"status": "valid"})
     return select_rows(
         db,
         "issuances",
-        where={"status": "valid"},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1164,19 +1199,26 @@ def get_issuances(db, cursor: str = None, limit: int = 100, offset: int = None):
 
 
 def get_issuances_by_block(
-    db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    block_index: int,
+    asset_events: IssuancesAssetEvents = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the issuances of a block
     :param int block_index: The index of the block to return (e.g. $LAST_ISSUANCE_BLOCK)
+    :param str asset_events: Filter result by one or several comma separated asset events
     :param str cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = prepare_issuance_where(asset_events, {"block_index": block_index, "status": "valid"})
     return select_rows(
         db,
         "issuances",
-        where={"block_index": block_index, "status": "valid"},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1192,22 +1234,30 @@ def get_issuance_by_transaction_hash(db, tx_hash: str):
 
 
 def get_issuances_by_asset(
-    db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    asset: str,
+    asset_events: IssuancesAssetEvents = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the issuances of an asset
     :param str asset: The asset to return (e.g. $ASSET_1)
+    :param str asset_events: Filter result by one or several comma separated asset events
     :param str cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = prepare_issuance_where(
+        asset_events, {"asset": asset.upper(), "status": "valid"}
+    ) + prepare_issuance_where(
+        asset_events, {"UPPER(asset_longname)": asset.upper(), "status": "valid"}
+    )
     return select_rows(
         db,
         "issuances",
-        where=[
-            {"asset": asset.upper(), "status": "valid"},
-            {"UPPER(asset_longname)": asset.upper(), "status": "valid"},
-        ],
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1215,19 +1265,26 @@ def get_issuances_by_asset(
 
 
 def get_issuances_by_address(
-    db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    db,
+    address: str,
+    asset_events: IssuancesAssetEvents = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the issuances of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str asset_events: Filter result by one or several comma separated asset events
     :param str cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = prepare_issuance_where(asset_events, {"issuer": address, "status": "valid"})
     return select_rows(
         db,
         "issuances",
-        where={"issuer": address, "status": "valid"},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,

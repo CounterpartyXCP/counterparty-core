@@ -8343,6 +8343,25 @@
                         "description": "The index of the block to return (e.g. $LAST_ISSUANCE_BLOCK)"
                     },
                     {
+                        "name": "asset_events",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "creation",
+                            "reissuance",
+                            "lock_quantity",
+                            "reset",
+                            "change_description",
+                            "transfer",
+                            "open_fairminter",
+                            "fairmint",
+                            "lock_description"
+                        ],
+                        "description": "Filter result by one or several comma separated asset events"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -10269,6 +10288,25 @@
                         "required": true,
                         "type": "str",
                         "description": "The address to return (e.g. $ADDRESS_1)"
+                    },
+                    {
+                        "name": "asset_events",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "creation",
+                            "reissuance",
+                            "lock_quantity",
+                            "reset",
+                            "change_description",
+                            "transfer",
+                            "open_fairminter",
+                            "fairmint",
+                            "lock_description"
+                        ],
+                        "description": "Filter result by one or several comma separated asset events"
                     },
                     {
                         "name": "cursor",
@@ -14850,6 +14888,25 @@
                         "description": "The asset to return (e.g. $ASSET_1)"
                     },
                     {
+                        "name": "asset_events",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "creation",
+                            "reissuance",
+                            "lock_quantity",
+                            "reset",
+                            "change_description",
+                            "transfer",
+                            "open_fairminter",
+                            "fairmint",
+                            "lock_description"
+                        ],
+                        "description": "Filter result by one or several comma separated asset events"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -16489,6 +16546,25 @@
                 "function": "get_issuances",
                 "description": "Returns all the issuances",
                 "args": [
+                    {
+                        "name": "asset_events",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "creation",
+                            "reissuance",
+                            "lock_quantity",
+                            "reset",
+                            "change_description",
+                            "transfer",
+                            "open_fairminter",
+                            "fairmint",
+                            "lock_description"
+                        ],
+                        "description": "Filter result by one or several comma separated asset events"
+                    },
                     {
                         "name": "cursor",
                         "default": null,

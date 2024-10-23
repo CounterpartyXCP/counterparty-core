@@ -651,13 +651,15 @@ SCENARIO = [
             },
             {
                 "url": "addresses/$ADDRESS_6/balances/MYASSETA",
-                "result": {
-                    "address": None,
-                    "asset": "MYASSETA",
-                    "quantity": 1500000000,
-                    "utxo": "$TX_HASH:0",
-                    "utxo_address": "$ADDRESS_6",
-                },
+                "result": [
+                    {
+                        "address": None,
+                        "asset": "MYASSETA",
+                        "quantity": 1500000000,
+                        "utxo": "$TX_HASH:0",
+                        "utxo_address": "$ADDRESS_6",
+                    }
+                ],
             },
         ],
     },

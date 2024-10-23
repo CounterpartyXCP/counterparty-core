@@ -26,6 +26,7 @@ Backwards-incompatible change
 - Add `status` argument for Fairminters routes
 - Made `/blocks/last` faster by adding an index to the `ledger_hash` field
 - `/v2/addresses/<address>/sweeps` now also searches by the `destination` field
+- Add `asset_events` argument for Issuances routes
 
 ## CLI
 
