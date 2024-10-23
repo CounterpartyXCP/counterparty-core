@@ -282,6 +282,8 @@ def select_rows(
         query = f"{query} OFFSET ?"
         bindings.append(offset)
 
+    print(query, bindings)
+
     with start_sentry_span(op="db.sql.execute", description=query) as sql_span:
         sql_span.set_tag("db.system", "sqlite3")
         cursor.execute(query, bindings)
@@ -1564,13 +1566,13 @@ def get_balances_by_addresses(
     return QueryResult(result, assets_result.next_cursor, assets_result.result_count)
 
 
-def get_balance_by_address_and_asset(db, address: str, asset: str):
+def get_balances_by_address_and_asset(db, address: str, asset: str):
     """
-    Returns the balance of an address and asset
+    Returns the balances of an address and asset
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset: The asset to return (e.g. XCP)
     """
-    return select_row(
+    return select_rows(
         db,
         "balances",
         select="address, asset, quantity, utxo, utxo_address",
@@ -1581,13 +1583,13 @@ def get_balance_by_address_and_asset(db, address: str, asset: str):
     )
 
 
-def get_balance_by_asset_and_address(db, asset: str, address: str):
+def get_balances_by_asset_and_address(db, asset: str, address: str):
     """
-    Returns the balance of an address and asset
+    Returns the balances of an address and asset
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset: The asset to return (e.g. XCP)
     """
-    return get_balance_by_address_and_asset(db, address, asset)
+    return get_balances_by_address_and_asset(db, address, asset)
 
 
 def get_bets(
