@@ -15,6 +15,7 @@ Backwards-incompatible change
 ## Bugfixes
 
 - Correctly catch invalid pubkey in compose API
+- Don't run reparse if unnecessary
 
 ## Codebase
 

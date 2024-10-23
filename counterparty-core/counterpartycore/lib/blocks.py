@@ -1103,6 +1103,9 @@ def generate_progression_message(
 
 
 def reparse(db, block_index=0):
+    if block_index > util.CURRENT_BLOCK_INDEX:
+        logger.debug("Block index is higher than current block index. No need to reparse.")
+        return
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     with log.Spinner(f"Rolling database back to Block {block_index}..."):
