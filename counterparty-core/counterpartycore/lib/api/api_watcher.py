@@ -945,7 +945,7 @@ class APIWatcher(threading.Thread):
                 last_parsed_event = parse_next_event(self.api_db, self.ledger_db, self)
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
-                self.stop_event.wait(timeout=0.1)
+                self.stop_event.wait(timeout=1)
             if self.stop_event.is_set():
                 break
             if time.time() - self.last_mempool_sync > 10 and (
