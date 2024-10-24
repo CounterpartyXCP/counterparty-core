@@ -1166,7 +1166,11 @@ def prepare_issuance_where(asset_events, other_conditions=None):
             where = [other_conditions] if other_conditions else []
             break
         if asset_event in typing.get_args(IssuancesAssetEvents):
-            where_status = {"asset_events__like": f"%{asset_event}%"}
+            if asset_event in ["open_fairminter", "fairmint"]:
+                # these event are always alone
+                where_status = {"asset_events": asset_event}
+            else:
+                where_status = {"asset_events__like": f"%{asset_event}%"}
             if other_conditions:
                 where_status.update(other_conditions)
             where.append(where_status)
