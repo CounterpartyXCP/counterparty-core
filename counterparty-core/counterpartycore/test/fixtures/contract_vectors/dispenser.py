@@ -311,8 +311,8 @@ DISPENSER_VECTOR = {
                 "error": (
                     exceptions.ComposeError,
                     [
-                        "dispenser doesn't have enough asset to give",
-                        "dispenser doesn't have enough asset to give",
+                        "dispenser for XCP doesn't have enough asset to give",
+                        "dispenser for TESTDISP doesn't have enough asset to give",
                     ],
                 ),
             },

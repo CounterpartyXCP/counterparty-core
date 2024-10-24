@@ -27,24 +27,36 @@ def get_must_give(db, dispenser, btc_amount, block_index=None):
 
 def validate(db, _source, destination, quantity):
     problems = []
+
     if not util.enabled("enable_dispense_tx"):
         problems.append("dispense tx is not enabled")
+        return problems
+
     dispensers = ledger.get_dispensers(db, address=destination)
     if len(dispensers) == 0:
         problems.append("address doesn't have any open dispenser")
+        return problems
+
     for dispenser in dispensers:
+        dispenser_problems = []
         if dispenser["status"] != dispenser_module.STATUS_OPEN:
-            problems.append("dispenser is not open")
+            dispenser_problems.append(f"dispenser for {dispenser['asset']} is not open")
         if dispenser["give_remaining"] == 0:
-            problems.append("dispenser is empty")
+            dispenser_problems.append(f"dispenser for {dispenser['asset']} is empty")
         else:
             try:
                 must_give = get_must_give(db, dispenser, quantity) * dispenser["give_quantity"]
                 logger.debug("must_give: %s", must_give)
                 if must_give > dispenser["give_remaining"]:
-                    problems.append("dispenser doesn't have enough asset to give")
+                    dispenser_problems.append(
+                        f"dispenser for {dispenser['asset']} doesn't have enough asset to give"
+                    )
             except exceptions.NoPriceError as e:
-                problems.append(str(e))
+                dispenser_problems.append(str(e))
+        # no error if at least one dispenser is valid
+        if len(dispenser_problems) == 0 and util.enabled("accept_only_one_valid_dispenser"):
+            return []
+        problems += dispenser_problems
     return problems
 
 
