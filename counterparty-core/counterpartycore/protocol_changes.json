@@ -637,5 +637,12 @@
         }
       }
     }
+  },
+  "accept_only_one_valid_dispenser": {
+    "minimum_version_major": 11,
+    "minimum_version_minor": 1,
+    "minimum_version_revision": 0,
+    "block_index": 966000,
+    "testnet_block_index": 2925800
   }
 }
