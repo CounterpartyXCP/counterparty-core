@@ -21,6 +21,7 @@ Backwards-incompatible change
 
 ## Codebase
 
+- Use lock file to ensure only one running RSFetcher
 
 ## API
 
