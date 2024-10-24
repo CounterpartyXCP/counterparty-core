@@ -290,6 +290,7 @@ class RegtestNode:
             _bg=True,
             _out=self.server_out,
             _err_to_out=True,
+            _bg_exc=False,
         )
         self.wait_for_counterparty_follower()
 
@@ -380,6 +381,7 @@ class RegtestNode:
             _bg=True,
             _out=self.server_out,
             _err_to_out=True,
+            _bg_exc=False,
         )
         self.wait_for_counterparty_follower()
         self.wait_for_counterparty_watcher()
@@ -399,6 +401,7 @@ class RegtestNode:
             150,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
             _out=sys.stdout,
             _err_to_out=True,
+            _bg_exc=False,
         )
         self.check_node_state(command, state_before)
         print(f"`{command}` successful")
