@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.6.0 (2024-10-??)
+# Release Notes - Counterparty Core v10.6.0 (2024-10-24)
 
 TODO
 
@@ -14,7 +14,7 @@ Backwards-incompatible change
 
 ## Protocol Changes
 
-- Dispense is triggered if at least one dispenser on an address is valid, not only if all are valid
+- From block 868200 Dispense is triggered if at least one dispenser on an address is valid, not only if all are valid
 
 ## Bugfixes
 
