@@ -28,6 +28,7 @@ This release is a protocol change from mainnet block 868,200 (in about one week)
 ## Codebase
 
 - Use a lock file for RS Fetcher thread
+- Add checkpoint for block 867290
 
 ## API
 
