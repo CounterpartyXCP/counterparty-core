@@ -32,6 +32,7 @@ This release also includes a bugfix for chained UTXO movements within the same b
 ## Codebase
 
 - Use a lock file for RS Fetcher thread
+- Add checkpoint for block 867290
 
 ## API
 
