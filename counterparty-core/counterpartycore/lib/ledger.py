@@ -406,7 +406,8 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
         credit_address = None
         utxo = address
         utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
-        UTXOBalancesCache(db).add_balance(utxo)
+        if block_index != config.MEMPOOL_BLOCK_INDEX and not util.PARSING_MEMPOOL:
+            UTXOBalancesCache(db).add_balance(utxo)
 
     add_to_balance(db, address, asset, quantity, tx_index, utxo_address)
 
@@ -473,6 +474,7 @@ class UTXOBalancesCache(metaclass=util.SingletonMeta):
         return utxo in self.utxos_with_balance
 
     def add_balance(self, utxo):
+        logger.warning(f"Adding balance for utxo {utxo}")
         self.utxos_with_balance[utxo] = True
 
 
