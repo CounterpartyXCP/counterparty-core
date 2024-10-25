@@ -663,6 +663,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "1c5164faca831bb726666eb6c63e5d8fd4070b382706c30f839ed407526c7de4",
         "txlist_hash": "a536d8a1b2b3cf6164b9a2cd70edd2efaea615340e11291eebb6201c762aaaf5",
     },
+    867290: {
+        "ledger_hash": "4b5c0ab384408c9e7268c24887f3d2265a0b045f5a161e3343d15cf861b7d07c",
+        "txlist_hash": "b32df1c46cde54f9eb1075652634276d5fb997a85ca7394c6566810475b30c00",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET = 7
@@ -916,12 +920,15 @@ class SanityError(Exception):
     pass
 
 
-def asset_conservation(db):
+def asset_conservation(db, stop_event=None):
     logger.debug("Checking for conservation of assets.")
     with db:
         supplies = ledger.supplies(db)
         held = ledger.held(db)
         for asset in supplies.keys():
+            if stop_event is not None and stop_event.is_set():
+                logger.debug("Stop event received. Exiting asset conservation check...")
+                return
             asset_issued = supplies[asset]
             asset_held = held[asset] if asset in held and held[asset] != None else 0  # noqa: E711
             if asset_issued != asset_held:
@@ -965,9 +972,7 @@ def check_change(protocol_change, change_name):
         explanation = f"Your version of {config.APP_NAME} is v{config.VERSION_STRING}, but, "
         explanation += f"as of block {protocol_change['block_index']}, the minimum version is "
         explanation += f"v{protocol_change['minimum_version_major']}.{protocol_change['minimum_version_minor']}.{protocol_change['minimum_version_revision']}. "
-        explanation += (
-            f"Reason: ‘{change_name}’. Please upgrade to the latest version and restart the server."
-        )
+        explanation += f"Reason: ' {change_name} '. Please upgrade to the latest version and restart the server."
         if util.CURRENT_BLOCK_INDEX >= protocol_change["block_index"]:
             raise VersionUpdateRequiredError(explanation)
         else:
@@ -1062,6 +1067,9 @@ def database_version(db):
             # and set an arbitrary value different from config.VERSION_PRE_RELEASE
             version_pre_release = "xxxx"
         if version_pre_release != config.VERSION_PRE_RELEASE:
-            message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
+            if version_pre_release == "xxxx":
+                message = "`VERSION_STRING` not found in dataase. "
+            else:
+                message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
             message += "Checking if a reparse is needed..."
             check_need_reparse(version_minor, message)

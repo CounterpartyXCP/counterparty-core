@@ -250,6 +250,7 @@ class WSGIApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
+        logger.info(f"Starting WSGI Server: {config.WSGI_SERVER}")
         if config.WSGI_SERVER == "gunicorn":
             self.server = GunicornApplication(self.app, self.args)
         elif config.WSGI_SERVER == "werkzeug":
@@ -258,7 +259,9 @@ class WSGIApplication:
             self.server = WaitressApplication(self.app, self.args)
 
     def run(self):
+        logger.info("Starting WSGI Server thread...")
         self.server.run()
 
     def stop(self):
+        logger.info("Stopping WSGI Server thread...")
         self.server.stop()

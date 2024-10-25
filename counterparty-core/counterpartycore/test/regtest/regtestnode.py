@@ -105,7 +105,8 @@ class RegtestNode:
         self.wait_for_counterparty_server()
         if return_only_data:
             params["return_only_data"] = True
-        params["exact_fee"] = 10000  # fixed fee
+        if "exact_fee" not in params:
+            params["exact_fee"] = 10000  # fixed fee
         query_string = urllib.parse.urlencode(params)
         if tx_name in ["detach", "movetoutxo"]:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
@@ -228,6 +229,8 @@ class RegtestNode:
             "-zmqpubrawblock=tcp://0.0.0.0:29333",
             "-fallbackfee=0.0002",
             "-acceptnonstdtxn",
+            "-minrelaytxfee=0",
+            "-blockmintxfee=0",
             f"-datadir={self.datadir}",
             _bg=True,
             _out=sys.stdout,
@@ -248,6 +251,8 @@ class RegtestNode:
             f"-datadir={self.datadir}/node2",
             "-port=28444",
             "-rpcport=28443",
+            "-minrelaytxfee=0",
+            "-blockmintxfee=0",
             _bg=True,
             _out=sys.stdout,
         )
@@ -290,6 +295,7 @@ class RegtestNode:
             _bg=True,
             _out=self.server_out,
             _err_to_out=True,
+            _bg_exc=False,
         )
         self.wait_for_counterparty_follower()
 
@@ -380,6 +386,7 @@ class RegtestNode:
             _bg=True,
             _out=self.server_out,
             _err_to_out=True,
+            _bg_exc=False,
         )
         self.wait_for_counterparty_follower()
         self.wait_for_counterparty_watcher()
@@ -399,6 +406,7 @@ class RegtestNode:
             150,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
             _out=sys.stdout,
             _err_to_out=True,
+            _bg_exc=False,
         )
         self.check_node_state(command, state_before)
         print(f"`{command}` successful")

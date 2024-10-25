@@ -590,6 +590,10 @@ def get_tx_info(db, decoded_tx, block_index):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     if util.enabled("utxo_support", block_index=block_index):
         utxos_info = get_utxos_info(db, decoded_tx)
+        # update utxo balances cache before parsing the transaction
+        # to catch chained utxo moves
+        if len(utxos_info) > 1 and not util.PARSING_MEMPOOL:
+            ledger.UTXOBalancesCache(db).add_balance(utxos_info[-1])
     else:
         utxos_info = []
     try:

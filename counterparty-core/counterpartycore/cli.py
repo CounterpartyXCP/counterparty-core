@@ -351,6 +351,7 @@ CONFIG_ARGS = [
             "help": "number of threads per worker for the Gunicorn WSGI server (if enabled)",
         },
     ],
+    [("--bootstrap-url",), {"type": str, "help": "the URL of the bootstrap snapshot to use"}],
 ]
 
 
@@ -456,9 +457,6 @@ def main():
 
     parser_bootstrap = subparsers.add_parser(
         "bootstrap", help="bootstrap database with hosted snapshot"
-    )
-    parser_bootstrap.add_argument(
-        "--bootstrap-url", help="the URL of the bootstrap snapshot to use"
     )
     setup.add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
 

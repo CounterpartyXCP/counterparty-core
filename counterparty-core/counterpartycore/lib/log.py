@@ -1,6 +1,7 @@
 import decimal
 import logging
 import sys
+import threading
 import time
 import traceback
 from datetime import datetime
@@ -122,6 +123,14 @@ class CustomisedJSONFormatter(JSONFormatter):
         return super(CustomisedJSONFormatter, self).json_record(message, extra, record)
 
 
+class SQLiteFilter(logging.Filter):
+    def filter(self, record):
+        if "SQLITE" in record.getMessage():
+            record.levelno = logging.DEBUG
+            record.levelname = "DEBUG"
+        return True
+
+
 def set_up(
     verbose=0,
     quiet=True,
@@ -141,6 +150,10 @@ def set_up(
 
     logger = logging.getLogger(config.LOGGER_NAME)
 
+    # Add the SQLite filter to the logger
+    sqlite_filter = SQLiteFilter()
+    logger.addFilter(sqlite_filter)
+
     log_level = logging.ERROR
     if quiet:
         log_level = logging.ERROR
@@ -155,6 +168,9 @@ def set_up(
 
     logger.setLevel(log_level)
 
+    # Create a lock for file handlers
+    log_lock = threading.Lock()
+
     # File Logging
     if log_file:
         fileh = RotatingFileHandler(
@@ -162,6 +178,15 @@ def set_up(
         )
         fileh.setLevel(logging.TRACE)
         fileh.setFormatter(CustomisedJSONFormatter())
+
+        # Wrap the emit method to use the lock
+        original_emit = fileh.emit
+
+        def locked_emit(record):
+            with log_lock:
+                original_emit(record)
+
+        fileh.emit = locked_emit
         logger.addHandler(fileh)
 
     if config.LOG_IN_CONSOLE:

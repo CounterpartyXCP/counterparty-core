@@ -56,8 +56,7 @@ def rpc_call(payload, retry=0):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             break
         except KeyboardInterrupt:
-            logger.warning("Interrupted by user")
-            exit(0)
+            raise
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.warning(
                 f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Attempt: {tries})"

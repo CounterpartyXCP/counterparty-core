@@ -4,13 +4,16 @@ from contextlib import contextmanager
 
 import apsw
 import apsw.bestpractice
+import apsw.ext
 import psutil
 from termcolor import cprint
 
 from counterpartycore.lib import config, exceptions, ledger, util
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
+
 logger = logging.getLogger(config.LOGGER_NAME)
+apsw.ext.log_sqlite(logger=logger)
 
 
 def rowtracer(cursor, sql):
@@ -50,7 +53,15 @@ def check_wal_file(db_file):
 
 def get_db_connection(db_file, read_only=True, check_wal=False):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug(f"Creating connection to `{db_file}`...")
+
+    if hasattr(config, "DATABASE") and db_file == config.DATABASE:
+        db_file_name = "Ledger DB"
+    elif hasattr(config, "API_DATABASE") and db_file == config.API_DATABASE:
+        db_file_name = "API DB"
+    else:
+        db_file_name = db_file
+    if hasattr(logger, "trace"):
+        logger.trace(f"Creating connection to {db_file_name}...")
 
     if not read_only and check_wal:
         try:
@@ -240,7 +251,7 @@ def update_version(db):
 
 
 def vacuum(db):
-    logger.info("Starting database VACUUM. This may take awhile...")
+    logger.info("Starting database VACUUM... this may take a while!")
     cursor = db.cursor()
     cursor.execute("VACUUM")
     logger.info("Database VACUUM completed.")

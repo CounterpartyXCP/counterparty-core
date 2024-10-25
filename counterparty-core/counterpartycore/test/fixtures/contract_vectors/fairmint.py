@@ -66,6 +66,14 @@ FAIRMINT_VECTOR = {
                 ),
                 "error": (exceptions.ComposeError, ["asset supply quantity exceeds hard cap"]),
             },
+            {
+                "in": (
+                    ADDR[1],  # source
+                    "FREEFAIRMIN",  # asset
+                    35,  # quantity
+                ),
+                "error": (exceptions.ComposeError, "quantity is not allowed for free fairminters"),
+            },
         ],
         "unpack": [
             {"in": (b"FREEFAIRMIN|0", False), "out": ("FREEFAIRMIN", 0)},

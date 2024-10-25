@@ -604,15 +604,6 @@ def initialise_config(
     config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
     config.GUNICORN_WORKERS = gunicorn_workers
 
-    # Log all config parameters, sorted by key
-    # Filter out default values #TODO: these should be set in a different way
-    custom_config = {
-        k: v
-        for k, v in sorted(config.__dict__.items())
-        if not k.startswith("__") and not k.startswith("DEFAULT_")
-    }
-    logger.debug(f"Config: {custom_config}")
-
 
 def initialise_log_and_config(args):
     # Configuration
@@ -698,30 +689,29 @@ class AssetConservationChecker(threading.Thread):
         self.last_check = 0
         threading.Thread.__init__(self)
         self.db = None
-        self.stopped = False
         self.daemon = True
-        self.running = False
+        self.stop_event = threading.Event()
 
     def run(self):
         self.db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
-        while not self.stopped:
-            self.running = True
-            if time.time() - self.last_check > 60 * 60 * 12:
-                try:
-                    check.asset_conservation(self.db)
-                except check.SanityError as e:
-                    logger.error("Asset conservation check failed: %s" % e)
-                    _thread.interrupt_main()
-                self.last_check = time.time()
-            time.sleep(1)
-        self.running = False
+        try:
+            while not self.stop_event.is_set():
+                if time.time() - self.last_check > 60 * 60 * 12:
+                    try:
+                        check.asset_conservation(self.db, self.stop_event)
+                    except check.SanityError as e:
+                        logger.error("Asset conservation check failed: %s" % e)
+                        _thread.interrupt_main()
+                    self.last_check = time.time()
+                time.sleep(1)
+        finally:
+            if self.db is not None:
+                self.db.close()
+                self.db = None
+            logger.info("Asset Conservation Checker thread stopped.")
 
     def stop(self):
-        self.stopped = True
-        while self.running:
-            time.sleep(0.1)
-        if self.db:
-            self.db.close()
+        self.stop_event.set()
 
 
 def start_all(args):
@@ -733,8 +723,21 @@ def start_all(args):
     asset_conservation_checker = None
     db = None
 
+    # Log all config parameters, sorted by key
+    # Filter out default values #TODO: these should be set in a different way
+    custom_config = {
+        k: v
+        for k, v in sorted(config.__dict__.items())
+        if not k.startswith("__") and not k.startswith("DEFAULT_")
+    }
+    logger.debug(f"Config: {custom_config}")
+
+    def handle_interrupt_signal(signum, frame):
+        logger.warning("Keyboard interrupt received. Shutting down...")
+        raise KeyboardInterrupt
+
     try:
-        # set signal handlers (needed for graceful shutdown on SIGINT/SIGTERM)
+        # Set signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, handle_interrupt_signal)
         signal.signal(signal.SIGTERM, handle_interrupt_signal)
 
@@ -742,33 +745,33 @@ def start_all(args):
         if (
             not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap"
         ) or args.catch_up == "bootstrap-always":
-            bootstrap(no_confirm=True)
+            bootstrap(no_confirm=True, snapshot_url=args.bootstrap_url)
 
-        # initialise database
+        # Initialise database
         db = database.initialise_db()
         blocks.initialise(db)
         blocks.check_database_version(db)
         database.optimize(db)
 
-        # check software version
+        # Check software version
         check.software_version()
 
-        # API Server v2.
+        # API Server v2
         api_server_v2 = api_v2.APIServer()
         api_server_v2.start(args)
-        while not api_server_v2.is_ready():
+        while not api_server_v2.is_ready() and not api_server_v2.has_stopped():
             logger.trace("Waiting for API server to start...")
             time.sleep(0.1)
 
-        # Backend.
+        # Backend
         connect_to_backend()
 
-        # API Status Poller.
+        # API Status Poller
         api_status_poller = api_v1.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
 
-        # API Server v1.
+        # API Server v1
         api_server_v1 = api_v1.APIServer()
         api_server_v1.daemon = True
         api_server_v1.start()
@@ -784,11 +787,16 @@ def start_all(args):
         logger.info("Watching for new blocks...")
         follower_daemon = follow.start_blockchain_watcher(db)
 
+        # Keep the main thread alive
+        while True:
+            time.sleep(1)
+
     except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt!")
+        pass
     except Exception as e:
         logger.error("Exception caught!", exc_info=e)
     finally:
+        # Ensure all services are stopped
         if api_server_v2:
             api_server_v2.stop()
         if telemetry_daemon:
@@ -802,23 +810,33 @@ def start_all(args):
         if follower_daemon:
             follower_daemon.stop()
         if not config.NO_TELEMETRY:
-            TelemetryOneShot().close()
+            TelemetryOneShot.close_instance()
         if db:
             database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()
+
+        # Wait for any leftover DB connections to close
+        open_connections = len(database.DBConnectionPool().connections)
+        while open_connections > 0:
+            logger.warning(f"Waiting for {open_connections} DB connections to close...")
+            time.sleep(0.1)
+            open_connections = len(database.DBConnectionPool().connections)  # Update count
+
+        # Now it's safe to check for WAL files
         try:
             database.check_wal_file(config.DATABASE)
         except exceptions.WALFileFoundError:
             logger.warning(
-                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
+                "Database WAL file detected. To ensure no data corruption has occurred, run `counterparty-server check-db`."
             )
         except exceptions.DatabaseError:
             logger.warning(
                 "Database is in use by another process and was unable to be closed correctly."
             )
-        # Ensure that the last closed connection is not read-only in order to delete WAL and SHM files
+
+        logger.debug("Cleaning up WAL and SHM files...")
         api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
         api_db.close()
         logger.info("Shutdown complete.")

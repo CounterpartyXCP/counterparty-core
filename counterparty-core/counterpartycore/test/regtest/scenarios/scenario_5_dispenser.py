@@ -12,6 +12,8 @@ SCENARIO = [
         },
         "set_variables": {
             "DISPENSER_1_TX_HASH": "$TX_HASH",
+            "DISPENSER_1_TX_INDEX": "$TX_INDEX",
+            "DISPENSER_1_BLOCK_INDEX": "$BLOCK_INDEX",
         },
         "controls": [
             {
@@ -158,7 +160,7 @@ SCENARIO = [
             "dispenser": "$ADDRESS_1",
             "quantity": 4001,
         },
-        "expected_error": ["dispenser doesn't have enough asset to give"],
+        "expected_error": ["dispenser for XCP doesn't have enough asset to give"],
     },
     {
         "title": "Dispense 3: no dispenser error",
@@ -177,6 +179,9 @@ SCENARIO = [
         "params": {
             "dispenser": "$ADDRESS_1",
             "quantity": 4000,
+        },
+        "set_variables": {
+            "DISPENSER_1_LAST_UPDATE_BLOCK_INDEX": "$BLOCK_INDEX",
         },
         "controls": [
             {
@@ -271,7 +276,7 @@ SCENARIO = [
             "dispenser": "$ADDRESS_1",
             "quantity": 4001,
         },
-        "expected_error": ["dispenser is not open", "dispenser is empty"],
+        "expected_error": ["dispenser for XCP is not open", "dispenser for XCP is empty"],
     },
     {
         "title": "Create Dispenser 2: dispenser must be created by source",

@@ -6,6 +6,7 @@ from counterpartycore.lib import (
     config,
     deserialize,
     exceptions,
+    gas,
     gettxinfo,
     message_type,
     messages,
@@ -13,6 +14,7 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
+from counterpartycore.lib.messages.utxo import ID as UTXO_ID
 
 D = decimal.Decimal
 
@@ -641,6 +643,13 @@ def compose_attach(
     )
 
 
+def get_attach_estimate_xcp_fee(db):
+    """
+    Returns the estimated fee for attaching assets to a UTXO.
+    """
+    return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
+
+
 def compose_detach(
     db,
     utxo: str,
@@ -666,7 +675,14 @@ def compose_detach(
     )
 
 
-def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
+def compose_movetoutxo(
+    db,
+    utxo: str,
+    destination: str,
+    more_utxos: str = "",
+    exact_fee: int = None,
+    change_address: str = None,
+):
     """
     Composes a transaction to move assets from UTXO to another UTXO.
     :param utxo: The utxo from which the assets are moved
@@ -701,10 +717,13 @@ def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
 
     tx_hash, vout = utxo.split(":")
 
-    fee_per_kb = backend.bitcoind.fee_per_kb()
-    # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
-    tx_size = (input_count * 148) + (2 * 34) + 10
-    fee = (D(fee_per_kb) / config.UNIT) * (D(tx_size) / 1024)
+    if exact_fee is not None:
+        fee = D(exact_fee) / config.UNIT if exact_fee else 0
+    else:
+        fee_per_kb = backend.bitcoind.fee_per_kb()
+        # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
+        tx_size = (input_count * 148) + (2 * 34) + 10
+        fee = (D(fee_per_kb) / config.UNIT) * (D(tx_size) / 1024)
 
     dust = D("0.0000546")
     change = D(total_value) - dust - fee
@@ -713,7 +732,12 @@ def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
         raise exceptions.ComposeError("Insufficient funds for fee")
 
     inputs = [{"txid": tx_hash, "vout": int(vout)}] + more_utxos_list
-    outputs = [{destination: str(dust)}, {source_address: str(change)}]
+    outputs = [{destination: str(dust)}]
+    if change > 0:
+        change_output_address = change_address or source_address
+        outputs += [{change_output_address: str(change)}]
+    print("inputs", inputs)
+    print("outputs", outputs)
     rawtransaction = backend.bitcoind.createrawtransaction(inputs, outputs)
 
     return {
@@ -876,11 +900,11 @@ def unpack(db, datahex: str, block_index: int = None):
         # Fair Minter
         elif message_type_id == messages.fairminter.ID:
             message_type_name = "fairminter"
-            message_data = messages.fairminter.unpack(message)
+            message_data = messages.fairminter.unpack(message, return_dict=True)
         # Fair Mint
         elif message_type_id == messages.fairmint.ID:
             message_type_name = "fairmint"
-            message_data = messages.fairmint.unpack(message)
+            message_data = messages.fairmint.unpack(message, return_dict=True)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 

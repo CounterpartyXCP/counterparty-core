@@ -645,6 +645,23 @@ SCENARIO = [
                     },
                 ],
             },
+            {
+                "url": "assets/FAIRMINTA",
+                "result": {
+                    "asset": "FAIRMINTA",
+                    "asset_id": "1046814266082",
+                    "asset_longname": "",
+                    "confirmed": True,
+                    "description": "",
+                    "divisible": True,
+                    "first_issuance_block_index": 122,
+                    "issuer": "$ADDRESS_1",
+                    "last_issuance_block_index": 125,
+                    "locked": False,
+                    "owner": "$ADDRESS_1",
+                    "supply": 100 * 10**8,
+                },
+            },
         ],
     },
 ]

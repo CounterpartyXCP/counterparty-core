@@ -19,6 +19,8 @@ only:
 - Blocks > Get Sends By Block > Get Sends By Block
 - Blocks > Get Dispenses By Block > Get Dispenses By Block
 - Blocks > Get Sweeps By Block > Get Sweeps By Block
+- Blocks > Get Fairminters By Block > Get Fairminters By Block
+- Blocks > Get Fairmints By Block > Get Fairmints By Block
 - Transactions > Get Transactions > Get Transactions
 - Transactions > Info > Info
 - Transactions > Info By Tx Hash > Info By Tx Hash
@@ -39,7 +41,7 @@ only:
 - Addresses > Get Events By Addresses > Get Events By Addresses
 - Addresses > Get Mempool Events By Addresses > Get Mempool Events By Addresses
 - Addresses > Get Address Balances > Get Address Balances
-- Addresses > Get Balance By Address And Asset > Get Balance By Address And Asset
+- Addresses > Get Balances By Address And Asset > Get Balances By Address And Asset
 - Addresses > Get Credits By Address > Get Credits By Address
 - Addresses > Get Debits By Address > Get Debits By Address
 - Addresses > Get Broadcasts By Source > Get Broadcasts By Source
@@ -86,10 +88,11 @@ only:
 - Compose > Compose Attach > Compose Attach
 - Compose > Compose Detach > Compose Detach
 - Compose > Compose Movetoutxo > Compose Movetoutxo
+- Compose > Get Attach Estimate Xcp Fee > Get Attach Estimate Xcp Fee
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset > Get Asset
 - Assets > Get Asset Balances > Get Asset Balances
-- Assets > Get Balance By Asset And Address > Get Balance By Asset And Address
+- Assets > Get Balances By Asset And Address > Get Balances By Asset And Address
 - Assets > Get Orders By Asset > Get Orders By Asset
 - Assets > Get Order Matches By Asset > Get Order Matches By Asset
 - Assets > Get Credits By Asset > Get Credits By Asset
