@@ -46,6 +46,7 @@ This release also includes a bugfix for chained UTXO movements within the same b
 - Have `/v2/addresses/<address>/sweeps` now also search by the `destination` field
 - Add `asset_events` argument for Issuances routes
 - Raise an error on `fairmint.compose()` when the fairminter is free and the quantity is not zero
+- Add `get_asset` and `give_asset` arguments for `/v2/orders` route
 
 ## CLI
 
