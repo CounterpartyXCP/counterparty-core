@@ -5,7 +5,7 @@ This release includes a protocol change to fix a regression for the case when th
 
 # Upgrading
 
-This release is a protocol change from mainnet block 868,200 (in about one week). It also includes a backwards-incompatible change in the API:
+This release is a protocol change from mainnet block 868,300 (in about six days). It also includes a backwards-incompatible change in the API:
 
 - `/v2/addresses/<address>/balances/<asset>` and `/v2/assets/<asset>/balances/<address>` now return a list that may include balances attached to UTXOs of `<address>`.
 
@@ -18,7 +18,7 @@ This release also includes a bugfix for chained UTXO movements within the same b
 
 ## Protocol Changes
 
-- Block 868200: Dispenses are now triggered if *at least* one dispenser on the address is valid rather than only if all of them are valid.
+- Block 868300: Dispenses are now triggered if *at least* one dispenser on the address is valid rather than only if all of them are valid.
 
 ## Bugfixes
 
