@@ -474,7 +474,6 @@ class UTXOBalancesCache(metaclass=util.SingletonMeta):
         return utxo in self.utxos_with_balance
 
     def add_balance(self, utxo):
-        logger.warning(f"Adding balance for utxo {utxo}")
         self.utxos_with_balance[utxo] = True
 
 
