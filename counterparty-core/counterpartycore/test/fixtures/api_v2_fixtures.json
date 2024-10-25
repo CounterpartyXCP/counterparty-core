@@ -15433,6 +15433,20 @@
                         "description": "The status of the orders to return"
                     },
                     {
+                        "name": "get_asset",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The get asset to return"
+                    },
+                    {
+                        "name": "give_asset",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The give asset to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,

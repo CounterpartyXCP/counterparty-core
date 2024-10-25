@@ -2261,6 +2261,8 @@ def prepare_order_matches_where(status, other_conditions=None):
 def get_orders(
     db,
     status: OrderStatus = "all",
+    get_asset: str = None,
+    give_asset: str = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2269,16 +2271,23 @@ def get_orders(
     """
     Returns all the orders
     :param str status: The status of the orders to return
+    :param str get_asset: The get asset to return
+    :param str give_asset: The give asset to return
     :param str cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
     """
+    where = {}
+    if get_asset:
+        where["get_asset"] = get_asset.upper()
+    if give_asset:
+        where["give_asset"] = give_asset.upper()
     return select_rows(
         db,
         "orders",
         cursor_field="tx_index",
-        where=prepare_order_where(status),
+        where=prepare_order_where(status, where),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
