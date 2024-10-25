@@ -14363,6 +14363,18 @@
                         "description": "The additional utxos to fund the transaction"
                     },
                     {
+                        "name": "exact_fee",
+                        "default": null,
+                        "required": false,
+                        "type": "int"
+                    },
+                    {
+                        "name": "change_address",
+                        "default": null,
+                        "required": false,
+                        "type": "str"
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
