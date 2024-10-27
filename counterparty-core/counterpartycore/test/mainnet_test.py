@@ -217,3 +217,8 @@ def test_mainnet_healthz(skip):
     print(response.json())
     assert response.status_code == 200
     assert response.json()["result"]["status"] == "Healthy"
+
+    response = requests.get(f"{LOCAL_API_URL}/healthz?check_type=heavy", timeout=10)
+    print(response.json())
+    assert response.status_code == 200
+    assert response.json()["result"]["status"] == "Healthy"

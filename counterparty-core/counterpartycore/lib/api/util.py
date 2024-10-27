@@ -57,7 +57,7 @@ def healthz_heavy(db):
             "quantity": 100000000,
         },
         allow_unconfirmed_inputs=True,
-        fee=1000,
+        exact_fee=1000,
     )
 
 
