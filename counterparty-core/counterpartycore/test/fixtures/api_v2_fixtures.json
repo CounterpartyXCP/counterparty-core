@@ -12569,18 +12569,32 @@
                         "description": "comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2)"
                     },
                     {
+                        "name": "memos",
+                        "default": null,
+                        "required": false,
+                        "type": "list",
+                        "description": "One `memos` argument by send, if any"
+                    },
+                    {
+                        "name": "memos_are_hex",
+                        "default": null,
+                        "required": false,
+                        "type": "bool",
+                        "description": "Whether the memos are in hexadecimal format"
+                    },
+                    {
                         "name": "memo",
                         "default": null,
                         "required": false,
                         "type": "str",
-                        "description": "The Memo associated with this transaction (e.g. \"Hello, world!\")"
+                        "description": "The Memo associated with this transaction, used by default for all sends if no `memos` are specified"
                     },
                     {
                         "name": "memo_is_hex",
                         "default": false,
                         "required": false,
                         "type": "bool",
-                        "description": "Whether the memo field is a hexadecimal string (e.g. False)"
+                        "description": "Whether the memo field is a hexadecimal string"
                     },
                     {
                         "name": "encoding",

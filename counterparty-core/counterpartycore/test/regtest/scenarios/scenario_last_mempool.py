@@ -1,4 +1,18 @@
 SCENARIO = [
+    # open order for dredd Cancel test
+    {
+        "title": "Open Sell XCP for BTC order",
+        "transaction": "order",
+        "source": "$ADDRESS_1",
+        "params": {
+            "give_asset": "XCP",
+            "give_quantity": 1000,
+            "get_asset": "BTC",
+            "get_quantity": 1000,
+            "expiration": 21,
+            "fee_required": 0,
+        },
+    },
     {
         "title": "Dispense in mempool",
         "transaction": "dispense",
