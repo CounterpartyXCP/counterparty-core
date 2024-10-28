@@ -101,6 +101,14 @@ def validate(db, source, asset_dest_quant_list, block_index):
 def compose(
     db, source: str, asset_dest_quant_list: list, memo: str = None, memo_is_hex: bool = None
 ):
+    """
+    Compose a MPMA send message.
+    :param db: sqlite3 database
+    :param source: source address
+    :param asset_dest_quant_list: list of tuples of the form (asset, destination, quantity, memo, is_hex), where memo and is_hex are optional; if not specified for a send, memo is used.
+    :param memo: optional memo for the entire send
+    :param memo_is_hex: optional boolean indicating if the memo is in hex format
+    """
     cursor = db.cursor()
 
     if memo and not isinstance(memo, str):
