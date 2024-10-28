@@ -98,7 +98,7 @@ def validate(db, source, asset_dest_quant_list, block_index):
     return problems
 
 
-def compose(db, source: str, asset_dest_quant_list: list, memo, memo_is_hex):
+def compose(db, source: str, asset_dest_quant_list: list, memo: str, memo_is_hex: bool):
     cursor = db.cursor()
 
     out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])

@@ -418,8 +418,9 @@ def compose_mpma(
             raise exceptions.ComposeError(
                 "The number of memos must be equal to the number of sends"
             )
-        for i, memo in enumerate(memos):
-            asset_dest_quant_list[i] += (memo, memos_are_hex)
+        for i, send_memo in enumerate(memos):
+            if send_memo:
+                asset_dest_quant_list[i] += (send_memo, memos_are_hex)
 
     params = {
         "source": address,

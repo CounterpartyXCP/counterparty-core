@@ -1,10 +1,3 @@
-from binascii import hexlify
-
-
-def to_hex(x):
-    return hexlify(x.encode()).decode()
-
-
 SCENARIO = [
     {
         "title": "Send XCP",
@@ -75,25 +68,16 @@ SCENARIO = [
         ],
     },
     {
-        "title": "Create asset MYASSETB",
-        "transaction": "issuance",
-        "source": "$ADDRESS_1",
-        "params": {
-            "asset": "MYASSETB",
-            "quantity": 1000 * 10**8,
-            "divisible": True,
-            "description": "My super asset B",
-        },
-    },
-    {
-        "title": "Send MPMA with memo",
+        "title": "Send MPMA",
         "transaction": "mpma",
         "source": "$ADDRESS_1",
         "params": {
-            "assets": "XCP,MYASSETB,MYASSETB",
+            "assets": "XCP,MYASSETA,MYASSETA",
             "quantities": "10,10,10",
             "destinations": "$ADDRESS_2,$ADDRESS_3,$ADDRESS_4",
-            "memo": "the memo",
+        },
+        "set_variables": {
+            "SEND_2_HASH": "$TX_HASH",
         },
         "controls": [
             {
@@ -106,7 +90,7 @@ SCENARIO = [
                             "asset": "XCP",
                             "block_index": "$BLOCK_INDEX",
                             "destination": "$ADDRESS_2",
-                            "memo": "the memo",
+                            "memo": None,
                             "msg_index": 2,
                             "quantity": 10,
                             "source": "$ADDRESS_1",
@@ -120,10 +104,10 @@ SCENARIO = [
                         "event": "MPMA_SEND",
                         "event_index": "$EVENT_INDEX_9",
                         "params": {
-                            "asset": "MYASSETB",
+                            "asset": "MYASSETA",
                             "block_index": "$BLOCK_INDEX",
                             "destination": "$ADDRESS_4",
-                            "memo": "the memo",
+                            "memo": None,
                             "msg_index": 1,
                             "quantity": 10,
                             "source": "$ADDRESS_1",
@@ -137,10 +121,10 @@ SCENARIO = [
                         "event": "MPMA_SEND",
                         "event_index": "$EVENT_INDEX_8",
                         "params": {
-                            "asset": "MYASSETB",
+                            "asset": "MYASSETA",
                             "block_index": "$BLOCK_INDEX",
                             "destination": "$ADDRESS_3",
-                            "memo": "the memo",
+                            "memo": None,
                             "msg_index": 0,
                             "quantity": 10,
                             "source": "$ADDRESS_1",
@@ -172,7 +156,7 @@ SCENARIO = [
                         "params": {
                             "action": "mpma send",
                             "address": "$ADDRESS_1",
-                            "asset": "MYASSETB",
+                            "asset": "MYASSETA",
                             "block_index": "$BLOCK_INDEX",
                             "event": "$TX_HASH",
                             "quantity": 20,
@@ -203,7 +187,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "address": "$ADDRESS_4",
-                            "asset": "MYASSETB",
+                            "asset": "MYASSETA",
                             "block_index": "$BLOCK_INDEX",
                             "calling_function": "mpma send",
                             "event": "$TX_HASH",
@@ -219,156 +203,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "address": "$ADDRESS_3",
-                            "asset": "MYASSETB",
-                            "block_index": "$BLOCK_INDEX",
-                            "calling_function": "mpma send",
-                            "event": "$TX_HASH",
-                            "quantity": 10,
-                            "tx_index": "$TX_INDEX",
-                            "utxo": None,
-                            "utxo_address": None,
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                ],
-            },
-        ],
-    },
-    {
-        "title": "Send MPMA with memos for each send",
-        "transaction": "mpma",
-        "source": "$ADDRESS_1",
-        "params": {
-            "assets": "XCP,MYASSETB,MYASSETB",
-            "quantities": "10,10,10",
-            "destinations": "$ADDRESS_2,$ADDRESS_3,$ADDRESS_4",
-            "memos": ["memo1", "memo2", "memo3"],
-        },
-        "controls": [
-            {
-                "url": "blocks/$BLOCK_INDEX/events?event_name=MPMA_SEND,CREDIT,DEBIT",
-                "result": [
-                    {
-                        "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_10",
-                        "params": {
-                            "asset": "XCP",
-                            "block_index": "$BLOCK_INDEX",
-                            "destination": "$ADDRESS_2",
-                            "memo": "memo1",
-                            "msg_index": 2,
-                            "quantity": 10,
-                            "source": "$ADDRESS_1",
-                            "status": "valid",
-                            "tx_hash": "$TX_HASH",
-                            "tx_index": "$TX_INDEX",
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
-                        "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_9",
-                        "params": {
-                            "asset": "MYASSETB",
-                            "block_index": "$BLOCK_INDEX",
-                            "destination": "$ADDRESS_4",
-                            "memo": "memo3",
-                            "msg_index": 1,
-                            "quantity": 10,
-                            "source": "$ADDRESS_1",
-                            "status": "valid",
-                            "tx_hash": "$TX_HASH",
-                            "tx_index": "$TX_INDEX",
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
-                        "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_8",
-                        "params": {
-                            "asset": "MYASSETB",
-                            "block_index": "$BLOCK_INDEX",
-                            "destination": "$ADDRESS_3",
-                            "memo": "memo2",
-                            "msg_index": 0,
-                            "quantity": 10,
-                            "source": "$ADDRESS_1",
-                            "status": "valid",
-                            "tx_hash": "$TX_HASH",
-                            "tx_index": "$TX_INDEX",
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
-                        "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_7",
-                        "params": {
-                            "action": "mpma send",
-                            "address": "$ADDRESS_1",
-                            "asset": "XCP",
-                            "block_index": "$BLOCK_INDEX",
-                            "event": "$TX_HASH",
-                            "quantity": 10,
-                            "tx_index": "$TX_INDEX",
-                            "utxo": None,
-                            "utxo_address": None,
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
-                        "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_6",
-                        "params": {
-                            "action": "mpma send",
-                            "address": "$ADDRESS_1",
-                            "asset": "MYASSETB",
-                            "block_index": "$BLOCK_INDEX",
-                            "event": "$TX_HASH",
-                            "quantity": 20,
-                            "tx_index": "$TX_INDEX",
-                            "utxo": None,
-                            "utxo_address": None,
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
-                        "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_5",
-                        "params": {
-                            "address": "$ADDRESS_2",
-                            "asset": "XCP",
-                            "block_index": "$BLOCK_INDEX",
-                            "calling_function": "mpma send",
-                            "event": "$TX_HASH",
-                            "quantity": 10,
-                            "tx_index": "$TX_INDEX",
-                            "utxo": None,
-                            "utxo_address": None,
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
-                        "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_4",
-                        "params": {
-                            "address": "$ADDRESS_4",
-                            "asset": "MYASSETB",
-                            "block_index": "$BLOCK_INDEX",
-                            "calling_function": "mpma send",
-                            "event": "$TX_HASH",
-                            "quantity": 10,
-                            "tx_index": "$TX_INDEX",
-                            "utxo": None,
-                            "utxo_address": None,
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
-                        "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_3",
-                        "params": {
-                            "address": "$ADDRESS_3",
-                            "asset": "MYASSETB",
+                            "asset": "MYASSETA",
                             "block_index": "$BLOCK_INDEX",
                             "calling_function": "mpma send",
                             "event": "$TX_HASH",
