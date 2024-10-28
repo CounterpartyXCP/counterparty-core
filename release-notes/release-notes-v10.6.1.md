@@ -11,6 +11,7 @@
 
 - Fix heavy healthz check 
 - In `mpma.compose()`, raise a `ComposeError` if `memo` is not a string or `memo_is_hex` is not a boolean
+- Update API v2 process to use `config.API_LOG` for log file
 
 ## Codebase
 
