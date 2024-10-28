@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v10.6.1 (2024-10-28)
 
-This is a minor release to address a few small bugs in the API v2, especially for MPMA, and to fill out API support for the management of assets attached to UTXOs.
+This is a minor release to address a few small bugs in the v2 API, especially for MPMA, and to fill out API support for the management of assets attached to UTXOs.
 
 
 # Upgrading
