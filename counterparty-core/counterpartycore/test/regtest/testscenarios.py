@@ -57,7 +57,7 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_18_utxo.SCENARIO
+# SCENARIOS = scenario_12_send.SCENARIO
 
 
 def compare_strings(string1, string2):

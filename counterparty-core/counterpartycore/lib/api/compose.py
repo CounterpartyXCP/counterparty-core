@@ -381,6 +381,8 @@ def compose_mpma(
     assets: str,
     destinations: str,
     quantities: str,
+    memos: list = None,
+    memos_are_hex: bool = None,
     memo: str = None,
     memo_is_hex: bool = False,
     **construct_args,
@@ -391,8 +393,10 @@ def compose_mpma(
     :param assets: comma-separated list of assets to send (e.g. XCP,$ASSET_5)
     :param destinations: comma-separated list of addresses to send to (e.g. $ADDRESS_1,$ADDRESS_2)
     :param quantities: comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2)
-    :param memo: The Memo associated with this transaction (e.g. "Hello, world!")
-    :param memo_is_hex: Whether the memo field is a hexadecimal string (e.g. False)
+    :param memos: One `memos` argument by send, if any
+    :param memos_are_hex: Whether the memos are in hexadecimal format
+    :param memo: The Memo associated with this transaction, used by default for all sends if no `memos` are specified
+    :param memo_is_hex: Whether the memo field is a hexadecimal string
     """
     asset_list = assets.split(",")
     destination_list = destinations.split(",")
@@ -406,6 +410,16 @@ def compose_mpma(
             raise exceptions.ComposeError("Quantity must be an integer")
     quantity_list = [int(quantity) for quantity in quantity_list]
     asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
+
+    if memos:
+        if not isinstance(memos, list):
+            raise exceptions.ComposeError("Memos must be a list")
+        if len(memos) != len(asset_dest_quant_list):
+            raise exceptions.ComposeError(
+                "The number of memos must be equal to the number of sends"
+            )
+        for i, memo in enumerate(memos):
+            asset_dest_quant_list[i] += (memo, memos_are_hex)
 
     params = {
         "source": address,
@@ -736,8 +750,6 @@ def compose_movetoutxo(
     if change > 0:
         change_output_address = change_address or source_address
         outputs += [{change_output_address: str(change)}]
-    print("inputs", inputs)
-    print("outputs", outputs)
     rawtransaction = backend.bitcoind.createrawtransaction(inputs, outputs)
 
     return {
