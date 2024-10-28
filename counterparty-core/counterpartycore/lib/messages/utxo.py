@@ -117,11 +117,15 @@ def compose(db, source, destination, asset, quantity):
     data += struct.pack(f">{len(data_content)}s", data_content)
 
     source_address = source
+    destinations = []
     # if source is a UTXO, we get the corresponding address
-    if util.is_utxo_format(source):
+    if util.is_utxo_format(source):  # detach from utxo
         source_address, _value = backend.bitcoind.get_utxo_address_and_value(source)
+    elif not destination:  # attach to utxo
+        # if no destination, we use the source address as the destination
+        destinations.append((source_address, None))
 
-    return (source_address, [], data)
+    return (source_address, destinations, data)
 
 
 def unpack(message, return_dict=False):
