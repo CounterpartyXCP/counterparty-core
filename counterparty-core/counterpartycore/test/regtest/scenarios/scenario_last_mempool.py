@@ -21,7 +21,7 @@ SCENARIO = [
         "params": {
             "dispenser": "$ADDRESS_6",
             "quantity": 1000,
-            "unspents_set": "$ATOMICSWAP_2_TX_HASH:1",
+            "inputs_set": "$ATOMICSWAP_2_TX_HASH:1",
             "exact_fee": 1,
         },
         "expected_error": "invalid UTXO: $ATOMICSWAP_2_TX_HASH:1",
@@ -34,7 +34,7 @@ SCENARIO = [
         "params": {
             "dispenser": "$ADDRESS_6",
             "quantity": 1000,
-            "unspents_set": "ATOMICSWAP_2_TX_HASH:1",
+            "inputs_set": "$ATOMICSWAP_2_TX_HASH:1",
             "use_utxos_with_balances": True,
             "exact_fee": 1,
         },
