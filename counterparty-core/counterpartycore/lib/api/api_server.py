@@ -174,11 +174,14 @@ def prepare_args(route, **kwargs):
         if arg_name in function_args:
             continue
 
-        str_arg = request.args.get(arg_name)
-        if str_arg is not None and str_arg.lower() == "none":
+        str_arg = query_params().get(arg_name)
+        if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() == "none":
             str_arg = None
         if str_arg is None and arg["required"]:
             raise ValueError(f"Missing required parameter: {arg_name}")
+
+        if arg["type"] != "list" and isinstance(str_arg, list):
+            str_arg = str_arg[0]  # we take the first argument
 
         if str_arg is None:
             function_args[arg_name] = arg["default"]
@@ -194,6 +197,11 @@ def prepare_args(route, **kwargs):
                 function_args[arg_name] = float(str_arg)
             except ValueError as e:
                 raise ValueError(f"Invalid float: {arg_name}") from e
+        elif arg["type"] == "list":
+            if not isinstance(str_arg, list):
+                function_args[arg_name] = [str_arg]
+            else:
+                function_args[arg_name] = str_arg
         else:
             function_args[arg_name] = str_arg
 
@@ -245,13 +253,18 @@ def get_transaction_name(rule):
     return "".join([part.capitalize() for part in ROUTES[rule]["function"].__name__.split("_")])
 
 
+def query_params():
+    params = request.args.to_dict(flat=False)
+    return {key: value[0] if len(value) == 1 else value for key, value in params.items()}
+
+
 @auth.login_required
 def handle_route(**kwargs):
     if request.method == "OPTIONS":
         return handle_options()
 
     start_time = time.time()
-    query_args = request.args.to_dict() | kwargs
+    query_args = query_params() | kwargs
 
     logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
     logger.debug(get_log_prefix(query_args))
