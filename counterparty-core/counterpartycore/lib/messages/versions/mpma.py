@@ -98,8 +98,15 @@ def validate(db, source, asset_dest_quant_list, block_index):
     return problems
 
 
-def compose(db, source: str, asset_dest_quant_list: list, memo: str, memo_is_hex: bool):
+def compose(
+    db, source: str, asset_dest_quant_list: list, memo: str = None, memo_is_hex: bool = None
+):
     cursor = db.cursor()
+
+    if memo and not isinstance(memo, str):
+        raise exceptions.ComposeError("`memo` must be a string")
+    if memo_is_hex and not isinstance(memo_is_hex, bool):
+        raise exceptions.ComposeError("`memo_is_hex` must be a boolean")
 
     out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
     for asset, quantity in out_balances:
