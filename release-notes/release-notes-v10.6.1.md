@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.6.1 (2024-10-??)
+# Release Notes - Counterparty Core v10.6.1 (2024-10-28)
 
 
 # Upgrading
@@ -22,6 +22,8 @@
 
 - Added `memos` and `memos_are_hex` parameters to the MPMA compose API. When using MPMA sends, one memo must be provided for each destination if these parameters are used.
 - Add `/v2/utxos/<utxo>/balances` route
+- By default, exclude UTXOs containing balances when composing transactions
+- Add `use_utxos_with_balances` and `exclude_utxos_with_balances` parameter to the compose API
 
 ## CLI
 

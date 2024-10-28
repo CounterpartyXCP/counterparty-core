@@ -222,11 +222,21 @@ def run_item(node, item, context):
         except ComposeError as e:
             if "expected_error" in item:
                 try:
-                    assert (str(item["expected_error"]),) == e.args
+                    expected_result = item["expected_error"]
+                    if isinstance(item["expected_error"], list):
+                        assert (str(item["expected_error"]),) == e.args
+                    else:
+                        for name, value in context.items():
+                            if name.endswith("_INDEX"):
+                                expected_result = expected_result.replace(f'"${name}"', value)
+                            else:
+                                expected_result = expected_result.replace(f"${name}", value)
+                        print(expected_result, str(e))
+                        assert expected_result == str(e)
                     print(f"{item['title']}: " + colored("Success", "green"))
                 except AssertionError:
                     print(colored(f"Failed: {item['title']}", "red"))
-                    print(f"Expected: {item['expected_error']}")
+                    print(f"Expected: {expected_result}")
                     print(f"Got: {str(e)}")
                     # raise e
             else:
