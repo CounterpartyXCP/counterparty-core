@@ -254,7 +254,7 @@ def construct_coin_selection(
         for utxo in unspent:
             str_input = f"{utxo['txid']}:{utxo['vout']}"
             if len(ledger.get_utxo_balances(db, str_input)) > 0:
-                if not exclude_utxos_with_balances:
+                if not exclude_utxos_with_balances and inputs_set:
                     raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
             else:
                 filtered_unspent.append(utxo)
