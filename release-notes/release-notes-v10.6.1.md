@@ -12,6 +12,7 @@
 - Fix heavy healthz check 
 - In `mpma.compose()`, raise a `ComposeError` if `memo` is not a string or `memo_is_hex` is not a boolean
 - Update API v2 process to use `config.API_LOG` for log file
+- When composing an Attach transaction without a destination address, create a dust output to the source address
 
 ## Codebase
 
