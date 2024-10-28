@@ -131,12 +131,12 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "(API v1 only) Returns a single hex-encoded string instead of an array",
     ),
-    "use_utxo_with_balances": (
+    "use_utxos_with_balances": (
         bool,
         False,
         "Use UTXO with balances",
     ),
-    "exclude_utxo_with_balances": (
+    "exclude_utxos_with_balances": (
         bool,
         False,
         "Exclude silently UTXO with balances instead of raising an exception",

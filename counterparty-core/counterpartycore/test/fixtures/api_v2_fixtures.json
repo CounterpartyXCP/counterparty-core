@@ -11073,10 +11073,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -11270,10 +11277,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -11449,10 +11463,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -11635,10 +11656,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -11814,10 +11842,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -12005,10 +12040,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -12222,10 +12264,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -12413,10 +12462,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -12633,10 +12689,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -12852,10 +12915,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -13061,10 +13131,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -13273,10 +13350,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -13464,10 +13548,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -13649,10 +13740,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -13940,10 +14038,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -14126,10 +14231,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -14318,10 +14430,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -14509,10 +14628,17 @@
                         "required": false
                     },
                     {
-                        "name": "use_utxo_with_balances",
+                        "name": "use_utxos_with_balances",
                         "type": "bool",
                         "default": false,
                         "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {

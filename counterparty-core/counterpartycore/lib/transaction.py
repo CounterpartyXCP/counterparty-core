@@ -191,8 +191,8 @@ def construct(
     p2sh_source_multisig_pubkeys=None,
     p2sh_source_multisig_pubkeys_required=None,
     p2sh_pretx_txid=None,
-    use_utxo_with_balances=False,
-    exclude_utxo_with_balances=False,
+    use_utxos_with_balances=False,
+    exclude_utxos_with_balances=False,
 ):
     # Extract tx_info
     (source, destinations, data) = tx_info
@@ -259,8 +259,8 @@ def construct(
         multisig_dust_size,
         disable_utxo_locks,
         exclude_utxos,
-        use_utxo_with_balances,
-        exclude_utxo_with_balances,
+        use_utxos_with_balances,
+        exclude_utxos_with_balances,
     )
 
     """Finish"""
