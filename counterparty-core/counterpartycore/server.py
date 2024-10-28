@@ -605,7 +605,7 @@ def initialise_config(
     config.GUNICORN_WORKERS = gunicorn_workers
 
 
-def initialise_log_and_config(args):
+def initialise_log_and_config(args, api=False):
     # Configuration
     init_args = {
         "data_dir": args.data_dir,
@@ -671,7 +671,7 @@ def initialise_log_and_config(args):
     log.set_up(
         verbose=config.VERBOSE,
         quiet=config.QUIET,
-        log_file=config.LOG,
+        log_file=config.LOG if not api else config.API_LOG,
         json_logs=config.JSON_LOGS,
         max_log_file_size=config.MAX_LOG_FILE_SIZE,
         max_log_file_rotations=config.MAX_LOG_FILE_ROTATIONS,

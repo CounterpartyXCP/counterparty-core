@@ -397,7 +397,7 @@ def run_api_server(args, server_ready_value, stop_event):
 
     # Initialize Sentry, logging, config, etc.
     sentry.init()
-    server.initialise_log_and_config(argparse.Namespace(**args))
+    server.initialise_log_and_config(argparse.Namespace(**args), api=True)
 
     watcher = api_watcher.APIWatcher()
     watcher.start()
