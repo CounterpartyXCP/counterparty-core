@@ -4738,6 +4738,11 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/utxos/<utxo>/balances?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
     "http://localhost:10009/v2/assets?verbose=true": {
         "result": [
             {
@@ -10803,6 +10808,53 @@
                         "default": null,
                         "required": false,
                         "type": "int"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/utxos/<utxo>/balances": {
+                "function": "get_utxo_balances",
+                "description": "Returns the balances of an utxo",
+                "args": [
+                    {
+                        "name": "utxo",
+                        "required": true,
+                        "type": "str",
+                        "description": "The utxo to return (e.g. $UTXO_WITH_BALANCE)"
+                    },
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the balances to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of balances to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
                     },
                     {
                         "name": "verbose",

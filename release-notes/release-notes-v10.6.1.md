@@ -21,6 +21,7 @@
 ## API
 
 - Added `memos` and `memos_are_hex` parameters to the MPMA compose API. When using MPMA sends, one memo must be provided for each destination if these parameters are used.
+- Add `/v2/utxos/<utxo>/balances` route
 
 ## CLI
 
