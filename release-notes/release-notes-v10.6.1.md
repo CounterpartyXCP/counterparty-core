@@ -9,7 +9,8 @@
 
 ## Bugfixes
 
-- Fix heavy healthz check 
+- Fix heavy healthz check
+- Update API v2 process to use `config.API_LOG` for log file
 
 ## Codebase
 
