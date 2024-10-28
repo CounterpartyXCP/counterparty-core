@@ -70,6 +70,7 @@ only:
 - Addresses > Get Fairminters By Address > Get Fairminters By Address
 - Addresses > Get Fairmints By Address > Get Fairmints By Address
 - Addresses > Get Fairmints By Address And Asset > Get Fairmints By Address And Asset
+- Utxos > Get Utxo Balances > Get Utxo Balances
 - Compose > Compose Broadcast > Compose Broadcast
 - Compose > Compose BTCPay > Compose BTCPay
 - Compose > Compose Burn > Compose Burn

@@ -102,6 +102,19 @@ UTXO_VECTOR = {
                     b"d4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1|mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns|XCP|100",
                 ),
             },
+            {
+                "in": (
+                    ADDR[0],
+                    None,
+                    "XCP",
+                    100,
+                ),
+                "out": (
+                    ADDR[0],
+                    [(ADDR[0], None)],
+                    b"dmn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc||XCP|100",
+                ),
+            },
         ],
         "unpack": [
             {

@@ -209,11 +209,11 @@ def set_up(
     return logger
 
 
-def re_set_up(suffix=""):
+def re_set_up(suffix="", api=False):
     return set_up(
         verbose=config.VERBOSE,
         quiet=config.QUIET,
-        log_file=config.LOG + suffix,
+        log_file=(config.LOG if not api else config.API_LOG) + suffix,
         json_logs=config.JSON_LOGS,
         max_log_file_size=config.MAX_LOG_FILE_SIZE,
         max_log_file_rotations=config.MAX_LOG_FILE_ROTATIONS,

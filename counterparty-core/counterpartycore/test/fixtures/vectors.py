@@ -9129,6 +9129,14 @@ UNITTEST_VECTOR = (
                         ),
                     ),
                 },
+                {
+                    "in": (ADDR[0], [("XCP", ADDR[1], DP["quantity"])], ["memo1"], None),
+                    "error": (exceptions.ComposeError, "`memo` must be a string"),
+                },
+                {
+                    "in": (ADDR[0], [("XCP", ADDR[1], DP["quantity"])], "memo1", "nobool"),
+                    "error": (exceptions.ComposeError, "`memo_is_hex` must be a boolean"),
+                },
             ],
             "parse": [
                 {

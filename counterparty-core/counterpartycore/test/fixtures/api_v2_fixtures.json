@@ -4738,6 +4738,11 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/utxos/<utxo>/balances?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
     "http://localhost:10009/v2/assets?verbose=true": {
         "result": [
             {
@@ -10820,6 +10825,53 @@
                     }
                 ]
             },
+            "/v2/utxos/<utxo>/balances": {
+                "function": "get_utxo_balances",
+                "description": "Returns the balances of an utxo",
+                "args": [
+                    {
+                        "name": "utxo",
+                        "required": true,
+                        "type": "str",
+                        "description": "The utxo to return (e.g. $UTXO_WITH_BALANCE)"
+                    },
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the balances to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of balances to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
             "/v2/addresses/<address>/compose/bet": {
                 "function": "compose_bet",
                 "description": "Composes a transaction to issue a bet against a feed.",
@@ -11021,6 +11073,20 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11211,6 +11277,20 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11380,6 +11460,20 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -11562,6 +11656,20 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11731,6 +11839,20 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -11915,6 +12037,20 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -12128,6 +12264,20 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12309,6 +12459,20 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -12525,6 +12689,20 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12569,18 +12747,32 @@
                         "description": "comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2)"
                     },
                     {
+                        "name": "memos",
+                        "default": null,
+                        "required": false,
+                        "type": "list",
+                        "description": "One `memos` argument by send, if any"
+                    },
+                    {
+                        "name": "memos_are_hex",
+                        "default": null,
+                        "required": false,
+                        "type": "bool",
+                        "description": "Whether the memos are in hexadecimal format"
+                    },
+                    {
                         "name": "memo",
                         "default": null,
                         "required": false,
                         "type": "str",
-                        "description": "The Memo associated with this transaction (e.g. \"Hello, world!\")"
+                        "description": "The Memo associated with this transaction, used by default for all sends if no `memos` are specified"
                     },
                     {
                         "name": "memo_is_hex",
                         "default": false,
                         "required": false,
                         "type": "bool",
-                        "description": "Whether the memo field is a hexadecimal string (e.g. False)"
+                        "description": "Whether the memo field is a hexadecimal string"
                     },
                     {
                         "name": "encoding",
@@ -12720,6 +12912,20 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -12922,6 +13128,20 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -13130,6 +13350,20 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13314,6 +13548,20 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13489,6 +13737,20 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -13776,6 +14038,20 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13952,6 +14228,20 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {
@@ -14140,6 +14430,20 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14321,6 +14625,20 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
+                        "name": "exclude_utxos_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Exclude silently UTXO with balances instead of raising an exception",
                         "required": false
                     },
                     {

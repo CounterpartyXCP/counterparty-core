@@ -107,7 +107,17 @@ class RegtestNode:
             params["return_only_data"] = True
         if "exact_fee" not in params:
             params["exact_fee"] = 10000  # fixed fee
-        query_string = urllib.parse.urlencode(params)
+
+        query_string = []
+        for key, value in params.items():
+            print(key, value)
+            if not isinstance(value, list):
+                query_string.append(urllib.parse.urlencode({key: value}))
+            else:
+                for i in range(len(value)):
+                    query_string.append(urllib.parse.urlencode({key: value[i]}))
+        query_string = "&".join(query_string)
+
         if tx_name in ["detach", "movetoutxo"]:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
         else:

@@ -7,7 +7,7 @@ import threading
 import bitcoin as bitcoinlib
 import cachetools
 
-from counterpartycore.lib import backend, config, exceptions, script, util
+from counterpartycore.lib import backend, config, exceptions, ledger, script, util
 from counterpartycore.lib.transaction_helper import p2sh_serializer, transaction_outputs
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -169,6 +169,7 @@ def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
 
 
 def construct_coin_selection(
+    db,
     size_for_fee,
     encoding,
     data_array,
@@ -186,6 +187,8 @@ def construct_coin_selection(
     multisig_dust_size,
     disable_utxo_locks,
     exclude_utxos,
+    use_utxos_with_balances,
+    exclude_utxos_with_balances,
 ):
     if inputs_set:
         if isinstance(inputs_set, str):
@@ -242,7 +245,22 @@ def construct_coin_selection(
         # self.logger.debug(f"Sorted candidate UTXOs: {[print_coin(coin) for coin in unspent]}")
         use_inputs = unspent
 
-    use_inputs = unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
+    # remove locked UTXOs
+    unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
+
+    # remove UTXOs with balances if not specified
+    if not use_utxos_with_balances:
+        filtered_unspent = []
+        for utxo in unspent:
+            str_input = f"{utxo['txid']}:{utxo['vout']}"
+            if len(ledger.get_utxo_balances(db, str_input)) > 0:
+                if not exclude_utxos_with_balances and inputs_set:
+                    raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
+            else:
+                filtered_unspent.append(utxo)
+        use_inputs = unspent = filtered_unspent
+    else:
+        use_inputs = unspent
 
     # dont override fee_per_kb if specified
     estimate_fee_per_kb = None
@@ -347,6 +365,7 @@ def construct_coin_selection(
 
 
 def prepare_inputs(
+    db,
     source,
     data,
     destination_outputs,
@@ -367,6 +386,8 @@ def prepare_inputs(
     multisig_dust_size,
     disable_utxo_locks,
     exclude_utxos,
+    use_utxos_with_balances,
+    exclude_utxos_with_balances,
 ):
     btc_in = 0
     final_fee = 0
@@ -397,6 +418,7 @@ def prepare_inputs(
 
     if not (encoding == "p2sh" and p2sh_pretx_txid):
         inputs, change_quantity, n_btc_in, n_final_fee = construct_coin_selection(
+            db,
             size_for_fee,
             encoding,
             data_array,
@@ -414,6 +436,8 @@ def prepare_inputs(
             multisig_dust_size,
             disable_utxo_locks,
             exclude_utxos,
+            use_utxos_with_balances,
+            exclude_utxos_with_balances,
         )
         btc_in = n_btc_in
         final_fee = n_final_fee

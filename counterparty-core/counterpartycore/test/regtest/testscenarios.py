@@ -28,6 +28,7 @@ from scenarios import (
     scenario_16_fairminter,
     scenario_17_dispenser,
     scenario_18_utxo,
+    scenario_19_mpma,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -51,13 +52,14 @@ SCENARIOS += scenario_14_sweep.SCENARIO
 SCENARIOS += scenario_15_destroy.SCENARIO
 SCENARIOS += scenario_17_dispenser.SCENARIO
 SCENARIOS += scenario_18_utxo.SCENARIO
+SCENARIOS += scenario_19_mpma.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_18_utxo.SCENARIO
+# SCENARIOS = scenario_19_mpma.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -220,11 +222,21 @@ def run_item(node, item, context):
         except ComposeError as e:
             if "expected_error" in item:
                 try:
-                    assert (str(item["expected_error"]),) == e.args
+                    expected_result = item["expected_error"]
+                    if isinstance(item["expected_error"], list):
+                        assert (str(item["expected_error"]),) == e.args
+                    else:
+                        for name, value in context.items():
+                            if name.endswith("_INDEX"):
+                                expected_result = expected_result.replace(f'"${name}"', value)
+                            else:
+                                expected_result = expected_result.replace(f"${name}", value)
+                        print(expected_result, str(e))
+                        assert expected_result == str(e)
                     print(f"{item['title']}: " + colored("Success", "green"))
                 except AssertionError:
                     print(colored(f"Failed: {item['title']}", "red"))
-                    print(f"Expected: {item['expected_error']}")
+                    print(f"Expected: {expected_result}")
                     print(f"Got: {str(e)}")
                     # raise e
             else:

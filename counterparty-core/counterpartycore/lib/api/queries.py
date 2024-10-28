@@ -1562,6 +1562,25 @@ def get_address_balances(
     )
 
 
+def get_utxo_balances(db, utxo: str, cursor: str = None, limit: int = 100, offset: int = None):
+    """
+    Returns the balances of an utxo
+    :param str utxo: The utxo to return (e.g. $UTXO_WITH_BALANCE)
+    :param str cursor: The last index of the balances to return
+    :param int limit: The maximum number of balances to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "balances",
+        where={"utxo": utxo, "quantity__gt": 0},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        select="asset, quantity, utxo, utxo_address",
+    )
+
+
 def get_balances_by_addresses(
     db, addresses: str, cursor: str = None, limit: int = 100, offset: int = None, sort: str = None
 ):
