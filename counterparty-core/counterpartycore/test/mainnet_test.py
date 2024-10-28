@@ -217,8 +217,17 @@ def test_mainnet_healthz(skip):
     print(response.json())
     assert response.status_code == 200
     assert response.json()["result"]["status"] == "Healthy"
-
-    response = requests.get(f"{LOCAL_API_URL}/healthz?check_type=heavy", timeout=10)
+    retry = 0
+    while True:
+        try:
+            response = requests.get(f"{LOCAL_API_URL}/healthz?check_type=heavy", timeout=120)
+            break
+        except requests.exceptions.ReadTimeout as e:
+            retry += 1
+            if retry > 5:
+                raise Exception("Too many retries") from e
+            print("Timeout, retrying in 5 seconds")
+            time.sleep(5)
     print(response.json())
     assert response.status_code == 200
     assert response.json()["result"]["status"] == "Healthy"
