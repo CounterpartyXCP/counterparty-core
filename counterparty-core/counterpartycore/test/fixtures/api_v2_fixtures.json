@@ -11073,6 +11073,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11263,6 +11270,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11432,6 +11446,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
                         "required": false
                     },
                     {
@@ -11614,6 +11635,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11783,6 +11811,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
                         "required": false
                     },
                     {
@@ -11967,6 +12002,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
                         "required": false
                     },
                     {
@@ -12180,6 +12222,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12361,6 +12410,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
                         "required": false
                     },
                     {
@@ -12577,6 +12633,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12789,6 +12852,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12988,6 +13058,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
                         "required": false
                     },
                     {
@@ -13196,6 +13273,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13380,6 +13464,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13555,6 +13646,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
                         "required": false
                     },
                     {
@@ -13842,6 +13940,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14018,6 +14123,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
                         "required": false
                     },
                     {
@@ -14206,6 +14318,13 @@
                         "required": false
                     },
                     {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14387,6 +14506,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "(API v1 only) Returns a single hex-encoded string instead of an array",
+                        "required": false
+                    },
+                    {
+                        "name": "use_utxo_with_balances",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Use UTXO with balances",
                         "required": false
                     },
                     {

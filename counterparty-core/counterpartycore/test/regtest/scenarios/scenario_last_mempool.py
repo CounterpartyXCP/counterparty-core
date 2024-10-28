@@ -14,6 +14,19 @@ SCENARIO = [
         },
     },
     {
+        "title": "Dispense in mempool with UTXO with balances",
+        "transaction": "dispense",
+        "source": "$ADDRESS_9",
+        "no_confirmation": True,
+        "params": {
+            "dispenser": "$ADDRESS_6",
+            "quantity": 1000,
+            "unspents_set": "$ATOMICSWAP_2_TX_HASH:1",
+            "exact_fee": 1,
+        },
+        "expected_error": "invalid UTXO: $ATOMICSWAP_2_TX_HASH:1",
+    },
+    {
         "title": "Dispense in mempool",
         "transaction": "dispense",
         "source": "$ADDRESS_9",
@@ -21,6 +34,9 @@ SCENARIO = [
         "params": {
             "dispenser": "$ADDRESS_6",
             "quantity": 1000,
+            "unspents_set": "ATOMICSWAP_2_TX_HASH:1",
+            "use_utxo_with_balances": True,
+            "exact_fee": 1,
         },
         "controls": [
             {

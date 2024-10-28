@@ -134,6 +134,9 @@ SCENARIO = [
                 },
             },
         },
+        "set_variables": {
+            "ATOMICSWAP_2_TX_HASH": "$TX_HASH",
+        },
         "controls": [
             {
                 "url": "blocks/$BLOCK_INDEX/events?event_name=UTXO_MOVE,DEBIT,CREDIT,ASSET_CREATION,ASSET_ISSUANCE",
