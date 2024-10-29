@@ -130,8 +130,8 @@ def compose(db, source, destination, asset, quantity):
             for value in [
                 source,
                 destination or "",
-                asset,
-                quantity,
+                asset or "",
+                quantity or "",
             ]
         ]
     ).encode("utf-8")
@@ -148,18 +148,20 @@ def compose(db, source, destination, asset, quantity):
 def unpack(message, return_dict=False):
     try:
         data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
-        (source, destination_str, asset, quantity) = data_content
-        destination = None if destination_str == "" else destination_str
+        (source, destination, asset, quantity) = data_content
+        destination = destination or None
+        asset = asset or None
+        quantity = int(quantity) if quantity else None
 
         if return_dict:
             return {
                 "source": source,
                 "destination": destination,
                 "asset": asset,
-                "quantity": int(quantity),
+                "quantity": quantity,
             }
 
-        return (source, destination, asset, int(quantity))
+        return (source, destination, asset, quantity)
     except Exception as e:
         raise exceptions.UnpackError(f"Cannot unpack utxo message: {e}") from e
 

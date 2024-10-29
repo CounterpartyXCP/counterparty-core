@@ -107,7 +107,7 @@ def parse_tx(db, tx):
 
     try:
         with db:
-            if "data" in tx and len(tx["data"]) > 1:
+            if tx["data"] and len(tx["data"]) > 1:
                 try:
                     message_type_id, message = message_type.unpack(tx["data"], tx["block_index"])
                 except struct.error:  # Deterministically raised.

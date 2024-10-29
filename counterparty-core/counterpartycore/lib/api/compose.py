@@ -714,6 +714,7 @@ def compose_movetoutxo(
     input_count = 1
     total_value = D("0")
     try:
+        print(utxo)
         source_address, source_value = backend.bitcoind.get_utxo_address_and_value(utxo)
         total_value += D(source_value)
         for more_utxo in more_utxos.split(","):
