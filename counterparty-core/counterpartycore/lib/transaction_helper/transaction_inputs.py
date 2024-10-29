@@ -284,7 +284,7 @@ def construct_coin_selection(
                     "amount": amount,
                 },
             )
-        else:
+        elif included_pos != 0:
             unspent.insert(0, unspent.pop(included_pos))
         use_inputs = unspent
 

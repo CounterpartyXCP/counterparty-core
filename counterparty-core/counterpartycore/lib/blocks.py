@@ -117,12 +117,14 @@ def parse_tx(db, tx):
                 message_type_id = None
                 message = None
 
-            if "utxos_info" in tx and tx["utxos_info"]:
-                if not util.enabled("spend_utxo_to_detach"):
-                    utxo.move_assets(db, tx)
-                elif message_type_id != utxo.ID:
-                    # if attach or detach we move assets after parsing
-                    utxo.move_assets(db, tx)
+            # After "spend_utxo_to_detach" protocol change we move assets before parsing
+            # only if the message is not an Attach or Detach, else will be moved after parsing
+            if (
+                "utxos_info" in tx
+                and tx["utxos_info"]
+                and (not util.enabled("spend_utxo_to_detach") or message_type_id != utxo.ID)
+            ):
+                utxo.move_assets(db, tx)
 
             if not tx["source"]:  # utxos move only
                 return
@@ -243,9 +245,13 @@ def parse_tx(db, tx):
                 return False
 
             # if attach or detach we move assets after parsing
-            if "utxos_info" in tx and tx["utxos_info"]:
-                if util.enabled("spend_utxo_to_detach") and message_type_id == utxo.ID:
-                    utxo.move_assets(db, tx)
+            if (
+                "utxos_info" in tx
+                and tx["utxos_info"]
+                and util.enabled("spend_utxo_to_detach")
+                and message_type_id == utxo.ID
+            ):
+                utxo.move_assets(db, tx)
 
             # NOTE: for debugging (check asset conservation after every `N` transactions).
             # if not tx['tx_index'] % N:
