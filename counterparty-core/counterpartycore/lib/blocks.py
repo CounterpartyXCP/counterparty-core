@@ -107,8 +107,22 @@ def parse_tx(db, tx):
 
     try:
         with db:
+            if len(tx["data"]) > 1:
+                try:
+                    message_type_id, message = message_type.unpack(tx["data"], tx["block_index"])
+                except struct.error:  # Deterministically raised.
+                    message_type_id = None
+                    message = None
+            else:
+                message_type_id = None
+                message = None
+
             if "utxos_info" in tx and tx["utxos_info"]:
-                utxo.move_assets(db, tx)
+                if not util.enabled("spend_utxo_to_detach"):
+                    utxo.move_assets(db, tx)
+                elif message_type_id != utxo.ID:
+                    # if attach or detach we move assets after parsing
+                    utxo.move_assets(db, tx)
 
             if not tx["source"]:  # utxos move only
                 return
@@ -124,16 +138,6 @@ def parse_tx(db, tx):
             if tx["destination"] == config.UNSPENDABLE:
                 burn.parse(db, tx, MAINNET_BURNS)
                 return
-
-            if len(tx["data"]) > 1:
-                try:
-                    message_type_id, message = message_type.unpack(tx["data"], tx["block_index"])
-                except struct.error:  # Deterministically raised.
-                    message_type_id = None
-                    message = None
-            else:
-                message_type_id = None
-                message = None
 
             # Protocol change.
             rps_enabled = tx["block_index"] >= 308500 or config.TESTNET or config.REGTEST
@@ -237,6 +241,11 @@ def parse_tx(db, tx):
                 cursor.close()
                 util.CURRENT_TX_HASH = None
                 return False
+
+            # if attach or detach we move assets after parsing
+            if "utxos_info" in tx and tx["utxos_info"]:
+                if util.enabled("spend_utxo_to_detach") and message_type_id == utxo.ID:
+                    utxo.move_assets(db, tx)
 
             # NOTE: for debugging (check asset conservation after every `N` transactions).
             # if not tx['tx_index'] % N:

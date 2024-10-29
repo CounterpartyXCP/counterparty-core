@@ -189,6 +189,7 @@ def construct_coin_selection(
     exclude_utxos,
     use_utxos_with_balances,
     exclude_utxos_with_balances,
+    force_utxo,
 ):
     if inputs_set:
         if isinstance(inputs_set, str):
@@ -253,13 +254,38 @@ def construct_coin_selection(
         filtered_unspent = []
         for utxo in unspent:
             str_input = f"{utxo['txid']}:{utxo['vout']}"
-            if len(ledger.get_utxo_balances(db, str_input)) > 0:
+            if len(ledger.get_utxo_balances(db, str_input)) > 0 and str_input != force_utxo:
                 if not exclude_utxos_with_balances and inputs_set:
                     raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
             else:
                 filtered_unspent.append(utxo)
         use_inputs = unspent = filtered_unspent
     else:
+        use_inputs = unspent
+
+    # forced  utxo always in first position
+    if force_utxo is not None:
+        txid, vout = force_utxo.split(":")
+        included_pos = None
+        for i, v in enumerate(unspent):
+            if v["txid"] == txid and v["vout"] == int(vout):
+                included_pos = i
+                break
+        if included_pos is None:
+            try:
+                amount = backend.bitcoind.get_tx_out_amount(txid, int(vout))
+            except Exception as e:
+                raise exceptions.ComposeError(f"invalid UTXO: {txid}:{vout}") from e
+            unspent.insert(
+                0,
+                {
+                    "txid": txid,
+                    "vout": int(vout),
+                    "amount": amount,
+                },
+            )
+        else:
+            unspent.insert(0, unspent.pop(included_pos))
         use_inputs = unspent
 
     # dont override fee_per_kb if specified
@@ -388,6 +414,7 @@ def prepare_inputs(
     exclude_utxos,
     use_utxos_with_balances,
     exclude_utxos_with_balances,
+    force_utxo,
 ):
     btc_in = 0
     final_fee = 0
@@ -438,6 +465,7 @@ def prepare_inputs(
             exclude_utxos,
             use_utxos_with_balances,
             exclude_utxos_with_balances,
+            force_utxo,
         )
         btc_in = n_btc_in
         final_fee = n_final_fee

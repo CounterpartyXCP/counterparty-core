@@ -12,6 +12,7 @@ import sys
 
 from counterpartycore.lib import (
     arc4,  # noqa: F401 # TODO: need for test: clean that up
+    backend,
     config,
     deserialize,
     exceptions,
@@ -80,6 +81,8 @@ def determine_encoding(
 
 def check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inputs):
     (desired_source, desired_destination_outputs, desired_data) = tx_info
+    if util.is_utxo_format(desired_source):
+        desired_source, _ = backend.bitcoind.get_utxo_address_and_value(desired_source)
     desired_source = script.make_canonical(desired_source)
     desired_destination = (
         script.make_canonical(desired_destination_outputs[0][0])
@@ -195,7 +198,14 @@ def construct(
     exclude_utxos_with_balances=False,
 ):
     # Extract tx_info
-    (source, destinations, data) = tx_info
+    (address_or_utxo, destinations, data) = tx_info
+
+    force_utxo = None
+    if util.is_utxo_format(address_or_utxo):
+        source, _value = backend.bitcoind.get_utxo_address_and_value(address_or_utxo)
+        force_utxo = address_or_utxo
+    else:
+        source = address_or_utxo
 
     # Collect pubkeys
     provided_pubkeys = collect_public_keys(pubkeys)
@@ -261,6 +271,7 @@ def construct(
         exclude_utxos,
         use_utxos_with_balances,
         exclude_utxos_with_balances,
+        force_utxo,
     )
 
     """Finish"""

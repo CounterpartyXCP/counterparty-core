@@ -630,8 +630,8 @@ def compose_utxo(
     db,
     source: str,
     destination: str,
-    asset: str,
-    quantity: int,
+    asset: str = None,
+    quantity: int = None,
     **construct_args,
 ):
     params = {
@@ -679,23 +679,17 @@ def compose_detach(
     db,
     utxo: str,
     destination: str,
-    asset: str,
-    quantity: int,
     **construct_args,
 ):
     """
     Composes a transaction to detach assets from UTXO to an address.
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
     :param destination: The address to detach the assets to (e.g. $ADDRESS_1)
-    :param asset: The asset or subasset to detach (e.g. XCP)
-    :param quantity: The quantity of the asset to detach (in satoshis, hence integer) (e.g. 1000)
     """
     return compose_utxo(
         db,
         source=utxo,
         destination=destination,
-        asset=asset,
-        quantity=quantity,
         **construct_args,
     )
 
