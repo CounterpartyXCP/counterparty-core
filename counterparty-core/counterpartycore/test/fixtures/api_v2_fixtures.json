@@ -9,7 +9,7 @@
                 "difficulty": null,
                 "ledger_hash": "1734f9eb30868d2383fdb38bbda66b1b937209c143632aabc05bf1de167eda66",
                 "txlist_hash": "b5cae1a9f44982ed3dd38f90d95cba93efbe9fd1e55b0f367e45336f3e68f786",
-                "messages_hash": "afb721e64a36bca838751fa2eca929a4fe485fbe69f8fc944e90de74019fd629",
+                "messages_hash": "f3014065513f86e787e801439ff4bc9d96db3169a76b8fc45ad5559621452358",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -21,7 +21,7 @@
                 "difficulty": null,
                 "ledger_hash": "059893c8ed0250380ad8102a8a17d60a92f1abf09000ff41766cbd846aa1efa2",
                 "txlist_hash": "0b912b59131e6aef7fb3313ef75bc138dc1f612d76e77cf583074564ddb6d35c",
-                "messages_hash": "5a3dfae16547617feeeaed1657c4375f36a5cd2dbbbd2fa22e4faf759f3c15b4",
+                "messages_hash": "5079468722ccfde0f3dcb4a6abf6fec96f149c1f7582341ae986af1581851a63",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -33,7 +33,7 @@
                 "difficulty": null,
                 "ledger_hash": "f235ba99322c9bf8dc115d7fe2b5e51db41b06026ac193718e47e89398c621f5",
                 "txlist_hash": "6b6c62d0facf03efea19bf2e8fa69ecd3c433d45a0ca6b3ed57ed0e5d69b1e2f",
-                "messages_hash": "b7a4328312125afc3fb1ea33e0d2bb7b8fae879670b170208355a4a27dc48150",
+                "messages_hash": "270532b89496cd74a4ab268ef002dd1f99c9891eb7141cfc3420bc3347b8aca5",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -45,7 +45,7 @@
                 "difficulty": null,
                 "ledger_hash": "43196ba8bf43fd138dd117cb0a9c1738d3a2c8917c2ea73893647a2ac0fbe0b8",
                 "txlist_hash": "1977d48057c66abe87f0bdffbcf4d501bd4b9fe138c0bc381409bc44bd503084",
-                "messages_hash": "a6aed16c4649d912789340a2a6a297058790efbf230facad044428560dc5836f",
+                "messages_hash": "03cf5a01c933cf5a0cd9c8aee1d2361afab6e5d58cfb55908489d7d97d04fb43",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -57,7 +57,7 @@
                 "difficulty": null,
                 "ledger_hash": "66cf0537b2abf572ae579fdb3512d125c181e2a1835b38f89cfee64113922cd7",
                 "txlist_hash": "d91fc03fd15e2ca4fc59b7be29586b0c8f2942abca45ccb49f2fc84e3eff8f94",
-                "messages_hash": "f9a65859e75811f5fff2ece7af021acfbe3f359717c438b682fbfee5c178a0ea",
+                "messages_hash": "e5b03e0afe7a9cdaeb4c14f83e179b396c2535f78b8c4c247fbaabc6ebfd0a40",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -69,7 +69,7 @@
                 "difficulty": null,
                 "ledger_hash": "aa8b6ca04c8551bacd6f964f2521c07b30d3c07978c992dc59633894ad1baedc",
                 "txlist_hash": "9b6c282c7fb96cbca27fe6b73253cfc31b93ff71dc0d116ebd0d661c33adde58",
-                "messages_hash": "6b61c09bd220de51ea7ce3730d0fb6562e321e30c180ed71088da4b2cc1bd71f",
+                "messages_hash": "d7993ff44510adb26285d51da7fef2d23cd72e989ee5c171a38dcf4634b10297",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -81,7 +81,7 @@
                 "difficulty": null,
                 "ledger_hash": "ae9aa7c4e06059f148a8ed8bf2a4f69c492fac7109a778afbf6cc4d96d36dc55",
                 "txlist_hash": "663e67da5996a4c9877a6c6cb61730798695aee9d89674823917dee2d1ab9708",
-                "messages_hash": "b6a66a5e44254ed9459a2fa8a198d060e218db5dce05a6e3904336be3ec5d0f3",
+                "messages_hash": "ca2f33a558cc343ac306d53de1a448612549da0ff4bc09c4d5e3169d1857f578",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -93,7 +93,7 @@
                 "difficulty": null,
                 "ledger_hash": "75b37c234c5951fb06761175db6d2a9584aa779f35f2f1516ec828230b6b1383",
                 "txlist_hash": "deb12f7c45ab5944a6e08fb2933d3a435860f9e1d8a758486b5e5995258ca973",
-                "messages_hash": "ffd24c9a2503318daab14dd046c526ed11ed3bfd5bb8207cf0048bc689ed4366",
+                "messages_hash": "6d5321aaf517dc3c3a44abf6b1c316a5f5862563ca09776dc858346df54657a4",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -105,7 +105,7 @@
                 "difficulty": null,
                 "ledger_hash": "d5ca4a21b2fbe8121c241c097d9f76156106b345296426b5b55bc4885fba4b80",
                 "txlist_hash": "9b08253a46b87ab3df60af60b519dd0c689c0acaca38bcc33f01000bf6b871d3",
-                "messages_hash": "cdb61ca3479bf5ad207d85590e721983539e58188ddf7f8b539e0e7a02b6463d",
+                "messages_hash": "fd6c47877becac7d5d35eecd98aa2bbf121be99d4808a944d4af1df7452704fc",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -117,7 +117,7 @@
                 "difficulty": null,
                 "ledger_hash": "582bf82bf4bf07a0d20259ae9026e726afcfff035ce715d13a473313dacaa5f1",
                 "txlist_hash": "52939845593123714b4bd665600642d14b61a384befa3498c7582806448150a1",
-                "messages_hash": "44f8b452d9ac57fee090eb5d5626b32a388955bb30c5bca995ec3175e87bb4d0",
+                "messages_hash": "a26a579cc9f06851e8247bb95998d5fd5833770c5acfddfa0f5f1105081e8343",
                 "transaction_count": 0,
                 "confirmed": true
             }
@@ -134,7 +134,7 @@
             "difficulty": null,
             "ledger_hash": "1734f9eb30868d2383fdb38bbda66b1b937209c143632aabc05bf1de167eda66",
             "txlist_hash": "b5cae1a9f44982ed3dd38f90d95cba93efbe9fd1e55b0f367e45336f3e68f786",
-            "messages_hash": "afb721e64a36bca838751fa2eca929a4fe485fbe69f8fc944e90de74019fd629",
+            "messages_hash": "f3014065513f86e787e801439ff4bc9d96db3169a76b8fc45ad5559621452358",
             "transaction_count": 0,
             "confirmed": true
         }
@@ -6229,7 +6229,7 @@
                 "params": {
                     "block_index": 310703,
                     "ledger_hash": "1734f9eb30868d2383fdb38bbda66b1b937209c143632aabc05bf1de167eda66",
-                    "messages_hash": "afb721e64a36bca838751fa2eca929a4fe485fbe69f8fc944e90de74019fd629",
+                    "messages_hash": "f3014065513f86e787e801439ff4bc9d96db3169a76b8fc45ad5559621452358",
                     "transaction_count": 0,
                     "txlist_hash": "b5cae1a9f44982ed3dd38f90d95cba93efbe9fd1e55b0f367e45336f3e68f786",
                     "block_time": 310703000
@@ -6260,7 +6260,7 @@
                 "params": {
                     "block_index": 310702,
                     "ledger_hash": "059893c8ed0250380ad8102a8a17d60a92f1abf09000ff41766cbd846aa1efa2",
-                    "messages_hash": "5a3dfae16547617feeeaed1657c4375f36a5cd2dbbbd2fa22e4faf759f3c15b4",
+                    "messages_hash": "5079468722ccfde0f3dcb4a6abf6fec96f149c1f7582341ae986af1581851a63",
                     "transaction_count": 0,
                     "txlist_hash": "0b912b59131e6aef7fb3313ef75bc138dc1f612d76e77cf583074564ddb6d35c",
                     "block_time": 310702000
@@ -6291,7 +6291,7 @@
                 "params": {
                     "block_index": 310701,
                     "ledger_hash": "f235ba99322c9bf8dc115d7fe2b5e51db41b06026ac193718e47e89398c621f5",
-                    "messages_hash": "b7a4328312125afc3fb1ea33e0d2bb7b8fae879670b170208355a4a27dc48150",
+                    "messages_hash": "270532b89496cd74a4ab268ef002dd1f99c9891eb7141cfc3420bc3347b8aca5",
                     "transaction_count": 0,
                     "txlist_hash": "6b6c62d0facf03efea19bf2e8fa69ecd3c433d45a0ca6b3ed57ed0e5d69b1e2f",
                     "block_time": 310701000
@@ -14474,18 +14474,6 @@
                         "required": true,
                         "type": "str",
                         "description": "The address to detach the assets to (e.g. $ADDRESS_1)"
-                    },
-                    {
-                        "name": "asset",
-                        "required": true,
-                        "type": "str",
-                        "description": "The asset or subasset to detach (e.g. XCP)"
-                    },
-                    {
-                        "name": "quantity",
-                        "required": true,
-                        "type": "int",
-                        "description": "The quantity of the asset to detach (in satoshis, hence integer) (e.g. 1000)"
                     },
                     {
                         "name": "encoding",

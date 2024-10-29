@@ -59,11 +59,11 @@ LEDGER_VECTOR = {
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"1734f9eb30868d2383fdb38bbda66b1b937209c143632aabc05bf1de167eda66","messages_hash":"afb721e64a36bca838751fa2eca929a4fe485fbe69f8fc944e90de74019fd629","transaction_count":0,"txlist_hash":"b5cae1a9f44982ed3dd38f90d95cba93efbe9fd1e55b0f367e45336f3e68f786"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"1734f9eb30868d2383fdb38bbda66b1b937209c143632aabc05bf1de167eda66","messages_hash":"f3014065513f86e787e801439ff4bc9d96db3169a76b8fc45ad5559621452358","transaction_count":0,"txlist_hash":"b5cae1a9f44982ed3dd38f90d95cba93efbe9fd1e55b0f367e45336f3e68f786"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "fedce5d97e17f27770b0093b4c37deaa145b777afe9ffb057cc2d02664686ee6",
+                    "event_hash": "9ea84cde1c958baeda4bb00845dd86f37f9526d118ec201e8e3503e28e36839a",
                 },
             }
         ],

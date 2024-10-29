@@ -29,7 +29,6 @@ UTXO_VECTOR = {
                 "in": (UTXO_1, UTXO_1, "XCP", 100),
                 "out": [
                     "If source is a UTXO, destination must be an address",
-                    "insufficient funds for transfer and fee",
                 ],
             },
             {
@@ -47,7 +46,7 @@ UTXO_VECTOR = {
                     "BTC",
                     100,
                 ),
-                "out": ["cannot send bitcoins", "insufficient funds for transfer"],
+                "out": ["cannot send bitcoins"],
             },
             {
                 "in": (
@@ -56,7 +55,7 @@ UTXO_VECTOR = {
                     "XCP",
                     config.MAX_INT + 1,
                 ),
-                "out": ["integer overflow", "insufficient funds for transfer and fee"],
+                "out": ["integer overflow"],
             },
             {
                 "in": (
@@ -97,7 +96,7 @@ UTXO_VECTOR = {
                     100,
                 ),
                 "out": (
-                    ADDR[0],
+                    UTXO_2,
                     [],
                     b"d4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1|mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns|XCP|100",
                 ),
@@ -144,6 +143,7 @@ UTXO_VECTOR = {
                         "destination": ADDR[0],
                         "block_time": 310501000,
                         "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
+                        "utxos_info": "",
                     },
                 ),
                 "records": [
@@ -224,6 +224,7 @@ UTXO_VECTOR = {
                         "destination": ADDR[0],
                         "block_time": 310501000,
                         "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
+                        "utxos_info": "d4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 d4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
                     },
                 ),
                 "records": [
@@ -272,7 +273,7 @@ UTXO_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","fee_paid":0,"msg_index":0,"quantity":100,"source":"4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","fee_paid":0,"msg_index":1,"quantity":100,"source":"4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "DETACH_FROM_UTXO",
                         },
                     },

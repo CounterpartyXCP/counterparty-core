@@ -88,7 +88,9 @@ def validate(db, source, destination, asset=None, quantity=None, block_index=Non
         fee = 0
 
     if source_is_address and util.enabled("spend_utxo_to_detach"):
-        problems += validate_asset_and_quantity(config.XCP, fee)
+        problems += validate_asset_and_quantity(asset, quantity)
+        if len(problems) > 0:
+            return problems
 
     if source_is_address or not util.enabled("spend_utxo_to_detach"):
         problems += validate_balance(db, source, source_is_address, asset, quantity, fee)

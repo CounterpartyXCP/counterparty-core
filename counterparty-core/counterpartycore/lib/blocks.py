@@ -107,7 +107,7 @@ def parse_tx(db, tx):
 
     try:
         with db:
-            if len(tx["data"]) > 1:
+            if "data" in tx and len(tx["data"]) > 1:
                 try:
                     message_type_id, message = message_type.unpack(tx["data"], tx["block_index"])
                 except struct.error:  # Deterministically raised.
@@ -253,7 +253,10 @@ def parse_tx(db, tx):
             util.CURRENT_TX_HASH = None
             return True
     except Exception as e:
-        raise exceptions.ParseTransactionError(f"{e}")  # noqa: B904
+        import traceback
+
+        print(traceback.format_exc())
+        raise exceptions.ParseTransactionError(f"{e}") from e
     finally:
         cursor.close()
         util.CURRENT_TX_HASH = None

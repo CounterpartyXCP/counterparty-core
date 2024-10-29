@@ -118,18 +118,8 @@ SCENARIO = [
                         "tx_hash": "$TX_HASH",
                     },
                     {
-                        "event": "INCREMENT_TRANSACTION_COUNT",
-                        "event_index": "$EVENT_INDEX_5",
-                        "params": {
-                            "block_index": "$BLOCK_INDEX",
-                            "count": 1,
-                            "transaction_id": 100,
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
                         "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_4",
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "address": None,
                             "asset": "MYASSETA",
@@ -145,7 +135,7 @@ SCENARIO = [
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "action": "attach to utxo",
                             "address": "$ADDRESS_1",
@@ -156,6 +146,16 @@ SCENARIO = [
                             "tx_index": "$TX_INDEX",
                             "utxo": None,
                             "utxo_address": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "INCREMENT_TRANSACTION_COUNT",
+                        "event_index": "$EVENT_INDEX_3",
+                        "params": {
+                            "block_index": "$BLOCK_INDEX",
+                            "count": 1,
+                            "transaction_id": 100,
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -283,7 +283,9 @@ SCENARIO = [
             "destination": "$ADDRESS_5",
             "asset": "MYASSETA",
             "quantity": 5 * 10**8,
-            "exclude_utxos": "$UTXO_MOVE_1_TX_HASH:0",
+        },
+        "set_variables": {
+            "UTXO_DETACH_1_TX_HASH": "$TX_HASH",
         },
         "controls": [
             {
@@ -423,7 +425,7 @@ SCENARIO = [
     {
         "title": "Move assets from 2 UTXOs to UTXO",
         "transaction": "movetoutxo",
-        "source": "$UTXO_MOVE_1_TX_HASH:0",
+        "source": "$UTXO_DETACH_1_TX_HASH:1",
         "params": {
             "destination": "$ADDRESS_6",
             "more_utxos": "$UTXO_ATTACH_2_TX_HASH:0,$UTXO_ATTACH_2_TX_HASH:2",
