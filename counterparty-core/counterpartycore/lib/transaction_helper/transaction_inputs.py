@@ -263,7 +263,7 @@ def construct_coin_selection(
     else:
         use_inputs = unspent
 
-    # forced  utxo always in first position
+    # we want force_utxo to be the first input in unspent list
     if force_utxo is not None:
         txid, vout = force_utxo.split(":")
         included_pos = None
