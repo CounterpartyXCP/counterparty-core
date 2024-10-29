@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import binascii
 import json
 import os
 import signal
@@ -10,6 +11,7 @@ import urllib.parse
 from io import StringIO
 
 import sh
+from counterpartycore.lib import arc4
 
 WALLET_NAME = "xcpwallet"
 
@@ -491,6 +493,58 @@ class RegtestNode:
         print("Burn count after reorganization: ", self.get_burn_count(self.addresses[0]))
         assert "Blockchain reorganization detected" in self.server_out.getvalue()
         assert self.get_burn_count(self.addresses[0]) == 1
+
+    def test_invalid_detach(self):
+        print("Test invalid detach...")
+
+        test_address = self.addresses[7]
+
+        balances = self.api_call(f"addresses/{test_address}/balances/UTXOASSET")["result"]
+        print(balances)
+        utxo = None
+        for balance in balances:
+            if balance["utxo"]:
+                utxo = balance["utxo"]
+                break
+        assert utxo
+        txid, vout = utxo.split(":")
+        data = self.send_transaction(
+            utxo,
+            "detach",
+            {"destination": test_address},
+            return_only_data=True,
+        )
+        data = binascii.unhexlify(data)
+        key = arc4.init_arc4(binascii.unhexlify(txid))
+        data = key.encrypt(data)
+        data = binascii.hexlify(data).decode("utf-8")
+
+        inputs = json.dumps([{"txid": txid, "vout": int(vout)}])
+        outputs = json.dumps({test_address: 200 / 10e8, "data": data})
+
+        raw_transaction = self.bitcoin_cli("createrawtransaction", inputs, outputs).strip()
+        signed_transaction_json = self.bitcoin_wallet(
+            "signrawtransactionwithwallet", raw_transaction
+        ).strip()
+        signed_transaction = json.loads(signed_transaction_json)["hex"]
+
+        retry = 0
+        while True:
+            try:
+                self.broadcast_transaction(signed_transaction)
+                break
+            except sh.ErrorReturnCode_25 as e:
+                retry += 1
+                assert retry < 6
+                print(str(e))
+                print("Sleeping for 5 seconds and retrying...")
+                time.sleep(5)
+
+        balances = self.api_call(f"addresses/{test_address}/balances/UTXOASSET")["result"]
+        for balance in balances:
+            assert balance["utxo"] != utxo
+
+        print("Invalid detach test successful")
 
 
 class RegtestNodeThread(threading.Thread):

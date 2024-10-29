@@ -329,6 +329,8 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 )
                 time.sleep(1)
         else:
+            regtest_node_thread.node.test_invalid_detach()
+
             if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
                 os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
             print("Generating API documentation...")
@@ -339,6 +341,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 _err_to_out=True,
                 _cwd=CURR_DIR,
             )
+
             print("Running Dredd...")
             sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
             print("Tesing reparse...")

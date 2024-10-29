@@ -281,7 +281,6 @@ SCENARIO = [
         "source": "$UTXO_MOVE_1_TX_HASH:0",
         "params": {
             "destination": "$ADDRESS_5",
-            "asset": "MYASSETA",
         },
         "set_variables": {
             "UTXO_DETACH_1_TX_HASH": "$TX_HASH",
