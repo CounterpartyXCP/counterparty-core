@@ -120,18 +120,8 @@ SCENARIO = [
                         "tx_hash": "$TX_HASH",
                     },
                     {
-                        "event": "INCREMENT_TRANSACTION_COUNT",
-                        "event_index": "$EVENT_INDEX_5",
-                        "params": {
-                            "block_index": "$BLOCK_INDEX",
-                            "count": 3,
-                            "transaction_id": 100,
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
                         "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_4",
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "address": None,
                             "asset": "UTXOASSET",
@@ -147,7 +137,7 @@ SCENARIO = [
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "action": "attach to utxo",
                             "address": "$ADDRESS_7",
@@ -158,6 +148,16 @@ SCENARIO = [
                             "tx_index": "$TX_INDEX",
                             "utxo": None,
                             "utxo_address": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "INCREMENT_TRANSACTION_COUNT",
+                        "event_index": "$EVENT_INDEX_3",
+                        "params": {
+                            "block_index": "$BLOCK_INDEX",
+                            "count": 4,
+                            "transaction_id": 100,
                         },
                         "tx_hash": "$TX_HASH",
                     },

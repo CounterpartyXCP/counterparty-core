@@ -55,7 +55,6 @@ def get_utxos_and_change(buyer_address, price_btc):
     # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
     tx_size = (input_count * 148) + (2 * 34) + 10
     fee = D(fee_per_kb) * (D(tx_size) / 1024)
-    print("FEE", fee)
     # Calculate change
     change = D(total_value) - D(price_btc) - D(fee)
     return buyer_utxos, change
@@ -68,8 +67,6 @@ def prepare_buyer_unsigned_psbt(buyer_address, buyer_utxos, change, data=None):
     outputs = [{buyer_address: str(change)}]
     if data:
         outputs = [{"data": data}] + outputs
-        print("DATA", data)
-        print("len", len(data))
     buyer_psbt_outputs = json.dumps(outputs)
     buyer_psbt = bitcoin_cli("createpsbt", buyer_psbt_inputs, buyer_psbt_outputs).strip()
     return buyer_psbt

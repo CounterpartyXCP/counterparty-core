@@ -157,14 +157,14 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
         try:
             assert result["result"] == expected_result
             print(f"{item['title']}: " + colored("Success", "green"))
-        except AssertionError:
+        except AssertionError as e:
             print(colored(f"Failed: {item['title']}", "red"))
             expected_result_str = json.dumps(expected_result, indent=4, sort_keys=True)
             got_result_str = json.dumps(result["result"], indent=4, sort_keys=True)
             print(f"Expected: {expected_result_str}")
             print(f"Got: {got_result_str}")
             compare_strings(expected_result_str, got_result_str)
-            # raise e
+            raise e
 
 
 def run_item(node, item, context):
@@ -234,11 +234,11 @@ def run_item(node, item, context):
                         print(expected_result, str(e))
                         assert expected_result == str(e)
                     print(f"{item['title']}: " + colored("Success", "green"))
-                except AssertionError:
+                except AssertionError as e:
                     print(colored(f"Failed: {item['title']}", "red"))
                     print(f"Expected: {expected_result}")
                     print(f"Got: {str(e)}")
-                    # raise e
+                    raise e
             else:
                 raise e
 
@@ -353,7 +353,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        print(regtest_node_thread.node.server_out.getvalue())
+        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 
