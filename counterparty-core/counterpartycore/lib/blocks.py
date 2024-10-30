@@ -259,9 +259,8 @@ def parse_tx(db, tx):
             util.CURRENT_TX_HASH = None
             return True
     except Exception as e:
-        import traceback
-
-        print(traceback.format_exc())
+        # import traceback
+        # print(traceback.format_exc())
         raise exceptions.ParseTransactionError(f"{e}") from e
     finally:
         cursor.close()
