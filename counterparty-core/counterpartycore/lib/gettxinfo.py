@@ -589,6 +589,8 @@ def get_utxos_info(db, decoded_tx):
 def get_tx_info(db, decoded_tx, block_index):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     if util.enabled("utxo_support", block_index=block_index):
+        # utxos_info is a space-separated list of UTXOs, last element is the destination,
+        # the rest are the inputs with a balance
         utxos_info = get_utxos_info(db, decoded_tx)
         # update utxo balances cache before parsing the transaction
         # to catch chained utxo moves

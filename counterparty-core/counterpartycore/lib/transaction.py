@@ -200,6 +200,8 @@ def construct(
     # Extract tx_info
     (address_or_utxo, destinations, data) = tx_info
 
+    # if source is an utxo we force the construction function to use it in inputs
+    # by passing it as force_utxo
     force_utxo = None
     if util.is_utxo_format(address_or_utxo):
         source, _value = backend.bitcoind.get_utxo_address_and_value(address_or_utxo)

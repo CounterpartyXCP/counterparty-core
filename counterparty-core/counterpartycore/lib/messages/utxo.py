@@ -90,6 +90,8 @@ def validate(db, source, destination, asset=None, quantity=None, block_index=Non
     if not util.enabled("spend_utxo_to_detach"):
         problems += validate_balance(db, source, source_is_address, asset, quantity, fee)
     elif source_is_address:
+        # after "spend_utxo_to_detach" protocol change all assets are detached from the UTXO
+        # so we need to check the balance only for attach
         problems += validate_asset_and_quantity(asset, quantity)
         if len(problems) == 0:
             problems += validate_balance(db, source, source_is_address, asset, quantity, fee)
@@ -202,7 +204,7 @@ def pay_fee(db, tx, action, source, recipient):
     return fee
 
 
-def proceed_send(db, tx, action, source, recipient, asset, quantity, event, fee_paid):
+def move_asset(db, tx, action, source, recipient, asset, quantity, event, fee_paid):
     # debit asset from source and credit to recipient
     ledger.debit(db, source, asset, quantity, tx["tx_index"], action=action, event=tx["tx_hash"])
     ledger.credit(
@@ -214,7 +216,6 @@ def proceed_send(db, tx, action, source, recipient, asset, quantity, event, fee_
         action=action,
         event=tx["tx_hash"],
     )
-    # we store parameters only if the transaction is valid
     bindings = {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
@@ -244,8 +245,12 @@ def parse(db, tx, message):
     # detach if source is a UTXO
     if util.is_utxo_format(source):
         if util.enabled("spend_utxo_to_detach"):
+            # we check if the source UTXO is in the transaction inputs
+            # if yes, utxos_info field must contain the source UTXO
+            # (utxos_info is a space-separated list of UTXOs, last element is the destination,
+            # the rest are the inputs with a balance)
             utxos = tx["utxos_info"].split(" ")
-            if len(utxos) < 2 and source not in utxos[:-1]:
+            if len(utxos) < 2 or source not in utxos[:-1]:
                 problems.append("UTXO not in the transaction inputs")
         else:
             source_address, _value = backend.bitcoind.get_utxo_address_and_value(source)
@@ -272,7 +277,7 @@ def parse(db, tx, message):
             gas.increment_counter(db, ID, tx["block_index"])
 
         if action == "attach to utxo" or not util.enabled("spend_utxo_to_detach"):
-            proceed_send(db, tx, action, source, recipient, asset, quantity, event, fee_paid)
+            move_asset(db, tx, action, source, recipient, asset, quantity, event, fee_paid)
 
         if action == "detach from utxo" and util.enabled("spend_utxo_to_detach"):
             # we detach all the assets from the source UTXO
@@ -280,7 +285,7 @@ def parse(db, tx, message):
             for balance in balances:
                 if balance["quantity"] == 0:
                     continue
-                proceed_send(
+                move_asset(
                     db,
                     tx,
                     action,
@@ -292,7 +297,7 @@ def parse(db, tx, message):
                     fee_paid,
                 )
     else:
-        # store the invalid transaction
+        # store the invalid transaction without potentially invalid parameters
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
