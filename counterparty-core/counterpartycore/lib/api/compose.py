@@ -626,46 +626,28 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     return compose(db, "fairmint", params, **construct_args)
 
 
-def compose_utxo(
-    db,
-    source: str,
-    destination: str,
-    asset: str = None,
-    quantity: int = None,
-    **construct_args,
-):
-    params = {
-        "source": source,
-        "destination": destination,
-        "asset": asset,
-        "quantity": quantity,
-    }
-    return compose(db, "utxo", params, **construct_args)
-
-
 def compose_attach(
     db,
     address: str,
     asset: str,
     quantity: int,
-    destination: str = None,
+    destination_vout: str = None,
     **construct_args,
 ):
     """
     Composes a transaction to attach assets from an address to UTXO.
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
-    :param destination: The utxo to attach the assets to (e.g. $UTXO_1_ADDRESS_1)
     :param asset: The asset or subasset to attach (e.g. XCP)
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
+    :param destination_vout: The vout of the destination output
     """
-    return compose_utxo(
-        db,
-        source=address,
-        destination=destination,
-        asset=asset,
-        quantity=quantity,
-        **construct_args,
-    )
+    params = {
+        "source": address,
+        "asset": asset,
+        "quantity": quantity,
+        "destination_vout": destination_vout,
+    }
+    return compose(db, "attach", params, **construct_args)
 
 
 def get_attach_estimate_xcp_fee(db):
@@ -686,12 +668,11 @@ def compose_detach(
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
     :param destination: The address to detach the assets to (e.g. $ADDRESS_1)
     """
-    return compose_utxo(
-        db,
-        source=utxo,
-        destination=destination,
-        **construct_args,
-    )
+    params = {
+        "source": utxo,
+        "destination": destination,
+    }
+    return compose(db, "detach", params, **construct_args)
 
 
 def compose_movetoutxo(

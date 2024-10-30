@@ -31,18 +31,21 @@ from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
 
 from .messages import (  # noqa: E402
+    attach,
     bet,
     broadcast,
     btcpay,
     burn,
     cancel,
     destroy,
+    detach,
     dispense,
     dispenser,
     dividend,
     fairmint,
     fairminter,
     issuance,
+    move,
     order,
     rps,
     rpsresolve,
@@ -122,9 +125,12 @@ def parse_tx(db, tx):
             if (
                 "utxos_info" in tx
                 and tx["utxos_info"]
-                and (not util.enabled("spend_utxo_to_detach") or message_type_id != utxo.ID)
+                and (
+                    not util.enabled("spend_utxo_to_detach")
+                    or message_type_id not in [attach.ID, detach.ID]
+                )
             ):
-                utxo.move_assets(db, tx)
+                move.move_assets(db, tx)
 
             if not tx["source"]:  # utxos move only
                 return
@@ -209,10 +215,16 @@ def parse_tx(db, tx):
                 "fairminter", block_index=tx["block_index"]
             ):
                 fairmint.parse(db, tx, message)
-            elif message_type_id == utxo.ID and util.enabled(
-                "utxo_support", block_index=tx["block_index"]
+            elif (
+                message_type_id == utxo.ID
+                and util.enabled("utxo_support", block_index=tx["block_index"])
+                and not util.enabled("spend_utxo_to_detach")
             ):
                 utxo.parse(db, tx, message)
+            elif message_type_id == attach.ID and util.enabled("spend_utxo_to_detach"):
+                attach.parse(db, tx, message)
+            elif message_type_id == detach.ID and util.enabled("spend_utxo_to_detach"):
+                detach.parse(db, tx, message)
             else:
                 supported = False
 
@@ -249,9 +261,9 @@ def parse_tx(db, tx):
                 "utxos_info" in tx
                 and tx["utxos_info"]
                 and util.enabled("spend_utxo_to_detach")
-                and message_type_id == utxo.ID
+                and message_type_id in [attach.ID, detach.ID]
             ):
-                utxo.move_assets(db, tx)
+                move.move_assets(db, tx)
 
             # NOTE: for debugging (check asset conservation after every `N` transactions).
             # if not tx['tx_index'] % N:
