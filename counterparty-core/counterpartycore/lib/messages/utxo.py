@@ -279,8 +279,6 @@ def parse(db, tx, message):
     if problems:
         status = "invalid: " + "; ".join(problems)
 
-    logger.warning(f"UTXO: {source} -> {recipient} ({tx['tx_hash']}) [status: {status}]")
-
     if status == "valid":
         fee_paid = pay_fee(db, tx, action, source, recipient)
 

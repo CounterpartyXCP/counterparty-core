@@ -497,29 +497,42 @@ class RegtestNode:
     def test_invalid_detach(self):
         print("Test invalid detach...")
 
-        test_address = self.addresses[7]
-
-        balances = self.api_call(f"addresses/{test_address}/balances/UTXOASSET")["result"]
+        balances = self.api_call("assets/UTXOASSET/balances")["result"]
         print(balances)
         utxo = None
+        test_address = None
         for balance in balances:
-            if balance["utxo"]:
+            if balance["utxo"] and balance["quantity"] > 0:
                 utxo = balance["utxo"]
+                test_address = balance["utxo_address"]
                 break
         assert utxo
         txid, vout = utxo.split(":")
+
         data = self.send_transaction(
             utxo,
             "detach",
-            {"destination": test_address},
+            {"destination": test_address, "exact_fee": 1},
             return_only_data=True,
         )
+
+        list_unspent = json.loads(
+            self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([test_address])).strip()
+        )
+        for utxo in list_unspent:
+            if utxo["txid"] != txid or utxo["vout"] != int(vout):
+                selected_utxo = utxo
+                break
+
         data = binascii.unhexlify(data)
-        key = arc4.init_arc4(binascii.unhexlify(txid))
+        key = arc4.init_arc4(binascii.unhexlify(selected_utxo["txid"]))
         data = key.encrypt(data)
         data = binascii.hexlify(data).decode("utf-8")
 
-        inputs = json.dumps([{"txid": txid, "vout": int(vout)}])
+        # correct input should be:
+        # inputs = json.dumps([{"txid": txid, "vout": int(vout)}])
+        # but we use the wrong input to test the invalid detach
+        inputs = json.dumps([selected_utxo])
         outputs = json.dumps({test_address: 200 / 10e8, "data": data})
 
         raw_transaction = self.bitcoin_cli("createrawtransaction", inputs, outputs).strip()
@@ -531,7 +544,7 @@ class RegtestNode:
         retry = 0
         while True:
             try:
-                self.broadcast_transaction(signed_transaction)
+                tx_hash, _block_hash, _block_time = self.broadcast_transaction(signed_transaction)
                 break
             except sh.ErrorReturnCode_25 as e:
                 retry += 1
@@ -540,9 +553,19 @@ class RegtestNode:
                 print("Sleeping for 5 seconds and retrying...")
                 time.sleep(5)
 
+        # utxo balance should be greater than 0
         balances = self.api_call(f"addresses/{test_address}/balances/UTXOASSET")["result"]
         for balance in balances:
-            assert balance["utxo"] != utxo
+            if balance["utxo"]:
+                assert balance["quantity"] > 0
+                break
+
+        # we should have a new event with status "invalid"
+        events = self.api_call(f"transactions/{tx_hash}/events?event_name=DETACH_FROM_UTXO")[
+            "result"
+        ]
+        print(events)
+        assert events[0]["params"]["status"] == "invalid: UTXO not in the transaction inputs"
 
         print("Invalid detach test successful")
 
