@@ -27,5 +27,8 @@
 
 # Credits
 
+* OpenStamp
+* DerpHerpenstein
 * Ouziel Slama
+* Wilfred Denton
 * Adam Krellenstein
