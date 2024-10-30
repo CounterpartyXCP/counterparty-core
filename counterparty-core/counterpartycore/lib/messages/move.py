@@ -1,6 +1,6 @@
 import logging
 
-from counterpartylib.lib import config, ledger
+from counterpartycore.lib import config, ledger
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

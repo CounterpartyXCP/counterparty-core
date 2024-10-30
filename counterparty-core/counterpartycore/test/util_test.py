@@ -245,6 +245,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     cursor = db.cursor()
 
     tx_hash = dummy_tx_hash(raw_transaction)
+    print("DUMMY TX HASH", tx_hash)
 
     # this isn't really correct, but it will do
     tx_index = list(

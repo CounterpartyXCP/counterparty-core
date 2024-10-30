@@ -134,9 +134,9 @@ TX Construct - Transaction constructed.
 TX Construct - Transaction constructed.
 20 A160361285792733729 minted for 200 XCP by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 TX Construct - Transaction constructed.
-Attach XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883) [valid]
+Attach XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 8cee0dcb5fc541ccff8306d3f0930079773bcb17d8be06a47d659e464cec536d:0 (1eff1a3604f6192ed1ab373d8619cf3e8af5a9fc8a382b1917f74855e4cc4be0) [valid]
 TX Construct - Transaction constructed.
-Attach DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e) [valid]
+Attach DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: cae344c4891ba774ed1010ad6ae48e3241423c64913b699064d5d40735edc673:0 (0f55bd29ca2cbf6f81c3736518a51efd2504e7d0f044b5a430e598fb2574aca8) [valid]
 TX Construct - Transaction constructed.
 Issuance of 1000 TESTDISP by munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b [01e52e3770a932827a4b4e5db193eef916fcf69bda1a7944298210a74f1633a1] (valid)
 TX Construct - Transaction constructed.

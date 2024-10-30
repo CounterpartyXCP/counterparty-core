@@ -2,7 +2,7 @@ import logging
 import struct
 
 from counterpartycore.lib import backend, config, exceptions, gas, ledger, script, util
-from counterpartycore.lib.messages import attach, detach
+from counterpartycore.lib.messages import attach
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -137,7 +137,7 @@ def parse(db, tx, message):
         else:
             fee = 0
         if fee > 0:
-            detach.pay_fee(db, tx, source, fee)
+            attach.pay_fee(db, tx, source, fee)
 
         # update counter
         if action == "attach to utxo":
