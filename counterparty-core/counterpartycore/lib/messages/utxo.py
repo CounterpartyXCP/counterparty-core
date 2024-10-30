@@ -15,6 +15,8 @@ def validate(db, source, destination, asset=None, quantity=None, block_index=Non
     problems = []
 
     problems += attach.validate_asset_and_quantity(asset, quantity)
+    if "quantity must be in satoshis" in problems:
+        return problems
 
     source_is_address = True
     destination_is_address = True

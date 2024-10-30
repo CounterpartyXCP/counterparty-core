@@ -87,9 +87,9 @@ def compose(db, source, asset, quantity, destination_vout=None):
         [
             str(value)
             for value in [
-                destination_vout or "",
                 asset,
                 quantity,
+                destination_vout or "",
             ]
         ]
     ).encode("utf-8")
@@ -98,7 +98,7 @@ def compose(db, source, asset, quantity, destination_vout=None):
     # if destination_vout is provided it's the responsability of the caller to
     # build a transaction with the destination UTXO
     destinations = []
-    if destination_vout is not None:
+    if destination_vout is None:
         # else we use the source address as the destination
         # with dust value
         destinations.append((source, None))
@@ -110,17 +110,17 @@ def unpack(message, return_dict=False):
     try:
         data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
 
-        (destination_vout, asset, quantity) = data_content
+        (asset, quantity, destination_vout) = data_content
         destination_vout = int(destination_vout) if destination_vout else None
 
         if return_dict:
             return {
-                "destination_vout": destination_vout,
                 "asset": asset,
                 "quantity": int(quantity),
+                "destination_vout": destination_vout,
             }
 
-        return (destination_vout, asset, int(quantity))
+        return (asset, int(quantity), destination_vout)
     except Exception as e:
         raise exceptions.UnpackError(f"Cannot unpack utxo message: {e}") from e
 
@@ -151,7 +151,7 @@ def pay_fee(db, tx, source, fee):
 
 
 def parse(db, tx, message):
-    (destination_vout, asset, quantity) = unpack(message)
+    (asset, quantity, destination_vout) = unpack(message)
     source = tx["source"]
 
     problems = validate(db, source, asset, quantity, destination_vout, tx["block_index"])

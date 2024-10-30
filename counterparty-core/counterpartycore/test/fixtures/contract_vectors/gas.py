@@ -2,19 +2,19 @@ GAS_VECTOR = {
     "gas": {
         "get_transaction_count_for_last_period": [
             {
-                "in": (100, 154),  # utxo.ID, 310507 // 2016
+                "in": (101, 154),  # attach.ID, 310507 // 2016
                 "out": 2,
             }
         ],
         "increment_counter": [
             {
-                "in": (100, 310507),  # utxo.ID, 310507
+                "in": (101, 310507),  # attach.ID, 310507
                 "records": [
                     {
                         "table": "transaction_count",
                         "values": {
                             "block_index": 310507,
-                            "transaction_id": 100,
+                            "transaction_id": 101,
                             "count": 3,
                         },
                     }
@@ -23,7 +23,7 @@ GAS_VECTOR = {
         ],
         "get_average_transactions": [
             {
-                "in": (100, 310507),  # utxo.ID, 310507
+                "in": (101, 310507),  # attach.ID, 310507
                 "out": 0,
             }
         ],

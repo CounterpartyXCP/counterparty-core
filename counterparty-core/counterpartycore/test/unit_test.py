@@ -44,7 +44,7 @@ def test_vector(
         conftest.ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = True
         conftest.RANDOM_ASSET_INT = 26**12 + 1
 
-        if tx_name in ["fairminter", "fairmint", "utxo"] and method == "parse":
+        if tx_name in ["fairminter", "fairmint", "utxo", "attach", "detach"] and method == "parse":
             util_test.insert_transaction(inputs[0], server_db)
             # insert message as 2nd arg
             inputs = inputs[:1] + (inputs[0]["data"][1:],) + inputs[1:]
