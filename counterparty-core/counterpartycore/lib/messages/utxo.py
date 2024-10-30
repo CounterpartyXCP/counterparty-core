@@ -118,8 +118,18 @@ def compose(db, source, destination, asset, quantity):
         and not backend.bitcoind.is_valid_utxo(destination)
     ):
         raise exceptions.ComposeError(["destination is not a UTXO"])
+
     if util.is_utxo_format(source) and not backend.bitcoind.is_valid_utxo(source):
         raise exceptions.ComposeError(["source is not a UTXO"])
+
+    message_asset = asset or ""
+    message_quantity = quantity or ""
+    if util.is_utxo_format(source):
+        if not backend.bitcoind.is_valid_utxo(source):
+            raise exceptions.ComposeError(["source is not a UTXO"])
+        # if detach from UTXO, we ignore asset and quantity
+        message_asset = ""
+        message_quantity = ""
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
@@ -131,8 +141,8 @@ def compose(db, source, destination, asset, quantity):
             for value in [
                 source,
                 destination or "",
-                asset or "",
-                quantity or "",
+                message_asset,
+                message_quantity,
             ]
         ]
     ).encode("utf-8")
@@ -268,6 +278,8 @@ def parse(db, tx, message):
     status = "valid"
     if problems:
         status = "invalid: " + "; ".join(problems)
+
+    logger.warning(f"UTXO: {source} -> {recipient} ({tx['tx_hash']}) [status: {status}]")
 
     if status == "valid":
         fee_paid = pay_fee(db, tx, action, source, recipient)
