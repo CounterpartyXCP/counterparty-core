@@ -277,8 +277,8 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
 def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     """
     Composes a transaction to cancel an open order or bet.
-    :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_1)
-    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_ORDER_TX_HASH)
+    :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_7)
+    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_UTXOASSET_ORDER_TX_HASH)
     """
     params = {"source": address, "offer_hash": offer_hash}
     return compose(db, "cancel", params, **construct_args)
@@ -310,7 +310,7 @@ def compose_dispenser(
 ):
     """
     Composes a transaction to opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
-    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. $ADDRESS_7)
+    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. $ADDRESS_9)
     :param asset: The asset or subasset to dispense (e.g. XCP)
     :param give_quantity: The quantity of the asset to dispense (in satoshis, hence integer) (e.g. 1000)
     :param escrow_quantity: The quantity of the asset to reserve for this dispenser (in satoshis, hence integer) (e.g. 1000)

@@ -481,6 +481,14 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_ORDER_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_ORDER_TX_HASH"] = row["tx_hash"]
 
+    # block and tx with UTXOASSET orders
+    cursor.execute(
+        "SELECT block_index, tx_hash FROM orders WHERE give_asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
+    )
+    row = cursor.fetchone()
+    regtest_fixtures["$LAST_UTXOASSET_ORDER_BLOCK"] = row["block_index"]
+    regtest_fixtures["$LAST_UTXOASSET_ORDER_TX_HASH"] = row["tx_hash"]
+
     # block and tx with fairminter
     cursor.execute("SELECT block_index, tx_hash FROM fairminters ORDER BY rowid DESC LIMIT 1")
     row = cursor.fetchone()

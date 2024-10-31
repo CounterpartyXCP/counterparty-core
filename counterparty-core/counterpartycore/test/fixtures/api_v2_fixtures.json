@@ -14471,9 +14471,10 @@
                     },
                     {
                         "name": "destination",
-                        "required": true,
+                        "default": null,
+                        "required": false,
                         "type": "str",
-                        "description": "The address to detach the assets to (e.g. $ADDRESS_1)"
+                        "description": "The address to detach the assets to, if not provided the addresse corresponding to the utxo is used (e.g. $ADDRESS_1)"
                     },
                     {
                         "name": "encoding",

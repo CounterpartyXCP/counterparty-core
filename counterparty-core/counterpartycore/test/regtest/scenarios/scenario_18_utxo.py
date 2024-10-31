@@ -411,4 +411,13 @@ SCENARIO = [
             }
         ],
     },
+    {
+        "title": "Re-Attach asset to UTXO",
+        "transaction": "attach",
+        "source": "$ADDRESS_7",
+        "params": {
+            "asset": "UTXOASSET",
+            "quantity": 10 * 10**8,
+        },
+    },
 ]
