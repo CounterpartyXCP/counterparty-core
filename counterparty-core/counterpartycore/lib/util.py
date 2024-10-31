@@ -678,3 +678,40 @@ def is_utxo_format(value):
     if len(values[0]) != 64:
         return False
     return True
+
+
+def parse_utxos_info(utxos_info):
+    info = utxos_info.split(",")
+
+    if len(info) == 1:
+        # old format
+        info = info[0].split(" ")
+        destination = info[-1]
+        sources = info[:-1]
+        return sources, destination, None, None
+
+    sources = info[0].split(" ")
+    destination = info[1] or None
+    outputs_count = int(info[2])
+    op_return_output = info[3] or None
+    return sources, destination, outputs_count, op_return_output
+
+
+def get_destination_from_utxos_info(utxos_info):
+    _sources, destination, _outputs_count, _op_return_output = parse_utxos_info(utxos_info)
+    return destination
+
+
+def get_sources_from_utxos_info(utxos_info):
+    sources, _destination, _outputs_count, _op_return_output = parse_utxos_info(utxos_info)
+    return sources
+
+
+def get_outputs_count_from_utxos_info(utxos_info):
+    _sources, _destination, outputs_count, _op_return_output = parse_utxos_info(utxos_info)
+    return outputs_count
+
+
+def get_op_return_output_from_utxos_info(utxos_info):
+    _sources, _destination, _outputs_count, op_return_output = parse_utxos_info(utxos_info)
+    return op_return_output

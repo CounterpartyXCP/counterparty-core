@@ -113,7 +113,7 @@ def parse(db, tx, message):
     # if no destination, we assume the destination is the first non-OP_RETURN output
     # that's mean the last element of the UTXOs info in `transactions` table
     if not recipient:
-        recipient = tx["utxos_info"].split(" ")[-1]
+        recipient = util.get_destination_from_utxos_info(tx["utxos_info"])
 
     # detach if source is a UTXO
     if util.is_utxo_format(source):

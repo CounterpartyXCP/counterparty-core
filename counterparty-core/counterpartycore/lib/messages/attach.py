@@ -68,8 +68,12 @@ def validate(db, source, asset, quantity, destination_vout=None, block_index=Non
     # check balances
     problems += validate_balance(db, source, asset, quantity, fee)
 
-    if destination_vout is not None and not isinstance(destination_vout, int):
-        problems.append("if provided destination must be an integer")
+    # check if destination_vout is valid
+    if destination_vout is not None:
+        if not isinstance(destination_vout, int):
+            problems.append("if provided destination must be an integer")
+        elif destination_vout < 0:
+            problems.append("destination vout must be greater than or equal to zero")
 
     return problems
 
@@ -159,19 +163,20 @@ def parse(db, tx, message):
     # determine destination
     if destination_vout is None:
         # if no destination_vout is provided, we use the first non-OPT_RETURN output
-        utxos_info = tx["utxos_info"].split(" ") if tx["utxos_info"] else []
-        if len(utxos_info) == 0:
+        destination = util.get_destination_from_utxos_info(tx["utxos_info"])
+        if not destination:
             problems.append("no UTXO to attach to")
-        else:
-            # last element of utxos_info field is the first non-OPT_RETURN output
-            destination = utxos_info[-1]
     else:
-        # IMPORTANT: if the vout provided doesn't exist in the transaction or
-        # if is an OP_RETURN output, the attached assets will be unspendable.
-        # We don't check this here because:
-        #    - we don't have the complete list of outputs here
-        #    - we don't want to make an RPC call during parsing
-        #    - if destination_vout it's provided it's the responsability of the caller to build a valid transaction
+        # check if destination_vout is valid
+        outputs_count = util.get_outputs_count_from_utxos_info(tx["utxos_info"])
+        if outputs_count and destination_vout > outputs_count - 1:
+            problems.append("destination vout is greater than the number of outputs")
+
+        # check if destination_vout is an OP_RETURN output
+        op_return_output = util.get_op_return_output_from_utxos_info(tx["utxos_info"])
+        if op_return_output and destination_vout == op_return_output:
+            problems.append("destination vout is an OP_RETURN output")
+
         destination = f"{tx['tx_hash']}:{destination_vout}"
 
     status = "valid"

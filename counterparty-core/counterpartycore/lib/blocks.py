@@ -122,14 +122,10 @@ def parse_tx(db, tx):
 
             # After "spend_utxo_to_detach" protocol change we move assets before parsing
             # only if the message is not an Attach or Detach, else will be moved after parsing
-            if (
-                "utxos_info" in tx
-                and tx["utxos_info"]
-                and (
-                    not util.enabled("spend_utxo_to_detach")
-                    or message_type_id not in [attach.ID, detach.ID]
-                )
-            ):
+            if not util.enabled("spend_utxo_to_detach") or message_type_id not in [
+                attach.ID,
+                detach.ID,
+            ]:
                 move.move_assets(db, tx)
 
             if not tx["source"]:  # utxos move only
@@ -257,12 +253,7 @@ def parse_tx(db, tx):
                 return False
 
             # if attach or detach we move assets after parsing
-            if (
-                "utxos_info" in tx
-                and tx["utxos_info"]
-                and util.enabled("spend_utxo_to_detach")
-                and message_type_id in [attach.ID, detach.ID]
-            ):
+            if util.enabled("spend_utxo_to_detach") and message_type_id in [attach.ID, detach.ID]:
                 move.move_assets(db, tx)
 
             # NOTE: for debugging (check asset conservation after every `N` transactions).
@@ -1008,9 +999,12 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
     else:
         assert block_index == util.CURRENT_BLOCK_INDEX
 
-    if (source and (data or destination == config.UNSPENDABLE or dispensers_outs)) or len(
-        utxos_info
-    ) > 1:
+    if (
+        (
+            source and (data or destination == config.UNSPENDABLE or dispensers_outs)
+        )  # counterparty tx
+        or (utxos_info[0] != "" and utxos_info[1] != "")  # utxo move
+    ):
         transaction_bindings = {
             "tx_index": tx_index,
             "tx_hash": tx_hash,

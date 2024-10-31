@@ -1,22 +1,25 @@
 import logging
 
-from counterpartycore.lib import config, ledger
+from counterpartycore.lib import config, ledger, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
 # call on each transaction
 def move_assets(db, tx):
-    utxos = tx["utxos_info"].split(" ")
-    # do nothing if there is only one UTXO (it's the first non-OP_RETURN output)
-    if len(utxos) < 2:
+    if "utxos_info" not in tx or not tx["utxos_info"]:
         return
-    # if there are more than one UTXO in the `utxos_info` field,
-    # we move all assets from the first UTXO to the last one
-    destination = utxos.pop()
-    sources = utxos
-    action = "utxo move"
 
+    sources, destination, _outputs_count, _op_return_output = util.parse_utxos_info(
+        tx["utxos_info"]
+    )
+
+    # do nothing if no source or destination
+    if not len(sources) or not destination:
+        return
+
+    # we move all assets from the sources to the destination
+    action = "utxo move"
     msg_index = 0
     # we move all assets from each source to the destination
     for source in sources:

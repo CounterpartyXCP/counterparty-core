@@ -122,10 +122,8 @@ def detach_assets(db, tx, source, destination):
 def parse(db, tx, message):
     destination = unpack(message)
 
-    # utxos_info is a space-separated list of UTXOs, last element is the destination,
-    # the rest are the inputs with a balance
-    utxos_info = tx["utxos_info"].split(" ") if tx["utxos_info"] else []
-    sources = utxos_info[:-1]
+    # get all inputs with balances
+    sources = util.get_sources_from_utxos_info(tx["utxos_info"])
 
     # detach assets from all the sources
     # IMPORTANT: that's mean we can't detach assets and move utxo in th same transaction
