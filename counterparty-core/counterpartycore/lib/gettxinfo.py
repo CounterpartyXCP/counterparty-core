@@ -596,11 +596,12 @@ def get_op_return_vout(decoded_tx):
 
 
 def get_utxos_info(db, decoded_tx):
+    op_return_vout = get_op_return_vout(decoded_tx)
     return [
         ",".join(get_inputs_with_balance(db, decoded_tx)),  # sources
         get_first_non_op_return_output(decoded_tx) or "",  # destination
         str(len(decoded_tx["vout"])),  # number of outputs
-        get_op_return_vout(decoded_tx) or "",  # op_return output
+        str(op_return_vout) if op_return_vout else "",  # op_return output
     ]
 
 

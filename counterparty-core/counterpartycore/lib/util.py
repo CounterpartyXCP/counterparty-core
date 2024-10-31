@@ -681,20 +681,20 @@ def is_utxo_format(value):
 
 
 def parse_utxos_info(utxos_info):
-    info = utxos_info.split(",")
+    info = utxos_info.split(" ")
 
-    if len(info) == 1:
-        # old format
-        info = info[0].split(" ")
-        destination = info[-1]
-        sources = info[:-1]
-        return sources, destination, None, None
+    # new format
+    if len(info) == 4 and not is_utxo_format(info[-1]):
+        sources = info[0].split(" ")
+        destination = info[1] or None
+        outputs_count = int(info[2])
+        op_return_output = int(info[3]) if info[3] else None
+        return sources, destination, outputs_count, op_return_output
 
-    sources = info[0].split(" ")
-    destination = info[1] or None
-    outputs_count = int(info[2])
-    op_return_output = info[3] or None
-    return sources, destination, outputs_count, op_return_output
+    # old format
+    destination = info[-1]
+    sources = info[:-1]
+    return sources, destination, None, None
 
 
 def get_destination_from_utxos_info(utxos_info):
