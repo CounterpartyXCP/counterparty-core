@@ -15,7 +15,7 @@ def move_assets(db, tx):
     )
 
     # do nothing if no source or destination
-    if not len(sources) or not destination:
+    if len(sources) == 0 or not destination:
         return
 
     # we move all assets from the sources to the destination

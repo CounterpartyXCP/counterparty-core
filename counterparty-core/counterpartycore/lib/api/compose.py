@@ -905,6 +905,18 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.fairmint.ID:
             message_type_name = "fairmint"
             message_data = messages.fairmint.unpack(message, return_dict=True)
+        # utxo
+        elif message_type_id == messages.utxo.ID:
+            message_type_name = "utxo"
+            message_data = messages.utxo.unpack(message, return_dict=True)
+        # Attach
+        elif message_type_id == messages.attach.ID:
+            message_type_name = "attach"
+            message_data = messages.attach.unpack(message, return_dict=True)
+        # Detach
+        elif message_type_id == messages.detach.ID:
+            message_type_name = "detach"
+            message_data = messages.detach.unpack(message, return_dict=True)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 

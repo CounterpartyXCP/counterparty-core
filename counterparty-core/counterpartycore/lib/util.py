@@ -685,7 +685,7 @@ def parse_utxos_info(utxos_info):
 
     # new format
     if len(info) == 4 and not is_utxo_format(info[-1]):
-        sources = info[0].split(" ")
+        sources = [source for source in info[0].split(",") if source]
         destination = info[1] or None
         outputs_count = int(info[2])
         op_return_output = int(info[3]) if info[3] else None

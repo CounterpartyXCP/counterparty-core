@@ -498,14 +498,16 @@ class RegtestNode:
         print("Test invalid detach...")
 
         balances = self.api_call("assets/UTXOASSET/balances")["result"]
+        utxoasset_balances = []
         print(balances)
         utxo = None
         test_address = None
         for balance in balances:
             if balance["utxo"] and balance["quantity"] > 0:
-                utxo = balance["utxo"]
-                test_address = balance["utxo_address"]
-                break
+                if not utxo:
+                    utxo = balance["utxo"]
+                    test_address = balance["utxo_address"]
+                utxoasset_balances.append(balance["utxo"])
         assert utxo
         txid, vout = utxo.split(":")
 
@@ -516,11 +518,16 @@ class RegtestNode:
             return_only_data=True,
         )
 
+        # select an input without balance
         list_unspent = json.loads(
             self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([test_address])).strip()
         )
         for utxo in list_unspent:
-            if utxo["txid"] != txid or utxo["vout"] != int(vout):
+            if (
+                utxo["txid"] != txid
+                or utxo["vout"] != int(vout)
+                and f"{txid}:{vout}" not in utxoasset_balances
+            ):
                 selected_utxo = utxo
                 break
 

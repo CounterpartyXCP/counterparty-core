@@ -163,9 +163,7 @@ def parse(db, tx, message):
     # determine destination
     if destination_vout is None:
         # if no destination_vout is provided, we use the first non-OPT_RETURN output
-        print("UTXO INFO", tx["utxos_info"])
         destination = util.get_destination_from_utxos_info(tx["utxos_info"])
-        print("DESTINATION", destination)
         if not destination:
             problems.append("no UTXO to attach to")
     else:

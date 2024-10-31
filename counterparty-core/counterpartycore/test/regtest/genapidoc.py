@@ -342,6 +342,8 @@ def gen_unpack_doc(db):
         "enhanced_send",
         "mpma_send",
         "sweep",
+        "attach",
+        "detach",
         # "send",
         # "bet",
     ]
@@ -358,6 +360,8 @@ def gen_unpack_doc(db):
         "dividend": get_event_tx_hash(db, "ASSET_DIVIDEND"),
         "sweep": get_event_tx_hash(db, "SWEEP"),
         "btcpay": get_event_tx_hash(db, "BTC_PAY"),
+        "attach": get_event_tx_hash(db, "ATTACH_TO_UTXO"),
+        "detach": get_event_tx_hash(db, "DETACH_FROM_UTXO"),
         # "send": ,
         # "bet": ,
     }
