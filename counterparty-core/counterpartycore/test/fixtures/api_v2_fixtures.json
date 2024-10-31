@@ -14265,9 +14265,10 @@
                 "description": "Composes a transaction to attach or detach an assets from an address to UTXO.\nDisabled after block 870000.",
                 "args": [
                     {
-                        "name": "source",
+                        "name": "address",
                         "required": true,
-                        "type": "str"
+                        "type": "str",
+                        "description": "The address or the utxo from which the assets are attached or detached (e.g. $ADDRESS_1)"
                     },
                     {
                         "name": "asset",
