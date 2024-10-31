@@ -94,6 +94,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/dispense": compose.compose_dispense,
         "/v2/addresses/<address>/compose/fairminter": compose.compose_fairminter,
         "/v2/addresses/<address>/compose/fairmint": compose.compose_fairmint,
+        "/v2/addresses/<address>/compose/utxo": compose.compose_utxo,
         "/v2/addresses/<address>/compose/attach": compose.compose_attach,
         "/v2/utxos/<utxo>/compose/detach": compose.compose_detach,
         "/v2/utxos/<utxo>/compose/movetoutxo": compose.compose_movetoutxo,

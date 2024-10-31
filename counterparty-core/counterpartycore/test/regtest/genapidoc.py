@@ -153,6 +153,8 @@ def get_example_output(path, args):
 def include_in_dredd(group, path):
     if "/bet" in path:
         return False
+    if "/compose/utxo" in path:
+        return False
     return True
 
 

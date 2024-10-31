@@ -628,6 +628,33 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     return compose(db, "fairmint", params, **construct_args)
 
 
+def compose_utxo(
+    db,
+    address: str,
+    asset: str,
+    quantity: int,
+    destination: str = None,
+    **construct_args,
+):
+    """
+    Composes a transaction to attach or detach an assets from an address to UTXO.
+    Disabled after block 870000.
+    :param address: The address or the utxo from which the assets are attached or detached (e.g. $ADDRESS_1)
+    :param asset: The asset or subasset to attach or detach (e.g. XCP)
+    :param quantity: The quantity of the asset to attach or detach (in satoshis, hence integer) (e.g. 1000)
+    :param destination: The address or the utxo from which the assets are attached or detached (e.g. $UTXO_1_ADDRESS_1)
+    """
+    if util.enabled("spend_utxo_to_detach"):
+        raise exceptions.ComposeError("Disbaled. Please use `attach` or `detach` instead.")
+    params = {
+        "source": address,
+        "destination": destination,
+        "asset": asset,
+        "quantity": quantity,
+    }
+    return compose(db, "utxo", params, **construct_args)
+
+
 def compose_attach(
     db,
     address: str,
@@ -643,6 +670,8 @@ def compose_attach(
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
     :param destination_vout: The vout of the destination output
     """
+    if not util.enabled("spend_utxo_to_detach"):
+        raise exceptions.ComposeError("Not enabled yet. Please use `utxo` instead.")
     params = {
         "source": address,
         "asset": asset,
@@ -650,13 +679,6 @@ def compose_attach(
         "destination_vout": destination_vout,
     }
     return compose(db, "attach", params, **construct_args)
-
-
-def get_attach_estimate_xcp_fee(db):
-    """
-    Returns the estimated fee for attaching assets to a UTXO.
-    """
-    return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
 
 
 def compose_detach(
@@ -670,11 +692,20 @@ def compose_detach(
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
     :param destination: The address to detach the assets to, if not provided the addresse corresponding to the utxo is used (e.g. $ADDRESS_1)
     """
+    if not util.enabled("spend_utxo_to_detach"):
+        raise exceptions.ComposeError("Not enabled yet. Please use `utxo` instead.")
     params = {
         "source": utxo,
         "destination": destination,
     }
     return compose(db, "detach", params, **construct_args)
+
+
+def get_attach_estimate_xcp_fee(db):
+    """
+    Returns the estimated fee for attaching assets to a UTXO.
+    """
+    return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
 
 
 def compose_movetoutxo(
