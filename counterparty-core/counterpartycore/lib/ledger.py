@@ -493,7 +493,7 @@ def get_address_balances(db, address: str):
         field_name = "utxo"
 
     query = f"""
-        SELECT {field_name}, asset, quantity, MAX(rowid)
+        SELECT {field_name}, asset, quantity, utxo_address, MAX(rowid)
         FROM balances
         WHERE {field_name} = ?
         GROUP BY {field_name}, asset

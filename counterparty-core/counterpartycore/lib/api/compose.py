@@ -662,13 +662,13 @@ def get_attach_estimate_xcp_fee(db):
 def compose_detach(
     db,
     utxo: str,
-    destination: str,
+    destination: str = None,
     **construct_args,
 ):
     """
     Composes a transaction to detach assets from UTXO to an address.
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
-    :param destination: The address to detach the assets to (e.g. $ADDRESS_1)
+    :param destination: The address to detach the assets to, if not provided the addresse corresponding to the utxo is used (e.g. $ADDRESS_1)
     """
     params = {
         "source": utxo,

@@ -8,7 +8,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 ID = 102
 
 
-def validate(source, destination):
+def validate(source, destination=None):
     problems = []
 
     # check if source is a UTXO
@@ -16,15 +16,16 @@ def validate(source, destination):
         problems.append("source must be a UTXO")
 
     # check if destination is an address
-    try:
-        script.validate(destination)
-    except script.AddressError:
-        problems.append("destination must be an address")
+    if destination is not None:
+        try:
+            script.validate(destination)
+        except script.AddressError:
+            problems.append("destination must be an address")
 
     return problems
 
 
-def compose(db, source, destination):
+def compose(db, source, destination=None):
     problems = validate(source, destination)
     if problems:
         raise exceptions.ComposeError(problems)
@@ -32,7 +33,10 @@ def compose(db, source, destination):
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
     # only the destination is needed
-    data_content = destination.encode("utf-8")
+    if destination is not None:
+        data_content = destination.encode("utf-8")
+    else:
+        data_content = b"0"  # not empty to avoid a protocol change in `message_type.unpack()`
     data += struct.pack(f">{len(data_content)}s", data_content)
 
     return (source, [], data)
@@ -40,7 +44,10 @@ def compose(db, source, destination):
 
 def unpack(message, return_dict=False):
     try:
-        destination = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8")
+        if message == b"0":  # no destination
+            destination = None
+        else:
+            destination = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8")
 
         if return_dict:
             return {
@@ -76,6 +83,11 @@ def detach_assets(db, tx, source, destination):
             continue
         # debit asset from source and credit to recipient
         action = "detach from utxo"
+
+        # if no destination is provided, we credit the asset to utxo_address
+        if destination is None:
+            destination = balance["utxo_address"]
+
         ledger.debit(
             db,
             source,

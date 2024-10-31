@@ -7724,6 +7724,11 @@ UNITTEST_VECTOR = (
                     "out": (None, None),
                     "mock_protocol_changes": {"short_tx_type_id": True},
                 },
+                {
+                    "in": (b"f0", 310502),
+                    "out": (102, b"0"),
+                    "mock_protocol_changes": {"short_tx_type_id": True},
+                },
             ],
             "pack": [
                 {"in": (0, 300000), "out": binascii.unhexlify("00000000")},

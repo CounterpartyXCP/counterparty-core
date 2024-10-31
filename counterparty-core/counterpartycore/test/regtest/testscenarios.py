@@ -59,7 +59,7 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_19_mpma.SCENARIO
+# SCENARIOS = scenario_18_utxo.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -357,7 +357,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        # print(regtest_node_thread.node.server_out.getvalue())
+        print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 
