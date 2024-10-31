@@ -560,12 +560,12 @@ class RegtestNode:
                 assert balance["quantity"] > 0
                 break
 
-        # we should have a new event with status "invalid"
+        # we should not have a new event
         events = self.api_call(f"transactions/{tx_hash}/events?event_name=DETACH_FROM_UTXO")[
             "result"
         ]
         print(events)
-        assert events[0]["params"]["status"] == "invalid: UTXO not in the transaction inputs"
+        assert len(events) == 0
 
         print("Invalid detach test successful")
 

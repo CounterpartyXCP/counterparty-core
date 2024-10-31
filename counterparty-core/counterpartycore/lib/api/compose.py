@@ -36,6 +36,8 @@ COMPOSABLE_TRANSACTIONS = [
     "utxo",
     "fairminter",
     "fairmint",
+    "attach",
+    "detach",
 ]
 
 COMPOSE_COMMONS_ARGS = {
@@ -725,7 +727,7 @@ def compose_movetoutxo(
         tx_size = (input_count * 148) + (2 * 34) + 10
         fee = (D(fee_per_kb) / config.UNIT) * (D(tx_size) / 1024)
 
-    dust = D("0.0000546")
+    dust = D("0.00000546")
     change = D(total_value) - dust - fee
 
     if change < 0:

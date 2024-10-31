@@ -157,7 +157,7 @@ SCENARIO = [
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "count": 4,
-                            "transaction_id": 100,
+                            "transaction_id": 101,
                         },
                         "tx_hash": "$TX_HASH",
                     },

@@ -618,6 +618,12 @@
             "fee_upper_threshold": 15,
             "base_fee": 1,
             "fee_sigmoid_k": 1
+          },
+          "101": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
           }
         }
       }
@@ -629,6 +635,12 @@
       "2925800": {
         "value": {
           "100": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
+          },
+          "101": {
             "fee_lower_threshold": 3,
             "fee_upper_threshold": 15,
             "base_fee": 1,

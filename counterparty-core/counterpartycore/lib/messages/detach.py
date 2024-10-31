@@ -75,7 +75,7 @@ def detach_assets(db, tx, source, destination):
         if balance["quantity"] == 0:
             continue
         # debit asset from source and credit to recipient
-        action = "detach to utxo"
+        action = "detach from utxo"
         ledger.debit(
             db,
             source,

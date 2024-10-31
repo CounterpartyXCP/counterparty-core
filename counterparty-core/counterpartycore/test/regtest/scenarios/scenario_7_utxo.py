@@ -94,7 +94,9 @@ SCENARIO = [
         "params": {
             "asset": "MYASSETA",
             "quantity": 10 * 10**8,
-            "destination": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+        },
+        "set_variables": {
+            "UTXO_ATTACH_1_TX_HASH": "$TX_HASH",
         },
         "controls": [
             {
@@ -106,7 +108,7 @@ SCENARIO = [
                         "params": {
                             "asset": "MYASSETA",
                             "block_index": "$BLOCK_INDEX",
-                            "destination": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+                            "destination": "$TX_HASH:0",
                             "fee_paid": 0,
                             "msg_index": 0,
                             "quantity": 1000000000,
@@ -128,8 +130,8 @@ SCENARIO = [
                             "event": "$TX_HASH",
                             "quantity": 1000000000,
                             "tx_index": "$TX_INDEX",
-                            "utxo": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
-                            "utxo_address": "$ADDRESS_3",
+                            "utxo": "$TX_HASH:0",
+                            "utxo_address": "$ADDRESS_1",
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -155,7 +157,7 @@ SCENARIO = [
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "count": 1,
-                            "transaction_id": 100,
+                            "transaction_id": 101,
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -166,9 +168,10 @@ SCENARIO = [
     {
         "title": "Move assets from UTXO to UTXO",
         "transaction": "movetoutxo",
-        "source": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+        "source": "$UTXO_ATTACH_1_TX_HASH:0",
         "params": {
             "destination": "$ADDRESS_4",
+            "exact_fee": 0,
         },
         "set_variables": {
             "UTXO_MOVE_1_TX_HASH": "$TX_HASH",
@@ -186,7 +189,7 @@ SCENARIO = [
                             "destination": "$TX_HASH:0",
                             "msg_index": 0,
                             "quantity": 1000000000,
-                            "source": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
+                            "source": "$UTXO_ATTACH_1_TX_HASH:0",
                             "status": "valid",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
@@ -220,8 +223,8 @@ SCENARIO = [
                             "event": "$TX_HASH",
                             "quantity": 1000000000,
                             "tx_index": "$TX_INDEX",
-                            "utxo": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1",
-                            "utxo_address": "$ADDRESS_3",
+                            "utxo": "$UTXO_ATTACH_1_TX_HASH:0",
+                            "utxo_address": "$ADDRESS_1",
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -267,7 +270,7 @@ SCENARIO = [
                             "source": "",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
-                            "utxos_info": "$FAIRMINTB_WITH_ADDRESS_3_TX_HASH:1 $TX_HASH:0",
+                            "utxos_info": "$UTXO_ATTACH_1_TX_HASH:0 $TX_HASH:0",
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -412,7 +415,7 @@ SCENARIO = [
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "count": 2,
-                            "transaction_id": 100,
+                            "transaction_id": 101,
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -490,7 +493,7 @@ SCENARIO = [
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "count": 3,
-                            "transaction_id": 100,
+                            "transaction_id": 101,
                         },
                         "tx_hash": "$TX_HASH",
                     },
