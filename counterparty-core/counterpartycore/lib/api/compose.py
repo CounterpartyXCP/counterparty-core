@@ -637,7 +637,7 @@ def compose_utxo(
     **construct_args,
 ):
     if util.enabled("spend_utxo_to_detach"):
-        raise exceptions.ComposeError("Disbaled. Please the new `attach` or `detach` instead.")
+        raise exceptions.ComposeError("Disbaled. Please use the new `attach` or `detach` instead.")
     params = {
         "source": source,
         "destination": destination,
