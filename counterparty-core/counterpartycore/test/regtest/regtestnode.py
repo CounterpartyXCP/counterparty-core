@@ -87,14 +87,19 @@ class RegtestNode:
         if os.path.exists(regtest_protocole_file):
             os.remove(regtest_protocole_file)
 
-    def broadcast_transaction(self, signed_transaction, no_confirmation=False, retry=0):
+    def broadcast_transaction(
+        self, signed_transaction, no_confirmation=False, dont_wait_mempool=False, retry=0
+    ):
         mempool_event_count_before = self.get_mempool_event_count()
         tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
         if not no_confirmation:
             block_hash, block_time = self.mine_blocks(1)
         else:
             block_hash, block_time = "mempool", 9999999
-            while self.get_mempool_event_count() == mempool_event_count_before:
+            while (
+                not dont_wait_mempool
+                and self.get_mempool_event_count() == mempool_event_count_before
+            ):
                 print("waiting for mempool event parsing...")
                 time.sleep(5)
         self.tx_index += 1
@@ -102,7 +107,14 @@ class RegtestNode:
         return tx_hash, block_hash, block_time
 
     def send_transaction(
-        self, source, tx_name, params, return_only_data=False, no_confirmation=False, retry=0
+        self,
+        source,
+        tx_name,
+        params,
+        return_only_data=False,
+        no_confirmation=False,
+        dont_wait_mempool=False,
+        retry=0,
     ):
         self.wait_for_counterparty_server()
         if return_only_data:
@@ -112,7 +124,6 @@ class RegtestNode:
 
         query_string = []
         for key, value in params.items():
-            print(key, value)
             if not isinstance(value, list):
                 query_string.append(urllib.parse.urlencode({key: value}))
             else:
@@ -132,7 +143,12 @@ class RegtestNode:
                 print("Sleeping for 5 seconds and retrying...")
                 time.sleep(5)
                 return self.send_transaction(
-                    source, tx_name, params, return_only_data, no_confirmation
+                    source,
+                    tx_name,
+                    params,
+                    return_only_data,
+                    no_confirmation,
+                    dont_wait_mempool=dont_wait_mempool,
                 )
             raise ComposeError(result["error"])
         if return_only_data:
@@ -144,7 +160,7 @@ class RegtestNode:
         signed_transaction = json.loads(signed_transaction_json)["hex"]
         try:
             tx_hash, block_hash, block_time = self.broadcast_transaction(
-                signed_transaction, no_confirmation
+                signed_transaction, no_confirmation, dont_wait_mempool=dont_wait_mempool
             )
         except sh.ErrorReturnCode_25 as e:
             if retry < 6:
@@ -152,7 +168,13 @@ class RegtestNode:
                 print("Sleeping for 5 seconds and retrying...")
                 time.sleep(10)
                 return self.send_transaction(
-                    source, tx_name, params, return_only_data, no_confirmation, retry + 1
+                    source,
+                    tx_name,
+                    params,
+                    return_only_data,
+                    no_confirmation,
+                    dont_wait_mempool,
+                    retry + 1,
                 )
             else:
                 raise e
@@ -374,10 +396,13 @@ class RegtestNode:
             pass
 
     def stop(self):
-        print("Stopping...")
+        print("Stopping bitcoin node 1...")
         self.stop_bitcoin_node()
+        print("Stopping bitcoin node 2...")
         self.stop_bitcoin_node(node=2)
+        print("Stopping counterparty-server...")
         self.stop_counterparty_server()
+        print("Stopping addrindexrs...")
         self.stop_addrindexrs()
 
     def get_node_state(self):
@@ -553,10 +578,10 @@ class RegtestNode:
             try:
                 tx_hash, _block_hash, _block_time = self.broadcast_transaction(signed_transaction)
                 break
-            except sh.ErrorReturnCode_25 as e:
+            except sh.ErrorReturnCode_25:
                 retry += 1
                 assert retry < 6
-                print(str(e))
+                # print(str(e))
                 print("Sleeping for 5 seconds and retrying...")
                 time.sleep(5)
 
