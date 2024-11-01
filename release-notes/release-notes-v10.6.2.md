@@ -27,8 +27,10 @@ The main consequences of this update are:
 1. Transaction attach and detach are cheaper and easier to construct. In fact, the size of messages is systematically less than 80 and an OP_RETURN is therefore sufficient.
 1. It is possible to make several detachments in a single transaction to save fees.
 1. It is no longer possible to make a detach and a UTXO move in the same transaction.
+1. Fix the `detach` function when data is encoded in `multisig`
 
 ## Bugfixes
+
 
 
 ## Codebase
