@@ -1,8 +1,6 @@
 from counterpartycore.lib import config, exceptions
 
-from ..params import (
-    ADDR,
-)
+from ..params import ADDR, DP
 
 UTXO_1 = "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1"
 UTXO_2 = "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0"
@@ -137,6 +135,209 @@ ATTACH_VECTOR = {
             {
                 "in": (b"XCP|100|",),
                 "out": ("XCP", 100, None),
+            },
+        ],
+        "parse": [
+            {
+                "in": (
+                    {
+                        "fee": 10000,
+                        "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        "data": b"eXCP|100|",
+                        "source": ADDR[0],
+                        "block_index": DP["default_block_index"],
+                        "btc_amount": 5430,
+                        "tx_index": DP["default_tx_index"],
+                        "supported": 1,
+                        "destination": ADDR[0],
+                        "block_time": 310501000,
+                        "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
+                        "utxos_info": " 72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0 2 1",
+                    },
+                ),
+                "records": [
+                    {
+                        "table": "debits",
+                        "values": {
+                            "address": ADDR[0],
+                            "asset": "XCP",
+                            "quantity": 100,
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "tx_index": DP["default_tx_index"],
+                            "action": "attach to utxo",
+                        },
+                    },
+                    {
+                        "table": "debits",
+                        "values": {
+                            "address": ADDR[0],
+                            "asset": "XCP",
+                            "quantity": 10,
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "tx_index": DP["default_tx_index"],
+                            "action": "attach to utxo fee",
+                        },
+                    },
+                    {
+                        "table": "credits",
+                        "values": {
+                            "utxo": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0",
+                            "address": None,
+                            "asset": "XCP",
+                            "quantity": 100,
+                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "tx_index": DP["default_tx_index"],
+                            "calling_function": "attach to utxo",
+                        },
+                    },
+                    {
+                        "table": "sends",
+                        "values": {
+                            "tx_index": DP["default_tx_index"],
+                            "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                            "block_index": DP["default_block_index"],
+                            "status": "valid",
+                            "source": ADDR[0],
+                            "destination": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0",
+                            "asset": "XCP",
+                            "quantity": 100,
+                            "fee_paid": 10,
+                        },
+                    },
+                    {
+                        "table": "messages",
+                        "values": {
+                            "block_index": DP["default_block_index"],
+                            "command": "insert",
+                            "category": "sends",
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0","fee_paid":10,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "event": "ATTACH_TO_UTXO",
+                        },
+                    },
+                ],
+            },
+            {
+                "in": (
+                    {
+                        "fee": 10000,
+                        "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        "data": b"eXCP|100|1",
+                        "source": ADDR[0],
+                        "block_index": DP["default_block_index"],
+                        "btc_amount": 5430,
+                        "tx_index": DP["default_tx_index"],
+                        "supported": 1,
+                        "destination": ADDR[0],
+                        "block_time": 310501000,
+                        "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
+                        "utxos_info": " 72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0 2 0",
+                    },
+                ),
+                "records": [
+                    {
+                        "table": "messages",
+                        "values": {
+                            "block_index": DP["default_block_index"],
+                            "command": "insert",
+                            "category": "sends",
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:1","fee_paid":10,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "event": "ATTACH_TO_UTXO",
+                        },
+                    },
+                ],
+            },
+            {
+                "in": (
+                    {
+                        "fee": 10000,
+                        "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        "data": b"eXCP|100|1",
+                        "source": ADDR[0],
+                        "block_index": DP["default_block_index"],
+                        "btc_amount": 5430,
+                        "tx_index": DP["default_tx_index"],
+                        "supported": 1,
+                        "destination": ADDR[0],
+                        "block_time": 310501000,
+                        "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
+                        "utxos_info": " 72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0 2 1",
+                    },
+                ),
+                "records": [
+                    {
+                        "table": "messages",
+                        "values": {
+                            "block_index": DP["default_block_index"],
+                            "command": "insert",
+                            "category": "sends",
+                            "bindings": '{"block_index":310704,"msg_index":0,"status":"invalid: destination vout is an OP_RETURN output","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "event": "ATTACH_TO_UTXO",
+                        },
+                    },
+                ],
+            },
+            {
+                "in": (
+                    {
+                        "fee": 10000,
+                        "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        "data": b"eXCP|100|3",
+                        "source": ADDR[0],
+                        "block_index": DP["default_block_index"],
+                        "btc_amount": 5430,
+                        "tx_index": DP["default_tx_index"],
+                        "supported": 1,
+                        "destination": ADDR[0],
+                        "block_time": 310501000,
+                        "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
+                        "utxos_info": " 72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0 2 1",
+                    },
+                ),
+                "records": [
+                    {
+                        "table": "messages",
+                        "values": {
+                            "block_index": DP["default_block_index"],
+                            "command": "insert",
+                            "category": "sends",
+                            "bindings": '{"block_index":310704,"msg_index":0,"status":"invalid: destination vout is greater than the number of outputs","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "event": "ATTACH_TO_UTXO",
+                        },
+                    },
+                ],
+            },
+            {
+                "in": (
+                    {
+                        "fee": 10000,
+                        "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
+                        "data": b"eXCP|100|",
+                        "source": ADDR[0],
+                        "block_index": DP["default_block_index"],
+                        "btc_amount": 5430,
+                        "tx_index": DP["default_tx_index"],
+                        "supported": 1,
+                        "destination": ADDR[0],
+                        "block_time": 310501000,
+                        "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
+                        "utxos_info": "  1 0",  # only one OP_RETURN output
+                    },
+                ),
+                "records": [
+                    {
+                        "table": "messages",
+                        "values": {
+                            "block_index": DP["default_block_index"],
+                            "command": "insert",
+                            "category": "sends",
+                            "bindings": '{"block_index":310704,"msg_index":0,"status":"invalid: no UTXO to attach to","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "event": "ATTACH_TO_UTXO",
+                        },
+                    },
+                ],
             },
         ],
     },
