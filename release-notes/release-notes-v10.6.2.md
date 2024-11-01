@@ -34,11 +34,13 @@ The main consequences of this update are:
 ## Codebase
 
 - The `transactions.compose()` function accepts a `tx_info` that contains a source in the form of a UTXO instead of an address. If this is the case, this UTXO is mandatory to be used in the transaction.
+- Refactor `compose_moveutxo` to use this new `transactions.compose()` feature.
 
 
 ## API
 
-- Removed `asset` and `quantity` parameters from the `/v2/utxos/<utxo>/compose/detach` route
+- In compose detach function, make `destination`, `asset` and `quantity` parameters optionals (`asset` and `quantity` will be ignored after protocol change)
+- In compose attach function add `destination_vout` parameter (`destination` will be ignored after protocol change)
 
 ## CLI
 
