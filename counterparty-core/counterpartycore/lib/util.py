@@ -594,6 +594,18 @@ def enabled(change_name, block_index=None):
         return False
 
 
+def get_change_block_index(change_name):
+    if config.REGTEST:
+        return 0
+
+    if config.TESTNET:
+        index_name = "testnet_block_index"
+    else:
+        index_name = "block_index"
+
+    return PROTOCOL_CHANGES[change_name][index_name]
+
+
 def get_value_by_block_index(change_name, block_index=None):
     if not block_index:
         block_index = CURRENT_BLOCK_INDEX

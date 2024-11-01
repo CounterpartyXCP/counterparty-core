@@ -647,22 +647,37 @@ def compose_utxo(
     return compose(db, "utxo", params, **construct_args)
 
 
-def compose_attach_old(
+def compose_attach(
     db,
     address: str,
     asset: str,
     quantity: int,
+    destination_vout: str = None,
     destination: str = None,
     **construct_args,
 ):
     """
     Composes a transaction to attach assets from an address to UTXO.
-    Disabled after block 870000.
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
-    :param destination: The utxo to attach the assets to (e.g. $UTXO_1_ADDRESS_1)
     :param asset: The asset or subasset to attach (e.g. XCP)
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
+    :param destination_vout: The vout of the destination output
+    :param destination: [Disabled after block 870000] The utxo to attach the assets to
     """
+    if util.enabled("spend_utxo_to_detach"):
+        params = {
+            "source": address,
+            "asset": asset,
+            "quantity": quantity,
+            "destination_vout": destination_vout,
+        }
+        return compose(db, "attach", params, **construct_args)
+
+    if util.CURRENT_BLOCK_INDEX > util.get_change_block_index("spend_utxo_to_detach") - 12:
+        raise exceptions.ComposeError(
+            "Attach is disabled from 12 blocks before block 870000 and the activation of the new attach/detach messages types"
+        )
+
     return compose_utxo(
         db,
         source=address,
@@ -673,22 +688,33 @@ def compose_attach_old(
     )
 
 
-def compose_detach_old(
+def compose_detach(
     db,
     utxo: str,
-    destination: str,
-    asset: str,
-    quantity: int,
+    destination: str = None,
+    asset: str = None,
+    quantity: int = None,
     **construct_args,
 ):
     """
     Composes a transaction to detach assets from UTXO to an address.
-    Disabled after block 870000.
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
-    :param destination: The address to detach the assets to (e.g. $ADDRESS_1)
-    :param asset: The asset or subasset to detach (e.g. XCP)
-    :param quantity: The quantity of the asset to detach (in satoshis, hence integer) (e.g. 1000)
+    :param destination: The address to detach the assets to, if not provided the addresse corresponding to the utxo is used (e.g. $ADDRESS_1)
+    :param asset: [Disabled after block 870000] The asset or subasset to detach
+    :param quantity: [Disabled after block 870000] The quantity of the asset to detach (in satoshis, hence integer)
     """
+    if util.enabled("spend_utxo_to_detach"):
+        params = {
+            "source": utxo,
+            "destination": destination,
+        }
+        return compose(db, "detach", params, **construct_args)
+
+    if util.CURRENT_BLOCK_INDEX > util.get_change_block_index("spend_utxo_to_detach") - 12:
+        raise exceptions.ComposeError(
+            "Attach is disabled from 12 blocks before block 870000 and the activation of the new attach/detach messages types"
+        )
+
     return compose_utxo(
         db,
         source=utxo,
@@ -697,52 +723,6 @@ def compose_detach_old(
         quantity=quantity,
         **construct_args,
     )
-
-
-def compose_attach(
-    db,
-    address: str,
-    asset: str,
-    quantity: int,
-    destination_vout: str = None,
-    **construct_args,
-):
-    """
-    Composes a transaction to attach assets from an address to UTXO.
-    :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
-    :param asset: The asset or subasset to attach (e.g. XCP)
-    :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
-    :param destination_vout: The vout of the destination output
-    """
-    if not util.enabled("spend_utxo_to_detach"):
-        raise exceptions.ComposeError("Not enabled yet. Please wait for the block 870000")
-    params = {
-        "source": address,
-        "asset": asset,
-        "quantity": quantity,
-        "destination_vout": destination_vout,
-    }
-    return compose(db, "attach", params, **construct_args)
-
-
-def compose_detach(
-    db,
-    utxo: str,
-    destination: str = None,
-    **construct_args,
-):
-    """
-    Composes a transaction to detach assets from UTXO to an address.
-    :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
-    :param destination: The address to detach the assets to, if not provided the addresse corresponding to the utxo is used (e.g. $ADDRESS_1)
-    """
-    if not util.enabled("spend_utxo_to_detach"):
-        raise exceptions.ComposeError("Not enabled yet. Please use `utxo` instead.")
-    params = {
-        "source": utxo,
-        "destination": destination,
-    }
-    return compose(db, "detach", params, **construct_args)
 
 
 def get_attach_estimate_xcp_fee(db):
