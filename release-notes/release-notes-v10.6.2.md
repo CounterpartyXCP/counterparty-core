@@ -8,26 +8,18 @@
 
 ## Protocol Changes
 
-This update includes major changes in UTXOS support. The previous system was designed to have maximum flexibility, in particular to be able to detach only part of the assets attached to a UTXO. However, as OpenStamp pointed out, this feature allows an Atomic Swap to be front runned by a detach. In addition to this vulnerability many interesting suggestions have been made by OpenStamp and the community.
-We therefore took advantage of all these updates to separate the `utxo.py` contract (ID 100) into two separate contracts: `attach.py` (ID 101) and `detach.py` (ID 102). Indeed in its original design the two functions had almost the same signature and the same code which is no longer the case.
-Messages with ID 100 will be disabled at the same block where messages with IDs 101 and 102 will be enabled.
-12 blocks before activation the functions `compose_attach` and `compose_detach` will be deactivated to avoid having transactions with ID 100 confirmed after activation.
+This update includes significant changes to the UTXO Support feature, and in particular to address a vulnerability where an atomic swap could be frontrun by a `detach` transaction. Further feedback from the community, in particular the OpenStamps team and DerpHerpenstein have allowed us to simplify the implementation of this feature significantly. With the protocol change, messages with ID 100 will be disabled at the same block that messages with IDs 101 and 102 will be enabled. 12 blocks before this activation block, the functions `compose_attach` and `compose_detach` will be deactivated to avoid having transactions with ID 100 confirmed after activation. The protocol and API have changed as follows:
 
-Here are the changes that will be active after activating the protocol change:
-
-1. The `attach` function no longer accepts a `destination` parameter. By default, the first non-OP_RETURN output is the destination.
-1. The `attach` function now accepts an optional `destination_vout` parameter. This parameter allows you to designate the number of the output to use as the destination. The transaction is invalid if `destination_vout` does not exist or if it is an `OP_RETURN`
-1. The `detach` function no longer accepts the `asset` and `quantity` parameters: the UTXO is necessarily part of the transaction inputs and all assets are detached from the UTXO.
+1. The `attach` function no longer accepts a `destination` parameter. It now accepts an optional `destination_vout` parameter (by default the first non-`OP_RETURN` output). This parameter allows one to designate the index of the output to use as the destination. The transaction is invalid if `destination_vout` does not exist or if it is an `OP_RETURN`.
 1. The `destination` parameter of the `detach` function is now optional. If not provided, the default destination is the address corresponding to the UTXO.
-1. The `detach` function detaches the assets attached to all transaction inputs.
+1. The `detach` function no longer accepts `asset` and `quantity` parameters: the UTXO is necessarily part of the transaction inputs and all assets are detached from the UTXO.
+1. The `detach` function detaches all assets attached to all transaction inputs every time.
 
-The main consequences of this update are:
+In addition to resolving the above frontrunning vulnerability, this update brings a number of improvements:
 
-1. It is no longer possible to front run a swap with a detach.
-1. Transaction attach and detach are cheaper and easier to construct. In fact, the size of messages is systematically less than 80 and an OP_RETURN is therefore sufficient.
-1. It is possible to make several detachments in a single transaction to save fees.
-1. It is no longer possible to make a detach and a UTXO move in the same transaction.
-1. Fix the `detach` function when the UTXO to detach is part of the inputs
+1. It is now cheaper and easier to construct `attach` and `detach` transactions. The size of messages is always less than 80 bytes, so an `OP_RETURN` output can store all of the necessary data.
+1. It is possible to execute several `detach` operations in a single transaction to save fees.
+1. It is no longer possible to make a `detach` and a UTXO `move` in the same transaction.
 
 ## Bugfixes
 
@@ -35,14 +27,14 @@ The main consequences of this update are:
 
 ## Codebase
 
-- The `transactions.compose()` function accepts a `tx_info` that contains a source in the form of a UTXO instead of an address. If this is the case, this UTXO is mandatory to be used in the transaction.
-- Refactor `compose_moveutxo` to use this new `transactions.compose()` feature.
+- The `transactions.compose()` function accepts a `tx_info` that contains a source in the form of a UTXO instead of an address. When a UTXO is used, this UTXO must be spent in the corresponding transaction.
+- Refactor `compose_moveutxo()` to use this new `transactions.compose()` feature.
 
 
 ## API
 
-- In compose detach function, make `destination`, `asset` and `quantity` parameters optionals (`asset` and `quantity` will be ignored after protocol change)
-- In compose attach function add `destination_vout` parameter (`destination` will be ignored after protocol change)
+- For the `compose_detach() endpoint, the `destination`, `asset` and `quantity` parameters are now optional (`asset` and `quantity` will be ignored after the protocol change).
+- For the `compose_attach()` endpoint, there is now a `destination_vout` parameter (and the `destination` parameter will be ignored after protocol change).
 
 ## CLI
 
