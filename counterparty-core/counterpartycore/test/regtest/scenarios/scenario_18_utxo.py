@@ -172,7 +172,7 @@ SCENARIO = [
         "no_confirmation": True,
         "params": {
             "destination": "$ADDRESS_8",
-            "more_utxos": "$UTXOASSET_UTXO_1_TX_HASH:2",  # third output is change of attach transaction
+            "inputs_set": "$UTXOASSET_UTXO_1_TX_HASH:2",  # third output is change of attach transaction
         },
         "set_variables": {
             "UTXOASSET_UTXO_2_TX_HASH": "$TX_HASH",

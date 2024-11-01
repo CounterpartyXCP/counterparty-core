@@ -10,7 +10,6 @@ from counterpartycore.lib import (
     gettxinfo,
     message_type,
     messages,
-    script,
     transaction,
     util,
 )
@@ -38,6 +37,7 @@ COMPOSABLE_TRANSACTIONS = [
     "fairmint",
     "attach",
     "detach",
+    "move",
 ]
 
 COMPOSE_COMMONS_ARGS = {
@@ -708,78 +708,17 @@ def get_attach_estimate_xcp_fee(db):
     return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
 
 
-def compose_movetoutxo(
-    db,
-    utxo: str,
-    destination: str,
-    more_utxos: str = "",
-    exact_fee: int = None,
-    change_address: str = None,
-):
+def compose_movetoutxo(db, utxo: str, destination: str, **construct_args):
     """
     Composes a transaction to move assets from UTXO to another UTXO.
     :param utxo: The utxo from which the assets are moved
     :param destination: The address to move the assets to
-    :param more_utxos: The additional utxos to fund the transaction
     """
-    decimal.getcontext().prec = 8
-
-    more_utxos_list = []
-    input_count = 1
-    total_value = D("0")
-    try:
-        source_address, source_value = backend.bitcoind.get_utxo_address_and_value(utxo)
-        total_value += D(source_value)
-        for more_utxo in more_utxos.split(","):
-            if more_utxo == "":
-                continue
-            _more_utxo_address, more_utxo_value = backend.bitcoind.get_utxo_address_and_value(
-                more_utxo
-            )
-            more_utxo_tx_hash, more_utxo_vout = more_utxo.split(":")
-            more_utxos_list.append({"txid": more_utxo_tx_hash, "vout": int(more_utxo_vout)})
-            input_count += 1
-            total_value += D(more_utxo_value)
-    except exceptions.InvalidUTXOError as e:
-        raise exceptions.ComposeError("Invalid UTXO for source") from e
-
-    try:
-        script.validate(destination)
-    except Exception as e:
-        raise exceptions.ComposeError("Invalid address for destination") from e
-
-    tx_hash, vout = utxo.split(":")
-
-    if exact_fee is not None:
-        fee = D(exact_fee) / config.UNIT if exact_fee else 0
-    else:
-        fee_per_kb = backend.bitcoind.fee_per_kb()
-        # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
-        tx_size = (input_count * 148) + (2 * 34) + 10
-        fee = (D(fee_per_kb) / config.UNIT) * (D(tx_size) / 1024)
-
-    dust = D("0.00000546")
-    change = D(total_value) - dust - fee
-
-    if change < 0:
-        raise exceptions.ComposeError("Insufficient funds for fee")
-
-    inputs = [{"txid": tx_hash, "vout": int(vout)}] + more_utxos_list
-    outputs = [{destination: str(dust)}]
-    if change > 0:
-        change_output_address = change_address or source_address
-        outputs += [{change_output_address: str(change)}]
-    rawtransaction = backend.bitcoind.createrawtransaction(inputs, outputs)
-
-    return {
-        "rawtransaction": rawtransaction,
-        "params": {
-            "source": utxo,
-            "destination": destination,
-        },
-        "name": "movetoutxo",
-        "data": None,
+    params = {
+        "source": utxo,
+        "destination": destination,
     }
+    return compose(db, "move", params, **construct_args)
 
 
 def info_by_tx_hash(db, tx_hash: str):

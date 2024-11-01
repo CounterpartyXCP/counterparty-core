@@ -1,8 +1,24 @@
 import logging
 
-from counterpartycore.lib import config, ledger, util
+from counterpartycore.lib import config, exceptions, ledger, script, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+
+def compose(db, source, destination):
+    if not util.is_utxo_format(source):
+        raise exceptions.ComposeError("Invalid source utxo format")
+
+    try:
+        script.validate(destination)
+    except script.AddressError as e:
+        raise exceptions.ComposeError("destination must be an address") from e
+
+    balances = ledger.get_utxo_balances(db, source)
+    if not balances:
+        raise exceptions.ComposeError("No balances found for source utxo")
+
+    return (source, [(destination, None)], None)
 
 
 # call on each transaction
