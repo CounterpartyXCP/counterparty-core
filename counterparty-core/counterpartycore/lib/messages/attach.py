@@ -56,7 +56,7 @@ def validate(db, source, asset, quantity, destination_vout=None, block_index=Non
         problems.append("invalid source address")
 
     # validate asset and quantity
-    validate_asset_and_quantity(asset, quantity)
+    problems += validate_asset_and_quantity(asset, quantity)
     if len(problems) > 0:
         # if asset or quantity are invalid, let's avoid some potential
         # errors in the next checks by returning here

@@ -330,7 +330,7 @@ def construct_coin_selection(
         # If exact fee is specified, use that. Otherwise, calculate size of tx
         # and base fee on that (plus provide a minimum fee for selling BTC).
         size = 181 * len(inputs) + size_for_fee + 10
-        if exact_fee:
+        if exact_fee is not None:
             final_fee = exact_fee
         else:
             necessary_fee = int(size / 1000 * fee_per_kb)

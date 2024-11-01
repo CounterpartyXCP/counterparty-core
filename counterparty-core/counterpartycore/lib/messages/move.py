@@ -6,6 +6,9 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def compose(db, source, destination):
+    # We don't check if the source has attached assets
+    # to allow transaction chaining in the same block
+
     if not util.is_utxo_format(source):
         raise exceptions.ComposeError("Invalid source utxo format")
 
@@ -13,10 +16,6 @@ def compose(db, source, destination):
         script.validate(destination)
     except script.AddressError as e:
         raise exceptions.ComposeError("destination must be an address") from e
-
-    balances = ledger.get_utxo_balances(db, source)
-    if not balances:
-        raise exceptions.ComposeError("No balances found for source utxo")
 
     return (source, [(destination, None)], None)
 

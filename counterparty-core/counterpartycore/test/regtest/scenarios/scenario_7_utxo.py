@@ -508,6 +508,7 @@ SCENARIO = [
         "params": {
             "destination": "$ADDRESS_6",
             "inputs_set": "$UTXO_ATTACH_2_TX_HASH:0,$UTXO_ATTACH_2_TX_HASH:2",
+            "use_utxos_with_balances": True,
         },
         "set_variables": {
             "UTXO_MOVE_2_TX_HASH": "$TX_HASH",
