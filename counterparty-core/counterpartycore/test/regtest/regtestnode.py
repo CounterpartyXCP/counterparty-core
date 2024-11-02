@@ -25,7 +25,13 @@ class ComposeError(Exception):
 
 
 class RegtestNode:
-    def __init__(self, datadir="regtestnode", show_output=False, wsgi_server="waitress"):
+    def __init__(
+        self,
+        datadir="regtestnode",
+        show_output=False,
+        wsgi_server="waitress",
+        burn_in_one_block=False,
+    ):
         self.datadir = datadir
         self.bitcoin_cli = sh.bitcoin_cli.bake(
             "-regtest",
@@ -57,6 +63,7 @@ class RegtestNode:
             "--no-telemetry",
             "-vv",
         )
+        self.burn_in_one_block = burn_in_one_block
 
     def api_call(self, url):
         return json.loads(sh.curl(f"http://localhost:24000/v2/{url}").strip())
@@ -250,11 +257,12 @@ class RegtestNode:
                 address,
                 "burn",
                 {"quantity": 50000000},
-                no_confirmation=True,
-                dont_wait_mempool=True,
+                no_confirmation=self.burn_in_one_block,
+                dont_wait_mempool=self.burn_in_one_block,
             )
-        self.mine_blocks(1)
-        self.wait_for_counterparty_server()
+        if self.burn_in_one_block:
+            self.mine_blocks(1)
+            self.wait_for_counterparty_server()
 
     def start_bitcoin_node(self):
         self.bitcoind_process = sh.bitcoind(
@@ -611,14 +619,17 @@ class RegtestNode:
 
 
 class RegtestNodeThread(threading.Thread):
-    def __init__(self, wsgi_server="gunicorn"):
+    def __init__(self, wsgi_server="gunicorn", burn_in_one_block=False):
         threading.Thread.__init__(self)
         self.wsgi_server = wsgi_server
+        self.burn_in_one_block = burn_in_one_block
         self.daemon = True
         self.node = None
 
     def run(self):
-        self.node = RegtestNode(wsgi_server=self.wsgi_server)
+        self.node = RegtestNode(
+            wsgi_server=self.wsgi_server, burn_in_one_block=self.burn_in_one_block
+        )
         self.node.start()
 
     def stop(self):

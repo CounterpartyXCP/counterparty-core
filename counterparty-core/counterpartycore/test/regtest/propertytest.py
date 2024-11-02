@@ -21,7 +21,7 @@ def unique(draw, strategy):
 class RegtestNode:
     def __init__(self):
         try:
-            regtest_node_thread = RegtestNodeThread()
+            regtest_node_thread = RegtestNodeThread(burn_in_one_block=True)
             regtest_node_thread.start()
             while not regtest_node_thread.ready():
                 time.sleep(1)
