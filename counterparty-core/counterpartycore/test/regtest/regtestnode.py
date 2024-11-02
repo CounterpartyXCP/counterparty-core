@@ -246,7 +246,15 @@ class RegtestNode:
     def generate_xcp(self):
         print("Generating XCP...")
         for address in self.addresses[0:10]:
-            self.send_transaction(address, "burn", {"quantity": 50000000})
+            self.send_transaction(
+                address,
+                "burn",
+                {"quantity": 50000000},
+                no_confirmation=True,
+                dont_wait_mempool=True,
+            )
+        self.mine_blocks(1)
+        self.wait_for_counterparty_server()
 
     def start_bitcoin_node(self):
         self.bitcoind_process = sh.bitcoind(

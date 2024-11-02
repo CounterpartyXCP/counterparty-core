@@ -215,7 +215,7 @@ def construct(
     # Sanity checks.
     if source:
         script.validate(source)
-    if exact_fee and not isinstance(exact_fee, int):
+    if exact_fee is not None and not isinstance(exact_fee, int):
         raise exceptions.TransactionError("Exact fees must be in satoshis.")
     if not isinstance(fee_provided, int):
         raise exceptions.TransactionError("Fee provided must be in satoshis.")
