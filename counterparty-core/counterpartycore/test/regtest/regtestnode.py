@@ -189,17 +189,16 @@ class RegtestNode:
         return tx_hash, block_hash, block_time, result["result"]["data"]
 
     def wait_for_counterparty_server(self, block=None):
+        target_block = block or self.block_count
         while True:
             try:
                 result = self.api_call("")
                 if result and "result" in result and result["result"]["server_ready"]:
                     current_block = result["result"]["counterparty_height"]
-                    target_block = block or self.block_count
                     if current_block < target_block:
                         print(f"Waiting for block {current_block} < {target_block}")
                         raise ServerNotReady
                     else:
-                        print("Server ready")
                         return
                 elif result and "result" in result:
                     print(
@@ -619,7 +618,7 @@ class RegtestNode:
 
 
 class RegtestNodeThread(threading.Thread):
-    def __init__(self, wsgi_server="gunicorn", burn_in_one_block=False):
+    def __init__(self, wsgi_server="waitress", burn_in_one_block=False):
         threading.Thread.__init__(self)
         self.wsgi_server = wsgi_server
         self.burn_in_one_block = burn_in_one_block
