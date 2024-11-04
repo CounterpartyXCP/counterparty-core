@@ -1008,11 +1008,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             utxos_info[0] != ""
             and util.enabled("spend_utxo_to_detach")  # utxo move or detach with a single OP_RETURN
         )
-        or (
-            utxos_info[0] != ""
-            and utxos_info[1] != ""
-            and not util.enabled("spend_utxo_to_detach")  # utxo move
-        )
+        or (utxos_info[0] != "" and utxos_info[1] != "")
     ):
         transaction_bindings = {
             "tx_index": tx_index,
