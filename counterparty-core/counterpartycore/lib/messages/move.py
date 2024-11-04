@@ -35,7 +35,7 @@ def move_assets(db, tx):
 
     # we move all assets from the sources to the destination
     action = "utxo move"
-    msg_index = 0
+    msg_index = ledger.get_send_msg_index(db, tx["tx_hash"])
     # we move all assets from each source to the destination
     for source in sources:
         balances = ledger.get_utxo_balances(db, source)

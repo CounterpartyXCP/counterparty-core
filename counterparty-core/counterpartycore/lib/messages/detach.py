@@ -133,7 +133,7 @@ def detach_assets(db, tx, source, destination):
         "Detach assets from %(source)s to address: %(destination)s (%(tx_hash)s) [%(status)s]",
         {
             "source": source,
-            "destination": destination,
+            "destination": detach_destination,
             "tx_hash": tx["tx_hash"],
             "status": status,
         },
