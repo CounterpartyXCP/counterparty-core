@@ -94,7 +94,7 @@ SCENARIO = [
                         "source": "$ADDRESS_1",
                         "status": 0,
                         "tx_hash": "$TX_HASH",
-                        "tx_index": 62,
+                        "tx_index": "$TX_INDEX",
                     },
                     {
                         "asset": "XCP",
