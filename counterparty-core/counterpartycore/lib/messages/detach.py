@@ -8,27 +8,27 @@ logger = logging.getLogger(config.LOGGER_NAME)
 ID = 102
 
 
-def validate(source, destination=None):
+def validate(source):
     problems = []
 
     # check if source is a UTXO
     if not util.is_utxo_format(source):
         problems.append("source must be a UTXO")
 
-    # check if destination is an address
-    if destination is not None:
-        try:
-            script.validate(destination)
-        except script.AddressError:
-            problems.append("destination must be an address")
-
     return problems
 
 
 def compose(db, source, destination=None):
-    problems = validate(source, destination)
+    problems = validate(source)
     if problems:
         raise exceptions.ComposeError(problems)
+
+    # check if destination is an address
+    if destination is not None:
+        try:
+            script.validate(destination)
+        except script.AddressError as e:
+            raise exceptions.ComposeError("destination must be an address") from e
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
@@ -59,7 +59,7 @@ def unpack(message, return_dict=False):
 
 
 def detach_assets(db, tx, source, destination):
-    problems = validate(source, destination)
+    problems = validate(source)
 
     status = "valid"
     if problems:
@@ -84,9 +84,18 @@ def detach_assets(db, tx, source, destination):
         # debit asset from source and credit to recipient
         action = "detach from utxo"
 
+        detach_destination = destination
+
+        # check if destination is an address
+        if detach_destination is not None:
+            try:
+                script.validate(detach_destination)
+            except Exception:  # let's catch all exceptions here
+                detach_destination = None
+
         # if no destination is provided, we credit the asset to utxo_address
-        if destination is None:
-            destination = balance["utxo_address"]
+        if detach_destination is None:
+            detach_destination = balance["utxo_address"]
 
         ledger.debit(
             db,
@@ -99,7 +108,7 @@ def detach_assets(db, tx, source, destination):
         )
         ledger.credit(
             db,
-            destination,
+            detach_destination,
             balance["asset"],
             balance["quantity"],
             tx["tx_index"],
@@ -113,7 +122,7 @@ def detach_assets(db, tx, source, destination):
             "block_index": tx["block_index"],
             "status": "valid",
             "source": source,
-            "destination": destination,
+            "destination": detach_destination,
             "asset": balance["asset"],
             "quantity": balance["quantity"],
             "fee_paid": 0,

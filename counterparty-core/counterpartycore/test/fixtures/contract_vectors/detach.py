@@ -1,3 +1,5 @@
+from counterpartycore.lib import exceptions
+
 from ..params import (
     ADDR,
     DP,
@@ -11,24 +13,12 @@ DETACH_VECTOR = {
     "detach": {
         "validate": [
             {
-                "in": (UTXO_1, ADDR[0]),
-                "out": [],
-            },
-            {
                 "in": (UTXO_1,),
                 "out": [],
             },
             {
                 "in": (ADDR[0],),
                 "out": ["source must be a UTXO"],
-            },
-            {
-                "in": (UTXO_1, UTXO_1),
-                "out": ["destination must be an address"],
-            },
-            {
-                "in": (ADDR[0], UTXO_1),
-                "out": ["source must be a UTXO", "destination must be an address"],
             },
         ],
         "compose": [
@@ -50,6 +40,10 @@ DETACH_VECTOR = {
                     [],
                     b"f0",
                 ),
+            },
+            {
+                "in": (UTXO_1, UTXO_1),
+                "error": (exceptions.ComposeError, "destination must be an address"),
             },
         ],
         "unpack": [
