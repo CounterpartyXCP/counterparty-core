@@ -1,5 +1,24 @@
 SCENARIO = [
     {
+        "title": "Create invalid dispenser with skip validation",
+        "transaction": "dispenser",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "TESTLOCKDESC",
+            "give_quantity": 1,
+            "escrow_quantity": int(10000 * 10e8),
+            "mainchainrate": 1,  # 1 BTC for 1 XCP
+            "status": 0,
+            "skip_validation": True,
+        },
+        "controls": [
+            {
+                "url": "blocks/$BLOCK_INDEX/events?event_name=OPEN_DISPENSER,DEBIT",
+                "result": [],
+            },
+        ],
+    },
+    {
         "title": "Create Dispenser 6",
         "transaction": "dispenser",
         "source": "$ADDRESS_1",

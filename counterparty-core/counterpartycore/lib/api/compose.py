@@ -141,6 +141,11 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "Exclude silently UTXO with balances instead of raising an exception",
     ),
+    "skip_validation": (
+        bool,
+        False,
+        "Skip validation of the transaction",
+    ),
 }
 
 

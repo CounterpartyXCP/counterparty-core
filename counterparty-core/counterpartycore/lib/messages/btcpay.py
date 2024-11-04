@@ -104,13 +104,13 @@ def validate(db, source, order_match_id, block_index):
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
 
-def compose(db, source: str, order_match_id: str):
+def compose(db, source: str, order_match_id: str, skip_validation: bool = False):
     tx0_hash, tx1_hash = util.parse_id(order_match_id)
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(
         db, source, order_match_id, util.CURRENT_BLOCK_INDEX
     )
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.

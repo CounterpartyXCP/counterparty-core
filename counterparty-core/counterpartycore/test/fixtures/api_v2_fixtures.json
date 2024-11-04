@@ -11087,6 +11087,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11291,6 +11298,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11474,6 +11488,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
                         "required": false
                     },
                     {
@@ -11670,6 +11691,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -11853,6 +11881,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
                         "required": false
                     },
                     {
@@ -12051,6 +12086,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
                         "required": false
                     },
                     {
@@ -12278,6 +12320,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12473,6 +12522,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
                         "required": false
                     },
                     {
@@ -12703,6 +12759,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12929,6 +12992,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13142,6 +13212,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
                         "required": false
                     },
                     {
@@ -13364,6 +13441,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13562,6 +13646,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13751,6 +13842,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
                         "required": false
                     },
                     {
@@ -14052,6 +14150,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14242,6 +14347,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
                         "required": false
                     },
                     {
@@ -14444,6 +14556,13 @@
                         "required": false
                     },
                     {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14639,6 +14758,13 @@
                         "type": "bool",
                         "default": false,
                         "description": "Exclude silently UTXO with balances instead of raising an exception",
+                        "required": false
+                    },
+                    {
+                        "name": "skip_validation",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Skip validation of the transaction",
                         "required": false
                     },
                     {

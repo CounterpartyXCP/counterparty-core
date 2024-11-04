@@ -100,14 +100,9 @@ def validate(
     return problems
 
 
-def compose(
-    db,
-    source,
-    asset,
-    quantity=0,
-):
+def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: bool = False):
     problems = validate(db, source, asset, quantity)
-    if len(problems) > 0:
+    if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     if quantity != 0:

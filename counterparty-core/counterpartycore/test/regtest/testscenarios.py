@@ -234,13 +234,13 @@ def run_item(node, item, context):
                         print(expected_result, str(e))
                         assert expected_result == str(e)
                     print(f"{item['title']}: " + colored("Success", "green"))
-                except AssertionError:
+                except AssertionError as er:
                     print(colored(f"Failed: {item['title']}", "red"))
                     print(f"Expected: {expected_result}")
                     print(f"Got: {str(e)}")
-                    # raise e
+                    raise er from er
             else:
-                raise e
+                raise e from e
 
     node.enable_all_protocol_changes()
 
@@ -353,7 +353,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        # print(regtest_node_thread.node.server_out.getvalue())
+        print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

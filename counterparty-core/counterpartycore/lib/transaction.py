@@ -308,7 +308,7 @@ def get_default_args(func):
     }
 
 
-def compose_data(db, name, params, accept_missing_params=False):
+def compose_data(db, name, params, accept_missing_params=False, skip_validation=False):
     compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != "db"]
@@ -325,11 +325,13 @@ def compose_data(db, name, params, accept_missing_params=False):
                     raise exceptions.ComposeError(
                         f"missing parameters: {', '.join(missing_params)}"
                     )
+    params["skip_validation"] = skip_validation
     return compose_method(db, **params)
 
 
 def compose_transaction(db, name, params, accept_missing_params=False, **construct_kwargs):
     """Create and return a transaction."""
-    tx_info = compose_data(db, name, params, accept_missing_params)
+    skip_validation = construct_kwargs.pop("skip_validation", False)
+    tx_info = compose_data(db, name, params, accept_missing_params, skip_validation)
     transaction_info = construct(db, tx_info, **construct_kwargs)
     return transaction_info

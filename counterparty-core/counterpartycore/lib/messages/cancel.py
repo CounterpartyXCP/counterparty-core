@@ -76,10 +76,10 @@ def validate(db, source, offer_hash):
     return offer, offer_type, problems
 
 
-def compose(db, source: str, offer_hash: str):
+def compose(db, source: str, offer_hash: str, skip_validation: bool = False):
     # Check that offer exists.
     offer, offer_type, problems = validate(db, source, offer_hash)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, "utf-8"))
