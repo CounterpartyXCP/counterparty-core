@@ -20,6 +20,7 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 1. It is now cheaper and easier to construct `attach` and `detach` transactions. The size of messages is always less than 80 bytes, so an `OP_RETURN` output can store all of the necessary data.
 1. It is possible to execute several `detach` operations in a single transaction to save fees.
 1. It is no longer possible to make a `detach` and a UTXO `move` in the same transaction.
+1. A UTXO move with a transaction that contains only a single OP_RETURN output behaves like a `detach`
 
 ## Bugfixes
 

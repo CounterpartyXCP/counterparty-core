@@ -58,7 +58,7 @@ def unpack(message, return_dict=False):
         raise exceptions.UnpackError(f"Cannot unpack utxo message: {e}") from e
 
 
-def detach_assets(db, tx, source, destination):
+def detach_assets(db, tx, source, destination=None):
     problems = validate(source)
 
     status = "valid"
@@ -84,15 +84,14 @@ def detach_assets(db, tx, source, destination):
         # debit asset from source and credit to recipient
         action = "detach from utxo"
 
+        # determine the destination
         detach_destination = destination
-
         # check if destination is an address
         if detach_destination is not None:
             try:
                 script.validate(detach_destination)
             except Exception:  # let's catch all exceptions here
                 detach_destination = None
-
         # if no destination is provided, we credit the asset to utxo_address
         if detach_destination is None:
             detach_destination = balance["utxo_address"]
@@ -130,10 +129,9 @@ def detach_assets(db, tx, source, destination):
         ledger.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
 
     logger.info(
-        "Detach assets from %(source)s to address: %(destination)s (%(tx_hash)s) [%(status)s]",
+        "Detach assets from %(source)s (%(tx_hash)s) [%(status)s]",
         {
             "source": source,
-            "destination": detach_destination,
             "tx_hash": tx["tx_hash"],
             "status": status,
         },

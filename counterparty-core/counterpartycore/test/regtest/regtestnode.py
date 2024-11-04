@@ -539,6 +539,7 @@ class RegtestNode:
 
         balances = self.api_call("assets/UTXOASSET/balances")["result"]
         utxoasset_balances = []
+        utxoasset_addresses = []
         print(balances)
         utxo = None
         test_address = None
@@ -548,6 +549,7 @@ class RegtestNode:
                     utxo = balance["utxo"]
                     test_address = balance["utxo_address"]
                 utxoasset_balances.append(balance["utxo"])
+                utxoasset_addresses.append(balance["utxo_address"])
         assert utxo
         txid, vout = utxo.split(":")
 
@@ -615,6 +617,41 @@ class RegtestNode:
         assert len(events) == 0
 
         print("Invalid detach test successful")
+
+        # let's try to detach assets with an UTXO move to a single OP_RETURN output
+        utxo = utxoasset_balances[0]
+        utxo_address = utxoasset_addresses[0]
+        txid, vout = utxo.split(":")
+
+        inputs = json.dumps([{"txid": txid, "vout": int(vout)}])
+        outputs = json.dumps({"data": 50 * "00"})
+
+        raw_transaction = self.bitcoin_cli("createrawtransaction", inputs, outputs).strip()
+        signed_transaction_json = self.bitcoin_wallet(
+            "signrawtransactionwithwallet", raw_transaction
+        ).strip()
+        signed_transaction = json.loads(signed_transaction_json)["hex"]
+
+        retry = 0
+        while True:
+            try:
+                tx_hash, _block_hash, _block_time = self.broadcast_transaction(signed_transaction)
+                break
+            except sh.ErrorReturnCode_25:
+                retry += 1
+                assert retry < 6
+                # print(str(e))
+                print("Sleeping for 5 seconds and retrying...")
+                time.sleep(5)
+
+        events = self.api_call(f"transactions/{tx_hash}/events?event_name=DETACH_FROM_UTXO")[
+            "result"
+        ]
+        assert len(events) == 1
+        assert events[0]["params"]["source"] == utxo
+        assert events[0]["params"]["destination"] == utxo_address
+
+        print("Detach with a single OP_RETURN output transaction test successful")
 
 
 class RegtestNodeThread(threading.Thread):
