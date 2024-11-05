@@ -102,6 +102,8 @@ SUPPORTED_SORT_FIELDS = {
         "get_asset",
         "get_quantity",
         "expiration",
+        "give_price",
+        "get_price",
     ],
     "dispensers": [
         "block_index",
@@ -2277,6 +2279,11 @@ def prepare_order_matches_where(status, other_conditions=None):
     return prepare_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
 
 
+SELECT_ORDERS = "*, "
+SELECT_ORDERS += "(get_quantity * 1.0) / (give_quantity * 1.0) AS give_price, "
+SELECT_ORDERS += "(give_quantity * 1.0) / (get_quantity * 1.0) AS get_price"
+
+
 def get_orders(
     db,
     status: OrderStatus = "all",
@@ -2311,6 +2318,7 @@ def get_orders(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDERS,
     )
 
 
@@ -2345,6 +2353,7 @@ def get_orders_by_asset(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDERS,
     )
 
 
@@ -2375,6 +2384,7 @@ def get_orders_by_address(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDERS,
     )
 
 
@@ -2452,6 +2462,7 @@ def get_order(db, order_hash: str):
         db,
         "orders",
         where={"tx_hash": order_hash},
+        select=SELECT_ORDERS,
     )
 
 

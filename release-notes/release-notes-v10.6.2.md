@@ -18,6 +18,7 @@
 ## API
 
 - Add `validate` argument to compose API
+- Add sortable `get_price` and `give_price` fields in orders
 
 ## CLI
 

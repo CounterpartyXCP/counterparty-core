@@ -396,6 +396,8 @@ def test_new_get_asset_orders():
         "fee_provided_remaining": 992800,
         "status": "open",
         "confirmed": True,
+        "get_price": 0.008,
+        "give_price": 125.0,
     }
 
 
@@ -423,6 +425,8 @@ def test_new_get_order_info():
         "fee_provided_remaining": 6800,
         "status": "open",
         "confirmed": True,
+        "get_price": 100.0,
+        "give_price": 0.01,
     }
 
 
