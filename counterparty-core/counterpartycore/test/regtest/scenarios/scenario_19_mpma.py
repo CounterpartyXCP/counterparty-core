@@ -342,7 +342,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_10",
+                        "event_index": "$EVENT_INDEX_13",
                         "params": {
                             "asset": "XCP",
                             "block_index": "$BLOCK_INDEX",
@@ -359,7 +359,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_9",
+                        "event_index": "$EVENT_INDEX_12",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -376,7 +376,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_8",
+                        "event_index": "$EVENT_INDEX_11",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -393,7 +393,7 @@ SCENARIO = [
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_7",
+                        "event_index": "$EVENT_INDEX_10",
                         "params": {
                             "action": "mpma send",
                             "address": "$ADDRESS_2",
@@ -409,7 +409,7 @@ SCENARIO = [
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_6",
+                        "event_index": "$EVENT_INDEX_9",
                         "params": {
                             "action": "mpma send",
                             "address": "$ADDRESS_2",
@@ -425,7 +425,7 @@ SCENARIO = [
                     },
                     {
                         "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_5",
+                        "event_index": "$EVENT_INDEX_8",
                         "params": {
                             "address": "$ADDRESS_1",
                             "asset": "XCP",
@@ -441,7 +441,7 @@ SCENARIO = [
                     },
                     {
                         "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_4",
+                        "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "address": "$ADDRESS_4",
                             "asset": "MPMASSET",
@@ -457,7 +457,7 @@ SCENARIO = [
                     },
                     {
                         "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "address": "$ADDRESS_3",
                             "asset": "MPMASSET",
@@ -466,6 +466,22 @@ SCENARIO = [
                             "event": "$TX_HASH",
                             "quantity": 10,
                             "tx_index": "$TX_INDEX",
+                            "utxo": None,
+                            "utxo_address": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "CREDIT",
+                        "event_index": "$EVENT_INDEX_4",
+                        "params": {
+                            "address": "$ADDRESS_1",
+                            "asset": "XCP",
+                            "block_index": "$BLOCK_INDEX",
+                            "calling_function": "cancel order",
+                            "event": "$ORDER_3_HASH",
+                            "quantity": 5000,
+                            "tx_index": 0,
                             "utxo": None,
                             "utxo_address": None,
                         },

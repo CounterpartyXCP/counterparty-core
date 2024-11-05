@@ -459,6 +459,7 @@ def compose(
     get_quantity: int,
     expiration: int,
     fee_required: int,
+    skip_validation: bool = False,
 ):
     cursor = db.cursor()
 
@@ -483,7 +484,7 @@ def compose(
         fee_required,
         util.CURRENT_BLOCK_INDEX,
     )
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     give_id = ledger.get_asset_id(db, give_asset, util.CURRENT_BLOCK_INDEX)

@@ -60,9 +60,9 @@ def validate(db, _source, destination, quantity):
     return problems
 
 
-def compose(db, source, destination, quantity):
+def compose(db, source, destination, quantity, skip_validation: bool = False):
     problems = validate(db, source, destination, quantity)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
     # create data
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser_module.DISPENSE_ID)
