@@ -11727,7 +11727,7 @@
                         "name": "offer_hash",
                         "required": true,
                         "type": "str",
-                        "description": "The hash of the order/bet to be cancelled (e.g. $LAST_ORDER_TX_HASH)"
+                        "description": "The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)"
                     },
                     {
                         "name": "encoding",

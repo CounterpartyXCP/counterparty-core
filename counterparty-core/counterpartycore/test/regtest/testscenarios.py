@@ -59,7 +59,7 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_19_mpma.SCENARIO
+# SCENARIOS = scenario_18_utxo.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -281,7 +281,10 @@ def run_item(node, item, context):
 
     for name, value in item.get("set_variables", {}).items():
         if tx_hash is not None:
+            print("get tx index", tx_hash)
             tx_index = get_tx_index(node, tx_hash)
+            if tx_index is None:
+                tx_index = get_last_tx_index(node) + 1
         else:
             tx_index = get_last_tx_index(node)
         context[name] = (
@@ -292,6 +295,7 @@ def run_item(node, item, context):
             .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))  # TODO: make it more generic
             .replace("$BLOCK_INDEX", str(node.block_count))
         )
+        print(f"Set variable {name} to {context[name]}")
 
     if "controls" in item:
         control_result(
@@ -394,7 +398,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        print(regtest_node_thread.node.server_out.getvalue())
+        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 
