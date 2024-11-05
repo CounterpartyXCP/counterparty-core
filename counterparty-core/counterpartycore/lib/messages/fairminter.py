@@ -128,13 +128,17 @@ def validate(
     except exceptions.AssetNameError as e:
         problems.append(f"Invalid asset name: {e}")
 
-    asset_name = asset
-    # is subasset ?
-    if asset_parent != "":
-        asset_name = f"{asset_parent}.{asset}"
-
     # check if asset exists
+    asset_name = asset
     existing_asset = ledger.get_asset(db, asset_name)
+    if existing_asset and existing_asset["asset_longname"]:
+        asset_name = existing_asset["asset_longname"]
+        if asset_parent != "":
+            problems.append("Asset parent cannot be set for a subasset.")
+        asset_parent, asset = asset_name.split(".")
+    elif asset_parent != "":
+        asset_name = f"{asset_parent}.{asset}"
+        existing_asset = ledger.get_asset(db, asset_name)
 
     if existing_asset:
         # check if a fair minter is already opened for this asset
@@ -413,10 +417,13 @@ def parse(db, tx, message):
 
     # is subasset ?
     asset_longname = ""
-    if asset_parent != "":
+    existing_asset = ledger.get_asset(db, asset)
+    if existing_asset and existing_asset["asset_longname"]:
+        asset_longname = existing_asset["asset_longname"]
+        asset_parent, asset = asset_longname.split(".")
+    elif asset_parent != "":
         asset_longname = f"{asset_parent}.{asset}"
-
-    existing_asset = ledger.get_asset(db, asset_longname if asset_longname != "" else asset)
+        existing_asset = ledger.get_asset(db, asset_longname)
 
     fee = 0
     asset_name = asset

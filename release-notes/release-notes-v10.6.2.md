@@ -24,7 +24,7 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 
 ## Bugfixes
 
-
+- Fixed subasset name handling when creating a fairminter by preserving the `asset_longname` field when `asset=<subasset_name>` is specified
 
 ## Codebase
 
