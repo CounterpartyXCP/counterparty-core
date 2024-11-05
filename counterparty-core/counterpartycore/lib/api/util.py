@@ -424,9 +424,14 @@ def inject_normalized_quantity(item, field_name, asset_info):
         return item
 
     if item[field_name] is not None:
-        item[field_name + "_normalized"] = (
-            divide(item[field_name], 10**8) if asset_info["divisible"] else str(item[field_name])
-        )
+        if field_name in ["give_price", "get_price"]:
+            item[field_name + "_normalized"] = divide(item[field_name], 1)
+        else:
+            item[field_name + "_normalized"] = (
+                divide(item[field_name], 10**8)
+                if asset_info["divisible"]
+                else str(item[field_name])
+            )
 
     return item
 
@@ -465,6 +470,8 @@ def inject_normalized_quantities(result_list):
         "earn_quantity": {"asset_field": "asset_info", "divisible": None},
         "commission": {"asset_field": "asset_info", "divisible": None},
         "paid_quantity": {"asset_field": "asset_info", "divisible": None},
+        "give_price": {"asset_field": "give_asset_info", "divisible": None},
+        "get_price": {"asset_field": "get_asset_info", "divisible": None},
     }
 
     enriched_result_list = []

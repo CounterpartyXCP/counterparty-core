@@ -4502,6 +4502,8 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
+                "give_price": 0.008,
+                "get_price": 125.0,
                 "confirmed": true,
                 "block_time": 310513000,
                 "give_asset_info": {
@@ -4525,7 +4527,9 @@
                 "fee_provided_normalized": "0.00006800",
                 "fee_required_normalized": "0.00900000",
                 "fee_required_remaining_normalized": "0.00900000",
-                "fee_provided_remaining_normalized": "0.00006800"
+                "fee_provided_remaining_normalized": "0.00006800",
+                "give_price_normalized": "0.00800000",
+                "get_price_normalized": "125.00000000"
             },
             {
                 "tx_index": 12,
@@ -4545,6 +4549,8 @@
                 "fee_provided": 1000000,
                 "fee_provided_remaining": 1000000,
                 "status": "open",
+                "give_price": 149.9999250000375,
+                "get_price": 0.00666667,
                 "confirmed": true,
                 "block_time": 310011000,
                 "give_asset_info": {
@@ -4568,7 +4574,9 @@
                 "fee_provided_normalized": "0.01000000",
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
-                "fee_provided_remaining_normalized": "0.01000000"
+                "fee_provided_remaining_normalized": "0.01000000",
+                "give_price_normalized": "149.99993000",
+                "get_price_normalized": "0.00666667"
             },
             {
                 "tx_index": 11,
@@ -4588,6 +4596,8 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
+                "give_price": 0.01,
+                "get_price": 100.0,
                 "confirmed": true,
                 "block_time": 310010000,
                 "give_asset_info": {
@@ -4611,7 +4621,9 @@
                 "fee_provided_normalized": "0.00006800",
                 "fee_required_normalized": "0.00900000",
                 "fee_required_remaining_normalized": "0.00900000",
-                "fee_provided_remaining_normalized": "0.00006800"
+                "fee_provided_remaining_normalized": "0.00006800",
+                "give_price_normalized": "0.01000000",
+                "get_price_normalized": "100.00000000"
             },
             {
                 "tx_index": 10,
@@ -4631,6 +4643,8 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
+                "give_price": 1.0,
+                "get_price": 1.0,
                 "confirmed": true,
                 "block_time": 310009000,
                 "give_asset_info": {
@@ -4654,7 +4668,9 @@
                 "fee_provided_normalized": "0.00006800",
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
-                "fee_provided_remaining_normalized": "0.00006800"
+                "fee_provided_remaining_normalized": "0.00006800",
+                "give_price_normalized": "1.00000000",
+                "get_price_normalized": "1.00000000"
             },
             {
                 "tx_index": 7,
@@ -4674,6 +4690,8 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
+                "give_price": 1.0,
+                "get_price": 1.0,
                 "confirmed": true,
                 "block_time": 310006000,
                 "give_asset_info": {
@@ -4697,7 +4715,9 @@
                 "fee_provided_normalized": "0.00006800",
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
-                "fee_provided_remaining_normalized": "0.00006800"
+                "fee_provided_remaining_normalized": "0.00006800",
+                "give_price_normalized": "1.00000000",
+                "get_price_normalized": "1.00000000"
             }
         ],
         "next_cursor": null,
@@ -5488,6 +5508,8 @@
                 "fee_provided": 1000000,
                 "fee_provided_remaining": 992800,
                 "status": "open",
+                "give_price": 125.0,
+                "get_price": 0.008,
                 "confirmed": true,
                 "block_time": 310513000,
                 "give_asset_info": {
@@ -5511,7 +5533,9 @@
                 "fee_provided_normalized": "0.01000000",
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
-                "fee_provided_remaining_normalized": "0.00992800"
+                "fee_provided_remaining_normalized": "0.00992800",
+                "give_price_normalized": "125.00000000",
+                "get_price_normalized": "0.00800000"
             },
             {
                 "tx_index": 492,
@@ -5531,6 +5555,8 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
+                "give_price": 0.008,
+                "get_price": 125.0,
                 "confirmed": true,
                 "block_time": 310513000,
                 "give_asset_info": {
@@ -5554,7 +5580,9 @@
                 "fee_provided_normalized": "0.00006800",
                 "fee_required_normalized": "0.00900000",
                 "fee_required_remaining_normalized": "0.00900000",
-                "fee_provided_remaining_normalized": "0.00006800"
+                "fee_provided_remaining_normalized": "0.00006800",
+                "give_price_normalized": "0.00800000",
+                "get_price_normalized": "125.00000000"
             },
             {
                 "tx_index": 12,
@@ -5574,6 +5602,8 @@
                 "fee_provided": 1000000,
                 "fee_provided_remaining": 1000000,
                 "status": "open",
+                "give_price": 149.9999250000375,
+                "get_price": 0.00666667,
                 "confirmed": true,
                 "block_time": 310011000,
                 "give_asset_info": {
@@ -5597,7 +5627,9 @@
                 "fee_provided_normalized": "0.01000000",
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
-                "fee_provided_remaining_normalized": "0.01000000"
+                "fee_provided_remaining_normalized": "0.01000000",
+                "give_price_normalized": "149.99993000",
+                "get_price_normalized": "0.00666667"
             },
             {
                 "tx_index": 11,
@@ -5617,6 +5649,8 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
+                "give_price": 0.01,
+                "get_price": 100.0,
                 "confirmed": true,
                 "block_time": 310010000,
                 "give_asset_info": {
@@ -5640,7 +5674,9 @@
                 "fee_provided_normalized": "0.00006800",
                 "fee_required_normalized": "0.00900000",
                 "fee_required_remaining_normalized": "0.00900000",
-                "fee_provided_remaining_normalized": "0.00006800"
+                "fee_provided_remaining_normalized": "0.00006800",
+                "give_price_normalized": "0.01000000",
+                "get_price_normalized": "100.00000000"
             },
             {
                 "tx_index": 10,
@@ -5660,6 +5696,8 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
+                "give_price": 1.0,
+                "get_price": 1.0,
                 "confirmed": true,
                 "block_time": 310009000,
                 "give_asset_info": {
@@ -5683,7 +5721,9 @@
                 "fee_provided_normalized": "0.00006800",
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
-                "fee_provided_remaining_normalized": "0.00006800"
+                "fee_provided_remaining_normalized": "0.00006800",
+                "give_price_normalized": "1.00000000",
+                "get_price_normalized": "1.00000000"
             },
             {
                 "tx_index": 7,
@@ -5703,6 +5743,8 @@
                 "fee_provided": 6800,
                 "fee_provided_remaining": 6800,
                 "status": "open",
+                "give_price": 1.0,
+                "get_price": 1.0,
                 "confirmed": true,
                 "block_time": 310006000,
                 "give_asset_info": {
@@ -5726,7 +5768,9 @@
                 "fee_provided_normalized": "0.00006800",
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
-                "fee_provided_remaining_normalized": "0.00006800"
+                "fee_provided_remaining_normalized": "0.00006800",
+                "give_price_normalized": "1.00000000",
+                "get_price_normalized": "1.00000000"
             }
         ],
         "next_cursor": null,
@@ -5751,6 +5795,8 @@
             "fee_provided": 6800,
             "fee_provided_remaining": 6800,
             "status": "open",
+            "give_price": 0.008,
+            "get_price": 125.0,
             "confirmed": true,
             "block_time": 310513000,
             "give_asset_info": {
@@ -5774,7 +5820,9 @@
             "fee_provided_normalized": "0.00006800",
             "fee_required_normalized": "0.00900000",
             "fee_required_remaining_normalized": "0.00900000",
-            "fee_provided_remaining_normalized": "0.00006800"
+            "fee_provided_remaining_normalized": "0.00006800",
+            "give_price_normalized": "0.00800000",
+            "get_price_normalized": "125.00000000"
         }
     },
     "http://localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/matches?verbose=true": {
