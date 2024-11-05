@@ -9,7 +9,7 @@ SCENARIO = [
             "escrow_quantity": int(10000 * 10e8),
             "mainchainrate": 1,  # 1 BTC for 1 XCP
             "status": 0,
-            "skip_validation": True,
+            "validate": False,
         },
         "controls": [
             {

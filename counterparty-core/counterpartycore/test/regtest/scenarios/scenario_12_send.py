@@ -7,7 +7,7 @@ SCENARIO = [
             "asset": "XCP",
             "quantity": int(10000 * 10e8),
             "destination": "$ADDRESS_4",
-            "skip_validation": True,
+            "validate": False,
         },
         "set_variables": {
             "SEND_SKIP_VALIDATION_HASH": "$TX_HASH",

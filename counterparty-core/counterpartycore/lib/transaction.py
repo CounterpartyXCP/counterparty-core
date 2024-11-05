@@ -331,7 +331,7 @@ def compose_data(db, name, params, accept_missing_params=False, skip_validation=
 
 def compose_transaction(db, name, params, accept_missing_params=False, **construct_kwargs):
     """Create and return a transaction."""
-    skip_validation = construct_kwargs.pop("skip_validation", False)
+    skip_validation = not construct_kwargs.pop("validate", True)
     tx_info = compose_data(db, name, params, accept_missing_params, skip_validation)
     transaction_info = construct(db, tx_info, **construct_kwargs)
     return transaction_info

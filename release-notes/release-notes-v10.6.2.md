@@ -17,7 +17,7 @@
 
 ## API
 
-- Add `skip_validation` argument to compose API
+- Add `validate` argument to compose API
 
 ## CLI
 
