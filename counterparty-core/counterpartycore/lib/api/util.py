@@ -303,6 +303,11 @@ def divide(value1, value2):
     return D(value1) / D(value2)
 
 
+def normalize_price(value):
+    decimal.getcontext().prec = 16
+    return "{0:.16f}".format(D(value))
+
+
 def inject_issuances_and_block_times(db, result_list):
     asset_fields = [
         "asset",
@@ -424,8 +429,9 @@ def inject_normalized_quantity(item, field_name, asset_info):
         return item
 
     if item[field_name] is not None:
-        if field_name in ["give_price", "get_price"]:
-            item[field_name + "_normalized"] = divide(item[field_name], 1)
+        if field_name in ["give_price", "get_price", "price"]:
+            # use 16 decimal places for prices
+            item[field_name + "_normalized"] = normalize_price(item[field_name])
         else:
             item[field_name + "_normalized"] = (
                 divide(item[field_name], 10**8)

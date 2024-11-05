@@ -3200,6 +3200,7 @@
             "dispense_count": 0,
             "last_status_tx_source": null,
             "close_block_index": null,
+            "price": 1.0,
             "confirmed": true,
             "fiat_price": null,
             "oracle_price": null,
@@ -3218,7 +3219,8 @@
             "give_remaining_normalized": "0.00000100",
             "escrow_quantity_normalized": "0.00000100",
             "satoshirate_normalized": "0.00000100",
-            "satoshi_price_normalized": "0.00000100"
+            "satoshi_price_normalized": "0.00000100",
+            "price_normalized": "1.0000000000000000"
         }
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispenses/sends?verbose=true": {
@@ -4528,8 +4530,8 @@
                 "fee_required_normalized": "0.00900000",
                 "fee_required_remaining_normalized": "0.00900000",
                 "fee_provided_remaining_normalized": "0.00006800",
-                "give_price_normalized": "0.00800000",
-                "get_price_normalized": "125.00000000"
+                "give_price_normalized": "0.0080000000000000",
+                "get_price_normalized": "125.0000000000000000"
             },
             {
                 "tx_index": 12,
@@ -4575,8 +4577,8 @@
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
                 "fee_provided_remaining_normalized": "0.01000000",
-                "give_price_normalized": "149.99993000",
-                "get_price_normalized": "0.00666667"
+                "give_price_normalized": "149.9999250000375071",
+                "get_price_normalized": "0.0066666700000000"
             },
             {
                 "tx_index": 11,
@@ -4622,8 +4624,8 @@
                 "fee_required_normalized": "0.00900000",
                 "fee_required_remaining_normalized": "0.00900000",
                 "fee_provided_remaining_normalized": "0.00006800",
-                "give_price_normalized": "0.01000000",
-                "get_price_normalized": "100.00000000"
+                "give_price_normalized": "0.0100000000000000",
+                "get_price_normalized": "100.0000000000000000"
             },
             {
                 "tx_index": 10,
@@ -4669,8 +4671,8 @@
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
                 "fee_provided_remaining_normalized": "0.00006800",
-                "give_price_normalized": "1.00000000",
-                "get_price_normalized": "1.00000000"
+                "give_price_normalized": "1.0000000000000000",
+                "get_price_normalized": "1.0000000000000000"
             },
             {
                 "tx_index": 7,
@@ -4716,8 +4718,8 @@
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
                 "fee_provided_remaining_normalized": "0.00006800",
-                "give_price_normalized": "1.00000000",
-                "get_price_normalized": "1.00000000"
+                "give_price_normalized": "1.0000000000000000",
+                "get_price_normalized": "1.0000000000000000"
             }
         ],
         "next_cursor": null,
@@ -5390,6 +5392,7 @@
             "dispense_count": 0,
             "last_status_tx_source": null,
             "close_block_index": null,
+            "price": 1.0,
             "confirmed": true,
             "fiat_price": null,
             "oracle_price": null,
@@ -5408,7 +5411,8 @@
             "give_remaining_normalized": "0.00000100",
             "escrow_quantity_normalized": "0.00000100",
             "satoshirate_normalized": "0.00000100",
-            "satoshi_price_normalized": "0.00000100"
+            "satoshi_price_normalized": "0.00000100",
+            "price_normalized": "1.0000000000000000"
         }
     },
     "http://localhost:10009/v2/assets/NODIVISIBLE/holders?verbose=true": {
@@ -5534,8 +5538,8 @@
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
                 "fee_provided_remaining_normalized": "0.00992800",
-                "give_price_normalized": "125.00000000",
-                "get_price_normalized": "0.00800000"
+                "give_price_normalized": "125.0000000000000000",
+                "get_price_normalized": "0.0080000000000000"
             },
             {
                 "tx_index": 492,
@@ -5581,8 +5585,8 @@
                 "fee_required_normalized": "0.00900000",
                 "fee_required_remaining_normalized": "0.00900000",
                 "fee_provided_remaining_normalized": "0.00006800",
-                "give_price_normalized": "0.00800000",
-                "get_price_normalized": "125.00000000"
+                "give_price_normalized": "0.0080000000000000",
+                "get_price_normalized": "125.0000000000000000"
             },
             {
                 "tx_index": 12,
@@ -5628,8 +5632,8 @@
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
                 "fee_provided_remaining_normalized": "0.01000000",
-                "give_price_normalized": "149.99993000",
-                "get_price_normalized": "0.00666667"
+                "give_price_normalized": "149.9999250000375071",
+                "get_price_normalized": "0.0066666700000000"
             },
             {
                 "tx_index": 11,
@@ -5675,8 +5679,8 @@
                 "fee_required_normalized": "0.00900000",
                 "fee_required_remaining_normalized": "0.00900000",
                 "fee_provided_remaining_normalized": "0.00006800",
-                "give_price_normalized": "0.01000000",
-                "get_price_normalized": "100.00000000"
+                "give_price_normalized": "0.0100000000000000",
+                "get_price_normalized": "100.0000000000000000"
             },
             {
                 "tx_index": 10,
@@ -5722,8 +5726,8 @@
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
                 "fee_provided_remaining_normalized": "0.00006800",
-                "give_price_normalized": "1.00000000",
-                "get_price_normalized": "1.00000000"
+                "give_price_normalized": "1.0000000000000000",
+                "get_price_normalized": "1.0000000000000000"
             },
             {
                 "tx_index": 7,
@@ -5769,8 +5773,8 @@
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
                 "fee_provided_remaining_normalized": "0.00006800",
-                "give_price_normalized": "1.00000000",
-                "get_price_normalized": "1.00000000"
+                "give_price_normalized": "1.0000000000000000",
+                "get_price_normalized": "1.0000000000000000"
             }
         ],
         "next_cursor": null,
@@ -5821,8 +5825,8 @@
             "fee_required_normalized": "0.00900000",
             "fee_required_remaining_normalized": "0.00900000",
             "fee_provided_remaining_normalized": "0.00006800",
-            "give_price_normalized": "0.00800000",
-            "get_price_normalized": "125.00000000"
+            "give_price_normalized": "0.0080000000000000",
+            "get_price_normalized": "125.0000000000000000"
         }
     },
     "http://localhost:10009/v2/orders/74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498/matches?verbose=true": {
@@ -6159,6 +6163,7 @@
                 "dispense_count": 0,
                 "last_status_tx_source": null,
                 "close_block_index": null,
+                "price": 1.0,
                 "confirmed": true,
                 "fiat_price": null,
                 "oracle_price": null,
@@ -6177,7 +6182,8 @@
                 "give_remaining_normalized": "100",
                 "escrow_quantity_normalized": "100",
                 "satoshirate_normalized": "0.00000100",
-                "satoshi_price_normalized": "0.00000100"
+                "satoshi_price_normalized": "0.00000100",
+                "price_normalized": "1.0000000000000000"
             },
             {
                 "tx_index": 108,
@@ -6196,6 +6202,7 @@
                 "dispense_count": 0,
                 "last_status_tx_source": null,
                 "close_block_index": null,
+                "price": 1.0,
                 "confirmed": true,
                 "fiat_price": null,
                 "oracle_price": null,
@@ -6214,7 +6221,8 @@
                 "give_remaining_normalized": "0.00000100",
                 "escrow_quantity_normalized": "0.00000100",
                 "satoshirate_normalized": "0.00000100",
-                "satoshi_price_normalized": "0.00000100"
+                "satoshi_price_normalized": "0.00000100",
+                "price_normalized": "1.0000000000000000"
             }
         ],
         "next_cursor": null,
@@ -6238,6 +6246,7 @@
             "dispense_count": 0,
             "last_status_tx_source": null,
             "close_block_index": null,
+            "price": 1.0,
             "confirmed": true,
             "fiat_price": null,
             "oracle_price": null,
@@ -6256,7 +6265,8 @@
             "give_remaining_normalized": "0.00000100",
             "escrow_quantity_normalized": "0.00000100",
             "satoshirate_normalized": "0.00000100",
-            "satoshi_price_normalized": "0.00000100"
+            "satoshi_price_normalized": "0.00000100",
+            "price_normalized": "1.0000000000000000"
         }
     },
     "http://localhost:10009/v2/dispensers/9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec/dispenses?verbose=true": {
