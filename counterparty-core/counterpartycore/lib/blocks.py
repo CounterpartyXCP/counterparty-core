@@ -253,7 +253,7 @@ def parse_tx(db, tx):
                 return False
 
             # if attach or detach we move assets after parsing
-            if util.enabled("spend_utxo_to_detach") and message_type_id in [attach.ID, detach.ID]:
+            if util.enabled("spend_utxo_to_detach") and message_type_id == attach.ID:
                 move.move_assets(db, tx)
 
             # NOTE: for debugging (check asset conservation after every `N` transactions).
