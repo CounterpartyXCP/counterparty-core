@@ -134,7 +134,7 @@ def validate(
     if existing_asset and existing_asset["asset_longname"]:
         asset_name = existing_asset["asset_longname"]
         if asset_parent != "":
-            problems.append("Asset parent cannot be set for a subasset.")
+            problems.append("Asset parent cannot be set when using subasset numeric name.")
         asset_parent, asset = asset_name.split(".")
     elif asset_parent != "":
         asset_name = f"{asset_parent}.{asset}"
