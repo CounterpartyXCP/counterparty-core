@@ -136,6 +136,7 @@ class RegtestNode:
         if return_only_data:
             return result["result"]["data"]
         raw_transaction = result["result"]["rawtransaction"]
+        # print(f"Raw transaction: {raw_transaction}")
         signed_transaction_json = self.bitcoin_wallet(
             "signrawtransactionwithwallet", raw_transaction
         ).strip()

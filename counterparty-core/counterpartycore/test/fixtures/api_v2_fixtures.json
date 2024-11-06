@@ -195,11 +195,11 @@
                         "fee_required": 900000,
                         "status": "open",
                         "give_asset_info": {
-                            "divisible": true,
                             "asset_longname": null,
                             "description": "The Counterparty protocol native currency",
-                            "locked": true,
-                            "issuer": null
+                            "issuer": null,
+                            "divisible": true,
+                            "locked": true
                         },
                         "get_asset_info": {
                             "divisible": true,
@@ -267,11 +267,11 @@
                     "tx_index": 492,
                     "block_time": 310491000,
                     "give_asset_info": {
-                        "divisible": true,
                         "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
                     },
                     "get_asset_info": {
                         "divisible": true,
@@ -306,11 +306,11 @@
                     "utxo_address": null,
                     "block_time": 310491000,
                     "asset_info": {
-                        "divisible": true,
                         "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
                     },
                     "quantity_normalized": "1.00000000"
                 },
@@ -344,11 +344,11 @@
                             "fee_required": 900000,
                             "status": "open",
                             "give_asset_info": {
-                                "divisible": true,
                                 "asset_longname": null,
                                 "description": "The Counterparty protocol native currency",
-                                "locked": true,
-                                "issuer": null
+                                "issuer": null,
+                                "divisible": true,
+                                "locked": true
                             },
                             "get_asset_info": {
                                 "divisible": true,
@@ -438,11 +438,11 @@
                 "confirmed": true,
                 "block_time": 310491000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000"
             }
@@ -918,11 +918,11 @@
                     "utxo_address": null,
                     "block_time": 310001000,
                     "asset_info": {
-                        "divisible": true,
                         "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
                     },
                     "quantity_normalized": "0.50000000"
                 },
@@ -1054,11 +1054,11 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "divisible": true,
                         "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
                     },
                     "quantity_normalized": "0.00000200"
                 },
@@ -1081,11 +1081,11 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "divisible": true,
                         "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
                     },
                     "quantity_normalized": "0.00000200"
                 },
@@ -1184,11 +1184,11 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "divisible": true,
                         "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
                     },
                     "quantity_normalized": "0.00000200"
                 },
@@ -1588,11 +1588,11 @@
                     "utxo_address": null,
                     "block_time": 310520000,
                     "asset_info": {
-                        "divisible": true,
                         "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
                     },
                     "quantity_normalized": "0.00000200"
                 },
@@ -1682,11 +1682,11 @@
                 "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
                 "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.00000100"
             },
@@ -1832,11 +1832,11 @@
                 "utxo": null,
                 "utxo_address": null,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "916.75000000"
             }
@@ -1901,11 +1901,11 @@
                 "confirmed": true,
                 "block_time": 310507000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.00000100"
             },
@@ -2006,11 +2006,11 @@
                 "confirmed": true,
                 "block_time": 310482000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000"
             },
@@ -2027,11 +2027,11 @@
                 "confirmed": true,
                 "block_time": 310102000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.00000009"
             },
@@ -2153,11 +2153,11 @@
                 "confirmed": true,
                 "block_time": 310000000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "930.00000000"
             }
@@ -2201,11 +2201,11 @@
                 "confirmed": true,
                 "block_time": 310508000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.00000010"
             },
@@ -2222,11 +2222,11 @@
                 "confirmed": true,
                 "block_time": 310507000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.00000100"
             },
@@ -2243,11 +2243,11 @@
                 "confirmed": true,
                 "block_time": 310507000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.00000010"
             },
@@ -2264,11 +2264,11 @@
                 "confirmed": true,
                 "block_time": 310503000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             },
@@ -2285,11 +2285,11 @@
                 "confirmed": true,
                 "block_time": 310502000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             },
@@ -2306,11 +2306,11 @@
                 "confirmed": true,
                 "block_time": 310500000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             },
@@ -2327,11 +2327,11 @@
                 "confirmed": true,
                 "block_time": 310499000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             },
@@ -2348,11 +2348,11 @@
                 "confirmed": true,
                 "block_time": 310498000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.25000000"
             },
@@ -2369,11 +2369,11 @@
                 "confirmed": true,
                 "block_time": 310497000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             },
@@ -2390,11 +2390,11 @@
                 "confirmed": true,
                 "block_time": 310491000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000"
             },
@@ -2411,11 +2411,11 @@
                 "confirmed": true,
                 "block_time": 310481000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000"
             },
@@ -2453,11 +2453,11 @@
                 "confirmed": true,
                 "block_time": 310019000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.00000009"
             },
@@ -2474,11 +2474,11 @@
                 "confirmed": true,
                 "block_time": 310016000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             },
@@ -2558,11 +2558,11 @@
                 "confirmed": true,
                 "block_time": 310012000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "3.00000000"
             },
@@ -2579,11 +2579,11 @@
                 "confirmed": true,
                 "block_time": 310010000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000"
             },
@@ -2600,11 +2600,11 @@
                 "confirmed": true,
                 "block_time": 310009000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000"
             },
@@ -2621,11 +2621,11 @@
                 "confirmed": true,
                 "block_time": 310008000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000"
             },
@@ -2663,11 +2663,11 @@
                 "confirmed": true,
                 "block_time": 310006000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000"
             },
@@ -2684,11 +2684,11 @@
                 "confirmed": true,
                 "block_time": 310004000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             },
@@ -2705,11 +2705,11 @@
                 "confirmed": true,
                 "block_time": 310003000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             },
@@ -2726,11 +2726,11 @@
                 "confirmed": true,
                 "block_time": 310002000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             },
@@ -2747,11 +2747,11 @@
                 "confirmed": true,
                 "block_time": 310001000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.50000000"
             }
@@ -2883,11 +2883,11 @@
                 "confirmed": true,
                 "block_time": 310507000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.00000100",
                 "fee_paid_normalized": "0.00000010"
@@ -2907,11 +2907,11 @@
                 "confirmed": true,
                 "block_time": 310481000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000",
                 "fee_paid_normalized": "0.00000000"
@@ -3027,11 +3027,11 @@
                 "confirmed": true,
                 "block_time": 310012000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "3.00000000",
                 "fee_paid_normalized": "0.00000000"
@@ -3051,11 +3051,11 @@
                 "confirmed": true,
                 "block_time": 310008000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000",
                 "fee_paid_normalized": "0.00000000"
@@ -3105,11 +3105,11 @@
                 "confirmed": true,
                 "block_time": 310482000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000",
                 "fee_paid_normalized": "0.00000000"
@@ -3209,11 +3209,11 @@
             "satoshi_price": 100,
             "block_time": 310107000,
             "asset_info": {
-                "divisible": true,
                 "asset_longname": null,
                 "description": "The Counterparty protocol native currency",
-                "locked": true,
-                "issuer": null
+                "issuer": null,
+                "divisible": true,
+                "locked": true
             },
             "give_quantity_normalized": "0.00000100",
             "give_remaining_normalized": "0.00000100",
@@ -4455,11 +4455,11 @@
                         "fee_required": 900000,
                         "status": "open",
                         "give_asset_info": {
-                            "divisible": true,
                             "asset_longname": null,
                             "description": "The Counterparty protocol native currency",
-                            "locked": true,
-                            "issuer": null
+                            "issuer": null,
+                            "divisible": true,
+                            "locked": true
                         },
                         "get_asset_info": {
                             "divisible": true,
@@ -4509,11 +4509,11 @@
                 "confirmed": true,
                 "block_time": 310513000,
                 "give_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "get_asset_info": {
                     "divisible": true,
@@ -4563,11 +4563,11 @@
                     "issuer": null
                 },
                 "get_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "give_quantity_normalized": "0.00666667",
                 "get_quantity_normalized": "1.00000000",
@@ -4603,11 +4603,11 @@
                 "confirmed": true,
                 "block_time": 310010000,
                 "give_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "get_asset_info": {
                     "divisible": true,
@@ -4650,11 +4650,11 @@
                 "confirmed": true,
                 "block_time": 310009000,
                 "give_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "get_asset_info": {
                     "asset_longname": null,
@@ -4697,11 +4697,11 @@
                 "confirmed": true,
                 "block_time": 310006000,
                 "give_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "get_asset_info": {
                     "asset_longname": null,
@@ -5401,11 +5401,11 @@
             "satoshi_price": 100,
             "block_time": 310107000,
             "asset_info": {
-                "divisible": true,
                 "asset_longname": null,
                 "description": "The Counterparty protocol native currency",
-                "locked": true,
-                "issuer": null
+                "issuer": null,
+                "divisible": true,
+                "locked": true
             },
             "give_quantity_normalized": "0.00000100",
             "give_remaining_normalized": "0.00000100",
@@ -5524,11 +5524,11 @@
                     "issuer": null
                 },
                 "get_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "give_quantity_normalized": "0.00800000",
                 "get_quantity_normalized": "1.00000000",
@@ -5564,11 +5564,11 @@
                 "confirmed": true,
                 "block_time": 310513000,
                 "give_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "get_asset_info": {
                     "divisible": true,
@@ -5618,11 +5618,11 @@
                     "issuer": null
                 },
                 "get_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "give_quantity_normalized": "0.00666667",
                 "get_quantity_normalized": "1.00000000",
@@ -5658,11 +5658,11 @@
                 "confirmed": true,
                 "block_time": 310010000,
                 "give_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "get_asset_info": {
                     "divisible": true,
@@ -5705,11 +5705,11 @@
                 "confirmed": true,
                 "block_time": 310009000,
                 "give_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "get_asset_info": {
                     "asset_longname": null,
@@ -5752,11 +5752,11 @@
                 "confirmed": true,
                 "block_time": 310006000,
                 "give_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "get_asset_info": {
                     "asset_longname": null,
@@ -5804,11 +5804,11 @@
             "confirmed": true,
             "block_time": 310513000,
             "give_asset_info": {
-                "divisible": true,
                 "asset_longname": null,
                 "description": "The Counterparty protocol native currency",
-                "locked": true,
-                "issuer": null
+                "issuer": null,
+                "divisible": true,
+                "locked": true
             },
             "get_asset_info": {
                 "divisible": true,
@@ -5854,11 +5854,11 @@
                 "confirmed": true,
                 "block_time": 310513000,
                 "forward_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "backward_asset_info": {
                     "divisible": true,
@@ -5915,11 +5915,11 @@
                 "confirmed": true,
                 "block_time": 310513000,
                 "forward_asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "backward_asset_info": {
                     "divisible": true,
@@ -6211,11 +6211,11 @@
                 "satoshi_price": 100,
                 "block_time": 310107000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "give_quantity_normalized": "0.00000100",
                 "give_remaining_normalized": "0.00000100",
@@ -6255,11 +6255,11 @@
             "satoshi_price": 100,
             "block_time": 310107000,
             "asset_info": {
-                "divisible": true,
                 "asset_longname": null,
                 "description": "The Counterparty protocol native currency",
-                "locked": true,
-                "issuer": null
+                "issuer": null,
+                "divisible": true,
+                "locked": true
             },
             "give_quantity_normalized": "0.00000100",
             "give_remaining_normalized": "0.00000100",
@@ -6421,11 +6421,11 @@
                     "utxo_address": null,
                     "block_time": 310588000,
                     "asset_info": {
-                        "divisible": true,
                         "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
                     },
                     "quantity_normalized": "0.00000009"
                 },
@@ -6529,11 +6529,11 @@
                     "utxo_address": null,
                     "block_time": 310520000,
                     "asset_info": {
-                        "divisible": true,
                         "asset_longname": null,
                         "description": "The Counterparty protocol native currency",
-                        "locked": true,
-                        "issuer": null
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
                     },
                     "quantity_normalized": "0.00000200"
                 },
@@ -6597,11 +6597,11 @@
                 "confirmed": true,
                 "block_time": 310507000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "0.00000100",
                 "fee_paid_normalized": "0.00000010"
@@ -6621,11 +6621,11 @@
                 "confirmed": true,
                 "block_time": 310496000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "929.45878000",
                 "fee_paid_normalized": "0.00000000"
@@ -6669,11 +6669,11 @@
                 "confirmed": true,
                 "block_time": 310482000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000",
                 "fee_paid_normalized": "0.00000000"
@@ -6693,11 +6693,11 @@
                 "confirmed": true,
                 "block_time": 310481000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000",
                 "fee_paid_normalized": "0.00000000"
@@ -6813,11 +6813,11 @@
                 "confirmed": true,
                 "block_time": 310012000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "3.00000000",
                 "fee_paid_normalized": "0.00000000"
@@ -6837,11 +6837,11 @@
                 "confirmed": true,
                 "block_time": 310008000,
                 "asset_info": {
-                    "divisible": true,
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
-                    "locked": true,
-                    "issuer": null
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
                 },
                 "quantity_normalized": "1.00000000",
                 "fee_paid_normalized": "0.00000000"
@@ -17754,6 +17754,32 @@
                         "required": true,
                         "type": "str",
                         "description": "The signed transaction hex."
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/bitcoin/transactions/decode": {
+                "function": "decoderawtransaction",
+                "description": "Proxy to `decoderawtransaction` RPC call.",
+                "args": [
+                    {
+                        "name": "rawtx",
+                        "required": true,
+                        "type": "str",
+                        "description": "The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)"
                     },
                     {
                         "name": "verbose",
