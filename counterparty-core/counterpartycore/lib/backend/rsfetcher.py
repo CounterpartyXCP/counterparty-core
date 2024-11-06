@@ -4,6 +4,7 @@ import logging
 import os
 import queue
 import random
+import shutil
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -16,6 +17,12 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 WORKER_THREADS = 3
 PREFETCH_QUEUE_SIZE = 20
+
+
+def delete_database_directory():
+    if os.path.isdir(config.FETCHER_DB):
+        shutil.rmtree(config.FETCHER_DB)
+        logger.debug(f"RSFetcher - Reset database at {config.FETCHER_DB}")
 
 
 class RSFetcher(metaclass=util.SingletonMeta):

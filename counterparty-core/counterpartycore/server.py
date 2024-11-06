@@ -780,6 +780,9 @@ def start_all(args):
         asset_conservation_checker = AssetConservationChecker()
         asset_conservation_checker.start()
 
+        # Reset (delete) rust fetcher database
+        blocks.reset_rust_fetcher_database()
+
         # catch up
         blocks.catch_up(db)
 
