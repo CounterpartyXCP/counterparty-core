@@ -21,6 +21,7 @@
 - Add sortable `get_price` and `give_price` fields in orders
 - Add sortable `price` field in dispensers
 - Fix `locked` in `asset_info` field
+- Add `/v2/bitcoin/transaction/decode` route to proxy bitcoin `decoderawtransaction` method
 
 ## CLI
 
