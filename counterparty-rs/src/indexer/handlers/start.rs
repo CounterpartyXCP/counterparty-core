@@ -97,7 +97,7 @@ where
         rx_c4.clone(),
         tx_c5.clone(),
         stopper.clone(),
-        writer::new(db.clone(), start_height, reorg_window, 1),
+        writer::new(db.clone(), config.clone(), start_height, reorg_window, 1),
     )?);
 
     handles.append(&mut new_worker_pool(
