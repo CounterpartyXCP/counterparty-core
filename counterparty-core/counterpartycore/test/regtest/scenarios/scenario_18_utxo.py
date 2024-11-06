@@ -419,6 +419,7 @@ SCENARIO = [
         "params": {
             "asset": "UTXOASSET",
             "quantity": 10 * 10**8,
+            "exact_fee": 0,
         },
     },
 ]
