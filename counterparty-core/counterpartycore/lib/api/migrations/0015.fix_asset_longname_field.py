@@ -41,6 +41,9 @@ def apply(db):
         cursor.execute(sql, (asset["asset_longname"], asset["asset"]))
         sql = "UPDATE assets_info SET asset_longname = ? WHERE asset = ?"
         cursor.execute(sql, (asset["asset_longname"], asset["asset"]))
+        asset_parent = asset["asset_longname"].split(".")[0]
+        sql = "UPDATE fairminters SET asset_longname = ?, asset_parent = ? WHERE asset = ? AND (asset_longname = '' OR asset_longname IS NULL)"
+        cursor.execute(sql, (asset["asset_longname"], asset_parent, asset["asset"]))
 
     logger.info("`asset_longname` field updated...")
 

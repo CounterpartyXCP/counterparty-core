@@ -60,7 +60,10 @@ def initialise(db):
     if database.get_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1") is None:
         logger.debug("Fixing issuances `asset_longname` field")
         with db:
+            # disable triggers
             cursor.execute("DROP TRIGGER IF EXISTS block_update_issuances")
+            cursor.execute("DROP TRIGGER IF EXISTS block_update_fairminters")
+            # get assets with `asset_longname` field not set
             sql = """
                 SELECT 
                     DISTINCT(asset),
@@ -73,17 +76,23 @@ def initialise(db):
             """
             cursor.execute(sql)
             assets = cursor.fetchall()
+            # update `asset_longname` field
             for asset in assets:
                 sql = "UPDATE issuances SET asset_longname = ? WHERE asset = ? AND (asset_longname = '' OR asset_longname IS NULL)"
                 cursor.execute(sql, (asset["asset_longname"], asset["asset"]))
-            cursor.execute(
-                """
-                CREATE TRIGGER IF NOT EXISTS block_update_issuances
-                BEFORE UPDATE ON issuances BEGIN
-                    SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                END;
-                """
-            )
+                asset_parent = asset["asset_longname"].split(".")[0]
+                sql = "UPDATE fairminters SET asset_longname = ?, asset_parent = ? WHERE asset = ? AND (asset_longname = '' OR asset_longname IS NULL)"
+                cursor.execute(sql, (asset["asset_longname"], asset_parent, asset["asset"]))
+            # re-enable triggers
+            for table in ["issuances", "fairminters"]:
+                cursor.execute(
+                    f"""
+                    CREATE TRIGGER IF NOT EXISTS block_update_{table}
+                    BEFORE UPDATE ON {table} BEGIN
+                        SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                    END;
+                    """
+                )
             database.set_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1", True)
 
 
