@@ -8,7 +8,13 @@
 
 ## Protocol Changes
 
+## Improvements
+
+- Rust fetcher will now only store entries in its database required for Bitcoin reorganization checks. This greatly reduces the size of the database and significantly increases the speed of the catch-up process.
+
 ## Bugfixes
+
+- Rust fetcher "reporter" worker now takes `rollback_height` into account in its block height ordering check.
 
 
 
