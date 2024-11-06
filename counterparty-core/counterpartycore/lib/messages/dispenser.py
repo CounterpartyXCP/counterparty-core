@@ -391,6 +391,7 @@ def compose(
     status: int,
     open_address: str = None,
     oracle_address: str = None,
+    skip_validation: bool = False,
 ):
     assetid, problems = validate(
         db,
@@ -405,7 +406,10 @@ def compose(
         oracle_address,
     )
     if problems:
-        raise exceptions.ComposeError(problems)
+        if not skip_validation:
+            raise exceptions.ComposeError(problems)
+        else:
+            assetid = ledger.generate_asset_id(asset, block_index=util.CURRENT_BLOCK_INDEX)
 
     destination = []
     data = message_type.pack(ID)

@@ -36,6 +36,10 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 
 - For the `compose_detach()` endpoint, the `destination`, `asset` and `quantity` parameters are now optional (`asset` and `quantity` will be ignored after the protocol change).
 - For the `compose_attach()` endpoint, there is now a `destination_vout` parameter (and the `destination` parameter will be ignored after protocol change).
+- Add `validate` argument to compose API
+- Add sortable `get_price` and `give_price` fields in orders
+- Add sortable `price` field in dispensers
+- Fix `locked` in `asset_info` field
 
 ## CLI
 

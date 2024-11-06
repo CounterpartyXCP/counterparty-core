@@ -79,7 +79,9 @@ def compose_send_btc(db, source: str, destination: str, quantity: int):
         return (source, [(destination, quantity)], None)
 
 
-def compose(db, source: str, destination: str, asset: str, quantity: int):
+def compose(
+    db, source: str, destination: str, asset: str, quantity: int, skip_validation: bool = False
+):
     cursor = db.cursor()
 
     # Just send BTC?
@@ -95,13 +97,13 @@ def compose(db, source: str, destination: str, asset: str, quantity: int):
 
     # Only for outgoing (incoming will overburn).
     balance = ledger.get_balance(db, source, asset)
-    if balance < quantity:
+    if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
     block_index = util.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, block_index)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     asset_id = ledger.get_asset_id(db, asset, block_index)

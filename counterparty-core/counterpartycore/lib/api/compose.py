@@ -143,6 +143,11 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "Exclude silently UTXO with balances instead of raising an exception",
     ),
+    "validate": (
+        bool,
+        True,
+        "Validate the transaction",
+    ),
 }
 
 
@@ -278,7 +283,7 @@ def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     """
     Composes a transaction to cancel an open order or bet.
     :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_7)
-    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_UTXOASSET_ORDER_TX_HASH)
+    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)
     """
     params = {"source": address, "offer_hash": offer_hash}
     return compose(db, "cancel", params, **construct_args)

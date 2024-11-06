@@ -18,9 +18,9 @@ def validate(source):
     return problems
 
 
-def compose(db, source, destination=None):
+def compose(db, source, destination=None, skip_validation=False):
     problems = validate(source)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     # check if destination is an address

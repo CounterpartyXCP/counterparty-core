@@ -79,7 +79,9 @@ def validate(db, source, destination, asset, quantity, block_index=None):
     return problems
 
 
-def compose(db, source, destination, asset, quantity):
+def compose(
+    db, source: str, destination: str, asset: str, quantity: int, skip_validation: bool = False
+):
     """
     Compose a UTXO message.
     source: the source address or UTXO
@@ -88,7 +90,7 @@ def compose(db, source, destination, asset, quantity):
     quantity: the quantity to transfer
     """
     problems = validate(db, source, destination, asset, quantity)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     # we make an RPC call only at the time of composition

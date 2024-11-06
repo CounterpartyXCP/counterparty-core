@@ -6,17 +6,19 @@ from counterpartycore.lib.messages.detach import detach_assets
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def compose(db, source, destination):
-    # We don't check if the source has attached assets
-    # to allow transaction chaining in the same block
+def compose(db, source, destination, skip_validation=False):
+    if not skip_validation:
+        if not util.is_utxo_format(source):
+            raise exceptions.ComposeError("Invalid source utxo format")
 
-    if not util.is_utxo_format(source):
-        raise exceptions.ComposeError("Invalid source utxo format")
+        balances = ledger.get_utxo_balances(db, source)
+        if not balances:
+            raise exceptions.ComposeError("No assets attached to the source utxo")
 
-    try:
-        script.validate(destination)
-    except script.AddressError as e:
-        raise exceptions.ComposeError("destination must be an address") from e
+        try:
+            script.validate(destination)
+        except script.AddressError as e:
+            raise exceptions.ComposeError("destination must be an address") from e
 
     return (source, [(destination, None)], None)
 

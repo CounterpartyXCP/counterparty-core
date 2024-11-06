@@ -78,9 +78,9 @@ def validate(db, source, asset, quantity, destination_vout=None, block_index=Non
     return problems
 
 
-def compose(db, source, asset, quantity, destination_vout=None):
+def compose(db, source, asset, quantity, destination_vout=None, skip_validation=False):
     problems = validate(db, source, asset, quantity, destination_vout)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     # create message

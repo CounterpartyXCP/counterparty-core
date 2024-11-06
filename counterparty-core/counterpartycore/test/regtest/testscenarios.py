@@ -88,10 +88,36 @@ def prepare_item(item, node, context):
     return item
 
 
-def control_result(item, node, context, block_hash, block_time, tx_hash, data, retry=0):
+def get_tx_index(node, tx_hash):
+    if tx_hash is None:
+        return node.tx_index
+    if tx_hash == "null":
+        return node.tx_index
+    result = node.api_call(f"transactions/{tx_hash}?limit=1")
+    if "result" in result:
+        return result["result"]["tx_index"]
+    return 0
+
+
+def get_last_tx_index(node):
+    result = node.api_call("transactions?limit=1")
+    if "result" in result:
+        return result["result"][0]["tx_index"]
+    return 0
+
+
+def control_result(
+    item, node, context, block_hash, block_time, tx_hash, data, no_confirmation, retry=0
+):
     block_index = node.block_count
     events = node.api_call(f"blocks/{block_index}/events")["result"]
     event_indexes = sorted([event["event_index"] for event in events])
+
+    if no_confirmation:
+        tx_index = get_last_tx_index(node) + 1
+    else:
+        tx_index = get_tx_index(node, tx_hash)
+
     for control in item["controls"]:
         control_url = (
             control["url"].replace("$TX_HASH", tx_hash).replace("$BLOCK_INDEX", str(block_index))
@@ -109,7 +135,15 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
         ):
             time.sleep(2)
             return control_result(
-                item, node, context, block_hash, block_time, tx_hash, data, retry=retry + 1
+                item,
+                node,
+                context,
+                block_hash,
+                block_time,
+                tx_hash,
+                data,
+                no_confirmation,
+                retry=retry + 1,
             )
 
         expected_result = control["result"]
@@ -118,7 +152,7 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
             .replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
             .replace('"$BLOCK_INDEX"', str(block_index))
-            .replace('"$TX_INDEX"', str(node.tx_index))
+            .replace('"$TX_INDEX"', str(tx_index))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
         if data:
@@ -164,7 +198,7 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
             print(f"Expected: {expected_result_str}")
             print(f"Got: {got_result_str}")
             compare_strings(expected_result_str, got_result_str)
-            raise e
+            raise e from e
 
 
 def run_item(node, item, context):
@@ -174,6 +208,8 @@ def run_item(node, item, context):
     if "disable_protocol_changes" in item:
         node.disable_protocol_changes(item["disable_protocol_changes"])
 
+    no_confirmation = item.get("no_confirmation", False)
+
     if item["transaction"] == "mine_blocks":
         block_hash, block_time = node.mine_blocks(item["params"]["blocks"])
         tx_hash = "null"
@@ -181,7 +217,6 @@ def run_item(node, item, context):
     else:
         item = prepare_item(item, node, context)
         try:
-            no_confirmation = item.get("no_confirmation", False)
             if item["transaction"] == "atomic_swap":
                 data = None
                 if "counterparty_tx" in item["params"]:
@@ -234,28 +269,38 @@ def run_item(node, item, context):
                         print(expected_result, str(e))
                         assert expected_result == str(e)
                     print(f"{item['title']}: " + colored("Success", "green"))
-                except AssertionError as e:
+                except AssertionError as er:
                     print(colored(f"Failed: {item['title']}", "red"))
                     print(f"Expected: {expected_result}")
                     print(f"Got: {str(e)}")
-                    raise e
+                    raise er from er
             else:
-                raise e
+                raise e from e
 
     node.enable_all_protocol_changes()
 
     for name, value in item.get("set_variables", {}).items():
+        if tx_hash is not None:
+            print("get tx index", tx_hash)
+            tx_index = get_tx_index(node, tx_hash)
+            if tx_index is None:
+                tx_index = get_last_tx_index(node) + 1
+        else:
+            tx_index = get_last_tx_index(node)
         context[name] = (
             value.replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
-            .replace("$TX_INDEX", str(node.tx_index))
+            .replace("$TX_INDEX", str(tx_index))
             .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
             .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))  # TODO: make it more generic
             .replace("$BLOCK_INDEX", str(node.block_count))
         )
+        print(f"Set variable {name} to {context[name]}")
 
     if "controls" in item:
-        control_result(item, node, context, block_hash, block_time, tx_hash, tx_data)
+        control_result(
+            item, node, context, block_hash, block_time, tx_hash, tx_data, no_confirmation
+        )
 
     return context
 
