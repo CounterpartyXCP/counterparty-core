@@ -20,6 +20,10 @@ PREFETCH_QUEUE_SIZE = 20
 
 
 def delete_database_directory():
+    if os.path.isdir(config.FETCHER_DB_OLD):
+        shutil.rmtree(config.FETCHER_DB_OLD)
+        logger.debug(f"RSFetcher - Deleted old database at {config.FETCHER_DB_OLD}")
+
     if os.path.isdir(config.FETCHER_DB):
         shutil.rmtree(config.FETCHER_DB)
         logger.debug(f"RSFetcher - Reset database at {config.FETCHER_DB}")
