@@ -57,6 +57,35 @@ def initialise(db):
         ],
     )
 
+    if database.get_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1") is None:
+        logger.debug("Fixing issuances `asset_longname` field")
+        with db:
+            cursor.execute("DROP TRIGGER IF EXISTS block_update_issuances")
+            sql = """
+                SELECT 
+                    DISTINCT(asset),
+                    (SELECT asset_longname FROM issuances WHERE asset = i.asset ORDER BY rowid ASC LIMIT 1) AS asset_longname
+                FROM issuances AS i WHERE 
+                    asset IN (SELECT DISTINCT(asset) FROM issuances WHERE asset_longname is NOT NULL AND asset_longname != '')
+                    AND (asset_longname is NULL OR asset_longname = '') 
+                    AND status='valid'
+                    AND fair_minting = 1;
+            """
+            cursor.execute(sql)
+            assets = cursor.fetchall()
+            for asset in assets:
+                sql = "UPDATE issuances SET asset_longname = ? WHERE asset = ? AND (asset_longname = '' OR asset_longname IS NULL)"
+                cursor.execute(sql, (asset["asset_longname"], asset["asset"]))
+            cursor.execute(
+                """
+                CREATE TRIGGER IF NOT EXISTS block_update_issuances
+                BEFORE UPDATE ON issuances BEGIN
+                    SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                END;
+                """
+            )
+            database.set_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1", True)
+
 
 def validate(
     db,
