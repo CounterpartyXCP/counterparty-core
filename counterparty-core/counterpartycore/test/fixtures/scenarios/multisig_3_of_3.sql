@@ -1464,9 +1464,9 @@ INSERT INTO issuances VALUES(6,'57b34dae586111eefeecae4d16f6d20d6447efa974b72931
 INSERT INTO issuances VALUES(7,'6163ab5e7282e43a2f07a146d28b4b45c55820ee541881bc98d2592f4e6ba975',0,310006,'BBBC',100000,0,'3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0,0,0);
 -- Triggers and indices on  issuances
 CREATE TRIGGER block_update_issuances
-                           BEFORE UPDATE ON issuances BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+                    BEFORE UPDATE ON issuances BEGIN
+                        SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                    END;
 CREATE INDEX issuances_asset_longname_idx ON issuances (asset_longname)
         ;
 CREATE INDEX issuances_asset_status_idx ON issuances (asset, status)
@@ -1989,9 +1989,9 @@ CREATE TABLE fairminters (
         );
 -- Triggers and indices on  fairminters
 CREATE TRIGGER block_update_fairminters
-                           BEFORE UPDATE ON fairminters BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+                    BEFORE UPDATE ON fairminters BEGIN
+                        SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                    END;
 CREATE INDEX fairminters_asset_idx ON fairminters (asset)
         ;
 CREATE INDEX fairminters_asset_longname_idx ON fairminters (asset_longname)

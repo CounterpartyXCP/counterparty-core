@@ -3685,9 +3685,9 @@ INSERT INTO issuances VALUES(507,'ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8
 INSERT INTO issuances VALUES(510,'01e52e3770a932827a4b4e5db193eef916fcf69bda1a7944298210a74f1633a1',0,310509,'TESTDISP',1000,0,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b','munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b',0,0,0,0.0,'Test dispensers asset',50000000,0,'valid',NULL,0,0,0);
 -- Triggers and indices on  issuances
 CREATE TRIGGER block_update_issuances
-                           BEFORE UPDATE ON issuances BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+                    BEFORE UPDATE ON issuances BEGIN
+                        SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                    END;
 CREATE INDEX issuances_asset_longname_idx ON issuances (asset_longname)
         ;
 CREATE INDEX issuances_asset_status_idx ON issuances (asset, status)
@@ -4244,9 +4244,9 @@ INSERT INTO fairminters VALUES('c3d10301a50c49b3c9515f88847b92ce969729c194c064f4
 INSERT INTO fairminters VALUES('0d56c40c31829bbd06cdc039eda95c844c98208ec981ef419093c386eab2d0e9',505,310504,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','A160361285792733729','','','softcap description',10,1,50,0,0,20,0,0,30000000,20,310520,1,1,1,0,'open');
 -- Triggers and indices on  fairminters
 CREATE TRIGGER block_update_fairminters
-                           BEFORE UPDATE ON fairminters BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+                    BEFORE UPDATE ON fairminters BEGIN
+                        SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+                    END;
 CREATE INDEX fairminters_asset_idx ON fairminters (asset)
         ;
 CREATE INDEX fairminters_asset_longname_idx ON fairminters (asset_longname)
