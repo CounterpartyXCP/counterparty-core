@@ -153,6 +153,7 @@ def control_result(
             .replace("$BLOCK_HASH", block_hash)
             .replace('"$BLOCK_INDEX"', str(block_index))
             .replace('"$TX_INDEX"', str(tx_index))
+            .replace('"$TX_INDEX - 1"', str(tx_index - 1))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
         if data:

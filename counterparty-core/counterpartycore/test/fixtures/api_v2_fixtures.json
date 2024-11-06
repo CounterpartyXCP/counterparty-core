@@ -12847,7 +12847,7 @@
                         "name": "address",
                         "required": true,
                         "type": "str",
-                        "description": "The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_1)"
+                        "description": "The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_2)"
                     },
                     {
                         "name": "assets",
