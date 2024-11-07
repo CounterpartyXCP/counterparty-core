@@ -22,8 +22,14 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 1. It is no longer possible to make a `detach` and a UTXO `move` in the same transaction.
 1. A UTXO move with a transaction that contains only a single OP_RETURN output behaves like a `detach`
 
+
+## Improvements
+
+- Rust fetcher will now only store entries in its database required for Bitcoin reorganization checks. This greatly reduces the size of the database and significantly increases the speed of the catch-up process.
+
 ## Bugfixes
 
+- Rust fetcher "reporter" worker now takes `rollback_height` into account in its block height ordering check.
 
 
 ## Codebase
