@@ -30,13 +30,15 @@ When there are fewer tokens remaining than `max_mint_per_tx` in a free Fairminte
 
 ## Bugfixes
 
+- Rust fetcher "reporter" worker now takes `rollback_height` into account in its block height ordering check.
 - Fixed subasset name handling when creating a fairminter by preserving the `asset_longname` field when `asset=<subasset_name>` is specified
+
 
 ## Codebase
 
 - The `transactions.compose()` function accepts a `tx_info` that contains a source in the form of a UTXO instead of an address. When a UTXO is used, this UTXO must be spent in the corresponding transaction.
 - Refactor `compose_moveutxo()` to use this new `transactions.compose()` feature.
-
+- Rust fetcher will now only store entries in its database required for Bitcoin reorganization checks. This greatly reduces the size of the database and significantly increases the speed of the catch-up process.
 
 ## API
 
@@ -48,7 +50,10 @@ When there are fewer tokens remaining than `max_mint_per_tx` in a free Fairminte
 - Fix `locked` in `asset_info` field
 - Add `/v2/bitcoin/transaction/decode` route to proxy bitcoin `decoderawtransaction` method
 
+
 ## CLI
+
+- Change verbosity of log messages related to blockchain following.
 
 
 # Credits
