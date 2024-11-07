@@ -196,24 +196,25 @@ def validate(
 
 def compose(
     db,
-    source,
-    asset,
-    asset_parent="",
-    price=0,
-    quantity_by_price=1,
-    max_mint_per_tx=0,
-    hard_cap=0,
-    premint_quantity=0,
-    start_block=0,
-    end_block=0,
-    soft_cap=0,
-    soft_cap_deadline_block=0,
-    minted_asset_commission=0.0,
-    burn_payment=False,
-    lock_description=False,
-    lock_quantity=False,
-    divisible=True,
-    description="",
+    source: str,
+    asset: str,
+    asset_parent: str = "",
+    price: int = 0,
+    quantity_by_price: int = 1,
+    max_mint_per_tx: int = 0,
+    hard_cap: int = 0,
+    premint_quantity: int = 0,
+    start_block: int = 0,
+    end_block: int = 0,
+    soft_cap: int = 0,
+    soft_cap_deadline_block: int = 0,
+    minted_asset_commission: float = 0.0,
+    burn_payment: bool = False,
+    lock_description: bool = False,
+    lock_quantity: bool = False,
+    divisible: bool = True,
+    description: str = "",
+    skip_validation: bool = False,
 ):
     # validate parameters
     problems = validate(
@@ -237,7 +238,7 @@ def compose(
         divisible,
         description,
     )
-    if len(problems) > 0:
+    if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     minted_asset_commission_int = int(minted_asset_commission * 1e8)

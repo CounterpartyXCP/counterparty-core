@@ -215,7 +215,7 @@ def construct(
     # Sanity checks.
     if source:
         script.validate(source)
-    if exact_fee and not isinstance(exact_fee, int):
+    if exact_fee is not None and not isinstance(exact_fee, int):
         raise exceptions.TransactionError("Exact fees must be in satoshis.")
     if not isinstance(fee_provided, int):
         raise exceptions.TransactionError("Fee provided must be in satoshis.")
@@ -321,7 +321,7 @@ def get_default_args(func):
     }
 
 
-def compose_data(db, name, params, accept_missing_params=False):
+def compose_data(db, name, params, accept_missing_params=False, skip_validation=False):
     compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != "db"]
@@ -338,11 +338,13 @@ def compose_data(db, name, params, accept_missing_params=False):
                     raise exceptions.ComposeError(
                         f"missing parameters: {', '.join(missing_params)}"
                     )
+    params["skip_validation"] = skip_validation
     return compose_method(db, **params)
 
 
 def compose_transaction(db, name, params, accept_missing_params=False, **construct_kwargs):
     """Create and return a transaction."""
-    tx_info = compose_data(db, name, params, accept_missing_params)
+    skip_validation = not construct_kwargs.pop("validate", True)
+    tx_info = compose_data(db, name, params, accept_missing_params, skip_validation)
     transaction_info = construct(db, tx_info, **construct_kwargs)
     return transaction_info

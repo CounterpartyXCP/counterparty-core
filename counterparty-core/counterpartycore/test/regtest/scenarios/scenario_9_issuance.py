@@ -5,7 +5,7 @@ SCENARIO = [
         "source": "$ADDRESS_1",
         "params": {
             "asset": "TESTLOCKDESC",
-            "quantity": int(100 * 1e8),
+            "quantity": int(10 * 10e8),
             "description": "Test Locking Description",
         },
         "controls": [

@@ -25,7 +25,13 @@ class ComposeError(Exception):
 
 
 class RegtestNode:
-    def __init__(self, datadir="regtestnode", show_output=False, wsgi_server="waitress"):
+    def __init__(
+        self,
+        datadir="regtestnode",
+        show_output=False,
+        wsgi_server="waitress",
+        burn_in_one_block=False,
+    ):
         self.datadir = datadir
         self.bitcoin_cli = sh.bitcoin_cli.bake(
             "-regtest",
@@ -57,6 +63,7 @@ class RegtestNode:
             "--no-telemetry",
             "-vv",
         )
+        self.burn_in_one_block = burn_in_one_block
 
     def api_call(self, url):
         return json.loads(sh.curl(f"http://localhost:24000/v2/{url}").strip())
@@ -154,6 +161,7 @@ class RegtestNode:
         if return_only_data:
             return result["result"]["data"]
         raw_transaction = result["result"]["rawtransaction"]
+        # print(f"Raw transaction: {raw_transaction}")
         signed_transaction_json = self.bitcoin_wallet(
             "signrawtransactionwithwallet", raw_transaction
         ).strip()
@@ -182,17 +190,16 @@ class RegtestNode:
         return tx_hash, block_hash, block_time, result["result"]["data"]
 
     def wait_for_counterparty_server(self, block=None):
+        target_block = block or self.block_count
         while True:
             try:
                 result = self.api_call("")
                 if result and "result" in result and result["result"]["server_ready"]:
                     current_block = result["result"]["counterparty_height"]
-                    target_block = block or self.block_count
                     if current_block < target_block:
                         print(f"Waiting for block {current_block} < {target_block}")
                         raise ServerNotReady
                     else:
-                        print("Server ready")
                         return
                 elif result and "result" in result:
                     print(
@@ -246,7 +253,16 @@ class RegtestNode:
     def generate_xcp(self):
         print("Generating XCP...")
         for address in self.addresses[0:10]:
-            self.send_transaction(address, "burn", {"quantity": 50000000})
+            self.send_transaction(
+                address,
+                "burn",
+                {"quantity": 50000000},
+                no_confirmation=self.burn_in_one_block,
+                dont_wait_mempool=self.burn_in_one_block,
+            )
+        if self.burn_in_one_block:
+            self.mine_blocks(1)
+            self.wait_for_counterparty_server()
 
     def start_bitcoin_node(self):
         self.bitcoind_process = sh.bitcoind(
@@ -524,6 +540,7 @@ class RegtestNode:
 
         balances = self.api_call("assets/UTXOASSET/balances")["result"]
         utxoasset_balances = []
+        utxoasset_addresses = []
         print(balances)
         utxo = None
         test_address = None
@@ -533,6 +550,7 @@ class RegtestNode:
                     utxo = balance["utxo"]
                     test_address = balance["utxo_address"]
                 utxoasset_balances.append(balance["utxo"])
+                utxoasset_addresses.append(balance["utxo_address"])
         assert utxo
         txid, vout = utxo.split(":")
 
@@ -601,16 +619,54 @@ class RegtestNode:
 
         print("Invalid detach test successful")
 
+        # let's try to detach assets with an UTXO move to a single OP_RETURN output
+        utxo = utxoasset_balances[0]
+        utxo_address = utxoasset_addresses[0]
+        txid, vout = utxo.split(":")
+
+        inputs = json.dumps([{"txid": txid, "vout": int(vout)}])
+        outputs = json.dumps({"data": 50 * "00"})
+
+        raw_transaction = self.bitcoin_cli("createrawtransaction", inputs, outputs).strip()
+        signed_transaction_json = self.bitcoin_wallet(
+            "signrawtransactionwithwallet", raw_transaction
+        ).strip()
+        signed_transaction = json.loads(signed_transaction_json)["hex"]
+
+        retry = 0
+        while True:
+            try:
+                tx_hash, _block_hash, _block_time = self.broadcast_transaction(signed_transaction)
+                break
+            except sh.ErrorReturnCode_25:
+                retry += 1
+                assert retry < 6
+                # print(str(e))
+                print("Sleeping for 5 seconds and retrying...")
+                time.sleep(5)
+
+        events = self.api_call(f"transactions/{tx_hash}/events?event_name=DETACH_FROM_UTXO")[
+            "result"
+        ]
+        assert len(events) == 1
+        assert events[0]["params"]["source"] == utxo
+        assert events[0]["params"]["destination"] == utxo_address
+
+        print("Detach with a single OP_RETURN output transaction test successful")
+
 
 class RegtestNodeThread(threading.Thread):
-    def __init__(self, wsgi_server="gunicorn"):
+    def __init__(self, wsgi_server="waitress", burn_in_one_block=False):
         threading.Thread.__init__(self)
         self.wsgi_server = wsgi_server
+        self.burn_in_one_block = burn_in_one_block
         self.daemon = True
         self.node = None
 
     def run(self):
-        self.node = RegtestNode(wsgi_server=self.wsgi_server)
+        self.node = RegtestNode(
+            wsgi_server=self.wsgi_server, burn_in_one_block=self.burn_in_one_block
+        )
         self.node.start()
 
     def stop(self):

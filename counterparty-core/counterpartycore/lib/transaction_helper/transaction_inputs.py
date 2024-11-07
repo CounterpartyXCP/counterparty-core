@@ -232,7 +232,7 @@ def construct_coin_selection(
                 source, unconfirmed=allow_unconfirmed_inputs
             )
         logger.trace(f"TX Construct - Unspent UTXOs: {[print_coin(coin) for coin in unspent]}")
-        if len(unspent) == 0:
+        if len(unspent) == 0 and force_utxo is None:
             raise exceptions.BalanceError(
                 f"Insufficient {config.BTC} at address {source}: no unspent outputs."
             )

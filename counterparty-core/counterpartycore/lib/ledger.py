@@ -461,7 +461,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
 
 class UTXOBalancesCache(metaclass=util.SingletonMeta):
     def __init__(self, db):
-        logger.debug("Initialising utxo balances cache...")
+        # logger.debug("Initialising utxo balances cache...")
         sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
         cursor = db.cursor()
         cursor.execute(sql)
@@ -922,14 +922,11 @@ def get_assets_last_issuance(db, asset_list):
     cursor = db.cursor()
     fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
     query = f"""
-        SELECT {", ".join(fields)}, MAX(rowid) AS rowid
-        FROM issuances
+        SELECT {", ".join(fields)} FROM assets_info
         WHERE asset IN ({",".join(["?"] * len(asset_list))})
-        AND status = ?
-        GROUP BY asset
     """  # nosec B608  # noqa: S608
-    cursor.execute(query, asset_list + ["valid"])
-    issuances = cursor.fetchall()
+    cursor.execute(query, asset_list)
+    assets_info = cursor.fetchall()
 
     result = {
         "BTC": {
@@ -947,11 +944,10 @@ def get_assets_last_issuance(db, asset_list):
             "issuer": None,
         },
     }
-    for issuance in issuances:
-        del issuance["rowid"]
-        asset = issuance["asset"]
-        del issuance["asset"]
-        result[asset] = issuance
+    for asset_info in assets_info:
+        asset = asset_info["asset"]
+        del asset_info["asset"]
+        result[asset] = asset_info
     return result
 
 

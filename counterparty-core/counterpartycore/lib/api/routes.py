@@ -176,6 +176,7 @@ ROUTES = util.prepare_routes(
         "/v2/bitcoin/transactions/<tx_hash>": util.get_transaction,
         "/v2/bitcoin/estimatesmartfee": bitcoind.fee_per_kb,
         "/v2/bitcoin/transactions": bitcoind.sendrawtransaction,
+        "/v2/bitcoin/transactions/decode": bitcoind.decoderawtransaction,
         "/v2/bitcoin/getmempoolinfo": bitcoind.get_mempool_info,
         ### /mempool ###
         "/v2/mempool/events": queries.get_all_mempool_events,

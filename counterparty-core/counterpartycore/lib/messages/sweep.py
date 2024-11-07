@@ -111,7 +111,9 @@ def validate(db, source, destination, flags, memo, block_index):
     return problems, total_fee
 
 
-def compose(db, source: str, destination: str, flags: int, memo: str):
+def compose(
+    db, source: str, destination: str, flags: int, memo: str, skip_validation: bool = False
+):
     if memo is None:
         memo = b""
     elif flags & FLAG_BINARY_MEMO:
@@ -122,7 +124,7 @@ def compose(db, source: str, destination: str, flags: int, memo: str):
 
     block_index = util.CURRENT_BLOCK_INDEX
     problems, total_fee = validate(db, source, destination, flags, memo, block_index)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     short_address_bytes = address.pack(destination)

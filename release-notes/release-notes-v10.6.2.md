@@ -20,6 +20,7 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 1. It is now cheaper and easier to construct `attach` and `detach` transactions. The size of messages is always less than 80 bytes, so an `OP_RETURN` output can store all of the necessary data.
 1. It is possible to execute several `detach` operations in a single transaction to save fees.
 1. It is no longer possible to make a `detach` and a UTXO `move` in the same transaction.
+1. A UTXO move with a transaction that contains only a single OP_RETURN output behaves like a `detach`
 
 ## Bugfixes
 
@@ -33,8 +34,13 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 
 ## API
 
-- For the `compose_detach() endpoint, the `destination`, `asset` and `quantity` parameters are now optional (`asset` and `quantity` will be ignored after the protocol change).
+- For the `compose_detach()` endpoint, the `destination`, `asset` and `quantity` parameters are now optional (`asset` and `quantity` will be ignored after the protocol change).
 - For the `compose_attach()` endpoint, there is now a `destination_vout` parameter (and the `destination` parameter will be ignored after protocol change).
+- Add `validate` argument to compose API
+- Add sortable `get_price` and `give_price` fields in orders
+- Add sortable `price` field in dispensers
+- Fix `locked` in `asset_info` field
+- Add `/v2/bitcoin/transaction/decode` route to proxy bitcoin `decoderawtransaction` method
 
 
 ## CLI

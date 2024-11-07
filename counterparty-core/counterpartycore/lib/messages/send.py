@@ -123,6 +123,7 @@ def compose(
     memo: str = None,
     memo_is_hex: bool = False,
     use_enhanced_send: bool = None,
+    skip_validation: bool = False,
 ):
     # special case - enhanced_send replaces send by default when it is enabled
     #   but it can be explicitly disabled with an API parameter
@@ -161,6 +162,7 @@ def compose(
                             util.flat(zip(asset, destination, quantity, memo, memo_is_hex)),
                             None,
                             None,
+                            skip_validation,
                         )
                     elif isinstance(memo, dict) and isinstance(memo_is_hex, dict):
                         # (2) implemented here
@@ -190,6 +192,7 @@ def compose(
                             ),
                             memo["msg_wide"],
                             memo_is_hex["msg_wide"],
+                            skip_validation,
                         )
                     else:
                         # (3) the default case
@@ -199,6 +202,7 @@ def compose(
                             util.flat(zip(asset, destination, quantity)),
                             memo,
                             memo_is_hex,
+                            skip_validation,
                         )
                 else:
                     raise exceptions.ComposeError(
@@ -208,12 +212,12 @@ def compose(
                 raise exceptions.ComposeError("mpma sends are not enabled")
         elif use_enhanced_send is None or use_enhanced_send == True:  # noqa: E712
             return enhanced_send.compose(
-                db, source, destination, asset, quantity, memo, memo_is_hex
+                db, source, destination, asset, quantity, memo, memo_is_hex, skip_validation
             )
     elif memo is not None or use_enhanced_send == True:  # noqa: E712
         raise exceptions.ComposeError("enhanced sends are not enabled")
 
-    return send1.compose(db, source, destination, asset, quantity)
+    return send1.compose(db, source, destination, asset, quantity, skip_validation)
 
 
 def parse(db, tx, message):  # TODO: *args
