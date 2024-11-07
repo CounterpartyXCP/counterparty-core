@@ -227,13 +227,11 @@ def init_config_table(db):
 
 
 def set_config_value(db, name, value):
-    init_config_table(db)
     cursor = db.cursor()
     cursor.execute("INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)", (name, value))
 
 
 def get_config_value(db, name):
-    init_config_table(db)
     cursor = db.cursor()
     cursor.execute("SELECT value FROM config WHERE name = ?", (name,))
     rows = cursor.fetchall()
@@ -324,3 +322,19 @@ def table_exists(cursor, table):
         f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"  # nosec B608  # noqa: S608
     ).fetchone()
     return table_name is not None
+
+
+def lock_update(db, table):
+    cursor = db.cursor()
+    cursor.execute(
+        f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
+            BEFORE UPDATE ON {table} BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
+        """
+    )
+
+
+def unlock_update(db, table):
+    cursor = db.cursor()
+    cursor.execute(f"DROP TRIGGER IF EXISTS block_update_{table}")

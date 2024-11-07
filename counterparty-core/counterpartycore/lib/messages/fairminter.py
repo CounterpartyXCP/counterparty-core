@@ -61,8 +61,8 @@ def initialise(db):
         logger.debug("Fixing issuances `asset_longname` field")
         with db:
             # disable triggers
-            cursor.execute("DROP TRIGGER IF EXISTS block_update_issuances")
-            cursor.execute("DROP TRIGGER IF EXISTS block_update_fairminters")
+            for table in ["issuances", "fairminters"]:
+                database.unlock_update(db, table)
             # get assets with `asset_longname` field not set
             sql = """
                 SELECT 
@@ -85,14 +85,7 @@ def initialise(db):
                 cursor.execute(sql, (asset["asset_longname"], asset_parent, asset["asset"]))
             # re-enable triggers
             for table in ["issuances", "fairminters"]:
-                cursor.execute(
-                    f"""
-                    CREATE TRIGGER IF NOT EXISTS block_update_{table}
-                    BEFORE UPDATE ON {table} BEGIN
-                        SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                    END;
-                    """
-                )
+                database.lock_update(db, table)
             database.set_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1", True)
 
 
