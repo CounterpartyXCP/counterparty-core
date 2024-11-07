@@ -133,6 +133,7 @@ pub struct Config {
     pub network: Network,
     pub heights: Heights,
     pub json_format: bool,
+    pub only_write_in_reorg_window: bool,
 }
 
 impl Config {
@@ -215,6 +216,11 @@ impl<'source> FromPyObject<'source> for Config {
             _ => false,
         };
 
+        let only_write_in_reorg_window = match dict.get_item("only_write_in_reorg_window") {
+            Ok(Some(item)) => item.extract()?,
+            _ => false,
+        };
+
         let prefix = match dict.get_item("prefix") {
             Ok(Some(item)) => item.extract::<Vec<u8>>()?,
             _ => b"CNTRPRTY".to_vec(),
@@ -261,6 +267,7 @@ impl<'source> FromPyObject<'source> for Config {
             network,
             heights,
             json_format,
+            only_write_in_reorg_window,
         })
     }
 }

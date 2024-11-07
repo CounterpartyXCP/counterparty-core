@@ -393,7 +393,7 @@ def parse_block(
 
         update_block_query = """
             UPDATE blocks
-            SET 
+            SET
                 txlist_hash=:txlist_hash,
                 ledger_hash=:ledger_hash,
                 messages_hash=:messages_hash,
@@ -495,7 +495,7 @@ def initialise(db):
         cursor.execute("""ALTER TABLE blocks ADD COLUMN transaction_count INTEGER""")
         cursor.execute(
             """
-            UPDATE blocks SET 
+            UPDATE blocks SET
                 transaction_count = (
                        SELECT COUNT(*)
                        FROM transactions
@@ -824,13 +824,7 @@ def initialise(db):
 
     # Lock UPDATE on all tables
     for table in TABLES:
-        cursor.execute(
-            f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
-                           BEFORE UPDATE ON {table} BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
-                        """
-        )
+        database.lock_update(db, table)
     cursor.close()
 
 
@@ -1142,8 +1136,8 @@ def reparse(db, block_index=0):
     step = "Recalculating consensus hashes..."
     with log.Spinner("Recalculating consensus hashes..."):
         query = """
-            UPDATE blocks 
-            SET ledger_hash=NULL, txlist_hash=NULL, messages_hash=NULL 
+            UPDATE blocks
+            SET ledger_hash=NULL, txlist_hash=NULL, messages_hash=NULL
             WHERE block_index >= ?
         """
         cursor.execute(query, (block_index,))
@@ -1414,3 +1408,7 @@ def catch_up(db, check_asset_conservation=True):
         catch_up(db, check_asset_conservation=False)
 
     logger.info("Catch up complete.")
+
+
+def reset_rust_fetcher_database():
+    rsfetcher.delete_database_directory()

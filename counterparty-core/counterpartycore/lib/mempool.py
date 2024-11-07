@@ -9,7 +9,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     util.PARSING_MEMPOOL = True
 
-    logger.debug(f"Parsing {len(raw_tx_list)} raw transactions from mempool...")
+    logger.trace(f"Parsing {len(raw_tx_list)} raw transaction(s) from the mempool...")
     now = time.time()
     transaction_events = []
     cursor = db.cursor()
