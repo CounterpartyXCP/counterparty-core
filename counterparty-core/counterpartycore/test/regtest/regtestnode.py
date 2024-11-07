@@ -656,6 +656,7 @@ class RegtestNode:
         print("Detach with a single OP_RETURN output transaction test successful")
 
     def test_transaction_chaining(self):
+        print("Test transaction chaining...")
         # source address
         source_address = self.addresses[0]
         address_info = json.loads(self.bitcoin_wallet("getaddressinfo", source_address).strip())
@@ -697,6 +698,7 @@ class RegtestNode:
         api_call_url += f"&inputs_set={txid_1}:{vout_1}:{value_1}:{pubkey_source}"
         api_call_url += "&disable_utxo_locks=true"
         api_call_url += "&validate=false"
+        api_call_url += "&exact_fee=1000"
         result = self.api_call(api_call_url)
         raw_transaction_2 = result["result"]["rawtransaction"]
 
@@ -727,6 +729,7 @@ class RegtestNode:
         api_call_url = f"addresses/{new_address}/compose/dispenser?"
         api_call_url += "asset=XCP&give_quantity=1&escrow_quantity=2&mainchainrate=1&status=0"
         api_call_url += f"&inputs_set={txid_2}:0:{value_2}:{pubkey_new_address}"
+        api_call_url += "&exact_fee=1000"
         api_call_url += "&disable_utxo_locks=true"
         api_call_url += "&validate=false"
         result = self.api_call(api_call_url)
