@@ -2810,6 +2810,22 @@ def get_fairmints_by_fairminter(
     )
 
 
+def get_dispenser_refills(db, cursor: str = None, limit: int = 100, offset: int = None):
+    """
+    Returns all dispenser refills
+    :param str cursor: The last index of the dispenser refills to return
+    :param int limit: The maximum number of dispenser refills to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        db,
+        "dispenser_refills",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
 def get_fairmints_by_address(
     db, address: str, cursor: str = None, limit: int = 100, offset: int = None
 ):
