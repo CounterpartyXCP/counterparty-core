@@ -358,6 +358,8 @@ class RegtestNode:
         print("Regtest node ready")
         self.ready = True
 
+        self.test_transaction_chaining()
+
         if self.show_output:
             printed_line_count = 0
             print("Server ready, ctrl-c to stop.")
@@ -412,6 +414,7 @@ class RegtestNode:
             pass
 
     def stop(self):
+        print(self.server_out.getvalue())
         print("Stopping bitcoin node 1...")
         self.stop_bitcoin_node()
         print("Stopping bitcoin node 2...")
@@ -653,6 +656,88 @@ class RegtestNode:
         assert events[0]["params"]["destination"] == utxo_address
 
         print("Detach with a single OP_RETURN output transaction test successful")
+
+    def test_transaction_chaining(self):
+        source_address = self.addresses[0]
+        address_info = json.loads(self.bitcoin_wallet("getaddressinfo", source_address).strip())
+        pubkey_source = address_info["scriptPubKey"]
+        print(f"pubkey_source: {pubkey_source}")
+
+        new_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "bech32").strip()
+        address_info = json.loads(self.bitcoin_wallet("getaddressinfo", new_address).strip())
+        pubkey_new_address = address_info["scriptPubKey"]
+        print(f"pubkey_new_address: {pubkey_new_address}")
+
+        # send XCP to new address
+        api_call_url = f"addresses/{source_address}/compose/send?destination={new_address}&quantity=100&asset=XCP"
+        print(api_call_url)
+        result = self.api_call(api_call_url)
+        raw_transaction_1 = result["result"]["rawtransaction"]
+        signed_transaction_1 = json.loads(
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_1).strip()
+        )["hex"]
+        print(f"Raw transaction 1: {signed_transaction_1}")
+
+        # get utxo info from the first transaction
+        decoded_transaction_1 = json.loads(
+            self.bitcoin_cli("decoderawtransaction", signed_transaction_1).strip()
+        )
+        print(json.dumps(decoded_transaction_1, indent=4))
+        txid_1 = decoded_transaction_1["txid"]
+        vout_1 = len(decoded_transaction_1["vout"]) - 1  # last vout is the change
+        value_1 = int(decoded_transaction_1["vout"][vout_1]["value"] * 1e8)
+        print(f"TXID 1: {txid_1}")
+
+        # send BTC to new address using the change from the previous transaction
+        api_call_url = f"addresses/{source_address}/compose/send?destination={new_address}&quantity=10000&asset=BTC"
+        api_call_url += f"&inputs_set={txid_1}:{vout_1}:{value_1}:{pubkey_source}"
+        api_call_url += "&disable_utxo_locks=true"
+        api_call_url += "&validate=false"
+        result = self.api_call(api_call_url)
+        raw_transaction_2 = result["result"]["rawtransaction"]
+        signed_transaction_2 = json.loads(
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_2).strip()
+        )["hex"]
+        print(f"Raw transaction 2: {signed_transaction_2}")
+
+        # get utxo info from the second transaction
+        decoded_transaction_2 = json.loads(
+            self.bitcoin_cli("decoderawtransaction", signed_transaction_2).strip()
+        )
+        print(json.dumps(decoded_transaction_2, indent=4))
+        txid_2 = decoded_transaction_2["txid"]
+        vout_2 = 0  # first vout is the 10000 sats from the previous transaction
+        value_2 = int(decoded_transaction_2["vout"][vout_2]["value"] * 1e8)
+        assert value_2 == 10000
+        print(f"TXID 2: {txid_2}")
+
+        # use the BTC and the XCP from the first transaction to create a dispenser
+        api_call_url = f"addresses/{new_address}/compose/dispenser?"
+        api_call_url += "asset=XCP&give_quantity=1&escrow_quantity=2&mainchainrate=1&status=0"
+        api_call_url += f"&inputs_set={txid_2}:0:{value_2}:{pubkey_new_address}"
+        api_call_url += "&disable_utxo_locks=true"
+        api_call_url += "&validate=false"
+        result = self.api_call(api_call_url)
+        raw_transaction_3 = result["result"]["rawtransaction"]
+        signed_transaction_3 = json.loads(
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_3).strip()
+        )["hex"]
+        print(f"Raw transaction 3: {signed_transaction_3}")
+
+        tx_hash, block_hash, block_time = self.broadcast_transaction(
+            signed_transaction_1, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 1 sent: {tx_hash}")
+        tx_hash, block_hash, block_time = self.broadcast_transaction(
+            signed_transaction_2, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 2 sent: {tx_hash}")
+        tx_hash, block_hash, block_time = self.broadcast_transaction(
+            signed_transaction_3, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 3 sent: {tx_hash}")
+        self.mine_blocks(1)
+        self.wait_for_counterparty_server()
 
 
 class RegtestNodeThread(threading.Thread):

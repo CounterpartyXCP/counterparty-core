@@ -179,13 +179,16 @@ def prepare_inputs_set(inputs_set, force_inputs_set=False):
         str_input_split = str_input.split(":")
         amount = None
 
-        if len(str_input_split) == 3:
+        script_pub_key = None
+        if len(str_input_split) > 2:
             utxo = f"{str_input_split[0]}:{str_input_split[1]}"
             try:
                 amount = int(str_input_split[2])
                 amount = amount / config.UNIT
             except ValueError as e:
                 raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
+            if len(str_input_split) > 3:
+                script_pub_key = str_input_split[3]
         elif len(str_input_split) == 2:
             utxo = str_input
 
@@ -204,13 +207,14 @@ def prepare_inputs_set(inputs_set, force_inputs_set=False):
                     ) from e
                 raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
 
-        new_inputs_set.append(
-            {
-                "txid": txid,
-                "vout": vout,
-                "amount": amount,
-            }
-        )
+        new_input = {
+            "txid": txid,
+            "vout": vout,
+            "amount": amount,
+        }
+        if script_pub_key is not None:
+            new_input["script_pub_key"] = script_pub_key
+        new_inputs_set.append(new_input)
     return new_inputs_set
 
 
@@ -330,7 +334,8 @@ def construct_coin_selection(
         use_inputs = unspent
 
     # remove locked UTXOs
-    unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
+    if not disable_utxo_locks:
+        unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
 
     # remove UTXOs with balances if not specified
     if not use_utxos_with_balances:
