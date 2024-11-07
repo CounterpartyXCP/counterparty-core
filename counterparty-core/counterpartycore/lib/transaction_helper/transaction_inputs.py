@@ -207,7 +207,7 @@ def prepare_inputs_set(inputs_set, force_inputs_set=False):
         new_inputs_set.append(
             {
                 "txid": txid,
-                "vout": amount,
+                "vout": vout,
                 "amount": amount,
             }
         )
