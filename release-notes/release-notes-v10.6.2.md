@@ -8,6 +8,8 @@
 
 ## Protocol Changes
 
+### UTXO Support
+
 This update includes significant changes to the UTXO Support feature, and in particular to address a vulnerability where an atomic swap could be frontrun by a `detach` transaction. Further feedback from the community, in particular the OpenStamps team and DerpHerpenstein have allowed us to simplify the implementation of this feature significantly. With the protocol change, messages with ID 100 will be disabled at the same block that messages with IDs 101 and 102 will be enabled. 12 blocks before this activation block, the functions `compose_attach` and `compose_detach` will be deactivated to avoid having transactions with ID 100 confirmed after activation. The protocol and API have changed as follows:
 
 1. The `attach` function no longer accepts a `destination` parameter. It now accepts an optional `destination_vout` parameter (by default the first non-`OP_RETURN` output). This parameter allows one to designate the index of the output to use as the destination. The transaction is invalid if `destination_vout` does not exist or if it is an `OP_RETURN`.
@@ -22,21 +24,21 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 1. It is no longer possible to make a `detach` and a UTXO `move` in the same transaction.
 1. A UTXO move with a transaction that contains only a single OP_RETURN output behaves like a `detach`
 
+### Fairminter
 
-## Improvements
-
-- Rust fetcher will now only store entries in its database required for Bitcoin reorganization checks. This greatly reduces the size of the database and significantly increases the speed of the catch-up process.
+When there are fewer tokens remaining than `max_mint_per_tx` in a free Fairminter with hard cap, the last mint receives what remains instead of triggering an error.
 
 ## Bugfixes
 
 - Rust fetcher "reporter" worker now takes `rollback_height` into account in its block height ordering check.
+- Fixed subasset name handling when creating a fairminter by preserving the `asset_longname` field when `asset=<subasset_name>` is specified and `asset_parent` is not specified.
 
 
 ## Codebase
 
 - The `transactions.compose()` function accepts a `tx_info` that contains a source in the form of a UTXO instead of an address. When a UTXO is used, this UTXO must be spent in the corresponding transaction.
 - Refactor `compose_moveutxo()` to use this new `transactions.compose()` feature.
-
+- Rust fetcher will now only store entries in its database required for Bitcoin reorganization checks. This greatly reduces the size of the database and significantly increases the speed of the catch-up process.
 
 ## API
 

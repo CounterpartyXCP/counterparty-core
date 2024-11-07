@@ -57,6 +57,37 @@ def initialise(db):
         ],
     )
 
+    if database.get_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1") is None:
+        logger.debug("Fixing issuances `asset_longname` field")
+        with db:
+            # disable triggers
+            for table in ["issuances", "fairminters"]:
+                database.unlock_update(db, table)
+            # get assets with `asset_longname` field not set
+            sql = """
+                SELECT 
+                    DISTINCT(asset),
+                    (SELECT asset_longname FROM issuances WHERE asset = i.asset ORDER BY rowid ASC LIMIT 1) AS asset_longname
+                FROM issuances AS i WHERE 
+                    asset IN (SELECT DISTINCT(asset) FROM issuances WHERE asset_longname is NOT NULL AND asset_longname != '')
+                    AND (asset_longname is NULL OR asset_longname = '') 
+                    AND status='valid'
+                    AND fair_minting = 1;
+            """
+            cursor.execute(sql)
+            assets = cursor.fetchall()
+            # update `asset_longname` field
+            for asset in assets:
+                sql = "UPDATE issuances SET asset_longname = ? WHERE asset = ? AND (asset_longname = '' OR asset_longname IS NULL)"
+                cursor.execute(sql, (asset["asset_longname"], asset["asset"]))
+                asset_parent = asset["asset_longname"].split(".")[0]
+                sql = "UPDATE fairminters SET asset_longname = ?, asset_parent = ? WHERE asset = ? AND (asset_longname = '' OR asset_longname IS NULL)"
+                cursor.execute(sql, (asset["asset_longname"], asset_parent, asset["asset"]))
+            # re-enable triggers
+            for table in ["issuances", "fairminters"]:
+                database.lock_update(db, table)
+            database.set_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1", True)
+
 
 def validate(
     db,
@@ -128,12 +159,14 @@ def validate(
     except exceptions.AssetNameError as e:
         problems.append(f"Invalid asset name: {e}")
 
-    asset_name = asset
-    # is subasset ?
-    if asset_parent != "":
-        asset_name = f"{asset_parent}.{asset}"
+    existing_asset = ledger.get_asset(db, asset)
+    if existing_asset and existing_asset["asset_longname"] and asset_parent == "":
+        asset_parent, asset = existing_asset["asset_longname"].split(".")
 
     # check if asset exists
+    asset_name = asset
+    if asset_parent != "":
+        asset_name = f"{asset_parent}.{asset}"
     existing_asset = ledger.get_asset(db, asset_name)
 
     if existing_asset:
@@ -410,6 +443,10 @@ def parse(db, tx, message):
         status = "open"
     if end_block > 0 and tx["block_index"] > end_block:
         status = "closed"
+
+    existing_asset = ledger.get_asset(db, asset)
+    if existing_asset and existing_asset["asset_longname"] and asset_parent == "":
+        asset_parent, asset = existing_asset["asset_longname"].split(".")
 
     # is subasset ?
     asset_longname = ""

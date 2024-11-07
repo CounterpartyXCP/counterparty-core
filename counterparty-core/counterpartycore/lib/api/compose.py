@@ -406,7 +406,7 @@ def compose_mpma(
 ):
     """
     Composes a transaction to send multiple payments to multiple addresses.
-    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_1)
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_2)
     :param assets: comma-separated list of assets to send (e.g. XCP,$ASSET_5)
     :param destinations: comma-separated list of addresses to send to (e.g. $ADDRESS_1,$ADDRESS_2)
     :param quantities: comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2)
@@ -523,7 +523,7 @@ def compose_dispense(
 ):
     """
     Composes a transaction to send BTC to a dispenser.
-    :param address: The address that will be sending (must have the necessary quantity of BTC) (e.g. $ADDRESS_2)
+    :param address: The address that will be sending (must have the necessary quantity of BTC) (e.g. $ADDRESS_1)
     :param dispenser: The dispenser that will be receiving the asset (e.g. $ADDRESS_4)
     :param quantity: The quantity of BTC to send (in satoshis, hence integer) (e.g. 1000)
     """

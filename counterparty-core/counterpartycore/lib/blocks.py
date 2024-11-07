@@ -824,13 +824,7 @@ def initialise(db):
 
     # Lock UPDATE on all tables
     for table in TABLES:
-        cursor.execute(
-            f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
-                           BEFORE UPDATE ON {table} BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
-                        """
-        )
+        database.lock_update(db, table)
     cursor.close()
 
 

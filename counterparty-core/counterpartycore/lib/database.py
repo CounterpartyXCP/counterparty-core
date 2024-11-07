@@ -324,3 +324,19 @@ def table_exists(cursor, table):
         f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"  # nosec B608  # noqa: S608
     ).fetchone()
     return table_name is not None
+
+
+def lock_update(db, table):
+    cursor = db.cursor()
+    cursor.execute(
+        f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
+            BEFORE UPDATE ON {table} BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
+        """
+    )
+
+
+def unlock_update(db, table):
+    cursor = db.cursor()
+    cursor.execute(f"DROP TRIGGER IF EXISTS block_update_{table}")

@@ -3,7 +3,7 @@ import logging
 import math
 import struct
 
-from counterpartycore.lib import config, database, exceptions, ledger
+from counterpartycore.lib import config, database, exceptions, ledger, util
 from counterpartycore.lib.messages import fairminter as fairminter_mod
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -89,7 +89,7 @@ def validate(
         balance = ledger.get_balance(db, source, config.XCP)
         if balance < xcp_total_price:
             problems.append("insufficient XCP balance")
-    else:
+    elif not util.enabled("partial_mint_to_reach_hard_cap"):
         # check id we don't exceed the hard cap
         if (
             fairminter["hard_cap"] > 0
@@ -194,7 +194,18 @@ def parse(db, tx, message):
         earn_quantity = quantity
     else:
         paid_quantity = 0
-        earn_quantity = fairminter["max_mint_per_tx"]
+        if util.enabled("partial_mint_to_reach_hard_cap"):
+            asset_supply = ledger.asset_supply(db, fairminter["asset"])
+            if (
+                fairminter["hard_cap"] > 0
+                and asset_supply + fairminter["max_mint_per_tx"] > fairminter["hard_cap"]
+            ):
+                earn_quantity = fairminter["hard_cap"] - asset_supply
+            else:
+                earn_quantity = fairminter["max_mint_per_tx"]
+        else:
+            earn_quantity = fairminter["max_mint_per_tx"]
+
     # we determine the commission to be paid to the issuer
     # and we subtract it from the assets to be sent to the user
     commission = 0

@@ -29,6 +29,7 @@ from scenarios import (
     scenario_17_dispenser,
     scenario_18_utxo,
     scenario_19_mpma,
+    scenario_20_fairminter,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -53,13 +54,14 @@ SCENARIOS += scenario_15_destroy.SCENARIO
 SCENARIOS += scenario_17_dispenser.SCENARIO
 SCENARIOS += scenario_18_utxo.SCENARIO
 SCENARIOS += scenario_19_mpma.SCENARIO
+SCENARIOS += scenario_20_fairminter.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_18_utxo.SCENARIO
+# SCENARIOS = scenario_20_fairminter.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -153,6 +155,7 @@ def control_result(
             .replace("$BLOCK_HASH", block_hash)
             .replace('"$BLOCK_INDEX"', str(block_index))
             .replace('"$TX_INDEX"', str(tx_index))
+            .replace('"$TX_INDEX - 1"', str(tx_index - 1))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
         if data:
