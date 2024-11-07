@@ -275,6 +275,7 @@ def construct(
         use_utxos_with_balances,
         exclude_utxos_with_balances,
         force_utxo,
+        force_inputs_set,
     )
 
     """Finish"""

@@ -168,7 +168,7 @@ def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
     return unspent
 
 
-def prepare_inputs_set(inputs_set):
+def prepare_inputs_set(inputs_set, force_inputs_set=False):
     new_inputs_set = []
     utxos_list = inputs_set.split(",")
     if len(utxos_list) > MAX_INPUTS_SET:
@@ -183,6 +183,7 @@ def prepare_inputs_set(inputs_set):
             utxo = f"{str_input_split[0]}:{str_input_split[1]}"
             try:
                 amount = int(str_input_split[2])
+                amount = amount / config.UNIT
             except ValueError as e:
                 raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
         elif len(str_input_split) == 2:
@@ -197,6 +198,10 @@ def prepare_inputs_set(inputs_set):
             try:
                 amount = backend.bitcoind.get_tx_out_amount(txid, vout)
             except Exception as e:
+                if force_inputs_set:
+                    raise exceptions.ComposeError(
+                        f"Amount not found for `{str_input}`, you must provide it"
+                    ) from e
                 raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
 
         new_inputs_set.append(
@@ -209,9 +214,16 @@ def prepare_inputs_set(inputs_set):
     return new_inputs_set
 
 
-def use_inputs_set(inputs, destination_btc_out, data_btc_out, exact_fee):
+def use_inputs_set(inputs_set, destination_btc_out, data_btc_out, exact_fee, force_utxo):
+    if not inputs_set:
+        raise exceptions.ComposeError(
+            "`inputs_set` must be specified when using `force_inputs_set`"
+        )
     if exact_fee is None:
         raise exceptions.ComposeError("`exact_fee` must be specified when using `force_inputs_set`")
+
+    inputs = prepare_inputs_set(inputs_set, force_inputs_set=True)
+    inputs = insert_force_utxo(inputs, force_utxo, force_inputs_set=True)
 
     btc_out = destination_btc_out + data_btc_out
     btc_in = 0
@@ -219,10 +231,43 @@ def use_inputs_set(inputs, destination_btc_out, data_btc_out, exact_fee):
         btc_in += tx_input["amount"]
 
     change_quantity = btc_in - btc_out - exact_fee
+    if change_quantity < 0:
+        raise exceptions.ComposeError("Insufficient funds in provided `inputs_set`")
 
-    final_inputs = script.ensure_script_pub_key_for_inputs(inputs)
+    inputs = script.ensure_script_pub_key_for_inputs(inputs)
 
-    return final_inputs, change_quantity, btc_in, exact_fee
+    return inputs, change_quantity, btc_in, exact_fee
+
+
+def insert_force_utxo(unspent, force_utxo, force_inputs_set=False):
+    if force_utxo is None:
+        return unspent
+
+    # we want force_utxo to be the first input in unspent list
+    txid, vout = force_utxo.split(":")
+    included_pos = None
+    for i, v in enumerate(unspent):
+        if v["txid"] == txid and v["vout"] == int(vout):
+            included_pos = i
+            break
+    if included_pos is None:
+        if force_inputs_set:
+            raise exceptions.ComposeError(f"`{force_utxo}` not found in `inputs_set`")
+        try:
+            amount = backend.bitcoind.get_tx_out_amount(txid, int(vout))
+        except Exception as e:
+            raise exceptions.ComposeError(f"invalid UTXO: {txid}:{vout}") from e
+        unspent.insert(
+            0,
+            {
+                "txid": txid,
+                "vout": int(vout),
+                "amount": amount,
+            },
+        )
+    elif included_pos != 0:
+        unspent.insert(0, unspent.pop(included_pos))
+    return unspent
 
 
 def construct_coin_selection(
@@ -247,7 +292,10 @@ def construct_coin_selection(
     use_utxos_with_balances,
     exclude_utxos_with_balances,
     force_utxo,
+    force_inputs_set,
 ):
+    if force_inputs_set:
+        return use_inputs_set(inputs_set, destination_btc_out, data_btc_out, exact_fee, force_utxo)
     if inputs_set:
         if isinstance(inputs_set, str):
             use_inputs = unspent = prepare_inputs_set(inputs_set)
@@ -299,29 +347,7 @@ def construct_coin_selection(
         use_inputs = unspent
 
     # we want force_utxo to be the first input in unspent list
-    if force_utxo is not None:
-        txid, vout = force_utxo.split(":")
-        included_pos = None
-        for i, v in enumerate(unspent):
-            if v["txid"] == txid and v["vout"] == int(vout):
-                included_pos = i
-                break
-        if included_pos is None:
-            try:
-                amount = backend.bitcoind.get_tx_out_amount(txid, int(vout))
-            except Exception as e:
-                raise exceptions.ComposeError(f"invalid UTXO: {txid}:{vout}") from e
-            unspent.insert(
-                0,
-                {
-                    "txid": txid,
-                    "vout": int(vout),
-                    "amount": amount,
-                },
-            )
-        elif included_pos != 0:
-            unspent.insert(0, unspent.pop(included_pos))
-        use_inputs = unspent
+    use_inputs = unspent = insert_force_utxo(unspent, force_utxo)
 
     # dont override fee_per_kb if specified
     estimate_fee_per_kb = None
@@ -450,6 +476,7 @@ def prepare_inputs(
     use_utxos_with_balances,
     exclude_utxos_with_balances,
     force_utxo,
+    force_inputs_set,
 ):
     btc_in = 0
     final_fee = 0
@@ -501,6 +528,7 @@ def prepare_inputs(
             use_utxos_with_balances,
             exclude_utxos_with_balances,
             force_utxo,
+            force_inputs_set,
         )
     else:
         # when encoding is P2SH and the pretx txid is passed we can skip coinselection
