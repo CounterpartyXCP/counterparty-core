@@ -196,7 +196,6 @@ def construct(
     p2sh_pretx_txid=None,
     use_utxos_with_balances=False,
     exclude_utxos_with_balances=False,
-    force_inputs_set=False,
     skip_validation=False,
 ):
     # Extract tx_info
@@ -274,7 +273,6 @@ def construct(
         use_utxos_with_balances,
         exclude_utxos_with_balances,
         force_utxo,
-        force_inputs_set,
     )
 
     """Finish"""
