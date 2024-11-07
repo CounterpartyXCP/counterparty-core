@@ -461,7 +461,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
 
 class UTXOBalancesCache(metaclass=util.SingletonMeta):
     def __init__(self, db):
-        logger.debug("Initialising utxo balances cache...")
+        # logger.debug("Initialising utxo balances cache...")
         sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
         cursor = db.cursor()
         cursor.execute(sql)
@@ -493,7 +493,7 @@ def get_address_balances(db, address: str):
         field_name = "utxo"
 
     query = f"""
-        SELECT {field_name}, asset, quantity, MAX(rowid)
+        SELECT {field_name}, asset, quantity, utxo_address, MAX(rowid)
         FROM balances
         WHERE {field_name} = ?
         GROUP BY {field_name}, asset

@@ -384,8 +384,12 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 _err_to_out=True,
                 _cwd=CURR_DIR,
             )
+
             print("Running Dredd...")
             sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
+
+            regtest_node_thread.node.test_invalid_detach()
+
             print("Tesing reparse...")
             regtest_node_thread.node.reparse()
             print("Testing rollback...")

@@ -618,6 +618,12 @@
             "fee_upper_threshold": 15,
             "base_fee": 1,
             "fee_sigmoid_k": 1
+          },
+          "101": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
           }
         }
       }
@@ -633,6 +639,12 @@
             "fee_upper_threshold": 15,
             "base_fee": 1,
             "fee_sigmoid_k": 1
+          },
+          "101": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
           }
         }
       }
@@ -643,6 +655,13 @@
     "minimum_version_minor": 6,
     "minimum_version_revision": 0,
     "block_index": 868300,
+    "testnet_block_index": 3195137
+  },
+  "spend_utxo_to_detach": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 6,
+    "minimum_version_revision": 0,
+    "block_index": 870000,
     "testnet_block_index": 3195137
   }
 }

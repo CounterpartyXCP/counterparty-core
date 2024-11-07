@@ -178,7 +178,7 @@ class BlockchainWatcher:
                     # reset mempool block
                     self.mempool_block = []
                     self.mempool_block_hashes = []
-                    logger.debug("Waiting for new transactions from mempool or new block...")
+                    logger.trace("Waiting for new transactions in the mempool or a new block...")
         # transaction removed from mempool for non-block inclusion reasons
         elif label == "R":
             mempool.clean_transaction_events(self.db, item_hash)

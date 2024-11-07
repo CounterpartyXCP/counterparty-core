@@ -31,18 +31,21 @@ from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
 
 from .messages import (  # noqa: E402
+    attach,
     bet,
     broadcast,
     btcpay,
     burn,
     cancel,
     destroy,
+    detach,
     dispense,
     dispenser,
     dividend,
     fairmint,
     fairminter,
     issuance,
+    move,
     order,
     rps,
     rpsresolve,
@@ -107,8 +110,23 @@ def parse_tx(db, tx):
 
     try:
         with db:
-            if "utxos_info" in tx and tx["utxos_info"]:
-                utxo.move_assets(db, tx)
+            if tx["data"] and len(tx["data"]) > 1:
+                try:
+                    message_type_id, message = message_type.unpack(tx["data"], tx["block_index"])
+                except struct.error:  # Deterministically raised.
+                    message_type_id = None
+                    message = None
+            else:
+                message_type_id = None
+                message = None
+
+            # After "spend_utxo_to_detach" protocol change we move assets before parsing
+            # only if the message is not an Attach or Detach, else will be moved after parsing
+            if not util.enabled("spend_utxo_to_detach") or message_type_id not in [
+                attach.ID,
+                detach.ID,
+            ]:
+                move.move_assets(db, tx)
 
             if not tx["source"]:  # utxos move only
                 return
@@ -124,16 +142,6 @@ def parse_tx(db, tx):
             if tx["destination"] == config.UNSPENDABLE:
                 burn.parse(db, tx, MAINNET_BURNS)
                 return
-
-            if len(tx["data"]) > 1:
-                try:
-                    message_type_id, message = message_type.unpack(tx["data"], tx["block_index"])
-                except struct.error:  # Deterministically raised.
-                    message_type_id = None
-                    message = None
-            else:
-                message_type_id = None
-                message = None
 
             # Protocol change.
             rps_enabled = tx["block_index"] >= 308500 or config.TESTNET or config.REGTEST
@@ -203,10 +211,16 @@ def parse_tx(db, tx):
                 "fairminter", block_index=tx["block_index"]
             ):
                 fairmint.parse(db, tx, message)
-            elif message_type_id == utxo.ID and util.enabled(
-                "utxo_support", block_index=tx["block_index"]
+            elif (
+                message_type_id == utxo.ID
+                and util.enabled("utxo_support", block_index=tx["block_index"])
+                and not util.enabled("spend_utxo_to_detach")
             ):
                 utxo.parse(db, tx, message)
+            elif message_type_id == attach.ID and util.enabled("spend_utxo_to_detach"):
+                attach.parse(db, tx, message)
+            elif message_type_id == detach.ID and util.enabled("spend_utxo_to_detach"):
+                detach.parse(db, tx, message)
             else:
                 supported = False
 
@@ -238,13 +252,19 @@ def parse_tx(db, tx):
                 util.CURRENT_TX_HASH = None
                 return False
 
+            # if attach or detach we move assets after parsing
+            if util.enabled("spend_utxo_to_detach") and message_type_id == attach.ID:
+                move.move_assets(db, tx)
+
             # NOTE: for debugging (check asset conservation after every `N` transactions).
             # if not tx['tx_index'] % N:
             #     check.asset_conservation(db)
             util.CURRENT_TX_HASH = None
             return True
     except Exception as e:
-        raise exceptions.ParseTransactionError(f"{e}")  # noqa: B904
+        # import traceback
+        # print(traceback.format_exc())
+        raise exceptions.ParseTransactionError(f"{e}") from e
     finally:
         cursor.close()
         util.CURRENT_TX_HASH = None
@@ -979,9 +999,17 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
     else:
         assert block_index == util.CURRENT_BLOCK_INDEX
 
-    if (source and (data or destination == config.UNSPENDABLE or dispensers_outs)) or len(
-        utxos_info
-    ) > 1:
+    if (
+        (
+            source
+            and (data or destination == config.UNSPENDABLE or dispensers_outs)  # counterparty tx
+        )
+        or (
+            utxos_info[0] != ""
+            and util.enabled("spend_utxo_to_detach")  # utxo move or detach with a single OP_RETURN
+        )
+        or (utxos_info[0] != "" and utxos_info[1] != "")
+    ):
         transaction_bindings = {
             "tx_index": tx_index,
             "tx_hash": tx_hash,

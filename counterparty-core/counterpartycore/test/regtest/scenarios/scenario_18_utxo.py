@@ -120,18 +120,8 @@ SCENARIO = [
                         "tx_hash": "$TX_HASH",
                     },
                     {
-                        "event": "INCREMENT_TRANSACTION_COUNT",
-                        "event_index": "$EVENT_INDEX_5",
-                        "params": {
-                            "block_index": "$BLOCK_INDEX",
-                            "count": 3,
-                            "transaction_id": 100,
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
                         "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_4",
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "address": None,
                             "asset": "UTXOASSET",
@@ -147,7 +137,7 @@ SCENARIO = [
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "action": "attach to utxo",
                             "address": "$ADDRESS_7",
@@ -158,6 +148,16 @@ SCENARIO = [
                             "tx_index": "$TX_INDEX",
                             "utxo": None,
                             "utxo_address": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "INCREMENT_TRANSACTION_COUNT",
+                        "event_index": "$EVENT_INDEX_3",
+                        "params": {
+                            "block_index": "$BLOCK_INDEX",
+                            "count": 4,
+                            "transaction_id": 101,
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -172,7 +172,7 @@ SCENARIO = [
         "no_confirmation": True,
         "params": {
             "destination": "$ADDRESS_8",
-            "more_utxos": "$UTXOASSET_UTXO_1_TX_HASH:2",  # third output is change of attach transaction
+            "inputs_set": "$UTXOASSET_UTXO_1_TX_HASH:2",  # third output is change of attach transaction
         },
         "set_variables": {
             "UTXOASSET_UTXO_2_TX_HASH": "$TX_HASH",
@@ -238,6 +238,11 @@ SCENARIO = [
         "params": {
             "destination": "$ADDRESS_7",
             "exact_fee": 0,
+            "validate": False,
+        },
+        "set_variables": {
+            "UTXOASSET_UTXO_3_TX_HASH": "$TX_HASH",
+            "UTXOASSET_UTXO_3_TX_INDEX": "$TX_INDEX",
         },
         "controls": [
             {
@@ -303,7 +308,7 @@ SCENARIO = [
                             "source": "$UTXOASSET_UTXO_1_TX_HASH:0",
                             "status": "valid",
                             "tx_hash": "$UTXOASSET_UTXO_2_TX_HASH",
-                            "tx_index": 68,
+                            "tx_index": 69,
                         },
                         "tx_hash": "$UTXOASSET_UTXO_2_TX_HASH",
                     },
@@ -317,7 +322,7 @@ SCENARIO = [
                             "calling_function": "utxo move",
                             "event": "$UTXOASSET_UTXO_2_TX_HASH",
                             "quantity": 1000000000,
-                            "tx_index": 68,
+                            "tx_index": 69,
                             "utxo": "$UTXOASSET_UTXO_2_TX_HASH:0",
                             "utxo_address": "$ADDRESS_8",
                         },
@@ -333,7 +338,7 @@ SCENARIO = [
                             "block_index": "$BLOCK_INDEX",
                             "event": "$UTXOASSET_UTXO_2_TX_HASH",
                             "quantity": 1000000000,
-                            "tx_index": 68,
+                            "tx_index": 69,
                             "utxo": "$UTXOASSET_UTXO_1_TX_HASH:0",
                             "utxo_address": "$ADDRESS_7",
                         },
@@ -342,5 +347,78 @@ SCENARIO = [
                 ],
             },
         ],
+    },
+    {
+        "title": "Detach asset from UTXO without destination",
+        "transaction": "detach",
+        "source": "$UTXOASSET_UTXO_3_TX_HASH:0",
+        "params": {
+            "exact_fee": 0,
+        },
+        "controls": [
+            {
+                "url": "blocks/$BLOCK_INDEX/events?event_name=DETACH_FROM_UTXO,CREDIT,DEBIT",
+                "result": [
+                    {
+                        "event": "DETACH_FROM_UTXO",
+                        "event_index": "$EVENT_INDEX_5",
+                        "params": {
+                            "asset": "UTXOASSET",
+                            "block_index": "$BLOCK_INDEX",
+                            "destination": "$ADDRESS_7",
+                            "fee_paid": 0,
+                            "msg_index": 0,
+                            "quantity": 1000000000,
+                            "source": "$UTXOASSET_UTXO_3_TX_HASH:0",
+                            "status": "valid",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": "$TX_INDEX",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "CREDIT",
+                        "event_index": "$EVENT_INDEX_4",
+                        "params": {
+                            "address": "$ADDRESS_7",
+                            "asset": "UTXOASSET",
+                            "block_index": "$BLOCK_INDEX",
+                            "calling_function": "detach from utxo",
+                            "event": "$TX_HASH",
+                            "quantity": 1000000000,
+                            "tx_index": "$TX_INDEX",
+                            "utxo": None,
+                            "utxo_address": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "DEBIT",
+                        "event_index": "$EVENT_INDEX_3",
+                        "params": {
+                            "action": "detach from utxo",
+                            "address": None,
+                            "asset": "UTXOASSET",
+                            "block_index": "$BLOCK_INDEX",
+                            "event": "$TX_HASH",
+                            "quantity": 1000000000,
+                            "tx_index": "$TX_INDEX",
+                            "utxo": "$UTXOASSET_UTXO_3_TX_HASH:0",
+                            "utxo_address": "$ADDRESS_7",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                ],
+            }
+        ],
+    },
+    {
+        "title": "Re-Attach asset to UTXO",
+        "transaction": "attach",
+        "source": "$ADDRESS_7",
+        "params": {
+            "asset": "UTXOASSET",
+            "quantity": 10 * 10**8,
+        },
     },
 ]

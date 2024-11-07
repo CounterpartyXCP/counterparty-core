@@ -18,6 +18,7 @@ This upgrade is not a protocol change and no automatic reparse is necessary.
 - Raise a `ComposeError` in `mpma.compose()` if `memo` is not a string or if `memo_is_hex` is not a boolean
 - Send API v2 log messages to the `config.API_LOG` logfile
 - Create a dust output when attaching an asset to a UTXO without a destination address
+- Fix dust value in compose move to UTXO
 
 ## Codebase
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import binascii
 import json
 import os
 import signal
@@ -10,6 +11,7 @@ import urllib.parse
 from io import StringIO
 
 import sh
+from counterpartycore.lib import arc4
 
 WALLET_NAME = "xcpwallet"
 
@@ -23,7 +25,13 @@ class ComposeError(Exception):
 
 
 class RegtestNode:
-    def __init__(self, datadir="regtestnode", show_output=False, wsgi_server="waitress"):
+    def __init__(
+        self,
+        datadir="regtestnode",
+        show_output=False,
+        wsgi_server="waitress",
+        burn_in_one_block=False,
+    ):
         self.datadir = datadir
         self.bitcoin_cli = sh.bitcoin_cli.bake(
             "-regtest",
@@ -55,6 +63,7 @@ class RegtestNode:
             "--no-telemetry",
             "-vv",
         )
+        self.burn_in_one_block = burn_in_one_block
 
     def api_call(self, url):
         return json.loads(sh.curl(f"http://localhost:24000/v2/{url}").strip())
@@ -85,14 +94,19 @@ class RegtestNode:
         if os.path.exists(regtest_protocole_file):
             os.remove(regtest_protocole_file)
 
-    def broadcast_transaction(self, signed_transaction, no_confirmation=False, retry=0):
+    def broadcast_transaction(
+        self, signed_transaction, no_confirmation=False, dont_wait_mempool=False, retry=0
+    ):
         mempool_event_count_before = self.get_mempool_event_count()
         tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
         if not no_confirmation:
             block_hash, block_time = self.mine_blocks(1)
         else:
             block_hash, block_time = "mempool", 9999999
-            while self.get_mempool_event_count() == mempool_event_count_before:
+            while (
+                not dont_wait_mempool
+                and self.get_mempool_event_count() == mempool_event_count_before
+            ):
                 print("waiting for mempool event parsing...")
                 time.sleep(5)
         self.tx_index += 1
@@ -100,7 +114,14 @@ class RegtestNode:
         return tx_hash, block_hash, block_time
 
     def send_transaction(
-        self, source, tx_name, params, return_only_data=False, no_confirmation=False, retry=0
+        self,
+        source,
+        tx_name,
+        params,
+        return_only_data=False,
+        no_confirmation=False,
+        dont_wait_mempool=False,
+        retry=0,
     ):
         self.wait_for_counterparty_server()
         if return_only_data:
@@ -110,7 +131,6 @@ class RegtestNode:
 
         query_string = []
         for key, value in params.items():
-            print(key, value)
             if not isinstance(value, list):
                 query_string.append(urllib.parse.urlencode({key: value}))
             else:
@@ -130,7 +150,12 @@ class RegtestNode:
                 print("Sleeping for 5 seconds and retrying...")
                 time.sleep(5)
                 return self.send_transaction(
-                    source, tx_name, params, return_only_data, no_confirmation
+                    source,
+                    tx_name,
+                    params,
+                    return_only_data,
+                    no_confirmation,
+                    dont_wait_mempool=dont_wait_mempool,
                 )
             raise ComposeError(result["error"])
         if return_only_data:
@@ -143,7 +168,7 @@ class RegtestNode:
         signed_transaction = json.loads(signed_transaction_json)["hex"]
         try:
             tx_hash, block_hash, block_time = self.broadcast_transaction(
-                signed_transaction, no_confirmation
+                signed_transaction, no_confirmation, dont_wait_mempool=dont_wait_mempool
             )
         except sh.ErrorReturnCode_25 as e:
             if retry < 6:
@@ -151,7 +176,13 @@ class RegtestNode:
                 print("Sleeping for 5 seconds and retrying...")
                 time.sleep(10)
                 return self.send_transaction(
-                    source, tx_name, params, return_only_data, no_confirmation, retry + 1
+                    source,
+                    tx_name,
+                    params,
+                    return_only_data,
+                    no_confirmation,
+                    dont_wait_mempool,
+                    retry + 1,
                 )
             else:
                 raise e
@@ -159,17 +190,16 @@ class RegtestNode:
         return tx_hash, block_hash, block_time, result["result"]["data"]
 
     def wait_for_counterparty_server(self, block=None):
+        target_block = block or self.block_count
         while True:
             try:
                 result = self.api_call("")
                 if result and "result" in result and result["result"]["server_ready"]:
                     current_block = result["result"]["counterparty_height"]
-                    target_block = block or self.block_count
                     if current_block < target_block:
                         print(f"Waiting for block {current_block} < {target_block}")
                         raise ServerNotReady
                     else:
-                        print("Server ready")
                         return
                 elif result and "result" in result:
                     print(
@@ -223,7 +253,16 @@ class RegtestNode:
     def generate_xcp(self):
         print("Generating XCP...")
         for address in self.addresses[0:10]:
-            self.send_transaction(address, "burn", {"quantity": 50000000})
+            self.send_transaction(
+                address,
+                "burn",
+                {"quantity": 50000000},
+                no_confirmation=self.burn_in_one_block,
+                dont_wait_mempool=self.burn_in_one_block,
+            )
+        if self.burn_in_one_block:
+            self.mine_blocks(1)
+            self.wait_for_counterparty_server()
 
     def start_bitcoin_node(self):
         self.bitcoind_process = sh.bitcoind(
@@ -373,10 +412,13 @@ class RegtestNode:
             pass
 
     def stop(self):
-        print("Stopping...")
+        print("Stopping bitcoin node 1...")
         self.stop_bitcoin_node()
+        print("Stopping bitcoin node 2...")
         self.stop_bitcoin_node(node=2)
+        print("Stopping counterparty-server...")
         self.stop_counterparty_server()
+        print("Stopping addrindexrs...")
         self.stop_addrindexrs()
 
     def get_node_state(self):
@@ -493,16 +535,138 @@ class RegtestNode:
         assert "Blockchain reorganization detected" in self.server_out.getvalue()
         assert self.get_burn_count(self.addresses[0]) == 1
 
+    def test_invalid_detach(self):
+        print("Test invalid detach...")
+
+        balances = self.api_call("assets/UTXOASSET/balances")["result"]
+        utxoasset_balances = []
+        utxoasset_addresses = []
+        print(balances)
+        utxo = None
+        test_address = None
+        for balance in balances:
+            if balance["utxo"] and balance["quantity"] > 0:
+                if not utxo:
+                    utxo = balance["utxo"]
+                    test_address = balance["utxo_address"]
+                utxoasset_balances.append(balance["utxo"])
+                utxoasset_addresses.append(balance["utxo_address"])
+        assert utxo
+        txid, vout = utxo.split(":")
+
+        data = self.send_transaction(
+            utxo,
+            "detach",
+            {"destination": test_address, "exact_fee": 1},
+            return_only_data=True,
+        )
+
+        # select an input without balance
+        list_unspent = json.loads(
+            self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([test_address])).strip()
+        )
+        for utxo in list_unspent:
+            if (
+                utxo["txid"] != txid
+                or utxo["vout"] != int(vout)
+                and f"{txid}:{vout}" not in utxoasset_balances
+            ):
+                selected_utxo = utxo
+                break
+
+        data = binascii.unhexlify(data)
+        key = arc4.init_arc4(binascii.unhexlify(selected_utxo["txid"]))
+        data = key.encrypt(data)
+        data = binascii.hexlify(data).decode("utf-8")
+
+        # correct input should be:
+        # inputs = json.dumps([{"txid": txid, "vout": int(vout)}])
+        # but we use the wrong input to test the invalid detach
+        inputs = json.dumps([selected_utxo])
+        outputs = json.dumps({test_address: 200 / 10e8, "data": data})
+
+        raw_transaction = self.bitcoin_cli("createrawtransaction", inputs, outputs).strip()
+        signed_transaction_json = self.bitcoin_wallet(
+            "signrawtransactionwithwallet", raw_transaction
+        ).strip()
+        signed_transaction = json.loads(signed_transaction_json)["hex"]
+
+        retry = 0
+        while True:
+            try:
+                tx_hash, _block_hash, _block_time = self.broadcast_transaction(signed_transaction)
+                break
+            except sh.ErrorReturnCode_25:
+                retry += 1
+                assert retry < 6
+                # print(str(e))
+                print("Sleeping for 5 seconds and retrying...")
+                time.sleep(5)
+
+        # utxo balance should be greater than 0
+        balances = self.api_call(f"addresses/{test_address}/balances/UTXOASSET")["result"]
+        for balance in balances:
+            if balance["utxo"]:
+                assert balance["quantity"] > 0
+                break
+
+        # we should not have a new event
+        events = self.api_call(f"transactions/{tx_hash}/events?event_name=DETACH_FROM_UTXO")[
+            "result"
+        ]
+        print(events)
+        assert len(events) == 0
+
+        print("Invalid detach test successful")
+
+        # let's try to detach assets with an UTXO move to a single OP_RETURN output
+        utxo = utxoasset_balances[0]
+        utxo_address = utxoasset_addresses[0]
+        txid, vout = utxo.split(":")
+
+        inputs = json.dumps([{"txid": txid, "vout": int(vout)}])
+        outputs = json.dumps({"data": 50 * "00"})
+
+        raw_transaction = self.bitcoin_cli("createrawtransaction", inputs, outputs).strip()
+        signed_transaction_json = self.bitcoin_wallet(
+            "signrawtransactionwithwallet", raw_transaction
+        ).strip()
+        signed_transaction = json.loads(signed_transaction_json)["hex"]
+
+        retry = 0
+        while True:
+            try:
+                tx_hash, _block_hash, _block_time = self.broadcast_transaction(signed_transaction)
+                break
+            except sh.ErrorReturnCode_25:
+                retry += 1
+                assert retry < 6
+                # print(str(e))
+                print("Sleeping for 5 seconds and retrying...")
+                time.sleep(5)
+
+        events = self.api_call(f"transactions/{tx_hash}/events?event_name=DETACH_FROM_UTXO")[
+            "result"
+        ]
+        assert len(events) == 1
+        assert events[0]["params"]["source"] == utxo
+        assert events[0]["params"]["destination"] == utxo_address
+
+        print("Detach with a single OP_RETURN output transaction test successful")
+
 
 class RegtestNodeThread(threading.Thread):
-    def __init__(self, wsgi_server="gunicorn"):
+    def __init__(self, wsgi_server="waitress", burn_in_one_block=False):
         threading.Thread.__init__(self)
         self.wsgi_server = wsgi_server
+        self.burn_in_one_block = burn_in_one_block
         self.daemon = True
         self.node = None
 
     def run(self):
-        self.node = RegtestNode(wsgi_server=self.wsgi_server)
+        self.node = RegtestNode(
+            wsgi_server=self.wsgi_server, burn_in_one_block=self.burn_in_one_block
+        )
         self.node.start()
 
     def stop(self):

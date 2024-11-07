@@ -10,7 +10,6 @@ from counterpartycore.lib import (
     gettxinfo,
     message_type,
     messages,
-    script,
     transaction,
     util,
 )
@@ -36,6 +35,9 @@ COMPOSABLE_TRANSACTIONS = [
     "utxo",
     "fairminter",
     "fairmint",
+    "attach",
+    "detach",
+    "move",
 ]
 
 COMPOSE_COMMONS_ARGS = {
@@ -280,7 +282,7 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
 def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     """
     Composes a transaction to cancel an open order or bet.
-    :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_1)
+    :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_7)
     :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)
     """
     params = {"source": address, "offer_hash": offer_hash}
@@ -313,7 +315,7 @@ def compose_dispenser(
 ):
     """
     Composes a transaction to opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
-    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. $ADDRESS_7)
+    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. $ADDRESS_9)
     :param asset: The asset or subasset to dispense (e.g. XCP)
     :param give_quantity: The quantity of the asset to dispense (in satoshis, hence integer) (e.g. 1000)
     :param escrow_quantity: The quantity of the asset to reserve for this dispenser (in satoshis, hence integer) (e.g. 1000)
@@ -639,6 +641,8 @@ def compose_utxo(
     quantity: int,
     **construct_args,
 ):
+    if util.enabled("spend_utxo_to_detach"):
+        raise exceptions.ComposeError("Disbaled. Please use the new `attach` or `detach` instead.")
     params = {
         "source": source,
         "destination": destination,
@@ -653,19 +657,72 @@ def compose_attach(
     address: str,
     asset: str,
     quantity: int,
+    destination_vout: str = None,
     destination: str = None,
     **construct_args,
 ):
     """
     Composes a transaction to attach assets from an address to UTXO.
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
-    :param destination: The utxo to attach the assets to (e.g. $UTXO_1_ADDRESS_1)
     :param asset: The asset or subasset to attach (e.g. XCP)
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
+    :param destination_vout: The vout of the destination output
+    :param destination: [Disabled after block 870000] The utxo to attach the assets to
     """
+    if util.enabled("spend_utxo_to_detach"):
+        params = {
+            "source": address,
+            "asset": asset,
+            "quantity": quantity,
+            "destination_vout": destination_vout,
+        }
+        return compose(db, "attach", params, **construct_args)
+
+    if util.CURRENT_BLOCK_INDEX > util.get_change_block_index("spend_utxo_to_detach") - 12:
+        raise exceptions.ComposeError(
+            "Attach is disabled from 12 blocks before block 870000 and the activation of the new attach/detach messages types"
+        )
+
     return compose_utxo(
         db,
         source=address,
+        destination=destination,
+        asset=asset,
+        quantity=quantity,
+        **construct_args,
+    )
+
+
+def compose_detach(
+    db,
+    utxo: str,
+    destination: str = None,
+    asset: str = None,
+    quantity: int = None,
+    **construct_args,
+):
+    """
+    Composes a transaction to detach assets from UTXO to an address.
+    :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
+    :param destination: The address to detach the assets to, if not provided the addresse corresponding to the utxo is used (e.g. $ADDRESS_1)
+    :param asset: [Disabled after block 870000] The asset or subasset to detach
+    :param quantity: [Disabled after block 870000] The quantity of the asset to detach (in satoshis, hence integer)
+    """
+    if util.enabled("spend_utxo_to_detach"):
+        params = {
+            "source": utxo,
+            "destination": destination,
+        }
+        return compose(db, "detach", params, **construct_args)
+
+    if util.CURRENT_BLOCK_INDEX > util.get_change_block_index("spend_utxo_to_detach") - 12:
+        raise exceptions.ComposeError(
+            "Attach is disabled from 12 blocks before block 870000 and the activation of the new attach/detach messages types"
+        )
+
+    return compose_utxo(
+        db,
+        source=utxo,
         destination=destination,
         asset=asset,
         quantity=quantity,
@@ -680,103 +737,17 @@ def get_attach_estimate_xcp_fee(db):
     return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
 
 
-def compose_detach(
-    db,
-    utxo: str,
-    destination: str,
-    asset: str,
-    quantity: int,
-    **construct_args,
-):
-    """
-    Composes a transaction to detach assets from UTXO to an address.
-    :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
-    :param destination: The address to detach the assets to (e.g. $ADDRESS_1)
-    :param asset: The asset or subasset to detach (e.g. XCP)
-    :param quantity: The quantity of the asset to detach (in satoshis, hence integer) (e.g. 1000)
-    """
-    return compose_utxo(
-        db,
-        source=utxo,
-        destination=destination,
-        asset=asset,
-        quantity=quantity,
-        **construct_args,
-    )
-
-
-def compose_movetoutxo(
-    db,
-    utxo: str,
-    destination: str,
-    more_utxos: str = "",
-    exact_fee: int = None,
-    change_address: str = None,
-):
+def compose_movetoutxo(db, utxo: str, destination: str, **construct_args):
     """
     Composes a transaction to move assets from UTXO to another UTXO.
     :param utxo: The utxo from which the assets are moved
     :param destination: The address to move the assets to
-    :param more_utxos: The additional utxos to fund the transaction
     """
-    decimal.getcontext().prec = 8
-
-    more_utxos_list = []
-    input_count = 1
-    total_value = D("0")
-    try:
-        source_address, source_value = backend.bitcoind.get_utxo_address_and_value(utxo)
-        total_value += D(source_value)
-        for more_utxo in more_utxos.split(","):
-            if more_utxo == "":
-                continue
-            _more_utxo_address, more_utxo_value = backend.bitcoind.get_utxo_address_and_value(
-                more_utxo
-            )
-            more_utxo_tx_hash, more_utxo_vout = more_utxo.split(":")
-            more_utxos_list.append({"txid": more_utxo_tx_hash, "vout": int(more_utxo_vout)})
-            input_count += 1
-            total_value += D(more_utxo_value)
-    except exceptions.InvalidUTXOError as e:
-        raise exceptions.ComposeError("Invalid UTXO for source") from e
-
-    try:
-        script.validate(destination)
-    except Exception as e:
-        raise exceptions.ComposeError("Invalid address for destination") from e
-
-    tx_hash, vout = utxo.split(":")
-
-    if exact_fee is not None:
-        fee = D(exact_fee) / config.UNIT if exact_fee else 0
-    else:
-        fee_per_kb = backend.bitcoind.fee_per_kb()
-        # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
-        tx_size = (input_count * 148) + (2 * 34) + 10
-        fee = (D(fee_per_kb) / config.UNIT) * (D(tx_size) / 1024)
-
-    dust = D("0.0000546")
-    change = D(total_value) - dust - fee
-
-    if change < 0:
-        raise exceptions.ComposeError("Insufficient funds for fee")
-
-    inputs = [{"txid": tx_hash, "vout": int(vout)}] + more_utxos_list
-    outputs = [{destination: str(dust)}]
-    if change > 0:
-        change_output_address = change_address or source_address
-        outputs += [{change_output_address: str(change)}]
-    rawtransaction = backend.bitcoind.createrawtransaction(inputs, outputs)
-
-    return {
-        "rawtransaction": rawtransaction,
-        "params": {
-            "source": utxo,
-            "destination": destination,
-        },
-        "name": "movetoutxo",
-        "data": None,
+    params = {
+        "source": utxo,
+        "destination": destination,
     }
+    return compose(db, "move", params, **construct_args)
 
 
 def info_by_tx_hash(db, tx_hash: str):
@@ -933,6 +904,18 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.fairmint.ID:
             message_type_name = "fairmint"
             message_data = messages.fairmint.unpack(message, return_dict=True)
+        # utxo
+        elif message_type_id == messages.utxo.ID:
+            message_type_name = "utxo"
+            message_data = messages.utxo.unpack(message, return_dict=True)
+        # Attach
+        elif message_type_id == messages.attach.ID:
+            message_type_name = "attach"
+            message_data = messages.attach.unpack(message, return_dict=True)
+        # Detach
+        elif message_type_id == messages.detach.ID:
+            message_type_name = "detach"
+            message_data = messages.detach.unpack(message, return_dict=True)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 

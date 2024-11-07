@@ -1,11 +1,11 @@
 SCENARIO = [
     # open order for dredd Cancel test
     {
-        "title": "Open Sell XCP for BTC order",
+        "title": "Open Sell UTXOASSET for BTC order",
         "transaction": "order",
-        "source": "$ADDRESS_1",
+        "source": "$ADDRESS_7",
         "params": {
-            "give_asset": "XCP",
+            "give_asset": "UTXOASSET",
             "give_quantity": 1000,
             "get_asset": "BTC",
             "get_quantity": 1000,

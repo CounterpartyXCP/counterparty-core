@@ -189,6 +189,7 @@ def construct_coin_selection(
     exclude_utxos,
     use_utxos_with_balances,
     exclude_utxos_with_balances,
+    force_utxo,
 ):
     if inputs_set:
         if isinstance(inputs_set, str):
@@ -231,7 +232,7 @@ def construct_coin_selection(
                 source, unconfirmed=allow_unconfirmed_inputs
             )
         logger.trace(f"TX Construct - Unspent UTXOs: {[print_coin(coin) for coin in unspent]}")
-        if len(unspent) == 0:
+        if len(unspent) == 0 and force_utxo is None:
             raise exceptions.BalanceError(
                 f"Insufficient {config.BTC} at address {source}: no unspent outputs."
             )
@@ -253,13 +254,38 @@ def construct_coin_selection(
         filtered_unspent = []
         for utxo in unspent:
             str_input = f"{utxo['txid']}:{utxo['vout']}"
-            if len(ledger.get_utxo_balances(db, str_input)) > 0:
+            if len(ledger.get_utxo_balances(db, str_input)) > 0 and str_input != force_utxo:
                 if not exclude_utxos_with_balances and inputs_set:
                     raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
             else:
                 filtered_unspent.append(utxo)
         use_inputs = unspent = filtered_unspent
     else:
+        use_inputs = unspent
+
+    # we want force_utxo to be the first input in unspent list
+    if force_utxo is not None:
+        txid, vout = force_utxo.split(":")
+        included_pos = None
+        for i, v in enumerate(unspent):
+            if v["txid"] == txid and v["vout"] == int(vout):
+                included_pos = i
+                break
+        if included_pos is None:
+            try:
+                amount = backend.bitcoind.get_tx_out_amount(txid, int(vout))
+            except Exception as e:
+                raise exceptions.ComposeError(f"invalid UTXO: {txid}:{vout}") from e
+            unspent.insert(
+                0,
+                {
+                    "txid": txid,
+                    "vout": int(vout),
+                    "amount": amount,
+                },
+            )
+        elif included_pos != 0:
+            unspent.insert(0, unspent.pop(included_pos))
         use_inputs = unspent
 
     # dont override fee_per_kb if specified
@@ -304,7 +330,7 @@ def construct_coin_selection(
         # If exact fee is specified, use that. Otherwise, calculate size of tx
         # and base fee on that (plus provide a minimum fee for selling BTC).
         size = 181 * len(inputs) + size_for_fee + 10
-        if exact_fee:
+        if exact_fee is not None:
             final_fee = exact_fee
         else:
             necessary_fee = int(size / 1000 * fee_per_kb)
@@ -388,6 +414,7 @@ def prepare_inputs(
     exclude_utxos,
     use_utxos_with_balances,
     exclude_utxos_with_balances,
+    force_utxo,
 ):
     btc_in = 0
     final_fee = 0
@@ -438,6 +465,7 @@ def prepare_inputs(
             exclude_utxos,
             use_utxos_with_balances,
             exclude_utxos_with_balances,
+            force_utxo,
         )
         btc_in = n_btc_in
         final_fee = n_final_fee

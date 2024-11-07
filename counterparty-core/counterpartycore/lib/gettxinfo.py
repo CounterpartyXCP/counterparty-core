@@ -562,7 +562,50 @@ def select_utxo_destination(vouts):
     return None
 
 
+def get_inputs_with_balance(db, decoded_tx):
+    sources = []
+    # we check that each vin does not contain assets..
+    for vin in decoded_tx["vin"]:
+        if isinstance(vin["hash"], str):
+            vin_hash = vin["hash"]
+        else:
+            vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
+        utxo = vin_hash + ":" + str(vin["n"])
+        if ledger.utxo_has_balance(db, utxo):
+            sources.append(utxo)
+    return sources
+
+
+def get_first_non_op_return_output(decoded_tx):
+    n = select_utxo_destination(decoded_tx["vout"])
+    if n is not None:
+        destination = decoded_tx["tx_hash"] + ":" + str(n)
+        return destination
+    return None
+
+
+def get_op_return_vout(decoded_tx):
+    for n, vout in enumerate(decoded_tx["vout"]):
+        try:
+            asm = script.script_to_asm(vout["script_pub_key"])
+            if asm[0] == OP_RETURN:  # noqa: F405
+                return n
+        except DecodeError:
+            pass
+    return None
+
+
 def get_utxos_info(db, decoded_tx):
+    op_return_vout = get_op_return_vout(decoded_tx)
+    return [
+        ",".join(get_inputs_with_balance(db, decoded_tx)),  # sources
+        get_first_non_op_return_output(decoded_tx) or "",  # destination
+        str(len(decoded_tx["vout"])),  # number of outputs
+        str(op_return_vout) if op_return_vout else "",  # op_return output
+    ]
+
+
+def get_utxos_info_old(db, decoded_tx):
     """
     Get the UTXO move info.
     Returns a list of UTXOs. Last UTXO is the destination, previous UTXOs are the sources.
@@ -589,11 +632,13 @@ def get_utxos_info(db, decoded_tx):
 def get_tx_info(db, decoded_tx, block_index):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     if util.enabled("utxo_support", block_index=block_index):
+        # utxos_info is a space-separated list of UTXOs, last element is the destination,
+        # the rest are the inputs with a balance
         utxos_info = get_utxos_info(db, decoded_tx)
         # update utxo balances cache before parsing the transaction
         # to catch chained utxo moves
-        if len(utxos_info) > 1 and not util.PARSING_MEMPOOL:
-            ledger.UTXOBalancesCache(db).add_balance(utxos_info[-1])
+        if utxos_info[0] != "" and utxos_info[1] != "" and not util.PARSING_MEMPOOL:
+            ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
     else:
         utxos_info = []
     try:
