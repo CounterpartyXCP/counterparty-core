@@ -168,6 +168,63 @@ def sort_unspent_txouts(unspent, dust_size=config.DEFAULT_REGULAR_DUST_SIZE):
     return unspent
 
 
+def prepare_inputs_set(inputs_set):
+    new_inputs_set = []
+    utxos_list = inputs_set.split(",")
+    if len(utxos_list) > MAX_INPUTS_SET:
+        raise exceptions.ComposeError(
+            f"too many UTXOs in inputs_set (max. {MAX_INPUTS_SET}): {len(utxos_list)}"
+        )
+    for str_input in utxos_list:
+        str_input_split = str_input.split(":")
+        amount = None
+
+        if len(str_input_split) == 3:
+            utxo = f"{str_input_split[0]}:{str_input_split[1]}"
+            try:
+                amount = int(str_input_split[2])
+            except ValueError as e:
+                raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
+        elif len(str_input_split) == 2:
+            utxo = str_input
+
+        if not util.is_utxo_format(utxo):
+            raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
+
+        txid, vout = str_input_split[0], int(str_input_split[1])
+
+        if amount is None:
+            try:
+                amount = backend.bitcoind.get_tx_out_amount(txid, vout)
+            except Exception as e:
+                raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
+
+        new_inputs_set.append(
+            {
+                "txid": txid,
+                "vout": amount,
+                "amount": amount,
+            }
+        )
+    return new_inputs_set
+
+
+def use_inputs_set(inputs, destination_btc_out, data_btc_out, exact_fee):
+    if exact_fee is None:
+        raise exceptions.ComposeError("`exact_fee` must be specified when using `force_inputs_set`")
+
+    btc_out = destination_btc_out + data_btc_out
+    btc_in = 0
+    for tx_input in inputs:
+        btc_in += tx_input["amount"]
+
+    change_quantity = btc_in - btc_out - exact_fee
+
+    final_inputs = script.ensure_script_pub_key_for_inputs(inputs)
+
+    return final_inputs, change_quantity, btc_in, exact_fee
+
+
 def construct_coin_selection(
     db,
     size_for_fee,
@@ -193,29 +250,7 @@ def construct_coin_selection(
 ):
     if inputs_set:
         if isinstance(inputs_set, str):
-            new_inputs_set = []
-            utxos_list = inputs_set.split(",")
-            if len(utxos_list) > MAX_INPUTS_SET:
-                raise exceptions.ComposeError(
-                    f"too many UTXOs in inputs_set (max. {MAX_INPUTS_SET}): {len(utxos_list)}"
-                )
-            for str_input in utxos_list:
-                if not util.is_utxo_format(str_input):
-                    raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
-                try:
-                    amount = backend.bitcoind.get_tx_out_amount(
-                        str_input.split(":")[0], int(str_input.split(":")[1])
-                    )
-                except Exception as e:
-                    raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
-                new_inputs_set.append(
-                    {
-                        "txid": str_input.split(":")[0],
-                        "vout": int(str_input.split(":")[1]),
-                        "amount": amount,
-                    }
-                )
-            use_inputs = unspent = new_inputs_set
+            use_inputs = unspent = prepare_inputs_set(inputs_set)
         elif isinstance(inputs_set, list):
             use_inputs = unspent = inputs_set
         else:
@@ -444,7 +479,7 @@ def prepare_inputs(
         size_for_fee = ((25 + 9) * len(destination_outputs)) + sum_data_output_size
 
     if not (encoding == "p2sh" and p2sh_pretx_txid):
-        inputs, change_quantity, n_btc_in, n_final_fee = construct_coin_selection(
+        inputs, change_quantity, btc_in, final_fee = construct_coin_selection(
             db,
             size_for_fee,
             encoding,
@@ -467,8 +502,6 @@ def prepare_inputs(
             exclude_utxos_with_balances,
             force_utxo,
         )
-        btc_in = n_btc_in
-        final_fee = n_final_fee
     else:
         # when encoding is P2SH and the pretx txid is passed we can skip coinselection
         inputs, change_quantity = None, None
