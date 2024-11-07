@@ -24,7 +24,7 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 
 ## Bugfixes
 
-
+- Fix `disable_utxo_locks` parameter
 
 ## Codebase
 
@@ -41,6 +41,8 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 - Add sortable `price` field in dispensers
 - Fix `locked` in `asset_info` field
 - Add `/v2/bitcoin/transaction/decode` route to proxy bitcoin `decoderawtransaction` method
+- `inputs_set` now supports UTXOs in the format `<txid>:<vout>:<amount>:<script_pub_key>`
+- Skip transaction sanity check when `validate=false`
 
 ## CLI
 

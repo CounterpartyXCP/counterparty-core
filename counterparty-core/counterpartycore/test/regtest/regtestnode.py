@@ -412,7 +412,6 @@ class RegtestNode:
             pass
 
     def stop(self):
-        print(self.server_out.getvalue())
         print("Stopping bitcoin node 1...")
         self.stop_bitcoin_node()
         print("Stopping bitcoin node 2...")

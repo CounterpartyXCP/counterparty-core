@@ -180,6 +180,7 @@ def prepare_inputs_set(inputs_set):
         amount = None
 
         script_pub_key = None
+        utxo = str_input
         if len(str_input_split) > 2:
             utxo = f"{str_input_split[0]}:{str_input_split[1]}"
             try:
@@ -189,8 +190,6 @@ def prepare_inputs_set(inputs_set):
                 raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
             if len(str_input_split) > 3:
                 script_pub_key = str_input_split[3]
-        elif len(str_input_split) == 2:
-            utxo = str_input
 
         if not util.is_utxo_format(utxo):
             raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
