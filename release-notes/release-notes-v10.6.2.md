@@ -42,7 +42,10 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 - Fix `locked` in `asset_info` field
 - Add `/v2/bitcoin/transaction/decode` route to proxy bitcoin `decoderawtransaction` method
 
+
 ## CLI
+
+- Change verbosity of log messages related to blockchain following.
 
 
 # Credits
