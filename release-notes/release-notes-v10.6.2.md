@@ -32,7 +32,7 @@ When there are fewer tokens remaining than `max_mint_per_tx` in a free Fairminte
 
 - Rust fetcher "reporter" worker now takes `rollback_height` into account in its block height ordering check.
 - Fixed subasset name handling when creating a fairminter by preserving the `asset_longname` field when `asset=<subasset_name>` is specified and `asset_parent` is not specified.
-
+- Fix `disable_utxo_locks` parameter in compose API
 
 ## Codebase
 
@@ -49,6 +49,8 @@ When there are fewer tokens remaining than `max_mint_per_tx` in a free Fairminte
 - Add sortable `price` field in dispensers
 - Fix `locked` in `asset_info` field
 - Add `/v2/bitcoin/transaction/decode` route to proxy bitcoin `decoderawtransaction` method
+- `inputs_set` now supports UTXOs in the format `<txid>:<vout>:<amount>:<script_pub_key>`
+- Skip transaction sanity check when `validate=false`
 
 
 ## CLI

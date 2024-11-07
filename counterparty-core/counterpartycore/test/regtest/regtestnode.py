@@ -654,6 +654,123 @@ class RegtestNode:
 
         print("Detach with a single OP_RETURN output transaction test successful")
 
+    def test_transaction_chaining(self):
+        print("Test transaction chaining...")
+        # source address
+        source_address = self.addresses[0]
+        address_info = json.loads(self.bitcoin_wallet("getaddressinfo", source_address).strip())
+        pubkey_source = address_info["scriptPubKey"]
+
+        # new empty address
+        new_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "bech32").strip()
+        address_info = json.loads(self.bitcoin_wallet("getaddressinfo", new_address).strip())
+        pubkey_new_address = address_info["scriptPubKey"]
+
+        #####   Send XCP to new address #####
+
+        # prepare transaction
+        # send 100 sats XCP to a new empty address
+        api_call_url = f"addresses/{source_address}/compose/send?destination={new_address}&quantity=100&asset=XCP"
+        result = self.api_call(api_call_url)
+        raw_transaction_1 = result["result"]["rawtransaction"]
+
+        # sign transaction
+        signed_transaction_1 = json.loads(
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_1).strip()
+        )["hex"]
+
+        # get utxo info from the transaction
+        decoded_transaction_1 = json.loads(
+            self.bitcoin_cli("decoderawtransaction", signed_transaction_1).strip()
+        )
+        txid_1 = decoded_transaction_1["txid"]
+        vout_1 = len(decoded_transaction_1["vout"]) - 1  # last vout is the change
+        value_1 = int(decoded_transaction_1["vout"][vout_1]["value"] * 1e8)
+
+        #####   Send BTC to new address using the change from the previous transaction #####
+
+        # prepare transaction
+        # send 10000 sats to the new address
+        # we are using the last output of the previous transaction as input
+        # this output is the change from the previous transaction
+        api_call_url = f"addresses/{source_address}/compose/send?destination={new_address}&quantity=10000&asset=BTC"
+        api_call_url += f"&inputs_set={txid_1}:{vout_1}:{value_1}:{pubkey_source}"
+        api_call_url += "&disable_utxo_locks=true"
+        api_call_url += "&validate=false"
+        api_call_url += "&exact_fee=1000"
+        result = self.api_call(api_call_url)
+        raw_transaction_2 = result["result"]["rawtransaction"]
+
+        # sign transaction
+        prevtx = [
+            {"txid": txid_1, "vout": vout_1, "scriptPubKey": pubkey_source, "amount": value_1 / 1e8}
+        ]
+        prevtx = json.dumps(prevtx)
+        signed_transaction_2_json = json.loads(
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_2, prevtx).strip()
+        )
+        signed_transaction_2 = signed_transaction_2_json["hex"]
+
+        # get utxo info from the second transaction
+        decoded_transaction_2 = json.loads(
+            self.bitcoin_cli("decoderawtransaction", signed_transaction_2).strip()
+        )
+        txid_2 = decoded_transaction_2["txid"]
+        vout_2 = 0  # first vout is the 10000 sats from the previous transaction
+        value_2 = int(decoded_transaction_2["vout"][vout_2]["value"] * 1e8)
+        assert value_2 == 10000
+
+        #####   Create a dispenser using the BTC received from the second transactions #####
+
+        # prepare transaction
+        # we are using the first output of the previous transaction as input
+        # this output must contain the 10000 sats
+        api_call_url = f"addresses/{new_address}/compose/dispenser?"
+        api_call_url += "asset=XCP&give_quantity=1&escrow_quantity=2&mainchainrate=1&status=0"
+        api_call_url += f"&inputs_set={txid_2}:0:{value_2}:{pubkey_new_address}"
+        api_call_url += "&exact_fee=1000"
+        api_call_url += "&disable_utxo_locks=true"
+        api_call_url += "&validate=false"
+        result = self.api_call(api_call_url)
+        raw_transaction_3 = result["result"]["rawtransaction"]
+
+        # sign transaction
+        prevtx = [
+            {"txid": txid_2, "vout": 0, "scriptPubKey": pubkey_new_address, "amount": value_2 / 1e8}
+        ]
+        prevtx = json.dumps(prevtx)
+        signed_transaction_3 = json.loads(
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_3, prevtx).strip()
+        )["hex"]
+
+        # broadcast the three transactions
+        tx_hash, block_hash, block_time = self.broadcast_transaction(
+            signed_transaction_1, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 1 sent: {tx_hash}")
+        tx_hash, block_hash, block_time = self.broadcast_transaction(
+            signed_transaction_2, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 2 sent: {tx_hash}")
+        tx_hash, block_hash, block_time = self.broadcast_transaction(
+            signed_transaction_3, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 3 sent: {tx_hash}")
+
+        # mine a block
+        self.mine_blocks(1)
+        self.wait_for_counterparty_server()
+
+        # check the dispenser is created
+        dispensers = self.api_call(f"addresses/{new_address}/dispensers")["result"]
+        assert len(dispensers) == 1
+        assert dispensers[0]["give_quantity"] == 1
+        assert dispensers[0]["escrow_quantity"] == 2
+        assert dispensers[0]["status"] == 0
+        assert dispensers[0]["asset"] == "XCP"
+
+        print("Dispenser created")
+
 
 class RegtestNodeThread(threading.Thread):
     def __init__(self, wsgi_server="waitress", burn_in_one_block=False):

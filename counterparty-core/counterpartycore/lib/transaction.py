@@ -196,6 +196,7 @@ def construct(
     p2sh_pretx_txid=None,
     use_utxos_with_balances=False,
     exclude_utxos_with_balances=False,
+    skip_validation=False,
 ):
     # Extract tx_info
     (address_or_utxo, destinations, data) = tx_info
@@ -225,7 +226,6 @@ def construct(
     encoding = determine_encoding(data, encoding, op_return_max_size)
 
     """Outputs"""
-
     (
         destination_outputs,
         destination_btc_out,
@@ -246,7 +246,6 @@ def construct(
         exact_fee,
         fee_per_kb,
     )
-
     """Inputs"""
 
     (inputs, change_output, btc_in, final_fee) = transaction_inputs.prepare_inputs(
@@ -296,7 +295,7 @@ def construct(
 
     """Sanity Check"""
 
-    if (encoding == "p2sh" and pretx_txid) or encoding != "p2sh":
+    if ((encoding == "p2sh" and pretx_txid) or encoding != "p2sh") and not skip_validation:
         check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inputs)
 
     logger.debug("TX Construct - Transaction constructed.")
@@ -346,5 +345,6 @@ def compose_transaction(db, name, params, accept_missing_params=False, **constru
     """Create and return a transaction."""
     skip_validation = not construct_kwargs.pop("validate", True)
     tx_info = compose_data(db, name, params, accept_missing_params, skip_validation)
+    construct_kwargs["skip_validation"] = skip_validation
     transaction_info = construct(db, tx_info, **construct_kwargs)
     return transaction_info
