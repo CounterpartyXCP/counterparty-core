@@ -820,8 +820,6 @@ def initialise(db):
     if "event" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
 
-    database.init_config_table(db)
-
     create_views(db)
 
     # Lock UPDATE on all tables

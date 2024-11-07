@@ -284,9 +284,9 @@ CREATE INDEX balances_utxo_address_idx ON balances (utxo_address)
 CREATE INDEX balances_utxo_idx ON balances (utxo)
         ;
 CREATE TRIGGER block_update_balances
-                           BEFORE UPDATE ON balances BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON balances BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -362,9 +362,9 @@ CREATE INDEX balances_utxo_address_idx ON balances (utxo_address)
 CREATE INDEX balances_utxo_idx ON balances (utxo)
         ;
 CREATE TRIGGER block_update_balances
-                           BEFORE UPDATE ON balances BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON balances BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -412,9 +412,9 @@ INSERT INTO credits VALUES(310023,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10
 INSERT INTO credits VALUES(310032,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,'cancel order','eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a',0,NULL,NULL);
 -- Triggers and indices on  credits
 CREATE TRIGGER block_update_credits
-                           BEFORE UPDATE ON credits BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON credits BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX credits_address_idx ON credits (address)
         ;
 CREATE INDEX credits_asset_idx ON credits (asset)
@@ -470,9 +470,9 @@ INSERT INTO debits VALUES(310021,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',500
 INSERT INTO debits VALUES(310023,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC',10000,'send','58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab',24,NULL,NULL);
 -- Triggers and indices on  debits
 CREATE TRIGGER block_update_debits
-                           BEFORE UPDATE ON debits BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON debits BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX debits_action_idx ON debits (action)
         ;
 CREATE INDEX debits_address_idx ON debits (address)
@@ -861,9 +861,9 @@ INSERT INTO messages VALUES(347,310101,'insert','blocks','{"block_hash":"3694724
 INSERT INTO messages VALUES(348,310101,'parse','blocks','{"block_index":310101,"ledger_hash":"0741e57ad88cdada65134c9f131ff5bfd9498cb054378d829e34715e8db2aa6d","messages_hash":"a2c1bad71d57d8cbf740a32e9d614704befad2c39be157e202d6d6c852eee51a","transaction_count":0,"txlist_hash":"4bd0054addc71915293b8f040ed3c6c64d0aaf8ad27647d1887e16d55604523c"}',0,'BLOCK_PARSED',NULL,'70f954d2262baeac91870775d2e8df45c10f930e6442692e86d935fb63cb47db');
 -- Triggers and indices on  messages
 CREATE TRIGGER block_update_messages
-                           BEFORE UPDATE ON messages BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON messages BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX messages_block_index_event_idx ON messages (block_index, event)
         ;
 CREATE INDEX messages_block_index_idx ON messages (block_index)
@@ -895,9 +895,9 @@ CREATE TABLE order_match_expirations(
                                               FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 -- Triggers and indices on  order_match_expirations
 CREATE TRIGGER block_update_order_match_expirations
-                           BEFORE UPDATE ON order_match_expirations BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON order_match_expirations BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX order_match_expirations_block_index_idx ON order_match_expirations (block_index)
         ;
 CREATE INDEX order_match_expirations_tx0_address_idx ON order_match_expirations (tx0_address)
@@ -939,9 +939,9 @@ INSERT INTO order_matches VALUES('6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c
 INSERT INTO order_matches VALUES('6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c',3,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',4,'36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BTC',50000000,'XCP',100000000,310002,310003,310004,10,10,310023,857142,'completed');
 -- Triggers and indices on  order_matches
 CREATE TRIGGER block_update_order_matches
-                           BEFORE UPDATE ON order_matches BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON order_matches BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX order_matches_backward_asset_idx ON order_matches (backward_asset)
         ;
 CREATE INDEX order_matches_block_index_idx ON order_matches (block_index)
@@ -983,9 +983,9 @@ INSERT INTO order_expirations VALUES('36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a9
 INSERT INTO order_expirations VALUES('eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',310032);
 -- Triggers and indices on  order_expirations
 CREATE TRIGGER block_update_order_expirations
-                           BEFORE UPDATE ON order_expirations BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON order_expirations BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX order_expirations_block_index_idx ON order_expirations (block_index)
         ;
 CREATE INDEX order_expirations_source_idx ON order_expirations (source)
@@ -1029,9 +1029,9 @@ INSERT INTO orders VALUES(22,'eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef21114
 INSERT INTO orders VALUES(22,'eb5953f4e1dec30f0bf4741cb2044c11b6e1c3be20fef2111461f69d989b852a',310032,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBB',50000000,50000000,'XCP',50000000,50000000,10,310031,0,0,6800,6800,'expired');
 -- Triggers and indices on  orders
 CREATE TRIGGER block_update_orders
-                           BEFORE UPDATE ON orders BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON orders BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX orders_block_index_idx ON orders (block_index)
         ;
 CREATE INDEX orders_expire_index_idx ON orders (expire_index)
@@ -1077,9 +1077,9 @@ CREATE INDEX bet_match_expirations_tx0_address_idx ON bet_match_expirations (tx0
 CREATE INDEX bet_match_expirations_tx1_address_idx ON bet_match_expirations (tx1_address)
         ;
 CREATE TRIGGER block_update_bet_match_expirations
-                           BEFORE UPDATE ON bet_match_expirations BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON bet_match_expirations BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1136,9 +1136,9 @@ CREATE INDEX bet_matches_tx0_address_idx ON bet_matches (tx0_address)
 CREATE INDEX bet_matches_tx1_address_idx ON bet_matches (tx1_address)
         ;
 CREATE TRIGGER block_update_bet_matches
-                           BEFORE UPDATE ON bet_matches BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON bet_matches BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1166,9 +1166,9 @@ INSERT INTO bet_match_resolutions VALUES('3d3ae119aa3891770b7ae1e1ce34062b7a8505
 INSERT INTO bet_match_resolutions VALUES('194a87d56aecedf43bb9724b6f20f10626c26c00267fd108db843772e5ee41f5_72baa141e136cbafc08ee2f6c8e5841076c7573d5d5cd619f45149bf84a6a207',5,310020,'NotEqual',NULL,NULL,NULL,1330000000,70000000);
 -- Triggers and indices on  bet_match_resolutions
 CREATE TRIGGER block_update_bet_match_resolutions
-                           BEFORE UPDATE ON bet_match_resolutions BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON bet_match_resolutions BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1193,9 +1193,9 @@ CREATE INDEX bet_expirations_block_index_idx ON bet_expirations (block_index)
 CREATE INDEX bet_expirations_source_idx ON bet_expirations (source)
         ;
 CREATE TRIGGER block_update_bet_expirations
-                           BEFORE UPDATE ON bet_expirations BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON bet_expirations BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1254,9 +1254,9 @@ CREATE INDEX bets_tx_hash_idx ON bets (tx_hash)
 CREATE INDEX bets_tx_index_tx_hash_idx ON bets (tx_index, tx_hash)
         ;
 CREATE TRIGGER block_update_bets
-                           BEFORE UPDATE ON bets BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON bets BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1286,9 +1286,9 @@ INSERT INTO broadcasts VALUES(20,'7cc015005c559686a8e10294015ca1773c0bcd9f4d7d97
 INSERT INTO broadcasts VALUES(21,'0899b8bccef3403252fd7d37ec550eea3350845dca098368b84bf4c3c48d3fc9',310020,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',1388000201,2.0,5000000,'Unit Test',0,'valid');
 -- Triggers and indices on  broadcasts
 CREATE TRIGGER block_update_broadcasts
-                           BEFORE UPDATE ON broadcasts BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON broadcasts BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX broadcasts_block_index_idx ON broadcasts (block_index)
         ;
 CREATE INDEX broadcasts_status_source_idx ON broadcasts (status, source)
@@ -1321,9 +1321,9 @@ CREATE TABLE btcpays(
 INSERT INTO btcpays VALUES(5,'843c5df8f979db230ba61f26ad1342ed5803adeba7333b019b8a96ac6703f099',310004,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',50000000,'6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c','valid');
 -- Triggers and indices on  btcpays
 CREATE TRIGGER block_update_btcpays
-                           BEFORE UPDATE ON btcpays BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON btcpays BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX btcpays_block_index_idx ON btcpays (block_index)
         ;
 CREATE INDEX btcpays_destination_idx ON btcpays (destination)
@@ -1354,9 +1354,9 @@ INSERT INTO burns VALUES(1,'6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b
 INSERT INTO burns VALUES(23,'c3f73d02e630cb2824f044e6d91f47b1ce351feff0339ea7b85652d24d8ff6bc',310022,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',38000000,56999887262,'valid');
 -- Triggers and indices on  burns
 CREATE TRIGGER block_update_burns
-                           BEFORE UPDATE ON burns BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON burns BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX burns_source_idx ON burns (source)
         ;
 CREATE INDEX burns_status_idx ON burns (status)
@@ -1382,9 +1382,9 @@ CREATE TABLE cancels(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  cancels
 CREATE TRIGGER block_update_cancels
-                           BEFORE UPDATE ON cancels BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON cancels BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX cancels_block_index_idx ON cancels (block_index)
         ;
 CREATE INDEX cancels_source_idx ON cancels (source)
@@ -1415,9 +1415,9 @@ INSERT INTO dividends VALUES(10,'42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf9
 INSERT INTO dividends VALUES(11,'201123e1ddbc4dab954fed0043a29fca770a9bd4268714354bb7991f01133c10',310010,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','BBBC','XCP',800,20000,'valid');
 -- Triggers and indices on  dividends
 CREATE TRIGGER block_update_dividends
-                           BEFORE UPDATE ON dividends BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON dividends BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX dividends_asset_idx ON dividends (asset)
         ;
 CREATE INDEX dividends_block_index_idx ON dividends (block_index)
@@ -1464,9 +1464,9 @@ INSERT INTO issuances VALUES(6,'5d951d44d034cb6fd5dc5c98cd877c63f55c1ae108d335b6
 INSERT INTO issuances VALUES(7,'2b44f590422a3ab5b70fb1265a2e4f4d3b0bcb3de3f296dc7280924870ec8c59',0,310006,'BBBC',100000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0,0,0);
 -- Triggers and indices on  issuances
 CREATE TRIGGER block_update_issuances
-                    BEFORE UPDATE ON issuances BEGIN
-                        SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                    END;
+            BEFORE UPDATE ON issuances BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX issuances_asset_longname_idx ON issuances (asset_longname)
         ;
 CREATE INDEX issuances_asset_status_idx ON issuances (asset, status)
@@ -1513,9 +1513,9 @@ INSERT INTO sends VALUES(9,'843e6f7712b7847099502bda8a4bd7127c17a2799290b91ef158
 INSERT INTO sends VALUES(24,'58b89d056b539d2cf9ddac4518ccca6744495127e0ce893eb71da2599cbf85ab',310023,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','BBBC',10000,'valid',0,NULL,0);
 -- Triggers and indices on  sends
 CREATE TRIGGER block_update_sends
-                           BEFORE UPDATE ON sends BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON sends BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX sends_asset_idx ON sends (asset)
         ;
 CREATE INDEX sends_block_index_idx ON sends (block_index)
@@ -1545,9 +1545,9 @@ CREATE TABLE rps_match_expirations(
                                             FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 -- Triggers and indices on  rps_match_expirations
 CREATE TRIGGER block_update_rps_match_expirations
-                           BEFORE UPDATE ON rps_match_expirations BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON rps_match_expirations BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX rps_match_expirations_block_index_idx ON rps_match_expirations (block_index)
         ;
 CREATE INDEX rps_match_expirations_tx0_address_idx ON rps_match_expirations (tx0_address)
@@ -1573,9 +1573,9 @@ CREATE TABLE rps_expirations(
                                     FOREIGN KEY (block_index) REFERENCES blocks(block_index));
 -- Triggers and indices on  rps_expirations
 CREATE TRIGGER block_update_rps_expirations
-                           BEFORE UPDATE ON rps_expirations BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON rps_expirations BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX rps_expirations_block_index_idx ON rps_expirations (block_index)
         ;
 CREATE INDEX rps_expirations_source_idx ON rps_expirations (source)
@@ -1603,9 +1603,9 @@ CREATE TABLE rpsresolves(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  rpsresolves
 CREATE TRIGGER block_update_rpsresolves
-                           BEFORE UPDATE ON rpsresolves BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON rpsresolves BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX rpsresolves_block_index_idx ON rpsresolves (block_index)
         ;
 CREATE INDEX rpsresolves_rps_match_id_idx ON rpsresolves (rps_match_id)
@@ -1644,9 +1644,9 @@ CREATE TABLE rps_matches(
                                 status TEXT);
 -- Triggers and indices on  rps_matches
 CREATE TRIGGER block_update_rps_matches
-                           BEFORE UPDATE ON rps_matches BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON rps_matches BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX rps_matches_id_idx ON rps_matches (id)
         ;
 CREATE INDEX rps_matches_match_expire_index_idx ON rps_matches (match_expire_index)
@@ -1681,9 +1681,9 @@ CREATE TABLE rps(
                         status TEXT);
 -- Triggers and indices on  rps
 CREATE TRIGGER block_update_rps
-                           BEFORE UPDATE ON rps BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON rps BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX rps_expire_index_idx ON rps (expire_index)
         ;
 CREATE INDEX rps_source_idx ON rps (source)
@@ -1721,9 +1721,9 @@ CREATE TABLE destructions(
         );
 -- Triggers and indices on  destructions
 CREATE TRIGGER block_update_destructions
-                           BEFORE UPDATE ON destructions BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON destructions BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX destructions_source_idx ON destructions (source)
         ;
 CREATE INDEX destructions_status_idx ON destructions (status)
@@ -1756,9 +1756,9 @@ CREATE UNIQUE INDEX assets_asset_longname_idx ON assets (asset_longname)
 CREATE INDEX assets_asset_name_idx ON assets (asset_name)
         ;
 CREATE TRIGGER block_update_assets
-                           BEFORE UPDATE ON assets BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON assets BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1779,9 +1779,9 @@ CREATE TABLE addresses(
 CREATE INDEX addresses_address_idx ON addresses (address)
         ;
 CREATE TRIGGER block_update_addresses
-                           BEFORE UPDATE ON addresses BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON addresses BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1806,9 +1806,9 @@ CREATE TABLE sweeps(
                       FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  sweeps
 CREATE TRIGGER block_update_sweeps
-                           BEFORE UPDATE ON sweeps BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON sweeps BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX sweeps_block_index_idx ON sweeps (block_index)
         ;
 CREATE INDEX sweeps_destination_idx ON sweeps (destination)
@@ -1847,9 +1847,9 @@ CREATE TABLE dispensers(
                                 close_block_index INTEGER);
 -- Triggers and indices on  dispensers
 CREATE TRIGGER block_update_dispensers
-                           BEFORE UPDATE ON dispensers BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON dispensers BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX dispensers_asset_idx ON dispensers (asset)
         ;
 CREATE INDEX dispensers_block_index_idx ON dispensers (block_index)
@@ -1901,9 +1901,9 @@ CREATE TABLE dispenses (
                                 FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  dispenses
 CREATE TRIGGER block_update_dispenses
-                           BEFORE UPDATE ON dispenses BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON dispenses BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX dispenses_asset_idx ON dispenses (asset)
         ;
 CREATE INDEX dispenses_block_index_idx ON dispenses (block_index)
@@ -1943,9 +1943,9 @@ CREATE TABLE dispenser_refills(
                                             REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  dispenser_refills
 CREATE TRIGGER block_update_dispenser_refills
-                           BEFORE UPDATE ON dispenser_refills BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON dispenser_refills BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX dispenser_refills_block_index_idx ON dispenser_refills (block_index)
         ;
 CREATE INDEX dispenser_refills_tx_hash_idx ON dispenser_refills (tx_hash)
@@ -1989,9 +1989,9 @@ CREATE TABLE fairminters (
         );
 -- Triggers and indices on  fairminters
 CREATE TRIGGER block_update_fairminters
-                    BEFORE UPDATE ON fairminters BEGIN
-                        SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                    END;
+            BEFORE UPDATE ON fairminters BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX fairminters_asset_idx ON fairminters (asset)
         ;
 CREATE INDEX fairminters_asset_longname_idx ON fairminters (asset_longname)
@@ -2031,9 +2031,9 @@ CREATE TABLE fairmints (
         );
 -- Triggers and indices on  fairmints
 CREATE TRIGGER block_update_fairmints
-                           BEFORE UPDATE ON fairmints BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON fairmints BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX fairmints_asset_idx ON fairmints (asset)
         ;
 CREATE INDEX fairmints_block_index_idx ON fairmints (block_index)
@@ -2063,9 +2063,9 @@ CREATE TABLE transaction_count(
             count INTEGER);
 -- Triggers and indices on  transaction_count
 CREATE TRIGGER block_update_transaction_count
-                           BEFORE UPDATE ON transaction_count BEGIN
-                               SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-                           END;
+            BEFORE UPDATE ON transaction_count BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
 CREATE INDEX transaction_count_block_index_transaction_id_idx ON transaction_count (block_index, transaction_id)
         ;
 
