@@ -43,10 +43,13 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
                 f"SELECT * FROM {table_name} WHERE rowid = ?",  # noqa: S608
                 (inserted_rowid,),
             ).fetchone()
-            if table_name == "issuances":
-                AssetCache(db).add_issuance(new_record)
-            elif table_name == "destructions":
-                AssetCache(db).add_destroyed(new_record)
+            if AssetCache in AssetCache._instances:
+                if table_name == "issuances":
+                    AssetCache(db).add_issuance(new_record)
+                elif table_name == "destructions":
+                    AssetCache(db).add_destroyed(new_record)
+            else:
+                AssetCache(db)  # initialization will add just created record to cache
 
     add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
 
