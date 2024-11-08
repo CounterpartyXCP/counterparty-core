@@ -41,7 +41,7 @@ SCENARIO = [
         "source": "$ADDRESS_9",
         "params": {
             "asset": "LOCKDESC",
-            "max_mint_per_tx": 10 * 10**8,
+            "max_mint_per_tx": 11 * 10**8,
             "premint_quantity": 100 * 10**8,
             "minted_asset_commission": 0.2,
             "description": "My super asset LOCKDESC",
@@ -113,7 +113,7 @@ SCENARIO = [
                             "hard_cap": 12000000000,
                             "lock_description": False,
                             "lock_quantity": True,
-                            "max_mint_per_tx": 1000000000,
+                            "max_mint_per_tx": 1100000000,
                             "minted_asset_commission_int": 20000000,
                             "pre_minted": True,
                             "premint_quantity": 10000000000,
@@ -142,11 +142,11 @@ SCENARIO = [
         },
         "controls": [
             {
-                "url": "blocks/$BLOCK_INDEX/events?event_name=NEW_FAIRMINT,ASSET_ISSUANCE,CREDIT",
+                "url": "blocks/$BLOCK_INDEX/events?event_name=NEW_FAIRMINT,CREDIT,FAIRMINTER_UPDATE,ASSET_ISSUANCE",
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_6",
+                        "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "LOCKDESC",
                             "asset_events": "fairmint",
@@ -158,10 +158,10 @@ SCENARIO = [
                             "description": "My super asset LOCKDESC",
                             "description_locked": False,
                             "divisible": True,
-                            "fair_minting": True,
+                            "fair_minting": False,
                             "fee_paid": 0,
                             "issuer": "$ADDRESS_9",
-                            "locked": False,
+                            "locked": True,
                             "msg_index": 0,
                             "quantity": 1000000000,
                             "reset": False,
@@ -171,6 +171,12 @@ SCENARIO = [
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
                         },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "FAIRMINTER_UPDATE",
+                        "event_index": "$EVENT_INDEX_6",
+                        "params": {"status": "closed", "tx_hash": "$FAIRMINTER_LOCKDESC_HASH"},
                         "tx_hash": "$TX_HASH",
                     },
                     {
