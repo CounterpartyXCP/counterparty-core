@@ -223,6 +223,11 @@ def validate(
             problems.append("Soft cap deadline block must be specified if soft cap is specified.")
         elif soft_cap_deadline_block >= end_block > 0:
             problems.append("Soft cap deadline block must be < end block.")
+        elif (
+            util.enabled("partial_mint_to_reach_hard_cap")
+            and soft_cap_deadline_block <= start_block
+        ):
+            problems.append("Soft cap deadline block must be > start block.")
 
     return problems
 
@@ -422,6 +427,13 @@ def parse(db, tx, message):
         divisible,
         description,
     )
+
+    if (
+        util.enabled("partial_mint_to_reach_hard_cap")
+        and soft_cap > 0
+        and soft_cap_deadline_block <= tx["block_index"]
+    ):
+        problems.append("Soft cap deadline block must be > start block.")
 
     # if problems, insert into fairminters table with status invalid and return
     if problems:
@@ -655,15 +667,16 @@ def check_fairminter_soft_cap(db, fairminter, block_index):
     fairmints = ledger.get_valid_fairmints(db, fairminter["tx_hash"])
 
     # we start by unescrow all the assets and payments for this fairminter...
-    ledger.debit(
-        db,
-        config.UNSPENDABLE,
-        fairminter["asset"],
-        fairminter_supply,
-        0,  # tx_index=0 for block actions
-        action="unescrowed fairmint",
-        event=fairminter["tx_hash"],
-    )
+    if fairminter_supply > 0 or not util.enabled("partial_mint_to_reach_hard_cap"):
+        ledger.debit(
+            db,
+            config.UNSPENDABLE,
+            fairminter["asset"],
+            fairminter_supply,
+            0,  # tx_index=0 for block actions
+            action="unescrowed fairmint",
+            event=fairminter["tx_hash"],
+        )
     if paid_quantity > 0:
         ledger.debit(
             db,
@@ -759,18 +772,19 @@ def check_fairminter_soft_cap(db, fairminter, block_index):
     # fairminter and destroy all the assets at once
     if fairmint_quantity < fairminter["soft_cap"]:
         close_fairminter(db, fairminter, block_index)
-        # destroy assets
-        bindings = {
-            "tx_index": fairminter["tx_index"],
-            "tx_hash": fairminter["tx_hash"],
-            "block_index": block_index,
-            "source": fairminter["source"],
-            "asset": fairminter["asset"],
-            "quantity": fairminter_supply,
-            "tag": "soft cap not reached",
-            "status": "valid",
-        }
-        ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+        if fairminter_supply > 0 or not util.enabled("partial_mint_to_reach_hard_cap"):
+            # destroy assets
+            bindings = {
+                "tx_index": fairminter["tx_index"],
+                "tx_hash": fairminter["tx_hash"],
+                "block_index": block_index,
+                "source": fairminter["source"],
+                "asset": fairminter["asset"],
+                "quantity": fairminter_supply,
+                "tag": "soft cap not reached",
+                "status": "valid",
+            }
+            ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
 
 def check_soft_cap(db, block_index):

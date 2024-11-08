@@ -251,7 +251,7 @@ class RegtestNode:
         self.mine_blocks(101)
 
     def generate_xcp(self):
-        print("Generating XCP...")
+        print("Generating XCP...", self.burn_in_one_block)
         for address in self.addresses[0:10]:
             self.send_transaction(
                 address,
@@ -773,7 +773,7 @@ class RegtestNode:
 
 
 class RegtestNodeThread(threading.Thread):
-    def __init__(self, wsgi_server="waitress", burn_in_one_block=False):
+    def __init__(self, wsgi_server="waitress", burn_in_one_block=True):
         threading.Thread.__init__(self)
         self.wsgi_server = wsgi_server
         self.burn_in_one_block = burn_in_one_block

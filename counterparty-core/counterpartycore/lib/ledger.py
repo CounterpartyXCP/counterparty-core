@@ -2125,8 +2125,8 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
     if not sums:
-        return None, None
-    return sums["quantity"] + sums["commission"], sums["paid_quantity"]
+        return 0, 0
+    return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
 
 
 def get_soft_caped_fairminters(db, block_index):
