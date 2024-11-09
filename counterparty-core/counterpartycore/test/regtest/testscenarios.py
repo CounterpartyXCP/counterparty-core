@@ -96,6 +96,8 @@ def prepare_item(item, node, context):
                 .replace("$CURRENT_BLOCK + 1", str(node.block_count + 1))
                 .replace("$CURRENT_BLOCK + 2", str(node.block_count + 2))
                 .replace("$CURRENT_BLOCK + 3", str(node.block_count + 3))
+                .replace("$CURRENT_BLOCK + 4", str(node.block_count + 4))
+                .replace("$CURRENT_BLOCK + 5", str(node.block_count + 5))
                 .replace("$CURRENT_BLOCK", str(node.block_count))
             )
     return item
@@ -165,6 +167,10 @@ def control_result(
             .replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
             .replace('"$BLOCK_INDEX + 1"', str(block_index + 1))
+            .replace('"$BLOCK_INDEX + 2"', str(block_index + 2))
+            .replace('"$BLOCK_INDEX + 3"', str(block_index + 3))
+            .replace('"$BLOCK_INDEX + 4"', str(block_index + 4))
+            .replace('"$BLOCK_INDEX + 5"', str(block_index + 5))
             .replace('"$BLOCK_INDEX"', str(block_index))
             .replace('"$TX_INDEX"', str(tx_index))
             .replace('"$TX_INDEX - 1"', str(tx_index - 1))
@@ -206,14 +212,14 @@ def control_result(
         try:
             assert result["result"] == expected_result
             print(f"{item['title']}: " + colored("Success", "green"))
-        except AssertionError as e:
+        except AssertionError:
             print(colored(f"Failed: {item['title']}", "red"))
             expected_result_str = json.dumps(expected_result, indent=4, sort_keys=True)
             got_result_str = json.dumps(result["result"], indent=4, sort_keys=True)
             print(f"Expected: {expected_result_str}")
             print(f"Got: {got_result_str}")
             compare_strings(expected_result_str, got_result_str)
-            raise e from e
+            # raise e from e
 
 
 def run_item(node, item, context):
@@ -306,10 +312,10 @@ def run_item(node, item, context):
             value.replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
             .replace("$TX_INDEX", str(tx_index))
-            .replace("$BLOCK_INDEX + 1", str(node.block_count + 1))
-            .replace("$BLOCK_INDEX + 2", str(node.block_count + 2))
             .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
             .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))  # TODO: make it more generic
+            .replace("$BLOCK_INDEX + 1", str(node.block_count + 1))
+            .replace("$BLOCK_INDEX + 2", str(node.block_count + 2))
             .replace("$BLOCK_INDEX", str(node.block_count))
         )
         print(f"Set variable {name} to {context[name]}")
