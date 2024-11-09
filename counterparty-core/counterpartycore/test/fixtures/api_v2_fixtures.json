@@ -11779,7 +11779,7 @@
                         "name": "address",
                         "required": true,
                         "type": "str",
-                        "description": "The address that placed the order/bet to be cancelled (e.g. $ADDRESS_7)"
+                        "description": "The address that placed the order/bet to be cancelled (e.g. $ADDRESS_6)"
                     },
                     {
                         "name": "offer_hash",
@@ -12420,7 +12420,7 @@
                         "name": "asset",
                         "required": true,
                         "type": "str",
-                        "description": "The asset or subasset that the dividends are being rewarded on (e.g. $ASSET_1)"
+                        "description": "The asset or subasset that the dividends are being rewarded on (e.g. MYASSETA)"
                     },
                     {
                         "name": "dividend_asset",
@@ -14244,14 +14244,14 @@
                         "name": "asset",
                         "required": true,
                         "type": "str",
-                        "description": "The asset to mint (e.g. $ASSET_3)"
+                        "description": "The asset to mint (e.g. OPENFAIR)"
                     },
                     {
                         "name": "quantity",
                         "default": 0,
                         "required": false,
                         "type": "int",
-                        "description": "The quantity of the asset to mint (in satoshis, hence integer) (e.g. 1)"
+                        "description": "The quantity of the asset to mint (in satoshis, hence integer)"
                     },
                     {
                         "name": "encoding",
