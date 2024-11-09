@@ -644,6 +644,7 @@ def close_fairminter(db, fairminter, block_index):
     last_issuance["fair_minting"] = False
     last_issuance["block_index"] = block_index
     last_issuance["msg_index"] += 1  # (tx_index, msg_index) and (tx_hash, msg_index) are unique
+    last_issuance["fee_paid"] = 0
     if fairminter["lock_quantity"]:
         last_issuance["locked"] = True
     if fairminter["lock_description"]:
