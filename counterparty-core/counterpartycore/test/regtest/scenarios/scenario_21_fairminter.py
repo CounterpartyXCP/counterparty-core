@@ -136,7 +136,7 @@ SCENARIO = [
     {
         "title": "Mint LOCKDESC",
         "transaction": "fairmint",
-        "source": "$ADDRESS_8",
+        "source": "$ADDRESS_6",
         "params": {
             "asset": "LOCKDESC",
         },
@@ -165,7 +165,7 @@ SCENARIO = [
                             "msg_index": 0,
                             "quantity": 1000000000,
                             "reset": False,
-                            "source": "$ADDRESS_8",
+                            "source": "$ADDRESS_6",
                             "status": "valid",
                             "transfer": False,
                             "tx_hash": "$TX_HASH",
@@ -189,7 +189,7 @@ SCENARIO = [
                             "earn_quantity": 800000000,
                             "fairminter_tx_hash": "$FAIRMINTER_LOCKDESC_HASH",
                             "paid_quantity": 0,
-                            "source": "$ADDRESS_8",
+                            "source": "$ADDRESS_6",
                             "status": "valid",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
@@ -216,7 +216,7 @@ SCENARIO = [
                         "event": "CREDIT",
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
-                            "address": "$ADDRESS_8",
+                            "address": "$ADDRESS_6",
                             "asset": "LOCKDESC",
                             "block_index": "$BLOCK_INDEX",
                             "calling_function": "fairmint",
@@ -345,7 +345,7 @@ SCENARIO = [
     {
         "title": "Mint BURNER",
         "transaction": "fairmint",
-        "source": "$ADDRESS_8",
+        "source": "$ADDRESS_6",
         "params": {
             "asset": "BURNER",
             "quantity": 1 * 10**8,
@@ -375,7 +375,7 @@ SCENARIO = [
                             "msg_index": 0,
                             "quantity": 100000000,
                             "reset": False,
-                            "source": "$ADDRESS_8",
+                            "source": "$ADDRESS_6",
                             "status": "valid",
                             "transfer": False,
                             "tx_hash": "$TX_HASH",
@@ -399,7 +399,7 @@ SCENARIO = [
                             "earn_quantity": 80000000,
                             "fairminter_tx_hash": "$FAIRMINTER_BURNER_HASH",
                             "paid_quantity": 100000000,
-                            "source": "$ADDRESS_8",
+                            "source": "$ADDRESS_6",
                             "status": "valid",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
@@ -426,9 +426,9 @@ SCENARIO = [
                         "event": "CREDIT",
                         "event_index": "$EVENT_INDEX_5",
                         "params": {
-                            "address": "$ADDRESS_8",
+                            "address": "$ADDRESS_6",
                             "asset": "BURNER",
-                            "block_index": 118,
+                            "block_index": "$BLOCK_INDEX",
                             "calling_function": "fairmint",
                             "event": "$TX_HASH",
                             "quantity": 80000000,
@@ -445,7 +445,7 @@ SCENARIO = [
                             "asset": "XCP",
                             "block_index": "$BLOCK_INDEX",
                             "quantity": 100000000,
-                            "source": "$ADDRESS_8",
+                            "source": "$ADDRESS_6",
                             "status": "valid",
                             "tag": "burn fairmint payment",
                             "tx_hash": "$TX_HASH",
@@ -458,7 +458,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "action": "burn fairmint payment",
-                            "address": "$ADDRESS_8",
+                            "address": "$ADDRESS_6",
                             "asset": "XCP",
                             "block_index": "$BLOCK_INDEX",
                             "event": "$TX_HASH",
@@ -583,7 +583,7 @@ SCENARIO = [
     {
         "title": "Mint EXPANSIVE",
         "transaction": "fairmint",
-        "source": "$ADDRESS_8",
+        "source": "$ADDRESS_6",
         "params": {
             "asset": "EXPANSIVE",
             "quantity": 1 * 10**8,
@@ -640,7 +640,7 @@ SCENARIO = [
     {
         "title": "Mint EXPANSIVE",
         "transaction": "fairmint",
-        "source": "$ADDRESS_8",
+        "source": "$ADDRESS_6",
         "params": {
             "asset": "EXPANSIVE",
             "quantity": 1 * 10**8,
@@ -716,7 +716,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_6",
+                        "event_index": "$EVENT_INDEX_9",
                         "params": {
                             "action": "fairminter fee",
                             "address": "$ADDRESS_10",
@@ -732,7 +732,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_5",
+                        "event_index": "$EVENT_INDEX_8",
                         "params": {
                             "asset": "STARTNOW",
                             "asset_events": "open_fairminter",
@@ -759,7 +759,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ASSET_CREATION",
-                        "event_index": "$EVENT_INDEX_4",
+                        "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset_id": "150450094622",
                             "asset_longname": None,
@@ -770,7 +770,7 @@ SCENARIO = [
                     },
                     {
                         "event": "NEW_FAIRMINTER",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "asset": "STARTNOW",
                             "asset_longname": "",

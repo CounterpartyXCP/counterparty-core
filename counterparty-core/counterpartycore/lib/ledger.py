@@ -2129,7 +2129,7 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
     return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
 
 
-def get_soft_caped_fairminters(db, block_index):
+def get_fairminters_by_soft_cap_deadline(db, block_index):
     cursor = db.cursor()
     query = """
         SELECT * FROM (

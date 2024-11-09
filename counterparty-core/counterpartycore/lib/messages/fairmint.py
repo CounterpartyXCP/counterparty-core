@@ -175,7 +175,7 @@ def parse(db, tx, message):
     asset_destination = tx["source"]
 
     # if the soft cap is not reached we escrow the assets and payments
-    # which will be distributed in the `fairminters.check_soft_cap()` function.
+    # which will be distributed in the `fairminters.perform_soft_cap_operations()` function.
     if soft_cap_not_reached:
         xcp_action = "escrowed fairmint"
         xcp_destination = config.UNSPENDABLE
@@ -317,7 +317,7 @@ def parse(db, tx, message):
                 fairminter["soft_cap"] > 0
                 and fairminter["soft_cap_deadline_block"] >= tx["block_index"]
             ):
-                fairminter_mod.check_fairminter_soft_cap(db, fairminter, tx["block_index"])
+                fairminter_mod.soft_cap_deadline_reached(db, fairminter, tx["block_index"])
             ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance

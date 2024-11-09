@@ -508,6 +508,11 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_FAIRMINT_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_FAIRMINT_TX_HASH"] = row["tx_hash"]
 
+    # open fairminter asset
+    cursor.execute("SELECT asset FROM fairminters WHERE status='open' ORDER BY rowid DESC LIMIT 1")
+    row = cursor.fetchone()
+    regtest_fixtures["$OPEN_FAIRMINTER_ASSET"] = row["asset"]
+
     # get utxo from bitcoin-cli
     utxo = json.loads(
         bitcoin_cli(

@@ -13,6 +13,30 @@ SCENARIO = [
             "fee_required": 0,
         },
     },
+    # order match for dredd test
+    {
+        "title": "Open Sell UTXOASSET for BTC order",
+        "transaction": "order",
+        "source": "$ADDRESS_6",
+        "params": {
+            "give_asset": "BTC",
+            "give_quantity": 1000,
+            "get_asset": "UTXOASSET",
+            "get_quantity": 1000,
+            "expiration": 21,
+            "fee_required": 0,
+        },
+    },
+    # fairmint for dredd test
+    {
+        "title": "Create fairminter OPENFAIR",
+        "transaction": "fairminter",
+        "source": "$ADDRESS_6",
+        "params": {
+            "asset": "OPENFAIR",
+            "max_mint_per_tx": 10,
+        },
+    },
     {
         "title": "Dispense in mempool with UTXO with balances",
         "transaction": "dispense",

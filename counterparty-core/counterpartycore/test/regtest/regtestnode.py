@@ -128,6 +128,9 @@ class RegtestNode:
             params["return_only_data"] = True
         if "exact_fee" not in params:
             params["exact_fee"] = 10000  # fixed fee
+        # if "inputs_set" not in params and len(source.split(":")) == 1:
+        #    params["inputs_set"] = self.get_inputs_set(source)
+        # print("Inputs set:", params["inputs_set"])
 
         query_string = []
         for key, value in params.items():
@@ -263,6 +266,16 @@ class RegtestNode:
         if self.burn_in_one_block:
             self.mine_blocks(1)
             self.wait_for_counterparty_server()
+
+    def get_inputs_set(self, address):
+        list_unspent = json.loads(
+            self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([address])).strip()
+        )
+        sorted(list_unspent, key=lambda x: -x["amount"])
+        inputs = []
+        for utxo in list_unspent:
+            inputs.append(f"{utxo['txid']}:{utxo['vout']}")
+        return ",".join(inputs)
 
     def start_bitcoin_node(self):
         self.bitcoind_process = sh.bitcoind(
