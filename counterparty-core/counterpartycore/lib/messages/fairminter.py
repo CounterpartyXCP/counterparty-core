@@ -192,7 +192,11 @@ def validate(
         if existing_asset["divisible"] != divisible:
             problems.append(f"Divisibility of asset `{asset_name}` is different.")
     else:
-        if premint_quantity > 0 and premint_quantity >= hard_cap:
+        if (
+            premint_quantity > 0
+            and premint_quantity >= hard_cap
+            and (hard_cap > 0 or not util.enabled("partial_mint_to_reach_hard_cap"))
+        ):
             problems.append("Premint quantity must be < hard cap.")
 
     if existing_asset is None:
@@ -223,10 +227,7 @@ def validate(
             problems.append("Soft cap deadline block must be specified if soft cap is specified.")
         elif soft_cap_deadline_block >= end_block > 0:
             problems.append("Soft cap deadline block must be < end block.")
-        elif (
-            util.enabled("partial_mint_to_reach_hard_cap")
-            and soft_cap_deadline_block <= start_block
-        ):
+        elif soft_cap_deadline_block <= start_block:
             problems.append("Soft cap deadline block must be > start block.")
 
     return problems
@@ -428,11 +429,7 @@ def parse(db, tx, message):
         description,
     )
 
-    if (
-        util.enabled("partial_mint_to_reach_hard_cap")
-        and soft_cap > 0
-        and soft_cap_deadline_block <= tx["block_index"]
-    ):
+    if soft_cap > 0 and soft_cap_deadline_block <= tx["block_index"]:
         problems.append("Soft cap deadline block must be > start block.")
 
     # if problems, insert into fairminters table with status invalid and return
@@ -708,6 +705,7 @@ def perform_fairmint_soft_cap_operations(db, fairmint, fairminter, fairmint_quan
     # the soft cap is reached:
     # - the assets are distributed to the miner,
     # - the commissions to the issuer,
+    # if not reached asset will be destroyed in `soft_cap_deadline_reached()`
     if fairmint_quantity >= fairminter["soft_cap"]:
         # send assets to minter
         ledger.credit(
@@ -770,20 +768,9 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
             db, fairmint, fairminter, fairmint_quantity, block_index
         )
 
-    # - the premint is unescrowed
-    if fairminter["premint_quantity"] > 0:
-        ledger.credit(
-            db,
-            fairminter["source"],
-            fairminter["asset"],
-            fairminter["premint_quantity"],
-            0,  # tx_index=0 for block actions
-            action="premint",
-            event=fairminter["tx_hash"],
-        )
-
     # the soft cap is not reached, we close the
     # fairminter and destroy all the assets at once
+    # if the soft cap is reached, the assets are distributed in `perform_fairmint_soft_cap_operations()`
     if fairmint_quantity < fairminter["soft_cap"]:
         close_fairminter(db, fairminter, block_index)
         if fairminter_supply > 0 or not util.enabled("partial_mint_to_reach_hard_cap"):
@@ -799,6 +786,17 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
                 "status": "valid",
             }
             ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+    elif fairminter["premint_quantity"] > 0:
+        # the premint is sent to the issuer
+        ledger.credit(
+            db,
+            fairminter["source"],
+            fairminter["asset"],
+            fairminter["premint_quantity"],
+            0,  # tx_index=0 for block actions
+            action="premint",
+            event=fairminter["tx_hash"],
+        )
 
 
 def perform_fairminter_soft_cap_operations(db, block_index):

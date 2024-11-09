@@ -397,9 +397,9 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 )
                 time.sleep(1)
         else:
+            print("Generating API documentation...")
             if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
                 os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
-            print("Generating API documentation...")
             sh.python3(
                 os.path.join(CURR_DIR, "genapidoc.py"),
                 os.path.abspath("regtestnode"),
@@ -407,13 +407,14 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 _err_to_out=True,
                 _cwd=CURR_DIR,
             )
-
             print("Running Dredd...")
             sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
-
+            print("Testing invalid detach...")
             regtest_node_thread.node.test_invalid_detach()
+            print("Testing transaction chaining...")
             regtest_node_thread.node.test_transaction_chaining()
-
+            print("Tesing asset conservation checking...")
+            regtest_node_thread.node.test_asset_conservation()
             print("Tesing reparse...")
             regtest_node_thread.node.reparse()
             print("Testing rollback...")

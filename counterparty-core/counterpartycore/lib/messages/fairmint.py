@@ -301,9 +301,7 @@ def parse(db, tx, message):
     # we check if the hard cap is reached and in this case...
     if fairminter["hard_cap"] > 0:
         asset_supply = ledger.asset_supply(db, fairminter["asset"])
-        alredy_minted = asset_supply + earn_quantity
-        if util.enabled("partial_mint_to_reach_hard_cap"):
-            alredy_minted += commission
+        alredy_minted = asset_supply + earn_quantity + commission
         if alredy_minted == fairminter["hard_cap"]:
             # ...we unlock the issuances for this assets
             bindings["fair_minting"] = False

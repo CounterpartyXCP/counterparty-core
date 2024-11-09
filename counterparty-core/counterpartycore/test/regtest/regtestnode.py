@@ -467,13 +467,21 @@ class RegtestNode:
         state_before = self.get_node_state()
         self.stop_counterparty_server()
         print(f"Running `{command}`...")
-        self.counterparty_server(
-            command,
-            150,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
-            _out=sys.stdout,
-            _err_to_out=True,
-            _bg_exc=False,
-        )
+        if command == "check-db":
+            self.counterparty_server(
+                command,
+                _out=sys.stdout,
+                _err_to_out=True,
+                _bg_exc=False,
+            )
+        else:
+            self.counterparty_server(
+                command,
+                150,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
+                _out=sys.stdout,
+                _err_to_out=True,
+                _bg_exc=False,
+            )
         self.check_node_state(command, state_before)
         print(f"`{command}` successful")
 
@@ -783,6 +791,9 @@ class RegtestNode:
         assert dispensers[0]["asset"] == "XCP"
 
         print("Dispenser created")
+
+    def test_asset_conservation(self):
+        self.test_command("check-db")
 
 
 class RegtestNodeThread(threading.Thread):
