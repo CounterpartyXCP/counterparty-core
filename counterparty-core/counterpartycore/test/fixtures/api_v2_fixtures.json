@@ -14800,7 +14800,7 @@
                         "default": null,
                         "required": false,
                         "type": "str",
-                        "description": "[Disabled after block 870000] The utxo to attach the assets to"
+                        "description": "[Disabled after block 872000] The utxo to attach the assets to"
                     },
                     {
                         "name": "encoding",
@@ -15001,14 +15001,14 @@
                         "default": null,
                         "required": false,
                         "type": "str",
-                        "description": "[Disabled after block 870000] The asset or subasset to detach"
+                        "description": "[Disabled after block 872000] The asset or subasset to detach"
                     },
                     {
                         "name": "quantity",
                         "default": null,
                         "required": false,
                         "type": "int",
-                        "description": "[Disabled after block 870000] The quantity of the asset to detach (in satoshis, hence integer)"
+                        "description": "[Disabled after block 872000] The quantity of the asset to detach (in satoshis, hence integer)"
                     },
                     {
                         "name": "encoding",
