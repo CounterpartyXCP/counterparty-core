@@ -87,30 +87,35 @@ def get_transaction_fee(db, transaction_id, block_index):
     if fee_params is None:
         return 0
 
-    a = fee_params[str(transaction_id)]["fee_lower_threshold"]
-    b = fee_params[str(transaction_id)]["fee_upper_threshold"]
-    base_fee = fee_params[str(transaction_id)]["base_fee"]
-    k = fee_params[str(transaction_id)]["fee_sigmoid_k"]
+    a = int(fee_params[str(transaction_id)]["fee_lower_threshold"])
+    b = int(fee_params[str(transaction_id)]["fee_upper_threshold"])
+    base_fee = int(fee_params[str(transaction_id)]["base_fee"])
+    k = int(fee_params[str(transaction_id)]["fee_sigmoid_k"])
 
     fee = calculate_fee(x, a, b, base_fee, k)
     return int(fee * config.UNIT)
 
 
-def calculate_fee(x, a, b, base_fee, k):
+def calculate_fee(x: int, a: int, b: int, base_fee: int, k: int):
     """
     Calculate the fee based on the number of transactions per block,
     ensuring continuity at the transition point.
 
     Parameters:
-    x (float): Number of transactions per period
-    a (float): Lower threshold (fee is zero below this)
-    b (float): Upper threshold (transition point to exponential growth)
-    base_fee (float): Base fee amount
-    k (float): Sigmoid steepness factor
+    x (int): Number of transactions per period
+    a (int): Lower threshold (fee is zero below this)
+    b (int): Upper threshold (transition point to exponential growth)
+    base_fee (int): Base fee amount
+    k (int): Sigmoid steepness factor
 
     Returns:
     float: Calculated fee
     """
+    if x < 0 or a < 0 or b < 0 or base_fee < 0 or k < 0:
+        raise ValueError("All inputs must be non-negative")
+    if b <= a:
+        raise ValueError("Upper threshold must be greater than lower threshold")
+
     m = 1.5  # Exponent
     n = 100  # Exponential Scaling Factor
 
