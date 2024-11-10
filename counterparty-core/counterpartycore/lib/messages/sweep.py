@@ -260,7 +260,11 @@ def parse(db, tx, message):
 
             for next_asset_issued in assets_issued:
                 issuances = ledger.get_issuances(
-                    db, asset=next_asset_issued["asset"], status="valid", first=True
+                    db,
+                    asset=next_asset_issued["asset"],
+                    status="valid",
+                    first=True,
+                    current_block_index=tx["block_index"],
                 )
                 if len(issuances) > 0:
                     last_issuance = issuances[-1]

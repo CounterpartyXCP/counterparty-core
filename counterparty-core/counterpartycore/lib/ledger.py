@@ -955,7 +955,14 @@ def get_assets_last_issuance(db, asset_list):
 
 
 def get_issuances(
-    db, asset=None, status=None, locked=None, block_index=None, first=False, last=False
+    db,
+    asset=None,
+    status=None,
+    locked=None,
+    block_index=None,
+    first=False,
+    last=False,
+    current_block_index=None,
 ):
     cursor = db.cursor()
     cursor = db.cursor()
@@ -975,10 +982,14 @@ def get_issuances(
         bindings.append(block_index)
     # no sql injection here
     query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    if util.enabled("fix_get_issuances", current_block_index):
+        order_fields = "rowid, tx_index"
+    else:
+        order_fields = "tx_index"
     if first:
-        query += f""" ORDER BY tx_index ASC"""  # noqa: F541
+        query += f""" ORDER BY {order_fields} ASC"""  # noqa: F541
     elif last:
-        query += f""" ORDER BY tx_index DESC"""  # noqa: F541
+        query += f""" ORDER BY {order_fields} DESC"""  # noqa: F541
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

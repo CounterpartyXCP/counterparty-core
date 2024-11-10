@@ -661,14 +661,21 @@
     "minimum_version_major": 10,
     "minimum_version_minor": 6,
     "minimum_version_revision": 2,
-    "block_index": 870000,
+    "block_index": 872000,
     "testnet_block_index": 3195137
   },
   "partial_mint_to_reach_hard_cap": {
     "minimum_version_major": 10,
     "minimum_version_minor": 6,
     "minimum_version_revision": 2,
-    "block_index": 870000,
+    "block_index": 872000,
+    "testnet_block_index": 3195137
+  },
+  "fix_get_issuances": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 6,
+    "minimum_version_revision": 2,
+    "block_index": 872000,
     "testnet_block_index": 3195137
   }
 }
