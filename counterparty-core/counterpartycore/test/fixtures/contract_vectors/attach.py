@@ -169,18 +169,6 @@ ATTACH_VECTOR = {
                         },
                     },
                     {
-                        "table": "debits",
-                        "values": {
-                            "address": ADDR[0],
-                            "asset": "XCP",
-                            "quantity": 10,
-                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
-                            "block_index": DP["default_block_index"],
-                            "tx_index": DP["default_tx_index"],
-                            "action": "attach to utxo fee",
-                        },
-                    },
-                    {
                         "table": "credits",
                         "values": {
                             "utxo": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0",
@@ -204,7 +192,7 @@ ATTACH_VECTOR = {
                             "destination": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0",
                             "asset": "XCP",
                             "quantity": 100,
-                            "fee_paid": 10,
+                            "fee_paid": 0,
                         },
                     },
                     {
@@ -213,7 +201,7 @@ ATTACH_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0","fee_paid":10,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:0","fee_paid":0,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "ATTACH_TO_UTXO",
                         },
                     },
@@ -243,7 +231,7 @@ ATTACH_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:1","fee_paid":10,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f:1","fee_paid":0,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "ATTACH_TO_UTXO",
                         },
                     },

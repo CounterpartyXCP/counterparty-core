@@ -33,6 +33,7 @@ When there are fewer tokens remaining than `max_mint_per_tx` in a free Fairminte
 - Rust fetcher "reporter" worker now takes `rollback_height` into account in its block height ordering check.
 - Fixed subasset name handling when creating a fairminter by preserving the `asset_longname` field when `asset=<subasset_name>` is specified and `asset_parent` is not specified.
 - Fix `disable_utxo_locks` parameter in compose API
+- Fix `gas.get_transaction_count_for_last_period()`
 
 ## Codebase
 

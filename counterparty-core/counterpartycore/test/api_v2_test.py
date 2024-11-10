@@ -224,7 +224,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
-            "quantity": 91674999880,
+            "quantity": 91674999900,
             "utxo": None,
             "utxo_address": None,
         },
@@ -245,7 +245,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
-            "quantity": 91674999880,
+            "quantity": 91674999900,
         },
         {
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",

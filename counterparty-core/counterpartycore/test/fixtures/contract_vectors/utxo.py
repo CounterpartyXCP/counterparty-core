@@ -114,18 +114,6 @@ UTXO_VECTOR = {
                         },
                     },
                     {
-                        "table": "debits",
-                        "values": {
-                            "address": ADDR[0],
-                            "asset": "XCP",
-                            "quantity": 10,
-                            "event": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
-                            "block_index": DP["default_block_index"],
-                            "tx_index": DP["default_tx_index"],
-                            "action": "attach to utxo fee",
-                        },
-                    },
-                    {
                         "table": "credits",
                         "values": {
                             "utxo": UTXO_1,
@@ -149,7 +137,7 @@ UTXO_VECTOR = {
                             "destination": UTXO_1,
                             "asset": "XCP",
                             "quantity": 100,
-                            "fee_paid": 10,
+                            "fee_paid": 0,
                         },
                     },
                     {
@@ -158,7 +146,7 @@ UTXO_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1","fee_paid":10,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1","fee_paid":0,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "ATTACH_TO_UTXO",
                         },
                     },
