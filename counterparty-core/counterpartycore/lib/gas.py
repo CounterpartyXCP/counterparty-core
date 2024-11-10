@@ -124,7 +124,7 @@ def calculate_fee(x: int, a: int, b: int, base_fee: int, k: int):
 
     def sigmoid(t):
         midpoint = (b - a) / 2 + a
-        return base_fee / (1 + math.exp(-k * (t - midpoint)))
+        return base_fee / (1 + D(math.exp(-k * (t - midpoint))))
 
     if x <= a:
         return 0

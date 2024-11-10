@@ -7,9 +7,9 @@
                 "block_time": 310703000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "641f62150677acca17d2666cbc25cb407932f96a4f25e6fe86e05cf57dee10e2",
+                "ledger_hash": "94a62752f851c8ec439fbbd46fbd0bd0d75987fb22416187a48a70e6e9af308a",
                 "txlist_hash": "75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1",
-                "messages_hash": "70fa6703ec74f168c5690eee6dd7539ebd625288d03ff45daf27615fa7948618",
+                "messages_hash": "5475e9c758035995f06c179546cf91e9cd4b1e35cdd7132362eca6ecc8e9d785",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -19,9 +19,9 @@
                 "block_time": 310702000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "854d3384203cf0dd5f8dc03dc5dbbe05545f4cfc1ca1cda40ee68723f78e5638",
+                "ledger_hash": "572bb86d600d33ec82edac9b1077ec7700d526cb25a69bc2bf2e10953f403e01",
                 "txlist_hash": "0ffd42fa9627a38e66bde8b0dc265ec25a6b44db75dbd5f05cb20d93fbbcb67f",
-                "messages_hash": "a05d54ddbe77016e18af508cebea1ca4afcaf5f79b6dfaa0c4b9fe6b53c72b2e",
+                "messages_hash": "6ea4ac41326e29e0232ae9d494849ea2b825116e5ff8b76cffe56ea9dfa09997",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -31,9 +31,9 @@
                 "block_time": 310701000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "61a7cc0ba60304365f584c2536a178d79d5f7abfc4382a575b5711f69f90c9d5",
+                "ledger_hash": "8bc0f9cfc1b75cdfd6e59f1d41c6b67b790a25a98b6240f7ff5df617f256cb00",
                 "txlist_hash": "c66db074cb4446477ac875d007c8a2145f4a95430cc144a305ee3e71fcdbd107",
-                "messages_hash": "923ef81789199a0802e87d8583516d6abb456ef83a2069a158c956f8e722ffbb",
+                "messages_hash": "5397b96551c0a64ab068399907d75384be4291c1cf18cc3abe34cd1ae3c8482d",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -43,9 +43,9 @@
                 "block_time": 310700000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "33aa36aec707bf3d53a40cf0d53a6683e13f5ddcf28d18bf8e4ee3dd7157a753",
+                "ledger_hash": "439c74d2a465996838179517ff57b2cc558d66848b857580be65319363846033",
                 "txlist_hash": "64d3d4ce91107031774de492adb7afb6b3d1e9e55fbc587c205a3fa0a36b6be6",
-                "messages_hash": "c2bcfc3a80630a5292e71f1b2e5d46a88439f12fb3c435b7eb76419842f88a07",
+                "messages_hash": "3060f01ecd3a6fccc1bd7b34efaee852a4b7d232a8d861626968e4690c5c4e6d",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -55,9 +55,9 @@
                 "block_time": 310699000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "47730696e0c76e9f462e37b882b6e38712ef0d5241dc24e6ff169aa785d24d54",
+                "ledger_hash": "5d0fa0f5c261642712f86c72055a7f19afe078a6c34e5538d77d85bb1b799a94",
                 "txlist_hash": "699935da2beafe8a13d0b6bafb2b7a9a57ca7a47c4cd352af9231b9c1313ff6b",
-                "messages_hash": "9ae47b7ef3de1e6a88d34e4c3ec15dd4bdd8170e4a2436dcb762b02f11f553a1",
+                "messages_hash": "c14011ca0548cc6aa347ebe1fb5249b938a40f7552924230ac9bd0456b173d84",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -67,9 +67,9 @@
                 "block_time": 310698000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "6fce1756267d81b45a7b01c65960c116569755f0881f9a23c9b07061ffdfbc96",
+                "ledger_hash": "f4f83f7b347792bb4c1336c694a08b2642717ebca900d9a0489bce1a2d994418",
                 "txlist_hash": "4512e4d49797db1713dd41784b0a38ef95c0a37386b2f1dfddffd16652ab1f13",
-                "messages_hash": "18987e8acd6141f2c85842316aa96c9f4f947d526de1a19c10a1c7ba18cccacf",
+                "messages_hash": "3a31ecc1c0af51adc95b88dd15ef06b7cd49f90977c3f8bc0931163c77be9218",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -79,9 +79,9 @@
                 "block_time": 310697000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "a57998dffd0c335680929446d6ac02a35de9cd18f393894beadfd12e6ed8f737",
+                "ledger_hash": "995f4b278c55bf41f128a3dcc39a0389d4856e4aafab042c915eaaae536e40e2",
                 "txlist_hash": "88060fae502e50aee9fea21032e5655a6e77e65d289ba32302c70652400024c7",
-                "messages_hash": "25e3090bb024a94d566bd22fabf17ae5179afa76e5302f94c46e2d08888985c0",
+                "messages_hash": "08c75385b4290db3fc39fb503a2a0f3ab7631db44d7ad0eb3d2db9ade975b6a9",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -91,9 +91,9 @@
                 "block_time": 310696000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "aa2cca3045564aaee758d8893db396bd4c9451f1f86d8170de3d3509dc1bec52",
+                "ledger_hash": "d0a47afe3a6d2d2bf01e56643798c4a653d827046991571026345f44b34bac6f",
                 "txlist_hash": "1510f38f77e3400993a985c5b0e348cb9068c0ded5eeb2c4dc9ff0b6b5e50376",
-                "messages_hash": "7c4a8f574231ee50d02e48738b105a103ef9aed940eb5e0ecfa6be8244200adf",
+                "messages_hash": "f5227bdae94c5ae394110e0690a013955d1e76379ba151b0fa209da444d9781c",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -103,9 +103,9 @@
                 "block_time": 310695000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "ef6655c27691018871b6dc327c9fb7f81e9b12967b2efa575fe4f24727a12516",
+                "ledger_hash": "819360045a5f9ee7b2696a8b1cd2579371b25a43076e1f4731d948dcb7b14202",
                 "txlist_hash": "cc4e8152565916228bebeb034d239a8d7a921420a20403b98b8c9cfbae646beb",
-                "messages_hash": "e2a732abd38072847b2cdb383913525995dfbbbbc0972946ba05c2d440862192",
+                "messages_hash": "05967636ad202a361deee96e758fd75be0c2a1b07817c215db206c187125f34b",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -115,9 +115,9 @@
                 "block_time": 310694000,
                 "previous_block_hash": null,
                 "difficulty": null,
-                "ledger_hash": "f3b637761d009580ce940759910ef3385b4780f2ea57f674a3912e5144b496d8",
+                "ledger_hash": "5b2559a37945f4174c2f651c9315ca9b9c274b40baf87a0e0890615459f7f437",
                 "txlist_hash": "cc78db8ff880deb043ca80285a482d558c829579b198fbb4ec33d35499c89f10",
-                "messages_hash": "e289f15ac993a195f32d0ef472ac1e84a36b57613c4ef6089488b5f0440082eb",
+                "messages_hash": "263bcb74757322f36cc19e8d722bfcf1c0c045ff6ae40b1ee071f9de4f6a1218",
                 "transaction_count": 0,
                 "confirmed": true
             }
@@ -132,9 +132,9 @@
             "block_time": 310703000,
             "previous_block_hash": null,
             "difficulty": null,
-            "ledger_hash": "641f62150677acca17d2666cbc25cb407932f96a4f25e6fe86e05cf57dee10e2",
+            "ledger_hash": "94a62752f851c8ec439fbbd46fbd0bd0d75987fb22416187a48a70e6e9af308a",
             "txlist_hash": "75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1",
-            "messages_hash": "70fa6703ec74f168c5690eee6dd7539ebd625288d03ff45daf27615fa7948618",
+            "messages_hash": "5475e9c758035995f06c179546cf91e9cd4b1e35cdd7132362eca6ecc8e9d785",
             "transaction_count": 0,
             "confirmed": true
         }
@@ -1936,7 +1936,7 @@
     "http://localhost:10009/v2/addresses/events?verbose=true&limit=6&addresses=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc,mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns": {
         "result": [
             {
-                "event_index": 1355,
+                "event_index": 1351,
                 "event": "ORDER_MATCH_EXPIRATION",
                 "params": {
                     "block_index": 310513,
@@ -1950,7 +1950,7 @@
                 "block_time": 310513000
             },
             {
-                "event_index": 1328,
+                "event_index": 1324,
                 "event": "DEBIT",
                 "params": {
                     "action": "attach to utxo",
@@ -1977,60 +1977,7 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1326,
-                "event": "ASSET_DESTRUCTION",
-                "params": {
-                    "asset": "XCP",
-                    "block_index": 310508,
-                    "quantity": 10,
-                    "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "status": "valid",
-                    "tag": "attach to utxo fee",
-                    "tx_hash": "a568f169d4bb433072dd25793970d330fa51092012964a5bdc42d22835182726",
-                    "tx_index": 509,
-                    "block_time": 310508000,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "The Counterparty protocol native currency",
-                        "issuer": null,
-                        "divisible": true,
-                        "locked": true
-                    },
-                    "quantity_normalized": "0.00000010"
-                },
-                "tx_hash": "a568f169d4bb433072dd25793970d330fa51092012964a5bdc42d22835182726",
-                "block_index": 310508,
-                "block_time": 310508000
-            },
-            {
-                "event_index": 1325,
-                "event": "DEBIT",
-                "params": {
-                    "action": "attach to utxo fee",
-                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "asset": "XCP",
-                    "block_index": 310508,
-                    "event": "a568f169d4bb433072dd25793970d330fa51092012964a5bdc42d22835182726",
-                    "quantity": 10,
-                    "tx_index": 509,
-                    "utxo": null,
-                    "utxo_address": null,
-                    "block_time": 310508000,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "The Counterparty protocol native currency",
-                        "issuer": null,
-                        "divisible": true,
-                        "locked": true
-                    },
-                    "quantity_normalized": "0.00000010"
-                },
-                "tx_hash": "a568f169d4bb433072dd25793970d330fa51092012964a5bdc42d22835182726",
-                "block_index": 310508,
-                "block_time": 310508000
-            },
-            {
-                "event_index": 1324,
+                "event_index": 1322,
                 "event": "NEW_TRANSACTION",
                 "params": {
                     "block_hash": "40cfaee344032c167d7317bb94d2e514f8dca023302303a908dd994e15d902cf",
@@ -2057,10 +2004,37 @@
                 "tx_hash": null,
                 "block_index": 310508,
                 "block_time": 310508000
+            },
+            {
+                "event_index": 1316,
+                "event": "DEBIT",
+                "params": {
+                    "action": "attach to utxo",
+                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "asset": "XCP",
+                    "block_index": 310507,
+                    "event": "c1a3885eac5247f363f6adcc0fbd6576b8b98f928065185074fe75d01c91af02",
+                    "quantity": 100,
+                    "tx_index": 508,
+                    "utxo": null,
+                    "utxo_address": null,
+                    "block_time": 310507000,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "The Counterparty protocol native currency",
+                        "issuer": null,
+                        "divisible": true,
+                        "locked": true
+                    },
+                    "quantity_normalized": "0.00000100"
+                },
+                "tx_hash": "c1a3885eac5247f363f6adcc0fbd6576b8b98f928065185074fe75d01c91af02",
+                "block_index": 310507,
+                "block_time": 310507000
             }
         ],
-        "next_cursor": 1324,
-        "result_count": 177
+        "next_cursor": 1314,
+        "result_count": 173
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
@@ -2232,7 +2206,7 @@
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "XCP",
-                "quantity": 91674999880,
+                "quantity": 91674999900,
                 "utxo": null,
                 "utxo_address": null,
                 "asset_info": {
@@ -2593,27 +2567,6 @@
                 "quantity_normalized": "0.00000001"
             },
             {
-                "block_index": 310508,
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "XCP",
-                "quantity": 10,
-                "action": "attach to utxo fee",
-                "event": "a568f169d4bb433072dd25793970d330fa51092012964a5bdc42d22835182726",
-                "tx_index": 509,
-                "utxo": null,
-                "utxo_address": null,
-                "confirmed": true,
-                "block_time": 310508000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "The Counterparty protocol native currency",
-                    "issuer": null,
-                    "divisible": true,
-                    "locked": true
-                },
-                "quantity_normalized": "0.00000010"
-            },
-            {
                 "block_index": 310507,
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "XCP",
@@ -2633,27 +2586,6 @@
                     "locked": true
                 },
                 "quantity_normalized": "0.00000100"
-            },
-            {
-                "block_index": 310507,
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "XCP",
-                "quantity": 10,
-                "action": "attach to utxo fee",
-                "event": "c1a3885eac5247f363f6adcc0fbd6576b8b98f928065185074fe75d01c91af02",
-                "tx_index": 508,
-                "utxo": null,
-                "utxo_address": null,
-                "confirmed": true,
-                "block_time": 310507000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "The Counterparty protocol native currency",
-                    "issuer": null,
-                    "divisible": true,
-                    "locked": true
-                },
-                "quantity_normalized": "0.00000010"
             },
             {
                 "block_index": 310503,
@@ -3161,7 +3093,7 @@
             }
         ],
         "next_cursor": null,
-        "result_count": 28
+        "result_count": 26
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/bets?verbose=true": {
         "result": [
@@ -3259,7 +3191,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
-                "fee_paid": 10,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310508000,
                 "asset_info": {
@@ -3270,7 +3202,7 @@
                     "locked": false
                 },
                 "quantity_normalized": "0.00000001",
-                "fee_paid_normalized": "0.00000010"
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 508,
@@ -3283,7 +3215,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
-                "fee_paid": 10,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310507000,
                 "asset_info": {
@@ -3294,7 +3226,7 @@
                     "locked": true
                 },
                 "quantity_normalized": "0.00000100",
-                "fee_paid_normalized": "0.00000010"
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 482,
@@ -5451,7 +5383,7 @@
                 "owner": null,
                 "divisible": true,
                 "locked": true,
-                "supply": 603781847900,
+                "supply": 603781847920,
                 "description": "The Counterparty protocol native currency",
                 "first_issuance_block_index": 278319,
                 "last_issuance_block_index": 283810,
@@ -6686,12 +6618,12 @@
     "http://localhost:10009/v2/events?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1739,
+                "event_index": 1735,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310703,
-                    "ledger_hash": "641f62150677acca17d2666cbc25cb407932f96a4f25e6fe86e05cf57dee10e2",
-                    "messages_hash": "70fa6703ec74f168c5690eee6dd7539ebd625288d03ff45daf27615fa7948618",
+                    "ledger_hash": "94a62752f851c8ec439fbbd46fbd0bd0d75987fb22416187a48a70e6e9af308a",
+                    "messages_hash": "5475e9c758035995f06c179546cf91e9cd4b1e35cdd7132362eca6ecc8e9d785",
                     "transaction_count": 0,
                     "txlist_hash": "75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1",
                     "block_time": 310703000
@@ -6701,7 +6633,7 @@
                 "block_time": 310703000
             },
             {
-                "event_index": 1738,
+                "event_index": 1734,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "b8b21ab596ed7ad84e449d098c04d86cbb6623c5e88af7772166882efbd91218",
@@ -6717,12 +6649,12 @@
                 "block_time": 310703000
             },
             {
-                "event_index": 1737,
+                "event_index": 1733,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310702,
-                    "ledger_hash": "854d3384203cf0dd5f8dc03dc5dbbe05545f4cfc1ca1cda40ee68723f78e5638",
-                    "messages_hash": "a05d54ddbe77016e18af508cebea1ca4afcaf5f79b6dfaa0c4b9fe6b53c72b2e",
+                    "ledger_hash": "572bb86d600d33ec82edac9b1077ec7700d526cb25a69bc2bf2e10953f403e01",
+                    "messages_hash": "6ea4ac41326e29e0232ae9d494849ea2b825116e5ff8b76cffe56ea9dfa09997",
                     "transaction_count": 0,
                     "txlist_hash": "0ffd42fa9627a38e66bde8b0dc265ec25a6b44db75dbd5f05cb20d93fbbcb67f",
                     "block_time": 310702000
@@ -6732,7 +6664,7 @@
                 "block_time": 310702000
             },
             {
-                "event_index": 1736,
+                "event_index": 1732,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "69cb443673c221a8e157d61707d52cf980c87faf5c3b31a5850ff43be70883c8",
@@ -6748,12 +6680,12 @@
                 "block_time": 310702000
             },
             {
-                "event_index": 1735,
+                "event_index": 1731,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310701,
-                    "ledger_hash": "61a7cc0ba60304365f584c2536a178d79d5f7abfc4382a575b5711f69f90c9d5",
-                    "messages_hash": "923ef81789199a0802e87d8583516d6abb456ef83a2069a158c956f8e722ffbb",
+                    "ledger_hash": "8bc0f9cfc1b75cdfd6e59f1d41c6b67b790a25a98b6240f7ff5df617f256cb00",
+                    "messages_hash": "5397b96551c0a64ab068399907d75384be4291c1cf18cc3abe34cd1ae3c8482d",
                     "transaction_count": 0,
                     "txlist_hash": "c66db074cb4446477ac875d007c8a2145f4a95430cc144a305ee3e71fcdbd107",
                     "block_time": 310701000
@@ -6763,8 +6695,8 @@
                 "block_time": 310701000
             }
         ],
-        "next_cursor": 1734,
-        "result_count": 1740
+        "next_cursor": 1730,
+        "result_count": 1736
     },
     "http://localhost:10009/v2/events/10?limit=5&verbose=true": {
         "result": {
@@ -6806,12 +6738,12 @@
             }
         ],
         "next_cursor": "ORDER_MATCH",
-        "result_count": 31
+        "result_count": 30
     },
     "http://localhost:10009/v2/events/CREDIT?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1507,
+                "event_index": 1503,
                 "event": "CREDIT",
                 "params": {
                     "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
@@ -6838,7 +6770,7 @@
                 "block_time": 310588000
             },
             {
-                "event_index": 1338,
+                "event_index": 1334,
                 "event": "CREDIT",
                 "params": {
                     "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
@@ -6865,7 +6797,7 @@
                 "block_time": 310509000
             },
             {
-                "event_index": 1329,
+                "event_index": 1325,
                 "event": "CREDIT",
                 "params": {
                     "address": null,
@@ -6892,7 +6824,7 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1319,
+                "event_index": 1317,
                 "event": "CREDIT",
                 "params": {
                     "address": null,
@@ -6973,7 +6905,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
-                "fee_paid": 10,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310508000,
                 "asset_info": {
@@ -6984,7 +6916,7 @@
                     "locked": false
                 },
                 "quantity_normalized": "0.00000001",
-                "fee_paid_normalized": "0.00000010"
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 508,
@@ -6997,7 +6929,7 @@
                 "status": "valid",
                 "msg_index": 0,
                 "memo": null,
-                "fee_paid": 10,
+                "fee_paid": 0,
                 "confirmed": true,
                 "block_time": 310507000,
                 "asset_info": {
@@ -7008,7 +6940,7 @@
                     "locked": true
                 },
                 "quantity_normalized": "0.00000100",
-                "fee_paid_normalized": "0.00000010"
+                "fee_paid_normalized": "0.00000000"
             },
             {
                 "tx_index": 497,

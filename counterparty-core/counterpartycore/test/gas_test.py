@@ -135,6 +135,7 @@ def test_calculate_fee(server_db):
 
     # test five random tx count per period between 2 and 40
     for _ in range(5):
+        # for tx_count_per_period in range(2, 41):
         tx_count_per_period = random.randint(2, 40)  # noqa: S311
         block_index = generate_gas_counter(server_db, block_index, tx_count_per_period)
         fee = gas.get_transaction_fee(server_db, TRANSACTION_ID, block_index)

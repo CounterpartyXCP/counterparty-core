@@ -156,7 +156,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "block_index": "$BLOCK_INDEX",
-                            "count": 4,
+                            "count": 1,
                             "transaction_id": 101,
                         },
                         "tx_hash": "$TX_HASH",
