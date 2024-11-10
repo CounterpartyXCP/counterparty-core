@@ -40,7 +40,7 @@ def pack(address):
             except bitcoin.base58.InvalidBase58Error as e:
                 raise e
             except Exception as e:  # noqa: F841
-                raise Exception(  # noqa: B904
+                raise script.AddressError(  # noqa: B904
                     f"The address {address} is not a valid bitcoin address ({'testnet' if config.TESTNET or config.REGTEST else 'mainnet'})"
                 )
     else:

@@ -458,7 +458,7 @@ def _get_unspent_txouts(source):
 def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash: str = None):
     """
     Returns a list of unspent outputs for a specific address
-    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param address: The address to search for (e.g. $ADDRESS_7)
     :param unconfirmed: Include unconfirmed transactions
     :param unspent_tx_hash: Filter by unspent_tx_hash
     """
@@ -486,7 +486,7 @@ def get_unspent_txouts(address: str, unconfirmed: bool = False, unspent_tx_hash:
 def get_unspent_txouts_by_addresses(addresses: str, unconfirmed: bool = False):
     """
     Returns a list of unspent outputs for a list of addresses
-    :param addresses: The addresses to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS,1JQheacLPdM5ySCkrZkV66G2ApAXe1mqLj)
+    :param addresses: The addresses to search for (e.g. $ADDRESS_7,$ADDRESS_8)
     :param unconfirmed: Include unconfirmed transactions
     """
     unspents = []
@@ -564,7 +564,7 @@ def get_transactions_by_address(
 ):
     """
     Returns all transactions involving a given address
-    :param address: The address to search for (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param address: The address to search for (e.g. $ADDRESS_3)
     :param unconfirmed: Include unconfirmed transactions (e.g. True)
     :param only_tx_hashes: Return only the tx hashes (e.g. True)
     """

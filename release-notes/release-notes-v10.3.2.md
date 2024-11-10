@@ -4,7 +4,7 @@ This release is a minor update with some bugfixes.
 
 # Upgrading
 
-This release is not a protocol change and does not require any reparsing. 
+This release is not a protocol change and does not require any reparsing.
 
 # ChangeLog
 

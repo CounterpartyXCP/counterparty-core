@@ -3,6 +3,10 @@
 set -e
 set -x
 
+#exit 0
+
+export PATH="/snap/bin:$PATH"
+
 if [ -f "./DOCKER_COMPOSE_TEST_LOCK" ]; then
     echo "A test is already running or the last one failed. Exiting."
     exit 1
@@ -26,16 +30,13 @@ docker compose --profile mainnet stop counterparty-core
 docker compose --profile testnet stop counterparty-core-testnet
 
 # remove counterparty-core container
-#docker rm counterparty-core-counterparty-core-1
 docker container prune -f
 
 # remove counterparty-core image
 docker rmi counterparty/counterparty:$VERSION || true
 
 # build the counterparty-core new image
-docker build -t counterparty/counterparty:$VERSION . > build.txt 2>&1
-COUNTERPARTY_RS_CACHED=$(awk '/COPY \.\/counterparty-rs \/counterparty-rs/{getline; print}' build.txt | awk '{print $2}')
-cat build.txt
+docker build -t counterparty/counterparty:$VERSION .
 
 # re-start containers
 docker compose --profile mainnet up -d
@@ -92,8 +93,8 @@ fi
 response_v2_testnet=$(curl http://localhost:14000/v2/ \
                         --write-out '%{http_code}' --silent --output /dev/null)
 
-if [ "$response_v2_mainnet" -ne 200 ]; then
-    echo "Failed to get API v2 root mainnet"
+if [ "$response_v2_testnet" -ne 200 ]; then
+    echo "Failed to get API v2 root testnet"
     exit 1
 fi
 
@@ -102,32 +103,31 @@ CURRENT_HEIGHT=$(curl http://localhost:4000/v2/ --silent | jq '.result.counterpa
 REPARSE_FROM=$(($CURRENT_HEIGHT-50))
 
 # Stop, reparse and start counterparty-core mainnet
+LOG_PATH=$(docker inspect --format='{{.LogPath}}' counterparty-core-counterparty-core-1)
+sudo rm -f $LOG_PATH
+sudo touch $LOG_PATH
+
 docker compose --profile mainnet stop counterparty-core
 docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
    --backend-connect=bitcoind \
    --indexd-connect=addrindexrs \
    --rpc-host=0.0.0.0 \
    --api-host=0.0.0.0
+
+sudo rm -f $LOG_PATH
+sudo touch $LOG_PATH
+
 docker compose --profile mainnet up -d counterparty-core
 
 # wait for counterparty-core to be ready
-while [ "$(docker compose logs counterparty-core 2>&1 | grep 'API Watcher - Catch up completed')" = "" ]; do
+while [ "$(docker compose logs counterparty-core 2>&1 | grep 'Watching for new blocks...')" = "" ]; do
     echo "Waiting for counterparty-core mainnet to be ready"
     sleep 1
 done
 
-# Run dredd test
-dredd
-
-
 # Run compare hashes test
 . "$HOME/.profile"
 cd counterparty-core
-
-if [ "$COUNTERPARTY_RS_CACHED" != "CACHED" ]; then
-    hatch env prune
-fi
-
 sudo python3 -m pytest counterpartycore/test/mainnet_test.py --testapidb --comparehashes
 cd ..
 

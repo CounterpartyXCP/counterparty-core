@@ -163,6 +163,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "ab9f9c1aafdfc816a19aa403775c56b0b63e4c977685427f8fcee85db449cb15",
         "txlist_hash": "c8c7b8c0a86d601274e047d7038d47cd20f7147d9245f0d22449102b4b0c6fbf",
     },
+    650000: {
+        "ledger_hash": "7e4d5af885d20a68eb78d939f3b56f10c3e4defbb797297754579122e9611679",
+        "txlist_hash": "14405c618a97fb2fc8b5640f84ad8a4aece924474a5b4ffc4e67c46914676ba6",
+    },
     700000: {
         "ledger_hash": "4e84538d7bde57bbea518563f2a50f4245597bf5e5619fc4cbe9d981ab9d0adc",
         "txlist_hash": "abb48c10d692c159180a376b4a9002abcf582fab1b5652ba3ccdc73f4b5e0d8a",
@@ -643,6 +647,26 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "0e594ca2b3b36b66475b1c53d9b02d9fe4726e28f6f61db8fdf8103a787e6c3e",
         "txlist_hash": "993c980296307d38656b4458a9b3913a8028adc02630fb6a8c55bea009008dd7",
     },
+    861500: {
+        "ledger_hash": "76ca4415a24ae04579b05b517f41441b7cb45eb881db71d1b59de5d373a4bc28",
+        "txlist_hash": "b05b906391cf96d5b4b5893c5fda13fb64635d26785ee3ad1330fe701eb41cb4",
+    },
+    866000: {
+        "ledger_hash": "5bfa1fef4356b1326c8edfe1af582911461d86132dd768028511d20ed2d9e3f5",
+        "txlist_hash": "19d1621ea05abd741e05e361ce96708e8dc1b442fb89079af370abd2698549db",
+    },
+    866330: {
+        "ledger_hash": "1c5f82ee5009fbc3d94bb8ff88d644aa0b2ec42f21409b315f555f1006bca6fc",
+        "txlist_hash": "1f5db508a80205eaaa6d915402c7833a0851bb369bea54a600e2fdda7e1d7ff5",
+    },
+    866750: {
+        "ledger_hash": "1c5164faca831bb726666eb6c63e5d8fd4070b382706c30f839ed407526c7de4",
+        "txlist_hash": "a536d8a1b2b3cf6164b9a2cd70edd2efaea615340e11291eebb6201c762aaaf5",
+    },
+    867290: {
+        "ledger_hash": "4b5c0ab384408c9e7268c24887f3d2265a0b045f5a161e3343d15cf861b7d07c",
+        "txlist_hash": "b32df1c46cde54f9eb1075652634276d5fb997a85ca7394c6566810475b30c00",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET = 7
@@ -896,27 +920,31 @@ class SanityError(Exception):
     pass
 
 
-def asset_conservation(db):
+def asset_conservation(db, stop_event=None):
     logger.debug("Checking for conservation of assets.")
-    supplies = ledger.supplies(db)
-    held = ledger.held(db)
-    for asset in supplies.keys():
-        asset_issued = supplies[asset]
-        asset_held = held[asset] if asset in held and held[asset] != None else 0  # noqa: E711
-        if asset_issued != asset_held:
-            raise SanityError(
-                "{} {} issued ≠ {} {} held".format(
-                    ledger.value_out(db, asset_issued, asset),
-                    asset,
-                    ledger.value_out(db, asset_held, asset),
-                    asset,
+    with db:
+        supplies = ledger.supplies(db)
+        held = ledger.held(db)
+        for asset in supplies.keys():
+            if stop_event is not None and stop_event.is_set():
+                logger.debug("Stop event received. Exiting asset conservation check...")
+                return
+            asset_issued = supplies[asset]
+            asset_held = held[asset] if asset in held and held[asset] != None else 0  # noqa: E711
+            if asset_issued != asset_held:
+                raise SanityError(
+                    "{} {} issued ≠ {} {} held".format(
+                        ledger.value_out(db, asset_issued, asset),
+                        asset,
+                        ledger.value_out(db, asset_held, asset),
+                        asset,
+                    )
+                )
+            logger.trace(
+                "{} has been conserved ({} {} both issued and held)".format(
+                    asset, ledger.value_out(db, asset_issued, asset), asset
                 )
             )
-        logger.debug(
-            "{} has been conserved ({} {} both issued and held)".format(
-                asset, ledger.value_out(db, asset_issued, asset), asset
-            )
-        )
     logger.debug("All assets have been conserved.")
 
 
@@ -944,9 +972,7 @@ def check_change(protocol_change, change_name):
         explanation = f"Your version of {config.APP_NAME} is v{config.VERSION_STRING}, but, "
         explanation += f"as of block {protocol_change['block_index']}, the minimum version is "
         explanation += f"v{protocol_change['minimum_version_major']}.{protocol_change['minimum_version_minor']}.{protocol_change['minimum_version_revision']}. "
-        explanation += (
-            f"Reason: ‘{change_name}’. Please upgrade to the latest version and restart the server."
-        )
+        explanation += f"Reason: ' {change_name} '. Please upgrade to the latest version and restart the server."
         if util.CURRENT_BLOCK_INDEX >= protocol_change["block_index"]:
             raise VersionUpdateRequiredError(explanation)
         else:
@@ -970,7 +996,7 @@ def software_version():
         requests.exceptions.ReadTimeout,
         TimeoutError,
     ):
-        logger.warning("Unable to check Counterparty version.", exc_info=sys.exc_info())
+        logger.warning("Unable to check Counterparty version.")
         return False
 
     for change_name in versions:
@@ -978,7 +1004,7 @@ def software_version():
         try:
             check_change(protocol_change, change_name)
         except VersionUpdateRequiredError:  # noqa: F841
-            logger.error("Version Update Required", exc_info=sys.exc_info())
+            logger.error("Version Update Required")
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     logger.debug("Version check passed.")
@@ -990,6 +1016,24 @@ class DatabaseVersionError(Exception):
         super(DatabaseVersionError, self).__init__(message)
         self.required_action = required_action
         self.from_block_index = from_block_index
+
+
+def check_need_reparse(version_minor, message):
+    if config.FORCE:
+        return
+    need_reparse_from = (
+        config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
+        if config.TESTNET
+        else config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
+    )
+    if need_reparse_from is not None:
+        for min_version_minor, min_version_block_index in need_reparse_from:
+            if version_minor < min_version_minor:
+                raise DatabaseVersionError(
+                    message=message,
+                    required_action="reparse",
+                    from_block_index=min_version_block_index,
+                )
 
 
 def database_version(db):
@@ -1007,18 +1051,25 @@ def database_version(db):
         )
     elif version_minor != config.VERSION_MINOR:
         # Reparse transactions from the vesion block if minor version has changed.
-        message = f"Client minor version number mismatch. Triggering a reparse... ({version_minor} ≠ {config.VERSION_MINOR})"
-        need_reparse_from = (
-            config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET
-            if config.TESTNET
-            else config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
+        message = (
+            f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}. "
         )
-        if need_reparse_from is not None:
-            min_version_minor, min_version_block_index = need_reparse_from
-            if version_minor < min_version_minor:
-                raise DatabaseVersionError(
-                    message=message,
-                    required_action="reparse",
-                    from_block_index=min_version_block_index,
-                )
+        message += "Checking if a reparse is needed..."
+        check_need_reparse(version_minor, message)
         raise DatabaseVersionError(message=message, required_action=None)
+    else:
+        version_string = database.get_config_value(db, "VERSION_STRING")
+        if version_string:
+            version_pre_release = "-".join(version_string.split("-")[1:])
+        else:
+            # if version_string is not set, that mean we are on a version before 10.5.0 and after 10.4.8
+            # let's assume it's a pre-release version
+            # and set an arbitrary value different from config.VERSION_PRE_RELEASE
+            version_pre_release = "xxxx"
+        if version_pre_release != config.VERSION_PRE_RELEASE:
+            if version_pre_release == "xxxx":
+                message = "`VERSION_STRING` not found in dataase. "
+            else:
+                message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
+            message += "Checking if a reparse is needed..."
+            check_need_reparse(version_minor, message)

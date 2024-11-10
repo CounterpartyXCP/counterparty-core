@@ -17,6 +17,7 @@ from counterpartycore.lib import (
     ledger,
     mempool,
     sentry,
+    util,
 )
 from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
 
@@ -79,7 +80,8 @@ class BlockchainWatcher:
         sentry.init()
         self.zmq_sequence_address, self.zmq_rawblock_address = get_zmq_notifications_addresses()
         self.db = db
-        self.loop = asyncio.get_event_loop()
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
         self.connect_to_zmq()
         self.mempool_block = []
         self.mempool_block_hashes = []
@@ -87,8 +89,10 @@ class BlockchainWatcher:
         self.hash_by_sequence = {}
         self.last_block_check_time = 0
         self.last_software_version_check_time = 0
-        # clean mempool before starting
-        mempool.clean_mempool(self.db)
+        # catch up and clean mempool before starting
+        if not config.NO_MEMPOOL:
+            mempool.parse_raw_mempool(self.db)
+            mempool.clean_mempool(self.db)
 
     def connect_to_zmq(self):
         self.zmq_context = zmq.asyncio.Context()
@@ -97,7 +101,8 @@ class BlockchainWatcher:
         self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "rawtx")
         self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "hashtx")
-        self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "sequence")
+        if not config.NO_MEMPOOL:
+            self.zmq_sub_socket_sequence.setsockopt_string(zmq.SUBSCRIBE, "sequence")
         self.zmq_sub_socket_sequence.connect(self.zmq_sequence_address)
         self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
@@ -117,7 +122,13 @@ class BlockchainWatcher:
         # check if already parsed by block.catch_up()
         existing_block = ledger.get_block_by_hash(self.db, decoded_block["block_hash"])
         if existing_block is None:
-            blocks.parse_new_block(self.db, decoded_block)
+            previous_block = ledger.get_block_by_hash(self.db, decoded_block["hash_prev"])
+            if previous_block is None:
+                # catch up with rpc if previous block is missing
+                logger.debug("Previous block is missing. Catching up...")
+                blocks.catch_up(self.db, check_asset_conservation=False)
+            else:
+                blocks.parse_new_block(self.db, decoded_block)
             mempool.clean_mempool(self.db)
             if not config.NO_TELEMETRY:
                 TelemetryOneShot().submit()
@@ -160,13 +171,14 @@ class BlockchainWatcher:
                 # logger.trace("Adding transaction to mempool block: %s", item_hash)
                 # logger.trace("Mempool block size: %s", len(self.mempool_block))
                 self.mempool_block.append(raw_tx)
-                if len(self.mempool_block) == MEMPOOL_BLOCK_MAX_SIZE:
+                mempool_block_max_size = 100 if config.NETWORK_NAME == "mainnet" else 1
+                if len(self.mempool_block) == mempool_block_max_size:
                     # parse mempool block
                     mempool.parse_mempool_transactions(self.db, self.mempool_block)
                     # reset mempool block
                     self.mempool_block = []
                     self.mempool_block_hashes = []
-                    logger.debug("Waiting for new transactions from mempool or new block...")
+                    logger.trace("Waiting for new transactions in the mempool or a new block...")
         # transaction removed from mempool for non-block inclusion reasons
         elif label == "R":
             mempool.clean_transaction_events(self.db, item_hash)
@@ -203,29 +215,53 @@ class BlockchainWatcher:
             self.receive_message(topic, body, seq)
         except Exception as e:
             logger.error("Error processing message: %s", e)
+            # import traceback
+            # print(traceback.format_exc())  # for debugging
             capture_exception(e)
             raise e
 
     async def handle(self):
         self.check_software_version_if_needed()
+        util.BLOCK_PARSER_STATUS = "following"
 
-        # sequence topic
-        await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
-        # check rawblock topic
-        check_block_delay = 10 if config.NETWORK_NAME == "mainnet" else 0.5
-        if time.time() - self.last_block_check_time > check_block_delay:
-            await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
-            self.last_block_check_time = time.time()
+        while True:
+            try:
+                # sequence topic
+                if not config.NO_MEMPOOL:
+                    await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
+                # check rawblock topic
+                check_block_delay = 10 if config.NETWORK_NAME == "mainnet" else 0.5
+                if time.time() - self.last_block_check_time > check_block_delay:
+                    await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
+                    self.last_block_check_time = time.time()
 
-        # schedule ourselves to receive the next message
-        asyncio.ensure_future(self.handle())
+                # Yield control to the event loop to allow other tasks to run
+                await asyncio.sleep(0)
+            except asyncio.CancelledError:
+                logger.debug("BlockchainWatcher.handle() was cancelled.")
+                break  # Exit the loop if the task is cancelled
+            except Exception as e:
+                logger.error("Error in handle loop: %s", e)
+                capture_exception(e)
+                break  # Optionally break the loop on other exceptions
 
     def start(self):
         logger.debug("Starting blockchain watcher...")
-        self.loop.create_task(self.handle())
+        # Schedule the handle coroutine once
+        self.task = self.loop.create_task(self.handle())
         self.loop.run_forever()
 
     def stop(self):
         logger.debug("Stopping blockchain watcher...")
+        # Cancel the handle task
+        self.task.cancel()
+        try:
+            # Run the event loop until the task has been cancelled
+            self.loop.run_until_complete(self.task)
+        except asyncio.CancelledError:
+            logger.debug("BlockchainWatcher.handle() cancelled successfully.")
+        # Stop and close the event loop
         self.loop.stop()
+        self.loop.close()
+        # Clean up ZMQ context
         self.zmq_context.destroy()

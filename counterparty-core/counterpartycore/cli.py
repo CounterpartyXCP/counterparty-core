@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 from urllib.parse import quote_plus as urlencode
 
 from termcolor import cprint
@@ -154,7 +155,7 @@ CONFIG_ARGS = [
     [
         ("--rpc-host",),
         {
-            "default": "localhost",
+            "default": "127.0.0.1",
             "help": "the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)",
         },
     ],
@@ -191,7 +192,7 @@ CONFIG_ARGS = [
     [
         ("--api-host",),
         {
-            "default": "localhost",
+            "default": "127.0.0.1",
             "help": "the IP of the interface to bind to for providing  API access (0.0.0.0 for all interfaces)",
         },
     ],
@@ -237,7 +238,7 @@ CONFIG_ARGS = [
         ("--no-confirm",),
         {"action": "store_true", "default": False, "help": "don't ask for confirmation"},
     ],
-    [("--database-file",), {"default": None, "help": "the path to the SQLite3 database file"}],
+    [("--data-dir",), {"default": None, "help": "the path to the data directory"}],
     [
         ("--log-file",),
         {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},
@@ -254,6 +255,14 @@ CONFIG_ARGS = [
     [
         ("--no-log-files",),
         {"action": "store_true", "default": False, "help": "Don't write log files"},
+    ],
+    [
+        ("--max-log-file-size",),
+        {"type": int, "default": 40 * 1024 * 1024, "help": "maximum size of log files in bytes"},
+    ],
+    [
+        ("--max-log-file-rotations",),
+        {"type": int, "default": 20, "help": "maximum number of log file rotations"},
     ],
     [
         ("--utxo-locks-max-addresses",),
@@ -298,6 +307,7 @@ CONFIG_ARGS = [
         ("--db-connection-pool-size",),
         {
             "type": int,
+            "default": 20,
             "help": "size of the database connection pool",
         },
     ],
@@ -309,6 +319,39 @@ CONFIG_ARGS = [
             "help": "show logs in JSON format",
         },
     ],
+    [
+        ("--wsgi-server",),
+        {
+            "default": "waitress",
+            "help": "WSGI server to use (waitress, gunicorn or werkzeug)",
+            "choices": ["waitress", "gunicorn", "werkzeug"],
+        },
+    ],
+    [
+        ("--waitress-threads",),
+        {
+            "type": int,
+            "default": 10,
+            "help": "number of threads for the Waitress WSGI server (if enabled)",
+        },
+    ],
+    [
+        ("--gunicorn-workers",),
+        {
+            "type": int,
+            "default": 2 * os.cpu_count() + 1,
+            "help": "number of worker processes for gunicorn (if enabled)",
+        },
+    ],
+    [
+        ("--gunicorn-threads-per-worker",),
+        {
+            "type": int,
+            "default": 2,
+            "help": "number of threads per worker for the Gunicorn WSGI server (if enabled)",
+        },
+    ],
+    [("--bootstrap-url",), {"type": str, "help": "the URL of the bootstrap snapshot to use"}],
 ]
 
 
@@ -387,7 +430,7 @@ def main():
     parser_server.add_argument("--config-file", help="the path to the configuration file")
     parser_server.add_argument(
         "--catch-up",
-        choices=["normal", "bootstrap"],
+        choices=["normal", "bootstrap", "bootstrap-always"],
         default="normal",
         help="Catch up mode (default: normal)",
     )
@@ -414,9 +457,6 @@ def main():
 
     parser_bootstrap = subparsers.add_parser(
         "bootstrap", help="bootstrap database with hosted snapshot"
-    )
-    parser_bootstrap.add_argument(
-        "--bootstrap-url", help="the URL of the bootstrap snapshot to use"
     )
     setup.add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
 

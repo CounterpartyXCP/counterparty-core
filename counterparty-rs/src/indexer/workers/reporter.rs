@@ -56,6 +56,9 @@ where
                   let mut height = prev_height;
                   for item in data.batch.into_iter() {
                       let block_height = item.get_height();
+                      if let Some(rollback_height) = item.get_rollback_height() {
+                        height = rollback_height;
+                      }
                       if block_height != height + 1 {
                           return Err(Error::OrderInvariant(height, item.get_height()));
                       }

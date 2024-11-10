@@ -15,16 +15,21 @@ TEST_CONFIG = {
     "db_dir": TEST_DB_PATH,
     "log_file": "/Users/wilfred/Desktop/indexer_test.log",
     "log_level": "debug",
-    # "consume_blocks": True,
+    "json_format": False,
+    "consume_blocks": True,
+    "only_write_in_reorg_window": True,
+    "start_height": 868900,
 }
 
 
 @pytest.mark.skip()
 def test_fetcher_singleton():
     fetcher = rsfetcher.RSFetcher(config=TEST_CONFIG)
+    fetcher.start()
     fetcher.is_me = "Coucou"
 
     fetcher2 = rsfetcher.RSFetcher(config=TEST_CONFIG)
+    fetcher2.start()
     assert fetcher2.is_me == "Coucou"
 
     assert fetcher.instance() is fetcher2.instance()
@@ -35,6 +40,7 @@ def test_fetcher_singleton():
 @pytest.mark.skip()
 def test_fetcher_interrupt():
     fetcher = rsfetcher.RSFetcher(config=TEST_CONFIG)
+    fetcher.start()
     interrupted = False
     try:
         for _ in range(500):

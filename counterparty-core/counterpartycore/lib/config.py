@@ -5,7 +5,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "10.3.2"  # for hatch
+__version__ = "10.6.1"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-")[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -20,8 +20,8 @@ ADDRINDEXRS_VERSION = "0.4.6"
 # Fo example:
 # NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (1, 800000)
 # means that we need to reparse from block 800000 if database minor version is less than 1
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (3, 0)
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = (3, 0)
+NEED_REPARSE_IF_MINOR_IS_LESS_THAN = [(3, 0), (5, 865999), (6, 867000)]
+NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = [(3, 0), (5, 2925799), (6, 2925799)]
 # Counterparty protocol
 TXTYPE_FORMAT = ">I"
 SHORT_TXTYPE_FORMAT = "B"
@@ -114,7 +114,7 @@ BLOCK_FIRST_MAINNET_HASH = "00000000000000017bac9a8e85660ad348050c789922d5f8fe54
 BURN_START_MAINNET = 278310
 BURN_END_MAINNET = 283810
 
-BLOCK_FIRST_REGTEST = 1
+BLOCK_FIRST_REGTEST = 101
 BLOCK_FIRST_REGTEST_HASH = "0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"
 BURN_START_REGTEST = 101
 BURN_END_REGTEST = 150000000
@@ -162,6 +162,8 @@ API_LIMIT_ROWS = 1000
 MPMA_LIMIT = 1000
 
 PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
+# PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
+
 BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
 BOOTSTRAP_URL_MAINNET_SIG = "https://bootstrap.counterparty.io/counterparty.latest.sig"
 BOOTSTRAP_URL_TESTNET = "https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz"

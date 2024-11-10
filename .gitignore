@@ -43,3 +43,6 @@ dist/
 .env.leave
 .venv/
 test-results/
+
+# cursor
+._*

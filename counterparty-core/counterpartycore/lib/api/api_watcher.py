@@ -1,9 +1,9 @@
 import json
 import logging
 import os
+import threading
 import time
 from random import randrange
-from threading import Thread
 
 import apsw
 from counterpartycore.lib import blocks, config, database, exceptions, ledger
@@ -29,6 +29,7 @@ UPDATE_EVENTS_ID_FIELDS = {
     "RPS_MATCH_UPDATE": ["id"],
     "RPS_UPDATE": ["tx_hash"],
     "ADDRESS_OPTIONS_UPDATE": ["address"],
+    "FAIRMINTER_UPDATE": ["tx_hash"],
 }
 
 EXPIRATION_EVENTS_OBJECT_ID = {
@@ -81,6 +82,8 @@ EVENTS_ADDRESS_FIELDS = {
     "DISPENSE": ["source", "destination"],
     "BROADCAST": ["source"],
     "BURN": ["source"],
+    "NEW_FAIRMINT": ["source"],
+    "NEW_FAIRMINTER": ["source"],
 }
 
 SKIP_EVENTS = ["NEW_TRANSACTION_OUTPUT"]
@@ -134,7 +137,11 @@ def get_event_to_parse_count(api_db, ledger_db):
 
 def get_event_bindings(event):
     event_bindings = json.loads(event["bindings"])
-    if "order_match_id" in event_bindings:
+    if (
+        "order_match_id" in event_bindings
+        and "id" in event_bindings
+        and event_bindings["order_match_id"] == event_bindings["id"]
+    ):
         del event_bindings["order_match_id"]
     return event_bindings
 
@@ -223,7 +230,7 @@ def insert_event(api_db, event):
 
 
 def rollback_event(api_db, event):
-    logger.debug(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
+    logger.trace(f"API Watcher - Rolling back event: {event['message_index']} ({event['event']})")
     with api_db:  # all or
         if event["event"] in SKIP_EVENTS:
             sql = "DELETE FROM messages WHERE message_index = ?"
@@ -262,6 +269,7 @@ def rollback_event(api_db, event):
         rollback_assets_info(api_db, event)
         rollback_xcp_supply(api_db, event)
         rollback_address_events(api_db, event)
+        rollback_fairminters(api_db, event)
 
         sql = "DELETE FROM messages WHERE message_index = ?"
         delete_all(api_db, sql, (event["message_index"],))
@@ -293,23 +301,34 @@ def update_balances(api_db, event):
     if event["event"] == "DEBIT":
         quantity = -quantity
 
-    sql = "SELECT * FROM balances WHERE address = :address AND asset = :asset"
+    field_name = "address"
+    address_or_utxo = event_bindings["address"]
+    if "utxo" in event_bindings and event_bindings["utxo"]:
+        field_name = "utxo"
+        address_or_utxo = event_bindings["utxo"]
+    event_bindings["address_or_utxo"] = address_or_utxo
+
+    sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608
     existing_balance = fetch_one(api_db, sql, event_bindings)
 
     if existing_balance is not None:
-        sql = """
+        sql = f"""
             UPDATE balances
             SET quantity = quantity + :quantity
-            WHERE address = :address AND asset = :asset
-            """
+            WHERE {field_name} = :address_or_utxo AND asset = :asset
+            """  # noqa: S608
     else:
-        sql = """
-            INSERT INTO balances (address, asset, quantity)
-            VALUES (:address, :asset, :quantity)
-            """
+        sql = f"""
+            INSERT INTO balances ({field_name}, asset, quantity, utxo_address)
+            VALUES (:address_or_utxo, :asset, :quantity, :utxo_address)
+            """  # noqa: S608
+    utxo_address = None
+    if "utxo_address" in event_bindings:
+        utxo_address = event_bindings["utxo_address"]
     insert_bindings = {
-        "address": event_bindings["address"],
+        "address_or_utxo": address_or_utxo,
         "asset": event_bindings["asset"],
+        "utxo_address": utxo_address,
         "quantity": quantity,
     }
     cursor.execute(sql, insert_bindings)
@@ -385,6 +404,12 @@ def update_assets_info(api_db, event):
             "SELECT * FROM assets_info WHERE asset = :asset",
             {"asset": event_bindings["asset"]},
         )
+        if existing_asset is None and "asset_longname" in event_bindings:
+            existing_asset = fetch_one(
+                api_db,
+                "SELECT * FROM assets_info WHERE asset_longname = :asset_longname",
+                {"asset_longname": event_bindings["asset_longname"]},
+            )
         if existing_asset is not None and not event_bindings["confirmed"]:
             return
         set_data = []
@@ -517,9 +542,18 @@ def rollback_assets_info(api_db, event):
 
 
 def execute_event(api_db, event):
+    cursor = api_db.cursor()
     sql, sql_bindings = event_to_sql(event)
     if sql is not None:
-        cursor = api_db.cursor()
+        # check if the transaction is already here from the mempool
+        if event["event"] == "NEW_TRANSACTION":
+            check_tx_sql = "SELECT * FROM transactions WHERE tx_hash = :tx_hash"
+            if fetch_one(
+                api_db,
+                check_tx_sql,
+                {"tx_hash": event["tx_hash"], "block_index": config.MEMPOOL_BLOCK_INDEX},
+            ):
+                clean_mempool(api_db)
         cursor.execute(sql, sql_bindings)
         if event["command"] == "insert":
             cursor.execute("SELECT last_insert_rowid() AS rowid")
@@ -584,14 +618,48 @@ def rollback_address_events(api_db, event):
     cursor.execute(sql, event)
 
 
-def parse_event(api_db, event, catching_up=False):
+def update_fairminters(api_db, event):
+    if event["event"] != "NEW_FAIRMINT":
+        return
+    event_bindings = json.loads(event["bindings"])
+    if event_bindings["status"] != "valid":
+        return
+    cursor = api_db.cursor()
+    sql = """
+        UPDATE fairminters SET
+            earned_quantity = COALESCE(earned_quantity, 0) + :earn_quantity,
+            commission = COALESCE(commission, 0) + :commission,
+            paid_quantity = COALESCE(paid_quantity, 0) + :paid_quantity
+        WHERE tx_hash = :fairminter_tx_hash
+    """
+    cursor.execute(sql, event_bindings)
+
+
+def rollback_fairminters(api_db, event):
+    if event["event"] != "NEW_FAIRMINT":
+        return
+    event_bindings = json.loads(event["bindings"])
+    if event_bindings["status"] != "valid":
+        return
+    cursor = api_db.cursor()
+    sql = """
+        UPDATE fairminters SET
+            earned_quantity = earned_quantity - :earn_quantity,
+            commission = commission - :commission,
+            paid_quantity = paid_quantity - :paid_quantity
+        WHERE tx_hash = :fairminter_tx_hash
+    """
+    cursor.execute(sql, event_bindings)
+
+
+def parse_event(api_db, event, watcher, catching_up=False):
     if event["event"] in SKIP_EVENTS:
         event["insert_rowid"] = None
         insert_event(api_db, event)
         return
     with api_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
-        if event["event"] == "NEW_BLOCK" and not catching_up:
+        if event["event"] == "NEW_BLOCK":
             clean_mempool(api_db)
         event["insert_rowid"] = execute_event(api_db, event)
         update_balances(api_db, event)
@@ -599,10 +667,11 @@ def parse_event(api_db, event, catching_up=False):
         update_assets_info(api_db, event)
         update_xcp_supply(api_db, event)
         update_address_events(api_db, event)
+        update_fairminters(api_db, event)
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
-        if event["event"] == "BLOCK_PARSED" and not catching_up:
-            synchronize_mempool(api_db, api_db)
+        if event["event"] == "BLOCK_PARSED":
+            synchronize_mempool(api_db, api_db, watcher.stop_event)
 
 
 def catch_up(api_db, ledger_db, watcher):
@@ -614,8 +683,8 @@ def catch_up(api_db, ledger_db, watcher):
         start_time = time.time()
         event_parsed = 0
         next_event = get_next_event_to_parse(api_db, ledger_db)
-        while next_event and not watcher.stopping and not watcher.stopped:
-            parse_event(api_db, next_event, catching_up=True)
+        while next_event and not watcher.stop_event.is_set():
+            parse_event(api_db, next_event, watcher, catching_up=True)
             event_parsed += 1
             if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
@@ -623,12 +692,12 @@ def catch_up(api_db, ledger_db, watcher):
                     f"API Watcher - {event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
                 )
             next_event = get_next_event_to_parse(api_db, ledger_db)
-        if not watcher.stopping and not watcher.stopped:
+        if not watcher.stop_event.is_set():
             duration = time.time() - start_time
             logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
     else:
         logger.info("API Watcher - Catch up completed.")
-    synchronize_mempool(api_db, api_db)
+    synchronize_mempool(api_db, api_db, watcher.stop_event)
 
 
 def apply_migration():
@@ -641,33 +710,43 @@ def apply_migration():
             # Apply any outstanding migrations
             backend.apply_migrations(backend.to_apply(migrations))
     except LockTimeout:
-        logger.error("API Watcher - Migration lock timeout. Breaking lock and retrying...")
+        logger.debug("API Watcher - Migration lock timeout. Breaking lock and retrying...")
         backend.break_lock()
         backend.apply_migrations(backend.to_apply(migrations))
     backend.connection.close()
 
 
+def get_last_event(db):
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM messages ORDER BY message_index DESC LIMIT 1")
+    return cursor.fetchone()
+
+
+def get_event(db, message_index):
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM messages WHERE message_index = ?", (message_index,))
+    return cursor.fetchone()
+
+
 # checks that there is no divergence between the event in the API and ledger databases
 def check_event_hashes(api_db, ledger_db):
     logger.trace("API Watcher - Checking event hashes...")
-    last_api_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
-    ledger_event_sql = "SELECT * FROM messages WHERE message_index = ?"
-    last_api_event = fetch_one(api_db, last_api_event_sql)
+    last_api_event = get_last_event(api_db)
     if last_api_event is None:
         return
-    ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
+    ledger_event = get_event(ledger_db, last_api_event["message_index"])
+    while ledger_event is None:
+        rollback_event(api_db, last_api_event)
+        last_api_event = get_last_event(api_db)
+        ledger_event = get_event(ledger_db, last_api_event["message_index"])
     while (
         last_api_event
         and ledger_event
         and last_api_event["event_hash"] != ledger_event["event_hash"]
     ):
-        logger.debug(
-            f"API Watcher - Event hash mismatch: {last_api_event['event_hash']} != {ledger_event['event_hash']}"
-        )
-        logger.debug(f"API Watcher - Rolling back event: {last_api_event['message_index']}")
         rollback_event(api_db, last_api_event)
-        last_api_event = fetch_one(api_db, last_api_event_sql)
-        ledger_event = fetch_one(ledger_db, ledger_event_sql, (last_api_event["message_index"],))
+        last_api_event = get_last_event(api_db)
+        ledger_event = get_event(ledger_db, last_api_event["message_index"])
 
 
 def rollback(block_index):
@@ -676,7 +755,7 @@ def rollback(block_index):
     api_db.close()
 
 
-def parse_next_event(api_db, ledger_db):
+def parse_next_event(api_db, ledger_db, watcher):
     check_event_hashes(api_db, ledger_db)
 
     last_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
@@ -689,16 +768,16 @@ def parse_next_event(api_db, ledger_db):
     if last_api_event is None:
         next_event_sql = "SELECT * FROM messages ORDER BY message_index ASC LIMIT 1"
         next_event = fetch_one(ledger_db, next_event_sql)
-        parse_event(api_db, next_event)
-        return
+        parse_event(api_db, next_event, watcher)
+        return next_event
 
     if last_ledger_event["message_index"] > last_api_event["message_index"]:
         next_event_sql = (
             "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
         )
         next_event = fetch_one(ledger_db, next_event_sql, (last_api_event["message_index"],))
-        parse_event(api_db, next_event)
-        return
+        parse_event(api_db, next_event, watcher)
+        return next_event
 
     raise exceptions.NoEventToParse("No event to parse")
 
@@ -724,7 +803,9 @@ def gen_random_tx_index(event):
     return event
 
 
-def synchronize_mempool(api_db, ledger_db):
+def synchronize_mempool(api_db, ledger_db, stop_event):
+    if config.NO_MEMPOOL or stop_event.is_set():
+        return
     logger.trace("API Watcher - Synchronizing mempool...")
     global MEMPOOL_SKIP_EVENT_HASHES  # noqa: PLW0602
     try:
@@ -734,12 +815,15 @@ def synchronize_mempool(api_db, ledger_db):
             clean_mempool(api_db)
             cursor = api_db.cursor()
             for event in mempool_events:
+                if stop_event.is_set():
+                    logger.info("API Watcher - Stopping mempool synchronization due to stop event.")
+                    break
                 if event["event"] in SKIP_EVENTS + ["NEW_BLOCK", "BLOCK_PARSED"]:
                     continue
                 if event["tx_hash"] in MEMPOOL_SKIP_EVENT_HASHES:
                     continue
                 event_bindings = json.loads(event["bindings"])
-                # edge case: asset alredy created in another confirmed tx
+                # edge case: asset already created in another confirmed tx
                 if event["event"] == "ASSET_CREATION":
                     existing_asset = fetch_one(
                         api_db,
@@ -790,15 +874,20 @@ def synchronize_mempool(api_db, ledger_db):
         pass
 
 
-class APIWatcher(Thread):
+def refresh_xcp_supply(ledger_db, api_db):
+    xcp_supply = ledger.xcp_supply(ledger_db)
+    cursor = api_db.cursor()
+    cursor.execute("UPDATE assets_info SET supply = ? WHERE asset = 'XCP'", (xcp_supply,))
+
+
+class APIWatcher(threading.Thread):
     def __init__(self):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
         logger.debug("Initializing API Watcher...")
         self.api_db = None
         self.ledger_db = None
         apply_migration()
-        self.stopping = False
-        self.stopped = True
+        self.stop_event = threading.Event()  # Add stop event
         self.api_db = database.get_db_connection(
             config.API_DATABASE, read_only=False, check_wal=False
         )
@@ -842,31 +931,35 @@ class APIWatcher(Thread):
         cursor.close()
         self.last_mempool_sync = 0
 
+    def run(self):
+        logger.info("Starting API Watcher thread...")
+        catch_up(self.api_db, self.ledger_db, self)
+        if not self.stop_event.is_set():
+            self.follow()
+
     def follow(self):
-        while not self.stopping and not self.stopped:
+        refresh_xcp_supply(self.ledger_db, self.api_db)
+        while not self.stop_event.is_set():
+            last_parsed_event = None
             try:
-                parse_next_event(self.api_db, self.ledger_db)
+                last_parsed_event = parse_next_event(self.api_db, self.ledger_db, self)
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
-                time.sleep(1)
-            if time.time() - self.last_mempool_sync > 10:
-                synchronize_mempool(self.api_db, self.ledger_db)
+                self.stop_event.wait(timeout=0.1)
+            if self.stop_event.is_set():
+                break
+            if time.time() - self.last_mempool_sync > 10 and (
+                last_parsed_event is None or last_parsed_event["event"] == "BLOCK_PARSED"
+            ):
+                synchronize_mempool(self.api_db, self.ledger_db, self.stop_event)
                 self.last_mempool_sync = time.time()
-        self.stopped = True
-
-    def run(self):
-        logger.info("Starting API Watcher...")
-        self.stopped = False
-        catch_up(self.api_db, self.ledger_db, self)
-        self.follow()
 
     def stop(self):
-        logger.info("Stopping API Watcher...")
-        self.stopping = True
-        while not self.stopped:
-            time.sleep(0.1)
+        logger.info("Stopping API Watcher thread...")
+        self.stop_event.set()
+        self.join()
         if self.api_db is not None:
             self.api_db.close()
         if self.ledger_db is not None:
             self.ledger_db.close()
-        logger.trace("API Watcher stopped")
+        logger.info("API Watcher thread stopped.")

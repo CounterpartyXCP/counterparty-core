@@ -26,6 +26,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 CURRENT_BLOCK_INDEX = None
 CURRENT_TX_HASH = None
 PARSING_MEMPOOL = False
+BLOCK_PARSER_STATUS = "starting"
 
 D = decimal.Decimal
 B26_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -178,7 +179,7 @@ def date_passed(date):
 # checks and validates subassets (PARENT.SUBASSET)
 #   throws exceptions for assset or subasset names with invalid syntax
 #   returns (None, None) if the asset is not a subasset name
-def parse_subasset_from_asset_name(asset):
+def parse_subasset_from_asset_name(asset, allow_subassets_on_numerics=False):
     subasset_parent = None
     subasset_child = None
     subasset_longname = None
@@ -189,7 +190,7 @@ def parse_subasset_from_asset_name(asset):
         subasset_longname = asset
 
         # validate parent asset
-        validate_subasset_parent_name(subasset_parent)
+        validate_subasset_parent_name(subasset_parent, allow_subassets_on_numerics)
 
         # validate child asset
         validate_subasset_longname(subasset_longname, subasset_child)
@@ -225,8 +226,21 @@ def validate_subasset_longname(subasset_longname, subasset_child=None):
     return True
 
 
-# throws exceptions for invalid subasset names
-def validate_subasset_parent_name(asset_name):
+def is_numeric(s):
+    pattern = r"^A(\d{17,20})$"
+    match = re.match(pattern, s)
+    if match:
+        numeric_part = match.group(1)
+        numeric_value = int(numeric_part)
+        lower_bound = 26**12 + 1
+        upper_bound = 256**8
+
+        return lower_bound <= numeric_value <= upper_bound
+
+    return False
+
+
+def legacy_validate_subasset_parent_name(asset_name):
     if asset_name == config.BTC:
         raise exceptions.AssetNameError(f"parent asset cannot be {config.BTC}")
     if asset_name == config.XCP:
@@ -236,10 +250,32 @@ def validate_subasset_parent_name(asset_name):
     if len(asset_name) >= 13:
         raise exceptions.AssetNameError("parent asset name too long")
     if asset_name[0] == "A":
-        raise exceptions.AssetNameError("parent asset name starts with ‘A’")
+        raise exceptions.AssetNameError("parent asset name starts with 'A'")
     for c in asset_name:
         if c not in B26_DIGITS:
             raise exceptions.AssetNameError("parent asset name contains invalid character:", c)
+    return True
+
+
+# throws exceptions for invalid subasset names
+def validate_subasset_parent_name(asset_name, allow_subassets_on_numerics):
+    if not allow_subassets_on_numerics:
+        return legacy_validate_subasset_parent_name(asset_name)
+
+    if asset_name == config.BTC:
+        raise exceptions.AssetNameError(f"parent asset cannot be {config.BTC}")
+    if asset_name == config.XCP:
+        raise exceptions.AssetNameError(f"parent asset cannot be {config.XCP}")
+    if len(asset_name) < 4:
+        raise exceptions.AssetNameError("parent asset name too short")
+    if len(asset_name) > 21:
+        raise exceptions.AssetNameError("parent asset name too long")
+
+    if not is_numeric(asset_name):
+        for c in asset_name:
+            if c not in B26_DIGITS:
+                raise exceptions.AssetNameError("parent asset name contains invalid character:", c)
+
     return True
 
 
@@ -265,9 +301,40 @@ def expand_subasset_longname(raw_bytes):
     return ret
 
 
-def generate_random_asset():
+def generate_random_asset(subasset_longname=None):
+    # deterministic random asset name for regtest
+    if config.REGTEST and subasset_longname:
+        return "A" + str(
+            int(hashlib.shake_256(bytes(subasset_longname, "utf8")).hexdigest(4), 16) + 26**12 + 1
+        )
     # Standard pseudo-random generators are suitable for our purpose.
     return "A" + str(random.randint(26**12 + 1, 2**64 - 1))  # nosec B311  # noqa: S311
+
+
+def gen_random_asset_name(seed, add=0):
+    return "A" + str(
+        int(hashlib.shake_256(bytes(seed, "utf8")).hexdigest(4), 16) + 26**12 + 1 + add
+    )
+
+
+def asset_exists(db, name):
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT * FROM issuances WHERE asset = ?",
+        (name,),
+    )
+    if cursor.fetchall():
+        return True
+    return False
+
+
+def deterministic_random_asset_name(db, seed):
+    asset_name = gen_random_asset_name(seed)
+    add = 0
+    while asset_exists(db, asset_name):
+        asset_name = gen_random_asset_name(seed, add=add)
+        add += 1
+    return asset_name
 
 
 def parse_options_from_string(string):
@@ -501,6 +568,14 @@ with open(CURR_DIR + "/../protocol_changes.json") as f:
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
     if config.REGTEST:
+        regtest_protocole_file = os.path.join(
+            os.path.dirname(config.DATABASE), "regtest_disabled_changes.json"
+        )
+        if os.path.exists(regtest_protocole_file):
+            with open(regtest_protocole_file) as f:
+                regtest_disabled_changes = json.load(f)
+            if change_name in regtest_disabled_changes:
+                return False
         return True  # All changes are always enabled on REGTEST
 
     if config.TESTNET:
@@ -517,6 +592,18 @@ def enabled(change_name, block_index=None):
         return True
     else:
         return False
+
+
+def get_change_block_index(change_name):
+    if config.REGTEST:
+        return 0
+
+    if config.TESTNET:
+        index_name = "testnet_block_index"
+    else:
+        index_name = "block_index"
+
+    return PROTOCOL_CHANGES[change_name][index_name]
 
 
 def get_value_by_block_index(change_name, block_index=None):
@@ -584,3 +671,59 @@ def inverse_hash(hashstring):
 
 def ib2h(b):
     return inverse_hash(b2h(b))
+
+
+def is_utxo_format(value):
+    if not isinstance(value, str):
+        return False
+    values = value.split(":")
+    if len(values) != 2:
+        return False
+    if not values[1].isnumeric():
+        return False
+    if str(int(values[1])) != values[1]:
+        return False
+    try:
+        int(values[0], 16)
+    except ValueError:
+        return False
+    if len(values[0]) != 64:
+        return False
+    return True
+
+
+def parse_utxos_info(utxos_info):
+    info = utxos_info.split(" ")
+
+    # new format
+    if len(info) == 4 and not is_utxo_format(info[-1]):
+        sources = [source for source in info[0].split(",") if source]
+        destination = info[1] or None
+        outputs_count = int(info[2])
+        op_return_output = int(info[3]) if info[3] else None
+        return sources, destination, outputs_count, op_return_output
+
+    # old format
+    destination = info[-1]
+    sources = info[:-1]
+    return sources, destination, None, None
+
+
+def get_destination_from_utxos_info(utxos_info):
+    _sources, destination, _outputs_count, _op_return_output = parse_utxos_info(utxos_info)
+    return destination
+
+
+def get_sources_from_utxos_info(utxos_info):
+    sources, _destination, _outputs_count, _op_return_output = parse_utxos_info(utxos_info)
+    return sources
+
+
+def get_outputs_count_from_utxos_info(utxos_info):
+    _sources, _destination, outputs_count, _op_return_output = parse_utxos_info(utxos_info)
+    return outputs_count
+
+
+def get_op_return_output_from_utxos_info(utxos_info):
+    _sources, _destination, _outputs_count, op_return_output = parse_utxos_info(utxos_info)
+    return op_return_output

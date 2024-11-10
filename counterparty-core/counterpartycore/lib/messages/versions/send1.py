@@ -6,6 +6,7 @@ import logging
 import struct
 
 from ... import config, exceptions, ledger, message_type, util
+from .. import dispense
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -67,12 +68,25 @@ def validate(db, source, destination, asset, quantity, block_index):
     return problems
 
 
-def compose(db, source: str, destination: str, asset: str, quantity: int):
+def compose_send_btc(db, source: str, destination: str, quantity: int):
+    if not util.enabled("enable_dispense_tx"):
+        return (source, [(destination, quantity)], None)
+    # try to compose a dispense instead
+    try:
+        return dispense.compose(db, source, destination, quantity)
+    except (exceptions.NoDispenserError, exceptions.ComposeError):
+        # simple BTC send
+        return (source, [(destination, quantity)], None)
+
+
+def compose(
+    db, source: str, destination: str, asset: str, quantity: int, skip_validation: bool = False
+):
     cursor = db.cursor()
 
     # Just send BTC?
     if asset == config.BTC:
-        return (source, [(destination, quantity)], None)
+        return compose_send_btc(db, source, destination, quantity)
 
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)
@@ -83,13 +97,13 @@ def compose(db, source: str, destination: str, asset: str, quantity: int):
 
     # Only for outgoing (incoming will overburn).
     balance = ledger.get_balance(db, source, asset)
-    if balance < quantity:
+    if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
     block_index = util.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, block_index)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     asset_id = ledger.get_asset_id(db, asset, block_index)
@@ -166,6 +180,3 @@ def parse(db, tx, message):
     )
 
     cursor.close()
-
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

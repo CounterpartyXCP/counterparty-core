@@ -4,24 +4,24 @@ from contextlib import contextmanager
 
 import apsw
 import apsw.bestpractice
+import apsw.ext
 import psutil
 from termcolor import cprint
 
 from counterpartycore.lib import config, exceptions, ledger, util
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
+
 logger = logging.getLogger(config.LOGGER_NAME)
+apsw.ext.log_sqlite(logger=logger)
 
 
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
-    dictionary = {}
-    for index, (name, field_type) in enumerate(cursor.getdescription()):  # noqa: B007
-        if str(field_type) == "BOOL":
-            dictionary[name] = bool(sql[index])
-        else:
-            dictionary[name] = sql[index]
-    return dictionary
+    return {
+        name: (bool(value) if str(field_type) == "BOOL" else value)
+        for (name, field_type), value in zip(cursor.getdescription(), sql)
+    }
 
 
 def get_file_openers(filename):
@@ -53,7 +53,15 @@ def check_wal_file(db_file):
 
 def get_db_connection(db_file, read_only=True, check_wal=False):
     """Connects to the SQLite database, returning a db `Connection` object"""
-    logger.debug(f"Creating connection to `{db_file}`...")
+
+    if hasattr(config, "DATABASE") and db_file == config.DATABASE:
+        db_file_name = "Ledger DB"
+    elif hasattr(config, "API_DATABASE") and db_file == config.API_DATABASE:
+        db_file_name = "API DB"
+    else:
+        db_file_name = db_file
+    if hasattr(logger, "trace"):
+        logger.trace(f"Creating connection to {db_file_name}...")
 
     if not read_only and check_wal:
         try:
@@ -116,7 +124,13 @@ class APSWConnectionPool:
             else:
                 # Too much connections in the pool: closing connection
                 logger.warning("Closing connection due to pool size limit (%s).", self.name)
-                db.close()
+                try:
+                    db.close()
+                except apsw.ThreadingViolationError:
+                    # This should never happen, and yet it has happened..
+                    # let's ignore this harmless error so as not to return a 500 error to the user.
+                    logger.trace("ThreadingViolationError occurred while closing connection.")
+                    pass
 
     def close(self):
         logger.trace(
@@ -200,15 +214,44 @@ def version(db):
     return version_major, version_minor
 
 
+def init_config_table(db):
+    sql = """
+        CREATE TABLE IF NOT EXISTS config (
+            name TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """
+    cursor = db.cursor()
+    cursor.execute(sql)
+    cursor.execute("CREATE INDEX IF NOT EXISTS config_config_name_idx ON config (name)")
+
+
+def set_config_value(db, name, value):
+    init_config_table(db)
+    cursor = db.cursor()
+    cursor.execute("INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)", (name, value))
+
+
+def get_config_value(db, name):
+    init_config_table(db)
+    cursor = db.cursor()
+    cursor.execute("SELECT value FROM config WHERE name = ?", (name,))
+    rows = cursor.fetchall()
+    if rows:
+        return rows[0]["value"]
+    return None
+
+
 def update_version(db):
     cursor = db.cursor()
     user_version = (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR
     cursor.execute(f"PRAGMA user_version = {user_version}")  # Syntax?!
+    set_config_value(db, "VERSION_STRING", config.VERSION_STRING)
     logger.info("Database version number updated.")
 
 
 def vacuum(db):
-    logger.info("Starting database VACUUM. This may take awhile...")
+    logger.info("Starting database VACUUM... this may take a while!")
     cursor = db.cursor()
     cursor.execute("VACUUM")
     logger.info("Database VACUUM completed.")
@@ -281,3 +324,19 @@ def table_exists(cursor, table):
         f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"  # nosec B608  # noqa: S608
     ).fetchone()
     return table_name is not None
+
+
+def lock_update(db, table):
+    cursor = db.cursor()
+    cursor.execute(
+        f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
+            BEFORE UPDATE ON {table} BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;
+        """
+    )
+
+
+def unlock_update(db, table):
+    cursor = db.cursor()
+    cursor.execute(f"DROP TRIGGER IF EXISTS block_update_{table}")

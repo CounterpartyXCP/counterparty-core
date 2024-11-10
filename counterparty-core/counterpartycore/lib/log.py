@@ -1,6 +1,7 @@
 import decimal
 import logging
 import sys
+import threading
 import time
 import traceback
 from datetime import datetime
@@ -122,7 +123,22 @@ class CustomisedJSONFormatter(JSONFormatter):
         return super(CustomisedJSONFormatter, self).json_record(message, extra, record)
 
 
-def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
+class SQLiteFilter(logging.Filter):
+    def filter(self, record):
+        if "SQLITE" in record.getMessage():
+            record.levelno = logging.DEBUG
+            record.levelname = "DEBUG"
+        return True
+
+
+def set_up(
+    verbose=0,
+    quiet=True,
+    log_file=None,
+    json_logs=False,
+    max_log_file_size=40 * 1024 * 1024,
+    max_log_file_rotations=20,
+):
     logging.Logger.trace = trace
     logging.Logger.event = event
 
@@ -133,6 +149,10 @@ def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
         logger.propagate = False
 
     logger = logging.getLogger(config.LOGGER_NAME)
+
+    # Add the SQLite filter to the logger
+    sqlite_filter = SQLiteFilter()
+    logger.addFilter(sqlite_filter)
 
     log_level = logging.ERROR
     if quiet:
@@ -148,12 +168,25 @@ def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
 
     logger.setLevel(log_level)
 
+    # Create a lock for file handlers
+    log_lock = threading.Lock()
+
     # File Logging
     if log_file:
-        max_log_size = 20 * 1024 * 1024  # 20 MB
-        fileh = RotatingFileHandler(log_file, maxBytes=max_log_size, backupCount=5)
+        fileh = RotatingFileHandler(
+            log_file, maxBytes=max_log_file_size, backupCount=max_log_file_rotations
+        )
         fileh.setLevel(logging.TRACE)
         fileh.setFormatter(CustomisedJSONFormatter())
+
+        # Wrap the emit method to use the lock
+        original_emit = fileh.emit
+
+        def locked_emit(record):
+            with log_lock:
+                original_emit(record)
+
+        fileh.emit = locked_emit
         logger.addHandler(fileh)
 
     if config.LOG_IN_CONSOLE:
@@ -172,6 +205,19 @@ def set_up(verbose=0, quiet=True, log_file=None, json_logs=False):
         traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stderr)
 
     sys.excepthook = handle_exception
+
+    return logger
+
+
+def re_set_up(suffix="", api=False):
+    return set_up(
+        verbose=config.VERBOSE,
+        quiet=config.QUIET,
+        log_file=(config.LOG if not api else config.API_LOG) + suffix,
+        json_logs=config.JSON_LOGS,
+        max_log_file_size=config.MAX_LOG_FILE_SIZE,
+        max_log_file_rotations=config.MAX_LOG_FILE_ROTATIONS,
+    )
 
 
 def isodt(epoch_time):

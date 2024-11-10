@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use pyo3::{exceptions::PyValueError, types::PyDict, FromPyObject, PyAny, PyErr, PyResult};
 use tracing::Level;
 
@@ -10,7 +12,7 @@ pub enum Mode {
 impl<'source> FromPyObject<'source> for Mode {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
         let mode_str: String = obj.extract()?;
-        match mode_str.as_str() {
+        match mode_str.trim().to_lowercase().as_str() {
             "indexer" => Ok(Mode::Indexer),
             "fetcher" => Ok(Mode::Fetcher),
             _ => Err(PyErr::new::<PyValueError, _>(
@@ -32,7 +34,7 @@ impl From<LogLevel> for Level {
 impl<'source> FromPyObject<'source> for LogLevel {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
         let level_str: String = obj.extract()?;
-        match level_str.as_str() {
+        match level_str.trim().to_lowercase().as_str() {
             "trace" => Ok(LogLevel(Level::TRACE)),
             "debug" => Ok(LogLevel(Level::DEBUG)),
             "info" => Ok(LogLevel(Level::INFO)),
@@ -49,14 +51,16 @@ impl<'source> FromPyObject<'source> for LogLevel {
 pub enum Network {
     Mainnet,
     Testnet,
+    Regtest,
 }
 
 impl<'source> FromPyObject<'source> for Network {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
         let network_str: String = obj.extract()?;
-        match network_str.as_str() {
+        match network_str.trim().to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
             "testnet" => Ok(Network::Testnet),
+            "regtest" => Ok(Network::Regtest),
             _ => Err(PyErr::new::<PyValueError, _>(
                 "'network' must be either 'mainnet' or 'testnet'",
             )),
@@ -64,12 +68,14 @@ impl<'source> FromPyObject<'source> for Network {
     }
 }
 
-impl ToString for Network {
-    fn to_string(&self) -> String {
-        match self {
-            Network::Mainnet => "mainnet".to_string(),
-            Network::Testnet => "testnet".to_string(),
-        }
+impl Display for Network {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Network::Mainnet => "mainnet",
+            Network::Testnet => "testnet",
+            Network::Regtest => "regtest",
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -99,6 +105,13 @@ impl Heights {
                 correct_segwit_txids: 1666625,
                 multisig_addresses: 0,
             },
+            Network::Regtest => Heights {
+                segwit: 0,
+                p2sh_addresses: 0,
+                p2sh_dispensers: 0,
+                correct_segwit_txids: 0,
+                multisig_addresses: 0,
+            },
         }
     }
 }
@@ -119,6 +132,8 @@ pub struct Config {
     pub p2sh_address_version: Vec<u8>,
     pub network: Network,
     pub heights: Heights,
+    pub json_format: bool,
+    pub only_write_in_reorg_window: bool,
 }
 
 impl Config {
@@ -146,6 +161,7 @@ impl Config {
         match self.network {
             Network::Mainnet => "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
             Network::Testnet => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+            Network::Regtest => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
         }
         .into()
     }
@@ -195,6 +211,16 @@ impl<'source> FromPyObject<'source> for Config {
             _ => LogLevel(Level::INFO),
         };
 
+        let json_format = match dict.get_item("json_format") {
+            Ok(Some(item)) => item.extract()?,
+            _ => false,
+        };
+
+        let only_write_in_reorg_window = match dict.get_item("only_write_in_reorg_window") {
+            Ok(Some(item)) => item.extract()?,
+            _ => false,
+        };
+
         let prefix = match dict.get_item("prefix") {
             Ok(Some(item)) => item.extract::<Vec<u8>>()?,
             _ => b"CNTRPRTY".to_vec(),
@@ -212,6 +238,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => match network {
                 Network::Mainnet => vec![0x00],
                 Network::Testnet => vec![0x6F],
+                Network::Regtest => vec![0x6F],
             },
         };
 
@@ -220,6 +247,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => match network {
                 Network::Mainnet => vec![0x05],
                 Network::Testnet => vec![0xC4],
+                Network::Regtest => vec![0xC4],
             },
         };
 
@@ -238,6 +266,8 @@ impl<'source> FromPyObject<'source> for Config {
             p2sh_address_version,
             network,
             heights,
+            json_format,
+            only_write_in_reorg_window,
         })
     }
 }

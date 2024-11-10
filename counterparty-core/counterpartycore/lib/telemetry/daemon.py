@@ -33,6 +33,7 @@ class TelemetryDaemon:
         self.thread.start()
 
     def _run(self):
+        logger.info("Starting Telemetry Daemon thread...")
         last_run = time.time()
         while self.is_running:
             try:
@@ -48,7 +49,7 @@ class TelemetryDaemon:
                 time.sleep(0.5)
 
     def stop(self):
-        logger.info("Stopping telemetry daemon...")
+        logger.info("Stopping Telemetry Daemon thread...")
         self.is_running = False
         self.collector.close()
         self.thread.join()

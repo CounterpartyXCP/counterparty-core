@@ -2,50 +2,45 @@ import argparse
 import logging
 import multiprocessing
 import os
+import threading
 import time
 from collections import OrderedDict
 from multiprocessing import Process, Value
-from threading import Thread, Timer
 
 import flask
 import requests
 from bitcoin.wallet import CBitcoinAddressError
 from counterpartycore import server
 from counterpartycore.lib import (
-    backend,
     config,
     exceptions,
     ledger,
+    script,
     sentry,
-    transaction,
     util,
 )
-from counterpartycore.lib.api import api_watcher, queries
+from counterpartycore.lib.api import api_watcher, queries, wsgi
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
     clean_rowids_and_confirmed_fields,
     function_needs_db,
-    get_backend_height,
     init_api_access_log,
     inject_details,
     to_json,
 )
-from counterpartycore.lib.database import APIDBConnectionPool, get_db_connection
+from counterpartycore.lib.database import APIDBConnectionPool
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
-from werkzeug.serving import make_server
+from sentry_sdk import start_span as start_sentry_span
 
 multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
-BACKEND_HEIGHT = None
-CURRENT_BLOCK_TIME = None
-REFRESH_BACKEND_HEIGHT_INTERVAL = 10
-BACKEND_HEIGHT_TIMER = None
+
 BLOCK_CACHE = OrderedDict()
 MAX_BLOCK_CACHE_SIZE = 1000
 
@@ -71,30 +66,15 @@ def api_root():
     elif config.TESTCOIN:
         network = "testcoin"
     return {
-        "server_ready": counterparty_height >= BACKEND_HEIGHT,
+        "server_ready": counterparty_height >= wsgi.BACKEND_HEIGHT,
         "network": network,
         "version": config.VERSION_STRING,
-        "backend_height": BACKEND_HEIGHT,
+        "backend_height": wsgi.BACKEND_HEIGHT,
         "counterparty_height": counterparty_height,
         "documentation": "https://counterpartycore.docs.apiary.io/",
-        "blueprint": f"{request.url_root}v2/blueprint",
+        "routes": f"{request.url_root}v2/routes",
+        "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
     }
-
-
-def is_server_ready():
-    # TODO: find a way to mock this function for testing
-    try:
-        if request.url_root == "http://localhost:10009/":
-            return True
-    except RuntimeError:
-        pass
-    if BACKEND_HEIGHT is None:
-        return False
-    if util.CURRENT_BLOCK_INDEX in [BACKEND_HEIGHT, BACKEND_HEIGHT - 1]:
-        return True
-    if time.time() - CURRENT_BLOCK_TIME < 60:
-        return True
-    return False
 
 
 def is_cachable(rule):
@@ -135,6 +115,13 @@ def get_log_prefix(query_args=None):
     return message
 
 
+def set_cors_headers(response):
+    if not config.API_NO_ALLOW_CORS:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+
+
 def return_result(
     http_code,
     result=None,
@@ -155,13 +142,11 @@ def return_result(
         api_result["error"] = error
     response = flask.make_response(to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
-    response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
-    response.headers["X-BITCOIN-HEIGHT"] = BACKEND_HEIGHT
+    response.headers["X-COUNTERPARTY-READY"] = wsgi.is_server_ready()
+    response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
+    response.headers["X-BITCOIN-HEIGHT"] = wsgi.BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
-    if not config.API_NO_ALLOW_CORS:
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "*"
+    set_cors_headers(response)
 
     if http_code != 404:
         message = get_log_prefix(query_args)
@@ -189,11 +174,14 @@ def prepare_args(route, **kwargs):
         if arg_name in function_args:
             continue
 
-        str_arg = request.args.get(arg_name)
-        if str_arg is not None and str_arg.lower() == "none":
+        str_arg = query_params().get(arg_name)
+        if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() == "none":
             str_arg = None
         if str_arg is None and arg["required"]:
             raise ValueError(f"Missing required parameter: {arg_name}")
+
+        if arg["type"] != "list" and isinstance(str_arg, list):
+            str_arg = str_arg[0]  # we take the first argument
 
         if str_arg is None:
             function_args[arg_name] = arg["default"]
@@ -209,6 +197,11 @@ def prepare_args(route, **kwargs):
                 function_args[arg_name] = float(str_arg)
             except ValueError as e:
                 raise ValueError(f"Invalid float: {arg_name}") from e
+        elif arg["type"] == "list":
+            if not isinstance(str_arg, list):
+                function_args[arg_name] = [str_arg]
+            else:
+                function_args[arg_name] = str_arg
         else:
             function_args[arg_name] = str_arg
 
@@ -224,9 +217,16 @@ def execute_api_function(db, rule, route, function_args):
     ) and not request.path.startswith("/v2/blocks/last"):
         cache_key = request.url
 
-    if cache_key in BLOCK_CACHE:
-        result = BLOCK_CACHE[cache_key]
-    else:
+    with start_sentry_span(op="cache.get") as sentry_get_span:
+        sentry_get_span.set_data("cache.key", cache_key)
+        if cache_key in BLOCK_CACHE:
+            result = BLOCK_CACHE[cache_key]
+            sentry_get_span.set_data("cache.hit", True)
+            return result
+        else:
+            sentry_get_span.set_data("cache.hit", False)
+
+    with start_sentry_span(op="cache.put") as sentry_put_span:
         if function_needs_db(route["function"]):
             result = route["function"](db, **function_args)
         else:
@@ -237,11 +237,12 @@ def execute_api_function(db, rule, route, function_args):
             and route["function"].__name__ != "redirect_to_api_v1"
             and not request.path.startswith("/v2/mempool/")
         ):
+            sentry_put_span.set_data("cache.key", cache_key)
             BLOCK_CACHE[cache_key] = result
             if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
                 BLOCK_CACHE.popitem(last=False)
 
-    return result
+        return result
 
 
 def get_transaction_name(rule):
@@ -252,27 +253,23 @@ def get_transaction_name(rule):
     return "".join([part.capitalize() for part in ROUTES[rule]["function"].__name__.split("_")])
 
 
-def refresh_current_block(db):
-    # update the current block index
-    global CURRENT_BLOCK_TIME  # noqa F811
-    last_block = ledger.get_last_block(db)
-    if last_block:
-        util.CURRENT_BLOCK_INDEX = last_block["block_index"]
-        CURRENT_BLOCK_TIME = last_block["block_time"]
-    else:
-        util.CURRENT_BLOCK_INDEX = 0
-        CURRENT_BLOCK_TIME = 0
+def query_params():
+    params = request.args.to_dict(flat=False)
+    return {key: value[0] if len(value) == 1 else value for key, value in params.items()}
 
 
 @auth.login_required
 def handle_route(**kwargs):
+    if request.method == "OPTIONS":
+        return handle_options()
+
     start_time = time.time()
-    query_args = request.args.to_dict() | kwargs
+    query_args = query_params() | kwargs
 
     logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
     logger.debug(get_log_prefix(query_args))
 
-    if BACKEND_HEIGHT is None:
+    if not config.FORCE and wsgi.BACKEND_HEIGHT is None:
         return return_result(
             503,
             error="Backend still not ready. Please try again later.",
@@ -285,7 +282,7 @@ def handle_route(**kwargs):
     with configure_sentry_scope() as scope:
         scope.set_transaction_name(get_transaction_name(rule))
 
-    if not is_server_ready() and not return_result_if_not_ready(rule):
+    if not config.FORCE and not wsgi.is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(
             503, error="Counterparty not ready", start_time=start_time, query_args=query_args
         )
@@ -309,6 +306,7 @@ def handle_route(**kwargs):
             result = execute_api_function(db, rule, route, function_args)
     except (
         exceptions.JSONRPCInvalidRequest,
+        flask.wrappers.BadRequest,
         exceptions.TransactionError,
         exceptions.BalanceError,
         exceptions.UnknownPubKeyError,
@@ -317,19 +315,27 @@ def handle_route(**kwargs):
         exceptions.ComposeError,
         exceptions.UnpackError,
         CBitcoinAddressError,
+        script.AddressError,
     ) as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        # import traceback
-        # print(traceback.format_exc()) # for debugging
+        import traceback
+
+        print(traceback.format_exc())  # for debugging
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )
 
     if isinstance(result, requests.Response):
-        return result.content, result.status_code, result.headers.items()
+        message = f"API Request - {request.remote_addr} {request.method} {request.url}"
+        message += f" - Response {result.status_code}"
+        message += f" - {int((time.time() - start_time) * 1000)}ms"
+        logger.debug(message)
+        headers = dict(result.headers)
+        del headers["Connection"]  # remove "hop-by-hop" headers
+        return result.content, result.status_code, headers
 
     # clean up and return the result
     if result is None:
@@ -367,17 +373,14 @@ def handle_doc():
     return flask.send_file(BLUEPRINT_FILEPATH)
 
 
-def run_api_server(args, interruped_value, server_ready_value):
-    sentry.init()
-    # Initialise log and config
-    server.initialise_log_and_config(argparse.Namespace(**args))
+def handle_options():
+    response = flask.Response("", 204)
+    set_cors_headers(response)
+    return response
 
-    watcher = api_watcher.APIWatcher()
-    watcher.start()
 
-    logger.info("Starting API Server...")
+def init_flask_app():
     app = Flask(config.APP_NAME)
-    transaction.initialise()
     with app.app_context():
         # Initialise the API access log
         init_api_access_log(app)
@@ -391,105 +394,106 @@ def run_api_server(args, interruped_value, server_ready_value):
         )
 
         for path in ROUTES:
-            methods = ["GET"]
+            methods = ["OPTIONS", "GET"]
             if path == "/v2/bitcoin/transactions":
-                methods = ["POST"]
+                methods = ["OPTIONS", "POST"]
             if not path.startswith("/v2/"):
-                methods = ["GET", "POST"]
+                methods = ["OPTIONS", "GET", "POST"]
             app.add_url_rule(path, view_func=handle_route, methods=methods, strict_slashes=False)
 
         app.register_error_handler(404, handle_not_found)
-        # run the scheduler to refresh the backend height
-        # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
-        timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
-        if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
-            refresh_backend_height(timer_db, start=True)
-        else:
-            refresh_current_block(timer_db)
-            global BACKEND_HEIGHT  # noqa F811
-            BACKEND_HEIGHT = 0
+
+    return app
+
+
+def run_api_server(args, server_ready_value, stop_event):
+    logger.info("Starting API Server process...")
+
+    # Initialize Sentry, logging, config, etc.
+    sentry.init()
+    server.initialise_log_and_config(argparse.Namespace(**args), api=True)
+
+    watcher = api_watcher.APIWatcher()
+    watcher.start()
+
+    app = init_flask_app()
+
+    wsgi_server = None
+    parent_checker = None
+
     try:
-        # Init the HTTP Server.
-        werkzeug_server = make_server(config.API_HOST, config.API_PORT, app, threaded=True)
-        ParentProcessChecker(interruped_value, werkzeug_server).start()
+        logger.info("Starting Parent Process Checker thread...")
+        parent_checker = ParentProcessChecker(wsgi_server)
+        parent_checker.start()
+
+        wsgi_server = wsgi.WSGIApplication(app, args=args)
+
         app.app_context().push()
-        # Run app server (blocking)
         server_ready_value.value = 1
-        werkzeug_server.serve_forever()
-    except KeyboardInterrupt:
-        logger.trace("Keyboard Interrupt!")
+
+        wsgi_server.run()
+
+    except Exception as e:
+        logger.error("Exception in API Server process!")
+        raise e
+
     finally:
         logger.trace("Shutting down API Server...")
-        watcher.stop()
-        watcher.join()
-        werkzeug_server.shutdown()
-        # ensure timer is cancelled
-        if BACKEND_HEIGHT_TIMER:
-            BACKEND_HEIGHT_TIMER.cancel()
-        if timer_db:
-            timer_db.close()
+
+        if watcher is not None:
+            watcher.stop()
+            watcher.join()
+
+        if wsgi_server is not None:
+            logger.trace("Stopping WSGI Server thread...")
+            wsgi_server.stop()
+
+        if parent_checker is not None:
+            logger.trace("Stopping Parent Process Checker thread...")
+            parent_checker.stop()
+            parent_checker.join()
+
+        logger.trace("Closing API DB Connection Pool...")
         APIDBConnectionPool().close()
-
-
-def refresh_backend_height(db, start=False):
-    global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
-    if not start:
-        BACKEND_HEIGHT = get_backend_height()
-        refresh_current_block(db)
-        backend.addrindexrs.clear_raw_transactions_cache()
-        if not is_server_ready():
-            if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
-                logger.debug(
-                    f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT})"
-                )
-            else:
-                logger.debug(
-                    f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {BACKEND_HEIGHT})"
-                )
-    else:
-        # starting the timer is not blocking in case of Addrindexrs is not ready
-        BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height, (db,))
-        BACKEND_HEIGHT_TIMER.start()
-        return
-    if BACKEND_HEIGHT_TIMER:
-        BACKEND_HEIGHT_TIMER.cancel()
-    BACKEND_HEIGHT_TIMER = Timer(REFRESH_BACKEND_HEIGHT_INTERVAL, refresh_backend_height, (db,))
-    BACKEND_HEIGHT_TIMER.start()
 
 
 # This thread is used for the following two reasons:
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
-class ParentProcessChecker(Thread):
-    def __init__(self, interruped_value, werkzeug_server):
+class ParentProcessChecker(threading.Thread):
+    def __init__(self, wsgi_server):
         super().__init__()
-        self.interruped_value = interruped_value
-        self.werkzeug_server = werkzeug_server
+        self.daemon = True
+        self.wsgi_server = wsgi_server
+        self._stop_event = threading.Event()
 
     def run(self):
+        parent_pid = os.getppid()
         try:
-            while True:
-                if self.interruped_value.value == 0:
-                    time.sleep(0.01)
-                else:
-                    logger.trace("Parent process is dead. Exiting...")
+            while not self._stop_event.is_set():
+                if os.getppid() != parent_pid:
+                    logger.debug("Parent process is dead. Exiting...")
+                    self.wsgi_server.stop()
                     break
-            self.werkzeug_server.shutdown()
+                time.sleep(1)
         except KeyboardInterrupt:
             pass
+
+    def stop(self):
+        self._stop_event.set()
 
 
 class APIServer(object):
     def __init__(self):
         self.process = None
-        self.interrupted = Value("I", 0)
         self.server_ready_value = Value("I", 0)
+        self.stop_event = multiprocessing.Event()
 
     def start(self, args):
         if self.process is not None:
             raise Exception("API Server is already running")
         self.process = Process(
-            target=run_api_server, args=(vars(args), self.interrupted, self.server_ready_value)
+            target=run_api_server, args=(vars(args), self.server_ready_value, self.stop_event)
         )
         self.process.start()
         return self.process
@@ -498,14 +502,14 @@ class APIServer(object):
         return self.server_ready_value.value == 1
 
     def stop(self):
-        logger.info("Stopping API Server...")
-        self.interrupted.value = 1
-        waiting_start_time = time.time()
-        while self.process.is_alive():
-            time.sleep(0.5)
-            logger.trace("Waiting for API Server to stop...")
-            if time.time() - waiting_start_time > 2:
-                logger.error("API Server did not stop in time. Terminating...")
+        logger.info("Stopping API Server process...")
+        if self.process.is_alive():
+            self.process.terminate()
+            self.process.join(timeout=2)
+            if self.process.is_alive():
+                logger.error("API Server process did not stop in time. Terminating forcefully...")
                 self.process.kill()
-                break
-        logger.trace("API Server stopped.")
+        logger.info("API Server process stopped.")
+
+    def has_stopped(self):
+        return self.stop_event.is_set()

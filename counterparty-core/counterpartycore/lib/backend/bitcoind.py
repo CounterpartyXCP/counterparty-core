@@ -18,7 +18,7 @@ TRANSACTIONS_CACHE = OrderedDict()
 TRANSACTIONS_CACHE_MAX_SIZE = 10000
 
 
-def rpc_call(payload):
+def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
     response = None
@@ -50,12 +50,13 @@ def rpc_call(payload):
                 raise exceptions.BitcoindRPCError(
                     f"Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}"
                 )
+            if response.status_code == 503:
+                raise ConnectionError("Received 503 error from backend")
             if response.status_code not in (200, 500):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             break
         except KeyboardInterrupt:
-            logger.warning("Interrupted by user")
-            exit(0)
+            raise
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.warning(
                 f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Attempt: {tries})"
@@ -87,10 +88,15 @@ def rpc_call(payload):
     if response_json["error"]["code"] in [-28, -8, -2]:
         # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
         logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
+        logger.debug(f"Payload: {payload}")
+        if retry >= 10:
+            raise exceptions.BitcoindRPCError(
+                f"Backend not ready after {retry} retries. ({response_json['error']})"
+            )
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
         # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)
-        return rpc_call(payload)
+        return rpc_call(payload, retry=retry + 1)
     raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
 
@@ -128,6 +134,46 @@ def convert_to_psbt(rawtx):
 @functools.lru_cache(maxsize=10000)
 def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
+
+
+def createrawtransaction(inputs, outputs):
+    return rpc("createrawtransaction", [inputs, outputs])
+
+
+def getrawmempool(verbose=False):
+    return rpc("getrawmempool", [True if verbose else False])
+
+
+@functools.lru_cache(maxsize=1000)
+def get_utxo_address_and_value(utxo):
+    tx_hash = utxo.split(":")[0]
+    vout = int(utxo.split(":")[1])
+    try:
+        transaction = getrawtransaction(tx_hash, True)
+    except exceptions.BitcoindRPCError as e:
+        raise exceptions.InvalidUTXOError(f"Could not find UTXO {utxo}") from e
+    if vout >= len(transaction["vout"]):
+        raise exceptions.InvalidUTXOError("vout index out of range")
+    if "address" not in transaction["vout"][vout]["scriptPubKey"]:
+        raise exceptions.InvalidUTXOError("vout does not have an address")
+    return transaction["vout"][vout]["scriptPubKey"]["address"], transaction["vout"][vout]["value"]
+
+
+def safe_get_utxo_address(utxo):
+    try:
+        return get_utxo_address_and_value(utxo)[0]
+    except exceptions.InvalidUTXOError:
+        return "unknown"
+
+
+def is_valid_utxo(utxo):
+    if not util.is_utxo_format(utxo):
+        return False
+    try:
+        get_utxo_address_and_value(utxo)
+        return True
+    except exceptions.InvalidUTXOError:
+        return False
 
 
 def fee_per_kb(
@@ -175,6 +221,13 @@ def get_blocks_behind():
 
 def get_zmq_notifications():
     return rpc("getzmqnotifications", [])
+
+
+def get_mempool_info():
+    """
+    Get the current mempool info.
+    """
+    return rpc("getmempoolinfo", [])
 
 
 def wait_for_block(block_index):
@@ -229,6 +282,11 @@ def get_decoded_transaction(tx_hash, block_index=None):
     return tx
 
 
+def get_tx_out_amount(tx_hash, vout):
+    raw_tx = getrawtransaction(tx_hash, True)
+    return raw_tx["vout"][vout]["value"]
+
+
 class BlockFetcher:
     def __init__(self, first_block) -> None:
         self.current_block = first_block
@@ -245,3 +303,11 @@ def sendrawtransaction(signedhex: str):
     :param signedhex: The signed transaction hex.
     """
     return rpc("sendrawtransaction", [signedhex])
+
+
+def decoderawtransaction(rawtx: str):
+    """
+    Proxy to `decoderawtransaction` RPC call.
+    :param rawtx: The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)
+    """
+    return rpc("decoderawtransaction", [rawtx])

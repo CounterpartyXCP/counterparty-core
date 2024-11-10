@@ -29,8 +29,10 @@ from counterpartycore.lib import (
     message_type,
     script,
     transaction,
+    transaction_helper,
     util,
 )
+from counterpartycore.lib.api import compose as api_compose
 from counterpartycore.lib.api import util as api_util
 from counterpartycore.lib.database import APIDBConnectionPool
 from counterpartycore.lib.messages import (
@@ -60,7 +62,6 @@ from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher
 from jsonrpc.exceptions import JSONRPCDispatchException
-from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
 from werkzeug.serving import make_server
 from xmltodict import unparse as serialize_to_xml
@@ -426,7 +427,8 @@ def adjust_get_transactions_results(query_result):
     """Format the data field.  Try and decode the data from a utf-8 uncoded string. Invalid utf-8 strings return an empty data."""
     filtered_results = []
     for transaction_row in list(query_result):
-        transaction_row["data"] = transaction_row["data"].hex()
+        if isinstance(transaction_row["data"], bytes):
+            transaction_row["data"] = transaction_row["data"].hex()
         filtered_results.append(transaction_row)
     return filtered_results
 
@@ -446,59 +448,60 @@ class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
 
     def __init__(self):
-        self.last_database_check = 0
         threading.Thread.__init__(self)
+        self.last_database_check = 0
         self.stop_event = threading.Event()
-        self.stopping = False
-        self.stopped = False
         self.db = None
 
     def stop(self):
-        logger.info("Stopping API Status Poller...")
-        self.stopping = True
-        if self.db is not None:
-            self.db.close()
-            self.db = None
+        logger.info("Stopping API v1 Status Poller thread...")
+        self.stop_event.set()
         self.join()
+        logger.info("API v1 Status Poller thread stopped.")
 
     def run(self):
-        logger.debug("Starting API Status Poller...")
+        logger.info("Starting v1 API Status Poller thread...")
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
         self.db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
 
         interval_if_ready = 5 * 60  # 5 minutes
-        interval_if_not_ready = 60  # 1 minutes
+        interval_if_not_ready = 60  # 1 minute
         interval = interval_if_not_ready
 
-        while not self.stopping:  # noqa: E712
-            try:
-                # Check that backend is running, communicable, and caught up with the blockchain.
-                # Check that the database has caught up with bitcoind.
-                if (
-                    time.time() - self.last_database_check > interval
-                ):  # Ten minutes since last check.
-                    self.last_database_check = time.time()
-                    if not config.FORCE and self.db is not None:
-                        code = 11
-                        check_backend_state()
-                        code = 12
-                        api_util.check_last_parsed_block(self.db, backend.bitcoind.getblockcount())
-                        interval = interval_if_ready
-            except (BackendError, exceptions.DatabaseError) as e:
-                interval = interval_if_not_ready
-                exception_name = e.__class__.__name__
-                exception_text = str(e)
-                logger.debug("API Status Poller: %s", exception_text)
-                jsonrpc_response = jsonrpc.exceptions.JSONRPCServerError(
-                    message=exception_name, data=exception_text
-                )
-                CURRENT_API_STATUS_CODE = code
-                CURRENT_API_STATUS_RESPONSE_JSON = jsonrpc_response.json.encode()
-            else:
-                CURRENT_API_STATUS_CODE = None
-                CURRENT_API_STATUS_RESPONSE_JSON = None
-            if not self.stopping:
-                time.sleep(0.5)  # sleep for 0.5 seconds
+        try:
+            while not self.stop_event.is_set():
+                try:
+                    # Check that backend is running, communicable, and caught up with the blockchain.
+                    # Check that the database has caught up with bitcoind.
+                    if time.time() - self.last_database_check > interval:
+                        self.last_database_check = time.time()
+                        if not config.FORCE and self.db is not None:
+                            code = 11
+                            check_backend_state()
+                            code = 12
+                            api_util.check_last_parsed_block(
+                                self.db, backend.bitcoind.getblockcount()
+                            )
+                            interval = interval_if_ready
+                except (BackendError, exceptions.DatabaseError) as e:
+                    interval = interval_if_not_ready
+                    exception_name = e.__class__.__name__
+                    exception_text = str(e)
+                    logger.debug("API Status Poller: %s", exception_text)
+                    jsonrpc_response = jsonrpc.exceptions.JSONRPCServerError(
+                        message=exception_name, data=exception_text
+                    )
+                    CURRENT_API_STATUS_CODE = code
+                    CURRENT_API_STATUS_RESPONSE_JSON = jsonrpc_response.json.encode()
+                else:
+                    CURRENT_API_STATUS_CODE = None
+                    CURRENT_API_STATUS_RESPONSE_JSON = None
+                self.stop_event.wait(timeout=0.5)
+        finally:
+            if self.db is not None:
+                self.db.close()
+                self.db = None
+            logger.info("API v1 Status Poller thread stopped.")
 
 
 class APIServer(threading.Thread):
@@ -513,13 +516,15 @@ class APIServer(threading.Thread):
         sentry.init()
 
     def stop(self):
-        logger.info("Stopping API Server v1...")
-        self.connection_pool.close()
-        self.server.shutdown()
+        logger.info("Stopping API Server v1 thread...")
+        if self.connection_pool:
+            self.connection_pool.close()
+        if self.server:
+            self.server.shutdown()
         self.join()
 
     def run(self):
-        logger.info("Starting API Server v1...")
+        logger.info("Starting API Server v1 thread...")
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
 
@@ -561,14 +566,53 @@ class APIServer(threading.Thread):
         # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
             def create_method(**kwargs):
+                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
+                    **kwargs
+                )
+                extended_tx_info = old_style_api = False
+                if "extended_tx_info" in common_args:
+                    extended_tx_info = common_args["extended_tx_info"]
+                    del common_args["extended_tx_info"]
+                if "old_style_api" in common_args:
+                    old_style_api = common_args["old_style_api"]
+                    del common_args["old_style_api"]
+                for v2_arg in ["return_only_data", "return_psbt"]:
+                    common_args.pop(v2_arg, None)
+                if "fee" in transaction_args and "exact_fee" not in common_args:
+                    common_args["exact_fee"] = transaction_args.pop("fee")
                 try:
-                    transaction_args, common_args, private_key_wif = (
-                        transaction.split_compose_params(**kwargs)
-                    )
                     with self.connection_pool.connection() as db:
-                        return transaction.compose_transaction(
-                            db, name=tx, params=transaction_args, api_v1=True, **common_args
+                        transaction_info = transaction.compose_transaction(
+                            db,
+                            name=tx,
+                            params=transaction_args,
+                            accept_missing_params=True,
+                            **common_args,
                         )
+                        if extended_tx_info:
+                            transaction_info["tx_hex"] = transaction_info["unsigned_tx_hex"]
+                            transaction_info["pretx_hex"] = transaction_info["unsigned_pretx_hex"]
+                            del transaction_info["unsigned_tx_hex"]
+                            del transaction_info["unsigned_pretx_hex"]
+                            return transaction_info
+                        tx_hexes = list(
+                            filter(
+                                None,
+                                [
+                                    transaction_info["unsigned_tx_hex"],
+                                    transaction_info["unsigned_pretx_hex"],
+                                ],
+                            )
+                        )  # filter out None
+                        if old_style_api:
+                            if len(tx_hexes) != 1:
+                                raise Exception("Can't do 2 TXs with old_style_api")
+                            return tx_hexes[0]
+                        else:
+                            if len(tx_hexes) == 1:
+                                return tx_hexes[0]
+                            else:
+                                return tx_hexes
                 except (
                     TypeError,
                     script.AddressError,
@@ -578,14 +622,14 @@ class APIServer(threading.Thread):
                 ) as error:
                     # TypeError happens when unexpected keyword arguments are passed in
                     error_msg = f"Error composing {tx} transaction via API: {str(error)}"
-                    logging.warning(error_msg)
+                    logger.trace(error_msg)
                     raise JSONRPCDispatchException(  # noqa: B904
                         code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg
                     )
 
             return create_method
 
-        for tx in transaction.COMPOSABLE_TRANSACTIONS:
+        for tx in api_compose.COMPOSABLE_TRANSACTIONS:
             create_method = generate_create_method(tx)
             create_method.__name__ = f"create_{tx}"
             dispatcher.add_method(create_method)
@@ -774,19 +818,7 @@ class APIServer(threading.Thread):
                 else:
                     caught_up = True
 
-                try:
-                    cursor = db.cursor()
-                    blocks = list(
-                        cursor.execute(
-                            """SELECT * FROM blocks WHERE block_index = ?""",
-                            (util.CURRENT_BLOCK_INDEX,),
-                        )
-                    )
-                    assert len(blocks) == 1
-                    last_block = blocks[0]
-                    cursor.close()
-                except:  # noqa: E722
-                    last_block = None
+                last_block = ledger.get_last_block(db)
 
                 try:
                     last_message = ledger.last_message(db)
@@ -937,10 +969,12 @@ class APIServer(threading.Thread):
             # block_index mandatory for transactions before block 335000
             use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
             with self.connection_pool.connection() as db:
-                source, destination, btc_amount, fee, data, extra = gettxinfo.get_tx_info(
-                    db,
-                    deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
-                    block_index=block_index,
+                source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
+                    gettxinfo.get_tx_info(
+                        db,
+                        deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
+                        block_index=block_index,
+                    )
                 )
             return (
                 source,
@@ -968,7 +1002,9 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
-            return transaction.pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=provided_pubkeys)
+            return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
+                pubkeyhash, provided_pubkeys=provided_pubkeys
+            )
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
@@ -1103,8 +1139,7 @@ class APIServer(threading.Thread):
                     and request_data["method"]
                 )
                 # params may be omitted
-            except Exception as error:  # noqa: E722
-                capture_exception(error)
+            except Exception:  # noqa: E722
                 obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                     data="Invalid JSON-RPC 2.0 request format"
                 )
@@ -1130,7 +1165,7 @@ class APIServer(threading.Thread):
             jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
 
             response = flask.Response(
-                jsonrpc_response.json.encode(), 200, mimetype="application/json"
+                api_util.to_json(jsonrpc_response.data), 200, mimetype="application/json"
             )
             _set_cors_headers(response)
             # response.headers["X-API-WARN"] = "Deprecated API"
@@ -1161,7 +1196,7 @@ class APIServer(threading.Thread):
                 error = "No query_type provided."
                 return flask.Response(error, 400, mimetype="application/json")
             # Check if message type or table name are valid.
-            if (compose and query_type not in transaction.COMPOSABLE_TRANSACTIONS) or (
+            if (compose and query_type not in api_compose.COMPOSABLE_TRANSACTIONS) or (
                 not compose and query_type not in API_TABLES
             ):
                 error = f'No such query type in supported queries: "{query_type}".'
@@ -1172,7 +1207,7 @@ class APIServer(threading.Thread):
             query_data = {}
 
             if compose:
-                transaction_args, common_args, private_key_wif = transaction.split_compose_params(
+                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
                     **extra_args
                 )
 
@@ -1184,7 +1219,7 @@ class APIServer(threading.Thread):
                 # Compose the transaction.
                 try:
                     with self.connection_pool.connection() as db:
-                        query_data = transaction.compose_transaction(
+                        query_data, data = transaction.compose_transaction(
                             db, name=query_type, params=transaction_args, **common_args
                         )
                 except (
@@ -1193,7 +1228,7 @@ class APIServer(threading.Thread):
                     exceptions.TransactionError,
                     exceptions.BalanceError,
                 ) as error:
-                    error_msg = logging.warning(
+                    error_msg = logger.trace(
                         f"{error.__class__.__name__} -- error composing {query_type} transaction via API: {error}"
                     )
                     return flask.Response(error_msg, 400, mimetype="application/json")

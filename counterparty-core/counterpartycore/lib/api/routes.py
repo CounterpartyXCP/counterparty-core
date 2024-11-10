@@ -1,6 +1,11 @@
-from counterpartycore.lib import transaction
-from counterpartycore.lib.api import queries, util
+from counterpartycore.lib.api import compose, queries, util
 from counterpartycore.lib.backend import addrindexrs, bitcoind
+
+
+def get_routes():
+    """Return the API routes."""
+    return ROUTES
+
 
 # Define the API routes except root (`/`) defined in `api_server.py`
 ROUTES = util.prepare_routes(
@@ -23,10 +28,13 @@ ROUTES = util.prepare_routes(
         "/v2/blocks/<int:block_index>/sends": queries.get_sends_by_block,
         "/v2/blocks/<int:block_index>/dispenses": queries.get_dispenses_by_block,
         "/v2/blocks/<int:block_index>/sweeps": queries.get_sweeps_by_block,
+        "/v2/blocks/<int:block_index>/fairminters": queries.get_fairminters_by_block,
+        "/v2/blocks/<int:block_index>/fairmints": queries.get_fairmints_by_block,
         ### /transactions ###
         "/v2/transactions": queries.get_transactions,
-        "/v2/transactions/info": transaction.info,
-        "/v2/transactions/unpack": transaction.unpack,
+        "/v2/transactions/info": compose.info,
+        "/v2/transactions/<tx_hash>/info": compose.info_by_tx_hash,
+        "/v2/transactions/unpack": compose.unpack,
         "/v2/transactions/<int:tx_index>": queries.get_transaction_by_tx_index,
         "/v2/transactions/<tx_hash>": queries.get_transaction_by_hash,
         "/v2/transactions/<int:tx_index>/events": queries.get_events_by_transaction_index,
@@ -41,7 +49,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/events": queries.get_events_by_addresses,
         "/v2/addresses/mempool": queries.get_mempool_events_by_addresses,
         "/v2/addresses/<address>/balances": queries.get_address_balances,
-        "/v2/addresses/<address>/balances/<asset>": queries.get_balance_by_address_and_asset,
+        "/v2/addresses/<address>/balances/<asset>": queries.get_balances_by_address_and_asset,
         "/v2/addresses/<address>/credits": queries.get_credits_by_address,
         "/v2/addresses/<address>/debits": queries.get_debits_by_address,
         "/v2/addresses/<address>/bets": queries.get_bet_by_feed,
@@ -59,29 +67,42 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/dispenses/receives/<asset>": queries.get_dispenses_by_destination_and_asset,
         "/v2/addresses/<address>/sweeps": queries.get_sweeps_by_address,
         "/v2/addresses/<address>/issuances": queries.get_issuances_by_address,
-        "/v2/addresses/<address>/assets": queries.get_valid_assets_by_issuer,
+        "/v2/addresses/<address>/assets": queries.get_valid_assets_by_issuer_or_owner,
+        "/v2/addresses/<address>/assets/issued": queries.get_valid_assets_by_issuer,
+        "/v2/addresses/<address>/assets/owned": queries.get_valid_assets_by_owner,
         "/v2/addresses/<address>/transactions": queries.get_transactions_by_address,
         "/v2/addresses/<address>/dividends": queries.get_dividends_distributed_by_address,
         "/v2/addresses/<address>/orders": queries.get_orders_by_address,
+        "/v2/addresses/<address>/fairminters": queries.get_fairminters_by_address,
+        "/v2/addresses/<address>/fairmints": queries.get_fairmints_by_address,
+        "/v2/addresses/<address>/fairmints/<asset>": queries.get_fairmints_by_address_and_asset,
+        "/v2/utxos/<utxo>/balances": queries.get_utxo_balances,
         ### /addresses/<address>/compose/ ###
-        "/v2/addresses/<address>/compose/bet": transaction.compose_bet,
-        "/v2/addresses/<address>/compose/broadcast": transaction.compose_broadcast,
-        "/v2/addresses/<address>/compose/btcpay": transaction.compose_btcpay,
-        "/v2/addresses/<address>/compose/burn": transaction.compose_burn,
-        "/v2/addresses/<address>/compose/cancel": transaction.compose_cancel,
-        "/v2/addresses/<address>/compose/destroy": transaction.compose_destroy,
-        "/v2/addresses/<address>/compose/dispenser": transaction.compose_dispenser,
-        "/v2/addresses/<address>/compose/dividend": transaction.compose_dividend,
-        "/v2/addresses/<address>/compose/issuance": transaction.compose_issuance,
-        "/v2/addresses/<address>/compose/mpma": transaction.compose_mpma,
-        "/v2/addresses/<address>/compose/order": transaction.compose_order,
-        "/v2/addresses/<address>/compose/send": transaction.compose_send,
-        "/v2/addresses/<address>/compose/sweep": transaction.compose_sweep,
+        "/v2/addresses/<address>/compose/bet": compose.compose_bet,
+        "/v2/addresses/<address>/compose/broadcast": compose.compose_broadcast,
+        "/v2/addresses/<address>/compose/btcpay": compose.compose_btcpay,
+        "/v2/addresses/<address>/compose/burn": compose.compose_burn,
+        "/v2/addresses/<address>/compose/cancel": compose.compose_cancel,
+        "/v2/addresses/<address>/compose/destroy": compose.compose_destroy,
+        "/v2/addresses/<address>/compose/dispenser": compose.compose_dispenser,
+        "/v2/addresses/<address>/compose/dividend": compose.compose_dividend,
+        "/v2/addresses/<address>/compose/issuance": compose.compose_issuance,
+        "/v2/addresses/<address>/compose/mpma": compose.compose_mpma,
+        "/v2/addresses/<address>/compose/order": compose.compose_order,
+        "/v2/addresses/<address>/compose/send": compose.compose_send,
+        "/v2/addresses/<address>/compose/sweep": compose.compose_sweep,
+        "/v2/addresses/<address>/compose/dispense": compose.compose_dispense,
+        "/v2/addresses/<address>/compose/fairminter": compose.compose_fairminter,
+        "/v2/addresses/<address>/compose/fairmint": compose.compose_fairmint,
+        "/v2/addresses/<address>/compose/attach": compose.compose_attach,
+        "/v2/utxos/<utxo>/compose/detach": compose.compose_detach,
+        "/v2/utxos/<utxo>/compose/movetoutxo": compose.compose_movetoutxo,
+        "/v2/compose/attach/estimatexcpfees": compose.get_attach_estimate_xcp_fee,
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
         "/v2/assets/<asset>": queries.get_asset,
         "/v2/assets/<asset>/balances": queries.get_asset_balances,
-        "/v2/assets/<asset>/balances/<address>": queries.get_balance_by_address_and_asset,
+        "/v2/assets/<asset>/balances/<address>": queries.get_balances_by_asset_and_address,
         "/v2/assets/<asset>/orders": queries.get_orders_by_asset,
         "/v2/assets/<asset>/matches": queries.get_order_matches_by_asset,
         "/v2/assets/<asset>/credits": queries.get_credits_by_asset,
@@ -94,6 +115,9 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/holders": queries.get_asset_holders,
         "/v2/assets/<asset>/dispenses": queries.get_dispenses_by_asset,
         "/v2/assets/<asset>/subassets": queries.get_subassets_by_asset,
+        "/v2/assets/<asset>/fairminters": queries.get_fairminters_by_asset,
+        "/v2/assets/<asset>/fairmints": queries.get_fairmints_by_asset,
+        "/v2/assets/<asset>/fairmints/<address>": queries.get_fairmints_by_address_and_asset,
         ### /orders ###
         "/v2/orders": queries.get_orders,
         "/v2/orders/<order_hash>": queries.get_order,
@@ -101,6 +125,7 @@ ROUTES = util.prepare_routes(
         "/v2/orders/<order_hash>/btcpays": queries.get_btcpays_by_order,
         "/v2/orders/<asset1>/<asset2>": queries.get_orders_by_two_assets,
         "/v2/orders/<asset1>/<asset2>/matches": queries.get_order_matches_by_two_assets,
+        "/v2/order_matches": queries.get_all_order_matches,
         ### /bets ###
         "/v2/bets": queries.get_bets,
         "/v2/bets/<bet_hash>": queries.get_bet,
@@ -135,9 +160,13 @@ ROUTES = util.prepare_routes(
         ### /broadcasts ###
         "/v2/broadcasts": queries.get_valid_broadcasts,
         "/v2/broadcasts/<tx_hash>": queries.get_broadcast_by_transaction_hash,
-        ### /healthz ###
-        "/v2/healthz": util.check_server_health,
-        "/healthz": util.check_server_health,
+        ### /fairminters ###
+        "/v2/fairminters": queries.get_all_fairminters,
+        "/v2/fairminters/<tx_hash>": queries.get_fairminter,
+        "/v2/fairminters/<tx_hash>/fairmints": queries.get_fairmints_by_fairminter,
+        ### /fairmints ###
+        "/v2/fairmints": queries.get_all_fairmints,
+        "/v2/fairmints/<tx_hash>": queries.get_fairmint,
         ### /bitcoin ###
         "/v2/bitcoin/addresses/utxos": addrindexrs.get_unspent_txouts_by_addresses,
         "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
@@ -147,10 +176,17 @@ ROUTES = util.prepare_routes(
         "/v2/bitcoin/transactions/<tx_hash>": util.get_transaction,
         "/v2/bitcoin/estimatesmartfee": bitcoind.fee_per_kb,
         "/v2/bitcoin/transactions": bitcoind.sendrawtransaction,
+        "/v2/bitcoin/transactions/decode": bitcoind.decoderawtransaction,
+        "/v2/bitcoin/getmempoolinfo": bitcoind.get_mempool_info,
         ### /mempool ###
         "/v2/mempool/events": queries.get_all_mempool_events,
         "/v2/mempool/events/<event>": queries.get_mempool_events_by_name,
         "/v2/mempool/transactions/<tx_hash>/events": queries.get_mempool_events_by_tx_hash,
+        ### /routes ###
+        "/v2/routes": get_routes,
+        ### /healthz ###
+        "/v2/healthz": util.check_server_health,
+        "/healthz": util.check_server_health,
         ### API v1 ###
         "/": util.redirect_to_rpc_v1,
         "/v1/": util.redirect_to_rpc_v1,

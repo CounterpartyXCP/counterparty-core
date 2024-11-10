@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import _thread
 import binascii
 import decimal
 import logging
@@ -8,6 +9,7 @@ import signal
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import urllib
 from urllib.parse import quote_plus as urlencode
@@ -25,7 +27,6 @@ from counterpartycore.lib import (
     exceptions,
     follow,
     log,
-    transaction,
     util,
 )
 from counterpartycore.lib.api import api_server as api_v2
@@ -61,6 +62,8 @@ def initialise(*args, **kwargs):
         regtest=kwargs.get("regtest", False),
         action=kwargs.get("action", None),
         json_logs=kwargs.get("json_logs", False),
+        max_log_file_size=kwargs.get("max_log_file_size", None),
+        max_log_file_rotations=kwargs.get("max_log_file_rotations", None),
     )
     initialise_config(*args, **kwargs)
     return database.initialise_db()
@@ -77,6 +80,8 @@ def initialise_log_config(
     regtest=False,
     action=None,
     json_logs=False,
+    max_log_file_size=40 * 1024 * 1024,
+    max_log_file_rotations=20,
 ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -125,9 +130,12 @@ def initialise_log_config(
     config.LOG_IN_CONSOLE = action == "start" or config.VERBOSE > 0
     config.JSON_LOGS = json_logs
 
+    config.MAX_LOG_FILE_SIZE = max_log_file_size
+    config.MAX_LOG_FILE_ROTATIONS = max_log_file_rotations
+
 
 def initialise_config(
-    database_file=None,
+    data_dir=None,
     testnet=False,
     testcoin=False,
     regtest=False,
@@ -166,16 +174,23 @@ def initialise_config(
     no_telemetry=False,
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
-    db_connection_pool_size=None,
+    db_connection_pool_size=config.DEFAULT_DB_CONNECTION_POOL_SIZE,
+    wsgi_server=None,
+    waitress_threads=None,
+    gunicorn_workers=None,
+    gunicorn_threads_per_worker=None,
+    database_file=None,  # for tests
 ):
     # log config already initialized
 
     # Data directory
-    data_dir = appdirs.user_data_dir(
-        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
-    )
+    if not data_dir:
+        data_dir = appdirs.user_data_dir(
+            appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+        )
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, mode=0o755)
+    config.DATA_DIR = data_dir
 
     # testnet
     if testnet:
@@ -224,7 +239,12 @@ def initialise_config(
         filename = f"{config.APP_NAME}{network}.db"
         config.DATABASE = os.path.join(data_dir, filename)
 
-    config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
+    config.FETCHER_DB_OLD = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
+    config.FETCHER_DB = os.path.join(
+        appdirs.user_cache_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME),
+        f"fetcherdb{network}",
+    )
+
     config.API_DATABASE = config.DATABASE.replace(".db", ".api.db")
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -352,7 +372,7 @@ def initialise_config(
     if rpc_host:
         config.RPC_HOST = rpc_host
     else:
-        config.RPC_HOST = "localhost"
+        config.RPC_HOST = "127.0.0.1"
 
     # The web root directory for API calls, eg. localhost:14000/rpc/
     config.RPC_WEBROOT = "/rpc/"
@@ -412,7 +432,7 @@ def initialise_config(
     if api_host:
         config.API_HOST = api_host
     else:
-        config.API_HOST = "localhost"
+        config.API_HOST = "127.0.0.1"
 
     # Server API port
     if api_port:
@@ -583,16 +603,17 @@ def initialise_config(
 
     config.NO_TELEMETRY = no_telemetry
 
-    if db_connection_pool_size:
-        config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
-    else:
-        config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
+    config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
+    config.WSGI_SERVER = wsgi_server
+    config.WAITRESS_THREADS = waitress_threads
+    config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
+    config.GUNICORN_WORKERS = gunicorn_workers
 
 
-def initialise_log_and_config(args):
+def initialise_log_and_config(args, api=False):
     # Configuration
     init_args = {
-        "database_file": args.database_file,
+        "data_dir": args.data_dir,
         "testnet": args.testnet,
         "testcoin": args.testcoin,
         "regtest": args.regtest,
@@ -629,7 +650,14 @@ def initialise_log_and_config(args):
         "enable_zmq_publisher": args.enable_zmq_publisher,
         "zmq_publisher_port": args.zmq_publisher_port,
         "db_connection_pool_size": args.db_connection_pool_size,
+        "wsgi_server": args.wsgi_server,
+        "waitress_threads": args.waitress_threads,
+        "gunicorn_workers": args.gunicorn_workers,
+        "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
     }
+    # for tests
+    if "database_file" in args:
+        init_args["database_file"] = args.database_file
 
     initialise_log_config(
         verbose=args.verbose,
@@ -648,8 +676,10 @@ def initialise_log_and_config(args):
     log.set_up(
         verbose=config.VERBOSE,
         quiet=config.QUIET,
-        log_file=config.LOG,
+        log_file=config.LOG if not api else config.API_LOG,
         json_logs=config.JSON_LOGS,
+        max_log_file_size=config.MAX_LOG_FILE_SIZE,
+        max_log_file_rotations=config.MAX_LOG_FILE_ROTATIONS,
     )
     initialise_config(**init_args)
 
@@ -659,55 +689,104 @@ def connect_to_backend():
         backend.bitcoind.getblockcount()
 
 
+class AssetConservationChecker(threading.Thread):
+    def __init__(self):
+        self.last_check = 0
+        threading.Thread.__init__(self)
+        self.db = None
+        self.daemon = True
+        self.stop_event = threading.Event()
+
+    def run(self):
+        self.db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
+        try:
+            while not self.stop_event.is_set():
+                if time.time() - self.last_check > 60 * 60 * 12:
+                    try:
+                        check.asset_conservation(self.db, self.stop_event)
+                    except check.SanityError as e:
+                        logger.error("Asset conservation check failed: %s" % e)
+                        _thread.interrupt_main()
+                    self.last_check = time.time()
+                time.sleep(1)
+        finally:
+            if self.db is not None:
+                self.db.close()
+                self.db = None
+            logger.info("Asset Conservation Checker thread stopped.")
+
+    def stop(self):
+        self.stop_event.set()
+
+
 def start_all(args):
     api_status_poller = None
     api_server_v1 = None
     api_server_v2 = None
     telemetry_daemon = None
     follower_daemon = None
+    asset_conservation_checker = None
     db = None
 
+    # Log all config parameters, sorted by key
+    # Filter out default values #TODO: these should be set in a different way
+    custom_config = {
+        k: v
+        for k, v in sorted(config.__dict__.items())
+        if not k.startswith("__") and not k.startswith("DEFAULT_")
+    }
+    logger.debug(f"Config: {custom_config}")
+
+    def handle_interrupt_signal(signum, frame):
+        logger.warning("Keyboard interrupt received. Shutting down...")
+        raise KeyboardInterrupt
+
     try:
-        # set signal handlers (needed for graceful shutdown on SIGINT/SIGTERM)
+        # Set signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, handle_interrupt_signal)
         signal.signal(signal.SIGTERM, handle_interrupt_signal)
 
         # download bootstrap if necessary
-        if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
-            bootstrap(no_confirm=True)
+        if (
+            not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap"
+        ) or args.catch_up == "bootstrap-always":
+            bootstrap(no_confirm=True, snapshot_url=args.bootstrap_url)
 
-        # initialise database
+        # Initialise database
         db = database.initialise_db()
         blocks.initialise(db)
         blocks.check_database_version(db)
         database.optimize(db)
 
-        # check software version
+        # Check software version
         check.software_version()
 
-        # API Server v2.
+        # API Server v2
         api_server_v2 = api_v2.APIServer()
         api_server_v2.start(args)
-        while not api_server_v2.is_ready():
+        while not api_server_v2.is_ready() and not api_server_v2.has_stopped():
             logger.trace("Waiting for API server to start...")
             time.sleep(0.1)
 
-        # Backend.
+        # Backend
         connect_to_backend()
 
-        # Reset UTXO_LOCKS.  This previously was done in
-        # initilise_config
-        transaction.initialise()
-
-        # API Status Poller.
+        # API Status Poller
         api_status_poller = api_v1.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
 
-        # API Server v1.
+        # API Server v1
         api_server_v1 = api_v1.APIServer()
         api_server_v1.daemon = True
         api_server_v1.start()
+
+        # Asset conservation checker
+        asset_conservation_checker = AssetConservationChecker()
+        asset_conservation_checker.start()
+
+        # Reset (delete) rust fetcher database
+        blocks.reset_rust_fetcher_database()
 
         # catch up
         blocks.catch_up(db)
@@ -716,11 +795,16 @@ def start_all(args):
         logger.info("Watching for new blocks...")
         follower_daemon = follow.start_blockchain_watcher(db)
 
+        # Keep the main thread alive
+        while True:
+            time.sleep(1)
+
     except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt!")
+        pass
     except Exception as e:
         logger.error("Exception caught!", exc_info=e)
     finally:
+        # Ensure all services are stopped
         if api_server_v2:
             api_server_v2.stop()
         if telemetry_daemon:
@@ -729,26 +813,38 @@ def start_all(args):
             api_status_poller.stop()
         if api_server_v1:
             api_server_v1.stop()
+        if asset_conservation_checker:
+            asset_conservation_checker.stop()
         if follower_daemon:
             follower_daemon.stop()
         if not config.NO_TELEMETRY:
-            TelemetryOneShot().close()
+            TelemetryOneShot.close_instance()
         if db:
             database.close(db)
         backend.addrindexrs.stop()
         log.shutdown()
         rsfetcher.stop()
+
+        # Wait for any leftover DB connections to close
+        open_connections = len(database.DBConnectionPool().connections)
+        while open_connections > 0:
+            logger.warning(f"Waiting for {open_connections} DB connections to close...")
+            time.sleep(0.1)
+            open_connections = len(database.DBConnectionPool().connections)  # Update count
+
+        # Now it's safe to check for WAL files
         try:
             database.check_wal_file(config.DATABASE)
         except exceptions.WALFileFoundError:
             logger.warning(
-                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
+                "Database WAL file detected. To ensure no data corruption has occurred, run `counterparty-server check-db`."
             )
         except exceptions.DatabaseError:
             logger.warning(
                 "Database is in use by another process and was unable to be closed correctly."
             )
-        # Ensure that the last closed connection is not read-only in order to delete WAL and SHM files
+
+        logger.debug("Cleaning up WAL and SHM files...")
         api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
         api_db.close()
         logger.info("Shutdown complete.")
@@ -845,10 +941,6 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         if input(confirmation_message).lower() != "y":
             exit()
 
-    data_dir = appdirs.user_data_dir(
-        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
-    )
-
     # Set Constants.
     if snapshot_url is None:
         bootstrap_url = (
@@ -865,15 +957,17 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     sig_filename = os.path.basename(bootstrap_sig_url)
     tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
     sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
-    ledger_database_path = os.path.join(data_dir, config.APP_NAME)
+
+    ledger_database_path = os.path.join(config.DATA_DIR, config.APP_NAME)
+
     if config.TESTNET:
         ledger_database_path += ".testnet"
     ledger_database_path += ".db"
     api_database_path = ledger_database_path.replace(".db", ".api.db")
 
     # Prepare Directory.
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir, mode=0o755)
+    if not os.path.exists(config.DATA_DIR):
+        os.makedirs(config.DATA_DIR, mode=0o755)
 
     for database_path in [ledger_database_path, api_database_path]:
         if os.path.exists(database_path):
@@ -903,14 +997,19 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     spinner.stop()
 
     with log.Spinner("Verifying signature..."):
-        if not any(util.verify_signature(k, sig_path, tarball_path) for k in PUBLIC_KEYS):
-            print("Snaptshot was not signed by any trusted keys")
+        signature_verified = False
+        for key in PUBLIC_KEYS:
+            if util.verify_signature(key, sig_path, tarball_path):
+                signature_verified = True
+                break
+        if not signature_verified:
+            print("Snapshot was not signed by any trusted keys")
             sys.exit(1)
 
     # TODO: check checksum, filenames, etc.
-    with log.Spinner(f"Extracting database to {data_dir}..."):
+    with log.Spinner(f"Extracting database to {config.DATA_DIR}..."):
         with tarfile.open(tarball_path, "r:gz") as tar_file:
-            tar_file.extractall(path=data_dir)  # nosec B202  # noqa: S202
+            tar_file.extractall(path=config.DATA_DIR)  # nosec B202  # noqa: S202
 
     assert os.path.exists(ledger_database_path)
     assert os.path.exists(api_database_path)

@@ -19,7 +19,7 @@ from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import arc4, config, database, ledger, log, script, util
+from counterpartycore.lib import arc4, config, database, exceptions, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.test import util_test
@@ -42,7 +42,7 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
         "allow_always_latest": True,
     },  # override to be true only at block 310495
     "short_tx_type_id": {
-        "block_index": 310502,
+        "block_index": DEFAULT_PARAMS["default_block_index"] + 1,
         "allow_always_latest": False,
     },  # override to be true only at block 310502
     "enhanced_sends": {
@@ -50,7 +50,7 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
         "allow_always_latest": False,
     },  # override to be true only at block 310999
     "issuance_lock_fix": {
-        "block_index": 310502,
+        "block_index": DEFAULT_PARAMS["default_block_index"] + 1,
         "allow_always_latest": False,
     },  # override to be true only at block 310502
     "segwit_support": {
@@ -58,7 +58,10 @@ MOCK_PROTOCOL_CHANGES_AT_BLOCK = {
         "allow_always_latest": False,
     },  # override to be true only at block 310999,
     "dispensers": {"block_index": 0, "allow_always_latest": True},
-    "multisig_addresses": {"block_index": 310502, "allow_always_latest": True},
+    "multisig_addresses": {
+        "block_index": DEFAULT_PARAMS["default_block_index"] + 1,
+        "allow_always_latest": True,
+    },
 }
 DISABLE_ALL_MOCK_PROTOCOL_CHANGES_AT_BLOCK = (
     False  # if true, never look at MOCK_PROTOCOL_CHANGES_AT_BLOCK
@@ -120,7 +123,7 @@ RANDOM_ASSET_INT = None
 _generate_random_asset = util.generate_random_asset
 
 
-def generate_random_asset():
+def generate_random_asset(subasset_longname=None):
     if RANDOM_ASSET_INT is None:
         return _generate_random_asset()
     else:
@@ -162,6 +165,8 @@ def pytest_generate_tests(metafunc):
     elif metafunc.function.__name__ == "test_compare_hashes":
         metafunc.parametrize("skip", [not metafunc.config.getoption("comparehashes")])
     elif metafunc.function.__name__ == "test_mainnet_api_db":
+        metafunc.parametrize("skip", [not metafunc.config.getoption("testapidb")])
+    elif metafunc.function.__name__ == "test_mainnet_healthz":
         metafunc.parametrize("skip", [not metafunc.config.getoption("testapidb")])
 
 
@@ -240,7 +245,7 @@ def api_server(request, cp_server):
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
 
-    # print(config.DATABASE, config.API_DATABASE)
+    print("api_server", config.DATABASE, config.API_DATABASE)
 
     # start RPC server and wait for server to be ready
     api_server = api.APIServer()
@@ -308,13 +313,20 @@ def api_server_v2(request, cp_server):
         "no_telemetry": True,
         "enable_zmq_publisher": False,
         "zmq_publisher_port": None,
-        "db_connection_pool_size": None,
+        "db_connection_pool_size": 10,
         "json_logs": False,
+        "wsgi_server": "waitress",
+        "gunicorn_workers": 2,
+        "gunicorn_threads_per_worker": 1,
+        "waitress_threads": 1,
+        "max_log_file_size": 40 * 1024 * 1024,
+        "max_log_file_rotations": 20,
     }
     server_config = (
         default_config
         | util_test.COUNTERPARTYD_OPTIONS
         | {
+            "data_dir": os.path.dirname(request.module.FIXTURE_DB),
             "database_file": request.module.FIXTURE_DB,
             "api_port": TEST_RPC_PORT + 10,
         }
@@ -345,7 +357,8 @@ def api_server_v2(request, cp_server):
             if result.status_code != 200:
                 raise requests.exceptions.RequestException
             result = result.json()
-            if result["result"]["counterparty_height"] < 310500:
+            print(DEFAULT_PARAMS["default_block_index"])
+            if result["result"]["counterparty_height"] < DEFAULT_PARAMS["default_block_index"] - 1:
                 raise requests.exceptions.RequestException
             break
         except requests.exceptions.RequestException:
@@ -582,6 +595,31 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def rps_expire(db, block_index):
         pass
 
+    def is_valid_utxo(value):
+        return util.is_utxo_format(value)
+
+    def get_utxo_address_and_value(value):
+        return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 100
+
+    def get_transaction_fee(db, transaction_type, block_index):
+        return 10
+
+    def determine_encoding(
+        data, desired_encoding="auto", op_return_max_size=config.OP_RETURN_MAX_SIZE
+    ):
+        if desired_encoding == "auto":
+            if len(data) + len(config.PREFIX) <= op_return_max_size:
+                encoding = "opreturn"
+            else:
+                encoding = "multisig"
+        else:
+            encoding = desired_encoding
+
+        if encoding not in ("pubkeyhash", "multisig", "opreturn", "p2sh"):
+            raise exceptions.TransactionError("Unknown encoding‐scheme.")
+
+        return encoding
+
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
@@ -595,6 +633,11 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction", mocked_getrawtransaction
     )
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.is_valid_utxo", is_valid_utxo)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_utxo_address_and_value",
+        get_utxo_address_and_value,
+    )
     monkeypatch.setattr(
         "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
         mocked_getrawtransaction_batch,
@@ -604,10 +647,11 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         mocked_search_raw_transactions,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.transaction.pubkeyhash_to_pubkey", pubkeyhash_to_pubkey
+        "counterpartycore.lib.transaction_helper.transaction_outputs.pubkeyhash_to_pubkey",
+        pubkeyhash_to_pubkey,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.transaction.multisig_pubkeyhashes_to_pubkeys",
+        "counterpartycore.lib.transaction_helper.transaction_outputs.multisig_pubkeyhashes_to_pubkeys",
         multisig_pubkeyhashes_to_pubkeys,
     )
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
@@ -616,3 +660,21 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
     )
+
+    monkeypatch.setattr("counterpartycore.lib.gas.get_transaction_fee", get_transaction_fee)
+    monkeypatch.setattr("counterpartycore.lib.transaction.determine_encoding", determine_encoding)
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.asset_issued_total", ledger.asset_issued_total_no_cache
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.get_last_issuance", ledger.get_last_issuance_no_cache
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.asset_destroyed_total", ledger.asset_destroyed_total_no_cache
+    )
+
+    class MockSingletonMeta:
+        pass
+
+    monkeypatch.setattr("counterpartycore.lib.util.SingletonMeta", MockSingletonMeta)

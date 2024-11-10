@@ -11,7 +11,16 @@ from logging import handlers as logging_handlers
 import flask
 import requests
 import werkzeug
-from counterpartycore.lib import backend, config, exceptions, ledger, transaction, util
+from counterpartycore.lib import (
+    backend,
+    config,
+    exceptions,
+    ledger,
+    transaction,
+    transaction_helper,
+    util,
+)
+from counterpartycore.lib.api import compose
 from docstring_parser import parse as parse_docstring
 
 D = decimal.Decimal
@@ -48,7 +57,7 @@ def healthz_heavy(db):
             "quantity": 100000000,
         },
         allow_unconfirmed_inputs=True,
-        fee=1000,
+        exact_fee=1000,
     )
 
 
@@ -129,20 +138,22 @@ def clean_rowids_and_confirmed_fields(query_result):
 def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
     """
     Get pubkey for an address.
-    :param address: Address to get pubkey for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param address: Address to get pubkey for. (e.g. $ADDRESS_1)
     :param provided_pubkeys: Comma separated list of provided pubkeys.
     """
     if provided_pubkeys:
         provided_pubkeys_list = provided_pubkeys.split(",")
     else:
         provided_pubkeys_list = None
-    return transaction.pubkeyhash_to_pubkey(address, provided_pubkeys=provided_pubkeys_list)
+    return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
+        address, provided_pubkeys=provided_pubkeys_list
+    )
 
 
 def get_transaction(tx_hash: str, format: str = "json"):
     """
     Get a transaction from the blockchain
-    :param tx_hash: The transaction hash (e.g. 3190047bf2320bdcd0fade655ae49be309519d151330aa478573815229cc0018)
+    :param tx_hash: The transaction hash (e.g. $LAST_TX_HASH)
     :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
     return backend.bitcoind.getrawtransaction(tx_hash, verbose=format == "json")
@@ -151,7 +162,7 @@ def get_transaction(tx_hash: str, format: str = "json"):
 def get_oldest_transaction_by_address(address: str, block_index: int = None):
     """
     Get the oldest transaction for an address.
-    :param address: The address to search for. (e.g. 14TjwxgnuqgB4HcDcSZk2m7WKwcGVYxRjS)
+    :param address: The address to search for. (e.g. $ADDRESS_9)
     :param block_index: The block index to search from.
     """
     return backend.addrindexrs.get_oldest_tx(
@@ -204,7 +215,7 @@ def prepare_route_args(function):
     args_description = get_args_description(function)
     for arg_name, arg in function_args.items():
         if arg_name == "construct_args":
-            for carg_name, carg_info in transaction.COMPOSE_COMMONS_ARGS.items():
+            for carg_name, carg_info in compose.COMPOSE_COMMONS_ARGS.items():
                 args.append(
                     {
                         "name": carg_name,
@@ -276,6 +287,8 @@ class ApiJsonEncoder(json.JSONEncoder):
             return "{0:.8f}".format(o)
         if isinstance(o, bytes):
             return o.hex()
+        if callable(o):
+            return o.__name__
         return super().default(o)
 
 
@@ -285,9 +298,14 @@ def to_json(obj, indent=None):
 
 def divide(value1, value2):
     decimal.getcontext().prec = 8
-    if value2 == 0:
+    if value2 == 0 or value1 == 0:
         return D(0)
     return D(value1) / D(value2)
+
+
+def normalize_price(value):
+    decimal.getcontext().prec = 16
+    return "{0:.16f}".format(D(value))
 
 
 def inject_issuances_and_block_times(db, result_list):
@@ -331,7 +349,11 @@ def inject_issuances_and_block_times(db, result_list):
             ):
                 block_indexes.append(result_item["params"][field_name])
 
-        if "asset_longname" in result_item and "description" in result_item:
+        if (
+            "asset_longname" in result_item
+            and "description" in result_item
+            and "max_mint_per_tx" not in result_item
+        ):
             continue
         item = result_item
         if "params" in item:
@@ -407,9 +429,15 @@ def inject_normalized_quantity(item, field_name, asset_info):
         return item
 
     if item[field_name] is not None:
-        item[field_name + "_normalized"] = (
-            divide(item[field_name], 10**8) if asset_info["divisible"] else str(item[field_name])
-        )
+        if field_name in ["give_price", "get_price", "price"]:
+            # use 16 decimal places for prices
+            item[field_name + "_normalized"] = normalize_price(item[field_name])
+        else:
+            item[field_name + "_normalized"] = (
+                divide(item[field_name], 10**8)
+                if asset_info["divisible"]
+                else str(item[field_name])
+            )
 
     return item
 
@@ -438,6 +466,18 @@ def inject_normalized_quantities(result_list):
         "fee_required_remaining": {"asset_field": None, "divisible": True},
         "fee_provided_remaining": {"asset_field": None, "divisible": True},
         "fee_fraction_int": {"asset_field": None, "divisible": True},
+        "price": {"asset_field": "asset_info", "divisible": None},
+        "hard_cap": {"asset_field": "asset_info", "divisible": None},
+        "soft_cap": {"asset_field": "asset_info", "divisible": None},
+        "quantity_by_price": {"asset_field": "asset_info", "divisible": None},
+        "max_mint_per_tx": {"asset_field": "asset_info", "divisible": None},
+        "premint_quantity": {"asset_field": "asset_info", "divisible": None},
+        "earned_quantity": {"asset_field": "asset_info", "divisible": None},
+        "earn_quantity": {"asset_field": "asset_info", "divisible": None},
+        "commission": {"asset_field": "asset_info", "divisible": None},
+        "paid_quantity": {"asset_field": "asset_info", "divisible": None},
+        "give_price": {"asset_field": "give_asset_info", "divisible": None},
+        "get_price": {"asset_field": "get_asset_info", "divisible": None},
     }
 
     enriched_result_list = []
@@ -658,8 +698,9 @@ def inject_dispensers(db, result_list):
 def inject_unpacked_data_in_dict(db, item):
     if "data" in item:
         data = binascii.hexlify(item["data"]) if isinstance(item["data"], bytes) else item["data"]
-        block_index = item.get("block_index")
-        item["unpacked_data"] = transaction.unpack(db, data, block_index=block_index)
+        if data:
+            block_index = item.get("block_index")
+            item["unpacked_data"] = compose.unpack(db, data, block_index=block_index)
     return item
 
 
@@ -674,6 +715,8 @@ def inject_unpacked_data(db, result_list):
 
 
 def inject_details(db, result, rule=None):
+    if isinstance(result, (int, str)):
+        return result
     # let's work with a list
     result_list = result
     result_is_dict = False

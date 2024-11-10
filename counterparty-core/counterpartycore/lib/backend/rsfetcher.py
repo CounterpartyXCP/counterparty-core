@@ -1,5 +1,11 @@
+import errno
+import fcntl
 import logging
+import os
+import queue
 import random
+import shutil
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -13,10 +19,21 @@ WORKER_THREADS = 3
 PREFETCH_QUEUE_SIZE = 20
 
 
+def delete_database_directory():
+    if os.path.isdir(config.FETCHER_DB_OLD):
+        shutil.rmtree(config.FETCHER_DB_OLD)
+        logger.debug(f"RSFetcher - Deleted old database at {config.FETCHER_DB_OLD}")
+
+    if os.path.isdir(config.FETCHER_DB):
+        shutil.rmtree(config.FETCHER_DB)
+        logger.debug(f"RSFetcher - Reset database at {config.FETCHER_DB}")
+
+
 class RSFetcher(metaclass=util.SingletonMeta):
     thread_index_counter = 0  # Add a thread index counter
 
-    def __init__(self, start_height=0, indexer_config=None):
+    def __init__(self, indexer_config=None):
+        logger.debug("Initializing RSFetcher...")
         RSFetcher.thread_index_counter += 1
         if indexer_config is None:
             self.config = {
@@ -26,27 +43,64 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 "db_dir": config.FETCHER_DB,
                 "log_file": config.FETCHER_LOG,
                 "log_level": config.LOG_LEVEL_STRING,
-                "start_height": start_height,
+                "json_format": config.JSON_LOGS,
             }
         else:
-            self.config = indexer_config | {"start_height": start_height}
-        self.config["network"] = "testnet" if config.TESTNET else "mainnet"
-        self.start_height = start_height
-        self.next_height = start_height
+            self.config = indexer_config
+        self.config["network"] = config.NETWORK_NAME
         self.fetcher = None
         self.prefetch_task = None
-        self.start()
-        # prefetching
-        self.stopped = False
-        self.prefetch_queue = {}
-        self.prefetch_queue_size = 0
-        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
-        self.prefetch_task = self.executor.submit(self.prefetch_blocks)
-        self.prefetch_queue_initialized = False
+        self.running = False
+        self.lock = threading.Lock()
+        self.lockfile_path = os.path.join(self.config["db_dir"], "rocksdb.lock")
+        self.lockfile = None
 
-    def start(self):
-        logger.debug("Starting Prefetcher...")
+        # Initialize additional attributes
+        self.executor = None
+        self.stopped_event = threading.Event()  # Use an Event for stopping threads
+        # Use queue.Queue for thread-safe prefetching
+        self.prefetch_queue = queue.Queue(maxsize=PREFETCH_QUEUE_SIZE)
+        self.prefetch_queue_initialized = False
+        self.next_height = 0
+
+    def acquire_lockfile(self):
+        # Ensure the directory exists
+        os.makedirs(self.config["db_dir"], exist_ok=True)
+        logger.debug(
+            f"RSFetcher - Ensured that directory {self.config['db_dir']} exists for lockfile."
+        )
+
         try:
+            fd = os.open(self.lockfile_path, os.O_CREAT | os.O_RDWR)
+            self.lockfile = os.fdopen(fd, "w")
+            fcntl.flock(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            logger.debug("RSFetcher - Lockfile acquired.")
+        except IOError as e:
+            if e.errno in (errno.EACCES, errno.EAGAIN):
+                logger.error(
+                    f"RSFetcher - Another instance is running. Unable to acquire lockfile: {e}"
+                )
+                raise RuntimeError("Failed to acquire lockfile.") from e
+            else:
+                logger.error(f"RSFetcher - Unexpected error acquiring lockfile: {e}")
+                raise
+
+    def release_lockfile(self):
+        if self.lockfile:
+            if not self.lockfile.closed:
+                fcntl.flock(self.lockfile, fcntl.LOCK_UN)
+                self.lockfile.close()
+                os.remove(self.lockfile_path)
+                logger.debug("RSFetcher - Lockfile released.")
+            else:
+                logger.debug("RSFetcher - Lockfile was already closed.")
+
+    def start(self, start_height=0):
+        logger.info("Starting RSFetcher thread...")
+        self.acquire_lockfile()
+        try:
+            self.config["start_height"] = start_height
+            self.next_height = start_height
             self.fetcher = indexer.Indexer(self.config)
             # check fetcher version
             fetcher_version = self.fetcher.get_version()
@@ -57,15 +111,28 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     config.__version__,
                     fetcher_version,
                 )
-                raise ValueError("Fetcher version mismatch.")
+                raise ValueError(
+                    f"Fetcher version mismatch {config.__version__} != {fetcher_version}."
+                )
             self.fetcher.start()
         except Exception as e:
             logger.error(f"Failed to initialize fetcher: {e}. Retrying in 5 seconds...")
             raise e
+        # prefetching
+        self.stopped_event.clear()  # Clear the stop event
+        self.prefetch_queue = queue.Queue(maxsize=PREFETCH_QUEUE_SIZE)  # Reset the queue
+        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
+        self.prefetch_task = self.executor.submit(self.prefetch_blocks)
+        self.prefetch_queue_initialized = False
 
     def get_block(self):
         logger.trace("Fetching block with Rust backend.")
-        block = self.get_prefetched_block(self.next_height)
+        block = self.get_prefetched_block()
+
+        if block is None:
+            # Fetcher has been stopped, handle accordingly
+            logger.debug("No block retrieved. Fetcher might have stopped.")
+            return None  # Handle as appropriate for your application
 
         # Handle potentially out-of-order blocks
         if block["height"] != self.next_height:
@@ -80,77 +147,86 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
         return block
 
-    def get_prefetched_block(self, height):
+    def get_prefetched_block(self):
         try:
-            logger.debug(f"Looking for Block {height} in prefetch queue...")
-            while height not in self.prefetch_queue:
-                if self.prefetch_queue_size == 0 and self.prefetch_queue_initialized:
-                    logger.warning("Prefetch queue is empty.")
-                logger.debug(f"Block {height} not found in prefetch queue. Waiting...")
-                time.sleep(0.1)
-            block = self.prefetch_queue.pop(height)
-            self.prefetch_queue_size -= 1
-            logger.debug(
-                "Block %s retrieved from queue. (Queue: %s/%s)",
-                height,
-                self.prefetch_queue_size,
-                PREFETCH_QUEUE_SIZE,
-            )
-            return block
+            logger.debug("Looking for block in prefetch queue...")
+            while not self.stopped_event.is_set():
+                try:
+                    block = self.prefetch_queue.get(timeout=1)
+                    logger.debug(
+                        "Block %s retrieved from queue. (Queue size: %s)",
+                        block["height"],
+                        self.prefetch_queue.qsize(),
+                    )
+                    return block
+                except queue.Empty:
+                    logger.debug("Prefetch queue is empty; waiting for blocks...")
+            # If stopped and queue is empty
+            logger.debug("Fetcher stopped and prefetch queue is empty.")
+            return None
         except Exception as e:
             logger.error(f"Error getting prefetched block: {e}")
             raise e
 
     def prefetch_blocks(self):
-        logger.debug("Starting prefetching blocks...")
+        logger.debug("Starting to prefetch blocks...")
         expected_height = self.next_height
-        while not self.stopped:
+        self.running = True
+        while not self.stopped_event.is_set():
             try:
-                while self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE and not self.stopped:
-                    time.sleep(0.1)  # Wait until there is space in the queue
-                if self.stopped:
-                    break
                 block = self.fetcher.get_block_non_blocking()
                 if block is not None:
-                    self.prefetch_queue[block["height"]] = block
-                    self.prefetch_queue_size += 1
-                    expected_height += 1
-                    logger.debug(
-                        "Block %s prefetched. (Queue: %s/%s)",
-                        block["height"],
-                        self.prefetch_queue_size,
-                        PREFETCH_QUEUE_SIZE,
-                    )
+                    while not self.stopped_event.is_set():
+                        try:
+                            self.prefetch_queue.put(block, timeout=1)
+                            expected_height += 1
+                            logger.debug(
+                                "Block %s prefetched. (Queue size: %s/%s)",
+                                block["height"],
+                                self.prefetch_queue.qsize(),
+                                PREFETCH_QUEUE_SIZE,
+                            )
 
-                    # Mark the queue as "initialized" after it has been half-full at least once.
-                    if (
-                        not self.prefetch_queue_initialized
-                        and self.prefetch_queue_size >= PREFETCH_QUEUE_SIZE // 2
-                    ):
-                        self.prefetch_queue_initialized = True
-                        logger.debug("Prefetch queue initialized.")
-
+                            # Mark the queue as "initialized" after it has been half-full at least once.
+                            if (
+                                not self.prefetch_queue_initialized
+                                and self.prefetch_queue.qsize() >= PREFETCH_QUEUE_SIZE // 2
+                            ):
+                                self.prefetch_queue_initialized = True
+                                logger.debug("Prefetch queue initialized.")
+                            break  # Break out of the inner loop after successfully putting the block
+                        except queue.Full:
+                            logger.debug("Prefetch queue is full; waiting...")
+                            time.sleep(0.1)
                 else:
                     logger.debug("No block fetched. Waiting before next fetch.")
-                    time.sleep(random.uniform(0.2, 0.7))  # noqa: S311
+                    # Use Event's wait method instead of time.sleep for better responsiveness
+                    self.stopped_event.wait(timeout=random.uniform(0.2, 0.7))  # noqa: S311
             except Exception as e:
-                logger.error(f"Error prefetching block: {e}")
-                time.sleep(random.uniform(0.8, 2.0))  # noqa: S311; longer wait on error
+                if str(e) == "Stopped error":
+                    logger.warning(
+                        "RSFetcher thread found stopped due to an error. Restarting in 5 seconds..."
+                    )
+                    self.stopped_event.wait(timeout=5)
+                    self.restart()
+                else:
+                    raise e
+        self.running = False
         logger.debug("Prefetching blocks stopped.")
 
     def stop(self):
-        logger.info("Stopping prefetcher...")
-        self.stopped = True
+        logger.info("Stopping RSFetcher thread...")
+        self.stopped_event.set()  # Signal all threads to stop
         try:
             if self.prefetch_task:
-                self.prefetch_task.cancel()
-                logger.debug("Prefetch task cancelled.")
+                # No need to cancel; threads should exit when they check the stop event
+                logger.debug("Waiting for prefetch task to finish...")
             if self.executor:
                 self.executor.shutdown(wait=True)
                 logger.debug("Executor shutdown complete.")
             if self.fetcher:
                 self.fetcher.stop()
-                logger.debug("Prefetcher stopped.")
+                logger.debug("Fetcher stopped.")
         except Exception as e:
             logger.error(f"Error during stop: {e}")
             if str(e) != "Stopped error":
@@ -158,7 +234,14 @@ class RSFetcher(metaclass=util.SingletonMeta):
         finally:
             self.fetcher = None
             self.prefetch_task = None
-            logger.debug("Prefetcher shutdown complete.")
+            self.release_lockfile()
+            logger.info("RSFetcher thread stopped.")
+
+    def restart(self):
+        self.stop()
+        while self.running:
+            time.sleep(0.1)
+        self.start(self.next_height)
 
 
 def stop():
