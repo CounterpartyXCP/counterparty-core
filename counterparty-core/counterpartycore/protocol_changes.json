@@ -670,12 +670,5 @@
     "minimum_version_revision": 2,
     "block_index": 870000,
     "testnet_block_index": 3195137
-  },
-  "new_gas_system": {
-    "minimum_version_major": 10,
-    "minimum_version_minor": 6,
-    "minimum_version_revision": 2,
-    "block_index": 870000,
-    "testnet_block_index": 3195137
   }
 }
