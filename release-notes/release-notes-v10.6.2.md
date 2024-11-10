@@ -51,6 +51,7 @@ When there are fewer tokens remaining than `max_mint_per_tx` in a free Fairminte
 - Add `/v2/bitcoin/transaction/decode` route to proxy bitcoin `decoderawtransaction` method
 - `inputs_set` now supports UTXOs in the format `<txid>:<vout>:<amount>:<script_pub_key>`
 - Skip transaction sanity check when `validate=false`
+- Take `asset_longname` into consideration when sorting on `asset` field
 
 
 ## CLI
