@@ -1,8 +1,7 @@
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::opcodes::all::*;
-use bitcoin::blockdata::script::{Instruction, Script};
-use bitcoin::util::address::{Payload, WitnessVersion};
-use bitcoin::{Address, Network};
+use bitcoin::blockdata::script::Instruction;
+use bitcoin::{Address, Network, ScriptBuf, WitnessProgram, WitnessVersion};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
@@ -22,7 +21,7 @@ fn inverse_hash(hashstring: &str) -> String {
 #[pyfunction]
 pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
     // Convert the script pubkey to a Script object
-    let script = Script::from(script_pubkey);
+    let script = ScriptBuf::from(script_pubkey);
 
     // Convert the network string to a Network enum value
     let network_enum = match network {
@@ -38,7 +37,7 @@ pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<Stri
     };
     if script.is_witness_program() {
         // This block below is necessary to reproduce a prior truncation bug in the python codebase.
-        let version = match WitnessVersion::try_from(opcodes::All::from(script[0])) {
+        let version = match WitnessVersion::try_from(opcodes::Opcode::from(script.as_bytes()[0])) {
             Ok(vers) => vers,
             Err(_) => {
                 return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
@@ -53,13 +52,13 @@ pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<Stri
                 "Script length is less than 22",
             ));
         }
-        let address = Address {
-            payload: Payload::WitnessProgram {
-                version,
-                program: script[2..n].to_vec(),
-            },
-            network: network_enum,
-        };
+        let program = WitnessProgram::new(version, &script.as_bytes()[2..n]).map_err(|e| {
+            return PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Could not create witness program from script: {}",
+                e
+            ));
+        })?;
+        let address = Address::from_witness_program(program, network_enum);
         Ok(address.to_string())
     } else {
         /*
@@ -83,7 +82,7 @@ pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<Stri
 fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
     // Wrap the code block that may panic inside `catch_unwind()`
     let result = panic::catch_unwind(|| {
-        let script = Script::from(script_bytes);
+        let script = ScriptBuf::from(script_bytes);
 
         let mut asm: Vec<PyObject> = Vec::new();
 
@@ -92,7 +91,7 @@ fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
                 Ok(instr) => {
                     let py_instruction = match instr {
                         Instruction::Op(op) => opcode_to_bytes(op),
-                        Instruction::PushBytes(data) => data.to_vec(),
+                        Instruction::PushBytes(data) => data.as_bytes().to_vec(),
                     };
                     asm.push(PyBytes::new_bound(py, &py_instruction).into());
                 }
@@ -117,7 +116,7 @@ fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
     }
 }
 
-fn opcode_to_bytes(opcode: bitcoin::blockdata::opcodes::All) -> Vec<u8> {
+fn opcode_to_bytes(opcode: bitcoin::blockdata::opcodes::Opcode) -> Vec<u8> {
     match opcode {
         OP_PUSHBYTES_0 => vec![0x00],
         OP_PUSHBYTES_1 => vec![0x01],
