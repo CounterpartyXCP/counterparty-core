@@ -1,4 +1,5 @@
 import math
+from decimal import Decimal as D
 
 from counterpartycore.lib import config, database, ledger, util
 
@@ -116,8 +117,10 @@ def calculate_fee(x: int, a: int, b: int, base_fee: int, k: int):
     if b <= a:
         raise ValueError("Upper threshold must be greater than lower threshold")
 
-    m = 1.5  # Exponent
-    n = 100  # Exponential Scaling Factor
+    x, a, b, base_fee, k = map(D, (x, a, b, base_fee, k))
+
+    m = D(1.5)  # Exponent
+    n = D(100)  # Exponential Scaling Factor
 
     def sigmoid(t):
         midpoint = (b - a) / 2 + a
