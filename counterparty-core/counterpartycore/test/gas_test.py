@@ -14,7 +14,7 @@ TRANSACTION_ID = 101
 
 @pytest.mark.usefixtures("server_db")
 def test_gas_counter(server_db):
-    assert gas.get_average_transactions(server_db, 101, 802015) == 0
+    assert gas.get_average_transactions(server_db, TRANSACTION_ID, 800000) == 0
 
     # two transactions by block during 2016 blocks
     for i in range(2016):
@@ -40,7 +40,7 @@ def test_gas_counter(server_db):
 
 @pytest.mark.usefixtures("server_db")
 def test_gas_counter_2(server_db):
-    assert gas.get_average_transactions(server_db, 101, 802015) == 0
+    assert gas.get_average_transactions(server_db, 101, 800000) == 0
 
     # two transactions by block during 3000 blocks
     for i in range(3000):
@@ -73,3 +73,25 @@ def test_gas_counter_2(server_db):
     # 4 tx by block during 504 blocks, then 0 tx during 1512 blocks (1512 + 504 = 2016)
     assert gas.get_average_transactions(server_db, TRANSACTION_ID, 804008 + 1512) == 1
     assert gas.get_average_transactions(server_db, TRANSACTION_ID, 804008 + 1513) == 0
+
+
+def generate_gas_counter(server_db, block_index, average):
+    for i in range(2016):
+        for _ in range(average):
+            gas.increment_counter(server_db, TRANSACTION_ID, block_index + i)
+    block_index += 2016
+    assert gas.get_average_transactions(server_db, TRANSACTION_ID, block_index) == average
+    return block_index
+
+
+@pytest.mark.usefixtures("server_db")
+def test_calculate_fee(server_db):
+    assert gas.get_average_transactions(server_db, TRANSACTION_ID, 800000) == 0
+
+    block_index = 3000000
+
+    block_index = generate_gas_counter(server_db, block_index, 2)
+
+    fee = gas.get_transaction_fee(server_db, TRANSACTION_ID, block_index)
+
+    assert fee == 0
