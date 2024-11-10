@@ -81,8 +81,6 @@ def get_average_transactions(db, transaction_id, block_index):
 
 
 def get_transaction_fee(db, transaction_id, block_index):
-    print("get_transaction_fee")
-
     x = get_average_transactions(db, transaction_id, block_index)
     fee_params = util.get_value_by_block_index("fee_parameters", block_index)
 

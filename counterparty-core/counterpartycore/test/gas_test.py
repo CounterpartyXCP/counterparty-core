@@ -1,3 +1,4 @@
+import random
 import tempfile
 
 import pytest
@@ -10,6 +11,48 @@ FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 TRANSACTION_ID = 101
+
+FEE_BY_TX_COUNT_PER_PERIOD = {
+    "2": 0,
+    "3": 0,
+    "4": 669285,
+    "5": 1798620,
+    "6": 4742587,
+    "7": 11920292,
+    "8": 26894142,
+    "9": 50000000,
+    "10": 73105857,
+    "11": 88079707,
+    "12": 95257412,
+    "13": 98201379,
+    "14": 99330714,
+    "15": 99752737,
+    "16": 101000000,
+    "17": 102828427,
+    "18": 105196152,
+    "19": 108000000,
+    "20": 111180339,
+    "21": 114696938,
+    "22": 118520259,
+    "23": 122627416,
+    "24": 127000000,
+    "25": 131622776,
+    "26": 136482872,
+    "27": 141569219,
+    "28": 146872166,
+    "29": 152383203,
+    "30": 158094750,
+    "31": 164000000,
+    "32": 170092795,
+    "33": 176367532,
+    "34": 182819079,
+    "35": 189442719,
+    "36": 196234089,
+    "37": 203189146,
+    "38": 210304125,
+    "39": 217575507,
+    "40": 225000000,
+}
 
 
 @pytest.mark.usefixtures("server_db")
@@ -90,8 +133,10 @@ def test_calculate_fee(server_db):
 
     block_index = 3000000
 
-    block_index = generate_gas_counter(server_db, block_index, 2)
-
-    fee = gas.get_transaction_fee(server_db, TRANSACTION_ID, block_index)
-
-    assert fee == 0
+    # test five random tx count per period between 2 and 40
+    for _ in range(5):
+        tx_count_per_period = random.randint(2, 40)  # noqa: S311
+        block_index = generate_gas_counter(server_db, block_index, tx_count_per_period)
+        fee = gas.get_transaction_fee(server_db, TRANSACTION_ID, block_index)
+        print(f'"{tx_count_per_period}": {fee},')
+        assert fee == FEE_BY_TX_COUNT_PER_PERIOD[str(tx_count_per_period)]
