@@ -242,7 +242,6 @@ def validate(
     issuances = ledger.get_issuances(
         db, asset=asset, status="valid", first=True, current_block_index=block_index
     )
-    print(issuances)
     reissued_asset_longname = None
     if issuances:
         reissuance = True
