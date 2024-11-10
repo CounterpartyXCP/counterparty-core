@@ -234,10 +234,10 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "DISPENSER_UPDATE",
-                        "event_index": 266,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "XCP",
-                            "close_block_index": 150,
+                            "close_block_index": "$BLOCK_INDEX + 5",
                             "last_status_tx_hash": "$TX_HASH",
                             "last_status_tx_source": "$ADDRESS_1",
                             "source": "$ADDRESS_1",

@@ -30,6 +30,7 @@ from scenarios import (
     scenario_18_utxo,
     scenario_19_mpma,
     scenario_20_fairminter,
+    scenario_21_fairminter,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -55,13 +56,14 @@ SCENARIOS += scenario_17_dispenser.SCENARIO
 SCENARIOS += scenario_18_utxo.SCENARIO
 SCENARIOS += scenario_19_mpma.SCENARIO
 SCENARIOS += scenario_20_fairminter.SCENARIO
+SCENARIOS += scenario_21_fairminter.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_20_fairminter.SCENARIO
+# SCENARIOS = scenario_21_fairminter.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -87,6 +89,17 @@ def prepare_item(item, node, context):
         for key in item["params"]:
             if isinstance(item["params"][key], str):
                 item["params"][key] = item["params"][key].replace(f"${name}", value)
+    for key in item["params"]:
+        if isinstance(item["params"][key], str):
+            item["params"][key] = (
+                item["params"][key]
+                .replace("$CURRENT_BLOCK + 1", str(node.block_count + 1))
+                .replace("$CURRENT_BLOCK + 2", str(node.block_count + 2))
+                .replace("$CURRENT_BLOCK + 3", str(node.block_count + 3))
+                .replace("$CURRENT_BLOCK + 4", str(node.block_count + 4))
+                .replace("$CURRENT_BLOCK + 5", str(node.block_count + 5))
+                .replace("$CURRENT_BLOCK", str(node.block_count))
+            )
     return item
 
 
@@ -153,6 +166,11 @@ def control_result(
             json.dumps(expected_result)
             .replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
+            .replace('"$BLOCK_INDEX + 1"', str(block_index + 1))
+            .replace('"$BLOCK_INDEX + 2"', str(block_index + 2))
+            .replace('"$BLOCK_INDEX + 3"', str(block_index + 3))
+            .replace('"$BLOCK_INDEX + 4"', str(block_index + 4))
+            .replace('"$BLOCK_INDEX + 5"', str(block_index + 5))
             .replace('"$BLOCK_INDEX"', str(block_index))
             .replace('"$TX_INDEX"', str(tx_index))
             .replace('"$TX_INDEX - 1"', str(tx_index - 1))
@@ -296,6 +314,8 @@ def run_item(node, item, context):
             .replace("$TX_INDEX", str(tx_index))
             .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
             .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))  # TODO: make it more generic
+            .replace("$BLOCK_INDEX + 1", str(node.block_count + 1))
+            .replace("$BLOCK_INDEX + 2", str(node.block_count + 2))
             .replace("$BLOCK_INDEX", str(node.block_count))
         )
         print(f"Set variable {name} to {context[name]}")
@@ -377,9 +397,9 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 )
                 time.sleep(1)
         else:
+            print("Generating API documentation...")
             if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
                 os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
-            print("Generating API documentation...")
             sh.python3(
                 os.path.join(CURR_DIR, "genapidoc.py"),
                 os.path.abspath("regtestnode"),
@@ -387,13 +407,14 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 _err_to_out=True,
                 _cwd=CURR_DIR,
             )
-
             print("Running Dredd...")
             sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
-
+            print("Testing invalid detach...")
             regtest_node_thread.node.test_invalid_detach()
+            print("Testing transaction chaining...")
             regtest_node_thread.node.test_transaction_chaining()
-
+            print("Tesing asset conservation checking...")
+            regtest_node_thread.node.test_asset_conservation()
             print("Tesing reparse...")
             regtest_node_thread.node.reparse()
             print("Testing rollback...")

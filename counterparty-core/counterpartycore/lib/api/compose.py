@@ -282,7 +282,7 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
 def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     """
     Composes a transaction to cancel an open order or bet.
-    :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_7)
+    :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_6)
     :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)
     """
     params = {"source": address, "offer_hash": offer_hash}
@@ -344,7 +344,7 @@ def compose_dividend(
     Composes a transaction to issue a dividend to holders of a given asset.
     :param address: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on) (e.g. $ADDRESS_1)
     :param quantity_per_unit: The amount of dividend_asset rewarded (in satoshis, hence integer) (e.g. 1)
-    :param asset: The asset or subasset that the dividends are being rewarded on (e.g. $ASSET_1)
+    :param asset: The asset or subasset that the dividends are being rewarded on (e.g. MYASSETA)
     :param dividend_asset: The asset or subasset that the dividends are paid in (e.g. XCP)
     """
     params = {
@@ -626,8 +626,8 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     """
     Composes a transaction to mint a quantity of an asset using the FairMinter protocol.
     :param address: The address that will be minting the asset (e.g. $ADDRESS_1)
-    :param asset: The asset to mint (e.g. $ASSET_3)
-    :param quantity: The quantity of the asset to mint (in satoshis, hence integer) (e.g. 1)
+    :param asset: The asset to mint (e.g. OPENFAIR)
+    :param quantity: The quantity of the asset to mint (in satoshis, hence integer)
     """
     params = {"source": address, "asset": asset, "quantity": quantity}
     return compose(db, "fairmint", params, **construct_args)

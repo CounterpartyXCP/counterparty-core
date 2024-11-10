@@ -9,7 +9,7 @@ SCENARIO = [
             "price": 1,
             "hard_cap": 100 * 10**8,
             "soft_cap": 10 * 10**8,
-            "soft_cap_deadline_block": 130,
+            "soft_cap_deadline_block": "$CURRENT_BLOCK + 5",
         },
         "set_variables": {
             "FAIRMINTB_TX_HASH": "$TX_HASH",
@@ -38,7 +38,7 @@ SCENARIO = [
                         "end_block": 0,
                         "minted_asset_commission_int": 0,
                         "soft_cap": 10 * 10**8,
-                        "soft_cap_deadline_block": 130,
+                        "soft_cap_deadline_block": "$BLOCK_INDEX + 4",
                         "lock_description": False,
                         "lock_quantity": False,
                         "divisible": True,

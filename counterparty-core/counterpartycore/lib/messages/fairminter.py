@@ -192,7 +192,11 @@ def validate(
         if existing_asset["divisible"] != divisible:
             problems.append(f"Divisibility of asset `{asset_name}` is different.")
     else:
-        if premint_quantity > 0 and premint_quantity >= hard_cap:
+        if (
+            premint_quantity > 0
+            and premint_quantity >= hard_cap
+            and (hard_cap > 0 or not util.enabled("partial_mint_to_reach_hard_cap"))
+        ):
             problems.append("Premint quantity must be < hard cap.")
 
     if existing_asset is None:
@@ -223,6 +227,8 @@ def validate(
             problems.append("Soft cap deadline block must be specified if soft cap is specified.")
         elif soft_cap_deadline_block >= end_block > 0:
             problems.append("Soft cap deadline block must be < end block.")
+        elif soft_cap_deadline_block <= start_block:
+            problems.append("Soft cap deadline block must be > start block.")
 
     return problems
 
@@ -422,6 +428,9 @@ def parse(db, tx, message):
         divisible,
         description,
     )
+
+    if soft_cap > 0 and soft_cap_deadline_block <= tx["block_index"]:
+        problems.append("Soft cap deadline block must be > start block.")
 
     # if problems, insert into fairminters table with status invalid and return
     if problems:
@@ -632,6 +641,7 @@ def close_fairminter(db, fairminter, block_index):
     last_issuance["fair_minting"] = False
     last_issuance["block_index"] = block_index
     last_issuance["msg_index"] += 1  # (tx_index, msg_index) and (tx_hash, msg_index) are unique
+    last_issuance["fee_paid"] = 0
     if fairminter["lock_quantity"]:
         last_issuance["locked"] = True
     if fairminter["lock_description"]:
@@ -649,21 +659,98 @@ def close_fairminters(db, block_index):
         close_fairminter(db, fairminter, block_index)
 
 
-def check_fairminter_soft_cap(db, fairminter, block_index):
+def perform_fairmint_soft_cap_operations(db, fairmint, fairminter, fairmint_quantity, block_index):
+    # is the fairmint paid ?
+    if fairmint["paid_quantity"] > 0:
+        # soft cap not reached
+        if fairmint_quantity < fairminter["soft_cap"]:
+            # reimburse paid quantity to minter
+            xcp_destination = fairmint["source"]
+            xcp_action = "fairmint refund"
+        # soft cap reached but payment is burned
+        elif fairminter["burn_payment"]:
+            # burn paid quantity
+            xcp_destination = None
+            xcp_action = "burned fairmint payment"
+        # soft cap reached and payment sent to issuer
+        else:
+            # send funds to issuer
+            xcp_destination = fairminter["source"]
+            xcp_action = "fairmint payment"
+        # credit paid quantity to issuer or minter...
+        if xcp_destination:
+            ledger.credit(
+                db,
+                xcp_destination,
+                config.XCP,
+                fairmint["paid_quantity"],
+                fairmint["tx_index"],
+                action=xcp_action,
+                event=fairmint["tx_hash"],
+            )
+        # ...or destroy it
+        else:
+            bindings = {
+                "tx_index": fairmint["tx_index"],
+                "tx_hash": fairmint["tx_hash"],
+                "block_index": block_index,
+                "source": fairmint["source"],
+                "asset": config.XCP,
+                "quantity": fairmint["paid_quantity"],
+                "tag": xcp_action,
+                "status": "valid",
+            }
+            ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+
+    # the soft cap is reached:
+    # - the assets are distributed to the miner,
+    # - the commissions to the issuer,
+    # if not reached asset will be destroyed in `soft_cap_deadline_reached()`
+    if fairmint_quantity >= fairminter["soft_cap"]:
+        # send assets to minter
+        ledger.credit(
+            db,
+            fairmint["source"],
+            fairminter["asset"],
+            fairmint["earn_quantity"],
+            fairmint["tx_index"],
+            action="unescrowed fairmint",
+            event=fairmint["tx_hash"],
+        )
+        # send commission to issuer
+        if fairmint["commission"] > 0:
+            ledger.credit(
+                db,
+                fairminter["source"],
+                fairminter["asset"],
+                fairmint["commission"],
+                fairmint["tx_index"],
+                action="fairmint commission",
+                event=fairmint["tx_hash"],
+            )
+
+
+def soft_cap_deadline_reached(db, fairminter, block_index):
+    """
+    Performs necessary operations for a fairminter whose soft cap deadline has been reached.
+    """
     fairmint_quantity, paid_quantity = ledger.get_fairmint_quantities(db, fairminter["tx_hash"])
     fairminter_supply = fairmint_quantity + fairminter["premint_quantity"]
     fairmints = ledger.get_valid_fairmints(db, fairminter["tx_hash"])
 
+    # until the soft cap is reached, payments, commissions and assets
+    # are escrowed at the config.UNSPENDABLE address. When the soft cap deadline is reached,
     # we start by unescrow all the assets and payments for this fairminter...
-    ledger.debit(
-        db,
-        config.UNSPENDABLE,
-        fairminter["asset"],
-        fairminter_supply,
-        0,  # tx_index=0 for block actions
-        action="unescrowed fairmint",
-        event=fairminter["tx_hash"],
-    )
+    if fairminter_supply > 0 or not util.enabled("partial_mint_to_reach_hard_cap"):
+        ledger.debit(
+            db,
+            config.UNSPENDABLE,
+            fairminter["asset"],
+            fairminter_supply,
+            0,  # tx_index=0 for block actions
+            action="unescrowed fairmint",
+            event=fairminter["tx_hash"],
+        )
     if paid_quantity > 0:
         ledger.debit(
             db,
@@ -677,75 +764,30 @@ def check_fairminter_soft_cap(db, fairminter, block_index):
     # ...and then we loop on the fairmints to decide how
     # to distribute the assets and payments
     for fairmint in fairmints:
-        # is the fairmint paid ?
-        if fairmint["paid_quantity"] > 0:
-            # soft cap not reached
-            if fairmint_quantity < fairminter["soft_cap"]:
-                # reimburse paid quantity to minter
-                xcp_destination = fairmint["source"]
-                xcp_action = "fairmint refund"
-            # soft cap reached but payment is burned
-            elif fairminter["burn_payment"]:
-                # burn paid quantity
-                xcp_destination = None
-                xcp_action = "burned fairmint payment"
-            # soft cap reached and payment sent to issuer
-            else:
-                # send funds to issuer
-                xcp_destination = fairminter["source"]
-                xcp_action = "fairmint payment"
-            # credit paid quantity to issuer or minter...
-            if xcp_destination:
-                ledger.credit(
-                    db,
-                    xcp_destination,
-                    config.XCP,
-                    fairmint["paid_quantity"],
-                    fairmint["tx_index"],
-                    action=xcp_action,
-                    event=fairmint["tx_hash"],
-                )
-            # ...or destroy it
-            else:
-                bindings = {
-                    "tx_index": fairmint["tx_index"],
-                    "tx_hash": fairmint["tx_hash"],
-                    "block_index": block_index,
-                    "source": fairmint["source"],
-                    "asset": config.XCP,
-                    "quantity": fairmint["paid_quantity"],
-                    "tag": xcp_action,
-                    "status": "valid",
-                }
-                ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+        perform_fairmint_soft_cap_operations(
+            db, fairmint, fairminter, fairmint_quantity, block_index
+        )
 
-        # the soft cap is reached:
-        # - the assets are distributed to the miner,
-        # - the commissions to the issuer,
-        # - the premint is unescrowed
-        if fairmint_quantity >= fairminter["soft_cap"]:
-            # send assets to minter
-            ledger.credit(
-                db,
-                fairmint["source"],
-                fairminter["asset"],
-                fairmint["earn_quantity"],
-                fairmint["tx_index"],
-                action="unescrowed fairmint",
-                event=fairmint["tx_hash"],
-            )
-            # send commission to issuer
-            if fairmint["commission"] > 0:
-                ledger.credit(
-                    db,
-                    fairminter["source"],
-                    fairminter["asset"],
-                    fairmint["commission"],
-                    fairmint["tx_index"],
-                    action="fairmint commission",
-                    event=fairmint["tx_hash"],
-                )
-    if fairminter["premint_quantity"] > 0:
+    # the soft cap is not reached, we close the
+    # fairminter and destroy all the assets at once
+    # if the soft cap is reached, the assets are distributed in `perform_fairmint_soft_cap_operations()`
+    if fairmint_quantity < fairminter["soft_cap"]:
+        close_fairminter(db, fairminter, block_index)
+        if fairminter_supply > 0 or not util.enabled("partial_mint_to_reach_hard_cap"):
+            # destroy assets
+            bindings = {
+                "tx_index": fairminter["tx_index"],
+                "tx_hash": fairminter["tx_hash"],
+                "block_index": block_index,
+                "source": fairminter["source"],
+                "asset": fairminter["asset"],
+                "quantity": fairminter_supply,
+                "tag": "soft cap not reached",
+                "status": "valid",
+            }
+            ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+    elif fairminter["premint_quantity"] > 0:
+        # the premint is sent to the issuer
         ledger.credit(
             db,
             fairminter["source"],
@@ -755,33 +797,14 @@ def check_fairminter_soft_cap(db, fairminter, block_index):
             action="premint",
             event=fairminter["tx_hash"],
         )
-    # the soft cap is not reached, we close the
-    # fairminter and destroy all the assets at once
-    if fairmint_quantity < fairminter["soft_cap"]:
-        close_fairminter(db, fairminter, block_index)
-        # destroy assets
-        bindings = {
-            "tx_index": fairminter["tx_index"],
-            "tx_hash": fairminter["tx_hash"],
-            "block_index": block_index,
-            "source": fairminter["source"],
-            "asset": fairminter["asset"],
-            "quantity": fairminter_supply,
-            "tag": "soft cap not reached",
-            "status": "valid",
-        }
-        ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
 
-def check_soft_cap(db, block_index):
+def perform_fairminter_soft_cap_operations(db, block_index):
     # get fairminters with `soft_cap_deadline_block` equal to `block_index`
-    fairminters = ledger.get_soft_caped_fairminters(db, block_index)
+    fairminters = ledger.get_fairminters_by_soft_cap_deadline(db, block_index)
 
-    # we loop on the fairminters to check if the soft cap is reached.
-    # If it is reached we transfer the assets to the minters and the payments
-    # to the issuer. If not we refund the payments and destroy the assets.
     for fairminter in fairminters:
-        check_fairminter_soft_cap(db, fairminter, block_index)
+        soft_cap_deadline_reached(db, fairminter, block_index)
 
 
 # This function is called on each block BEFORE parsing the transactions
@@ -791,5 +814,5 @@ def before_block(db, block_index):
 
 # This function is called on each block AFTER parsing the transactions
 def after_block(db, block_index):
-    check_soft_cap(db, block_index)
+    perform_fairminter_soft_cap_operations(db, block_index)
     close_fairminters(db, block_index)

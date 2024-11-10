@@ -43,10 +43,13 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
                 f"SELECT * FROM {table_name} WHERE rowid = ?",  # noqa: S608
                 (inserted_rowid,),
             ).fetchone()
-            if table_name == "issuances":
-                AssetCache(db).add_issuance(new_record)
-            elif table_name == "destructions":
-                AssetCache(db).add_destroyed(new_record)
+            if AssetCache in AssetCache._instances:
+                if table_name == "issuances":
+                    AssetCache(db).add_issuance(new_record)
+                elif table_name == "destructions":
+                    AssetCache(db).add_destroyed(new_record)
+            else:
+                AssetCache(db)  # initialization will add just created record to cache
 
     add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
 
@@ -461,7 +464,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
 
 class UTXOBalancesCache(metaclass=util.SingletonMeta):
     def __init__(self, db):
-        # logger.debug("Initialising utxo balances cache...")
+        logger.debug("Initialising utxo balances cache...")
         sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
         cursor = db.cursor()
         cursor.execute(sql)
@@ -2122,11 +2125,11 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
     if not sums:
-        return None, None
-    return sums["quantity"] + sums["commission"], sums["paid_quantity"]
+        return 0, 0
+    return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
 
 
-def get_soft_caped_fairminters(db, block_index):
+def get_fairminters_by_soft_cap_deadline(db, block_index):
     cursor = db.cursor()
     query = """
         SELECT * FROM (

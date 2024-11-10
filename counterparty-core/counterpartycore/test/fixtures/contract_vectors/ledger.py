@@ -55,15 +55,15 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1738,
+                    "message_index": 1739,
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"a31bf2a11c48612d2ab1fe49d95f65c47ad4cf374a65b38b6473675c3c92df15","messages_hash":"0fd171bb4e999c78222cf6973bb7eba6bffa3f2e0a121f1f5503ce9e372c4da4","transaction_count":0,"txlist_hash":"75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"641f62150677acca17d2666cbc25cb407932f96a4f25e6fe86e05cf57dee10e2","messages_hash":"70fa6703ec74f168c5690eee6dd7539ebd625288d03ff45daf27615fa7948618","transaction_count":0,"txlist_hash":"75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "0a2a4cdaa4a9376fec251367b187c54afa0f623ca89a5f88a1dacbd7fa0fdf3d",
+                    "event_hash": "d44081ef15bc4521ac345a6b37bba2287c806862180e65fa3096c09019ae6b77",
                 },
             }
         ],
@@ -438,7 +438,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 7,
@@ -449,7 +449,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 3,
@@ -460,7 +460,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 14,
@@ -471,7 +471,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 6,
@@ -482,7 +482,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 20,
@@ -500,7 +500,7 @@ LEDGER_VECTOR = {
                 "in": ("A160361285792733729",),
                 "out": [
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
                         "asset": "A160361285792733729",
                         "quantity": 50,

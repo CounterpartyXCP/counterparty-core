@@ -128,6 +128,9 @@ class RegtestNode:
             params["return_only_data"] = True
         if "exact_fee" not in params:
             params["exact_fee"] = 10000  # fixed fee
+        # if "inputs_set" not in params and len(source.split(":")) == 1:
+        #    params["inputs_set"] = self.get_inputs_set(source)
+        # print("Inputs set:", params["inputs_set"])
 
         query_string = []
         for key, value in params.items():
@@ -251,7 +254,7 @@ class RegtestNode:
         self.mine_blocks(101)
 
     def generate_xcp(self):
-        print("Generating XCP...")
+        print("Generating XCP...", self.burn_in_one_block)
         for address in self.addresses[0:10]:
             self.send_transaction(
                 address,
@@ -263,6 +266,16 @@ class RegtestNode:
         if self.burn_in_one_block:
             self.mine_blocks(1)
             self.wait_for_counterparty_server()
+
+    def get_inputs_set(self, address):
+        list_unspent = json.loads(
+            self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([address])).strip()
+        )
+        sorted(list_unspent, key=lambda x: -x["amount"])
+        inputs = []
+        for utxo in list_unspent:
+            inputs.append(f"{utxo['txid']}:{utxo['vout']}")
+        return ",".join(inputs)
 
     def start_bitcoin_node(self):
         self.bitcoind_process = sh.bitcoind(
@@ -454,13 +467,21 @@ class RegtestNode:
         state_before = self.get_node_state()
         self.stop_counterparty_server()
         print(f"Running `{command}`...")
-        self.counterparty_server(
-            command,
-            150,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
-            _out=sys.stdout,
-            _err_to_out=True,
-            _bg_exc=False,
-        )
+        if command == "check-db":
+            self.counterparty_server(
+                command,
+                _out=sys.stdout,
+                _err_to_out=True,
+                _bg_exc=False,
+            )
+        else:
+            self.counterparty_server(
+                command,
+                150,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
+                _out=sys.stdout,
+                _err_to_out=True,
+                _bg_exc=False,
+            )
         self.check_node_state(command, state_before)
         print(f"`{command}` successful")
 
@@ -771,9 +792,12 @@ class RegtestNode:
 
         print("Dispenser created")
 
+    def test_asset_conservation(self):
+        self.test_command("check-db")
+
 
 class RegtestNodeThread(threading.Thread):
-    def __init__(self, wsgi_server="waitress", burn_in_one_block=False):
+    def __init__(self, wsgi_server="waitress", burn_in_one_block=True):
         threading.Thread.__init__(self)
         self.wsgi_server = wsgi_server
         self.burn_in_one_block = burn_in_one_block
