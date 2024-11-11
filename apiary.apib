@@ -9996,7 +9996,7 @@ Composes a transaction to attach assets from an address to UTXO.
     + quantity: `1000` (int, required) - The quantity of the asset to attach (in satoshis, hence integer)
     + destination_vout (str, optional) - The vout of the destination output
         + Default: `None`
-    + destination (str, optional) - [Disabled after block 872000] The utxo to attach the assets to
+    + destination (str, optional) - [Disabled after block 871900] The utxo to attach the assets to
         + Default: `None`
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
@@ -10098,9 +10098,9 @@ Composes a transaction to detach assets from UTXO to an address.
     + utxo: `a3fc3352c726d435c99bbfe7c4b4b1dd7c0e22cd91fcdbc5f1971a2984137db8:0` (str, required) - The utxo from which the assets are detached
     + destination: `bcrt1q26zaczwkn20vzza2854zem5a3f8zgrpdddgekw` (str, optional) - The address to detach the assets to, if not provided the addresse corresponding to the utxo is used
         + Default: `None`
-    + asset (str, optional) - [Disabled after block 872000] The asset or subasset to detach
+    + asset (str, optional) - [Disabled after block 871900] The asset or subasset to detach
         + Default: `None`
-    + quantity (int, optional) - [Disabled after block 872000] The quantity of the asset to detach (in satoshis, hence integer)
+    + quantity (int, optional) - [Disabled after block 871900] The quantity of the asset to detach (in satoshis, hence integer)
         + Default: `None`
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
