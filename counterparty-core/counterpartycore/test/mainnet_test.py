@@ -172,7 +172,7 @@ def test_mainnet_api_db(skip):
         f"{MAINNET_DB_DIR}counterparty.api.db", read_only=True, check_wal=False
     )
 
-    api_sql = "SELECT * FROM balances ORDER BY random() LIMIT 10000"
+    api_sql = "SELECT * FROM balances WHERE address IS NOT NULL ORDER BY random() LIMIT 10000"
     api_balances = api_db.execute(api_sql)
     i = 0
     for api_balance in api_balances:
