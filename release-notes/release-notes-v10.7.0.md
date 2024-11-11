@@ -65,8 +65,6 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 
 ## CLI
 
-- Change verbosity of log messages related to blockchain following. (Log a `WARNING` when the node is behind Bitcoin Core.)
-
 
 # Credits
 

@@ -67,11 +67,11 @@ def refresh_backend_height(db, start=False):
         backend.addrindexrs.clear_raw_transactions_cache()
         if not is_server_ready():
             if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
-                logger.warning(
+                logger.debug(
                     f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT})"
                 )
             else:
-                logger.warning(
+                logger.debug(
                     f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {BACKEND_HEIGHT})"
                 )
     else:
