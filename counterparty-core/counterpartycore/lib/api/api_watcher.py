@@ -422,7 +422,7 @@ def update_assets_info(api_db, event):
         set_data.append("confirmed = :confirmed")
         if event_bindings["locked"]:
             set_data.append("locked = :locked")
-        if not existing_asset["issuer"]:  # first issuance
+        if existing_asset is None or not existing_asset["issuer"]:  # first issuance
             set_data.append("issuer = :issuer")
         set_data = ", ".join(set_data)
 
