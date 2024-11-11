@@ -1,10 +1,10 @@
 # Release Notes - Counterparty Core v10.7.0 (2024-11-11)
 
-This is a protocol upgrade that includes a refactor of the UTXO Support feature that fixes some bugs in the original design and simplifies the implementation significantly. It also includes bugfixes for the fair minting functionality in addition to the usual set of miscellaneous improvements to the node API.
+This is a protocol upgrade that includes a refactor of the UTXO Support feature that fixes some bugs in the original design and simplifies the implementation significantly. It also includes bugfixes for the fair minting functionality in addition to the usual set of miscellaneous improvements to the node API. 
 
 # Upgrading
 
-A reparse from block 869900 is mandatory and will be performed automatically.
+**This upgrade is mandatory and must be performed before block 871,900 (around November 25th).** A reparse from this block is mandatory and will be performed automatically.
 
 
 # ChangeLog
