@@ -16,7 +16,7 @@ CHECK_SERVERS = [
     # ["http://rpc:rpc@api1.counterparty.io:4000", "v1", "v9.61.1"],
     ["https://api.counterparty.io:4000", "v2", "v10.6.1"],
     ["https://dev.counterparty.io:4000", "v2", "v10.7.0"],
-    ["https://api.counterparty.info", "v2", "v10.6.1"],
+    ["https://api.counterparty.info", "v2", "v10.6.0"],
     # ["http://rpc:1234@public.coindaddy.io:4000", "v1", "v9.61.3"],
     # ["https://api.xcp.dev/v9_61/", "xcpdev", "v9.61.3"],
     # ["https://api.xcp.dev/v10_1/", "xcpdev", "v10.1.2.CNTRPRTY"],
