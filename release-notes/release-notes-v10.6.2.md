@@ -42,6 +42,7 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 - The `transactions.compose()` function accepts a `tx_info` that contains a source in the form of a UTXO instead of an address. When a UTXO is used, this UTXO must be spent in the corresponding transaction.
 - Refactor `compose_moveutxo()` to use this new `transactions.compose()` feature.
 - Rust fetcher will now only store entries in its database required for Bitcoin reorganization checks. This greatly reduces the size of the database and significantly increases the speed of the catch-up process.
+- Update Rust Bitcoin dependencies (bitcoin 0.32.4 and bitcoincore-rpc 0.19.0)
 
 ## API
 
