@@ -12,6 +12,7 @@ import sys
 
 from counterpartycore.lib import (
     arc4,  # noqa: F401 # TODO: need for test: clean that up
+    backend,
     config,
     deserialize,
     exceptions,
@@ -80,6 +81,8 @@ def determine_encoding(
 
 def check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inputs):
     (desired_source, desired_destination_outputs, desired_data) = tx_info
+    if util.is_utxo_format(desired_source):
+        desired_source, _ = backend.bitcoind.get_utxo_address_and_value(desired_source)
     desired_source = script.make_canonical(desired_source)
     desired_destination = (
         script.make_canonical(desired_destination_outputs[0][0])
@@ -193,9 +196,19 @@ def construct(
     p2sh_pretx_txid=None,
     use_utxos_with_balances=False,
     exclude_utxos_with_balances=False,
+    skip_validation=False,
 ):
     # Extract tx_info
-    (source, destinations, data) = tx_info
+    (address_or_utxo, destinations, data) = tx_info
+
+    # if source is an utxo we force the construction function to use it in inputs
+    # by passing it as force_utxo
+    force_utxo = None
+    if util.is_utxo_format(address_or_utxo):
+        source, _value = backend.bitcoind.get_utxo_address_and_value(address_or_utxo)
+        force_utxo = address_or_utxo
+    else:
+        source = address_or_utxo
 
     # Collect pubkeys
     provided_pubkeys = collect_public_keys(pubkeys)
@@ -203,7 +216,7 @@ def construct(
     # Sanity checks.
     if source:
         script.validate(source)
-    if exact_fee and not isinstance(exact_fee, int):
+    if exact_fee is not None and not isinstance(exact_fee, int):
         raise exceptions.TransactionError("Exact fees must be in satoshis.")
     if not isinstance(fee_provided, int):
         raise exceptions.TransactionError("Fee provided must be in satoshis.")
@@ -213,7 +226,6 @@ def construct(
     encoding = determine_encoding(data, encoding, op_return_max_size)
 
     """Outputs"""
-
     (
         destination_outputs,
         destination_btc_out,
@@ -234,7 +246,6 @@ def construct(
         exact_fee,
         fee_per_kb,
     )
-
     """Inputs"""
 
     (inputs, change_output, btc_in, final_fee) = transaction_inputs.prepare_inputs(
@@ -261,6 +272,7 @@ def construct(
         exclude_utxos,
         use_utxos_with_balances,
         exclude_utxos_with_balances,
+        force_utxo,
     )
 
     """Finish"""
@@ -283,7 +295,7 @@ def construct(
 
     """Sanity Check"""
 
-    if (encoding == "p2sh" and pretx_txid) or encoding != "p2sh":
+    if ((encoding == "p2sh" and pretx_txid) or encoding != "p2sh") and not skip_validation:
         check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inputs)
 
     logger.debug("TX Construct - Transaction constructed.")
@@ -308,7 +320,7 @@ def get_default_args(func):
     }
 
 
-def compose_data(db, name, params, accept_missing_params=False):
+def compose_data(db, name, params, accept_missing_params=False, skip_validation=False):
     compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
     compose_params = inspect.getfullargspec(compose_method)[0]
     missing_params = [p for p in compose_params if p not in params and p != "db"]
@@ -325,11 +337,14 @@ def compose_data(db, name, params, accept_missing_params=False):
                     raise exceptions.ComposeError(
                         f"missing parameters: {', '.join(missing_params)}"
                     )
+    params["skip_validation"] = skip_validation
     return compose_method(db, **params)
 
 
 def compose_transaction(db, name, params, accept_missing_params=False, **construct_kwargs):
     """Create and return a transaction."""
-    tx_info = compose_data(db, name, params, accept_missing_params)
+    skip_validation = not construct_kwargs.pop("validate", True)
+    tx_info = compose_data(db, name, params, accept_missing_params, skip_validation)
+    construct_kwargs["skip_validation"] = skip_validation
     transaction_info = construct(db, tx_info, **construct_kwargs)
     return transaction_info

@@ -33,5 +33,6 @@ pyzmq==26.0.3
 JSON-log-formatter==1.0
 yoyo-migrations==8.2.0
 gunicorn==23.0.0
-waitress==3.0.0
-counterparty-rs==10.6.1
+waitress==3.0.1
+hypothesis==6.116.0
+counterparty-rs==10.7.0

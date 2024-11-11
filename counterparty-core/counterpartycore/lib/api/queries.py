@@ -102,6 +102,8 @@ SUPPORTED_SORT_FIELDS = {
         "get_asset",
         "get_quantity",
         "expiration",
+        "give_price",
+        "get_price",
     ],
     "dispensers": [
         "block_index",
@@ -110,6 +112,7 @@ SUPPORTED_SORT_FIELDS = {
         "give_remaining",
         "dispense_count",
         "satoshirate",
+        "price",
     ],
 }
 
@@ -283,7 +286,9 @@ def select_rows(
                 sort_order = "ASC"
             if sort_order.upper() not in ["ASC", "DESC"]:
                 sort_order = "ASC"
-            if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
+            if sort_name == "asset":
+                order_by.append(f"COALESCE(asset_longname, asset) {sort_order.upper()}")
+            elif sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
                 order_by.append(f"{sort_name} {sort_order.upper()}")
     if len(order_by) == 0:
         order_by.append(f"{cursor_field} {order}")
@@ -1890,6 +1895,9 @@ def prepare_dispenser_where(status, other_conditions=None):
     return where
 
 
+SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
+
+
 def get_dispensers(
     db,
     status: DispenserStatus = "all",
@@ -1915,6 +1923,7 @@ def get_dispensers(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_DISPENSERS,
     )
 
 
@@ -1944,6 +1953,7 @@ def get_dispensers_by_address(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_DISPENSERS,
     )
 
 
@@ -1973,6 +1983,7 @@ def get_dispensers_by_asset(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_DISPENSERS,
     )
 
 
@@ -1987,6 +1998,7 @@ def get_dispenser_by_address_and_asset(db, address: str, asset: str):
         db,
         "dispensers",
         where={"source": address, "asset": asset.upper()},
+        select=SELECT_DISPENSERS,
     )
 
 
@@ -2277,6 +2289,11 @@ def prepare_order_matches_where(status, other_conditions=None):
     return prepare_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
 
 
+SELECT_ORDERS = "*, "
+SELECT_ORDERS += "(get_quantity * 1.0) / (give_quantity * 1.0) AS give_price, "
+SELECT_ORDERS += "(give_quantity * 1.0) / (get_quantity * 1.0) AS get_price"
+
+
 def get_orders(
     db,
     status: OrderStatus = "all",
@@ -2311,6 +2328,7 @@ def get_orders(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDERS,
     )
 
 
@@ -2345,6 +2363,7 @@ def get_orders_by_asset(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDERS,
     )
 
 
@@ -2375,6 +2394,7 @@ def get_orders_by_address(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDERS,
     )
 
 
@@ -2452,6 +2472,7 @@ def get_order(db, order_hash: str):
         db,
         "orders",
         where={"tx_hash": order_hash},
+        select=SELECT_ORDERS,
     )
 
 
@@ -2695,6 +2716,7 @@ def get_dispenser_info_by_hash(db, dispenser_hash: str):
         db,
         "dispensers",
         where={"tx_hash": dispenser_hash},
+        select=SELECT_DISPENSERS,
     )
 
 

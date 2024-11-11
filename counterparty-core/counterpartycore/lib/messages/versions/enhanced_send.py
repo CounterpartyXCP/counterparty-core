@@ -99,7 +99,14 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
 
 
 def compose(
-    db, source: str, destination: str, asset: str, quantity: int, memo: str, memo_is_hex: bool
+    db,
+    source: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    memo: str,
+    memo_is_hex: bool,
+    skip_validation: bool = False,
 ):
     cursor = db.cursor()
 
@@ -117,7 +124,7 @@ def compose(
 
     # Only for outgoing (incoming will overburn).
     balance = ledger.get_balance(db, source, asset)
-    if balance < quantity:
+    if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
     # convert memo to memo_bytes based on memo_is_hex setting
@@ -132,7 +139,7 @@ def compose(
     block_index = util.CURRENT_BLOCK_INDEX
 
     problems = validate(db, source, destination, asset, quantity, memo_bytes, block_index)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     asset_id = ledger.get_asset_id(db, asset, block_index)

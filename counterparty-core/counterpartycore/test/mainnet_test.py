@@ -14,8 +14,8 @@ LOCAL_API_URL = "http://localhost:4000"
 # [server_url, api_version, server_version]
 CHECK_SERVERS = [
     # ["http://rpc:rpc@api1.counterparty.io:4000", "v1", "v9.61.1"],
-    ["https://api.counterparty.io:4000", "v2", "v10.6.0"],
-    ["https://dev.counterparty.io:4000", "v2", "v10.6.0"],
+    ["https://api.counterparty.io:4000", "v2", "v10.6.1"],
+    ["https://dev.counterparty.io:4000", "v2", "v10.7.0"],
     ["https://api.counterparty.info", "v2", "v10.6.0"],
     # ["http://rpc:1234@public.coindaddy.io:4000", "v1", "v9.61.3"],
     # ["https://api.xcp.dev/v9_61/", "xcpdev", "v9.61.3"],
@@ -172,7 +172,7 @@ def test_mainnet_api_db(skip):
         f"{MAINNET_DB_DIR}counterparty.api.db", read_only=True, check_wal=False
     )
 
-    api_sql = "SELECT * FROM balances ORDER BY random() LIMIT 10000"
+    api_sql = "SELECT * FROM balances WHERE address IS NOT NULL ORDER BY random() LIMIT 10000"
     api_balances = api_db.execute(api_sql)
     i = 0
     for api_balance in api_balances:

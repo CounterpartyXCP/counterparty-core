@@ -17,12 +17,15 @@ from counterpartycore.lib.api.api_v1 import APIError
 from counterpartycore.lib.messages import issuance
 from counterpartycore.lib.util import RPCError
 
+from .contract_vectors.attach import ATTACH_VECTOR
+from .contract_vectors.detach import DETACH_VECTOR
 from .contract_vectors.dispenser import DISPENSER_VECTOR
 from .contract_vectors.fairmint import FAIRMINT_VECTOR
 from .contract_vectors.fairminter import FAIRMINTER_VECTOR
 from .contract_vectors.gas import GAS_VECTOR
 from .contract_vectors.gettxinfo import GETTXINFO_VECTOR
 from .contract_vectors.ledger import LEDGER_VECTOR
+from .contract_vectors.move import MOVE_VECTOR
 from .contract_vectors.send import SEND_VECTOR
 from .contract_vectors.transaction import TRANSACTION_VECTOR
 from .contract_vectors.utxo import UTXO_VECTOR
@@ -37,7 +40,7 @@ from .params import (
     DEFAULT_PARAMS as DP,
 )
 
-UNITTEST_VECTOR_ = GETTXINFO_VECTOR
+# UNITTEST_VECTOR = DETACH_VECTOR
 
 UNITTEST_VECTOR = (
     FAIRMINTER_VECTOR
@@ -49,6 +52,9 @@ UNITTEST_VECTOR = (
     | GAS_VECTOR
     | TRANSACTION_VECTOR
     | GETTXINFO_VECTOR
+    | MOVE_VECTOR
+    | ATTACH_VECTOR
+    | DETACH_VECTOR
     | {
         "bet": {
             "validate": [
@@ -7722,6 +7728,11 @@ UNITTEST_VECTOR = (
                 {
                     "in": (binascii.unhexlify("00"), 310502),
                     "out": (None, None),
+                    "mock_protocol_changes": {"short_tx_type_id": True},
+                },
+                {
+                    "in": (b"f0", 310502),
+                    "out": (102, b"0"),
                     "mock_protocol_changes": {"short_tx_type_id": True},
                 },
             ],

@@ -33,7 +33,7 @@ jobs:
 
       - name: Install pytest and build module
         run: |
-          python3.10 -m pip install pytest hatch
+          python3.10 -m pip install pytest hatchling==1.25.0 hatch==1.13.0
           python3.10 -m pip install --upgrade build
 
       # Build counterparty packages
@@ -98,7 +98,7 @@ jobs:
 
       - name: Install pytest and build module
         run: |
-          pip install pytest hatch
+          pip install pytest hatchling==1.25.0 hatch==1.13.0
           python -m pip install --upgrade build
 
       # Build counterparty packages

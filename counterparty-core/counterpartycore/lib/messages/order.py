@@ -436,11 +436,11 @@ def validate(
     if not give_quantity or not get_quantity:
         problems.append("zero give or zero get")
     if give_asset not in (config.BTC, config.XCP) and not ledger.get_issuances(
-        db, status="valid", asset=give_asset
+        db, status="valid", asset=give_asset, current_block_index=block_index
     ):
         problems.append(f"no such asset to give ({give_asset})")
     if get_asset not in (config.BTC, config.XCP) and not ledger.get_issuances(
-        db, status="valid", asset=get_asset
+        db, status="valid", asset=get_asset, current_block_index=block_index
     ):
         problems.append(f"no such asset to get ({get_asset})")
     if expiration > config.MAX_EXPIRATION:
@@ -459,6 +459,7 @@ def compose(
     get_quantity: int,
     expiration: int,
     fee_required: int,
+    skip_validation: bool = False,
 ):
     cursor = db.cursor()
 
@@ -483,7 +484,7 @@ def compose(
         fee_required,
         util.CURRENT_BLOCK_INDEX,
     )
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     give_id = ledger.get_asset_id(db, give_asset, util.CURRENT_BLOCK_INDEX)

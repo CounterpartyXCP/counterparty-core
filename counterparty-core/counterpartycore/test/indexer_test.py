@@ -16,7 +16,9 @@ TEST_CONFIG = {
     "log_file": "/Users/wilfred/Desktop/indexer_test.log",
     "log_level": "debug",
     "json_format": False,
-    # "consume_blocks": True,
+    "consume_blocks": True,
+    "only_write_in_reorg_window": True,
+    "start_height": 868900,
 }
 
 

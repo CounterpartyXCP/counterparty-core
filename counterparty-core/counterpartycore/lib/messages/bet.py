@@ -379,6 +379,7 @@ def compose(
     target_value: int,
     leverage: int,
     expiration: int,
+    skip_validation: bool = False,
 ):
     if ledger.get_balance(db, source, config.XCP) < wager_quantity:
         raise exceptions.ComposeError("insufficient funds")
@@ -398,7 +399,7 @@ def compose(
     )
     if util.date_passed(deadline):
         problems.append("deadline passed")
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     data = message_type.pack(ID)

@@ -99,7 +99,12 @@ def validate(db, source, asset_dest_quant_list, block_index):
 
 
 def compose(
-    db, source: str, asset_dest_quant_list: list, memo: str = None, memo_is_hex: bool = None
+    db,
+    source: str,
+    asset_dest_quant_list: list,
+    memo: str = None,
+    memo_is_hex: bool = None,
+    skip_validation: bool = False,
 ):
     """
     Compose a MPMA send message.
@@ -126,7 +131,7 @@ def compose(
             raise exceptions.ComposeError(f"quantities must be an int (in satoshis) for {asset}")
 
         balance = ledger.get_balance(db, source, asset)
-        if balance < quantity:
+        if balance < quantity and not skip_validation:
             raise exceptions.ComposeError(f"insufficient funds for {asset}")
 
     block_index = util.CURRENT_BLOCK_INDEX
@@ -134,7 +139,7 @@ def compose(
     cursor.close()
 
     problems = validate(db, source, asset_dest_quant_list, block_index)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     data = message_type.pack(ID)

@@ -832,9 +832,12 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                 "versions.enhanced_send",
                 "versions.mpma",
                 "sweep",
+                "attach",
+                "detach",
             ]
             and method == "unpack"
         )
+        or (tx_name in ["detach"] and method == "validate")
     ):
         return tested_method(*inputs)
     else:

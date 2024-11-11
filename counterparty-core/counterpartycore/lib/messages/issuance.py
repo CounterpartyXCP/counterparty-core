@@ -239,7 +239,9 @@ def validate(
                 problems.append("call price for non‐callable asset")
 
     # Valid re-issuance?
-    issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
+    issuances = ledger.get_issuances(
+        db, asset=asset, status="valid", first=True, current_block_index=block_index
+    )
     reissued_asset_longname = None
     if issuances:
         reissuance = True
@@ -298,7 +300,7 @@ def validate(
     # validate parent ownership for subasset
     if subasset_longname is not None and not reissuance:
         parent_issuances = ledger.get_issuances(
-            db, asset=subasset_parent, status="valid", first=True
+            db, asset=subasset_parent, status="valid", first=True, current_block_index=block_index
         )
         if parent_issuances:
             last_parent_issuance = parent_issuances[-1]
@@ -406,10 +408,13 @@ def compose(
     lock: bool = None,
     reset: bool = None,
     description: str = None,
+    skip_validation: bool = False,
 ):
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
-    issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
+    issuances = ledger.get_issuances(
+        db, asset=asset, status="valid", first=True, current_block_index=util.CURRENT_BLOCK_INDEX
+    )
     if issuances:
         last_issuance = issuances[-1]
         callable_ = last_issuance["callable"]
@@ -471,7 +476,7 @@ def compose(
         subasset_longname,
         util.CURRENT_BLOCK_INDEX,
     )
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     if subasset_longname is None or reissuance:
@@ -824,8 +829,10 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
     )
 
 
-def _get_last_description(db, asset, default):
-    issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
+def _get_last_description(db, asset, default, block_index):
+    issuances = ledger.get_issuances(
+        db, asset=asset, status="valid", first=True, current_block_index=block_index
+    )
     if len(issuances) > 0:
         return issuances[-1]["description"]  # Use last description
 
@@ -906,7 +913,9 @@ def parse(db, tx, message, message_type_id):
 
         if len(balances_result) <= 1:
             if len(balances_result) == 0:
-                issuances_result = ledger.get_issuances(db, asset=asset, last=True)
+                issuances_result = ledger.get_issuances(
+                    db, asset=asset, last=True, current_block_index=tx["block_index"]
+                )
 
                 owner_balance = 0
                 owner_address = issuances_result[0]["issuer"]
@@ -1007,7 +1016,7 @@ def parse(db, tx, message, message_type_id):
 
         description_locked = False
         if status == "valid" and description:
-            last_description = _get_last_description(db, asset, description)
+            last_description = _get_last_description(db, asset, description, tx["block_index"])
             if description.lower() == "lock":
                 lock = True
                 description = last_description

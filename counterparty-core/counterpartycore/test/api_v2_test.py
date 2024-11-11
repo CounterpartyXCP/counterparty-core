@@ -148,14 +148,14 @@ def test_new_get_balances_by_address():
             "address": None,
             "asset": "DIVISIBLE",
             "quantity": 1,
-            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "utxo": "74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         },
         {
             "address": None,
             "asset": "XCP",
             "quantity": 100,
-            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "utxo": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         },
         {
@@ -224,7 +224,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
-            "quantity": 91674999880,
+            "quantity": 91674999900,
             "utxo": None,
             "utxo_address": None,
         },
@@ -245,7 +245,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
-            "quantity": 91674999880,
+            "quantity": 91674999900,
         },
         {
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -312,7 +312,7 @@ def test_new_get_balances_by_asset():
         },
         {
             "address": None,
-            "utxo": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+            "utxo": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
             "quantity": 100,
@@ -396,6 +396,8 @@ def test_new_get_asset_orders():
         "fee_provided_remaining": 992800,
         "status": "open",
         "confirmed": True,
+        "get_price": 0.008,
+        "give_price": 125.0,
     }
 
 
@@ -423,6 +425,8 @@ def test_new_get_order_info():
         "fee_provided_remaining": 6800,
         "status": "open",
         "confirmed": True,
+        "get_price": 100.0,
+        "give_price": 0.01,
     }
 
 
@@ -480,6 +484,7 @@ def test_asset_dispensers():
             "oracle_address": None,
             "last_status_tx_hash": None,
             "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+            "price": 1.0,
             "dispense_count": 0,
             "last_status_tx_source": None,
             "close_block_index": None,
@@ -510,6 +515,7 @@ def test_asset_dispensers():
             "oracle_address": None,
             "last_status_tx_hash": None,
             "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+            "price": 1.0,
             "dispense_count": 0,
             "last_status_tx_source": None,
             "close_block_index": None,

@@ -29,6 +29,8 @@ from scenarios import (
     scenario_17_dispenser,
     scenario_18_utxo,
     scenario_19_mpma,
+    scenario_20_fairminter,
+    scenario_21_fairminter,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -53,13 +55,15 @@ SCENARIOS += scenario_15_destroy.SCENARIO
 SCENARIOS += scenario_17_dispenser.SCENARIO
 SCENARIOS += scenario_18_utxo.SCENARIO
 SCENARIOS += scenario_19_mpma.SCENARIO
+SCENARIOS += scenario_20_fairminter.SCENARIO
+SCENARIOS += scenario_21_fairminter.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_19_mpma.SCENARIO
+# SCENARIOS = scenario_21_fairminter.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -85,13 +89,50 @@ def prepare_item(item, node, context):
         for key in item["params"]:
             if isinstance(item["params"][key], str):
                 item["params"][key] = item["params"][key].replace(f"${name}", value)
+    for key in item["params"]:
+        if isinstance(item["params"][key], str):
+            item["params"][key] = (
+                item["params"][key]
+                .replace("$CURRENT_BLOCK + 1", str(node.block_count + 1))
+                .replace("$CURRENT_BLOCK + 2", str(node.block_count + 2))
+                .replace("$CURRENT_BLOCK + 3", str(node.block_count + 3))
+                .replace("$CURRENT_BLOCK + 4", str(node.block_count + 4))
+                .replace("$CURRENT_BLOCK + 5", str(node.block_count + 5))
+                .replace("$CURRENT_BLOCK", str(node.block_count))
+            )
     return item
 
 
-def control_result(item, node, context, block_hash, block_time, tx_hash, data, retry=0):
+def get_tx_index(node, tx_hash):
+    if tx_hash is None:
+        return node.tx_index
+    if tx_hash == "null":
+        return node.tx_index
+    result = node.api_call(f"transactions/{tx_hash}?limit=1")
+    if "result" in result:
+        return result["result"]["tx_index"]
+    return 0
+
+
+def get_last_tx_index(node):
+    result = node.api_call("transactions?limit=1")
+    if "result" in result:
+        return result["result"][0]["tx_index"]
+    return 0
+
+
+def control_result(
+    item, node, context, block_hash, block_time, tx_hash, data, no_confirmation, retry=0
+):
     block_index = node.block_count
     events = node.api_call(f"blocks/{block_index}/events")["result"]
     event_indexes = sorted([event["event_index"] for event in events])
+
+    if no_confirmation:
+        tx_index = get_last_tx_index(node) + 1
+    else:
+        tx_index = get_tx_index(node, tx_hash)
+
     for control in item["controls"]:
         control_url = (
             control["url"].replace("$TX_HASH", tx_hash).replace("$BLOCK_INDEX", str(block_index))
@@ -109,7 +150,15 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
         ):
             time.sleep(2)
             return control_result(
-                item, node, context, block_hash, block_time, tx_hash, data, retry=retry + 1
+                item,
+                node,
+                context,
+                block_hash,
+                block_time,
+                tx_hash,
+                data,
+                no_confirmation,
+                retry=retry + 1,
             )
 
         expected_result = control["result"]
@@ -117,8 +166,14 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
             json.dumps(expected_result)
             .replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
+            .replace('"$BLOCK_INDEX + 1"', str(block_index + 1))
+            .replace('"$BLOCK_INDEX + 2"', str(block_index + 2))
+            .replace('"$BLOCK_INDEX + 3"', str(block_index + 3))
+            .replace('"$BLOCK_INDEX + 4"', str(block_index + 4))
+            .replace('"$BLOCK_INDEX + 5"', str(block_index + 5))
             .replace('"$BLOCK_INDEX"', str(block_index))
-            .replace('"$TX_INDEX"', str(node.tx_index))
+            .replace('"$TX_INDEX"', str(tx_index))
+            .replace('"$TX_INDEX - 1"', str(tx_index - 1))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
         if data:
@@ -157,14 +212,14 @@ def control_result(item, node, context, block_hash, block_time, tx_hash, data, r
         try:
             assert result["result"] == expected_result
             print(f"{item['title']}: " + colored("Success", "green"))
-        except AssertionError:
+        except AssertionError as e:
             print(colored(f"Failed: {item['title']}", "red"))
             expected_result_str = json.dumps(expected_result, indent=4, sort_keys=True)
             got_result_str = json.dumps(result["result"], indent=4, sort_keys=True)
             print(f"Expected: {expected_result_str}")
             print(f"Got: {got_result_str}")
             compare_strings(expected_result_str, got_result_str)
-            # raise e
+            raise e from e
 
 
 def run_item(node, item, context):
@@ -174,6 +229,8 @@ def run_item(node, item, context):
     if "disable_protocol_changes" in item:
         node.disable_protocol_changes(item["disable_protocol_changes"])
 
+    no_confirmation = item.get("no_confirmation", False)
+
     if item["transaction"] == "mine_blocks":
         block_hash, block_time = node.mine_blocks(item["params"]["blocks"])
         tx_hash = "null"
@@ -181,7 +238,6 @@ def run_item(node, item, context):
     else:
         item = prepare_item(item, node, context)
         try:
-            no_confirmation = item.get("no_confirmation", False)
             if item["transaction"] == "atomic_swap":
                 data = None
                 if "counterparty_tx" in item["params"]:
@@ -234,28 +290,40 @@ def run_item(node, item, context):
                         print(expected_result, str(e))
                         assert expected_result == str(e)
                     print(f"{item['title']}: " + colored("Success", "green"))
-                except AssertionError:
+                except AssertionError as er:
                     print(colored(f"Failed: {item['title']}", "red"))
                     print(f"Expected: {expected_result}")
                     print(f"Got: {str(e)}")
-                    # raise e
+                    raise er from er
             else:
-                raise e
+                raise e from e
 
     node.enable_all_protocol_changes()
 
     for name, value in item.get("set_variables", {}).items():
+        if tx_hash is not None:
+            print("get tx index", tx_hash)
+            tx_index = get_tx_index(node, tx_hash)
+            if tx_index is None:
+                tx_index = get_last_tx_index(node) + 1
+        else:
+            tx_index = get_last_tx_index(node)
         context[name] = (
             value.replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
-            .replace("$TX_INDEX", str(node.tx_index))
+            .replace("$TX_INDEX", str(tx_index))
             .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
             .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))  # TODO: make it more generic
+            .replace("$BLOCK_INDEX + 1", str(node.block_count + 1))
+            .replace("$BLOCK_INDEX + 2", str(node.block_count + 2))
             .replace("$BLOCK_INDEX", str(node.block_count))
         )
+        print(f"Set variable {name} to {context[name]}")
 
     if "controls" in item:
-        control_result(item, node, context, block_hash, block_time, tx_hash, tx_data)
+        control_result(
+            item, node, context, block_hash, block_time, tx_hash, tx_data, no_confirmation
+        )
 
     return context
 
@@ -329,9 +397,9 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 )
                 time.sleep(1)
         else:
+            print("Generating API documentation...")
             if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
                 os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
-            print("Generating API documentation...")
             sh.python3(
                 os.path.join(CURR_DIR, "genapidoc.py"),
                 os.path.abspath("regtestnode"),
@@ -341,6 +409,12 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             )
             print("Running Dredd...")
             sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
+            print("Testing invalid detach...")
+            regtest_node_thread.node.test_invalid_detach()
+            print("Testing transaction chaining...")
+            regtest_node_thread.node.test_transaction_chaining()
+            print("Tesing asset conservation checking...")
+            regtest_node_thread.node.test_asset_conservation()
             print("Tesing reparse...")
             regtest_node_thread.node.reparse()
             print("Testing rollback...")

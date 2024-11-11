@@ -55,15 +55,15 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1738,
+                    "message_index": 1735,
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"1734f9eb30868d2383fdb38bbda66b1b937209c143632aabc05bf1de167eda66","messages_hash":"afb721e64a36bca838751fa2eca929a4fe485fbe69f8fc944e90de74019fd629","transaction_count":0,"txlist_hash":"b5cae1a9f44982ed3dd38f90d95cba93efbe9fd1e55b0f367e45336f3e68f786"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"94a62752f851c8ec439fbbd46fbd0bd0d75987fb22416187a48a70e6e9af308a","messages_hash":"5475e9c758035995f06c179546cf91e9cd4b1e35cdd7132362eca6ecc8e9d785","transaction_count":0,"txlist_hash":"75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "fedce5d97e17f27770b0093b4c37deaa145b777afe9ffb057cc2d02664686ee6",
+                    "event_hash": "ed17a78d1950320b3daa1988427288bd90e23d9b4b46b87378fdd10376a5aaa3",
                 },
             }
         ],
@@ -191,11 +191,11 @@ LEDGER_VECTOR = {
             },
         ],
         "xcp_created": [{"in": (), "out": 604506847920}],
-        "xcp_destroyed": [{"in": (), "out": 725000020}],
+        "xcp_destroyed": [{"in": (), "out": 725000000}],
         "xcp_supply": [
             {
                 "in": (),
-                "out": 603781847900,
+                "out": 603781847920,
             }
         ],
         "creations": [
@@ -222,7 +222,7 @@ LEDGER_VECTOR = {
                 },
             }
         ],
-        "destructions": [{"in": (), "out": {"XCP": 725000020}}],
+        "destructions": [{"in": (), "out": {"XCP": 725000000}}],
         "asset_supply": [
             {
                 "in": ("DIVISIBLE",),
@@ -233,7 +233,7 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "XCP": 603781847900,
+                    "XCP": 603781847920,
                     "A95428956661682277": 100000000,
                     "CALLABLE": 1000,
                     "DIVIDEND": 100,
@@ -254,7 +254,7 @@ LEDGER_VECTOR = {
             }
         ],
         "get_balance": [
-            {"in": (ADDR[0], "XCP"), "out": 91674999880},
+            {"in": (ADDR[0], "XCP"), "out": 91674999900},
             {"in": (ADDR[0], "foobar"), "out": 0},
         ],
         "get_asset_name": [
@@ -268,7 +268,7 @@ LEDGER_VECTOR = {
                 "out": [
                     {
                         "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                        "address_quantity": 91674999880,
+                        "address_quantity": 91674999900,
                         "escrow": None,
                     },
                     {
@@ -327,7 +327,7 @@ LEDGER_VECTOR = {
                         "escrow": None,
                     },
                     {
-                        "address": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                        "address": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
                         "address_quantity": 100,
                         "escrow": None,
                     },
@@ -392,7 +392,7 @@ LEDGER_VECTOR = {
                         "escrow": None,
                     },
                     {
-                        "address": "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                        "address": "74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0",
                         "address_quantity": 1,
                         "escrow": None,
                     },
@@ -438,7 +438,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 7,
@@ -449,7 +449,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 3,
@@ -460,7 +460,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 14,
@@ -471,7 +471,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 6,
@@ -482,7 +482,7 @@ LEDGER_VECTOR = {
                         "utxo_address": None,
                     },
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "asset": "A160361285792733729",
                         "quantity": 20,
@@ -500,7 +500,7 @@ LEDGER_VECTOR = {
                 "in": ("A160361285792733729",),
                 "out": [
                     {
-                        "block_index": 310520,
+                        "block_index": 310506,
                         "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
                         "asset": "A160361285792733729",
                         "quantity": 50,

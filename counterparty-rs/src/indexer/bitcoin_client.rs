@@ -4,21 +4,18 @@ use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
 
 use crate::b58::b58_encode;
 use crate::utils::script_to_address;
-use bitcoin::hashes::hex::ToHex;
-use bitcoincore_rpc::bitcoin::script::Instruction;
-use bitcoincore_rpc::{
-    bitcoin::{
-        consensus::serialize,
-        hashes::{ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
-        opcodes::all::{
-            OP_CHECKMULTISIG, OP_CHECKSIG, OP_EQUAL, OP_HASH160, OP_PUSHNUM_1, OP_PUSHNUM_2,
-            OP_PUSHNUM_3, OP_RETURN,
-        },
-        script::Instruction::{Op, PushBytes},
-        Block, BlockHash, Script, TxOut,
+use bitcoin::{
+    consensus::serialize,
+    hashes::{hex::prelude::*, ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
+    opcodes::all::{
+        OP_CHECKMULTISIG, OP_CHECKSIG, OP_EQUAL, OP_HASH160, OP_PUSHNUM_1, OP_PUSHNUM_2,
+        OP_PUSHNUM_3, OP_RETURN,
     },
-    Auth, Client, RpcApi,
+    script::Instruction::{Op, PushBytes},
+    Block, BlockHash, Script, TxOut,
 };
+use bitcoincore_rpc::bitcoin::script::Instruction;
+use bitcoincore_rpc::{Auth, Client, RpcApi};
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
@@ -55,7 +52,7 @@ impl BlockHasEntries for Block {
         let mut script_hashes = HashMap::new();
         for tx in self.txdata.iter() {
             let entry = TxInBlockAtHeight {
-                txid: tx.txid().to_byte_array(),
+                txid: tx.compute_txid().to_byte_array(),
                 height,
             };
             entries.push(Box::new(WritableEntry::new(entry)));
@@ -390,10 +387,15 @@ impl ToBlock for Block {
                     key = vin.previous_output.txid.to_byte_array().to_vec();
                     key.reverse();
                 }
-                let hash = vin.previous_output.txid.to_hex();
+                let hash = vin.previous_output.txid.to_string();
                 if !vin.witness.is_empty() {
-                    vtxinwit
-                        .append(&mut vin.witness.iter().map(|w| w.to_hex()).collect::<Vec<_>>());
+                    vtxinwit.append(
+                        &mut vin
+                            .witness
+                            .iter()
+                            .map(|w| w.as_hex().to_string())
+                            .collect::<Vec<_>>(),
+                    );
                     segwit = true
                 }
                 vins.push(Vin {
@@ -421,7 +423,14 @@ impl ToBlock for Block {
                 }
                 let output_value = vout.value.to_sat() as i64;
                 fee -= output_value;
-                let result = parse_vout(&config, key.clone(), height, tx.txid().to_hex(), vi, vout);
+                let result = parse_vout(
+                    &config,
+                    key.clone(),
+                    height,
+                    tx.compute_txid().to_string(),
+                    vi,
+                    vout,
+                );
                 match result {
                     Err(e) => {
                         err = Some(e);
@@ -466,8 +475,8 @@ impl ToBlock for Block {
                 segwit,
                 coinbase: tx.is_coinbase(),
                 lock_time: tx.lock_time.to_consensus_u32(),
-                tx_id: tx.txid().to_hex(),
-                tx_hash: Sha256dHash::hash(&tx_bytes).to_hex(),
+                tx_id: tx.compute_txid().to_string(),
+                tx_hash: Sha256dHash::hash(&tx_bytes).to_string(),
                 vtxinwit,
                 vin: vins,
                 vout: vouts,
@@ -477,12 +486,12 @@ impl ToBlock for Block {
         CrateBlock {
             height,
             version: self.header.version.to_consensus(),
-            hash_prev: self.header.prev_blockhash.to_hex(),
-            hash_merkle_root: self.header.merkle_root.to_hex(),
+            hash_prev: self.header.prev_blockhash.to_string(),
+            hash_merkle_root: self.header.merkle_root.to_string(),
             block_time: self.header.time,
             bits: self.header.bits.to_consensus(),
             nonce: self.header.nonce,
-            block_hash: self.block_hash().to_hex(),
+            block_hash: self.block_hash().to_string(),
             transaction_count: self.txdata.len(),
             transactions,
         }
@@ -503,7 +512,7 @@ impl BlockHasOutputs for Block {
                 if script_hash == o.script_pubkey.script_hash().as_byte_array().as_ref() {
                     outputs.push((
                         TxidVoutPrefix {
-                            txid: tx.txid().to_byte_array(),
+                            txid: tx.compute_txid().to_byte_array(),
                             vout: i as u32,
                         },
                         o.value.to_sat(),
@@ -756,7 +765,7 @@ mod tests {
 
         let entry = entries.get(1).unwrap().to_entry();
         let e = TxInBlockAtHeight::from_entry(entry).unwrap();
-        assert_eq!(e.txid, block.txdata[0].txid().to_byte_array());
+        assert_eq!(e.txid, block.txdata[0].compute_txid().to_byte_array());
         assert_eq!(e.height, height);
 
         let entry = entries.get(2).unwrap().to_entry();

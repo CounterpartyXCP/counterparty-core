@@ -153,6 +153,8 @@ def get_example_output(path, args):
 def include_in_dredd(group, path):
     if "/bet" in path:
         return False
+    if "_old" in path:
+        return False
     return True
 
 
@@ -342,6 +344,8 @@ def gen_unpack_doc(db):
         "enhanced_send",
         "mpma_send",
         "sweep",
+        "attach",
+        "detach",
         # "send",
         # "bet",
     ]
@@ -358,6 +362,8 @@ def gen_unpack_doc(db):
         "dividend": get_event_tx_hash(db, "ASSET_DIVIDEND"),
         "sweep": get_event_tx_hash(db, "SWEEP"),
         "btcpay": get_event_tx_hash(db, "BTC_PAY"),
+        "attach": get_event_tx_hash(db, "ATTACH_TO_UTXO"),
+        "detach": get_event_tx_hash(db, "DETACH_FROM_UTXO"),
         # "send": ,
         # "bet": ,
     }
@@ -477,6 +483,19 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_ORDER_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_ORDER_TX_HASH"] = row["tx_hash"]
 
+    # block and tx with UTXOASSET orders
+    cursor.execute(
+        "SELECT block_index, tx_hash FROM orders WHERE give_asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
+    )
+    row = cursor.fetchone()
+    regtest_fixtures["$LAST_UTXOASSET_ORDER_BLOCK"] = row["block_index"]
+    regtest_fixtures["$LAST_UTXOASSET_ORDER_TX_HASH"] = row["tx_hash"]
+
+    # last open order tx_hash
+    cursor.execute("SELECT tx_hash FROM orders WHERE status='open' ORDER BY rowid DESC LIMIT 1")
+    row = cursor.fetchone()
+    regtest_fixtures["$LAST_OPEN_ORDER_TX_HASH"] = row["tx_hash"]
+
     # block and tx with fairminter
     cursor.execute("SELECT block_index, tx_hash FROM fairminters ORDER BY rowid DESC LIMIT 1")
     row = cursor.fetchone()
@@ -488,6 +507,11 @@ def generate_regtest_fixtures(db):
     row = cursor.fetchone()
     regtest_fixtures["$LAST_FAIRMINT_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_FAIRMINT_TX_HASH"] = row["tx_hash"]
+
+    # open fairminter asset
+    cursor.execute("SELECT asset FROM fairminters WHERE status='open' ORDER BY rowid DESC LIMIT 1")
+    row = cursor.fetchone()
+    regtest_fixtures["$OPEN_FAIRMINTER_ASSET"] = row["asset"]
 
     # get utxo from bitcoin-cli
     utxo = json.loads(

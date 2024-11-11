@@ -3,7 +3,7 @@ import logging
 import math
 import struct
 
-from counterpartycore.lib import config, database, exceptions, ledger
+from counterpartycore.lib import config, database, exceptions, ledger, util
 from counterpartycore.lib.messages import fairminter as fairminter_mod
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -89,7 +89,7 @@ def validate(
         balance = ledger.get_balance(db, source, config.XCP)
         if balance < xcp_total_price:
             problems.append("insufficient XCP balance")
-    else:
+    elif not util.enabled("partial_mint_to_reach_hard_cap"):
         # check id we don't exceed the hard cap
         if (
             fairminter["hard_cap"] > 0
@@ -100,14 +100,9 @@ def validate(
     return problems
 
 
-def compose(
-    db,
-    source,
-    asset,
-    quantity=0,
-):
+def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: bool = False):
     problems = validate(db, source, asset, quantity)
-    if len(problems) > 0:
+    if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     if quantity != 0:
@@ -180,7 +175,7 @@ def parse(db, tx, message):
     asset_destination = tx["source"]
 
     # if the soft cap is not reached we escrow the assets and payments
-    # which will be distributed in the `fairminters.check_soft_cap()` function.
+    # which will be distributed in the `fairminters.perform_soft_cap_operations()` function.
     if soft_cap_not_reached:
         xcp_action = "escrowed fairmint"
         xcp_destination = config.UNSPENDABLE
@@ -199,7 +194,18 @@ def parse(db, tx, message):
         earn_quantity = quantity
     else:
         paid_quantity = 0
-        earn_quantity = fairminter["max_mint_per_tx"]
+        if util.enabled("partial_mint_to_reach_hard_cap"):
+            asset_supply = ledger.asset_supply(db, fairminter["asset"])
+            if (
+                fairminter["hard_cap"] > 0
+                and asset_supply + fairminter["max_mint_per_tx"] > fairminter["hard_cap"]
+            ):
+                earn_quantity = fairminter["hard_cap"] - asset_supply
+            else:
+                earn_quantity = fairminter["max_mint_per_tx"]
+        else:
+            earn_quantity = fairminter["max_mint_per_tx"]
+
     # we determine the commission to be paid to the issuer
     # and we subtract it from the assets to be sent to the user
     commission = 0
@@ -295,7 +301,8 @@ def parse(db, tx, message):
     # we check if the hard cap is reached and in this case...
     if fairminter["hard_cap"] > 0:
         asset_supply = ledger.asset_supply(db, fairminter["asset"])
-        if asset_supply + earn_quantity == fairminter["hard_cap"]:
+        alredy_minted = asset_supply + earn_quantity + commission
+        if alredy_minted == fairminter["hard_cap"]:
             # ...we unlock the issuances for this assets
             bindings["fair_minting"] = False
             # we check if we need to lock the assets
@@ -308,7 +315,7 @@ def parse(db, tx, message):
                 fairminter["soft_cap"] > 0
                 and fairminter["soft_cap_deadline_block"] >= tx["block_index"]
             ):
-                fairminter_mod.check_fairminter_soft_cap(db, fairminter, tx["block_index"])
+                fairminter_mod.soft_cap_deadline_reached(db, fairminter, tx["block_index"])
             ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance

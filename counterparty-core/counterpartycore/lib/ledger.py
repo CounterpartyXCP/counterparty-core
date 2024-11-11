@@ -43,10 +43,13 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
                 f"SELECT * FROM {table_name} WHERE rowid = ?",  # noqa: S608
                 (inserted_rowid,),
             ).fetchone()
-            if table_name == "issuances":
-                AssetCache(db).add_issuance(new_record)
-            elif table_name == "destructions":
-                AssetCache(db).add_destroyed(new_record)
+            if AssetCache in AssetCache._instances:
+                if table_name == "issuances":
+                    AssetCache(db).add_issuance(new_record)
+                elif table_name == "destructions":
+                    AssetCache(db).add_destroyed(new_record)
+            else:
+                AssetCache(db)  # initialization will add just created record to cache
 
     add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
 
@@ -493,7 +496,7 @@ def get_address_balances(db, address: str):
         field_name = "utxo"
 
     query = f"""
-        SELECT {field_name}, asset, quantity, MAX(rowid)
+        SELECT {field_name}, asset, quantity, utxo_address, MAX(rowid)
         FROM balances
         WHERE {field_name} = ?
         GROUP BY {field_name}, asset
@@ -922,14 +925,11 @@ def get_assets_last_issuance(db, asset_list):
     cursor = db.cursor()
     fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
     query = f"""
-        SELECT {", ".join(fields)}, MAX(rowid) AS rowid
-        FROM issuances
+        SELECT {", ".join(fields)} FROM assets_info
         WHERE asset IN ({",".join(["?"] * len(asset_list))})
-        AND status = ?
-        GROUP BY asset
     """  # nosec B608  # noqa: S608
-    cursor.execute(query, asset_list + ["valid"])
-    issuances = cursor.fetchall()
+    cursor.execute(query, asset_list)
+    assets_info = cursor.fetchall()
 
     result = {
         "BTC": {
@@ -947,16 +947,22 @@ def get_assets_last_issuance(db, asset_list):
             "issuer": None,
         },
     }
-    for issuance in issuances:
-        del issuance["rowid"]
-        asset = issuance["asset"]
-        del issuance["asset"]
-        result[asset] = issuance
+    for asset_info in assets_info:
+        asset = asset_info["asset"]
+        del asset_info["asset"]
+        result[asset] = asset_info
     return result
 
 
 def get_issuances(
-    db, asset=None, status=None, locked=None, block_index=None, first=False, last=False
+    db,
+    asset=None,
+    status=None,
+    locked=None,
+    block_index=None,
+    first=False,
+    last=False,
+    current_block_index=None,
 ):
     cursor = db.cursor()
     cursor = db.cursor()
@@ -976,10 +982,14 @@ def get_issuances(
         bindings.append(block_index)
     # no sql injection here
     query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    if util.enabled("fix_get_issuances", current_block_index):
+        order_fields = "rowid, tx_index"
+    else:
+        order_fields = "tx_index"
     if first:
-        query += f""" ORDER BY tx_index ASC"""  # noqa: F541
+        query += f""" ORDER BY {order_fields} ASC"""  # noqa: F541
     elif last:
-        query += f""" ORDER BY tx_index DESC"""  # noqa: F541
+        query += f""" ORDER BY {order_fields} DESC"""  # noqa: F541
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -2126,11 +2136,11 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
     if not sums:
-        return None, None
-    return sums["quantity"] + sums["commission"], sums["paid_quantity"]
+        return 0, 0
+    return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
 
 
-def get_soft_caped_fairminters(db, block_index):
+def get_fairminters_by_soft_cap_deadline(db, block_index):
     cursor = db.cursor()
     query = """
         SELECT * FROM (
