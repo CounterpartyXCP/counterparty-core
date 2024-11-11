@@ -5,7 +5,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "10.6.1"  # for hatch
+__version__ = "10.7.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-")[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -20,8 +20,8 @@ ADDRINDEXRS_VERSION = "0.4.6"
 # Fo example:
 # NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (1, 800000)
 # means that we need to reparse from block 800000 if database minor version is less than 1
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN = [(3, 0), (5, 865999), (6, 867000)]
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = [(3, 0), (5, 2925799), (6, 2925799)]
+NEED_REPARSE_IF_MINOR_IS_LESS_THAN = [(3, 0), (5, 865999), (6, 867000), (7, 869900)]
+NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = [(3, 0), (5, 2925799), (6, 2925799), (7, 2925799)]
 # Counterparty protocol
 TXTYPE_FORMAT = ">I"
 SHORT_TXTYPE_FORMAT = "B"
