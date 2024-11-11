@@ -999,10 +999,11 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             and (data or destination == config.UNSPENDABLE or dispensers_outs)  # counterparty tx
         )
         or (
-            utxos_info[0] != ""
+            len(utxos_info) > 0
+            and utxos_info[0] != ""
             and util.enabled("spend_utxo_to_detach")  # utxo move or detach with a single OP_RETURN
         )
-        or (utxos_info[0] != "" and utxos_info[1] != "")
+        or (len(utxos_info) > 1 and utxos_info[0] != "" and utxos_info[1] != "")
     ):
         transaction_bindings = {
             "tx_index": tx_index,

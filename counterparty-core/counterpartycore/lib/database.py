@@ -215,13 +215,18 @@ def version(db):
 
 
 def init_config_table(db):
+    cursor = db.cursor()
+
+    query = "SELECT name FROM sqlite_master WHERE type='table' AND name='config'"
+    if len(list(cursor.execute(query))) == 1:
+        return
+
     sql = """
         CREATE TABLE IF NOT EXISTS config (
             name TEXT PRIMARY KEY,
             value TEXT
         )
     """
-    cursor = db.cursor()
     cursor.execute(sql)
     cursor.execute("CREATE INDEX IF NOT EXISTS config_config_name_idx ON config (name)")
 

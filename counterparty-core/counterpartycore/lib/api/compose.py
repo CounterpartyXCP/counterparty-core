@@ -667,7 +667,7 @@ def compose_attach(
     :param asset: The asset or subasset to attach (e.g. XCP)
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
     :param destination_vout: The vout of the destination output
-    :param destination: [Disabled after block 870000] The utxo to attach the assets to
+    :param destination: [Disabled after block 872000] The utxo to attach the assets to
     """
     if util.enabled("spend_utxo_to_detach"):
         params = {
@@ -680,7 +680,7 @@ def compose_attach(
 
     if util.CURRENT_BLOCK_INDEX > util.get_change_block_index("spend_utxo_to_detach") - 12:
         raise exceptions.ComposeError(
-            "Attach is disabled from 12 blocks before block 870000 and the activation of the new attach/detach messages types"
+            "Attach is disabled from 12 blocks before block 872000 and the activation of the new attach/detach messages types"
         )
 
     return compose_utxo(
@@ -705,8 +705,8 @@ def compose_detach(
     Composes a transaction to detach assets from UTXO to an address.
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
     :param destination: The address to detach the assets to, if not provided the addresse corresponding to the utxo is used (e.g. $ADDRESS_1)
-    :param asset: [Disabled after block 870000] The asset or subasset to detach
-    :param quantity: [Disabled after block 870000] The quantity of the asset to detach (in satoshis, hence integer)
+    :param asset: [Disabled after block 872000] The asset or subasset to detach
+    :param quantity: [Disabled after block 872000] The quantity of the asset to detach (in satoshis, hence integer)
     """
     if util.enabled("spend_utxo_to_detach"):
         params = {
@@ -717,7 +717,7 @@ def compose_detach(
 
     if util.CURRENT_BLOCK_INDEX > util.get_change_block_index("spend_utxo_to_detach") - 12:
         raise exceptions.ComposeError(
-            "Attach is disabled from 12 blocks before block 870000 and the activation of the new attach/detach messages types"
+            "Attach is disabled from 12 blocks before block 872000 and the activation of the new attach/detach messages types"
         )
 
     return compose_utxo(
