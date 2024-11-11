@@ -40,6 +40,7 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 - Fix subasset name handling when creating a Fair Minter by preserving the `asset_longname` field when `asset=<subasset_name>` is specified and `asset_parent` is not specified
 - Fix `disable_utxo_locks` parameter in compose API
 - Fix `gas.get_transaction_count_for_last_period()`
+- Fix `update_assets_info()` when a fairmint is parsed into the mempool before the corresponding fairminter
 
 ## Codebase
 
