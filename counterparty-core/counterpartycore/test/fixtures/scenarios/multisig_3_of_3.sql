@@ -281,6 +281,8 @@ CREATE INDEX balances_quantity_idx ON balances (quantity)
         ;
 CREATE INDEX balances_utxo_address_idx ON balances (utxo_address)
         ;
+CREATE INDEX balances_utxo_asset_idx ON balances (utxo, asset)
+        ;
 CREATE INDEX balances_utxo_idx ON balances (utxo)
         ;
 CREATE TRIGGER block_update_balances
@@ -358,6 +360,8 @@ CREATE INDEX balances_block_index_idx ON balances (block_index)
 CREATE INDEX balances_quantity_idx ON balances (quantity)
         ;
 CREATE INDEX balances_utxo_address_idx ON balances (utxo_address)
+        ;
+CREATE INDEX balances_utxo_asset_idx ON balances (utxo, asset)
         ;
 CREATE INDEX balances_utxo_idx ON balances (utxo)
         ;

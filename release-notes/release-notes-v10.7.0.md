@@ -4,7 +4,10 @@ This is a protocol upgrade that includes a refactor of the UTXO Support feature 
 
 # Upgrading
 
-**This upgrade is mandatory and must be performed before block 871,900 (around November 25th).** A reparse from this block is mandatory and will be performed automatically.
+**This upgrade is mandatory and must be performed before block 871,900 (around November 25th).**
+A reparse from the block 869,900 block is mandatory and will be performed automatically.
+
+Composition functions for `attach` and `detach` transactions are disabled between block 871,888 and 871,900.
 
 
 # ChangeLog
@@ -41,6 +44,14 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 - Fix `disable_utxo_locks` parameter in compose API
 - Fix `gas.get_transaction_count_for_last_period()`
 - Fix `update_assets_info()` when a fairmint is parsed into the mempool before the corresponding fairminter
+- Fix asset cache initialization
+- Takes into account the commission to check if the hard cap is reached
+- Soft cap deadline block must be greater than start block
+- Fix `legder.get_fairmint_quantities()` function
+- Fix `fee_paid`` field when closing fairminter
+- Fix `premint_quantity` checking when no hardcap
+- Fix `premint_quantity` destruction when soft cap is not reached
+- Add an index on `(utxo, asset)` fields in the `balances` tables
 
 ## Codebase
 
