@@ -1052,4 +1052,64 @@ SCENARIO = [
             }
         ],
     },
+    {
+        "title": "Update description after fairminter closed",
+        "transaction": "issuance",
+        "source": "$ADDRESS_10",
+        "params": {
+            "asset": "PREMINT",
+            "quantity": 0,
+            "description": "My super description",
+        },
+        "controls": [
+            {
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ASSET_ISSUANCE,DEBIT",
+                "result": [
+                    {
+                        "event": "ASSET_ISSUANCE",
+                        "event_index": "$EVENT_INDEX_4",
+                        "params": {
+                            "asset": "PREMINT",
+                            "asset_events": "change_description",
+                            "asset_longname": "",
+                            "block_index": "$BLOCK_INDEX",
+                            "call_date": 0,
+                            "call_price": 0.0,
+                            "callable": False,
+                            "description": "My super description",
+                            "description_locked": False,
+                            "divisible": True,
+                            "fee_paid": 0,
+                            "issuer": "$ADDRESS_10",
+                            "locked": False,
+                            "quantity": 0,
+                            "reset": False,
+                            "source": "$ADDRESS_10",
+                            "status": "valid",
+                            "transfer": False,
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": "$TX_INDEX",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                    {
+                        "event": "DEBIT",
+                        "event_index": "$EVENT_INDEX_3",
+                        "params": {
+                            "action": "issuance fee",
+                            "address": "$ADDRESS_10",
+                            "asset": "XCP",
+                            "block_index": "$BLOCK_INDEX",
+                            "event": "$TX_HASH",
+                            "quantity": 0,
+                            "tx_index": "$TX_INDEX",
+                            "utxo": None,
+                            "utxo_address": None,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                ],
+            }
+        ],
+    },
 ]

@@ -26,7 +26,9 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 
 ### Fairminter
 
-When there are fewer tokens remaining than `max_mint_per_tx` in a free Fairminter with hard cap, the last mint receives what remains instead of triggering an error.
+1. When there are fewer tokens remaining than `max_mint_per_tx` in a free Fairminter with hard cap, the last mint receives what remains instead of triggering an error.
+
+1. Fix the bug that prevents updating an asset's description after a fairminter's automatic closure.
 
 ## Bugfixes
 
