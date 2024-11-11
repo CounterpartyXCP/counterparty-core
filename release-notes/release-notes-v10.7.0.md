@@ -1,5 +1,4 @@
-# Release Notes - Counterparty Core v10.6.2 (2024-11-??)
-
+# Release Notes - Counterparty Core v10.7.0 (2024-11-11)
 
 
 # Upgrading
