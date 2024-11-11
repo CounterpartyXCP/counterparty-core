@@ -51,7 +51,7 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 - Fix `fee_paid`` field when closing fairminter
 - Fix `premint_quantity` checking when no hardcap
 - Fix `premint_quantity` destruction when soft cap is not reached
-
+- Add an index on `(utxo, asset)` fields in the `balances` tables
 
 ## Codebase
 
