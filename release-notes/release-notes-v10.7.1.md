@@ -17,10 +17,11 @@
 - Correctly catch `ValueError` in unpack endpoint
 - Correctly catch `InvalidBase58Error` in compose endpoints
 - Correctly catch `BitcoindRPCError` in get transaction info endpoint
-- Fix typo in dispenser error message (`has` -> `have`)
+- Fix typo in dispenser error messages (`has` -> `have`)
 - Fix get balances endpoint when using `sort=asset`
 - Catch all errors when using unpack endpoint with invalid data
 - Restart RSFetcher when it returns None
+- Clean up blocks without ledger hash before starting the catch up
 
 ## Codebase
 

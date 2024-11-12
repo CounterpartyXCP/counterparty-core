@@ -11,7 +11,7 @@ import urllib.parse
 from io import StringIO
 
 import sh
-from counterpartycore.lib import arc4
+from counterpartycore.lib import arc4, database
 
 WALLET_NAME = "xcpwallet"
 
@@ -484,6 +484,18 @@ class RegtestNode:
             )
         self.check_node_state(command, state_before)
         print(f"`{command}` successful")
+
+    def test_empty_ledger_hash(self):
+        print("Test empty ledger hash...")
+        state_before = self.get_node_state()
+        self.stop_counterparty_server()
+        # delete some ledger hash
+        db = database.get_db_connection(
+            f"{self.datadir}/counterparty.db", read_only=False, check_wal=False
+        )
+        db.execute("UPDATE blocks SET ledger_hash = NULL WHERE block_index > 150")
+        self.check_node_state("auto-rollback", state_before)
+        print("Empty ledger hash test successful")
 
     def reparse(self):
         self.test_command("reparse")

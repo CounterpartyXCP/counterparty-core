@@ -1316,6 +1316,22 @@ def parse_new_block(db, decoded_block, tx_index=None):
     return tx_index, decoded_block["block_index"]
 
 
+def rollback_empty_block(db):
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT block_index FROM blocks 
+        WHERE ledger_hash IS NULL 
+        ORDER BY block_index ASC
+        LIMIT 1
+    """)
+    block = cursor.fetchone()
+    if block:
+        logger.warning(
+            f"Ledger hashes are empty from block {block['block_index']}. Rolling back..."
+        )
+        rollback(db, block_index=block["block_index"])
+
+
 def check_database_version(db):
     # Update version if new database.
     if util.CURRENT_BLOCK_INDEX <= config.BLOCK_FIRST:
@@ -1338,6 +1354,11 @@ def check_database_version(db):
 
 def catch_up(db, check_asset_conservation=True):
     logger.info("Catching up...")
+
+    # delete blocks with no ledger hashes
+    # in case of reparse interrupted
+    rollback_empty_block(db)
+
     util.BLOCK_PARSER_STATUS = "catching up"
     # update the current block index
     util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
