@@ -11,17 +11,17 @@
 
 ## Bugfixes
 
-- Fix CORS for OPTIONS requests
+- Fix CORS headers for OPTIONS requests
 - Fix rounding error on normalized quantity
-- Use `null` instead of '' for `asset_longname` and `asset_parent` fields
+- Use `null` instead of `''` for `asset_longname` and `asset_parent` fields
 - Correctly catch `ValueError` in unpack endpoint
 - Correctly catch `InvalidBase58Error` in compose endpoints
 - Correctly catch `BitcoindRPCError` in get transaction info endpoint
 - Fix typo in dispenser error messages (`has` -> `have`)
 - Fix get balances endpoint when using `sort=asset`
 - Catch all errors when using unpack endpoint with invalid data
-- Restart RSFetcher when it returns None
-- Clean up blocks without ledger hash before starting the catch up
+- Restart RSFetcher when it returns `None`
+- Clean up blocks without ledger hash before starting catch-up
 
 ## Codebase
 
@@ -38,8 +38,5 @@
 # Credits
 
 * droplister 
-* OpenStamp
-* DerpHerpenstein
 * Ouziel Slama
-* Wilfred Denton
 * Adam Krellenstein
