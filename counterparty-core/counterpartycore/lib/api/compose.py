@@ -775,13 +775,17 @@ def info(db, rawtransaction: str, block_index: int = None):
     except Exception as e:
         raise exceptions.ComposeError("Invalid rawtransaction") from e
 
-    source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
-        gettxinfo.get_tx_info(
-            db,
-            decoded_tx,
-            block_index=block_index,
+    try:
+        source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
+            gettxinfo.get_tx_info(
+                db,
+                decoded_tx,
+                block_index=block_index,
+            )
         )
-    )
+    except exceptions.BitcoindRPCError:
+        source, destination, btc_amount, fee, data = None, None, None, None, None
+
     del decoded_tx["__data__"]
     result = {
         "source": source,
