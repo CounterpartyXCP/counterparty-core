@@ -28,7 +28,7 @@ DISPENSER_VECTOR = {
                 "in": (ADDR[0], "PARENT", 100, 1000000000, 100, 0, None, DP["burn_start"], None),
                 "out": (
                     None,
-                    ["address doesn't has enough balance of PARENT (100000000 < 1000000000)"],
+                    ["address doesn't have enough balance of PARENT (100000000 < 1000000000)"],
                 ),
             },
             {
@@ -88,7 +88,7 @@ DISPENSER_VECTOR = {
                 "out": (
                     None,
                     [
-                        "address doesn't has enough balance of XCP (91674999900 < 9223372036854775808)",
+                        "address doesn't have enough balance of XCP (91674999900 < 9223372036854775808)",
                         "integer overflow",
                     ],
                 ),

@@ -232,7 +232,7 @@ def validate(
         problems.append(f"address doesn't has the asset {asset}")
     elif len(available) >= 1 and available[0]["quantity"] < escrow_quantity:
         problems.append(
-            f"address doesn't has enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})"
+            f"address doesn't have enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})"
         )
     elif (
         util.enabled("dispenser_must_be_created_by_source")
