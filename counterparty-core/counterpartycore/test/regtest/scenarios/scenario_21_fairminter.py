@@ -77,7 +77,7 @@ SCENARIO = [
                         "params": {
                             "asset": "LOCKDESC",
                             "asset_events": "open_fairminter",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0,
@@ -103,8 +103,8 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "LOCKDESC",
-                            "asset_longname": "",
-                            "asset_parent": "",
+                            "asset_longname": None,
+                            "asset_parent": None,
                             "block_index": "$BLOCK_INDEX",
                             "burn_payment": False,
                             "description": "My super asset LOCKDESC",
@@ -150,7 +150,7 @@ SCENARIO = [
                         "params": {
                             "asset": "LOCKDESC",
                             "asset_events": "fairmint",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0.0,
@@ -275,7 +275,7 @@ SCENARIO = [
                         "params": {
                             "asset": "BURNER",
                             "asset_events": "open_fairminter",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0,
@@ -312,8 +312,8 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "BURNER",
-                            "asset_longname": "",
-                            "asset_parent": "",
+                            "asset_longname": None,
+                            "asset_parent": None,
                             "block_index": "$BLOCK_INDEX",
                             "burn_payment": True,
                             "description": "let's burn it",
@@ -360,7 +360,7 @@ SCENARIO = [
                         "params": {
                             "asset": "BURNER",
                             "asset_events": "fairmint",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0.0,
@@ -513,7 +513,7 @@ SCENARIO = [
                         "params": {
                             "asset": "EXPANSIVE",
                             "asset_events": "open_fairminter",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0,
@@ -550,8 +550,8 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "EXPANSIVE",
-                            "asset_longname": "",
-                            "asset_parent": "",
+                            "asset_longname": None,
+                            "asset_parent": None,
                             "block_index": "$BLOCK_INDEX",
                             "burn_payment": False,
                             "description": "too expensive for you",
@@ -604,7 +604,7 @@ SCENARIO = [
                         "params": {
                             "asset": "EXPANSIVE",
                             "asset_events": "close_fairminter",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0.0,
@@ -736,7 +736,7 @@ SCENARIO = [
                         "params": {
                             "asset": "STARTNOW",
                             "asset_events": "open_fairminter",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0,
@@ -773,8 +773,8 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "asset": "STARTNOW",
-                            "asset_longname": "",
-                            "asset_parent": "",
+                            "asset_longname": None,
+                            "asset_parent": None,
                             "block_index": "$BLOCK_INDEX",
                             "burn_payment": False,
                             "description": "let's start now",
@@ -817,7 +817,7 @@ SCENARIO = [
                         "params": {
                             "asset": "STARTNOW",
                             "asset_events": "close_fairminter",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0.0,
@@ -907,7 +907,7 @@ SCENARIO = [
                         "params": {
                             "asset": "PREMINT",
                             "asset_events": "open_fairminter",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0,
@@ -944,8 +944,8 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "PREMINT",
-                            "asset_longname": "",
-                            "asset_parent": "",
+                            "asset_longname": None,
+                            "asset_parent": None,
                             "block_index": "$BLOCK_INDEX",
                             "burn_payment": False,
                             "description": "",
@@ -1003,7 +1003,7 @@ SCENARIO = [
                         "params": {
                             "asset": "PREMINT",
                             "asset_events": "close_fairminter",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0.0,
@@ -1071,7 +1071,7 @@ SCENARIO = [
                         "params": {
                             "asset": "PREMINT",
                             "asset_events": "change_description",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0.0,
