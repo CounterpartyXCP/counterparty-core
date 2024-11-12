@@ -20,6 +20,7 @@
 - Fix typo in dispenser error message (`has` -> `have`)
 - Fix get balances endpoint when using `sort=asset`
 - Catch all errors when using unpack endpoint with invalid data
+- Restart RSFetcher when it returns None
 
 ## Codebase
 

@@ -1366,7 +1366,20 @@ def catch_up(db, check_asset_conservation=True):
         if fetcher is None:
             fetcher = rsfetcher.RSFetcher()
             fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+
+        retry = 0
         decoded_block = fetcher.get_block()
+        while decoded_block is None:
+            retry += 1
+            if retry > 5:
+                raise exceptions.RSFetchError("RSFetcher returned None too many times.")
+            logger.warning("RSFetcher returned None. Trying again in 5 seconds...")
+            time.sleep(5)
+            fetcher.stop()
+            fetcher = rsfetcher.RSFetcher()
+            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+            decoded_block = fetcher.get_block()
+
         block_height = decoded_block.get("height")
         fetch_time_end = time.time()
         fetch_duration = fetch_time_end - fetch_time_start
