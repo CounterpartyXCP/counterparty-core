@@ -25,6 +25,9 @@
 
 ## API
 
+- Add `sort` parameter for the get holders endpoint (sortable fields: `quantity`, `holding_type`, and `status`)
+- Exclude blocks that are not finished being parsed
+
 ## CLI
 
 
