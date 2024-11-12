@@ -36,6 +36,7 @@
 
 # Credits
 
+* droplister 
 * OpenStamp
 * DerpHerpenstein
 * Ouziel Slama
