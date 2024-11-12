@@ -9,7 +9,7 @@
                 "difficulty": null,
                 "ledger_hash": "94a62752f851c8ec439fbbd46fbd0bd0d75987fb22416187a48a70e6e9af308a",
                 "txlist_hash": "75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1",
-                "messages_hash": "5475e9c758035995f06c179546cf91e9cd4b1e35cdd7132362eca6ecc8e9d785",
+                "messages_hash": "d712fc779e33fdbe64e45df1ee3e30620f0c87570ea8d10bab7d82a8cea15a91",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -21,7 +21,7 @@
                 "difficulty": null,
                 "ledger_hash": "572bb86d600d33ec82edac9b1077ec7700d526cb25a69bc2bf2e10953f403e01",
                 "txlist_hash": "0ffd42fa9627a38e66bde8b0dc265ec25a6b44db75dbd5f05cb20d93fbbcb67f",
-                "messages_hash": "6ea4ac41326e29e0232ae9d494849ea2b825116e5ff8b76cffe56ea9dfa09997",
+                "messages_hash": "9b7ba670baddd6022984465ba5bb70aba8c3d0c126c11ee7a0b2d9341ca6d4cf",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -33,7 +33,7 @@
                 "difficulty": null,
                 "ledger_hash": "8bc0f9cfc1b75cdfd6e59f1d41c6b67b790a25a98b6240f7ff5df617f256cb00",
                 "txlist_hash": "c66db074cb4446477ac875d007c8a2145f4a95430cc144a305ee3e71fcdbd107",
-                "messages_hash": "5397b96551c0a64ab068399907d75384be4291c1cf18cc3abe34cd1ae3c8482d",
+                "messages_hash": "534806223a151454cc198c72db7951d661c75e3d70af2036249020a8d63d5cdd",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -45,7 +45,7 @@
                 "difficulty": null,
                 "ledger_hash": "439c74d2a465996838179517ff57b2cc558d66848b857580be65319363846033",
                 "txlist_hash": "64d3d4ce91107031774de492adb7afb6b3d1e9e55fbc587c205a3fa0a36b6be6",
-                "messages_hash": "3060f01ecd3a6fccc1bd7b34efaee852a4b7d232a8d861626968e4690c5c4e6d",
+                "messages_hash": "1b9a60c987a5c62f6927a84312b0437e006e444bc52c31641863262e7a24099b",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -57,7 +57,7 @@
                 "difficulty": null,
                 "ledger_hash": "5d0fa0f5c261642712f86c72055a7f19afe078a6c34e5538d77d85bb1b799a94",
                 "txlist_hash": "699935da2beafe8a13d0b6bafb2b7a9a57ca7a47c4cd352af9231b9c1313ff6b",
-                "messages_hash": "c14011ca0548cc6aa347ebe1fb5249b938a40f7552924230ac9bd0456b173d84",
+                "messages_hash": "3c125a3308bdc284d8e16b92dc79ce247f8e2f14ce424e7ccea56c8fdea8097b",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -69,7 +69,7 @@
                 "difficulty": null,
                 "ledger_hash": "f4f83f7b347792bb4c1336c694a08b2642717ebca900d9a0489bce1a2d994418",
                 "txlist_hash": "4512e4d49797db1713dd41784b0a38ef95c0a37386b2f1dfddffd16652ab1f13",
-                "messages_hash": "3a31ecc1c0af51adc95b88dd15ef06b7cd49f90977c3f8bc0931163c77be9218",
+                "messages_hash": "19e1b1f4f6a807bf5976cbc627fbcb942cf564e1d84002742b9c939bfa55ab17",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -81,7 +81,7 @@
                 "difficulty": null,
                 "ledger_hash": "995f4b278c55bf41f128a3dcc39a0389d4856e4aafab042c915eaaae536e40e2",
                 "txlist_hash": "88060fae502e50aee9fea21032e5655a6e77e65d289ba32302c70652400024c7",
-                "messages_hash": "08c75385b4290db3fc39fb503a2a0f3ab7631db44d7ad0eb3d2db9ade975b6a9",
+                "messages_hash": "bd4332e8de2aa3a9a000515a2082bc8a5ea37676994ad00d3906e33eab0de6d3",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -93,7 +93,7 @@
                 "difficulty": null,
                 "ledger_hash": "d0a47afe3a6d2d2bf01e56643798c4a653d827046991571026345f44b34bac6f",
                 "txlist_hash": "1510f38f77e3400993a985c5b0e348cb9068c0ded5eeb2c4dc9ff0b6b5e50376",
-                "messages_hash": "f5227bdae94c5ae394110e0690a013955d1e76379ba151b0fa209da444d9781c",
+                "messages_hash": "21fd4f3bf938cc67aa00820968872fec60223ba4bc0ee6a78f90d25b618e534d",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -105,7 +105,7 @@
                 "difficulty": null,
                 "ledger_hash": "819360045a5f9ee7b2696a8b1cd2579371b25a43076e1f4731d948dcb7b14202",
                 "txlist_hash": "cc4e8152565916228bebeb034d239a8d7a921420a20403b98b8c9cfbae646beb",
-                "messages_hash": "05967636ad202a361deee96e758fd75be0c2a1b07817c215db206c187125f34b",
+                "messages_hash": "81f2371b41bacbccbabdbe211d86766eb1487de6064eda2d778be2cbbe9da821",
                 "transaction_count": 0,
                 "confirmed": true
             },
@@ -117,7 +117,7 @@
                 "difficulty": null,
                 "ledger_hash": "5b2559a37945f4174c2f651c9315ca9b9c274b40baf87a0e0890615459f7f437",
                 "txlist_hash": "cc78db8ff880deb043ca80285a482d558c829579b198fbb4ec33d35499c89f10",
-                "messages_hash": "263bcb74757322f36cc19e8d722bfcf1c0c045ff6ae40b1ee071f9de4f6a1218",
+                "messages_hash": "4ee525c1063f5d9fcca329941c1d05712e0304cb315f79e3c4d36023e3105f17",
                 "transaction_count": 0,
                 "confirmed": true
             }
@@ -134,7 +134,7 @@
             "difficulty": null,
             "ledger_hash": "94a62752f851c8ec439fbbd46fbd0bd0d75987fb22416187a48a70e6e9af308a",
             "txlist_hash": "75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1",
-            "messages_hash": "5475e9c758035995f06c179546cf91e9cd4b1e35cdd7132362eca6ecc8e9d785",
+            "messages_hash": "d712fc779e33fdbe64e45df1ee3e30620f0c87570ea8d10bab7d82a8cea15a91",
             "transaction_count": 0,
             "confirmed": true
         }
@@ -162,7 +162,7 @@
             "difficulty": null,
             "ledger_hash": "6c240f1f3a985ff91e6a280c4448b8d739a06caa6fa383c4b9a7b90d27bdb17b",
             "txlist_hash": "d21ed1a33a3ff157708a8e8c5a11062e0b33a7682896f695cd174ee93dce7767",
-            "messages_hash": "3ffd1160eaebd802f207462d3c2fb3124fbc3beefed8fbe9b6473bd906140074",
+            "messages_hash": "7e390aad9c33545e3d9724aa7e07454bafc8bbaf5d92c76cf2329762d7e4df9b",
             "transaction_count": 1,
             "confirmed": true
         }
@@ -954,7 +954,7 @@
                 "params": {
                     "asset": "A160361285792733729",
                     "asset_events": "fairmint",
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "block_index": 310506,
                     "call_date": 0,
                     "call_price": 0.0,
@@ -1008,7 +1008,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1035,7 +1035,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1062,7 +1062,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1116,7 +1116,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1143,7 +1143,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1224,7 +1224,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1252,7 +1252,7 @@
                     "tx_index": 507,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1281,7 +1281,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1411,7 +1411,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1438,7 +1438,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1465,7 +1465,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1519,7 +1519,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1546,7 +1546,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1600,7 +1600,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -1658,7 +1658,7 @@
                     }
                 ],
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "softcap description",
                     "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                     "divisible": true,
@@ -1717,7 +1717,7 @@
                         "utxo": null,
                         "utxo_address": null,
                         "quantity": 98799999999,
-                        "quantity_normalized": "988.00000000"
+                        "quantity_normalized": "987.99999999"
                     },
                     {
                         "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1756,7 +1756,7 @@
                     }
                 ],
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
@@ -2075,7 +2075,7 @@
                 "utxo": null,
                 "utxo_address": null,
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
@@ -2090,7 +2090,7 @@
                 "utxo": null,
                 "utxo_address": null,
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
@@ -2141,7 +2141,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "92233720000.00000000"
+                "quantity_normalized": "92233720368.54776000"
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -2201,7 +2201,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "988.00000000"
+                "quantity_normalized": "987.99999999"
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -2216,7 +2216,7 @@
                     "divisible": true,
                     "locked": true
                 },
-                "quantity_normalized": "916.75000000"
+                "quantity_normalized": "916.74999900"
             }
         ],
         "next_cursor": null,
@@ -2300,7 +2300,7 @@
                 "confirmed": true,
                 "block_time": 310502000,
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
@@ -2321,7 +2321,7 @@
                 "confirmed": true,
                 "block_time": 310501000,
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
@@ -2432,7 +2432,7 @@
                     "divisible": true,
                     "locked": false
                 },
-                "quantity_normalized": "92233720000.00000000"
+                "quantity_normalized": "92233720368.54776000"
             },
             {
                 "block_index": 310004,
@@ -3603,7 +3603,7 @@
                 "description": "",
                 "fee_paid": 50000000,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -3631,7 +3631,7 @@
                 "description": "",
                 "fee_paid": 50000000,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -3659,7 +3659,7 @@
                 "description": "",
                 "fee_paid": 0,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -3687,7 +3687,7 @@
                 "description": "",
                 "fee_paid": 50000000,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -3715,7 +3715,7 @@
                 "description": "",
                 "fee_paid": 50000000,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -3807,7 +3807,7 @@
                 "asset_events": "creation",
                 "confirmed": true,
                 "block_time": 310016000,
-                "quantity_normalized": "92233720000.00000000",
+                "quantity_normalized": "92233720368.54776000",
                 "fee_paid_normalized": "0.50000000"
             },
             {
@@ -3959,7 +3959,7 @@
             {
                 "asset": "QAIDFAIRMIN",
                 "asset_id": "2260369790942965",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -3976,7 +3976,7 @@
             {
                 "asset": "RAIDFAIRMIN",
                 "asset_id": "2401536886596341",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -3993,7 +3993,7 @@
             {
                 "asset": "PAIDFAIRMIN",
                 "asset_id": "2119202695289589",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4010,7 +4010,7 @@
             {
                 "asset": "FREEFAIRMIN",
                 "asset_id": "799006024850293",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4073,7 +4073,7 @@
                 "confirmed": true,
                 "first_issuance_block_time": 310016000,
                 "last_issuance_block_time": 310016000,
-                "supply_normalized": "92233720000.00000000"
+                "supply_normalized": "92233720368.54776000"
             },
             {
                 "asset": "LOCKED",
@@ -4152,7 +4152,7 @@
             {
                 "asset": "QAIDFAIRMIN",
                 "asset_id": "2260369790942965",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4169,7 +4169,7 @@
             {
                 "asset": "RAIDFAIRMIN",
                 "asset_id": "2401536886596341",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4186,7 +4186,7 @@
             {
                 "asset": "PAIDFAIRMIN",
                 "asset_id": "2119202695289589",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4203,7 +4203,7 @@
             {
                 "asset": "FREEFAIRMIN",
                 "asset_id": "799006024850293",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4266,7 +4266,7 @@
                 "confirmed": true,
                 "first_issuance_block_time": 310016000,
                 "last_issuance_block_time": 310016000,
-                "supply_normalized": "92233720000.00000000"
+                "supply_normalized": "92233720368.54776000"
             },
             {
                 "asset": "LOCKED",
@@ -4345,7 +4345,7 @@
             {
                 "asset": "QAIDFAIRMIN",
                 "asset_id": "2260369790942965",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4362,7 +4362,7 @@
             {
                 "asset": "RAIDFAIRMIN",
                 "asset_id": "2401536886596341",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4379,7 +4379,7 @@
             {
                 "asset": "PAIDFAIRMIN",
                 "asset_id": "2119202695289589",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4396,7 +4396,7 @@
             {
                 "asset": "FREEFAIRMIN",
                 "asset_id": "799006024850293",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -4459,7 +4459,7 @@
                 "confirmed": true,
                 "first_issuance_block_time": 310016000,
                 "last_issuance_block_time": 310016000,
-                "supply_normalized": "92233720000.00000000"
+                "supply_normalized": "92233720368.54776000"
             },
             {
                 "asset": "LOCKED",
@@ -5077,7 +5077,7 @@
                 "confirmed": true,
                 "block_time": 310501000,
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
@@ -5123,7 +5123,7 @@
             {
                 "asset": "A160361285792733729",
                 "asset_id": "160361285792733729",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                 "owner": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                 "divisible": true,
@@ -5140,7 +5140,7 @@
             {
                 "asset": "QAIDFAIRMIN",
                 "asset_id": "2260369790942965",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -5157,7 +5157,7 @@
             {
                 "asset": "RAIDFAIRMIN",
                 "asset_id": "2401536886596341",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -5174,7 +5174,7 @@
             {
                 "asset": "PAIDFAIRMIN",
                 "asset_id": "2119202695289589",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -5191,7 +5191,7 @@
             {
                 "asset": "FREEFAIRMIN",
                 "asset_id": "799006024850293",
-                "asset_longname": "",
+                "asset_longname": null,
                 "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "divisible": true,
@@ -5305,7 +5305,7 @@
                 "confirmed": true,
                 "first_issuance_block_time": 310016000,
                 "last_issuance_block_time": 310016000,
-                "supply_normalized": "92233720000.00000000"
+                "supply_normalized": "92233720368.54776000"
             },
             {
                 "asset": "LOCKED",
@@ -5388,7 +5388,7 @@
                 "first_issuance_block_index": 278319,
                 "last_issuance_block_index": 283810,
                 "confirmed": true,
-                "supply_normalized": "6037.81850000"
+                "supply_normalized": "6037.81847920"
             }
         ],
         "next_cursor": null,
@@ -6383,7 +6383,7 @@
                 "confirmed": true,
                 "block_time": 310493000,
                 "burned_normalized": "0.62000000",
-                "earned_normalized": "929.95878000"
+                "earned_normalized": "929.95878046"
             },
             {
                 "tx_index": 117,
@@ -6396,7 +6396,7 @@
                 "confirmed": true,
                 "block_time": 310116000,
                 "burned_normalized": "0.62000000",
-                "earned_normalized": "929.99030000"
+                "earned_normalized": "929.99030129"
             },
             {
                 "tx_index": 109,
@@ -6409,7 +6409,7 @@
                 "confirmed": true,
                 "block_time": 310108000,
                 "burned_normalized": "0.31000000",
-                "earned_normalized": "464.99549000"
+                "earned_normalized": "464.99548508"
             },
             {
                 "tx_index": 107,
@@ -6435,7 +6435,7 @@
                 "confirmed": true,
                 "block_time": 310105000,
                 "burned_normalized": "0.62000000",
-                "earned_normalized": "929.99122000"
+                "earned_normalized": "929.99122099"
             },
             {
                 "tx_index": 105,
@@ -6448,7 +6448,7 @@
                 "confirmed": true,
                 "block_time": 310104000,
                 "burned_normalized": "0.62000000",
-                "earned_normalized": "929.99130000"
+                "earned_normalized": "929.99130460"
             },
             {
                 "tx_index": 104,
@@ -6461,7 +6461,7 @@
                 "confirmed": true,
                 "block_time": 310103000,
                 "burned_normalized": "0.62000000",
-                "earned_normalized": "929.99139000"
+                "earned_normalized": "929.99138821"
             },
             {
                 "tx_index": 1,
@@ -6623,7 +6623,7 @@
                 "params": {
                     "block_index": 310703,
                     "ledger_hash": "94a62752f851c8ec439fbbd46fbd0bd0d75987fb22416187a48a70e6e9af308a",
-                    "messages_hash": "5475e9c758035995f06c179546cf91e9cd4b1e35cdd7132362eca6ecc8e9d785",
+                    "messages_hash": "d712fc779e33fdbe64e45df1ee3e30620f0c87570ea8d10bab7d82a8cea15a91",
                     "transaction_count": 0,
                     "txlist_hash": "75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1",
                     "block_time": 310703000
@@ -6654,7 +6654,7 @@
                 "params": {
                     "block_index": 310702,
                     "ledger_hash": "572bb86d600d33ec82edac9b1077ec7700d526cb25a69bc2bf2e10953f403e01",
-                    "messages_hash": "6ea4ac41326e29e0232ae9d494849ea2b825116e5ff8b76cffe56ea9dfa09997",
+                    "messages_hash": "9b7ba670baddd6022984465ba5bb70aba8c3d0c126c11ee7a0b2d9341ca6d4cf",
                     "transaction_count": 0,
                     "txlist_hash": "0ffd42fa9627a38e66bde8b0dc265ec25a6b44db75dbd5f05cb20d93fbbcb67f",
                     "block_time": 310702000
@@ -6685,7 +6685,7 @@
                 "params": {
                     "block_index": 310701,
                     "ledger_hash": "8bc0f9cfc1b75cdfd6e59f1d41c6b67b790a25a98b6240f7ff5df617f256cb00",
-                    "messages_hash": "5397b96551c0a64ab068399907d75384be4291c1cf18cc3abe34cd1ae3c8482d",
+                    "messages_hash": "534806223a151454cc198c72db7951d661c75e3d70af2036249020a8d63d5cdd",
                     "transaction_count": 0,
                     "txlist_hash": "c66db074cb4446477ac875d007c8a2145f4a95430cc144a305ee3e71fcdbd107",
                     "block_time": 310701000
@@ -6865,7 +6865,7 @@
                     "utxo_address": null,
                     "block_time": 310506000,
                     "asset_info": {
-                        "asset_longname": "",
+                        "asset_longname": null,
                         "description": "softcap description",
                         "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "divisible": true,
@@ -6963,7 +6963,7 @@
                     "divisible": true,
                     "locked": true
                 },
-                "quantity_normalized": "929.45878000",
+                "quantity_normalized": "929.45878046",
                 "fee_paid_normalized": "0.00000000"
             },
             {
@@ -7257,7 +7257,7 @@
                 "description": "softcap description",
                 "fee_paid": 0,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": true,
                 "reset": false,
                 "description_locked": true,
@@ -7285,7 +7285,7 @@
                 "description": "softcap description",
                 "fee_paid": 0,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -7313,7 +7313,7 @@
                 "description": "softcap description",
                 "fee_paid": 0,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -7341,7 +7341,7 @@
                 "description": "",
                 "fee_paid": 50000000,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -7369,7 +7369,7 @@
                 "description": "",
                 "fee_paid": 50000000,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -7397,7 +7397,7 @@
                 "description": "",
                 "fee_paid": 0,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -7425,7 +7425,7 @@
                 "description": "",
                 "fee_paid": 50000000,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -7453,7 +7453,7 @@
                 "description": "",
                 "fee_paid": 50000000,
                 "status": "valid",
-                "asset_longname": "",
+                "asset_longname": null,
                 "locked": false,
                 "reset": false,
                 "description_locked": false,
@@ -7685,7 +7685,7 @@
                 "asset_events": "creation",
                 "confirmed": true,
                 "block_time": 310016000,
-                "quantity_normalized": "92233720000.00000000",
+                "quantity_normalized": "92233720368.54776000",
                 "fee_paid_normalized": "0.50000000"
             },
             {
@@ -8029,7 +8029,7 @@
                 "confirmed": true,
                 "block_time": 310506000,
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "softcap description",
                     "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                     "divisible": true,
@@ -8053,7 +8053,7 @@
                 "confirmed": true,
                 "block_time": 310505000,
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "softcap description",
                     "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                     "divisible": true,
@@ -8077,7 +8077,7 @@
                 "confirmed": true,
                 "block_time": 310501000,
                 "asset_info": {
-                    "asset_longname": "",
+                    "asset_longname": null,
                     "description": "",
                     "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     "divisible": true,
@@ -8106,7 +8106,7 @@
             "confirmed": true,
             "block_time": 310506000,
             "asset_info": {
-                "asset_longname": "",
+                "asset_longname": null,
                 "description": "softcap description",
                 "issuer": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                 "divisible": true,
@@ -16142,6 +16142,13 @@
                         "required": false,
                         "type": "int",
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "sort",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The sort order of the holders to return (overrides the `cursor` parameter) (e.g. quantity:desc)"
                     },
                     {
                         "name": "verbose",

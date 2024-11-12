@@ -1316,6 +1316,22 @@ def parse_new_block(db, decoded_block, tx_index=None):
     return tx_index, decoded_block["block_index"]
 
 
+def rollback_empty_block(db):
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT block_index FROM blocks 
+        WHERE ledger_hash IS NULL 
+        ORDER BY block_index ASC
+        LIMIT 1
+    """)
+    block = cursor.fetchone()
+    if block:
+        logger.warning(
+            f"Ledger hashes are empty from block {block['block_index']}. Rolling back..."
+        )
+        rollback(db, block_index=block["block_index"])
+
+
 def check_database_version(db):
     # Update version if new database.
     if util.CURRENT_BLOCK_INDEX <= config.BLOCK_FIRST:
@@ -1338,6 +1354,7 @@ def check_database_version(db):
 
 def catch_up(db, check_asset_conservation=True):
     logger.info("Catching up...")
+
     util.BLOCK_PARSER_STATUS = "catching up"
     # update the current block index
     util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
@@ -1366,7 +1383,20 @@ def catch_up(db, check_asset_conservation=True):
         if fetcher is None:
             fetcher = rsfetcher.RSFetcher()
             fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+
+        retry = 0
         decoded_block = fetcher.get_block()
+        while decoded_block is None:
+            retry += 1
+            if retry > 5:
+                raise exceptions.RSFetchError("RSFetcher returned None too many times.")
+            logger.warning("RSFetcher returned None. Trying again in 5 seconds...")
+            time.sleep(5)
+            fetcher.stop()
+            fetcher = rsfetcher.RSFetcher()
+            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+            decoded_block = fetcher.get_block()
+
         block_height = decoded_block.get("height")
         fetch_time_end = time.time()
         fetch_duration = fetch_time_end - fetch_time_start

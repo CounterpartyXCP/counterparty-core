@@ -116,7 +116,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "asset": "FREEFAIRMINT",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "fairmint",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
@@ -193,7 +193,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "asset": "FREEFAIRMINT",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "fairmint",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,

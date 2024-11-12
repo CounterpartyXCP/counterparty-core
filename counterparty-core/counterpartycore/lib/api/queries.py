@@ -114,6 +114,16 @@ SUPPORTED_SORT_FIELDS = {
         "satoshirate",
         "price",
     ],
+    "xcp_holders": [
+        "quantity",
+        "holding_type",
+        "status",
+    ],
+    "asset_holders": [
+        "quantity",
+        "holding_type",
+        "status",
+    ],
 }
 
 ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
@@ -286,9 +296,7 @@ def select_rows(
                 sort_order = "ASC"
             if sort_order.upper() not in ["ASC", "DESC"]:
                 sort_order = "ASC"
-            if sort_name == "asset":
-                order_by.append(f"COALESCE(asset_longname, asset) {sort_order.upper()}")
-            elif sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
+            if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
                 order_by.append(f"{sort_name} {sort_order.upper()}")
     if len(order_by) == 0:
         order_by.append(f"{cursor_field} {order}")
@@ -332,6 +340,11 @@ def select_row(db, table, where, select="*", group_by=""):
     return None
 
 
+GET_BLOCKS_WHERE = {
+    "ledger_hash__notnull": None,
+}
+
+
 def get_blocks(db, cursor: str = None, limit: int = 10, offset: int = None):
     """
     Returns the list of the last ten blocks
@@ -340,7 +353,13 @@ def get_blocks(db, cursor: str = None, limit: int = 10, offset: int = None):
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        db, "blocks", cursor_field="block_index", last_cursor=cursor, limit=limit, offset=offset
+        db,
+        "blocks",
+        cursor_field="block_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        where=GET_BLOCKS_WHERE,
     )
 
 
@@ -349,7 +368,7 @@ def get_block_by_height(db, block_index: int):
     Return the information of a block
     :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
     """
-    return select_row(db, "blocks", where={"block_index": block_index})
+    return select_row(db, "blocks", where=GET_BLOCKS_WHERE | {"block_index": block_index})
 
 
 def get_block_by_hash(db, block_hash: str):
@@ -357,7 +376,7 @@ def get_block_by_hash(db, block_hash: str):
     Return the information of a block
     :param str block_hash: The index of the block to return (e.g. $LAST_BLOCK_HASH)
     """
-    return select_row(db, "blocks", where={"block_hash": block_hash})
+    return select_row(db, "blocks", where=GET_BLOCKS_WHERE | {"block_hash": block_hash})
 
 
 def get_last_block(db):
@@ -367,9 +386,7 @@ def get_last_block(db):
     return select_row(
         db,
         "blocks",
-        where={
-            "ledger_hash__notnull": None,
-        },
+        where=GET_BLOCKS_WHERE,
     )
 
 
@@ -2442,13 +2459,16 @@ def get_orders_by_two_assets(
     return QueryResult(query_result.result, query_result.next_cursor, query_result.result_count)
 
 
-def get_asset_holders(db, asset: str, cursor: str = None, limit: int = 100, offset: int = None):
+def get_asset_holders(
+    db, asset: str, cursor: str = None, limit: int = 100, offset: int = None, sort: str = None
+):
     """
     Returns the holders of an asset
     :param str asset: The asset to return (e.g. $ASSET_1)
     :param str cursor: The last index of the holder to return
     :param int limit: The maximum number of holders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the holders to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     table_name = "xcp_holders" if asset.upper() == "XCP" else "asset_holders"
     return select_rows(
@@ -2460,6 +2480,7 @@ def get_asset_holders(db, asset: str, cursor: str = None, limit: int = 100, offs
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 

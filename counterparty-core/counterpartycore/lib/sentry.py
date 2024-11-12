@@ -43,13 +43,15 @@ def init():
     if not dsn:
         return
 
-    logger.info(f"Initializing Sentry with {dsn}...")
+    sample_rate = float(os.environ.get("SENTRY_SAMPLE_RATE", 0.01))
+
+    logger.info(f"Initializing Sentry with {dsn} and sample rate of {sample_rate}...")
 
     sentry_sdk.init(
         dsn=dsn,
         environment=environment,
         release=release,
-        traces_sample_rate=0.02,
+        traces_sample_rate=sample_rate,
         before_send=before_send,
         before_send_transaction=before_send_transaction,
     )

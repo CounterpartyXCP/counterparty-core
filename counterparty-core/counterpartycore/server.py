@@ -781,6 +781,10 @@ def start_all(args):
         api_server_v1.daemon = True
         api_server_v1.start()
 
+        # delete blocks with no ledger hashes
+        # in case of reparse interrupted
+        blocks.rollback_empty_block(db)
+
         # Asset conservation checker
         asset_conservation_checker = AssetConservationChecker()
         asset_conservation_checker.start()

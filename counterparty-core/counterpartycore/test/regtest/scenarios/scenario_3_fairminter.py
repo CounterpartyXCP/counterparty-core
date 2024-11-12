@@ -36,7 +36,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "asset": "FAIRMINTC",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "open_fairminter",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
@@ -74,8 +74,8 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "FAIRMINTC",
-                            "asset_longname": "",
-                            "asset_parent": "",
+                            "asset_longname": None,
+                            "asset_parent": None,
                             "block_index": "$BLOCK_INDEX",
                             "burn_payment": False,
                             "description": "",
@@ -121,7 +121,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "FAIRMINTC",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "fairmint",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
@@ -231,7 +231,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "FAIRMINTC",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "fairmint",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
@@ -341,7 +341,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "FAIRMINTC",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "fairmint",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
@@ -471,7 +471,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "asset": "FAIRMINTD",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "open_fairminter",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
@@ -509,8 +509,8 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "FAIRMINTD",
-                            "asset_longname": "",
-                            "asset_parent": "",
+                            "asset_longname": None,
+                            "asset_parent": None,
                             "block_index": "$BLOCK_INDEX",
                             "burn_payment": False,
                             "description": "",
@@ -556,7 +556,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "FAIRMINTD",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "fairmint",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,

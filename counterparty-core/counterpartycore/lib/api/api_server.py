@@ -384,19 +384,35 @@ def init_flask_app():
         # Get the last block index
         with APIDBConnectionPool().connection() as db:
             util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+        methods = ["OPTIONS", "GET"]
         # Add routes
-        app.add_url_rule("/v2/", view_func=handle_route, strict_slashes=False)
         app.add_url_rule(
-            "/v2/blueprint", view_func=handle_doc, methods=["GET"], strict_slashes=False
+            "/v2/",
+            view_func=handle_route,
+            methods=methods,
+            strict_slashes=False,
+            provide_automatic_options=False,
         )
-
+        app.add_url_rule(
+            "/v2/blueprint",
+            view_func=handle_doc,
+            methods=methods,
+            strict_slashes=False,
+            provide_automatic_options=False,
+        )
         for path in ROUTES:
             methods = ["OPTIONS", "GET"]
             if path == "/v2/bitcoin/transactions":
                 methods = ["OPTIONS", "POST"]
             if not path.startswith("/v2/"):
                 methods = ["OPTIONS", "GET", "POST"]
-            app.add_url_rule(path, view_func=handle_route, methods=methods, strict_slashes=False)
+            app.add_url_rule(
+                path,
+                view_func=handle_route,
+                methods=methods,
+                strict_slashes=False,
+                provide_automatic_options=False,
+            )
 
         app.register_error_handler(404, handle_not_found)
 

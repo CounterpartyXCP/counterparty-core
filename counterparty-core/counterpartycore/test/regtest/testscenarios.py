@@ -419,6 +419,8 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             regtest_node_thread.node.reparse()
             print("Testing rollback...")
             regtest_node_thread.node.rollback()
+            print("Testing interrupted reparse...")
+            regtest_node_thread.node.test_empty_ledger_hash()
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
     except KeyboardInterrupt:
