@@ -491,7 +491,7 @@ class RegtestNode:
         self.stop_counterparty_server()
         # delete some ledger hash
         db = database.get_db_connection(
-            f"{self.datadir}/counterparty.db", read_only=False, check_wal=False
+            f"{self.datadir}/counterparty.regtest.db", read_only=False, check_wal=False
         )
         db.execute("UPDATE blocks SET ledger_hash = NULL WHERE block_index > 150")
         self.check_node_state("auto-rollback", state_before)
