@@ -30,6 +30,7 @@
 
 ## CLI
 
+- Support the `SENTRY_SAMPLE_RATE` environment variable to set the Sentry sample rate
 
 # Credits
 
