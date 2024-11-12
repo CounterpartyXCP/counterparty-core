@@ -229,7 +229,7 @@ def validate(
     available = ledger.get_balance(db, source, asset, return_list=True)
 
     if len(available) == 0:
-        problems.append(f"address doesn't has the asset {asset}")
+        problems.append(f"address doesn't have the asset {asset}")
     elif len(available) >= 1 and available[0]["quantity"] < escrow_quantity:
         problems.append(
             f"address doesn't have enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})"
@@ -307,7 +307,7 @@ def validate(
                             )
             elif status == STATUS_CLOSED:
                 if len(open_dispensers) == 0:
-                    problems.append(f"address doesnt has an open dispenser for asset {asset}")
+                    problems.append(f"address doesn't have an open dispenser for asset {asset}")
 
             if status == STATUS_OPEN_EMPTY_ADDRESS:
                 # If an address is trying to refill a dispenser in a different address and it's the creator

@@ -51,7 +51,7 @@ DISPENSER_VECTOR = {
             },
             {
                 "in": (ADDR[0], "PARENT", 0, 0, 0, 10, None, DP["burn_start"], None),
-                "out": (None, ["address doesnt has an open dispenser for asset PARENT"]),
+                "out": (None, ["address doesn't have an open dispenser for asset PARENT"]),
             },
             {
                 "in": (

@@ -340,11 +340,9 @@ def select_row(db, table, where, select="*", group_by=""):
     return None
 
 
-GET_BLOCKS_WHERE = (
-    {
-        "ledger_hash__notnull": None,
-    },
-)
+GET_BLOCKS_WHERE = {
+    "ledger_hash__notnull": None,
+}
 
 
 def get_blocks(db, cursor: str = None, limit: int = 10, offset: int = None):
