@@ -1355,10 +1355,6 @@ def check_database_version(db):
 def catch_up(db, check_asset_conservation=True):
     logger.info("Catching up...")
 
-    # delete blocks with no ledger hashes
-    # in case of reparse interrupted
-    rollback_empty_block(db)
-
     util.BLOCK_PARSER_STATUS = "catching up"
     # update the current block index
     util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
