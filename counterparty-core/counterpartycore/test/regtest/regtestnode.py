@@ -494,6 +494,7 @@ class RegtestNode:
             f"{self.datadir}/counterparty.regtest.db", read_only=False, check_wal=False
         )
         db.execute("UPDATE blocks SET ledger_hash = NULL WHERE block_index > 150")
+        db.close()
         self.check_node_state("auto-rollback", state_before)
         print("Empty ledger hash test successful")
 
