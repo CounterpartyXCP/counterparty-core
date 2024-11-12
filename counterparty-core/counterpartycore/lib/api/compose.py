@@ -809,7 +809,7 @@ def unpack(db, datahex: str, block_index: int = None):
     """
     try:
         data = binascii.unhexlify(datahex)
-    except ValueError as e:
+    except Exception as e:  # noqa
         raise exceptions.UnpackError("Data must be in hexadecimal format") from e
     if data[: len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX) :]
