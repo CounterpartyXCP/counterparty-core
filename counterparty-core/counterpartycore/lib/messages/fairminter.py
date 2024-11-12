@@ -99,6 +99,7 @@ def initialise(db):
         cursor.execute(
             "UPDATE fairminters SET asset_longname = ? WHERE asset_longname = ?", (None, "")
         )
+        cursor.execute("UPDATE fairminters SET asset_parent = ? WHERE asset_parent = ?", (None, ""))
         # re-enable triggers
         for table in ["issuances", "fairminters"]:
             database.lock_update(db, table)
@@ -511,7 +512,7 @@ def parse(db, tx, message):
         "block_index": tx["block_index"],
         "source": tx["source"],
         "asset": asset_name,
-        "asset_parent": asset_parent,
+        "asset_parent": asset_parent or None,
         "asset_longname": asset_longname or None,
         "description": description,
         "price": price,
