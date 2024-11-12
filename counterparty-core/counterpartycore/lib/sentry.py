@@ -43,7 +43,7 @@ def init():
     if not dsn:
         return
 
-    sample_rate = os.environ.get("SENTRY_SAMPLE_RATE", 0.01)
+    sample_rate = float(os.environ.get("SENTRY_SAMPLE_RATE", 0.01))
 
     logger.info(f"Initializing Sentry with {dsn} and sample rate of {sample_rate}...")
 
