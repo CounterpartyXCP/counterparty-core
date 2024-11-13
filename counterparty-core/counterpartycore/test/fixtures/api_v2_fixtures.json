@@ -6717,27 +6717,27 @@
     "http://localhost:10009/v2/events/counts?limit=5&verbose=true": {
         "result": [
             {
-                "event": "TRANSACTION_PARSED",
-                "event_count": 56
-            },
-            {
-                "event": "SEND",
-                "event_count": 9
-            },
-            {
-                "event": "ORDER_UPDATE",
-                "event_count": 4
-            },
-            {
-                "event": "ORDER_MATCH_UPDATE",
-                "event_count": 1
+                "event": "BET_EXPIRATION",
+                "count": 1
             },
             {
                 "event": "ORDER_MATCH_EXPIRATION",
-                "event_count": 1
+                "count": 1
+            },
+            {
+                "event": "ORDER_MATCH_UPDATE",
+                "count": 1
+            },
+            {
+                "event": "ATTACH_TO_UTXO",
+                "count": 2
+            },
+            {
+                "event": "INCREMENT_TRANSACTION_COUNT",
+                "count": 2
             }
         ],
-        "next_cursor": "ORDER_MATCH",
+        "next_cursor": 25,
         "result_count": 30
     },
     "http://localhost:10009/v2/events/CREDIT?limit=5&verbose=true": {
@@ -6884,7 +6884,7 @@
     "http://localhost:10009/v2/events/CREDIT/count?limit=5&verbose=true": {
         "result": {
             "event": "CREDIT",
-            "event_count": 53
+            "count": 53
         }
     },
     "http://localhost:10009/v2/dispenses?verbose=true": {
