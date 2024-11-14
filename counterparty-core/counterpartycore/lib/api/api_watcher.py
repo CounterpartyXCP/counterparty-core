@@ -239,7 +239,7 @@ def decrement_event_count(api_db, event):
     if current_count is None or current_count == 0:
         return
     cursor = api_db.cursor()
-    cursor.execute("UPDATE blocks SET count = count - 1 WHERE event = ?", (event["event"],))
+    cursor.execute("UPDATE events_count SET count = count - 1 WHERE event = ?", (event["event"],))
 
 
 def insert_event(api_db, event):
