@@ -5,7 +5,7 @@ import logging
 import os
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api.api_watcher import update_address_events
+from counterpartycore.lib.api.dbbuilder import build_address_events_table
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -37,16 +37,7 @@ def apply(db):
     for sql in sqls:
         cursor.execute(sql)
 
-    event_count = cursor.execute("SELECT COUNT(*) AS count FROM messages").fetchone()["count"]
-    parsed_event = 0
-
-    sql = "SELECT * FROM messages ORDER BY message_index"
-    cursor.execute(sql)
-    for event in cursor:
-        update_address_events(db, event)
-        parsed_event += 1
-        if parsed_event % 250000 == 0:
-            logger.debug(f"{parsed_event} of {event_count} events processed")
+    build_address_events_table(db)
 
     logger.info("`address_events` tables created...")
 

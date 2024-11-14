@@ -1,10 +1,10 @@
 import logging
 import os
+import shutil
 import tempfile
 import time
 
 from counterpartycore.lib import config, database
-from counterpartycore.lib.api import api_watcher
 from yoyo import get_backend, read_migrations
 from yoyo.exceptions import LockTimeout
 
@@ -66,6 +66,35 @@ TABLES = [
     "messages",
 ]
 
+EVENTS_ADDRESS_FIELDS = {
+    "NEW_TRANSACTION": ["source", "destination"],
+    "DEBIT": ["address"],
+    "CREDIT": ["address"],
+    "ENHANCED_SEND": ["source", "destination"],
+    "MPMA_SEND": ["source", "destination"],
+    "SEND": ["source", "destination"],
+    "ASSET_TRANSFER": ["source", "issuer"],
+    "SWEEP": ["source", "destination"],
+    "ASSET_DIVIDEND": ["source"],
+    "RESET_ISSUANCE": ["source", "issuer"],
+    "ASSET_ISSUANCE": ["source", "issuer"],
+    "ASSET_DESTRUCTION": ["source"],
+    "OPEN_ORDER": ["source"],
+    "ORDER_MATCH": ["tx0_address", "tx1_address"],
+    "BTC_PAY": ["source", "destination"],
+    "CANCEL_ORDER": ["source"],
+    "ORDER_EXPIRATION": ["source"],
+    "ORDER_MATCH_EXPIRATION": ["tx0_address", "tx1_address"],
+    "OPEN_DISPENSER": ["source", "origin", "oracle_address"],
+    "DISPENSER_UPDATE": ["source"],
+    "REFILL_DISPENSER": ["source", "destination"],
+    "DISPENSE": ["source", "destination"],
+    "BROADCAST": ["source"],
+    "BURN": ["source"],
+    "NEW_FAIRMINT": ["source"],
+    "NEW_FAIRMINTER": ["source"],
+}
+
 
 def apply_migration(db_path):
     logger.debug("Applying migrations...")
@@ -75,7 +104,7 @@ def apply_migration(db_path):
     try:
         with backend.lock():
             # Apply any outstanding migrations
-            backend.apply_migrations(backend.to_apply(migrations))
+            backend.apply_migrations(backend.to_apply(migrations), force=True)
     except LockTimeout:
         logger.debug("API Watcher - Migration lock timeout. Breaking lock and retrying...")
         backend.break_lock()
@@ -84,13 +113,46 @@ def apply_migration(db_path):
 
 
 def initialize_state_db():
-    destination_path = config.API_DATABASE.replace("api.", "state.")
-    if os.path.exists(destination_path):
-        os.unlink(destination_path)
-    apply_migration(destination_path)
-    destination_db = database.get_db_connection(destination_path, read_only=False)
+    state_db_path = config.API_DATABASE.replace("api.", "state.")
+    if os.path.exists(state_db_path):
+        os.unlink(state_db_path)
+    if os.path.exists(state_db_path + "-wal"):
+        os.unlink(state_db_path + "-wal")
+    if os.path.exists(state_db_path + "-shm"):
+        os.unlink(state_db_path + "-shm")
 
-    return destination_db
+    start_time = time.time()
+    logger.debug("Copying ledger database to state database")
+
+    shutil.copyfile(config.DATABASE, state_db_path)
+    state_db = database.get_db_connection(state_db_path, read_only=False)
+
+    logger.debug(f"Ledger database copied in {time.time() - start_time} seconds")
+
+    start_time = time.time()
+    logger.debug("Cleaning state database")
+
+    state_db.execute("""PRAGMA foreign_keys=OFF""")
+    for table in CONSOLIDATED_TABLES.keys():
+        state_db.execute(f"DELETE FROM {table}")  # noqa S608
+    for table in list(EXPIRATION_TABLES.keys()) + TABLES:
+        database.unlock_update(state_db, table)
+    state_db.execute("DROP VIEW IF EXISTS all_expirations")
+    state_db.execute("ALTER TABLE fairminters ADD COLUMN earned_quantity INTEGER")
+    state_db.execute("ALTER TABLE fairminters ADD COLUMN paid_quantity INTEGER")
+    state_db.execute("ALTER TABLE fairminters ADD COLUMN commission INTEGER")
+    state_db.execute("ALTER TABLE issuances ADD COLUMN asset_events TEXT")
+    state_db.execute("ALTER TABLE dispenses ADD COLUMN btc_amount TEXT")
+    state_db.execute("""PRAGMA foreign_keys=ON""")
+    state_db.close()
+
+    logger.debug(f"Database cleaned in {time.time() - start_time} seconds")
+
+    apply_migration(state_db_path)
+
+    state_db = database.get_db_connection(state_db_path, read_only=False)
+
+    return state_db
 
 
 def initialize_memory_state_db():
@@ -117,8 +179,6 @@ def save_memory_db(memory_db):
 
     # We will copy a disk database into this memory database
     destination_path = config.API_DATABASE.replace("api.", "state.")
-    if os.path.exists(destination_path):
-        os.unlink(destination_path)
     destination = database.get_db_connection(destination_path, read_only=False)
 
     # Copy into destination
@@ -175,6 +235,20 @@ def copy_consolidated_table(state_db, table_name):
     logger.debug(f"Consolidated table {table_name} copied in {time.time() - start_time} seconds")
 
 
+def gen_select_from_bindings(field_name, as_field=None):
+    delta = len(field_name) + 4
+    select = f"""
+        substr(
+            bindings, 
+            instr(bindings, '"{field_name}":') + {delta}, 
+            instr(substr(bindings, instr(bindings, '"{field_name}":') + {delta}), '"') - 1
+        )
+    """
+    if as_field:
+        select = f"{select} AS {as_field}"
+    return select
+
+
 def build_events_count_table(state_db):
     logger.debug("Building events_count table")
     start_time = time.time()
@@ -212,17 +286,24 @@ def build_address_events_table(state_db):
     logger.debug("Building address_events table")
     start_time = time.time()
 
-    event_count = state_db.execute("SELECT COUNT(*) AS count FROM messages").fetchone()["count"]
-    parsed_event = 0
+    queries = []
+    for event, fields in EVENTS_ADDRESS_FIELDS.items():
+        for field in fields:
+            sql = f"""
+                SELECT 
+                    {gen_select_from_bindings(field, "address")},
+                    message_index AS event_index
+                FROM messages
+                WHERE event = '{event}'
+            """  # noqa S608
+            queries.append(sql)
 
-    sql = "SELECT * FROM messages ORDER BY message_index"
-    cursor = state_db.cursor()
-    cursor.execute(sql)
-    for event in cursor:
-        api_watcher.update_address_events(state_db, event)
-        parsed_event += 1
-        if parsed_event % 250000 == 0:
-            logger.debug(f"{parsed_event} of {event_count} events processed")
+    sql = f"""
+        INSERT INTO address_events (address, event_index)
+        SELECT * FROM ({' UNION ALL'.join(queries)})
+    """  # noqa S608
+
+    state_db.execute(sql)
 
     logger.debug(f"Address_events table built in {time.time() - start_time} seconds")
 
@@ -328,15 +409,15 @@ def update_issuances(state_db):
     logger.debug("Updating issuances table")
     start_time = time.time()
 
-    sql = """
+    sql = f"""
         UPDATE issuances SET 
             asset_events = (
                 SELECT
-                substr(bindings, instr(bindings, '"asset_events":') + 16, instr(substr(bindings, instr(bindings, '"asset_events":') + 16), '"') - 1)
+                {gen_select_from_bindings("asset_events")}
                 FROM messages
                 WHERE messages.tx_hash = issuances.tx_hash
             );
-    """
+    """  # noqa S608
     state_db.execute(sql)
     logger.debug(f"Issuances table updated in {time.time() - start_time} seconds")
 
@@ -386,8 +467,8 @@ def build_state_db(use_memory_db=False):
 
     for table in CONSOLIDATED_TABLES:
         copy_consolidated_table(state_db, table)
-    for table in TABLES:
-        copy_table(state_db, table)
+    # for table in TABLES:
+    #    copy_table(state_db, table)
     finish_building_state_db(state_db)
 
     state_db.execute("DETACH DATABASE ledger_db")
