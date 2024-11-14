@@ -213,6 +213,7 @@ def select_rows(
         "asset_holders",
         "xcp_holders",
         "messages",
+        "events_count",
     ]
 
     if where_clause:
@@ -882,9 +883,8 @@ def get_event_count(db, event: str):
     """
     return select_row(
         db,
-        "messages",
+        "events_count",
         where={"event": event},
-        select="event, COUNT(*) AS event_count",
     )
 
 
@@ -897,10 +897,7 @@ def get_all_events_counts(db, cursor: str = None, limit: int = 100, offset: int 
     """
     return select_rows(
         db,
-        "messages",
-        select="event, COUNT(*) AS event_count",
-        group_by="event",
-        cursor_field="event",
+        "events_count",
         last_cursor=cursor,
         limit=limit,
         offset=offset,

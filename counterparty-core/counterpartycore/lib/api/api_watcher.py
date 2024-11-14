@@ -214,6 +214,34 @@ def get_event_previous_state(api_db, event):
     return previous_state
 
 
+def get_event_count(api_db, event):
+    cursor = api_db.cursor()
+    cursor.execute("SELECT count FROM events_count WHERE event = ?", (event["event"],))
+    count = cursor.fetchone()
+    if count is None:
+        return None
+    return count["count"]
+
+
+def increment_event_count(api_db, event):
+    current_count = get_event_count(api_db, event)
+    cursor = api_db.cursor()
+    if current_count is None:
+        cursor.execute("INSERT INTO events_count (event, count) VALUES (?, 1)", (event["event"],))
+    else:
+        cursor.execute(
+            "UPDATE events_count SET count = count + 1 WHERE event = ?", (event["event"],)
+        )
+
+
+def decrement_event_count(api_db, event):
+    current_count = get_event_count(api_db, event)
+    if current_count is None or current_count == 0:
+        return
+    cursor = api_db.cursor()
+    cursor.execute("UPDATE events_count SET count = count - 1 WHERE event = ?", (event["event"],))
+
+
 def insert_event(api_db, event):
     previous_state = get_event_previous_state(api_db, event)
     if previous_state is not None:
@@ -227,6 +255,7 @@ def insert_event(api_db, event):
     """
     cursor = api_db.cursor()
     cursor.execute(sql, event)
+    increment_event_count(api_db, event)
 
 
 def rollback_event(api_db, event):
@@ -235,6 +264,7 @@ def rollback_event(api_db, event):
         if event["event"] in SKIP_EVENTS:
             sql = "DELETE FROM messages WHERE message_index = ?"
             delete_all(api_db, sql, (event["message_index"],))
+            decrement_event_count(api_db, event)
             return
         if event["previous_state"] is None or event["previous_state"] == "null":
             sql = f"DELETE FROM {event['category']} WHERE rowid = ?"  # noqa: S608
@@ -273,6 +303,7 @@ def rollback_event(api_db, event):
 
         sql = "DELETE FROM messages WHERE message_index = ?"
         delete_all(api_db, sql, (event["message_index"],))
+        decrement_event_count(api_db, event)
 
 
 def rollback_events(api_db, block_index):
