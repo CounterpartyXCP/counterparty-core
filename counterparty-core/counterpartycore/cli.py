@@ -9,6 +9,7 @@ from termcolor import cprint
 
 from counterpartycore import server
 from counterpartycore.lib import config, sentry, setup
+from counterpartycore.lib.api import dbbuilder
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -468,6 +469,11 @@ def main():
     )
     setup.add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
 
+    parser_show_config = subparsers.add_parser(
+        "build-state-db", help="Build the API database from the ledger database"
+    )
+    setup.add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
+
     args = parser.parse_args()
 
     # Help message
@@ -502,5 +508,9 @@ def main():
 
     elif args.action == "check-db":
         server.check_database()
+
+    elif args.action == "build-state-db":
+        dbbuilder.build_state_db()
+
     else:
         parser.print_help()
