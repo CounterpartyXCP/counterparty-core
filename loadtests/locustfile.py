@@ -4,6 +4,9 @@ import random
 # Define headers for JSON-RPC requests
 headers = {"Content-Type": "application/json"}
 
+###########
+## SETUP ##
+###########
 
 # Load hard-coded list of addresses and transaction hashes from files
 def load_list_from_file(filename):
@@ -16,15 +19,17 @@ def load_list_from_file(filename):
 
 HARDCODED_TX_HASHES = load_list_from_file('data/tx_hashes.csv')
 HARDCODED_ADDRESSES = load_list_from_file('data/addresses.csv')
-print(HARDCODED_TX_HASHES)
-print(HARDCODED_ADDRESSES)
 
 def get_random_tx_hash():
-    return random.choice(HARDCODED_TX_HASHES)
+    return random.choice(HARDCODED_TX_HASHES[:99])
 
 def get_random_address():
-    return random.choice(HARDCODED_ADDRESSES)
+    return random.choice(HARDCODED_ADDRESSES[:99])
 
+
+###########
+## TASKS ##
+###########
 
 # 1. Counterparty API Root
 class CounterpartyApiRootTasks(TaskSet):
@@ -214,7 +219,7 @@ class DispensesTasks(TaskSet):
     @task
     def get_dispenses_by_source(self):
         """Get dispenses by a random source address."""
-        self.client.get(f"/v2/dispenses/source/{get_random_address()}", headers=headers)
+        self.client.get(f"/v2/addresses/{get_random_address()}/dispenses", headers=headers)
 
 
 # 16. Sends
