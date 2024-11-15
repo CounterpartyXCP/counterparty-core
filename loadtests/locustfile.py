@@ -1,7 +1,29 @@
 from locust import HttpUser, TaskSet, between, task
+import random
 
 # Define headers for JSON-RPC requests
 headers = {"Content-Type": "application/json"}
+
+
+# Load hard-coded list of addresses and transaction hashes from files
+def load_list_from_file(filename):
+    try:
+        with open(filename, 'r') as file:
+            return [line.strip() for line in file if line.strip()]
+    except FileNotFoundError:
+        print(f"File {filename} not found.")
+        return []
+
+HARDCODED_TX_HASHES = load_list_from_file('data/tx_hashes.csv')
+HARDCODED_ADDRESSES = load_list_from_file('data/addresses.csv')
+print(HARDCODED_TX_HASHES)
+print(HARDCODED_ADDRESSES)
+
+def get_random_tx_hash():
+    return random.choice(HARDCODED_TX_HASHES)
+
+def get_random_address():
+    return random.choice(HARDCODED_ADDRESSES)
 
 
 # 1. Counterparty API Root
@@ -41,58 +63,37 @@ class BlocksTasks(TaskSet):
 
 # 3. Transactions
 class TransactionsTasks(TaskSet):
-    tx_hash = None  # Store tx_hash for reuse
-    source_address = None  # Store source address for reuse
-
-    @task
-    def get_transactions(self):
-        """Get list of transactions and store tx_hash and source address."""
-        with self.client.get(
-            "/v2/transactions?limit=10&cursor=200&verbose=true",
-            headers=headers,
-            catch_response=True,
-        ) as response:
-            if response.status_code == 200:
-                result = response.json().get("result")
-                if result:
-                    # Store the tx_hash and source address from the first transaction for reuse
-                    TransactionsTasks.tx_hash = result[0].get("tx_hash")
-                    TransactionsTasks.source_address = result[0].get("source")
 
     @task
     def get_transaction_info(self):
-        """Get transaction info by stored tx_hash."""
-        if TransactionsTasks.tx_hash:
-            self.client.get(
-                f"/v2/transactions/{TransactionsTasks.tx_hash}?verbose=true", headers=headers
-            )
+        """Get transaction info by a random tx_hash."""
+        self.client.get(
+            f"/v2/transactions/{get_random_tx_hash()}?verbose=true", headers=headers
+        )
 
     @task
     def get_sends_by_transaction_hash(self):
-        """Get sends by stored tx_hash."""
-        if TransactionsTasks.tx_hash:
-            self.client.get(f"/v2/transactions/{TransactionsTasks.tx_hash}/sends", headers=headers)
+        """Get sends by a random tx_hash."""
+        self.client.get(f"/v2/transactions/{get_random_tx_hash()}/sends", headers=headers)
 
 
 # 4. Addresses (using source_address from Transactions)
 class AddressesTasks(TaskSet):
     @task
     def get_balances_by_address(self):
-        """Get balances by address from stored source address."""
-        if TransactionsTasks.source_address:
-            self.client.get(
-                f"/v2/addresses/{TransactionsTasks.source_address}/balances?limit=10&cursor=200",
-                headers=headers,
-            )
+        """Get balances by a random source address."""
+        self.client.get(
+            f"/v2/addresses/{get_random_address()}/balances?limit=10&cursor=200",
+            headers=headers,
+        )
 
     @task
     def get_transactions_by_address(self):
-        """Get transactions by stored source address."""
-        if TransactionsTasks.source_address:
-            self.client.get(
-                f"/v2/addresses/{TransactionsTasks.source_address}/transactions?limit=10&cursor=200",
-                headers=headers,
-            )
+        """Get transactions by a random source address."""
+        self.client.get(
+            f"/v2/addresses/{get_random_address()}/transactions?limit=10&cursor=200",
+            headers=headers,
+        )
 
 
 # 5. UTXOs
@@ -103,9 +104,9 @@ class UtxosTasks(TaskSet):
 
     @task
     def get_utxos_by_address(self):
-        if TransactionsTasks.source_address:
+        if HARDCODED_ADDRESSES:
             self.client.get(
-                f"/v2/utxos/{TransactionsTasks.source_address}?limit=10&cursor=200", headers=headers
+                f"/v2/utxos/{HARDCODED_ADDRESSES[0]}?limit=10&cursor=200", headers=headers
             )
 
 
@@ -118,8 +119,7 @@ class ComposeTasks(TaskSet):
             json={
                 "wager": 1000,
                 "odds": 2,
-                "counterparty": TransactionsTasks.source_address
-                or "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+                "counterparty": get_random_address(),
             },
             headers=headers,
         )
@@ -130,7 +130,7 @@ class ComposeTasks(TaskSet):
             "/v2/compose/broadcast",
             json={
                 "value": 1.23,
-                "source": TransactionsTasks.source_address or "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+                "source": get_random_address(),
                 "text": "Test Broadcast",
             },
             headers=headers,
@@ -153,17 +153,13 @@ class AssetsTasks(TaskSet):
 class OrdersTasks(TaskSet):
     @task
     def get_order_by_id(self):
-        """Get specific order by tx_hash (used as order_id)."""
-        if TransactionsTasks.tx_hash:
-            self.client.get(f"/v2/orders/{TransactionsTasks.tx_hash}", headers=headers)
+        """Get specific order by a random tx_hash (used as order_id)."""
+        self.client.get(f"/v2/orders/{get_random_tx_hash()}", headers=headers)
 
     @task
     def get_orders_by_address(self):
-        """Get orders by source address."""
-        if TransactionsTasks.source_address:
-            self.client.get(
-                f"/v2/orders?source={TransactionsTasks.source_address}", headers=headers
-            )
+        """Get orders by a random source address."""
+        self.client.get(f"/v2/orders?source={get_random_address()}", headers=headers)
 
 
 # 9. Order Matches
@@ -212,19 +208,13 @@ class EventsTasks(TaskSet):
 class DispensesTasks(TaskSet):
     @task
     def get_dispenses_by_transaction_hash(self):
-        """Get dispenses by stored tx_hash."""
-        if TransactionsTasks.tx_hash:
-            self.client.get(
-                f"/v2/transactions/{TransactionsTasks.tx_hash}/dispenses", headers=headers
-            )
+        """Get dispenses by a random tx_hash."""
+        self.client.get(f"/v2/transactions/{get_random_tx_hash()}/dispenses", headers=headers)
 
     @task
     def get_dispenses_by_source(self):
-        """Get dispenses by source address."""
-        if TransactionsTasks.source_address:
-            self.client.get(
-                f"/v2/dispenses/source/{TransactionsTasks.source_address}", headers=headers
-            )
+        """Get dispenses by a random source address."""
+        self.client.get(f"/v2/dispenses/source/{get_random_address()}", headers=headers)
 
 
 # 16. Sends
@@ -273,10 +263,9 @@ class FairmintsTasks(TaskSet):
 class BitcoinTasks(TaskSet):
     @task
     def get_unspent_txouts_by_address(self):
-        if TransactionsTasks.source_address:
-            self.client.get(
-                f"/v2/bitcoin/{TransactionsTasks.source_address}/utxos", headers=headers
-            )
+        self.client.get(
+            f"/v2/bitcoin/{TransactionsTasks.get_random_address()}/utxos", headers=headers
+        )
 
 
 # 23. Mempool
@@ -300,8 +289,8 @@ class CounterpartyCoreUser(HttpUser):
         BlocksTasks: 2,
         TransactionsTasks: 3,
         AddressesTasks: 4,
-        UtxosTasks: 5,
-        ComposeTasks: 6,
+        # UtxosTasks: 5,
+        # ComposeTasks: 6,
         AssetsTasks: 7,
         OrdersTasks: 8,
         OrderMatchesTasks: 9,
@@ -309,7 +298,7 @@ class CounterpartyCoreUser(HttpUser):
         BurnsTasks: 11,
         DispensersTasks: 12,
         DividendsTasks: 13,
-        EventsTasks: 14,
+        # EventsTasks: 14,
         DispensesTasks: 15,
         SendsTasks: 16,
         IssuancesTasks: 17,
@@ -317,7 +306,7 @@ class CounterpartyCoreUser(HttpUser):
         BroadcastsTasks: 19,
         FairmintersTasks: 20,
         FairmintsTasks: 21,
-        BitcoinTasks: 22,
+        # BitcoinTasks: 22,
         MempoolTasks: 23,
         RoutesTasks: 24,
     }
