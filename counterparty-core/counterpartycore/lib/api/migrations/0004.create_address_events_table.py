@@ -21,7 +21,7 @@ def dict_factory(cursor, row):
 
 
 def apply(db):
-    logger.info("Create and populate `address_events` table...")
+    logger.debug("Create and populate `address_events` table...")
     db.row_factory = dict_factory
 
     cursor = db.cursor()
@@ -57,7 +57,7 @@ def apply(db):
         if parsed_event % 1000000 == 0:
             logger.debug(f"{parsed_event} of {event_count} events processed")
 
-    logger.info("`address_events` tables created...")
+    logger.debug("`address_events` tables created...")
 
 
 def rollback(db):

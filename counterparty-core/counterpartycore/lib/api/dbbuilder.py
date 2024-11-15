@@ -3,7 +3,7 @@ import os
 import shutil
 import time
 
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config, database, log
 from yoyo import get_backend, read_migrations
 from yoyo.exceptions import LockTimeout
 
@@ -69,6 +69,8 @@ NON_ROLLBACKABLE_TABLES = list(CONSOLIDATED_TABLES.keys()) + [
     "events_count",
 ]
 
+LEDGER_TABLES = list(CONSOLIDATED_TABLES.keys()) + REGULAR_TABLES
+
 ADDITIONAL_FIELDS = {
     "fairminters": ["earned_quantity INTEGER", "paid_quantity INTEGER", "commission INTEGER"],
     "issuances": ["asset_events TEXT"],
@@ -104,6 +106,8 @@ def pre_migration():
     # Add additional fields to tables already in the state db
     state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     state_db.execute("""PRAGMA foreign_keys=OFF""")
+    for table_name in LEDGER_TABLES:
+        database.unlock_update(state_db, table_name)
     state_db.execute("DROP VIEW all_expirations")
     for table, fields in ADDITIONAL_FIELDS.items():
         for field in fields:
@@ -115,7 +119,6 @@ def pre_migration():
 def apply_migration():
     logger.info("Applying migrations...")
     start_time = time.time()
-
     # Apply migrations
     backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
     migrations = read_migrations(MIGRATIONS_DIR)
@@ -133,11 +136,10 @@ def apply_migration():
 
 
 def copy_consolidated_table(state_db, table_name):
-    logger.info(f"Copying consolidated table {table_name} to state db")
+    logger.info(f"Copying consolidated table `{table_name}` to state db")
     start_time = time.time()
 
     state_db.execute(f"DELETE FROM {table_name}")  # noqa S608
-    database.unlock_update(state_db, table_name)
 
     columns = [column["name"] for column in state_db.execute(f"PRAGMA table_info({table_name})")]
 
@@ -155,7 +157,7 @@ def copy_consolidated_table(state_db, table_name):
             )
     """  # noqa S608
     state_db.execute(sql)
-    logger.info(f"Consolidated table {table_name} copied in {time.time() - start_time} seconds")
+    logger.info(f"Consolidated table `{table_name}` copied in {time.time() - start_time} seconds")
 
 
 def copy_tables_from_ledger_db():
@@ -187,7 +189,7 @@ def gen_select_from_bindings(field_name, as_field=None):
 
 
 def build_all_expirations_table(state_db):
-    logger.info("Building all_expirations table")
+    logger.info("Building `all_expirations` table")
     start_time = time.time()
 
     for table_name, object_id in EXPIRATION_TABLES.items():
@@ -202,11 +204,11 @@ def build_all_expirations_table(state_db):
         """  # noqa S608
         state_db.execute(sql)
 
-    logger.info(f"All_expirations table built in {time.time() - start_time} seconds")
+    logger.info(f"`all_expirations` table built in {time.time() - start_time} seconds")
 
 
 def build_assets_info_table(state_db):
-    logger.info("Building assets_info table")
+    logger.info("Building `assets_info` table")
     start_time = time.time()
 
     sql = """
@@ -289,7 +291,7 @@ def build_assets_info_table(state_db):
     """
     state_db.execute(sql)
 
-    logger.info(f"Assets_info table built in {time.time() - start_time} seconds")
+    logger.info(f"`assets_info` table built in {time.time() - start_time} seconds")
 
 
 def rebuild_assets_info_table():
@@ -301,7 +303,7 @@ def rebuild_assets_info_table():
 
 
 def update_issuances(state_db):
-    logger.info("Updating issuances table")
+    logger.info("Updating `issuances` table")
     start_time = time.time()
 
     sql = f"""
@@ -314,11 +316,11 @@ def update_issuances(state_db):
             );
     """  # noqa S608
     state_db.execute(sql)
-    logger.info(f"Issuances table updated in {time.time() - start_time} seconds")
+    logger.info(f"`issuances` table updated in {time.time() - start_time} seconds")
 
 
 def update_dispenses_table(state_db):
-    logger.info("Updating dispenses table")
+    logger.info("Updating `dispenses` table")
     start_time = time.time()
 
     sql = """
@@ -334,7 +336,7 @@ def update_dispenses_table(state_db):
             );
     """
     state_db.execute(sql)
-    logger.info(f"Dispenses table updated in {time.time() - start_time} seconds")
+    logger.info(f"`dispenses` table updated in {time.time() - start_time} seconds")
 
 
 def build_state_tables():
@@ -379,17 +381,21 @@ def build_state_db():
     logger.info("Building state db")
     start_time = time.time()
 
-    copy_ledger_db()
-    pre_migration()
-    apply_migration()
-    copy_tables_from_ledger_db()
-    build_state_tables()
+    with log.Spinner("Copying ledger database to state database"):
+        copy_ledger_db()
+    with log.Spinner("Applying migrations"):
+        pre_migration()
+        apply_migration()
+    with log.Spinner("Copying tables from ledger db"):
+        copy_tables_from_ledger_db()
+    with log.Spinner("Building state tables"):
+        build_state_tables()
 
     logger.info(f"State db built in {time.time() - start_time} seconds")
 
 
 def rollback_state_db(block_index):
-    logger.info("Rolling back state db")
+    logger.info(f"Rolling back state db to block index {block_index}")
     start_time = time.time()
 
     rollback_tables(config.STATE_DATABASE, block_index)

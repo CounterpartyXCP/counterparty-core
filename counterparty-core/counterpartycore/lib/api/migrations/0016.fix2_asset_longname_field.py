@@ -17,7 +17,7 @@ def dict_factory(cursor, row):
 
 
 def apply(db):
-    logger.info("Update `asset_longname` field...")
+    logger.debug("Update `asset_longname` field...")
     db.row_factory = dict_factory
 
     cursor = db.cursor()
@@ -26,7 +26,7 @@ def apply(db):
     cursor.execute("UPDATE issuances SET asset_longname = NULL WHERE asset_longname = ''")
     cursor.execute("UPDATE assets_info SET asset_longname = NULL WHERE asset_longname = ''")
 
-    logger.info("`asset_longname` field updated...")
+    logger.debug("`asset_longname` field updated...")
 
 
 def rollback(db):

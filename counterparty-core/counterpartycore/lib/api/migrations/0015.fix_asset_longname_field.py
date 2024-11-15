@@ -20,7 +20,7 @@ def dict_factory(cursor, row):
 
 
 def apply(db):
-    logger.info("Update `asset_longname` field...")
+    logger.debug("Update `asset_longname` field...")
     db.row_factory = dict_factory
 
     cursor = db.cursor()
@@ -45,7 +45,7 @@ def apply(db):
         sql = "UPDATE fairminters SET asset_longname = ?, asset_parent = ? WHERE asset = ? AND (asset_longname = '' OR asset_longname IS NULL)"
         cursor.execute(sql, (asset["asset_longname"], asset_parent, asset["asset"]))
 
-    logger.info("`asset_longname` field updated...")
+    logger.debug("`asset_longname` field updated...")
 
 
 def rollback(db):

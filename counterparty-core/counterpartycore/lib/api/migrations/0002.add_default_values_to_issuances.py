@@ -20,7 +20,7 @@ __depends__ = {"0001.create_api_database"}
 
 
 def apply(db):
-    logger.info("Add defaul value for `locked` and `reset` fields in `issuances` table...")
+    logger.debug("Add defaul value for `locked` and `reset` fields in `issuances` table...")
     # db.row_factory = dict_factory
 
     cursor = db.cursor()
@@ -43,7 +43,7 @@ def apply(db):
     for sql in sqls:
         cursor.execute(sql)
 
-    logger.info("`locked` and `reset` fields updated...")
+    logger.debug("`locked` and `reset` fields updated...")
 
 
 def rollback(db):
