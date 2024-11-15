@@ -80,7 +80,7 @@ def initialise(db):
     if "last_status_tx_source" not in columns:
         cursor.execute("ALTER TABLE dispensers ADD COLUMN last_status_tx_source TEXT")
     if "close_block_index" not in columns:
-        cursor.execute("ALTER TABLE dispensers ADD COLUMN close_block_index TEXT")
+        cursor.execute("ALTER TABLE dispensers ADD COLUMN close_block_index INTEGER")
 
     # migrate old table
     if database.field_is_pk(cursor, "dispensers", "tx_index"):

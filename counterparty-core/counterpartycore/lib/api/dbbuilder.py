@@ -69,14 +69,6 @@ NON_ROLLBACKABLE_TABLES = list(CONSOLIDATED_TABLES.keys()) + [
     "events_count",
 ]
 
-LEDGER_TABLES = list(CONSOLIDATED_TABLES.keys()) + REGULAR_TABLES
-
-ADDITIONAL_FIELDS = {
-    "fairminters": ["earned_quantity INTEGER", "paid_quantity INTEGER", "commission INTEGER"],
-    "issuances": ["asset_events TEXT"],
-    "dispenses": ["btc_amount TEXT"],
-}
-
 
 def copy_ledger_db():
     if os.path.exists(config.STATE_DATABASE):
@@ -85,9 +77,6 @@ def copy_ledger_db():
         os.unlink(config.STATE_DATABASE + "-wal")
     if os.path.exists(config.STATE_DATABASE + "-shm"):
         os.unlink(config.STATE_DATABASE + "-shm")
-
-    start_time = time.time()
-    logger.info("Copying ledger database to state database")
 
     # ensure the database is closed an no wall file is present
     ledger_db = database.get_db_connection(config.DATABASE, read_only=False, check_wal=True)
@@ -99,26 +88,8 @@ def copy_ledger_db():
     if os.path.exists(config.DATABASE + "-shm"):
         shutil.copyfile(config.DATABASE + "-shm", config.STATE_DATABASE + "-shm")
 
-    logger.info(f"Ledger database copied in {time.time() - start_time} seconds")
-
-
-def pre_migration():
-    # Add additional fields to tables already in the state db
-    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-    state_db.execute("""PRAGMA foreign_keys=OFF""")
-    for table_name in LEDGER_TABLES:
-        database.unlock_update(state_db, table_name)
-    state_db.execute("DROP VIEW all_expirations")
-    for table, fields in ADDITIONAL_FIELDS.items():
-        for field in fields:
-            state_db.execute(f"ALTER TABLE {table} ADD COLUMN {field}")  # noqa S608
-    state_db.execute("""PRAGMA foreign_keys=OFF""")
-    state_db.close()
-
 
 def apply_migration():
-    logger.info("Applying migrations...")
-    start_time = time.time()
     # Apply migrations
     backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
     migrations = read_migrations(MIGRATIONS_DIR)
@@ -132,10 +103,8 @@ def apply_migration():
         backend.apply_migrations(backend.to_apply(migrations))
     backend.connection.close()
 
-    logger.info(f"Migrations applied in {time.time() - start_time} seconds")
 
-
-def copy_consolidated_table(state_db, table_name):
+def build_consolidated_table(state_db, table_name):
     logger.info(f"Copying consolidated table `{table_name}` to state db")
     start_time = time.time()
 
@@ -167,196 +136,11 @@ def copy_tables_from_ledger_db():
     state_db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
     for table in CONSOLIDATED_TABLES.keys():
-        copy_consolidated_table(state_db, table)
+        build_consolidated_table(state_db, table)
 
     state_db.execute("DETACH DATABASE ledger_db")
     state_db.execute("""PRAGMA foreign_keys=ON""")
     state_db.close()
-
-
-def gen_select_from_bindings(field_name, as_field=None):
-    delta = len(field_name) + 4
-    select = f"""
-        substr(
-            bindings, 
-            instr(bindings, '"{field_name}":') + {delta}, 
-            instr(substr(bindings, instr(bindings, '"{field_name}":') + {delta}), '"') - 1
-        )
-    """
-    if as_field:
-        select = f"{select} AS {as_field}"
-    return select
-
-
-def build_all_expirations_table(state_db):
-    logger.info("Building `all_expirations` table")
-    start_time = time.time()
-
-    for table_name, object_id in EXPIRATION_TABLES.items():
-        object_id_field = f"{object_id} AS object_id"
-        object_type = table_name.replace("_expirations", "")
-        object_type_field = f"'{object_type}' AS type"
-
-        sql = f"""
-            INSERT INTO all_expirations (object_id, block_index, type)
-            SELECT {object_id_field}, block_index, {object_type_field}
-            FROM {table_name}
-        """  # noqa S608
-        state_db.execute(sql)
-
-    logger.info(f"`all_expirations` table built in {time.time() - start_time} seconds")
-
-
-def build_assets_info_table(state_db):
-    logger.info("Building `assets_info` table")
-    start_time = time.time()
-
-    sql = """
-        INSERT INTO assets_info (asset, asset_id, asset_longname, first_issuance_block_index)
-        SELECT asset_name AS asset, asset_id, asset_longname, block_index AS first_issuance_block_index
-        FROM assets
-    """
-    state_db.execute(sql)
-
-    sql = """
-        UPDATE assets_info SET 
-            divisible = (
-                SELECT divisible FROM (
-                    SELECT issuances.divisible AS divisible, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid DESC
-                    LIMIT 1
-                )
-            ),
-            description = (
-                SELECT description FROM (
-                    SELECT issuances.description AS description, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid DESC
-                    LIMIT 1
-                )
-            ),
-            owner = (
-                SELECT issuer FROM (
-                    SELECT issuances.issuer AS issuer, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid DESC
-                    LIMIT 1
-                )
-            ),
-            last_issuance_block_index = (
-                SELECT block_index FROM (
-                    SELECT issuances.block_index AS block_index, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid DESC
-                    LIMIT 1
-                )
-            ),
-            issuer = (
-                SELECT issuer FROM (
-                    SELECT issuances.issuer AS issuer, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid ASC
-                    LIMIT 1
-                )
-            ),
-            supply = (
-                SELECT supply FROM (
-                    SELECT SUM(issuances.quantity) AS supply, issuances.asset
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    GROUP BY issuances.asset
-                )
-            ) - (
-                SELECT quantity FROM (
-                    SELECT SUM(destructions.quantity) AS quantity, destructions.asset
-                    FROM destructions
-                    WHERE assets_info.asset = destructions.asset AND status = 'valid'
-                    GROUP BY destructions.asset
-                )
-            ),
-            locked = (
-                SELECT locked FROM (
-                    SELECT SUM(issuances.locked) AS locked, issuances.asset
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    GROUP BY issuances.asset
-                )
-            );
-    """
-    state_db.execute(sql)
-
-    logger.info(f"`assets_info` table built in {time.time() - start_time} seconds")
-
-
-def rebuild_assets_info_table():
-    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-    state_db.execute("""PRAGMA foreign_keys=OFF""")
-    build_assets_info_table(state_db)
-    state_db.execute("""PRAGMA foreign_keys=ON""")
-    state_db.close()
-
-
-def update_issuances(state_db):
-    logger.info("Updating `issuances` table")
-    start_time = time.time()
-
-    sql = f"""
-        UPDATE issuances SET 
-            asset_events = (
-                SELECT
-                {gen_select_from_bindings("asset_events")}
-                FROM messages
-                WHERE messages.tx_hash = issuances.tx_hash
-            );
-    """  # noqa S608
-    state_db.execute(sql)
-    logger.info(f"`issuances` table updated in {time.time() - start_time} seconds")
-
-
-def update_dispenses_table(state_db):
-    logger.info("Updating `dispenses` table")
-    start_time = time.time()
-
-    sql = """
-        UPDATE dispenses SET 
-            btc_amount = (
-                SELECT
-                CAST (
-                    substr(bindings, instr(bindings, '"btc_amount":') + 13, instr(substr(bindings, instr(bindings, '"btc_amount":') + 13), ',') - 1)
-                    AS INTEGER
-                )
-                FROM messages
-                WHERE messages.tx_hash = dispenses.tx_hash
-            );
-    """
-    state_db.execute(sql)
-    logger.info(f"`dispenses` table updated in {time.time() - start_time} seconds")
-
-
-def build_state_tables():
-    logger.info("Building state tables")
-    start_time = time.time()
-
-    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-    state_db.execute("""PRAGMA foreign_keys=OFF""")
-
-    build_all_expirations_table(state_db)
-    build_assets_info_table(state_db)
-    update_issuances(state_db)
-    update_dispenses_table(state_db)
-    # build_events_count_table(state_db)
-    # build_address_events_table(state_db)
-    # update_fairminters_table(state_db)
-    state_db.execute("""PRAGMA foreign_keys=ON""")
-    state_db.close()
-
-    logger.info(f"State tables built in {time.time() - start_time} seconds")
 
 
 def rollback_tables(block_index):
@@ -384,12 +168,9 @@ def build_state_db():
     with log.Spinner("Copying ledger database to state database"):
         copy_ledger_db()
     with log.Spinner("Applying migrations"):
-        pre_migration()
         apply_migration()
     with log.Spinner("Copying tables from ledger db"):
         copy_tables_from_ledger_db()
-    with log.Spinner("Building state tables"):
-        build_state_tables()
 
     logger.info(f"State db built in {time.time() - start_time} seconds")
 
@@ -398,9 +179,8 @@ def rollback_state_db(block_index):
     logger.info(f"Rolling back state db to block index {block_index}")
     start_time = time.time()
 
-    rollback_tables(config.STATE_DATABASE, block_index)
-    apply_migration(config.STATE_DATABASE)
-    copy_tables_from_ledger_db(config.STATE_DATABASE)
-    rebuild_assets_info_table(config.STATE_DATABASE)
+    rollback_tables(block_index)
+    apply_migration()
+    copy_tables_from_ledger_db()
 
     logger.info(f"State db rolled back in {time.time() - start_time} seconds")

@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0004.create_address_events_table.py
+# file: counterpartycore/lib/api/migrations/0003.populate_address_events.py
 #
 import logging
 import os
@@ -12,7 +12,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-__depends__ = {"0003.recreate_views"}
+__depends__ = {"0001.api_db_to_state_db"}
 
 
 def dict_factory(cursor, row):
@@ -21,21 +21,10 @@ def dict_factory(cursor, row):
 
 
 def apply(db):
-    logger.debug("Create and populate `address_events` table...")
+    logger.debug("Populate `address_events` table...")
     db.row_factory = dict_factory
 
     cursor = db.cursor()
-    sqls = [
-        """
-        CREATE TABLE IF NOT EXISTS address_events (
-            address TEXT,
-            event_index INTEGER
-        )
-        """,
-        "CREATE INDEX IF NOT EXISTS address_events_address_idx ON address_events (address)",
-    ]
-    for sql in sqls:
-        cursor.execute(sql)
 
     event_count = cursor.execute("SELECT COUNT(*) AS count FROM messages").fetchone()["count"]
     parsed_event = 0
@@ -57,7 +46,7 @@ def apply(db):
         if parsed_event % 1000000 == 0:
             logger.debug(f"{parsed_event} of {event_count} events processed")
 
-    logger.debug("`address_events` tables created...")
+    logger.debug("`address_events` ready.")
 
 
 def rollback(db):
