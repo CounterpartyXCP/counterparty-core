@@ -19,12 +19,16 @@ def load_list_from_file(filename):
 
 HARDCODED_TX_HASHES = load_list_from_file('data/tx_hashes.csv')
 HARDCODED_ADDRESSES = load_list_from_file('data/addresses.csv')
+HARDCODED_ORDERS = load_list_from_file('data/orders.csv')
 
 def get_random_tx_hash():
     return random.choice(HARDCODED_TX_HASHES[:99])
 
 def get_random_address():
     return random.choice(HARDCODED_ADDRESSES[:99])
+    
+def get_random_order():
+    return random.choice(HARDCODED_ORDERS[:99])
 
 
 ###########
@@ -219,7 +223,7 @@ class DispensesTasks(TaskSet):
     @task
     def get_dispenses_by_source(self):
         """Get dispenses by a random source address."""
-        self.client.get(f"/v2/addresses/{get_random_address()}/dispenses", headers=headers)
+        self.client.get(f"/v2/addresses/{get_random_address()}/dispenses/sends", headers=headers)
 
 
 # 16. Sends
