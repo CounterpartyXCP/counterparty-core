@@ -155,7 +155,7 @@ class OrdersTasks(TaskSet):
     @task
     def get_order_by_id(self):
         """Get specific order by a random tx_hash (used as order_id)."""
-        self.client.get(f"/v2/orders/{get_random_tx_hash()}", headers=headers)
+        self.client.get(f"/v2/orders/{get_random_order()}", headers=headers)
 
     @task
     def get_orders_by_address(self):
@@ -202,7 +202,7 @@ class DividendsTasks(TaskSet):
 class EventsTasks(TaskSet):
     @task
     def get_all_events(self):
-        self.client.get("/v2/events?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/events?limit={random.randint(1, 200)}&cursor={random.randint(0, 100000)}", headers=headers)
 
 
 # 15. Dispenses (using tx_hash and source address)
@@ -299,7 +299,7 @@ class CounterpartyCoreUser(HttpUser):
         BurnsTasks: 11,
         DispensersTasks: 12,
         DividendsTasks: 13,
-        # EventsTasks: 14,
+        EventsTasks: 14,
         DispensesTasks: 15,
         SendsTasks: 16,
         IssuancesTasks: 17,
