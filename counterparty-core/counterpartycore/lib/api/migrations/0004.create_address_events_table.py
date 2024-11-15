@@ -5,7 +5,7 @@ import logging
 import os
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api.dbbuilder import build_address_events_table
+from counterpartycore.lib.api.api_watcher import EVENTS_ADDRESS_FIELDS, update_address_events
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -37,7 +37,25 @@ def apply(db):
     for sql in sqls:
         cursor.execute(sql)
 
-    build_address_events_table(db)
+    event_count = cursor.execute("SELECT COUNT(*) AS count FROM messages").fetchone()["count"]
+    parsed_event = 0
+
+    event_list = tuple(EVENTS_ADDRESS_FIELDS.keys())
+    placeholders = ", ".join(["?"] * len(event_list))
+
+    event_count = cursor.execute(
+        f"SELECT COUNT(*) AS count FROM messages WHERE event IN ({placeholders})",  # noqa S608
+        event_list,
+    ).fetchone()["count"]
+    parsed_event = 0
+
+    sql = f"SELECT * FROM messages WHERE event IN ({placeholders}) ORDER BY message_index"  # noqa S608
+    cursor.execute(sql, event_list)
+    for event in cursor:
+        update_address_events(db, event)
+        parsed_event += 1
+        if parsed_event % 1000000 == 0:
+            logger.debug(f"{parsed_event} of {event_count} events processed")
 
     logger.info("`address_events` tables created...")
 
