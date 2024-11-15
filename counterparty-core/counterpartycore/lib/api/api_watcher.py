@@ -734,7 +734,7 @@ def catch_up(api_db, ledger_db, watcher):
 def apply_migration():
     logger.debug("API Watcher - Applying migrations...")
     # Apply migrations
-    backend = get_backend(f"sqlite:///{config.API_DATABASE}")
+    backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
     migrations = read_migrations(MIGRATIONS_DIR)
     try:
         with backend.lock():
@@ -781,7 +781,7 @@ def check_event_hashes(api_db, ledger_db):
 
 
 def rollback(block_index):
-    api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
+    api_db = database.get_db_connection(config.STATE_DATABASE, read_only=False, check_wal=False)
     rollback_events(api_db, block_index)
     api_db.close()
 
@@ -920,7 +920,7 @@ class APIWatcher(threading.Thread):
         apply_migration()
         self.stop_event = threading.Event()  # Add stop event
         self.api_db = database.get_db_connection(
-            config.API_DATABASE, read_only=False, check_wal=False
+            config.STATE_DATABASE, read_only=False, check_wal=False
         )
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False

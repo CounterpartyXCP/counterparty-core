@@ -192,7 +192,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             self.cfg.set(key.lower(), value)
 
     def load(self):
-        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        self.timer_db = get_db_connection(config.STATE_DATABASE, read_only=True, check_wal=False)
         start_refresh_backend_height(self.timer_db, self.args)
         return self.application
 
@@ -217,7 +217,7 @@ class WerkzeugApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        self.timer_db = get_db_connection(config.STATE_DATABASE, read_only=True, check_wal=False)
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
 
     def run(self):
@@ -233,7 +233,7 @@ class WaitressApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        self.timer_db = get_db_connection(config.STATE_DATABASE, read_only=True, check_wal=False)
         self.server = waitress.server.create_server(
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )

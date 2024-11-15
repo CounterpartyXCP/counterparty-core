@@ -245,7 +245,17 @@ def initialise_config(
         f"fetcherdb{network}",
     )
 
-    config.API_DATABASE = config.DATABASE.replace(".db", ".api.db")
+    config.STATE_DATABASE = config.DATABASE.replace(".db", ".state.db")
+
+    if not os.path.exists(config.STATE_DATABASE):
+        old_db_name = config.DATABASE.replace(".db", ".api.db")
+        if os.path.exists(old_db_name):
+            os.rename(old_db_name, config.STATE_DATABASE)
+        if os.path.exists(old_db_name + "-wal"):
+            os.rename(old_db_name + "-wal", config.STATE_DATABASE + "-wal")
+        if os.path.exists(old_db_name + "-shm"):
+            os.rename(old_db_name + "-shm", config.STATE_DATABASE + "-shm")
+
     config.API_LIMIT_ROWS = api_limit_rows
 
     ##############
@@ -849,7 +859,7 @@ def start_all(args):
             )
 
         logger.debug("Cleaning up WAL and SHM files...")
-        api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
+        api_db = database.get_db_connection(config.STATE_DATABASE, read_only=False, check_wal=False)
         api_db.close()
         logger.info("Shutdown complete.")
 

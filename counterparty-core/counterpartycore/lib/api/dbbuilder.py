@@ -34,7 +34,7 @@ EXPIRATION_TABLES = {
     "rps_match_expirations": "rps_match_id",
 }
 
-TABLES = [
+REGULAR_TABLES = [
     "blocks",
     "transactions",
     "transaction_outputs",
@@ -55,14 +55,18 @@ TABLES = [
     "fairmints",
     "transaction_count",
     "issuances",
-    "bet_match_resolutions",
-    "order_expirations",
-    "order_match_expirations",
-    "bet_expirations",
-    "bet_match_expirations",
-    "rps_expirations",
-    "rps_match_expirations",
     "messages",
+    "bet_match_resolutions",
+] + list(EXPIRATION_TABLES.keys())
+
+ROLLBACKABLE_TABLES = REGULAR_TABLES + [
+    "all_expirations",
+    "address_events",
+]
+
+NON_ROLLBACKABLE_TABLES = list(CONSOLIDATED_TABLES.keys()) + [
+    "assets_info",
+    "events_count",
 ]
 
 ADDITIONAL_FIELDS = {
@@ -72,13 +76,13 @@ ADDITIONAL_FIELDS = {
 }
 
 
-def copy_ledger_db(state_db_path):
-    if os.path.exists(state_db_path):
-        os.unlink(state_db_path)
-    if os.path.exists(state_db_path + "-wal"):
-        os.unlink(state_db_path + "-wal")
-    if os.path.exists(state_db_path + "-shm"):
-        os.unlink(state_db_path + "-shm")
+def copy_ledger_db():
+    if os.path.exists(config.STATE_DATABASE):
+        os.unlink(config.STATE_DATABASE)
+    if os.path.exists(config.STATE_DATABASE + "-wal"):
+        os.unlink(config.STATE_DATABASE + "-wal")
+    if os.path.exists(config.STATE_DATABASE + "-shm"):
+        os.unlink(config.STATE_DATABASE + "-shm")
 
     start_time = time.time()
     logger.info("Copying ledger database to state database")
@@ -87,20 +91,20 @@ def copy_ledger_db(state_db_path):
     ledger_db = database.get_db_connection(config.DATABASE, read_only=False, check_wal=True)
     ledger_db.close()
 
-    shutil.copyfile(config.DATABASE, state_db_path)
+    shutil.copyfile(config.DATABASE, config.STATE_DATABASE)
     if os.path.exists(config.DATABASE + "-wal"):
-        shutil.copyfile(config.DATABASE + "-wal", state_db_path + "-wal")
+        shutil.copyfile(config.DATABASE + "-wal", config.STATE_DATABASE + "-wal")
     if os.path.exists(config.DATABASE + "-shm"):
-        shutil.copyfile(config.DATABASE + "-shm", state_db_path + "-shm")
+        shutil.copyfile(config.DATABASE + "-shm", config.STATE_DATABASE + "-shm")
 
     logger.info(f"Ledger database copied in {time.time() - start_time} seconds")
 
 
-def pre_migration(state_db_path):
+def pre_migration():
     # Add additional fields to tables already in the state db
-    state_db = database.get_db_connection(state_db_path, read_only=False)
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     state_db.execute("""PRAGMA foreign_keys=OFF""")
-    state_db.execute("DROP VIEW IF EXISTS all_expirations")
+    state_db.execute("DROP VIEW all_expirations")
     for table, fields in ADDITIONAL_FIELDS.items():
         for field in fields:
             state_db.execute(f"ALTER TABLE {table} ADD COLUMN {field}")  # noqa S608
@@ -108,14 +112,12 @@ def pre_migration(state_db_path):
     state_db.close()
 
 
-def apply_migration(state_db_path):
+def apply_migration():
     logger.info("Applying migrations...")
     start_time = time.time()
 
-    pre_migration(state_db_path)
-
     # Apply migrations
-    backend = get_backend(f"sqlite:///{state_db_path}")
+    backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
     migrations = read_migrations(MIGRATIONS_DIR)
     try:
         with backend.lock():
@@ -156,8 +158,8 @@ def copy_consolidated_table(state_db, table_name):
     logger.info(f"Consolidated table {table_name} copied in {time.time() - start_time} seconds")
 
 
-def copy_tables_from_ledger_db(state_db_path):
-    state_db = database.get_db_connection(state_db_path, read_only=False)
+def copy_tables_from_ledger_db():
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
 
     state_db.execute("""PRAGMA foreign_keys=OFF""")
     state_db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
@@ -290,6 +292,14 @@ def build_assets_info_table(state_db):
     logger.info(f"Assets_info table built in {time.time() - start_time} seconds")
 
 
+def rebuild_assets_info_table():
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+    state_db.execute("""PRAGMA foreign_keys=OFF""")
+    build_assets_info_table(state_db)
+    state_db.execute("""PRAGMA foreign_keys=ON""")
+    state_db.close()
+
+
 def update_issuances(state_db):
     logger.info("Updating issuances table")
     start_time = time.time()
@@ -327,11 +337,11 @@ def update_dispenses_table(state_db):
     logger.info(f"Dispenses table updated in {time.time() - start_time} seconds")
 
 
-def build_state_tables(state_db_path):
+def build_state_tables():
     logger.info("Building state tables")
     start_time = time.time()
 
-    state_db = database.get_db_connection(state_db_path, read_only=False)
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     state_db.execute("""PRAGMA foreign_keys=OFF""")
 
     build_all_expirations_table(state_db)
@@ -347,15 +357,44 @@ def build_state_tables(state_db_path):
     logger.info(f"State tables built in {time.time() - start_time} seconds")
 
 
+def rollback_tables(block_index):
+    logger.info(f"Delete tables to block index {block_index}")
+    start_time = time.time()
+
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+    state_db.execute("""PRAGMA foreign_keys=OFF""")
+
+    for table in ROLLBACKABLE_TABLES:
+        state_db.execute(f"DELETE FROM {table} WHERE block_index >= ?", (block_index,))  # noqa S608
+
+    for table in NON_ROLLBACKABLE_TABLES:
+        state_db.execute(f"DELETE FROM {table}")  # noqa S608
+
+    state_db.execute("""PRAGMA foreign_keys=ON""")
+    state_db.close()
+    logger.info(f"Tables deleted in {time.time() - start_time} seconds")
+
+
 def build_state_db():
     logger.info("Building state db")
     start_time = time.time()
 
-    state_db_path = config.API_DATABASE.replace("api.", "state.")
-
-    copy_ledger_db(state_db_path)
-    apply_migration(state_db_path)
-    copy_tables_from_ledger_db(state_db_path)
-    build_state_tables(state_db_path)
+    copy_ledger_db()
+    pre_migration()
+    apply_migration()
+    copy_tables_from_ledger_db()
+    build_state_tables()
 
     logger.info(f"State db built in {time.time() - start_time} seconds")
+
+
+def rollback_state_db(block_index):
+    logger.info("Rolling back state db")
+    start_time = time.time()
+
+    rollback_tables(config.STATE_DATABASE, block_index)
+    apply_migration(config.STATE_DATABASE)
+    copy_tables_from_ledger_db(config.STATE_DATABASE)
+    rebuild_assets_info_table(config.STATE_DATABASE)
+
+    logger.info(f"State db rolled back in {time.time() - start_time} seconds")

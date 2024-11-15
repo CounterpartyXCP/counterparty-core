@@ -462,7 +462,7 @@ class APIStatusPoller(threading.Thread):
     def run(self):
         logger.info("Starting v1 API Status Poller thread...")
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
-        self.db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        self.db = database.get_db_connection(config.STATE_DATABASE, read_only=True, check_wal=False)
 
         interval_if_ready = 5 * 60  # 5 minutes
         interval_if_not_ready = 60  # 1 minute

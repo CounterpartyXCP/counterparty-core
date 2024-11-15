@@ -245,7 +245,7 @@ def api_server(request, cp_server):
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
 
-    print("api_server", config.DATABASE, config.API_DATABASE)
+    print("api_server", config.DATABASE, config.STATE_DATABASE)
 
     # start RPC server and wait for server to be ready
     api_server = api.APIServer()
@@ -332,12 +332,12 @@ def api_server_v2(request, cp_server):
         }
     )
 
-    if os.path.exists(config.API_DATABASE):
-        os.unlink(config.API_DATABASE)
-    if os.path.exists(config.API_DATABASE + "-shm"):
-        os.unlink(config.API_DATABASE + "-shm")
-    if os.path.exists(config.API_DATABASE + "-wal"):
-        os.unlink(config.API_DATABASE + "-wal")
+    if os.path.exists(config.STATE_DATABASE):
+        os.unlink(config.STATE_DATABASE)
+    if os.path.exists(config.STATE_DATABASE + "-shm"):
+        os.unlink(config.STATE_DATABASE + "-shm")
+    if os.path.exists(config.STATE_DATABASE + "-wal"):
+        os.unlink(config.STATE_DATABASE + "-wal")
 
     def is_server_ready():
         return True

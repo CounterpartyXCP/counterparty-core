@@ -365,7 +365,7 @@ def welcome_message(action, server_configfile):
     cprint(f"Network: {config.NETWORK_NAME}", "light_grey")
     cprint(f"Configuration File: {server_configfile}", "light_grey")
     cprint(f"Counterparty Database: {config.DATABASE}", "light_grey")
-    cprint(f"Counterparty API Database: {config.API_DATABASE}", "light_grey")
+    cprint(f"Counterparty State Database: {config.STATE_DATABASE}", "light_grey")
     cprint(f"Rust Fetcher Database: {config.FETCHER_DB}", "light_grey")
 
     if config.VERBOSE:

@@ -56,8 +56,8 @@ def get_db_connection(db_file, read_only=True, check_wal=False):
 
     if hasattr(config, "DATABASE") and db_file == config.DATABASE:
         db_file_name = "Ledger DB"
-    elif hasattr(config, "API_DATABASE") and db_file == config.API_DATABASE:
-        db_file_name = "API DB"
+    elif hasattr(config, "STATE_DATABASE") and db_file == config.STATE_DATABASE:
+        db_file_name = "State DB"
     else:
         db_file_name = db_file
     if hasattr(logger, "trace"):
@@ -149,7 +149,7 @@ class DBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
 
 class APIDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
     def __init__(self):
-        super().__init__(config.API_DATABASE, "API DB")
+        super().__init__(config.STATE_DATABASE, "API DB")
 
 
 def initialise_db():
