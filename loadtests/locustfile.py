@@ -20,6 +20,7 @@ def load_list_from_file(filename):
 HARDCODED_TX_HASHES = load_list_from_file('data/tx_hashes.csv')
 HARDCODED_ADDRESSES = load_list_from_file('data/addresses.csv')
 HARDCODED_ORDERS = load_list_from_file('data/orders.csv')
+JDOG_ADDRESS = '1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev'
 
 def get_random_tx_hash():
     return random.choice(HARDCODED_TX_HASHES[:99])
@@ -30,6 +31,11 @@ def get_random_address():
 def get_random_order():
     return random.choice(HARDCODED_ORDERS[:99])
 
+def get_random_asset():
+    return 'PEPECASH'
+
+def get_random_quantity():
+    return 1000
 
 ###########
 ## TASKS ##
@@ -122,26 +128,12 @@ class UtxosTasks(TaskSet):
 # 6. Compose
 class ComposeTasks(TaskSet):
     @task
-    def compose_bet(self):
-        self.client.post(
-            "/v2/compose/bet",
-            json={
-                "wager": 1000,
-                "odds": 2,
-                "counterparty": get_random_address(),
-            },
-            headers=headers,
-        )
+    def compose_send(self):
+        self.client.get(
+            # Insufficient balances
+            # f"/v2/addresses/{get_random_address()}/compose/send?destination={get_random_address()}&asset={get_random_asset()}&quantity={get_random_quantity()}",
 
-    @task
-    def compose_broadcast(self):
-        self.client.post(
-            "/v2/compose/broadcast",
-            json={
-                "value": 1.23,
-                "source": get_random_address(),
-                "text": "Test Broadcast",
-            },
+            f"/v2/addresses/{JDOG_ADDRESS}/compose/send?destination={JDOG_ADDRESS}&asset=XCP&quantity=1",
             headers=headers,
         )
 
@@ -273,7 +265,7 @@ class BitcoinTasks(TaskSet):
     @task
     def get_unspent_txouts_by_address(self):
         self.client.get(
-            f"/v2/bitcoin/{TransactionsTasks.get_random_address()}/utxos", headers=headers
+            f"/v2/bitcoin/{get_random_address()}/utxos", headers=headers
         )
 
 
@@ -319,4 +311,5 @@ class CounterpartyCoreUser(HttpUser):
         MempoolTasks: 23,
         RoutesTasks: 24,
     }
+
     wait_time = between(1, 3)
