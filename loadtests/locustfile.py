@@ -22,20 +22,43 @@ HARDCODED_ADDRESSES = load_list_from_file('data/addresses.csv')
 HARDCODED_ORDERS = load_list_from_file('data/orders.csv')
 JDOG_ADDRESS = '1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev'
 
+NO_CACHE = False  # This should be set externally as needed
+
 def get_random_tx_hash():
-    return random.choice(HARDCODED_TX_HASHES[:99])
+    if NO_CACHE:
+        return HARDCODED_TX_HASHES[0]
+    return random.choice(HARDCODED_TX_HASHES)
 
 def get_random_address():
-    return random.choice(HARDCODED_ADDRESSES[:99])
+    if NO_CACHE:
+        return HARDCODED_ADDRESSES[0]
+    return random.choice(HARDCODED_ADDRESSES)
     
 def get_random_order():
-    return random.choice(HARDCODED_ORDERS[:99])
+    if NO_CACHE:
+        return HARDCODED_ORDERS[0]
+    return random.choice(HARDCODED_ORDERS)
 
 def get_random_asset():
-    return 'PEPECASH'
+    if NO_CACHE:
+        return 'PEPECASH'
+    return random.choice(['PEPECASH', 'BTC', 'ETH'])  # Example of random choice
 
 def get_random_quantity():
-    return 1000
+    if NO_CACHE:
+        return 1000
+    return random.randint(1, 10000)  # Example of random range
+
+def get_random_limit():
+    if NO_CACHE:
+        return 1000
+    return random.randint(1, 1000)
+
+def get_random_cursor():
+    if NO_CACHE:
+        return 1000
+    return random.randint(0, 100000)
+
 
 ###########
 ## TASKS ##
@@ -98,7 +121,7 @@ class AddressesTasks(TaskSet):
     def get_balances_by_address(self):
         """Get balances by a random source address."""
         self.client.get(
-            f"/v2/addresses/{get_random_address()}/balances?limit=10&cursor=200",
+            f"/v2/addresses/{get_random_address()}/balances?limit={get_random_limit()}&cursor={get_random_cursor()}",
             headers=headers,
         )
 
@@ -106,7 +129,7 @@ class AddressesTasks(TaskSet):
     def get_transactions_by_address(self):
         """Get transactions by a random source address."""
         self.client.get(
-            f"/v2/addresses/{get_random_address()}/transactions?limit=10&cursor=200",
+            f"/v2/addresses/{get_random_address()}/transactions?limit={get_random_limit()}&cursor={get_random_cursor()}",
             headers=headers,
         )
 
@@ -115,13 +138,13 @@ class AddressesTasks(TaskSet):
 class UtxosTasks(TaskSet):
     @task
     def get_utxo_balances(self):
-        self.client.get("/v2/utxos/balances?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/utxos/balances?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
     @task
     def get_utxos_by_address(self):
         if HARDCODED_ADDRESSES:
             self.client.get(
-                f"/v2/utxos/{HARDCODED_ADDRESSES[0]}?limit=10&cursor=200", headers=headers
+                f"/v2/utxos/{HARDCODED_ADDRESSES[0]}?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers
             )
 
 
@@ -167,42 +190,42 @@ class OrdersTasks(TaskSet):
 class OrderMatchesTasks(TaskSet):
     @task
     def get_all_order_matches(self):
-        self.client.get("/v2/order_matches?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/order_matches?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 10. Bets
 class BetsTasks(TaskSet):
     @task
     def get_bets(self):
-        self.client.get("/v2/bets?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/bets?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 11. Burns
 class BurnsTasks(TaskSet):
     @task
     def get_all_burns(self):
-        self.client.get("/v2/burns?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/burns?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 12. Dispensers
 class DispensersTasks(TaskSet):
     @task
     def get_dispensers(self):
-        self.client.get("/v2/dispensers?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/dispensers?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 13. Dividends
 class DividendsTasks(TaskSet):
     @task
     def get_dividends(self):
-        self.client.get("/v2/dividends?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/dividends?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 14. Events
 class EventsTasks(TaskSet):
     @task
     def get_all_events(self):
-        self.client.get(f"/v2/events?limit={random.randint(1, 200)}&cursor={random.randint(0, 100000)}", headers=headers)
+        self.client.get(f"/v2/events?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 15. Dispenses (using tx_hash and source address)
@@ -222,42 +245,42 @@ class DispensesTasks(TaskSet):
 class SendsTasks(TaskSet):
     @task
     def get_sends(self):
-        self.client.get("/v2/sends?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/sends?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 17. Issuances
 class IssuancesTasks(TaskSet):
     @task
     def get_issuances(self):
-        self.client.get("/v2/issuances?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/issuances?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 18. Sweeps
 class SweepsTasks(TaskSet):
     @task
     def get_sweeps(self):
-        self.client.get("/v2/sweeps?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/sweeps?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 19. Broadcasts
 class BroadcastsTasks(TaskSet):
     @task
     def get_valid_broadcasts(self):
-        self.client.get("/v2/broadcasts?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/broadcasts?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 20. Fairminters
 class FairmintersTasks(TaskSet):
     @task
     def get_all_fairminters(self):
-        self.client.get("/v2/fairminters?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/fairminters?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 21. Fairmints
 class FairmintsTasks(TaskSet):
     @task
     def get_all_fairmints(self):
-        self.client.get("/v2/fairmints?limit=10&cursor=200", headers=headers)
+        self.client.get(f"/v2/fairmints?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 22. Bitcoin
@@ -273,7 +296,7 @@ class BitcoinTasks(TaskSet):
 class MempoolTasks(TaskSet):
     @task
     def get_all_mempool_events(self):
-        self.client.get("/v2/mempool/events", headers=headers)
+        self.client.get(f"/v2/mempool/events?limit={get_random_limit()}&cursor={get_random_cursor()}", headers=headers)
 
 
 # 24. Routes
