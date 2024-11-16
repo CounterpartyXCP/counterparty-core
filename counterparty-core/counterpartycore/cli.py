@@ -470,6 +470,10 @@ def main():
 
     args = parser.parse_args()
 
+    if args.action is None:
+        parser.print_help()
+        exit(1)
+
     # Help message
     if args.help:
         parser.print_help()
