@@ -1614,6 +1614,31 @@ def get_utxo_balances(db, utxo: str, cursor: str = None, limit: int = 100, offse
     )
 
 
+def utxos_with_balances(db, utxos: str):
+    """
+    Check if the utxos have balances
+    :param str utxos: Comma separated list of utxos (e.g. $UTXO_1,$UTXO_2)
+    """
+    utxo_list = utxos.split(",")
+    utxo_with_balances_result = select_rows(
+        db,
+        "balances",
+        select="utxo, CAST(MIN(SUM(quantity), 1) AS BOOLEAN) AS has_balance",
+        where={"utxo__in": utxo_list},
+        group_by="utxo",
+    )
+    utxo_with_balances = utxo_with_balances_result.result
+
+    result = {}
+    for utxo in utxo_with_balances:
+        result[utxo["utxo"]] = utxo["has_balance"]
+    for utxo in utxo_list:
+        if utxo not in result:
+            result[utxo] = False
+
+    return QueryResult(result, None, len(utxo_list))
+
+
 def get_balances_by_addresses(
     db,
     addresses: str,
