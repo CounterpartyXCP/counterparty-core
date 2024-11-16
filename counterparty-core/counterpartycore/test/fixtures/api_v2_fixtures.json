@@ -5101,6 +5101,11 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/utxos/withbalances?verbose=true&utxos=74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498:0,74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498:0": {
+        "result": {
+            "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498:0": false
+        }
+    },
     "http://localhost:10009/v2/assets?verbose=true": {
         "result": [
             {
@@ -9549,6 +9554,18 @@
                         "description": "Comma separated list of addresses (e.g. $ADDRESS_1,$ADDRESS_2)"
                     },
                     {
+                        "name": "type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "utxo",
+                            "address"
+                        ],
+                        "description": "The type of balances to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -9744,6 +9761,18 @@
                         "description": "The address to return (e.g. $ADDRESS_1)"
                     },
                     {
+                        "name": "type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "utxo",
+                            "address"
+                        ],
+                        "description": "The type of balances to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -9802,6 +9831,39 @@
                         "required": true,
                         "type": "str",
                         "description": "The asset to return (e.g. XCP)"
+                    },
+                    {
+                        "name": "type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "utxo",
+                            "address"
+                        ],
+                        "description": "The type of balances to return"
+                    },
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the balances to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of balances to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
                     },
                     {
                         "name": "verbose",
@@ -11249,6 +11311,32 @@
                         "required": false,
                         "type": "int",
                         "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    },
+                    {
+                        "name": "show_unconfirmed",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include results from Mempool.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/utxos/withbalances": {
+                "function": "utxos_with_balances",
+                "description": "Check if the utxos have balances",
+                "args": [
+                    {
+                        "name": "utxos",
+                        "required": true,
+                        "type": "str",
+                        "description": "Comma separated list of utxos (e.g. $UTXO_1,$UTXO_2)"
                     },
                     {
                         "name": "verbose",
@@ -15483,6 +15571,18 @@
                         "required": true,
                         "type": "str",
                         "description": "The asset to return (e.g. $ASSET_1)"
+                    },
+                    {
+                        "name": "type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "utxo",
+                            "address"
+                        ],
+                        "description": "The type of balances to return"
                     },
                     {
                         "name": "cursor",

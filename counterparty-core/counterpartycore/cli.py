@@ -475,6 +475,10 @@ def main():
         parser.print_help()
         exit(0)
 
+    if args.action is None:
+        parser.print_help()
+        exit(1)
+
     # Configuration and logging
     server.initialise_log_and_config(args)
 

@@ -32,10 +32,13 @@
 - Add `sort` parameter for the get holders endpoint (sortable fields: `quantity`, `holding_type`, and `status`)
 - Exclude blocks that are not finished being parsed
 - Optimize events counts endpoints with `events_count` table
+- Add route `/v2/utxos/withbalances` to check if utxos have balances
+- Add `type` parameter for get balances endpoints (`all`, `utxo` or `address`)
 
 ## CLI
 
 - Support the `SENTRY_SAMPLE_RATE` environment variable to set the Sentry sample rate
+- Show help if no actions are provided
 
 # Credits
 
