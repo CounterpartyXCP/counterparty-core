@@ -102,6 +102,8 @@ def test_api_v2(request):
             or route.startswith("/v2/addresses/mempool")
         ):
             url += "?verbose=true&limit=6&addresses=" + ADDR[0] + "," + ADDR[1]
+        elif route.startswith("/v2/utxos/withbalances"):
+            url += "?verbose=true&utxos=" + tx_hash + ":0," + order_hash + ":0"
         else:
             url += "?verbose=true"
         print(url)

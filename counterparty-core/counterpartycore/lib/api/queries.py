@@ -1631,7 +1631,7 @@ def utxos_with_balances(db, utxos: str):
 
     result = {}
     for utxo in utxo_with_balances:
-        result[utxo["utxo"]] = utxo["has_balance"]
+        result[utxo["utxo"]] = bool(utxo["has_balance"])
     for utxo in utxo_list:
         if utxo not in result:
             result[utxo] = False
