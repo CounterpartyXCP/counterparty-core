@@ -23,85 +23,51 @@ def apply(db):
     logger.debug("Populate `assets_info` table...")
     db.row_factory = dict_factory
 
+    sql = """
+    INSERT INTO assets_info 
+    SELECT 
+        asset,
+        asset_id,
+        asset_longname,
+        issuer,
+        owner,
+        divisible,
+        locked,
+        supply,
+        description,
+        description_locked,
+        first_issuance_block_index,
+        last_issuance_block_index,
+        confirmed
+    FROM (
+        SELECT
+            asset,
+            assets.asset_id,
+            assets.asset_longname,
+            (
+                SELECT issuer
+                FROM issuances AS issuances2
+                WHERE assets.asset_name = issuances2.asset
+                ORDER BY issuances2.rowid ASC
+                LIMIT 1
+            ) AS issuer,
+            issuer AS owner,
+            divisible,
+            SUM(locked) AS locked,
+            SUM(quantity) AS supply,
+            description,
+            SUM(description_locked) AS description_locked,
+            MIN(issuances.block_index) AS first_issuance_block_index,
+            MAX(issuances.block_index) AS last_issuance_block_index,
+            TRUE AS confirmed,
+            MAX(issuances.rowid) AS rowid
+        FROM issuances, assets
+        WHERE issuances.asset = assets.asset_name
+        AND issuances.status = 'valid'
+        GROUP BY asset
+    );
+    """
     cursor = db.cursor()
-    sql = """
-        INSERT INTO assets_info (asset, asset_id, asset_longname, first_issuance_block_index)
-        SELECT asset_name AS asset, asset_id, asset_longname, block_index AS first_issuance_block_index
-        FROM assets
-    """
-    cursor.execute(sql)
-
-    sql = """
-        UPDATE assets_info SET 
-            divisible = (
-                SELECT divisible FROM (
-                    SELECT issuances.divisible AS divisible, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid DESC
-                    LIMIT 1
-                )
-            ),
-            description = (
-                SELECT description FROM (
-                    SELECT issuances.description AS description, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid DESC
-                    LIMIT 1
-                )
-            ),
-            owner = (
-                SELECT issuer FROM (
-                    SELECT issuances.issuer AS issuer, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid DESC
-                    LIMIT 1
-                )
-            ),
-            last_issuance_block_index = (
-                SELECT block_index FROM (
-                    SELECT issuances.block_index AS block_index, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid DESC
-                    LIMIT 1
-                )
-            ),
-            issuer = (
-                SELECT issuer FROM (
-                    SELECT issuances.issuer AS issuer, issuances.rowid
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    ORDER BY issuances.rowid ASC
-                    LIMIT 1
-                )
-            ),
-            supply = (
-                SELECT supply FROM (
-                    SELECT SUM(issuances.quantity) AS supply, issuances.asset
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    GROUP BY issuances.asset
-                )
-            ) - (
-                SELECT quantity FROM (
-                    SELECT SUM(destructions.quantity) AS quantity, destructions.asset
-                    FROM destructions
-                    WHERE assets_info.asset = destructions.asset AND status = 'valid'
-                    GROUP BY destructions.asset
-                )
-            ),
-            locked = (
-                SELECT locked FROM (
-                    SELECT SUM(issuances.locked) AS locked, issuances.asset
-                    FROM issuances
-                    WHERE assets_info.asset = issuances.asset AND status = 'valid'
-                    GROUP BY issuances.asset
-                )
-            );
-    """
     cursor.execute(sql)
 
     logger.debug("`assets_info` ready.")
