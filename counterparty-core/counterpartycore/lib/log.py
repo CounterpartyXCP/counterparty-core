@@ -14,7 +14,7 @@ from json_log_formatter import JSONFormatter
 from termcolor import colored, cprint
 
 from counterpartycore.lib import config, util
-from counterpartycore.lib.api.util import inject_details, to_json
+from counterpartycore.lib.api.util import to_json
 
 logging.TRACE = logging.DEBUG - 5
 logging.addLevelName(logging.TRACE, "TRACE")
@@ -336,7 +336,6 @@ class ZmqPublisher(metaclass=util.SingletonMeta):
 
     def publish_event(self, db, event):
         logger.trace("Publishing event: %s", event["event"])
-        event = inject_details(db, event)
         self.socket.send_multipart([event["event"].encode("utf-8"), to_json(event).encode("utf-8")])
 
     def close(self):

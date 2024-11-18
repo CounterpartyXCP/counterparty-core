@@ -134,7 +134,7 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--check-asset-conservation",),
+        ("--skip-asset-conservation-check",),
         {
             "action": "store_true",
             "default": False,
@@ -474,6 +474,10 @@ def main():
     if args.help:
         parser.print_help()
         exit(0)
+
+    if args.action is None:
+        parser.print_help()
+        exit(1)
 
     # Configuration and logging
     server.initialise_log_and_config(args)

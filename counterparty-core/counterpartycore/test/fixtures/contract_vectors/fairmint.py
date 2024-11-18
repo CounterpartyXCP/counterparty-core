@@ -130,7 +130,7 @@ FAIRMINT_VECTOR = {
                             "locked": False,
                             "reset": False,
                             "status": "valid",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "fair_minting": True,
                         },
                     },

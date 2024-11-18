@@ -25,8 +25,8 @@ SCENARIO = [
                         "block_index": "$BLOCK_INDEX",
                         "source": "$ADDRESS_1",
                         "asset": "FAIRMINTB",
-                        "asset_parent": "",
-                        "asset_longname": "",
+                        "asset_parent": None,
+                        "asset_longname": None,
                         "description": "",
                         "price": 1,
                         "quantity_by_price": 1,
@@ -74,7 +74,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "FAIRMINTB",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "fairmint",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
@@ -188,7 +188,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "FAIRMINTB",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "fairmint",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
@@ -320,7 +320,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "FAIRMINTB",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "fairmint",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
@@ -441,7 +441,7 @@ SCENARIO = [
                         "event_index": "$EVENT_INDEX_8",
                         "params": {
                             "asset": "FAIRMINTB",
-                            "asset_longname": "",
+                            "asset_longname": None,
                             "asset_events": "close_fairminter",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
