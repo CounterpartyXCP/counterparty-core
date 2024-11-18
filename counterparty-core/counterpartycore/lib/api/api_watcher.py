@@ -707,10 +707,10 @@ def parse_event(api_db, event, watcher, catching_up=False):
         insert_event(api_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
         if event["event"] == "BLOCK_PARSED":
-            synchronize_mempool(api_db, api_db, watcher.stop_event)
+            synchronize_mempool(api_db, api_db, watcher)
 
 
-def catch_up(api_db, ledger_db, watcher):
+def catch_up(api_db, ledger_db, watcher=None):
     check_event_hashes(api_db, ledger_db)
     clean_mempool(api_db)
     event_to_parse_count = get_event_to_parse_count(api_db, ledger_db)
@@ -733,7 +733,7 @@ def catch_up(api_db, ledger_db, watcher):
             logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
     else:
         logger.info("API Watcher - Catch up completed.")
-    synchronize_mempool(api_db, api_db, watcher.stop_event)
+    synchronize_mempool(api_db, api_db, watcher)
 
 
 def apply_migration():
@@ -839,8 +839,8 @@ def gen_random_tx_index(event):
     return event
 
 
-def synchronize_mempool(api_db, ledger_db, stop_event):
-    if config.NO_MEMPOOL or stop_event.is_set():
+def synchronize_mempool(api_db, ledger_db, watcher_instance=None):
+    if config.NO_MEMPOOL or (watcher_instance is not None and watcher_instance.stop_event.is_set()):
         return
     logger.trace("API Watcher - Synchronizing mempool...")
     global MEMPOOL_SKIP_EVENT_HASHES  # noqa: PLW0602
@@ -851,7 +851,7 @@ def synchronize_mempool(api_db, ledger_db, stop_event):
             clean_mempool(api_db)
             cursor = api_db.cursor()
             for event in mempool_events:
-                if stop_event.is_set():
+                if watcher_instance is not None and watcher_instance.stop_event.is_set():
                     logger.info("API Watcher - Stopping mempool synchronization due to stop event.")
                     break
                 if event["event"] in SKIP_EVENTS + ["NEW_BLOCK", "BLOCK_PARSED"]:
@@ -987,7 +987,7 @@ class APIWatcher(threading.Thread):
             if time.time() - self.last_mempool_sync > 10 and (
                 last_parsed_event is None or last_parsed_event["event"] == "BLOCK_PARSED"
             ):
-                synchronize_mempool(self.api_db, self.ledger_db, self.stop_event)
+                synchronize_mempool(self.api_db, self.ledger_db, self)
                 self.last_mempool_sync = time.time()
 
     def stop(self):
