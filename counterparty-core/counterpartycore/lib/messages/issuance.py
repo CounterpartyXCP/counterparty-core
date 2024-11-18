@@ -47,28 +47,36 @@ def initialise(db):
         ],
     )
 
-    cursor.execute("""CREATE TABLE IF NOT EXISTS issuances(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      asset TEXT,
-                      quantity INTEGER,
-                      divisible BOOL,
-                      source TEXT,
-                      issuer TEXT,
-                      transfer BOOL,
-                      callable BOOL,
-                      call_date INTEGER,
-                      call_price REAL,
-                      description TEXT,
-                      fee_paid INTEGER,
-                      locked BOOL,
-                      status TEXT,
-                      asset_longname TEXT,
-                      reset BOOL,
-                      description_locked BOOL,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
+    create_issuances_query = """
+        CREATE TABLE IF NOT EXISTS issuances(
+            tx_index INTEGER,
+            tx_hash TEXT,
+            msg_index INTEGER DEFAULT 0,
+            block_index INTEGER,
+            asset TEXT,
+            quantity INTEGER,
+            divisible BOOL,
+            source TEXT,
+            issuer TEXT,
+            transfer BOOL,
+            callable BOOL,
+            call_date INTEGER,
+            call_price REAL,
+            description TEXT,
+            fee_paid INTEGER,
+            locked BOOL DEFAULT FALSE,
+            status TEXT,
+            asset_longname TEXT,
+            reset BOOL DEFAULT FALSE,
+            description_locked BOOL,
+            fair_minting BOOL DEFAULT FALSE,
+            asset_events TEXT,
+            PRIMARY KEY (tx_index, msg_index),
+            UNIQUE (tx_hash, msg_index)
+        )
+    """
+
+    cursor.execute(create_issuances_query)
 
     # Add asset_longname for sub-assets
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
@@ -83,38 +91,18 @@ def initialise(db):
     # If sweep_hotfix activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
     #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
     if "msg_index" not in columns:
-        cursor.execute("""CREATE TABLE IF NOT EXISTS new_issuances(
-                              tx_index INTEGER,
-                              tx_hash TEXT,
-                              msg_index INTEGER DEFAULT 0,
-                              block_index INTEGER,
-                              asset TEXT,
-                              quantity INTEGER,
-                              divisible BOOL,
-                              source TEXT,
-                              issuer TEXT,
-                              transfer BOOL,
-                              callable BOOL,
-                              call_date INTEGER,
-                              call_price REAL,
-                              description TEXT,
-                              fee_paid INTEGER,
-                              locked BOOL,
-                              status TEXT,
-                              asset_longname TEXT,
-                              reset BOOL,
-                              description_locked BOOL,
-                              PRIMARY KEY (tx_index, msg_index),
-                              FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                              UNIQUE (tx_hash, msg_index))
-                           """)
+        cursor.execute(
+            create_issuances_query.replace("NOT EXISTS issuances", "NOT EXISTS new_issuances")
+        )
         cursor.execute(
             """INSERT INTO new_issuances(tx_index, tx_hash, msg_index,
                 block_index, asset, quantity, divisible, source, issuer, transfer, callable,
-                call_date, call_price, description, fee_paid, locked, status, asset_longname, reset, description_locked)
+                call_date, call_price, description, fee_paid, locked, status, asset_longname, 
+                reset, description_locked, fairminting, asset_events)
                 SELECT tx_index, tx_hash, 0, block_index, asset, quantity, divisible, source,
                 issuer, transfer, callable, call_date, call_price, description, fee_paid,
-                locked, status, asset_longname, reset, description_locked FROM issuances""",
+                locked, status, asset_longname, reset, description_locked, fairminting, asset_events
+                FROM issuances""",
             {},
         )
         cursor.execute("DROP TABLE issuances")
@@ -123,35 +111,31 @@ def initialise(db):
     if "fair_minting" not in columns:
         cursor.execute("""ALTER TABLE issuances ADD COLUMN fair_minting BOOL DEFAULT 0""")
 
+    if "asset_events" not in columns:
+        logger.info("Adding `asset_events` column to issuances table...")
+        cursor.execute("""
+        ALTER TABLE issuances ADD COLUMN asset_events TEXT;
+        ALTER TABLE issuances RENAME COLUMN locked TO locked_old;
+        ALTER TABLE issuances ADD COLUMN locked BOOL DEFAULT FALSE;
+        UPDATE issuances SET locked = locked_old;
+        ALTER TABLE issuances DROP COLUMN locked_old;
+        UPDATE issuances SET locked = 0 WHERE locked IS NULL;
+        ALTER TABLE issuances RENAME COLUMN reset TO reset_old;
+        ALTER TABLE issuances ADD COLUMN reset BOOL DEFAULT FALSE;
+        UPDATE issuances SET reset = reset_old;
+        ALTER TABLE issuances DROP COLUMN reset_old;
+        UPDATE issuances SET locked = 0 WHERE locked IS NULL;
+        UPDATE issuances SET 
+            asset_events = (
+                SELECT
+                    json_extract(bindings, '$.asset_events')
+                FROM messages
+                WHERE messages.tx_hash = issuances.tx_hash
+            );
+    """)
+
     # remove FOREIGN KEY with transactions
     if database.has_fk_on(cursor, "issuances", "transactions.tx_index"):
-        create_issuances_query = """
-            CREATE TABLE IF NOT EXISTS issuances(
-                tx_index INTEGER,
-                tx_hash TEXT,
-                msg_index INTEGER DEFAULT 0,
-                block_index INTEGER,
-                asset TEXT,
-                quantity INTEGER,
-                divisible BOOL,
-                source TEXT,
-                issuer TEXT,
-                transfer BOOL,
-                callable BOOL,
-                call_date INTEGER,
-                call_price REAL,
-                description TEXT,
-                fee_paid INTEGER,
-                locked BOOL,
-                status TEXT,
-                asset_longname TEXT,
-                reset BOOL,
-                description_locked BOOL,
-                fair_minting BOOL DEFAULT 0,
-                PRIMARY KEY (tx_index, msg_index),
-                UNIQUE (tx_hash, msg_index)
-            )
-        """
         database.copy_old_table(cursor, "issuances", create_issuances_query)
 
     database.create_indexes(
@@ -966,11 +950,10 @@ def parse(db, tx, message, message_type_id):
                     "status": status,
                     "reset": True,
                     "asset_longname": reissued_asset_longname,
+                    "asset_events": "reset",
                 }
 
-                ledger.insert_record(
-                    db, "issuances", bindings, "RESET_ISSUANCE", {"asset_events": "reset"}
-                )
+                ledger.insert_record(db, "issuances", bindings, "RESET_ISSUANCE")
 
                 logger.info("Reset issuance of %(asset)s [%(tx_hash)s] (%(status)s)", bindings)
 
@@ -1073,18 +1056,13 @@ def parse(db, tx, message, message_type_id):
             "reset": reset,
             "status": status,
             "asset_longname": asset_longname,
+            "asset_events": " ".join(asset_events),
         }
         # ensure last issuance is locked when fair minting is active
         if "cannot issue during fair minting" in status:
             bindings["fair_minting"] = True
         if "integer overflow" not in status:
-            ledger.insert_record(
-                db,
-                "issuances",
-                bindings,
-                "ASSET_ISSUANCE",
-                {"asset_events": " ".join(asset_events)},
-            )
+            ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
         logger.info(
             "Issuance of %(quantity)s %(asset)s by %(source)s [%(tx_hash)s] (%(status)s)", bindings

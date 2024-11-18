@@ -3630,52 +3630,53 @@ BEGIN TRANSACTION;
 -- Table  issuances
 DROP TABLE IF EXISTS issuances;
 CREATE TABLE issuances(
-                tx_index INTEGER,
-                tx_hash TEXT,
-                msg_index INTEGER DEFAULT 0,
-                block_index INTEGER,
-                asset TEXT,
-                quantity INTEGER,
-                divisible BOOL,
-                source TEXT,
-                issuer TEXT,
-                transfer BOOL,
-                callable BOOL,
-                call_date INTEGER,
-                call_price REAL,
-                description TEXT,
-                fee_paid INTEGER,
-                locked BOOL,
-                status TEXT,
-                asset_longname TEXT,
-                reset BOOL,
-                description_locked BOOL,
-                fair_minting BOOL DEFAULT 0,
-                PRIMARY KEY (tx_index, msg_index),
-                UNIQUE (tx_hash, msg_index)
-            );
-INSERT INTO issuances VALUES(2,'1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1',0,310001,'DIVISIBLE',100000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Divisible asset',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(3,'7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584',0,310002,'NODIVISIBLE',1000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'No divisible asset',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(4,'c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140',0,310003,'CALLABLE',1000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Callable asset',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(5,'90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da',0,310004,'LOCKED',1000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Locked asset',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(6,'344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc',0,310005,'LOCKED',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Locked asset',0,1,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(17,'bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39',0,310016,'MAXI',9223372036854775807,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Maximum quantity',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(110,'e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e',0,310109,'PAYTOSCRIPT',1000,0,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',0,0,0,0.0,'PSH issued asset',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(114,'34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63',0,310113,'LOCKEDPREV',1000,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'Locked asset',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(115,'025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2',0,310114,'LOCKEDPREV',0,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'Locked asset',0,1,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(116,'4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb',0,310115,'LOCKEDPREV',0,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'changed',0,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(495,'321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503',0,310494,'DIVIDEND',100,1,'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH','mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',0,0,0,0.0,'',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(498,'076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f',0,310497,'PARENT',100000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Parent asset',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(499,'0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf',0,310498,'A95428956661682277',100000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Child of parent',25000000,0,'valid','PARENT.already.issued',0,0,0);
-INSERT INTO issuances VALUES(500,'a34d2b430b05ce71e9b09125d92be01fe666327252cbe54916e3a07db67b93ce',0,310499,'FREEFAIRMIN',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0,NULL,1);
-INSERT INTO issuances VALUES(501,'13e642d78db80af715cdce12a9fca81965752bbfb59549341fa4760da3d32afe',0,310500,'PAIDFAIRMIN',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0,NULL,1);
-INSERT INTO issuances VALUES(502,'d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67',0,310501,'FREEFAIRMIN',10,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',0,0,'valid',NULL,0,0,1);
-INSERT INTO issuances VALUES(503,'9830e28496bb94f7e9f829abd26fd2cdce24ccb637e55488537a7080979ad9c1',0,310502,'RAIDFAIRMIN',20,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0,NULL,1);
-INSERT INTO issuances VALUES(504,'c3d10301a50c49b3c9515f88847b92ce969729c194c064f411d610bc3b3704e7',0,310503,'QAIDFAIRMIN',20,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0,NULL,1);
-INSERT INTO issuances VALUES(505,'0d56c40c31829bbd06cdc039eda95c844c98208ec981ef419093c386eab2d0e9',0,310504,'A160361285792733729',20,1,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',0,0,0,0.0,'softcap description',0,0,'valid',NULL,0,NULL,1);
-INSERT INTO issuances VALUES(506,'6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8',0,310505,'A160361285792733729',10,1,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',0,0,0,0.0,'softcap description',0,0,'valid',NULL,0,0,1);
-INSERT INTO issuances VALUES(507,'ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18',0,310506,'A160361285792733729',20,1,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',0,0,0,0.0,'softcap description',0,1,'valid',NULL,0,1,0);
-INSERT INTO issuances VALUES(510,'01e52e3770a932827a4b4e5db193eef916fcf69bda1a7944298210a74f1633a1',0,310509,'TESTDISP',1000,0,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b','munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b',0,0,0,0.0,'Test dispensers asset',50000000,0,'valid',NULL,0,0,0);
+            tx_index INTEGER,
+            tx_hash TEXT,
+            msg_index INTEGER DEFAULT 0,
+            block_index INTEGER,
+            asset TEXT,
+            quantity INTEGER,
+            divisible BOOL,
+            source TEXT,
+            issuer TEXT,
+            transfer BOOL,
+            callable BOOL,
+            call_date INTEGER,
+            call_price REAL,
+            description TEXT,
+            fee_paid INTEGER,
+            locked BOOL DEFAULT FALSE,
+            status TEXT,
+            asset_longname TEXT,
+            reset BOOL DEFAULT FALSE,
+            description_locked BOOL,
+            fair_minting BOOL DEFAULT FALSE,
+            asset_events TEXT,
+            PRIMARY KEY (tx_index, msg_index),
+            UNIQUE (tx_hash, msg_index)
+        );
+INSERT INTO issuances VALUES(2,'1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1',0,310001,'DIVISIBLE',100000000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Divisible asset',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(3,'7b1bf5144346279271b1ff78664f118224fe27fd8679d6c1519345f9c6c54584',0,310002,'NODIVISIBLE',1000,0,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'No divisible asset',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(4,'c26f3a0c4e57e41919ff27aae95a9a9d4d65d34c6da6f1893884a17c8d407140',0,310003,'CALLABLE',1000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Callable asset',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(5,'90b5734be98b0f2a0bd4b6a269c8db3368e2e387bb890ade239951d05423b4da',0,310004,'LOCKED',1000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Locked asset',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(6,'344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc',0,310005,'LOCKED',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Locked asset',0,1,'valid',NULL,0,0,0,'lock_quantity');
+INSERT INTO issuances VALUES(17,'bd4e9cbbe69c2db893cd32182a2d315c89c45ba4e31aa5775d1fe42d841cea39',0,310016,'MAXI',9223372036854775807,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Maximum quantity',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(110,'e8baf787b9e4636a3cad0ffeb62992ad7abb160dc6506af0546f566dc178de7e',0,310109,'PAYTOSCRIPT',1000,0,'2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy','2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy',0,0,0,0.0,'PSH issued asset',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(114,'34bce6f409758b3d6fd13282a99b277ef1fdf44a1025d2901075cac0249dbc63',0,310113,'LOCKEDPREV',1000,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'Locked asset',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(115,'025b810fce7735c5869b90846007e5f604f60c1beda4c1695f1c7fbec3d44bc2',0,310114,'LOCKEDPREV',0,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'Locked asset',0,1,'valid',NULL,0,0,0,'lock_quantity');
+INSERT INTO issuances VALUES(116,'4ab1a24283c1dbfc710be7b215d64e8a4510ee97af019e210049c25773b50beb',0,310115,'LOCKEDPREV',0,1,'mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42','mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42',0,0,0,0.0,'changed',0,0,'valid',NULL,0,0,0,'change_description');
+INSERT INTO issuances VALUES(495,'321bed395482e034f2ce0a4dbf28d1f800592a658e26ea91ae9c5b0928204503',0,310494,'DIVIDEND',100,1,'mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH','mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH',0,0,0,0.0,'',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(498,'076ae3d8eeb7fb40d2ae27692340157c746d9832806766b0dac5adb1526dc78f',0,310497,'PARENT',100000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Parent asset',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(499,'0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf',0,310498,'A95428956661682277',100000000,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'Child of parent',25000000,0,'valid','PARENT.already.issued',0,0,0,'creation');
+INSERT INTO issuances VALUES(500,'a34d2b430b05ce71e9b09125d92be01fe666327252cbe54916e3a07db67b93ce',0,310499,'FREEFAIRMIN',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0,NULL,1,'open_fairminter');
+INSERT INTO issuances VALUES(501,'13e642d78db80af715cdce12a9fca81965752bbfb59549341fa4760da3d32afe',0,310500,'PAIDFAIRMIN',0,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0,NULL,1,'open_fairminter');
+INSERT INTO issuances VALUES(502,'d42849c71a32e388606982d3384ec8ae12e5c0ba2f742cb4ddf0649fb66e1f67',0,310501,'FREEFAIRMIN',10,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',0,0,'valid',NULL,0,0,1,'fairmint');
+INSERT INTO issuances VALUES(503,'9830e28496bb94f7e9f829abd26fd2cdce24ccb637e55488537a7080979ad9c1',0,310502,'RAIDFAIRMIN',20,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0,NULL,1,'open_fairminter');
+INSERT INTO issuances VALUES(504,'c3d10301a50c49b3c9515f88847b92ce969729c194c064f411d610bc3b3704e7',0,310503,'QAIDFAIRMIN',20,1,'mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc','mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc',0,0,0,0.0,'',50000000,0,'valid',NULL,0,NULL,1,'open_fairminter');
+INSERT INTO issuances VALUES(505,'0d56c40c31829bbd06cdc039eda95c844c98208ec981ef419093c386eab2d0e9',0,310504,'A160361285792733729',20,1,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',0,0,0,0.0,'softcap description',0,0,'valid',NULL,0,NULL,1,'open_fairminter');
+INSERT INTO issuances VALUES(506,'6f4c3965a1cc2891e7dcdb4a3c12b73e6cf2e56e750dabcdf87c82443f08e1d8',0,310505,'A160361285792733729',10,1,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',0,0,0,0.0,'softcap description',0,0,'valid',NULL,0,0,1,'fairmint');
+INSERT INTO issuances VALUES(507,'ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18',0,310506,'A160361285792733729',20,1,'mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns','mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns',0,0,0,0.0,'softcap description',0,1,'valid',NULL,0,1,0,'fairmint');
+INSERT INTO issuances VALUES(510,'01e52e3770a932827a4b4e5db193eef916fcf69bda1a7944298210a74f1633a1',0,310509,'TESTDISP',1000,0,'munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b','munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b',0,0,0,0.0,'Test dispensers asset',50000000,0,'valid',NULL,0,0,0,'creation');
 -- Triggers and indices on  issuances
 CREATE TRIGGER block_update_issuances
             BEFORE UPDATE ON issuances BEGIN

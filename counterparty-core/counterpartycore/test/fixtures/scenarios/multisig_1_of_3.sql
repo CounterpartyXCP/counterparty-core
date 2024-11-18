@@ -1440,32 +1440,33 @@ BEGIN TRANSACTION;
 -- Table  issuances
 DROP TABLE IF EXISTS issuances;
 CREATE TABLE issuances(
-                tx_index INTEGER,
-                tx_hash TEXT,
-                msg_index INTEGER DEFAULT 0,
-                block_index INTEGER,
-                asset TEXT,
-                quantity INTEGER,
-                divisible BOOL,
-                source TEXT,
-                issuer TEXT,
-                transfer BOOL,
-                callable BOOL,
-                call_date INTEGER,
-                call_price REAL,
-                description TEXT,
-                fee_paid INTEGER,
-                locked BOOL,
-                status TEXT,
-                asset_longname TEXT,
-                reset BOOL,
-                description_locked BOOL,
-                fair_minting BOOL DEFAULT 0,
-                PRIMARY KEY (tx_index, msg_index),
-                UNIQUE (tx_hash, msg_index)
-            );
-INSERT INTO issuances VALUES(6,'1ba2a0b4ee8543976aab629c78103c0ba86c60250c11d51f9bc40676487283b7',0,310005,'BBBB',1000000000,1,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(7,'3f9e2dc4f7a72dee0e2d3badd871324506fe6c8239f62b6aa35f316800d55846',0,310006,'BBBC',100000,0,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0,0,0);
+            tx_index INTEGER,
+            tx_hash TEXT,
+            msg_index INTEGER DEFAULT 0,
+            block_index INTEGER,
+            asset TEXT,
+            quantity INTEGER,
+            divisible BOOL,
+            source TEXT,
+            issuer TEXT,
+            transfer BOOL,
+            callable BOOL,
+            call_date INTEGER,
+            call_price REAL,
+            description TEXT,
+            fee_paid INTEGER,
+            locked BOOL DEFAULT FALSE,
+            status TEXT,
+            asset_longname TEXT,
+            reset BOOL DEFAULT FALSE,
+            description_locked BOOL,
+            fair_minting BOOL DEFAULT FALSE,
+            asset_events TEXT,
+            PRIMARY KEY (tx_index, msg_index),
+            UNIQUE (tx_hash, msg_index)
+        );
+INSERT INTO issuances VALUES(6,'1ba2a0b4ee8543976aab629c78103c0ba86c60250c11d51f9bc40676487283b7',0,310005,'BBBB',1000000000,1,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(7,'3f9e2dc4f7a72dee0e2d3badd871324506fe6c8239f62b6aa35f316800d55846',0,310006,'BBBC',100000,0,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0,0,0,'creation');
 -- Triggers and indices on  issuances
 CREATE TRIGGER block_update_issuances
             BEFORE UPDATE ON issuances BEGIN
