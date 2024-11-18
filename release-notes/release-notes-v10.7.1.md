@@ -39,7 +39,7 @@
 
 - Support the `SENTRY_SAMPLE_RATE` environment variable to set the Sentry sample rate
 - Show help if no actions are provided
-- Fix and rename `--check-asset-conservation` flag to `--skip-check-asset-conservation`
+- Fix and rename `--check-asset-conservation` flag to `--skip-asset-conservation-check`
 
 # Credits
 
