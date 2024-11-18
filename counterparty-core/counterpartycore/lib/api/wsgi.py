@@ -100,10 +100,6 @@ class GunicornArbiter(Arbiter):
     def __init__(self, app):
         super().__init__(app)
         self.app = app
-        self.timeout = 10
-        self.graceful_timeout = 10
-        self.max_requests = 10000
-        self.max_requests_jitter = 2000
 
     def handle_winch(self):
         pass
@@ -167,6 +163,10 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
     def __init__(self, app, args=None):
         self.options = {
             "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
+            "timeout": 10,
+            "graceful_timeout": 10,
+            "max_requests": 1000,
+            "max_requests_jitter": 500,
             "workers": config.GUNICORN_WORKERS,
             "worker_class": "gthread",
             "daemon": True,
