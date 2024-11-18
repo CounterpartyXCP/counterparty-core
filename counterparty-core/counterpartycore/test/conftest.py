@@ -22,6 +22,7 @@ from counterpartycore import server
 from counterpartycore.lib import arc4, config, database, exceptions, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
+from counterpartycore.lib.api import dbbuilder
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -338,6 +339,8 @@ def api_server_v2(request, cp_server):
         os.unlink(config.STATE_DATABASE + "-shm")
     if os.path.exists(config.STATE_DATABASE + "-wal"):
         os.unlink(config.STATE_DATABASE + "-wal")
+
+    dbbuilder.build_state_db()
 
     def is_server_ready():
         return True

@@ -60,7 +60,7 @@ def copy_ledger_db():
             os.unlink(config.STATE_DATABASE + ext)
 
     # ensure the database is closed an no wall file is present
-    ledger_db = database.get_db_connection(config.DATABASE, read_only=False, check_wal=True)
+    ledger_db = database.get_db_connection(config.DATABASE, read_only=False, check_wal=False)
     ledger_db.close()
 
     for ext in ["", "-wal", "-shm"]:
