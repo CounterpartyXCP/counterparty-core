@@ -134,7 +134,7 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--check-asset-conservation",),
+        ("--skip-check-asset-conservation",),
         {
             "action": "store_true",
             "default": False,
