@@ -48,6 +48,9 @@ ALTER TABLE fairminters ADD COLUMN commission INTEGER;
 ALTER TABLE issuances ADD COLUMN asset_events TEXT;
 ALTER TABLE dispenses ADD COLUMN btc_amount TEXT;
 
+ALTER TABLE messages ADD COLUMN previous_state TEXT;
+ALTER TABLE messages ADD COLUMN insert_rowid INTEGER;
+
 
 CREATE TABLE IF NOT EXISTS mempool(
     tx_hash TEXT,

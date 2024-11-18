@@ -1433,12 +1433,6 @@ def catch_up(db, check_asset_conservation=True):
     if fetcher is not None:
         fetcher.stop()
 
-    if config.CHECK_ASSET_CONSERVATION and check_asset_conservation:
-        # TODO: timer to check asset conservation every N hours
-        check.asset_conservation(db)
-        # catch up new blocks during asset conservation check
-        catch_up(db, check_asset_conservation=False)
-
     logger.info("Catch up complete.")
 
 

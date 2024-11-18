@@ -654,6 +654,7 @@ SCENARIO = [
                     "asset_longname": None,
                     "confirmed": True,
                     "description": "",
+                    "description_locked": False,
                     "divisible": True,
                     "first_issuance_block_index": "$FAIRMINTA_BLOCK_INDEX",
                     "issuer": "$ADDRESS_1",

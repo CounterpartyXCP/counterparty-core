@@ -250,6 +250,7 @@ def initialise_config(
     if not os.path.exists(config.STATE_DATABASE):
         old_db_name = config.DATABASE.replace(".db", ".api.db")
         if os.path.exists(old_db_name):
+            # delete old API db
             for ext in ["", "-wal", "-shm"]:
                 if os.path.exists(old_db_name + ext):
                     os.unlink(old_db_name + ext)
