@@ -1902,6 +1902,7 @@ CREATE TABLE dispenses (
                                 asset TEXT,
                                 dispense_quantity INTEGER,
                                 dispenser_tx_hash TEXT,
+                                btc_amount INTEGER,
                                 PRIMARY KEY (tx_index, dispense_index, source, destination),
                                 FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  dispenses

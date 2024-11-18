@@ -113,26 +113,28 @@ def initialise(db):
 
     if "asset_events" not in columns:
         logger.info("Adding `asset_events` column to issuances table...")
+        database.unlock_update(db, "issuances")
         cursor.execute("""
-        ALTER TABLE issuances ADD COLUMN asset_events TEXT;
-        ALTER TABLE issuances RENAME COLUMN locked TO locked_old;
-        ALTER TABLE issuances ADD COLUMN locked BOOL DEFAULT FALSE;
-        UPDATE issuances SET locked = locked_old;
-        ALTER TABLE issuances DROP COLUMN locked_old;
-        UPDATE issuances SET locked = 0 WHERE locked IS NULL;
-        ALTER TABLE issuances RENAME COLUMN reset TO reset_old;
-        ALTER TABLE issuances ADD COLUMN reset BOOL DEFAULT FALSE;
-        UPDATE issuances SET reset = reset_old;
-        ALTER TABLE issuances DROP COLUMN reset_old;
-        UPDATE issuances SET locked = 0 WHERE locked IS NULL;
-        UPDATE issuances SET 
-            asset_events = (
-                SELECT
-                    json_extract(bindings, '$.asset_events')
-                FROM messages
-                WHERE messages.tx_hash = issuances.tx_hash
-            );
-    """)
+            ALTER TABLE issuances ADD COLUMN asset_events TEXT;
+            ALTER TABLE issuances RENAME COLUMN locked TO locked_old;
+            ALTER TABLE issuances ADD COLUMN locked BOOL DEFAULT FALSE;
+            UPDATE issuances SET locked = locked_old;
+            ALTER TABLE issuances DROP COLUMN locked_old;
+            UPDATE issuances SET locked = 0 WHERE locked IS NULL;
+            ALTER TABLE issuances RENAME COLUMN reset TO reset_old;
+            ALTER TABLE issuances ADD COLUMN reset BOOL DEFAULT FALSE;
+            UPDATE issuances SET reset = reset_old;
+            ALTER TABLE issuances DROP COLUMN reset_old;
+            UPDATE issuances SET locked = 0 WHERE locked IS NULL;
+            UPDATE issuances SET 
+                asset_events = (
+                    SELECT
+                        json_extract(bindings, '$.asset_events')
+                    FROM messages
+                    WHERE messages.tx_hash = issuances.tx_hash
+                );
+        """)
+        database.lock_update(db, "issuances")
 
     # remove FOREIGN KEY with transactions
     if database.has_fk_on(cursor, "issuances", "transactions.tx_index"):

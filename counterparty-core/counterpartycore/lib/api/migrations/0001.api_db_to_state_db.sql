@@ -46,8 +46,6 @@ ALTER TABLE fairminters ADD COLUMN paid_quantity INTEGER;
 ALTER TABLE fairminters ADD COLUMN commission INTEGER;
 
 
-ALTER TABLE dispenses ADD COLUMN btc_amount TEXT;
-
 ALTER TABLE messages ADD COLUMN previous_state TEXT;
 ALTER TABLE messages ADD COLUMN insert_rowid INTEGER;
 
@@ -61,29 +59,6 @@ CREATE TABLE IF NOT EXISTS mempool(
     event TEXT);
 
 ALTER TABLE mempool ADD COLUMN addresses TEXT;
-
-
-
-ALTER TABLE dispensers RENAME TO old_dispensers;
-CREATE TABLE IF NOT EXISTS dispensers(
-    tx_index INTEGER,
-    tx_hash TEXT,
-    block_index INTEGER,
-    source TEXT,
-    asset TEXT,
-    give_quantity INTEGER,
-    escrow_quantity INTEGER,
-    satoshirate INTEGER,
-    status INTEGER,
-    give_remaining INTEGER,
-    oracle_address TEXT,
-    last_status_tx_hash TEXT,
-    origin TEXT,
-    dispense_count INTEGER DEFAULT 0,
-    last_status_tx_source TEXT,
-    close_block_index INTEGER);
-INSERT INTO dispensers SELECT * FROM old_dispensers;
-DROP TABLE old_dispensers;
 
 
 CREATE INDEX IF NOT EXISTS blocks_ledger_hash_idx ON blocks (ledger_hash);
@@ -154,16 +129,7 @@ CREATE INDEX IF NOT EXISTS events_count_count_idx ON events_count (count);
 
 
 
-UPDATE dispenses SET 
-    btc_amount = (
-        SELECT
-        CAST (
-            json_extract(bindings, '$.btc_amount')
-            AS INTEGER
-        )
-        FROM messages
-        WHERE messages.tx_hash = dispenses.tx_hash
-    );
+
 
 
 CREATE VIEW IF NOT EXISTS asset_holders AS 

@@ -191,16 +191,9 @@ def parse(db, tx):
                     "asset": dispenser["asset"],
                     "dispense_quantity": actually_given,
                     "dispenser_tx_hash": dispenser["tx_hash"],
+                    "btc_amount": next_out["btc_amount"],
                 }
-                ledger.insert_record(
-                    db,
-                    "dispenses",
-                    bindings,
-                    "DISPENSE",
-                    {
-                        "btc_amount": next_out["btc_amount"],
-                    },
-                )
+                ledger.insert_record(db, "dispenses", bindings, "DISPENSE")
                 dispense_index += 1
 
                 logger.info(

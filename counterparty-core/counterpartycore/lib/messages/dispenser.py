@@ -118,6 +118,7 @@ def initialise(db):
                                 asset TEXT,
                                 dispense_quantity INTEGER,
                                 dispenser_tx_hash TEXT,
+                                btc_amount INTEGER,
                                 PRIMARY KEY (tx_index, dispense_index, source, destination),
                                 FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                                 """
@@ -128,6 +129,50 @@ def initialise(db):
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(dispenses)""")]
     if "dispenser_tx_hash" not in columns:
         cursor.execute("ALTER TABLE dispenses ADD COLUMN dispenser_tx_hash TEXT")
+
+    if "btc_amount" not in columns:
+        cursor.execute("ALTER TABLE dispenses ADD COLUMN btc_amount INTEGER")
+        database.unlock_update(db, "dispenses")
+        cursor.execute("""
+            UPDATE dispenses SET 
+                btc_amount = (
+                    SELECT
+                    CAST (
+                        json_extract(bindings, '$.btc_amount')
+                        AS INTEGER
+                    )
+                    FROM messages
+                    WHERE messages.tx_hash = dispenses.tx_hash
+                )
+        """)
+        database.lock_update(db, "dispenses")
+
+    close_block_index_type = cursor.execute("""
+         SELECT type FROM PRAGMA_TABLE_INFO('dispensers') WHERE name='close_block_index'
+    """).fetchone()["type"]
+    if close_block_index_type != "INTEGER":
+        cursor.execute("""
+            ALTER TABLE dispensers RENAME TO old_dispensers;
+            CREATE TABLE IF NOT EXISTS dispensers(
+                tx_index INTEGER,
+                tx_hash TEXT,
+                block_index INTEGER,
+                source TEXT,
+                asset TEXT,
+                give_quantity INTEGER,
+                escrow_quantity INTEGER,
+                satoshirate INTEGER,
+                status INTEGER,
+                give_remaining INTEGER,
+                oracle_address TEXT,
+                last_status_tx_hash TEXT,
+                origin TEXT,
+                dispense_count INTEGER DEFAULT 0,
+                last_status_tx_source TEXT,
+                close_block_index INTEGER);
+            INSERT INTO dispensers SELECT * FROM old_dispensers;
+            DROP TABLE old_dispensers;
+        """)
 
     # create indexes
     database.create_indexes(
