@@ -29,7 +29,7 @@ CONSOLIDATED_TABLES = {
 
 
 def build_consolidated_table(state_db, table_name):
-    logger.info(f"Copying consolidated table `{table_name}` to state db")
+    logger.debug(f"Copying consolidated table `{table_name}` to state db")
     start_time = time.time()
 
     state_db.execute(f"DELETE FROM {table_name}")  # noqa S608
@@ -50,7 +50,7 @@ def build_consolidated_table(state_db, table_name):
             )
     """  # noqa S608
     state_db.execute(sql)
-    logger.info(f"Consolidated table `{table_name}` copied in {time.time() - start_time} seconds")
+    logger.debug(f"Consolidated table `{table_name}` copied in {time.time() - start_time} seconds")
 
 
 def dict_factory(cursor, row):

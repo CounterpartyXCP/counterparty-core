@@ -12,14 +12,16 @@ import requests
 from bitcoin.wallet import CBitcoinAddressError
 from counterpartycore import server
 from counterpartycore.lib import (
+    check,
     config,
+    database,
     exceptions,
     ledger,
     script,
     sentry,
     util,
 )
-from counterpartycore.lib.api import api_watcher, queries, wsgi
+from counterpartycore.lib.api import api_watcher, dbbuilder, queries, wsgi
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
     clean_rowids_and_confirmed_fields,
@@ -419,12 +421,31 @@ def init_flask_app():
     return app
 
 
+def check_database_version():
+    try:
+        db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+        check.database_version(db)
+    except check.DatabaseVersionError as e:
+        logger.info(str(e))
+        # rollback or reparse the database
+        if e.required_action in ["rollback", "reparse"]:
+            dbbuilder.rollback_state_db(db, block_index=e.from_block_index)
+        # refresh the current block index
+        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+        # update the database version
+        database.update_version(db)
+    finally:
+        db.close()
+
+
 def run_api_server(args, server_ready_value, stop_event):
     logger.info("Starting API Server process...")
 
     # Initialize Sentry, logging, config, etc.
     sentry.init()
     server.initialise_log_and_config(argparse.Namespace(**args), api=True)
+
+    check_database_version()
 
     watcher = api_watcher.APIWatcher()
     watcher.start()

@@ -12,6 +12,13 @@ logger = logging.getLogger(config.LOGGER_NAME)
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "migrations")
 
+MIGRATIONS_AFTER_ROLLBACK = [
+    "0003.populate_assets_info",
+    "0004.populate_events_count",
+    "0005.populate_consolidated_tables",
+    "0006.populate_fairminters_counters",
+]
+
 ROLLBACKABLE_TABLES = [
     "blocks",
     "transactions",
@@ -44,13 +51,6 @@ ROLLBACKABLE_TABLES = [
     # state db tables
     "all_expirations",
     "address_events",
-]
-
-MIGRATIONS_AFTER_ROLLBACK = [
-    "0003.populate_assets_info",
-    "0004.populate_events_count",
-    "0005.populate_consolidated_tables",
-    "0006.populate_fairminters_counters",
 ]
 
 
@@ -87,19 +87,16 @@ def apply_migration(migration_ids=None):
     backend.connection.close()
 
 
-def rollback_tables(block_index):
-    logger.info(f"Delete tables to block index {block_index}")
-    start_time = time.time()
-
-    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-    state_db.execute("""PRAGMA foreign_keys=OFF""")
+def rollback_tables(state_db, block_index):
+    cursor = state_db.cursor()
+    cursor.execute("""PRAGMA foreign_keys=OFF""")
 
     for table in ROLLBACKABLE_TABLES:
-        state_db.execute(f"DELETE FROM {table} WHERE block_index >= ?", (block_index,))  # noqa S608
+        logger.debug(f"Rolling back table {table}")
+        cursor.execute(f"DELETE FROM {table} WHERE block_index >= ?", (block_index,))  # noqa S608
 
-    state_db.execute("""PRAGMA foreign_keys=ON""")
-    state_db.close()
-    logger.info(f"Tables deleted in {time.time() - start_time} seconds")
+    cursor.execute("""PRAGMA foreign_keys=ON""")
+    cursor.close()
 
 
 def build_state_db():
@@ -110,15 +107,20 @@ def build_state_db():
         copy_ledger_db()
     with log.Spinner("Applying migrations"):
         apply_migration()
+    with log.Spinner("Set initial database version"):
+        state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+        database.update_version(state_db)
 
     logger.info(f"State db built in {time.time() - start_time} seconds")
 
 
-def rollback_state_db(block_index):
+def rollback_state_db(state_db, block_index):
     logger.info(f"Rolling back state db to block index {block_index}")
     start_time = time.time()
 
-    rollback_tables(block_index)
-    apply_migration(MIGRATIONS_AFTER_ROLLBACK)
+    with log.Spinner("Rolling back State DB tables"):
+        rollback_tables(state_db, block_index)
+    with log.Spinner("Applying migrations"):
+        apply_migration(MIGRATIONS_AFTER_ROLLBACK)
 
     logger.info(f"State db rolled back in {time.time() - start_time} seconds")

@@ -30,7 +30,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1
+from counterpartycore.lib.api import api_v1, dbbuilder
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
@@ -250,11 +250,11 @@ def initialise_config(
     if not os.path.exists(config.STATE_DATABASE):
         old_db_name = config.DATABASE.replace(".db", ".api.db")
         if os.path.exists(old_db_name):
-            os.rename(old_db_name, config.STATE_DATABASE)
-        if os.path.exists(old_db_name + "-wal"):
-            os.rename(old_db_name + "-wal", config.STATE_DATABASE + "-wal")
-        if os.path.exists(old_db_name + "-shm"):
-            os.rename(old_db_name + "-shm", config.STATE_DATABASE + "-shm")
+            for ext in ["", "-wal", "-shm"]:
+                if os.path.exists(old_db_name + ext):
+                    os.unlink(old_db_name + ext)
+            logger.info("Building new State DB from Ledger DB. Please be patient...")
+            dbbuilder.build_state_db()
 
     config.API_LIMIT_ROWS = api_limit_rows
 
@@ -877,8 +877,10 @@ def reparse(block_index):
 
 def rollback(block_index=None):
     db = database.initialise_db()
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     try:
         blocks.rollback(db, block_index=block_index)
+        dbbuilder.rollback_state_db(state_db, block_index)
     finally:
         database.optimize(db)
         db.close()
