@@ -77,6 +77,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/fairmints": queries.get_fairmints_by_address,
         "/v2/addresses/<address>/fairmints/<asset>": queries.get_fairmints_by_address_and_asset,
         "/v2/utxos/<utxo>/balances": queries.get_utxo_balances,
+        "/v2/utxos/withbalances": queries.utxos_with_balances,
         ### /addresses/<address>/compose/ ###
         "/v2/addresses/<address>/compose/bet": compose.compose_bet,
         "/v2/addresses/<address>/compose/broadcast": compose.compose_broadcast,

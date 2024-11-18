@@ -84,6 +84,7 @@ CreditAction = Literal[
     "sweep",
     "wins",
 ]
+BalanceType = Literal["all", "utxo", "address"]
 
 SUPPORTED_SORT_FIELDS = {
     "balances": ["address", "asset", "quantity"],
@@ -1556,23 +1557,36 @@ def get_sweeps_by_address(
 
 
 def get_address_balances(
-    db, address: str, cursor: str = None, limit: int = 100, offset: int = None, sort: str = None
+    db,
+    address: str,
+    type: BalanceType = all,
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the balances of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str type: The type of balances to return
     :param str cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
+    where = [
+        {"address": address, "quantity__gt": 0},
+        {"utxo_address": address, "quantity__gt": 0},
+    ]
+    if type == "utxo":
+        where.pop(0)
+    elif type == "address":
+        where.pop(1)
+
     return select_rows(
         db,
         "balances",
-        where=[
-            {"address": address, "quantity__gt": 0},
-            {"utxo_address": address, "quantity__gt": 0},
-        ],
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1600,25 +1614,63 @@ def get_utxo_balances(db, utxo: str, cursor: str = None, limit: int = 100, offse
     )
 
 
+def utxos_with_balances(db, utxos: str):
+    """
+    Check if the utxos have balances
+    :param str utxos: Comma separated list of utxos (e.g. $UTXO_1,$UTXO_2)
+    """
+    utxo_list = utxos.split(",")
+    utxo_with_balances_result = select_rows(
+        db,
+        "balances",
+        select="utxo, CAST(MIN(SUM(quantity), 1) AS BOOLEAN) AS has_balance",
+        where={"utxo__in": utxo_list},
+        group_by="utxo",
+    )
+    utxo_with_balances = utxo_with_balances_result.result
+
+    result = {}
+    for utxo in utxo_with_balances:
+        result[utxo["utxo"]] = bool(utxo["has_balance"])
+    for utxo in utxo_list:
+        if utxo not in result:
+            result[utxo] = False
+
+    return QueryResult(result, None, len(utxo_list))
+
+
 def get_balances_by_addresses(
-    db, addresses: str, cursor: str = None, limit: int = 100, offset: int = None, sort: str = None
+    db,
+    addresses: str,
+    type: BalanceType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the balances of several addresses
     :param str addresses: Comma separated list of addresses (e.g. $ADDRESS_1,$ADDRESS_2)
+    :param str type: The type of balances to return
     :param str cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
+    where = [
+        {"address__in": addresses.split(","), "quantity__gt": 0},
+        {"utxo_address__in": addresses.split(","), "quantity__gt": 0},
+    ]
+    if type == "utxo":
+        where.pop(0)
+    elif type == "address":
+        where.pop(1)
+
     assets_result = select_rows(
         db,
         "balances",
         select="DISTINCT asset AS asset",
-        where=[
-            {"address__in": addresses.split(","), "quantity__gt": 0},
-            {"utxo_address__in": addresses.split(","), "quantity__gt": 0},
-        ],
+        where=where,
         order="ASC",
         cursor_field="asset",
         last_cursor=cursor,
@@ -1627,13 +1679,19 @@ def get_balances_by_addresses(
     )
     assets = [asset["asset"] for asset in assets_result.result]
 
+    where = [
+        {"address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
+        {"utxo_address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
+    ]
+    if type == "utxo":
+        where.pop(0)
+    elif type == "address":
+        where.pop(1)
+
     balances = select_rows(
         db,
         "balances",
-        where=[
-            {"address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
-            {"utxo_address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
-        ],
+        where=where,
         select="address, asset, quantity, utxo, utxo_address",
         order="ASC",
         cursor_field="asset",
@@ -1669,20 +1727,41 @@ def get_balances_by_addresses(
     return QueryResult(result, assets_result.next_cursor, assets_result.result_count)
 
 
-def get_balances_by_address_and_asset(db, address: str, asset: str):
+def get_balances_by_address_and_asset(
+    db,
+    address: str,
+    asset: str,
+    type: BalanceType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+):
     """
     Returns the balances of an address and asset
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset: The asset to return (e.g. XCP)
+    :param str type: The type of balances to return
+    :param str cursor: The last index of the balances to return
+    :param int limit: The maximum number of balances to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = [
+        {"address": address, "asset": asset.upper()},
+        {"utxo_address": address, "asset": asset.upper()},
+    ]
+    if type == "utxo":
+        where.pop(0)
+    elif type == "address":
+        where.pop(1)
+
     return select_rows(
         db,
         "balances",
         select="address, asset, quantity, utxo, utxo_address",
-        where=[
-            {"address": address, "asset": asset.upper()},
-            {"utxo_address": address, "asset": asset.upper()},
-        ],
+        where=where,
+        last_cursor=cursor,
+        offset=offset,
+        limit=limit,
     )
 
 
@@ -2256,21 +2335,33 @@ def get_dividend_disribution(
 
 
 def get_asset_balances(
-    db, asset: str, cursor: str = None, limit: int = 100, offset: int = None, sort: str = None
+    db,
+    asset: str,
+    type: BalanceType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the asset balances
     :param str asset: The asset to return (e.g. $ASSET_1)
+    :param str type: The type of balances to return
     :param str cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
+    where = [{"asset": asset.upper(), "quantity__gt": 0}]
+    if type == "utxo":
+        where.append({"utxo__notnull": True})
+    elif type == "address":
+        where.append({"address__notnull": True})
+
     return select_rows(
         db,
         "balances",
-        where={"asset": asset.upper(), "quantity__gt": 0},
-        # cursor_field="address, utxo",
+        where=where,
         select="address, utxo, utxo_address, asset, quantity",
         order="ASC",
         last_cursor=cursor,
