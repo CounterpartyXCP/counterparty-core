@@ -44,8 +44,10 @@ DROP VIEW IF EXISTS all_expirations;
 ALTER TABLE fairminters ADD COLUMN earned_quantity INTEGER;
 ALTER TABLE fairminters ADD COLUMN paid_quantity INTEGER;
 ALTER TABLE fairminters ADD COLUMN commission INTEGER;
+
 ALTER TABLE issuances ADD COLUMN asset_events TEXT;
 ALTER TABLE dispenses ADD COLUMN btc_amount TEXT;
+
 ALTER TABLE mempool ADD COLUMN addresses TEXT;
 
 ALTER TABLE issuances RENAME COLUMN locked TO locked_old;
@@ -96,6 +98,7 @@ CREATE TABLE IF NOT EXISTS assets_info(
     locked BOOL DEFAULT 0,
     supply INTEGER DEFAULT 0,
     description TEXT,
+    description_locked BOOL DEFAULT 0,
     first_issuance_block_index INTEGER,
     last_issuance_block_index INTEGER,
     confirmed BOOLEAN DEFAULT TRUE
@@ -131,6 +134,7 @@ FROM rps_expirations;
 INSERT INTO all_expirations (object_id, block_index, type)
 SELECT rps_match_id AS object_id, block_index, 'rps_match' AS type
 FROM rps_match_expirations;
+
 
 CREATE TABLE IF NOT EXISTS address_events (
     address TEXT,
@@ -173,11 +177,7 @@ UPDATE fairminters SET
 UPDATE issuances SET 
     asset_events = (
         SELECT
-            substr(
-                bindings, 
-                instr(bindings, '"asset_events":') + 16, 
-                instr(substr(bindings, instr(bindings, '"asset_events":') + 16), '"') - 1
-            )
+            json_extract(bindings, '$.asset_events')
         FROM messages
         WHERE messages.tx_hash = issuances.tx_hash
     );
@@ -186,11 +186,7 @@ UPDATE dispenses SET
     btc_amount = (
         SELECT
         CAST (
-            substr(
-                bindings,
-                instr(bindings, '"btc_amount":') + 13,
-                instr(substr(bindings, instr(bindings, '"btc_amount":') + 13), ',') - 1
-            )
+            json_extract(bindings, '$.btc_amount')
             AS INTEGER
         )
         FROM messages
