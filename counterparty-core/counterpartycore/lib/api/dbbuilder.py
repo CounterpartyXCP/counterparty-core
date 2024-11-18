@@ -73,16 +73,29 @@ def filter_migrations(migrations, wanted_ids):
     return migrations.__class__(topological_sort(filtered_migrations), migrations.post_apply)
 
 
-def apply_migration(migration_ids=None):
+def apply_all_migrations():
     backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
 
     migrations = read_migrations(MIGRATIONS_DIR)
-    if migration_ids is not None:
-        migrations = filter_migrations(migrations, migration_ids)
 
     # Apply migrations
     with backend.lock():
         backend.apply_migrations(migrations, force=False)
+
+    backend.connection.close()
+
+
+def reapply_migrations(migration_ids):
+    backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
+
+    migrations = read_migrations(MIGRATIONS_DIR)
+    migrations = filter_migrations(migrations, migration_ids)
+
+    # Apply migrations
+    with backend.lock():
+        for migration in migrations:
+            backend.rollback_one(migration)
+            backend.apply_one(migration)
 
     backend.connection.close()
 
@@ -106,7 +119,7 @@ def build_state_db():
     with log.Spinner("Copying ledger database to state database"):
         copy_ledger_db()
     with log.Spinner("Applying migrations"):
-        apply_migration()
+        apply_all_migrations()
     with log.Spinner("Set initial database version"):
         state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
         database.update_version(state_db)
@@ -121,6 +134,6 @@ def rollback_state_db(state_db, block_index):
     with log.Spinner("Rolling back State DB tables"):
         rollback_tables(state_db, block_index)
     with log.Spinner("Applying migrations"):
-        apply_migration(MIGRATIONS_AFTER_ROLLBACK)
+        reapply_migrations(MIGRATIONS_AFTER_ROLLBACK)
 
     logger.info(f"State db rolled back in {time.time() - start_time} seconds")
