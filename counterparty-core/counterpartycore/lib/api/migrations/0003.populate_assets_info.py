@@ -23,6 +23,8 @@ def apply(db):
     logger.debug("Populate `assets_info` table...")
     db.row_factory = dict_factory
 
+    db.execute("DELETE FROM assets_info")
+
     sql = """
     INSERT INTO assets_info 
     SELECT 

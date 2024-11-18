@@ -633,11 +633,16 @@ def update_address_events(api_db, event):
     cursor = api_db.cursor()
     for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
         sql = """
-            INSERT INTO address_events (address, event_index)
-            VALUES (:address, :event_index)
+            INSERT INTO address_events (address, event_index, block_index)
+            VALUES (:address, :event_index, :block_index)
             """
         cursor.execute(
-            sql, {"address": event_bindings[field], "event_index": event["message_index"]}
+            sql,
+            {
+                "address": event_bindings[field],
+                "event_index": event["message_index"],
+                "block_index": event["block_index"],
+            },
         )
 
 

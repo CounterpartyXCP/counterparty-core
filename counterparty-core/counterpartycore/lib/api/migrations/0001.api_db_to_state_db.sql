@@ -138,40 +138,18 @@ FROM rps_match_expirations;
 
 CREATE TABLE IF NOT EXISTS address_events (
     address TEXT,
-    event_index INTEGER
+    event_index INTEGER,
+    block_index INTEGER
 );
 CREATE INDEX IF NOT EXISTS address_events_address_idx ON address_events (address);
 CREATE INDEX IF NOT EXISTS address_events_event_index_idx ON address_events (event_index);
+CREATE INDEX IF NOT EXISTS address_events_block_index_idx ON address_events (block_index);
 
 
 CREATE TABLE IF NOT EXISTS events_count(
         event TEXT PRIMARY KEY,
         count INTEGER);
 CREATE INDEX IF NOT EXISTS events_count_count_idx ON events_count (count);
-
-
-INSERT INTO events_count (event, count)
-    SELECT event, COUNT(*) AS counter
-    FROM messages
-    GROUP BY event;
-
-
-UPDATE fairminters SET 
-    earned_quantity = (
-        SELECT SUM(earn_quantity) 
-        FROM fairmints 
-        WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
-    ),
-    paid_quantity = (
-        SELECT SUM(paid_quantity) 
-        FROM fairmints 
-        WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
-    ),
-    commission = (
-        SELECT SUM(commission) 
-        FROM fairmints 
-        WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
-    );
 
 
 UPDATE issuances SET 
@@ -181,6 +159,7 @@ UPDATE issuances SET
         FROM messages
         WHERE messages.tx_hash = issuances.tx_hash
     );
+
 
 UPDATE dispenses SET 
     btc_amount = (
