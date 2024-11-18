@@ -166,7 +166,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             "timeout": 10,
             "graceful_timeout": 10,
             "max_requests": 1000,
-            "max_requests_jitter": 500,
+            "max_requests_jitter": 250,
             "workers": config.GUNICORN_WORKERS,
             "worker_class": "gthread",
             "daemon": True,
