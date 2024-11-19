@@ -162,7 +162,7 @@ def initialise_config(
     force=False,
     requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
     rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
-    skip_check_asset_conservation=False,
+    skip_asset_conservation_check=False,
     backend_ssl_verify=None,
     rpc_allow_cors=None,
     p2sh_dust_return_pubkey=None,
@@ -605,7 +605,7 @@ def initialise_config(
 
     # Misc
     config.REQUESTS_TIMEOUT = requests_timeout
-    config.CHECK_ASSET_CONSERVATION = not skip_check_asset_conservation
+    config.CHECK_ASSET_CONSERVATION = not skip_asset_conservation_check
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
 
@@ -653,7 +653,7 @@ def initialise_log_and_config(args, api=False):
         "api_no_allow_cors": args.api_no_allow_cors,
         "requests_timeout": args.requests_timeout,
         "rpc_batch_size": args.rpc_batch_size,
-        "skip_check_asset_conservation": args.skip_check_asset_conservation,
+        "skip_asset_conservation_check": args.skip_asset_conservation_check,
         "force": args.force,
         "p2sh_dust_return_pubkey": args.p2sh_dust_return_pubkey,
         "utxo_locks_max_addresses": args.utxo_locks_max_addresses,

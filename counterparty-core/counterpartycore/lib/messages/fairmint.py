@@ -135,8 +135,8 @@ def unpack(message, return_dict=False):
             return {"asset": asset, "quantity": int(quantity)}
 
         return (asset, int(quantity))
-    except Exception as e:
-        raise exceptions.UnpackError(f"Cannot unpack fair mint message: {e}") from e
+    except Exception:
+        return ("", 0)
 
 
 def parse(db, tx, message):

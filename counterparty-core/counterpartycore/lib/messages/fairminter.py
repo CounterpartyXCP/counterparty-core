@@ -399,8 +399,8 @@ def unpack(message, return_dict=False):
             bool(int(divisible)),
             description,
         )
-    except Exception as e:
-        raise exceptions.UnpackError(f"Cannot unpack fair minter message: {e}") from e
+    except Exception:
+        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
 
 
 def parse(db, tx, message):
