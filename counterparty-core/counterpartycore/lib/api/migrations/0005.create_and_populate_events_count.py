@@ -2,6 +2,7 @@
 # file: counterpartycore/lib/api/migrations/0005.create_and_populate_events_counts.py
 #
 import logging
+import time
 
 from counterpartycore.lib import config
 from yoyo import step
@@ -13,7 +14,8 @@ __depends__ = {"0004.create_and_populate_assets_info"}
 
 
 def apply(db):
-    logger.debug("Preparing `events_count` table...")
+    start_time = time.time()
+    logger.debug("Populating `events_count` table...")
 
     db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
@@ -33,7 +35,7 @@ def apply(db):
 
     db.execute("""CREATE INDEX events_count_count_idx ON events_count (count)""")
 
-    logger.debug("`events_count` table ready.")
+    logger.debug(f"Populated the `events_count` table in {time.time() - start_time:.2f} seconds")
 
 
 def rollback(db):

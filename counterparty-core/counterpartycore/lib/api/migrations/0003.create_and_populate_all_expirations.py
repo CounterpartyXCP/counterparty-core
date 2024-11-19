@@ -2,6 +2,7 @@
 # file: counterpartycore/lib/api/migrations/0003.create_and_populate_all_expirations.py
 #
 import logging
+import time
 
 from counterpartycore.lib import config
 from yoyo import step
@@ -13,7 +14,8 @@ __depends__ = {"0002.create_and_populate_address_events"}
 
 
 def apply(db):
-    logger.debug("Preparing `all_expirations` table...")
+    start_time = time.time()
+    logger.debug("Populating the `all_expirations` table...")
 
     db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
@@ -64,8 +66,7 @@ def apply(db):
     for sql in sqls:
         db.execute(sql)
 
-    logger.debug("`all_expirations` table ready.")
-
+    logger.debug(f"Populated the `all_expirations` table in {time.time() - start_time:.2f} seconds")
 
 def rollback(db):
     db.execute("DROP TABLE all_expirations")

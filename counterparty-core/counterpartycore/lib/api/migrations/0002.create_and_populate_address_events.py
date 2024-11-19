@@ -4,6 +4,7 @@
 import json
 import logging
 import os
+import time
 
 from counterpartycore.lib import config
 from counterpartycore.lib.api.api_watcher import EVENTS_ADDRESS_FIELDS
@@ -22,7 +23,8 @@ def dict_factory(cursor, row):
 
 
 def apply(db):
-    logger.debug("Populate `address_events` table...")
+    start_time = time.time()
+    logger.debug("Populating `address_events` table...")
     db.row_factory = dict_factory
 
     db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
@@ -57,13 +59,13 @@ def apply(db):
             db.execute(sql, (bindings[field], row["message_index"], row["block_index"]))
             inserted += 1
             if inserted % 1000000 == 0:
-                logger.debug(f"Inserted {inserted} address events")
+                logger.trace(f"Inserted {inserted} address events")
 
     cursor.execute("CREATE INDEX address_events_address_idx ON address_events (address)")
     cursor.execute("CREATE INDEX address_events_event_index_idx ON address_events (event_index)")
     cursor.execute("CREATE INDEX address_events_block_index_idx ON address_events (block_index)")
 
-    logger.debug("`address_events` ready.")
+    logger.debug(f"Populated `address_events` table in {time.time() - start_time:.2f} seconds")
 
 
 def rollback(db):

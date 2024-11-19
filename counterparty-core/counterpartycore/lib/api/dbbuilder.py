@@ -97,25 +97,26 @@ def reapply_migrations(migration_ids):
 
 
 def build_state_db():
-    logger.info("Building state db")
+    logger.info("Building State DB...")
     start_time = time.time()
 
-    with log.Spinner("Creating state db"):
+    with log.Spinner("Creating State DB..."):
         create_state_db()
-    with log.Spinner("Applying migrations"):
+    with log.Spinner("Applying database migrations..."):
         apply_all_migrations()
-    with log.Spinner("Set initial database version"):
-        state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-        database.update_version(state_db)
 
-    logger.info(f"State db built in {time.time() - start_time} seconds")
+    # Set initial database version
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+    database.update_version(state_db)
+
+    logger.info(f"Built State DB in {time.time() - start_time:.2f} seconds")
 
 
 def rollback_state_db(state_db):
-    logger.info("Rolling back state db")
+    logger.info("Rolling back state db...")
     start_time = time.time()
 
     with log.Spinner("Applying migrations"):
         reapply_migrations(MIGRATIONS_AFTER_ROLLBACK)
 
-    logger.info(f"State db rolled back in {time.time() - start_time} seconds")
+    logger.info(f"Rolled back State DB in {time.time() - start_time:.2f} seconds")

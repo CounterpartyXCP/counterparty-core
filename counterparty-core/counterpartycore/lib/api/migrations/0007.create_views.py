@@ -2,6 +2,7 @@
 # file: counterpartycore/lib/api/migrations/0007.create_views.py
 #
 import logging
+import time
 
 from counterpartycore.lib import config
 from yoyo import step
@@ -13,7 +14,8 @@ __depends__ = {"0006.create_and_populate_consolidated_tables"}
 
 
 def apply(db):
-    logger.debug("Preparing views...")
+    start_time = time.time()
+    logger.debug("Building views...")
 
     db.execute("""
          CREATE VIEW asset_holders AS 
@@ -77,7 +79,7 @@ def apply(db):
             FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
     """)
 
-    logger.debug("Views ready.")
+    logger.debug(f"Built views in {time.time() - start_time:.2f} seconds")
 
 
 def rollback(db):

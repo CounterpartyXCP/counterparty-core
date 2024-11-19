@@ -3,6 +3,7 @@
 #
 import logging
 import os
+import time
 
 from counterpartycore.lib import config
 from yoyo import step
@@ -20,7 +21,8 @@ def dict_factory(cursor, row):
 
 
 def apply(db):
-    logger.debug("Populate `assets_info` table...")
+    start_time = time.time()
+    logger.debug("Populating the `assets_info` table...")
     db.row_factory = dict_factory
 
     db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
@@ -94,7 +96,7 @@ def apply(db):
     db.execute("CREATE INDEX assets_info_issuer_idx ON assets_info (issuer)")
     db.execute("CREATE INDEX assets_info_owner_idx ON assets_info (owner)")
 
-    logger.debug("`assets_info` ready.")
+    logger.debug(f"Populated the `assets_info` table in {time.time() - start_time:.2f} seconds")
 
 
 def rollback(db):
