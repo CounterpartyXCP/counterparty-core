@@ -217,10 +217,6 @@ def version(db):
 def init_config_table(db):
     cursor = db.cursor()
 
-    query = "SELECT name FROM sqlite_master WHERE type='table' AND name='config'"
-    if len(list(cursor.execute(query))) == 1:
-        return
-
     sql = """
         CREATE TABLE IF NOT EXISTS config (
             name TEXT PRIMARY KEY,
@@ -232,13 +228,11 @@ def init_config_table(db):
 
 
 def set_config_value(db, name, value):
-    init_config_table(db)
     cursor = db.cursor()
     cursor.execute("INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)", (name, value))
 
 
 def get_config_value(db, name):
-    init_config_table(db)
     cursor = db.cursor()
     cursor.execute("SELECT value FROM config WHERE name = ?", (name,))
     rows = cursor.fetchall()

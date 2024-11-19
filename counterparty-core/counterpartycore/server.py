@@ -250,14 +250,10 @@ def initialise_config(
 
     if not os.path.exists(config.STATE_DATABASE):
         old_db_name = config.DATABASE.replace(".db", ".api.db")
-        if os.path.exists(old_db_name):
-            # delete old API db
-            for ext in ["", "-wal", "-shm"]:
-                if os.path.exists(old_db_name + ext):
-                    os.unlink(old_db_name + ext)
-            if action != "build-state-db":
-                logger.info("Building new State DB from Ledger DB. Please be patient...")
-                dbbuilder.build_state_db()
+        # delete old API db
+        for ext in ["", "-wal", "-shm"]:
+            if os.path.exists(old_db_name + ext):
+                os.unlink(old_db_name + ext)
 
     config.API_LIMIT_ROWS = api_limit_rows
 

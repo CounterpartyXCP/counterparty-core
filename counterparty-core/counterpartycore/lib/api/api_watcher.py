@@ -6,8 +6,6 @@ import time
 
 from counterpartycore.lib import config, database, exceptions
 from counterpartycore.lib.util import format_duration
-from yoyo import get_backend, read_migrations
-from yoyo.exceptions import LockTimeout
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -118,29 +116,24 @@ def delete_all(db, query, bindings=None):
     return changes["deleted"]
 
 
-def get_last_parsed_message_index(api_db):
-    sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
-    last_event = fetch_one(api_db, sql)
-    last_message_index = -1
-    if last_event:
-        last_message_index = last_event["message_index"]
-    return last_message_index
+def get_last_parsed_message_index(state_db):
+    return database.get_config(state_db, "LAST_PARSED_EVENT", 0)
 
 
-def get_next_event_to_parse(api_db, ledger_db):
-    last_parsed_message_index = get_last_parsed_message_index(api_db)
-    sql = "SELECT * FROM messages WHERE message_index = ?"
-    next_event = fetch_one(ledger_db, sql, (last_parsed_message_index + 1,))
+def get_next_event_to_parse(state_db, ledger_db):
+    last_parsed_message_index = get_last_parsed_message_index(state_db)
+    sql = "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
+    next_event = fetch_one(ledger_db, sql, (last_parsed_message_index,))
     return next_event
 
 
-def get_event_to_parse_count(api_db, ledger_db):
-    last_parsed_message_index = get_last_parsed_message_index(api_db)
-    sql = "SELECT message_index FROM messages ORDER BY message_index DESC LIMIT 1"
-    last_event = fetch_one(ledger_db, sql)
-    if last_event is None:
+def get_event_to_parse_count(state_db, ledger_db):
+    last_parsed_message_index = get_last_parsed_message_index(state_db)
+    sql = "SELECT COUNT(*) AS message_count FROM messages WHERE message_index > ?"
+    message_count = fetch_one(ledger_db, sql, (last_parsed_message_index,))
+    if message_count is None:
         return 0
-    return last_event["message_index"] - last_parsed_message_index
+    return message_count["message_count"]
 
 
 def get_event_bindings(event):
@@ -206,8 +199,153 @@ def event_to_sql(event):
     return None, []
 
 
-def get_event_count(api_db, event):
-    cursor = api_db.cursor()
+def update_address_events(state_db, event):
+    if event["event"] not in EVENTS_ADDRESS_FIELDS:
+        return
+    event_bindings = json.loads(event["bindings"])
+    cursor = state_db.cursor()
+    for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
+        sql = """
+            INSERT INTO address_events (address, event_index, block_index)
+            VALUES (:address, :event_index, :block_index)
+            """
+        cursor.execute(
+            sql,
+            {
+                "address": event_bindings[field],
+                "event_index": event["message_index"],
+                "block_index": event["block_index"],
+            },
+        )
+
+
+def update_all_expiration(state_db, event):
+    if event["event"] not in EXPIRATION_EVENTS_OBJECT_ID:
+        return
+    event_bindings = json.loads(event["bindings"])
+
+    cursor = state_db.cursor()
+    sql = """
+        INSERT INTO all_expirations (object_id, block_index, type) 
+        VALUES (:object_id, :block_index, :type)
+        """
+    bindings = {
+        "object_id": event_bindings[EXPIRATION_EVENTS_OBJECT_ID[event["event"]]],
+        "block_index": event_bindings["block_index"],
+        "type": event["event"].replace("_EXPIRATION", "").lower(),
+    }
+    cursor.execute(sql, bindings)
+
+
+def update_xcp_supply(state_db, event):
+    if event["event"] not in XCP_DESTROY_EVENTS:
+        return
+    event_bindings = json.loads(event["bindings"])
+    if "fee_paid" not in event_bindings:
+        return
+    if event_bindings["fee_paid"] == 0:
+        return
+    sql = """
+        UPDATE assets_info 
+        SET supply = supply - :fee_paid
+        WHERE asset = 'XCP'
+    """
+    cursor = state_db.cursor()
+    cursor.execute(sql, event_bindings)
+
+
+def update_assets_info(state_db, event):
+    update_xcp_supply(state_db, event)
+
+    if event["event"] not in ASSET_EVENTS:
+        return
+    event_bindings = json.loads(event["bindings"])
+
+    event_bindings["confirmed"] = event["block_index"] != config.MEMPOOL_BLOCK_INDEX
+
+    if event["event"] == "ASSET_CREATION":
+        sql = """
+            INSERT OR REPLACE INTO assets_info 
+                (asset, asset_id, asset_longname, first_issuance_block_index, confirmed) 
+            VALUES 
+                (:asset_name, :asset_id, :asset_longname, :block_index, :confirmed)
+            """
+        cursor = state_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
+    if event_bindings["status"] != "valid":
+        return
+
+    if event["event"] in ["ASSET_ISSUANCE", "RESET_ISSUANCE"]:
+        existing_asset = fetch_one(
+            state_db,
+            "SELECT * FROM assets_info WHERE asset = :asset",
+            {"asset": event_bindings["asset"]},
+        )
+        if existing_asset is None and "asset_longname" in event_bindings:
+            existing_asset = fetch_one(
+                state_db,
+                "SELECT * FROM assets_info WHERE asset_longname = :asset_longname",
+                {"asset_longname": event_bindings["asset_longname"]},
+            )
+        if existing_asset is not None and not event_bindings["confirmed"]:
+            return
+        set_data = []
+        set_data.append("divisible = :divisible")
+        set_data.append("description = :description")
+        set_data.append("owner = :issuer")
+        set_data.append("supply = supply + :quantity")
+        set_data.append("last_issuance_block_index = :block_index")
+        set_data.append("asset_longname = :asset_longname")
+        set_data.append("confirmed = :confirmed")
+        if event_bindings["locked"]:
+            set_data.append("locked = :locked")
+        if existing_asset is None or not existing_asset["issuer"]:  # first issuance
+            set_data.append("issuer = :issuer")
+        set_data = ", ".join(set_data)
+
+        sql = f"UPDATE assets_info SET {set_data} WHERE asset = :asset"  # noqa: S608
+        cursor = state_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
+    if not event_bindings["confirmed"]:
+        return
+
+    if event["event"] == "ASSET_DESTRUCTION":
+        sql = """
+            UPDATE assets_info
+            SET supply = supply - :quantity
+            WHERE asset = :asset
+            """
+        cursor = state_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
+    if event["event"] == "ASSET_TRANSFER":
+        sql = """
+            UPDATE assets_info 
+            SET owner = :issuer
+            WHERE asset = :asset
+            """
+        cursor = state_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
+    if event["event"] == "BURN":
+        sql = """
+            UPDATE assets_info 
+            SET supply = supply + :earned
+            WHERE asset = 'XCP'
+            """
+        cursor = state_db.cursor()
+        cursor.execute(sql, event_bindings)
+        return
+
+
+def get_event_count(state_db, event):
+    cursor = state_db.cursor()
     cursor.execute("SELECT count FROM events_count WHERE event = ?", (event["event"],))
     count = cursor.fetchone()
     if count is None:
@@ -215,9 +353,9 @@ def get_event_count(api_db, event):
     return count["count"]
 
 
-def increment_event_count(api_db, event):
-    current_count = get_event_count(api_db, event)
-    cursor = api_db.cursor()
+def update_events_count(state_db, event):
+    current_count = get_event_count(state_db, event)
+    cursor = state_db.cursor()
     if current_count is None:
         cursor.execute("INSERT INTO events_count (event, count) VALUES (?, 1)", (event["event"],))
     else:
@@ -226,20 +364,11 @@ def increment_event_count(api_db, event):
         )
 
 
-def execute_event(api_db, event):
-    if event["category"] not in STATE_DB_TABLES:
-        return
-    cursor = api_db.cursor()
-    sql, sql_bindings = event_to_sql(event)
-    if sql is not None:
-        cursor.execute(sql, sql_bindings)
-
-
-def update_balances(api_db, event):
+def update_balances(state_db, event):
     if event["event"] not in ["DEBIT", "CREDIT"]:
         return
 
-    cursor = api_db.cursor()
+    cursor = state_db.cursor()
 
     event_bindings = get_event_bindings(event)
     quantity = event_bindings["quantity"]
@@ -257,7 +386,7 @@ def update_balances(api_db, event):
     event_bindings["address_or_utxo"] = address_or_utxo
 
     sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608
-    existing_balance = fetch_one(api_db, sql, event_bindings)
+    existing_balance = fetch_one(state_db, sql, event_bindings)
 
     if existing_balance is not None:
         sql = f"""
@@ -282,156 +411,13 @@ def update_balances(api_db, event):
     cursor.execute(sql, insert_bindings)
 
 
-def update_expiration(api_db, event):
-    if event["event"] not in EXPIRATION_EVENTS_OBJECT_ID:
-        return
-    event_bindings = json.loads(event["bindings"])
-
-    cursor = api_db.cursor()
-    sql = """
-        INSERT INTO all_expirations (object_id, block_index, type) 
-        VALUES (:object_id, :block_index, :type)
-        """
-    bindings = {
-        "object_id": event_bindings[EXPIRATION_EVENTS_OBJECT_ID[event["event"]]],
-        "block_index": event_bindings["block_index"],
-        "type": event["event"].replace("_EXPIRATION", "").lower(),
-    }
-    cursor.execute(sql, bindings)
-
-
-def update_assets_info(api_db, event):
-    if event["event"] not in ASSET_EVENTS:
-        return
-    event_bindings = json.loads(event["bindings"])
-
-    event_bindings["confirmed"] = event["block_index"] != config.MEMPOOL_BLOCK_INDEX
-
-    if event["event"] == "ASSET_CREATION":
-        sql = """
-            INSERT OR REPLACE INTO assets_info 
-                (asset, asset_id, asset_longname, first_issuance_block_index, confirmed) 
-            VALUES 
-                (:asset_name, :asset_id, :asset_longname, :block_index, :confirmed)
-            """
-        cursor = api_db.cursor()
-        cursor.execute(sql, event_bindings)
-        return
-
-    if event_bindings["status"] != "valid":
-        return
-
-    if event["event"] in ["ASSET_ISSUANCE", "RESET_ISSUANCE"]:
-        existing_asset = fetch_one(
-            api_db,
-            "SELECT * FROM assets_info WHERE asset = :asset",
-            {"asset": event_bindings["asset"]},
-        )
-        if existing_asset is None and "asset_longname" in event_bindings:
-            existing_asset = fetch_one(
-                api_db,
-                "SELECT * FROM assets_info WHERE asset_longname = :asset_longname",
-                {"asset_longname": event_bindings["asset_longname"]},
-            )
-        if existing_asset is not None and not event_bindings["confirmed"]:
-            return
-        set_data = []
-        set_data.append("divisible = :divisible")
-        set_data.append("description = :description")
-        set_data.append("owner = :issuer")
-        set_data.append("supply = supply + :quantity")
-        set_data.append("last_issuance_block_index = :block_index")
-        set_data.append("asset_longname = :asset_longname")
-        set_data.append("confirmed = :confirmed")
-        if event_bindings["locked"]:
-            set_data.append("locked = :locked")
-        if existing_asset is None or not existing_asset["issuer"]:  # first issuance
-            set_data.append("issuer = :issuer")
-        set_data = ", ".join(set_data)
-
-        sql = f"UPDATE assets_info SET {set_data} WHERE asset = :asset"  # noqa: S608
-        cursor = api_db.cursor()
-        cursor.execute(sql, event_bindings)
-        return
-
-    if not event_bindings["confirmed"]:
-        return
-
-    if event["event"] == "ASSET_DESTRUCTION":
-        sql = """
-            UPDATE assets_info
-            SET supply = supply - :quantity
-            WHERE asset = :asset
-            """
-        cursor = api_db.cursor()
-        cursor.execute(sql, event_bindings)
-        return
-
-    if event["event"] == "ASSET_TRANSFER":
-        sql = """
-            UPDATE assets_info 
-            SET owner = :issuer
-            WHERE asset = :asset
-            """
-        cursor = api_db.cursor()
-        cursor.execute(sql, event_bindings)
-        return
-
-    if event["event"] == "BURN":
-        sql = """
-            UPDATE assets_info 
-            SET supply = supply + :earned
-            WHERE asset = 'XCP'
-            """
-        cursor = api_db.cursor()
-        cursor.execute(sql, event_bindings)
-        return
-
-
-def update_xcp_supply(api_db, event):
-    if event["event"] not in XCP_DESTROY_EVENTS:
-        return
-    event_bindings = json.loads(event["bindings"])
-    if "fee_paid" not in event_bindings:
-        return
-    if event_bindings["fee_paid"] == 0:
-        return
-    sql = """
-        UPDATE assets_info 
-        SET supply = supply - :fee_paid
-        WHERE asset = 'XCP'
-    """
-    cursor = api_db.cursor()
-    cursor.execute(sql, event_bindings)
-
-
-def update_address_events(api_db, event):
-    if event["event"] not in EVENTS_ADDRESS_FIELDS:
-        return
-    event_bindings = json.loads(event["bindings"])
-    cursor = api_db.cursor()
-    for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
-        sql = """
-            INSERT INTO address_events (address, event_index, block_index)
-            VALUES (:address, :event_index, :block_index)
-            """
-        cursor.execute(
-            sql,
-            {
-                "address": event_bindings[field],
-                "event_index": event["message_index"],
-                "block_index": event["block_index"],
-            },
-        )
-
-
-def update_fairminters(api_db, event):
+def update_fairminters(state_db, event):
     if event["event"] != "NEW_FAIRMINT":
         return
     event_bindings = json.loads(event["bindings"])
     if event_bindings["status"] != "valid":
         return
-    cursor = api_db.cursor()
+    cursor = state_db.cursor()
     sql = """
         UPDATE fairminters SET
             earned_quantity = COALESCE(earned_quantity, 0) + :earn_quantity,
@@ -442,40 +428,50 @@ def update_fairminters(api_db, event):
     cursor.execute(sql, event_bindings)
 
 
-def parse_event(api_db, event, watcher, catching_up=False):
-    if event["event"] in SKIP_EVENTS:
-        increment_event_count(api_db, event)
+def update_consolidated_tables(state_db, event):
+    if event["category"] not in STATE_DB_TABLES:
         return
-    with api_db:
+    cursor = state_db.cursor()
+    sql, sql_bindings = event_to_sql(event)
+    if sql is not None:
+        cursor.execute(sql, sql_bindings)
+    # because no event for balance update
+    # except DEBIT and CREDIT
+    update_balances(state_db, event)
+    # update counters not present in the ledger
+    update_fairminters(state_db, event)
+
+
+def parse_event(state_db, event):
+    if event["event"] in SKIP_EVENTS:
+        update_events_count(state_db, event)
+        return
+    with state_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
-        execute_event(api_db, event)
-        update_balances(api_db, event)
-        update_expiration(api_db, event)
-        update_assets_info(api_db, event)
-        update_xcp_supply(api_db, event)
-        update_address_events(api_db, event)
-        update_fairminters(api_db, event)
-        increment_event_count(api_db, event)
+        update_address_events(state_db, event)
+        update_all_expiration(state_db, event)
+        update_assets_info(state_db, event)
+        update_events_count(state_db, event)
+        update_consolidated_tables(state_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 
-def catch_up(api_db, ledger_db, watcher=None):
-    check_event_hashes(api_db, ledger_db)
-    event_to_parse_count = get_event_to_parse_count(api_db, ledger_db)
+def catch_up(state_db, ledger_db, watcher=None):
+    event_to_parse_count = get_event_to_parse_count(state_db, ledger_db)
     if event_to_parse_count > 0:
         logger.debug(f"API Watcher - {event_to_parse_count} events to catch up...")
         start_time = time.time()
         event_parsed = 0
-        next_event = get_next_event_to_parse(api_db, ledger_db)
+        next_event = get_next_event_to_parse(state_db, ledger_db)
         while next_event and not watcher.stop_event.is_set():
-            parse_event(api_db, next_event, watcher, catching_up=True)
+            parse_event(state_db, next_event)
             event_parsed += 1
             if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
                 logger.debug(
                     f"API Watcher - {event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
                 )
-            next_event = get_next_event_to_parse(api_db, ledger_db)
+            next_event = get_next_event_to_parse(state_db, ledger_db)
         if not watcher.stop_event.is_set():
             duration = time.time() - start_time
             logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
@@ -483,91 +479,23 @@ def catch_up(api_db, ledger_db, watcher=None):
         logger.info("API Watcher - Catch up completed.")
 
 
-def apply_migration():
-    logger.debug("API Watcher - Applying migrations...")
-    # Apply migrations
-    backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
-    migrations = read_migrations(MIGRATIONS_DIR)
-    try:
-        with backend.lock():
-            # Apply any outstanding migrations
-            backend.apply_migrations(backend.to_apply(migrations))
-    except LockTimeout:
-        logger.debug("API Watcher - Migration lock timeout. Breaking lock and retrying...")
-        backend.break_lock()
-        backend.apply_migrations(backend.to_apply(migrations))
-    backend.connection.close()
+def parse_next_event(state_db, ledger_db):
+    next_event = get_next_event_to_parse(state_db, ledger_db)
 
-
-def get_last_event(db):
-    cursor = db.cursor()
-    cursor.execute("SELECT * FROM messages ORDER BY message_index DESC LIMIT 1")
-    return cursor.fetchone()
-
-
-def get_event(db, message_index):
-    cursor = db.cursor()
-    cursor.execute("SELECT * FROM messages WHERE message_index = ?", (message_index,))
-    return cursor.fetchone()
-
-
-# checks that there is no divergence between the event in the API and ledger databases
-def check_event_hashes(api_db, ledger_db):
-    logger.trace("API Watcher - Checking event hashes...")
-    last_api_event = get_last_event(api_db)
-    if last_api_event is None:
-        return
-    ledger_event = get_event(ledger_db, last_api_event["message_index"])
-    while ledger_event is None:
-        # rollback_event(api_db, last_api_event)
-        last_api_event = get_last_event(api_db)
-        ledger_event = get_event(ledger_db, last_api_event["message_index"])
-    while (
-        last_api_event
-        and ledger_event
-        and last_api_event["event_hash"] != ledger_event["event_hash"]
-    ):
-        # rollback_event(api_db, last_api_event)
-        last_api_event = get_last_event(api_db)
-        ledger_event = get_event(ledger_db, last_api_event["message_index"])
-
-
-def parse_next_event(api_db, ledger_db, watcher):
-    check_event_hashes(api_db, ledger_db)
-
-    last_event_sql = "SELECT * FROM messages ORDER BY message_index DESC LIMIT 1"
-    last_ledger_event = fetch_one(ledger_db, last_event_sql)
-    last_api_event = fetch_one(api_db, last_event_sql)
-
-    if last_ledger_event is None:
+    if next_event is None:
         raise exceptions.NoEventToParse("No event to parse")
 
-    if last_api_event is None:
-        next_event_sql = "SELECT * FROM messages ORDER BY message_index ASC LIMIT 1"
-        next_event = fetch_one(ledger_db, next_event_sql)
-        parse_event(api_db, next_event, watcher)
-        return next_event
-
-    if last_ledger_event["message_index"] > last_api_event["message_index"]:
-        next_event_sql = (
-            "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
-        )
-        next_event = fetch_one(ledger_db, next_event_sql, (last_api_event["message_index"],))
-        parse_event(api_db, next_event, watcher)
-        return next_event
-
-    raise exceptions.NoEventToParse("No event to parse")
+    parse_event(state_db, next_event)
 
 
 class APIWatcher(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         logger.debug("Initializing API Watcher...")
-        self.api_db = None
+        self.state_db = None
         self.ledger_db = None
-        apply_migration()
         self.stop_event = threading.Event()  # Add stop event
-        self.api_db = database.get_db_connection(
+        self.state_db = database.get_db_connection(
             config.STATE_DATABASE, read_only=False, check_wal=False
         )
         self.ledger_db = database.get_db_connection(
@@ -576,14 +504,14 @@ class APIWatcher(threading.Thread):
 
     def run(self):
         logger.info("Starting API Watcher thread...")
-        catch_up(self.api_db, self.ledger_db, self)
+        catch_up(self.state_db, self.ledger_db, self)
         if not self.stop_event.is_set():
             self.follow()
 
     def follow(self):
         while not self.stop_event.is_set():
             try:
-                parse_next_event(self.api_db, self.ledger_db, self)
+                parse_next_event(self.state_db, self.ledger_db, self)
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
                 self.stop_event.wait(timeout=0.1)
@@ -594,8 +522,8 @@ class APIWatcher(threading.Thread):
         logger.info("Stopping API Watcher thread...")
         self.stop_event.set()
         self.join()
-        if self.api_db is not None:
-            self.api_db.close()
+        if self.state_db is not None:
+            self.state_db.close()
         if self.ledger_db is not None:
             self.ledger_db.close()
         logger.info("API Watcher thread stopped.")

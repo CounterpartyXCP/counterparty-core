@@ -442,6 +442,8 @@ def initialise(db):
     cursor.execute("DROP VIEW IF EXISTS all_expirations")
     cursor.execute("DROP VIEW IF EXISTS all_holders")
 
+    database.init_config_table(db)
+
     # remove misnamed indexes
     database.drop_indexes(
         cursor,

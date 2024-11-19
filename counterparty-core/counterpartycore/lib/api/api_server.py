@@ -422,9 +422,6 @@ def init_flask_app():
 
 
 def check_database_version():
-    if not os.path.exists(config.STATE_DATABASE):
-        dbbuilder.build_state_db()
-        return
     try:
         db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
         check.database_version(db)
@@ -448,6 +445,7 @@ def run_api_server(args, server_ready_value, stop_event):
     sentry.init()
     server.initialise_log_and_config(argparse.Namespace(**args), api=True)
 
+    dbbuilder.apply_outstanding_migration()
     check_database_version()
 
     watcher = api_watcher.APIWatcher()
