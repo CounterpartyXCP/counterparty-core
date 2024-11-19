@@ -15,7 +15,7 @@ __depends__ = {"0004.create_and_populate_assets_info"}
 
 def apply(db):
     start_time = time.time()
-    logger.debug("Populating `events_count` table...")
+    logger.debug("Populating the `events_count` table...")
 
     db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 

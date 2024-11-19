@@ -68,6 +68,7 @@ def apply(db):
 
     logger.debug(f"Populated the `all_expirations` table in {time.time() - start_time:.2f} seconds")
 
+
 def rollback(db):
     db.execute("DROP TABLE all_expirations")
 

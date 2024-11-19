@@ -101,7 +101,9 @@ def build_consolidated_table(state_db, table_name):
 
     for sql_index in indexes:
         state_db.execute(sql_index)
-    logger.debug(f"Copied consolidated table `{table_name}` in {time.time() - start_time:.2f} seconds")
+    logger.debug(
+        f"Copied consolidated table `{table_name}` in {time.time() - start_time:.2f} seconds"
+    )
 
 
 def dict_factory(cursor, row):
