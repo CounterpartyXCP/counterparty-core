@@ -15,6 +15,8 @@ __depends__ = {"0004.create_and_populate_assets_info"}
 def apply(db):
     logger.debug("Preparing `events_count` table...")
 
+    db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+
     db.execute("""
         CREATE TABLE events_count(
             event TEXT PRIMARY KEY,
@@ -27,7 +29,7 @@ def apply(db):
     db.execute("""
         INSERT INTO events_count (event, count)
         SELECT event, COUNT(*) AS counter
-        FROM messages
+        FROM ledger_db.messages
         GROUP BY event;
     """)
 

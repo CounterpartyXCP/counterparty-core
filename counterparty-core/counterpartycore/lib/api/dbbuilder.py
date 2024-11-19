@@ -1,6 +1,5 @@
 import logging
 import os
-import shutil
 import time
 
 from counterpartycore.lib import config, database, log
@@ -13,10 +12,10 @@ CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "migrations")
 
 MIGRATIONS_AFTER_ROLLBACK = [
-    "0003.populate_assets_info",
-    "0004.populate_events_count",
-    "0005.populate_consolidated_tables",
-    "0006.populate_fairminters_counters",
+    "0004.create_and_populate_assets_info",
+    "0005.create_and_populate_events_count",
+    "0006.create_and_populate_consolidated_tables",
+    "0007.create_views",
 ]
 
 ROLLBACKABLE_TABLES = [
@@ -54,18 +53,14 @@ ROLLBACKABLE_TABLES = [
 ]
 
 
-def copy_ledger_db():
+def create_state_db():
     for ext in ["", "-wal", "-shm"]:
         if os.path.exists(config.STATE_DATABASE + ext):
             os.unlink(config.STATE_DATABASE + ext)
 
-    # ensure the database is closed an no wall file is present
-    ledger_db = database.get_db_connection(config.DATABASE, read_only=False, check_wal=False)
-    ledger_db.close()
-
-    for ext in ["", "-wal", "-shm"]:
-        if os.path.exists(config.DATABASE + ext):
-            shutil.copyfile(config.DATABASE + ext, config.STATE_DATABASE + ext)
+    # create empty state db
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+    state_db.close()
 
 
 def filter_migrations(migrations, wanted_ids):
@@ -93,8 +88,9 @@ def reapply_migrations(migration_ids):
 
     # Apply migrations
     with backend.lock():
-        for migration in migrations:
+        for migration in reversed(migrations):
             backend.rollback_one(migration)
+        for migration in migrations:
             backend.apply_one(migration)
 
     backend.connection.close()
@@ -116,8 +112,8 @@ def build_state_db():
     logger.info("Building state db")
     start_time = time.time()
 
-    with log.Spinner("Copying ledger database to state database"):
-        copy_ledger_db()
+    with log.Spinner("Creating state db"):
+        create_state_db()
     with log.Spinner("Applying migrations"):
         apply_all_migrations()
     with log.Spinner("Set initial database version"):

@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0003.populate_address_events.py
+# file: counterpartycore/lib/api/migrations/0002.populate_address_events.py
 #
 import json
 import logging
@@ -13,7 +13,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-__depends__ = {"0001.api_db_to_state_db"}
+__depends__ = {"0001.create_mempool_table"}
 
 
 def dict_factory(cursor, row):
@@ -24,6 +24,9 @@ def dict_factory(cursor, row):
 def apply(db):
     logger.debug("Populate `address_events` table...")
     db.row_factory = dict_factory
+
+    db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+
     cursor = db.cursor()
 
     cursor.execute("""CREATE TABLE address_events (
@@ -40,7 +43,7 @@ def apply(db):
 
     sql = f"""
         SELECT event, bindings, message_index, block_index
-        FROM messages WHERE event IN ({placeholders})
+        FROM ledger_db.messages WHERE event IN ({placeholders})
         ORDER BY message_index
     """  # noqa S608
 

@@ -23,6 +23,8 @@ def apply(db):
     logger.debug("Populate `assets_info` table...")
     db.row_factory = dict_factory
 
+    db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+
     db.execute("""
         CREATE TABLE assets_info(
             asset TEXT UNIQUE,
@@ -63,12 +65,12 @@ def apply(db):
     FROM (
         SELECT
             asset,
-            assets.asset_id,
-            assets.asset_longname,
+            ledger_db.assets.asset_id,
+            ledger_db.assets.asset_longname,
             (
                 SELECT issuer
-                FROM issuances AS issuances2
-                WHERE assets.asset_name = issuances2.asset
+                FROM ledger_db.issuances AS issuances2
+                WHERE ledger_db.assets.asset_name = issuances2.asset
                 ORDER BY issuances2.rowid ASC
                 LIMIT 1
             ) AS issuer,
@@ -78,13 +80,13 @@ def apply(db):
             SUM(quantity) AS supply,
             description,
             SUM(description_locked) AS description_locked,
-            MIN(issuances.block_index) AS first_issuance_block_index,
-            MAX(issuances.block_index) AS last_issuance_block_index,
+            MIN(ledger_db.issuances.block_index) AS first_issuance_block_index,
+            MAX(ledger_db.issuances.block_index) AS last_issuance_block_index,
             TRUE AS confirmed,
-            MAX(issuances.rowid) AS rowid
-        FROM issuances, assets
-        WHERE issuances.asset = assets.asset_name
-        AND issuances.status = 'valid'
+            MAX(ledger_db.issuances.rowid) AS rowid
+        FROM ledger_db.issuances, ledger_db.assets
+        WHERE ledger_db.issuances.asset = ledger_db.assets.asset_name
+        AND ledger_db.issuances.status = 'valid'
         GROUP BY asset
     );
     """

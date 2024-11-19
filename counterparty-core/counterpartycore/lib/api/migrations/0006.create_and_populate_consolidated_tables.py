@@ -2,15 +2,12 @@
 # file: counterpartycore/lib/api/migrations/0006.create_and_populate_consolidated_tables.py
 #
 import logging
-import os
 import time
 
 from counterpartycore.lib import config
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 __depends__ = {"0005.create_and_populate_events_count"}
 
@@ -66,9 +63,13 @@ def build_consolidated_table(state_db, table_name):
     # recreate table
     sqls = []
     for sql in state_db.execute(f"""
-        SELECT sql FROM ledger.sqlite_master WHERE tbl_name='{table_name}'
+        SELECT sql FROM ledger_db.sqlite_master 
+        WHERE tbl_name='{table_name}'
+        AND type != 'trigger'
     """).fetchall():  # noqa S608
         sqls.append(sql["sql"])
+
+    # add additional columns
     if table_name in ADDITONAL_COLUMNS:
         for column in ADDITONAL_COLUMNS[table_name]:
             sqls.append(f"""
@@ -80,9 +81,10 @@ def build_consolidated_table(state_db, table_name):
 
     columns = [column["name"] for column in state_db.execute(f"PRAGMA table_info({table_name})")]
 
-    if table_name in ["fairminters"]:
-        for field in ["earned_quantity", "commission", "paid_quantity"]:
-            columns = [f"NULL AS {x}" if x == field else x for x in columns]
+    if table_name in ADDITONAL_COLUMNS:
+        for field in ADDITONAL_COLUMNS[table_name]:
+            field_name = field.split(" ")[0]
+            columns = [f"NULL AS {x}" if x == field_name else x for x in columns]
 
     select_fields = ", ".join(columns)
 
@@ -113,7 +115,6 @@ def apply(db):
     logger.debug("Copy consolidated tables from ledger db...")
 
     db.execute("""PRAGMA foreign_keys=OFF""")
-    logger.debug(f"Attach ledger db {config.DATABASE}...")
     db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
     for table in CONSOLIDATED_TABLES.keys():
