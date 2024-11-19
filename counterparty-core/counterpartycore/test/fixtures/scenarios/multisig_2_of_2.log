@@ -1,5 +1,19 @@
 Initializing database...
 Fixing issuances `asset_longname` field
+SQLITE_LOG: statement aborts at 12: [SELECT value FROM config WHERE name = ?] database schema has changed (17) SQLITE_SCHEMA
+Fixing issuances `asset_longname` field
+SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_issuances] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_fairminters] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_issuances
+            BEFORE UPDATE ON issuances BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;] database s (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_fairminters
+            BEFORE UPDATE ON fairminters BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;] databa (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 11: [SELECT name FROM sqlite_master WHERE type='table' AND name='config'] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 27: [INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)] database schema has changed (17) SQLITE_SCHEMA
 Cleaning `transaction_count` table
 SQLITE_LOG: statement aborts at 11: [SELECT name FROM sqlite_master WHERE type='table' AND name='config'] database schema has changed (17) SQLITE_SCHEMA
 Initialising asset cache...

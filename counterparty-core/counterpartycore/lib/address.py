@@ -37,8 +37,6 @@ def pack(address):
                 script.validate(address)  # This will check if the address is valid
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
                 return short_address_bytes
-            except bitcoin.base58.InvalidBase58Error as e:
-                raise e
             except Exception as e:  # noqa: F841
                 raise script.AddressError(  # noqa: B904
                     f"The address {address} is not a valid bitcoin address ({'testnet' if config.TESTNET or config.REGTEST else 'mainnet'})"

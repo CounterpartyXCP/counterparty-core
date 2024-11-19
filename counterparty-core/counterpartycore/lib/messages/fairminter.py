@@ -88,6 +88,23 @@ def initialise(db):
                 database.lock_update(db, table)
             database.set_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1", True)
 
+    if database.get_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_2") is None:
+        logger.debug("Fixing issuances `asset_longname` field")
+        # disable triggers
+        for table in ["issuances", "fairminters"]:
+            database.unlock_update(db, table)
+        cursor.execute(
+            "UPDATE issuances SET asset_longname = ? WHERE asset_longname = ?", (None, "")
+        )
+        cursor.execute(
+            "UPDATE fairminters SET asset_longname = ? WHERE asset_longname = ?", (None, "")
+        )
+        cursor.execute("UPDATE fairminters SET asset_parent = ? WHERE asset_parent = ?", (None, ""))
+        # re-enable triggers
+        for table in ["issuances", "fairminters"]:
+            database.lock_update(db, table)
+        database.set_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_2", True)
+
 
 def validate(
     db,
@@ -495,8 +512,8 @@ def parse(db, tx, message):
         "block_index": tx["block_index"],
         "source": tx["source"],
         "asset": asset_name,
-        "asset_parent": asset_parent,
-        "asset_longname": asset_longname,
+        "asset_parent": asset_parent or None,
+        "asset_longname": asset_longname or None,
         "description": description,
         "price": price,
         "quantity_by_price": quantity_by_price,
@@ -548,7 +565,7 @@ def parse(db, tx, message):
         "locked": False,
         "reset": False,
         "status": "valid",
-        "asset_longname": asset_longname,
+        "asset_longname": asset_longname or None,
         "fair_minting": True,
     }
     ledger.insert_record(

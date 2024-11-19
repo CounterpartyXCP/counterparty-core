@@ -297,14 +297,14 @@ def to_json(obj, indent=None):
 
 
 def divide(value1, value2):
-    decimal.getcontext().prec = 8
+    decimal.getcontext().prec = 16
     if value2 == 0 or value1 == 0:
         return D(0)
     return D(value1) / D(value2)
 
 
 def normalize_price(value):
-    decimal.getcontext().prec = 16
+    decimal.getcontext().prec = 32
     return "{0:.16f}".format(D(value))
 
 

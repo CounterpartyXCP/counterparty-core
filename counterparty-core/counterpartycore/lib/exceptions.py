@@ -137,3 +137,7 @@ class NoDispenserError(Exception):
 
 class NoPriceError(Exception):
     pass
+
+
+class RSFetchError(Exception):
+    pass
