@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0006.create_and_populate_consolidated_tables.py
+# file: counterpartycore/lib/api/migrations/0005.create_and_populate_consolidated_tables.py
 #
 import logging
 import time
@@ -9,7 +9,7 @@ from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-__depends__ = {"0005.create_and_populate_events_count"}
+__depends__ = {"0004.create_and_populate_events_count"}
 
 CONSOLIDATED_TABLES = {
     "fairminters": "tx_hash",

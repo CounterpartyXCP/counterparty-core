@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0007.create_views.py
+# file: counterpartycore/lib/api/migrations/0006.create_views.py
 #
 import logging
 import time
@@ -10,7 +10,7 @@ from yoyo import step
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-__depends__ = {"0006.create_and_populate_consolidated_tables"}
+__depends__ = {"0005.create_and_populate_consolidated_tables"}
 
 
 def apply(db):

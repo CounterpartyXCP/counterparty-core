@@ -1,18 +1,15 @@
 #
-# file: counterpartycore/lib/api/migrations/0004.create_and_populate_assets_info.py
+# file: counterpartycore/lib/api/migrations/0003.create_and_populate_assets_info.py
 #
 import logging
-import os
 import time
 
-from counterpartycore.lib import config
+from counterpartycore.lib import config, database, ledger
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-
-__depends__ = {"0003.create_and_populate_all_expirations"}
+__depends__ = {"0002.create_and_populate_all_expirations"}
 
 
 def dict_factory(cursor, row):
@@ -90,6 +87,28 @@ def apply(db):
     """
     cursor = db.cursor()
     cursor.execute(sql)
+
+    ledger_db = database.get_db_connection(config.DATABASE)
+    cursor.execute(
+        """
+        INSERT INTO assets_info (
+            asset, divisible, locked, supply, description,
+            first_issuance_block_index, last_issuance_block_index
+        ) VALUES (
+            :asset, :divisible, :locked, :supply, :description,
+            :first_issuance_block_index, :last_issuance_block_index
+        )
+        """,
+        {
+            "asset": "XCP",
+            "divisible": True,
+            "locked": True,
+            "supply": ledger.xcp_supply(ledger_db),
+            "description": "The Counterparty protocol native currency",
+            "first_issuance_block_index": 278319,
+            "last_issuance_block_index": 283810,
+        },
+    )
 
     db.execute("CREATE INDEX assets_info_asset_idx ON assets_info (asset)")
     db.execute("CREATE INDEX assets_info_asset_longname_idx ON assets_info (asset_longname)")

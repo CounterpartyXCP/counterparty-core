@@ -1,9 +1,8 @@
 #
-# file: counterpartycore/lib/api/migrations/0002.populate_address_events.py
+# file: counterpartycore/lib/api/migrations/0001.populate_address_events.py
 #
 import json
 import logging
-import os
 import time
 
 from counterpartycore.lib import config
@@ -11,8 +10,6 @@ from counterpartycore.lib.api.api_watcher import EVENTS_ADDRESS_FIELDS
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 __depends__ = {"0001.create_mempool_table"}
 

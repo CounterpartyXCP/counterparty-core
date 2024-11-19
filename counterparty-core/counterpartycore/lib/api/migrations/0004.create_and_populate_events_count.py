@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0005.create_and_populate_events_counts.py
+# file: counterpartycore/lib/api/migrations/0004.create_and_populate_events_counts.py
 #
 import logging
 import time
@@ -9,8 +9,7 @@ from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-
-__depends__ = {"0004.create_and_populate_assets_info"}
+__depends__ = {"0003.create_and_populate_assets_info"}
 
 
 def apply(db):

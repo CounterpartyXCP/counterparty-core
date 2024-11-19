@@ -815,7 +815,8 @@ def initialise(db):
                       category TEXT,
                       bindings TEXT,
                       timestamp INTEGER,
-                      event TEXT)
+                      event TEXT,
+                      addresses TEXT)
                   """
     )
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(mempool)""")]
