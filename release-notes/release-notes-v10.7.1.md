@@ -22,8 +22,5 @@ This is a hotfix release that must be installed immediately. It fixes a bug in t
 
 # Credits
 
-* OpenStamp
-* DerpHerpenstein
 * Ouziel Slama
-* Wilfred Denton
-* Adam Krellenstein
+
