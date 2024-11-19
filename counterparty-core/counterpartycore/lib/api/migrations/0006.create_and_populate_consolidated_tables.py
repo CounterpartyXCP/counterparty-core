@@ -62,30 +62,21 @@ def build_consolidated_table(state_db, table_name):
 
     # recreate table
     sqls = []
+    indexes = []
     for sql in state_db.execute(f"""
-        SELECT sql FROM ledger_db.sqlite_master 
+        SELECT sql, type FROM ledger_db.sqlite_master 
         WHERE tbl_name='{table_name}'
         AND type != 'trigger'
     """).fetchall():  # noqa S608
-        sqls.append(sql["sql"])
-
-    # add additional columns
-    if table_name in ADDITONAL_COLUMNS:
-        for column in ADDITONAL_COLUMNS[table_name]:
-            sqls.append(f"""
-                ALTER TABLE {table_name} ADD COLUMN {column}
-            """)
+        if sql["type"] == "index":
+            indexes.append(sql["sql"])
+        else:
+            sqls.append(sql["sql"])
 
     for sql in sqls:
         state_db.execute(sql)
 
     columns = [column["name"] for column in state_db.execute(f"PRAGMA table_info({table_name})")]
-
-    if table_name in ADDITONAL_COLUMNS:
-        for field in ADDITONAL_COLUMNS[table_name]:
-            field_name = field.split(" ")[0]
-            columns = [f"NULL AS {x}" if x == field_name else x for x in columns]
-
     select_fields = ", ".join(columns)
 
     sql = f"""
@@ -97,9 +88,19 @@ def build_consolidated_table(state_db, table_name):
     """  # noqa S608
     state_db.execute(sql)
 
+    # add additional columns
+    if table_name in ADDITONAL_COLUMNS:
+        for column in ADDITONAL_COLUMNS[table_name]:
+            sqls.append(f"""
+                ALTER TABLE {table_name} ADD COLUMN {column}
+            """)
+
     if table_name in POST_QUERIES:
         for post_query in POST_QUERIES[table_name]:
             state_db.execute(post_query)
+
+    for sql_index in indexes:
+        state_db.execute(sql_index)
 
     logger.debug(f"Consolidated table `{table_name}` copied in {time.time() - start_time} seconds")
 

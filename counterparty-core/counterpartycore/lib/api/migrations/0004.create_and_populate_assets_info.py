@@ -41,10 +41,6 @@ def apply(db):
             last_issuance_block_index INTEGER,
             confirmed BOOLEAN DEFAULT TRUE
     )""")
-    db.execute("CREATE INDEX assets_info_asset_idx ON assets_info (asset)")
-    db.execute("CREATE INDEX assets_info_asset_longname_idx ON assets_info (asset_longname)")
-    db.execute("CREATE INDEX assets_info_issuer_idx ON assets_info (issuer)")
-    db.execute("CREATE INDEX assets_info_owner_idx ON assets_info (owner)")
 
     sql = """
     INSERT INTO assets_info 
@@ -92,6 +88,11 @@ def apply(db):
     """
     cursor = db.cursor()
     cursor.execute(sql)
+
+    db.execute("CREATE INDEX assets_info_asset_idx ON assets_info (asset)")
+    db.execute("CREATE INDEX assets_info_asset_longname_idx ON assets_info (asset_longname)")
+    db.execute("CREATE INDEX assets_info_issuer_idx ON assets_info (issuer)")
+    db.execute("CREATE INDEX assets_info_owner_idx ON assets_info (owner)")
 
     logger.debug("`assets_info` ready.")
 

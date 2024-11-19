@@ -34,9 +34,6 @@ def apply(db):
         event_index INTEGER,
         block_index INTEGER
     )""")
-    cursor.execute("CREATE INDEX address_events_address_idx ON address_events (address)")
-    cursor.execute("CREATE INDEX address_events_event_index_idx ON address_events (event_index)")
-    cursor.execute("CREATE INDEX address_events_block_index_idx ON address_events (block_index)")
 
     event_names = list(EVENTS_ADDRESS_FIELDS.keys())
     placeholders = ", ".join(["?"] * len(event_names))
@@ -61,6 +58,10 @@ def apply(db):
             inserted += 1
             if inserted % 1000000 == 0:
                 logger.debug(f"Inserted {inserted} address events")
+
+    cursor.execute("CREATE INDEX address_events_address_idx ON address_events (address)")
+    cursor.execute("CREATE INDEX address_events_event_index_idx ON address_events (event_index)")
+    cursor.execute("CREATE INDEX address_events_block_index_idx ON address_events (block_index)")
 
     logger.debug("`address_events` ready.")
 

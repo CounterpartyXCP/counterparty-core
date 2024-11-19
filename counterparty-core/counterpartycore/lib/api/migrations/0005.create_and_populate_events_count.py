@@ -24,14 +24,14 @@ def apply(db):
         );
     """)
 
-    db.execute("""CREATE INDEX events_count_count_idx ON events_count (count)""")
-
     db.execute("""
         INSERT INTO events_count (event, count)
         SELECT event, COUNT(*) AS counter
         FROM ledger_db.messages
         GROUP BY event;
     """)
+
+    db.execute("""CREATE INDEX events_count_count_idx ON events_count (count)""")
 
     logger.debug("`events_count` table ready.")
 

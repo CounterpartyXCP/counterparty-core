@@ -25,12 +25,6 @@ def apply(db):
             block_index INTEGER);
         """,
         """
-        CREATE INDEX all_expirations_type_idx ON all_expirations (type)
-        """,
-        """
-        CREATE INDEX all_expirations_block_index_idx ON all_expirations (block_index)
-        """,
-        """
         INSERT INTO all_expirations (object_id, block_index, type)
         SELECT order_hash AS object_id, block_index, 'order' AS type
         FROM ledger_db.order_expirations
@@ -59,6 +53,12 @@ def apply(db):
         INSERT INTO all_expirations (object_id, block_index, type)
         SELECT rps_match_id AS object_id, block_index, 'rps_match' AS type
         FROM ledger_db.rps_match_expirations
+        """,
+        """
+        CREATE INDEX all_expirations_type_idx ON all_expirations (type)
+        """,
+        """
+        CREATE INDEX all_expirations_block_index_idx ON all_expirations (block_index)
         """,
     ]
     for sql in sqls:
