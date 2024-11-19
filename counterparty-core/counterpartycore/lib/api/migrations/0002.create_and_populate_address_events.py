@@ -24,6 +24,16 @@ def dict_factory(cursor, row):
 def apply(db):
     logger.debug("Populate `address_events` table...")
     db.row_factory = dict_factory
+    cursor = db.cursor()
+
+    cursor.execute("""CREATE TABLE address_events (
+        address TEXT,
+        event_index INTEGER,
+        block_index INTEGER
+    )""")
+    cursor.execute("CREATE INDEX address_events_address_idx ON address_events (address)")
+    cursor.execute("CREATE INDEX address_events_event_index_idx ON address_events (event_index)")
+    cursor.execute("CREATE INDEX address_events_block_index_idx ON address_events (block_index)")
 
     event_names = list(EVENTS_ADDRESS_FIELDS.keys())
     placeholders = ", ".join(["?"] * len(event_names))
@@ -33,7 +43,7 @@ def apply(db):
         FROM messages WHERE event IN ({placeholders})
         ORDER BY message_index
     """  # noqa S608
-    cursor = db.cursor()
+
     cursor.execute(sql, event_names)
 
     inserted = 0
@@ -53,7 +63,7 @@ def apply(db):
 
 
 def rollback(db):
-    pass
+    db.execute("DROP TABLE address_events")
 
 
 steps = [step(apply, rollback)]

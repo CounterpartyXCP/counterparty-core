@@ -510,6 +510,7 @@ def initialise(db):
         [
             ["block_index"],
             ["block_index", "block_hash"],
+            ["ledger_hash"],
         ],
     )
 

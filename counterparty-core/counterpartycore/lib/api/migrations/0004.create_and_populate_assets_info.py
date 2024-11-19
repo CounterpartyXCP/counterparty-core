@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0002.populate_assets_info.py
+# file: counterpartycore/lib/api/migrations/0004.create_and_populate_assets_info.py
 #
 import logging
 import os
@@ -11,7 +11,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-__depends__ = {"0001.api_db_to_state_db"}
+__depends__ = {"0003.create_and_populate_all_expirations"}
 
 
 def dict_factory(cursor, row):
@@ -23,7 +23,26 @@ def apply(db):
     logger.debug("Populate `assets_info` table...")
     db.row_factory = dict_factory
 
-    db.execute("DELETE FROM assets_info")
+    db.execute("""
+        CREATE TABLE assets_info(
+            asset TEXT UNIQUE,
+            asset_id TEXT UNIQUE,
+            asset_longname TEXT,
+            issuer TEXT,
+            owner TEXT,
+            divisible BOOL,
+            locked BOOL DEFAULT 0,
+            supply INTEGER DEFAULT 0,
+            description TEXT,
+            description_locked BOOL DEFAULT 0,
+            first_issuance_block_index INTEGER,
+            last_issuance_block_index INTEGER,
+            confirmed BOOLEAN DEFAULT TRUE
+    )""")
+    db.execute("CREATE INDEX assets_info_asset_idx ON assets_info (asset)")
+    db.execute("CREATE INDEX assets_info_asset_longname_idx ON assets_info (asset_longname)")
+    db.execute("CREATE INDEX assets_info_issuer_idx ON assets_info (issuer)")
+    db.execute("CREATE INDEX assets_info_owner_idx ON assets_info (owner)")
 
     sql = """
     INSERT INTO assets_info 
@@ -76,7 +95,7 @@ def apply(db):
 
 
 def rollback(db):
-    pass
+    db.execute("DROP TABLE assets_info")
 
 
 steps = [step(apply, rollback)]

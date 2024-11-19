@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0003.populate_address_events.py
+# file: counterpartycore/lib/api/migrations/0006.create_and_populate_consolidated_tables.py
 #
 import logging
 import os
@@ -12,7 +12,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-__depends__ = {"0001.api_db_to_state_db"}
+__depends__ = {"0005.create_and_populate_events_count"}
 
 CONSOLIDATED_TABLES = {
     "fairminters": "tx_hash",
@@ -27,12 +27,56 @@ CONSOLIDATED_TABLES = {
     "rps_matches": "id",
 }
 
+ADDITONAL_COLUMNS = {
+    "fairminters": [
+        "earned_quantity INTEGER",
+        "paid_quantity INTEGER",
+        "commission INTEGER",
+    ]
+}
+
+POST_QUERIES = {
+    "fairminters": [
+        """
+        UPDATE fairminters SET 
+            earned_quantity = (
+                SELECT SUM(earn_quantity) 
+                FROM fairmints 
+                WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
+            ),
+            paid_quantity = (
+                SELECT SUM(paid_quantity) 
+                FROM fairmints 
+                WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
+            ),
+            commission = (
+                SELECT SUM(commission) 
+                FROM fairmints 
+                WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
+            );
+        """
+    ]
+}
+
 
 def build_consolidated_table(state_db, table_name):
     logger.debug(f"Copying consolidated table `{table_name}` to state db")
     start_time = time.time()
 
-    state_db.execute(f"DELETE FROM {table_name}")  # noqa S608
+    # recreate table
+    sqls = []
+    for sql in state_db.execute(f"""
+        SELECT sql FROM ledger.sqlite_master WHERE tbl_name='{table_name}'
+    """).fetchall():  # noqa S608
+        sqls.append(sql["sql"])
+    if table_name in ADDITONAL_COLUMNS:
+        for column in ADDITONAL_COLUMNS[table_name]:
+            sqls.append(f"""
+                ALTER TABLE {table_name} ADD COLUMN {column}
+            """)
+
+    for sql in sqls:
+        state_db.execute(sql)
 
     columns = [column["name"] for column in state_db.execute(f"PRAGMA table_info({table_name})")]
 
@@ -50,6 +94,11 @@ def build_consolidated_table(state_db, table_name):
             )
     """  # noqa S608
     state_db.execute(sql)
+
+    if table_name in POST_QUERIES:
+        for post_query in POST_QUERIES[table_name]:
+            state_db.execute(post_query)
+
     logger.debug(f"Consolidated table `{table_name}` copied in {time.time() - start_time} seconds")
 
 
@@ -74,7 +123,8 @@ def apply(db):
 
 
 def rollback(db):
-    pass
+    for table in CONSOLIDATED_TABLES.keys():
+        db.execute(f"DROP TABLE {table}")
 
 
 steps = [step(apply, rollback)]
