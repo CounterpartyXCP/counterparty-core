@@ -91,7 +91,7 @@ def build_consolidated_table(state_db, table_name):
     # add additional columns
     if table_name in ADDITONAL_COLUMNS:
         for column in ADDITONAL_COLUMNS[table_name]:
-            sqls.append(f"""
+            state_db.execute(f"""
                 ALTER TABLE {table_name} ADD COLUMN {column}
             """)
 

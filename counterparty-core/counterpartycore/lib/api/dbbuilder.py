@@ -96,18 +96,6 @@ def reapply_migrations(migration_ids):
     backend.connection.close()
 
 
-def rollback_tables(state_db, block_index):
-    cursor = state_db.cursor()
-    cursor.execute("""PRAGMA foreign_keys=OFF""")
-
-    for table in ROLLBACKABLE_TABLES:
-        logger.debug(f"Rolling back table {table}")
-        cursor.execute(f"DELETE FROM {table} WHERE block_index >= ?", (block_index,))  # noqa S608
-
-    cursor.execute("""PRAGMA foreign_keys=ON""")
-    cursor.close()
-
-
 def build_state_db():
     logger.info("Building state db")
     start_time = time.time()
@@ -123,12 +111,10 @@ def build_state_db():
     logger.info(f"State db built in {time.time() - start_time} seconds")
 
 
-def rollback_state_db(state_db, block_index):
-    logger.info(f"Rolling back state db to block index {block_index}")
+def rollback_state_db(state_db):
+    logger.info("Rolling back state db")
     start_time = time.time()
 
-    with log.Spinner("Rolling back State DB tables"):
-        rollback_tables(state_db, block_index)
     with log.Spinner("Applying migrations"):
         reapply_migrations(MIGRATIONS_AFTER_ROLLBACK)
 
