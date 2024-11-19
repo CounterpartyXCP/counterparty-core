@@ -24,7 +24,8 @@ def apply(db):
         CREATE TABLE all_expirations(
             type TEXT,
             object_id TEXT,
-            block_index INTEGER);
+            block_index INTEGER
+        );
         """,
         """
         INSERT INTO all_expirations (object_id, block_index, type)

@@ -31,11 +31,13 @@ def apply(db):
 
     cursor = db.cursor()
 
-    cursor.execute("""CREATE TABLE address_events (
-        address TEXT,
-        event_index INTEGER,
-        block_index INTEGER
-    )""")
+    cursor.execute("""
+        CREATE TABLE address_events (
+            address TEXT,
+            event_index INTEGER,
+            block_index INTEGER
+        )
+    """)
 
     event_names = list(EVENTS_ADDRESS_FIELDS.keys())
     placeholders = ", ".join(["?"] * len(event_names))
