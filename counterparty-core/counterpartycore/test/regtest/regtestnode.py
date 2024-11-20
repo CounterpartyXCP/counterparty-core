@@ -794,6 +794,9 @@ class RegtestNode:
         # mine a block
         self.mine_blocks(1)
         self.wait_for_counterparty_server()
+        # wait for event to be parsed
+        # TODO:find a way to check the event is parsed
+        time.sleep(2)
 
         # check the dispenser is created
         dispensers = self.api_call(f"addresses/{new_address}/dispensers")["result"]

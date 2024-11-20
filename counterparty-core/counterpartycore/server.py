@@ -30,7 +30,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1, api_watcher, dbbuilder
+from counterpartycore.lib.api import api_v1, dbbuilder
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
@@ -867,27 +867,30 @@ def start_all(args):
 
 def reparse(block_index):
     backend.addrindexrs.init()
-    db = database.initialise_db()
+    ledger_db = database.initialise_db()
     state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     try:
-        blocks.reparse(db, block_index=block_index)
+        blocks.reparse(ledger_db, block_index=block_index)
         dbbuilder.rollback_state_db(state_db, block_index)
-        api_watcher.catch_up(db, state_db)
     finally:
         backend.addrindexrs.stop()
-        database.optimize(db)
-        db.close()
+        database.optimize(ledger_db)
+        database.optimize(state_db)
+        ledger_db.close()
+        state_db.close()
 
 
 def rollback(block_index=None):
-    db = database.initialise_db()
+    ledger_db = database.initialise_db()
     state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     try:
-        blocks.rollback(db, block_index=block_index)
+        blocks.rollback(ledger_db, block_index=block_index)
         dbbuilder.rollback_state_db(state_db, block_index)
     finally:
-        database.optimize(db)
-        db.close()
+        database.optimize(ledger_db)
+        database.optimize(state_db)
+        ledger_db.close()
+        state_db.close()
 
 
 def vacuum():

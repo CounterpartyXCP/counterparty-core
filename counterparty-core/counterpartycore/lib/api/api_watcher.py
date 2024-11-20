@@ -129,14 +129,14 @@ def get_last_parsed_message_index(state_db):
     return database.get_config_value(state_db, "LAST_PARSED_EVENT") or 0
 
 
-def get_next_event_to_parse(state_db, ledger_db):
+def get_next_event_to_parse(ledger_db, state_db):
     last_parsed_message_index = get_last_parsed_message_index(state_db)
     sql = "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
     next_event = fetch_one(ledger_db, sql, (last_parsed_message_index,))
     return next_event
 
 
-def get_event_to_parse_count(state_db, ledger_db):
+def get_event_to_parse_count(ledger_db, state_db):
     last_parsed_message_index = get_last_parsed_message_index(state_db)
     sql = "SELECT COUNT(*) AS message_count FROM messages WHERE message_index > ?"
     message_count = fetch_one(ledger_db, sql, (last_parsed_message_index,))
@@ -438,12 +438,11 @@ def update_fairminters(state_db, event):
 
 
 def update_consolidated_tables(state_db, event):
-    if event["category"] not in STATE_DB_TABLES:
-        return
-    cursor = state_db.cursor()
-    sql, sql_bindings = event_to_sql(event)
-    if sql is not None:
-        cursor.execute(sql, sql_bindings)
+    if event["category"] in STATE_DB_TABLES:
+        cursor = state_db.cursor()
+        sql, sql_bindings = event_to_sql(event)
+        if sql is not None:
+            cursor.execute(sql, sql_bindings)
     # because no event for balance update
     # except DEBIT and CREDIT
     update_balances(state_db, event)
@@ -468,13 +467,13 @@ def parse_event(state_db, event):
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 
-def catch_up(state_db, ledger_db, watcher=None):
-    event_to_parse_count = get_event_to_parse_count(state_db, ledger_db)
+def catch_up(ledger_db, state_db, watcher=None):
+    event_to_parse_count = get_event_to_parse_count(ledger_db, state_db)
     if event_to_parse_count > 0:
         logger.debug(f"API Watcher - {event_to_parse_count} events to catch up...")
         start_time = time.time()
         event_parsed = 0
-        next_event = get_next_event_to_parse(state_db, ledger_db)
+        next_event = get_next_event_to_parse(ledger_db, state_db)
         while next_event and not watcher.stop_event.is_set():
             parse_event(state_db, next_event)
             event_parsed += 1
@@ -483,7 +482,7 @@ def catch_up(state_db, ledger_db, watcher=None):
                 logger.debug(
                     f"API Watcher - {event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
                 )
-            next_event = get_next_event_to_parse(state_db, ledger_db)
+            next_event = get_next_event_to_parse(ledger_db, state_db)
         if not watcher.stop_event.is_set():
             duration = time.time() - start_time
             logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
@@ -491,8 +490,8 @@ def catch_up(state_db, ledger_db, watcher=None):
         logger.info("API Watcher - Catch up completed.")
 
 
-def parse_next_event(state_db, ledger_db):
-    next_event = get_next_event_to_parse(state_db, ledger_db)
+def parse_next_event(ledger_db, state_db):
+    next_event = get_next_event_to_parse(ledger_db, state_db)
 
     if next_event is None:
         raise exceptions.NoEventToParse("No event to parse")
@@ -516,14 +515,14 @@ class APIWatcher(threading.Thread):
 
     def run(self):
         logger.info("Starting API Watcher thread...")
-        catch_up(self.state_db, self.ledger_db, self)
+        catch_up(self.ledger_db, self.state_db, self)
         if not self.stop_event.is_set():
             self.follow()
 
     def follow(self):
         while not self.stop_event.is_set():
             try:
-                parse_next_event(self.state_db, self.ledger_db)
+                parse_next_event(self.ledger_db, self.state_db)
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
                 self.stop_event.wait(timeout=0.1)
