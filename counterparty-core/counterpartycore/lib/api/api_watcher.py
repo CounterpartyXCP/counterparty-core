@@ -54,6 +54,9 @@ EVENTS_ADDRESS_FIELDS = {
     "BURN": ["source"],
     "NEW_FAIRMINT": ["source"],
     "NEW_FAIRMINTER": ["source"],
+    "ATTACH_TO_UTXO": ["source", "destination"],
+    "DETACH_FROM_UTXO": ["source", "destination"],
+    "UTXO_MOVE": ["source", "destination"],
 }
 
 EXPIRATION_EVENTS_OBJECT_ID = {
@@ -442,17 +445,20 @@ def update_consolidated_tables(state_db, event):
     update_fairminters(state_db, event)
 
 
-def parse_event(state_db, event):
-    if event["event"] in SKIP_EVENTS:
-        update_events_count(state_db, event)
-        return
-    with state_db:
-        logger.trace(f"API Watcher - Parsing event: {event}")
+def update_state_db_tables(state_db, event):
+    if event["event"] not in SKIP_EVENTS:
         update_address_events(state_db, event)
         update_all_expiration(state_db, event)
         update_assets_info(state_db, event)
-        update_events_count(state_db, event)
         update_consolidated_tables(state_db, event)
+
+
+def parse_event(state_db, event):
+    with state_db:
+        logger.trace(f"API Watcher - Parsing event: {event}")
+        update_state_db_tables(state_db, event)
+        update_events_count(state_db, event)
+        database.set_config(state_db, "LAST_PARSED_EVENT", event["message_index"])
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 

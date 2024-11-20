@@ -206,7 +206,13 @@ def get_args_description(function):
 
 
 def function_needs_db(function):
-    return "db" in inspect.signature(function).parameters
+    dbs = []
+    parameters = inspect.signature(function).parameters
+    if "ledger_db" in parameters or "db" in parameters:
+        dbs.append("ledger_db")
+    if "state_db" in parameters:
+        dbs.append("state_db")
+    return " ".join(dbs)
 
 
 def prepare_route_args(function):

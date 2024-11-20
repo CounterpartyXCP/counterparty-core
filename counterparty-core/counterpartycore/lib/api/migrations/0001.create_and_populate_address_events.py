@@ -11,8 +11,6 @@ from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-__depends__ = {"0001.create_mempool_table"}
-
 
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
@@ -51,6 +49,8 @@ def apply(db):
     for row in cursor:
         bindings = json.loads(row["bindings"])
         for field in EVENTS_ADDRESS_FIELDS[row["event"]]:
+            if field not in bindings:
+                continue
             sql = """
                 INSERT INTO address_events (address, event_index, block_index)
                 VALUES (?, ?, ?)

@@ -4,6 +4,10 @@
 
 # Upgrading
 
+API breaking changes:
+
+- Remove `show_unconfirmed` parameter and `confirmed` field
+
 
 # ChangeLog
 
@@ -23,6 +27,7 @@
 - Restart RSFetcher when it returns `None`
 - Clean up blocks without ledger hash before starting catch-up
 - Don't inject details before publishing events with ZMQ
+- Populate `address_events` also with UTXO events (attach, detach and move)
 
 ## Codebase
 
@@ -34,6 +39,7 @@
 - Optimize events counts endpoints with `events_count` table
 - Add route `/v2/utxos/withbalances` to check if utxos have balances
 - Add `type` parameter for get balances endpoints (`all`, `utxo` or `address`)
+- Add `description_locked` in asset info
 
 ## CLI
 

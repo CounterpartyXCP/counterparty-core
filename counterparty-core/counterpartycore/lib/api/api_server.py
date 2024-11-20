@@ -30,7 +30,7 @@ from counterpartycore.lib.api.util import (
     inject_details,
     to_json,
 )
-from counterpartycore.lib.database import APIDBConnectionPool
+from counterpartycore.lib.database import APIDBConnectionPool, DBConnectionPool
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
@@ -210,7 +210,7 @@ def prepare_args(route, **kwargs):
     return function_args
 
 
-def execute_api_function(db, rule, route, function_args):
+def execute_api_function(rule, route, function_args):
     # cache everything for one block
     cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
     # except for blocks and transactions cached forever
@@ -229,8 +229,17 @@ def execute_api_function(db, rule, route, function_args):
             sentry_get_span.set_data("cache.hit", False)
 
     with start_sentry_span(op="cache.put") as sentry_put_span:
-        if function_needs_db(route["function"]):
-            result = route["function"](db, **function_args)
+        needed_db = function_needs_db(route["function"])
+        if needed_db == "ledger_db":
+            with DBConnectionPool().connection() as ledger_db:
+                result = route["function"](ledger_db, **function_args)
+        elif needed_db == "state_db":
+            with APIDBConnectionPool().connection() as state_db:
+                result = route["function"](state_db, **function_args)
+        elif needed_db == "ledger_db state_db":
+            with DBConnectionPool().connection() as ledger_db:
+                with APIDBConnectionPool().connection() as state_db:
+                    result = route["function"](ledger_db, state_db, **function_args)
         else:
             result = route["function"](**function_args)
         # don't cache API v1 and mempool queries
@@ -304,8 +313,7 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        with APIDBConnectionPool().connection() as db:
-            result = execute_api_function(db, rule, route, function_args)
+        result = execute_api_function(rule, route, function_args)
     except (
         exceptions.JSONRPCInvalidRequest,
         flask.wrappers.BadRequest,
@@ -352,7 +360,8 @@ def handle_route(**kwargs):
     # inject details
     verbose = request.args.get("verbose", "False")
     if verbose.lower() in ["true", "1"]:
-        result = inject_details(db, result)
+        with APIDBConnectionPool().connection() as db:
+            result = inject_details(db, result)
 
     return return_result(
         200,
