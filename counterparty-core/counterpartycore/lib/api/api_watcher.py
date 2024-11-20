@@ -85,6 +85,7 @@ XCP_DESTROY_EVENTS = [
 ]
 
 STATE_DB_TABLES = [
+    # consolidated from ledger_db
     "fairminters",
     "balances",
     "addresses",
@@ -95,6 +96,11 @@ STATE_DB_TABLES = [
     "orders",
     "rps",
     "rps_matches",
+    # only in state_db
+    "address_events",
+    "all_expirations",
+    "assets_info",
+    "events_count",
 ]
 
 SKIP_EVENTS = ["NEW_TRANSACTION_OUTPUT"]
@@ -120,7 +126,7 @@ def delete_all(db, query, bindings=None):
 
 
 def get_last_parsed_message_index(state_db):
-    return database.get_config(state_db, "LAST_PARSED_EVENT", 0)
+    return database.get_config_value(state_db, "LAST_PARSED_EVENT") or 0
 
 
 def get_next_event_to_parse(state_db, ledger_db):
@@ -458,7 +464,7 @@ def parse_event(state_db, event):
         logger.trace(f"API Watcher - Parsing event: {event}")
         update_state_db_tables(state_db, event)
         update_events_count(state_db, event)
-        database.set_config(state_db, "LAST_PARSED_EVENT", event["message_index"])
+        database.set_config_value(state_db, "LAST_PARSED_EVENT", event["message_index"])
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 
@@ -517,7 +523,7 @@ class APIWatcher(threading.Thread):
     def follow(self):
         while not self.stop_event.is_set():
             try:
-                parse_next_event(self.state_db, self.ledger_db, self)
+                parse_next_event(self.state_db, self.ledger_db)
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
                 self.stop_event.wait(timeout=0.1)

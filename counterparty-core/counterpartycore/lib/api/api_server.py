@@ -393,7 +393,7 @@ def init_flask_app():
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        with APIDBConnectionPool().connection() as db:
+        with DBConnectionPool().connection() as db:
             util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         methods = ["OPTIONS", "GET"]
         # Add routes
@@ -439,8 +439,6 @@ def check_database_version():
         # rollback or reparse the database
         if e.required_action in ["rollback", "reparse"]:
             dbbuilder.rollback_state_db(db, block_index=e.from_block_index)
-        # refresh the current block index
-        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         # update the database version
         database.update_version(db)
     finally:

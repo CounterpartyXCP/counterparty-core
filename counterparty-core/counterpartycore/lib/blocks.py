@@ -824,6 +824,8 @@ def initialise(db):
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(mempool)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
+    if "addresses" not in columns:
+        cursor.execute("""ALTER TABLE mempool ADD COLUMN addresses TEXT""")
 
     create_views(db)
 
