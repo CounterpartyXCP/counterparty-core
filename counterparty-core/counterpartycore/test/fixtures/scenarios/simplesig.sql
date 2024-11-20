@@ -126,6 +126,8 @@ CREATE INDEX blocks_block_index_block_hash_idx ON blocks (block_index, block_has
         ;
 CREATE INDEX blocks_block_index_idx ON blocks (block_index)
         ;
+CREATE INDEX blocks_ledger_hash_idx ON blocks (ledger_hash)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -289,6 +291,26 @@ CREATE TRIGGER block_update_balances
             BEFORE UPDATE ON balances BEGIN
                 SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
             END;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=FULL;
+-- PRAGMA max_page_count=4294967294;
+
+BEGIN TRANSACTION;
+
+-- Table  config
+DROP TABLE IF EXISTS config;
+CREATE TABLE config (
+            name TEXT PRIMARY KEY,
+            value TEXT
+        );
+INSERT INTO config VALUES('FIX_ISSUANCES_ASSET_LONGNAME_1','1');
+INSERT INTO config VALUES('FIX_ISSUANCES_ASSET_LONGNAME_2','1');
+INSERT INTO config VALUES('CLEAN_TRANSACTION_COUNT_1','1');
+-- Triggers and indices on  config
+CREATE INDEX config_config_name_idx ON config (name);
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;

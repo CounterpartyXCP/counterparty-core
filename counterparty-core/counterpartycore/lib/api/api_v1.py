@@ -35,7 +35,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.api import compose as api_compose
 from counterpartycore.lib.api import util as api_util
 from counterpartycore.lib.api.api_watcher import STATE_DB_TABLES
-from counterpartycore.lib.database import APIDBConnectionPool, DBConnectionPool
+from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -333,12 +333,13 @@ def get_rows(
             statement += f""" OFFSET {offset}"""
 
     if table.lower() in STATE_DB_TABLES:
-        with APIDBConnectionPool().connection() as state_db:
+        with StateDBConnectionPool().connection() as state_db:
             query_result = db_query(state_db, statement, tuple(bindings))
             if table == "balances":
-                return adjust_get_balances_results(query_result, state_db)
+                with LedgerDBConnectionPool().connection() as ledger_db:
+                    return adjust_get_balances_results(query_result, ledger_db)
     else:
-        with DBConnectionPool().connection() as ledger_db:
+        with LedgerDBConnectionPool().connection() as ledger_db:
             query_result = db_query(ledger_db, statement, tuple(bindings))
 
     if table == "destructions":
@@ -368,13 +369,13 @@ def remove_rowids(query_result):
     return filtered_results
 
 
-def adjust_get_balances_results(query_result, db):
+def adjust_get_balances_results(query_result, ledger_db):
     filtered_results = []
     assets = {}
     for balances_row in list(query_result):
         asset = balances_row["asset"]
         if asset not in assets:
-            assets[asset] = ledger.is_divisible(db, asset)
+            assets[asset] = ledger.is_divisible(ledger_db, asset)
 
         balances_row["divisible"] = assets[asset]
         filtered_results.append(balances_row)
@@ -515,7 +516,7 @@ class APIServer(threading.Thread):
         self.is_ready = False
         self.server = None
         self.ctx = None
-        self.connection_pool = DBConnectionPool()
+        self.connection_pool = LedgerDBConnectionPool()
         threading.Thread.__init__(self)
         sentry.init()
 

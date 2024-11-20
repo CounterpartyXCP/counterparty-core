@@ -314,7 +314,7 @@ def normalize_price(value):
     return "{0:.16f}".format(D(value))
 
 
-def inject_issuances_and_block_times(db, result_list):
+def inject_issuances_and_block_times(ledger_db, state_db, result_list):
     asset_fields = [
         "asset",
         "give_asset",
@@ -379,10 +379,10 @@ def inject_issuances_and_block_times(db, result_list):
                     asset_list.append(item[field_name])
 
     # get asset issuances
-    issuance_by_asset = ledger.get_assets_last_issuance(db, asset_list)
+    issuance_by_asset = ledger.get_assets_last_issuance(state_db, asset_list)
 
     # get block_time for each block_index
-    block_times = ledger.get_blocks_time(db, block_indexes)
+    block_times = ledger.get_blocks_time(ledger_db, block_indexes)
 
     # inject issuance and block_time
     for result_item in result_list:
@@ -641,7 +641,7 @@ def inject_normalized_quantities(result_list):
     return enriched_result_list
 
 
-def inject_fiat_price(db, dispenser):
+def inject_fiat_price(ledger_db, dispenser):
     if "satoshirate" not in dispenser:
         return dispenser
     if dispenser["oracle_address"] != None:  # noqa: E711
@@ -651,7 +651,9 @@ def inject_fiat_price(db, dispenser):
             _oracle_fee,
             dispenser["fiat_unit"],
             dispenser["oracle_price_last_updated"],
-        ) = ledger.get_oracle_last_price(db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX)
+        ) = ledger.get_oracle_last_price(
+            ledger_db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
+        )
 
         if dispenser["oracle_price"] > 0:
             dispenser["satoshi_price"] = math.ceil(
@@ -668,14 +670,14 @@ def inject_fiat_price(db, dispenser):
     return dispenser
 
 
-def inject_fiat_prices(db, result_list):
+def inject_fiat_prices(ledger_db, result_list):
     enriched_result_list = []
     for result_item in result_list:
-        enriched_result_list.append(inject_fiat_price(db, result_item))
+        enriched_result_list.append(inject_fiat_price(ledger_db, result_item))
     return enriched_result_list
 
 
-def inject_dispensers(db, result_list):
+def inject_dispensers(ledger_db, state_db, result_list):
     # gather dispenser list
     dispenser_list = []
     for result_item in result_list:
@@ -684,7 +686,7 @@ def inject_dispensers(db, result_list):
                 dispenser_list.append(result_item["dispenser_tx_hash"])
 
     # get dispenser info
-    dispenser_info = ledger.get_dispensers_info(db, dispenser_list)
+    dispenser_info = ledger.get_dispensers_info(state_db, dispenser_list)
 
     # inject dispenser info
     enriched_result_list = []
@@ -694,33 +696,33 @@ def inject_dispensers(db, result_list):
             and result_item["dispenser_tx_hash"] in dispenser_info
         ):
             result_item["dispenser"] = inject_fiat_price(
-                db, dispenser_info[result_item["dispenser_tx_hash"]]
+                ledger_db, dispenser_info[result_item["dispenser_tx_hash"]]
             )
         enriched_result_list.append(result_item)
 
     return enriched_result_list
 
 
-def inject_unpacked_data_in_dict(db, item):
+def inject_unpacked_data_in_dict(ledger_db, item):
     if "data" in item:
         data = binascii.hexlify(item["data"]) if isinstance(item["data"], bytes) else item["data"]
         if data:
             block_index = item.get("block_index")
-            item["unpacked_data"] = compose.unpack(db, data, block_index=block_index)
+            item["unpacked_data"] = compose.unpack(ledger_db, data, block_index=block_index)
     return item
 
 
-def inject_unpacked_data(db, result_list):
+def inject_unpacked_data(ledger_db, result_list):
     enriched_result_list = []
     for result_item in result_list:
-        result_item = inject_unpacked_data_in_dict(db, result_item)  # noqa PLW2901
+        result_item = inject_unpacked_data_in_dict(ledger_db, result_item)  # noqa PLW2901
         if "params" in result_item:
-            result_item["params"] = inject_unpacked_data_in_dict(db, result_item["params"])
+            result_item["params"] = inject_unpacked_data_in_dict(ledger_db, result_item["params"])
         enriched_result_list.append(result_item)
     return enriched_result_list
 
 
-def inject_details(db, result, rule=None):
+def inject_details(ledger_db, state_db, result):
     if isinstance(result, (int, str)):
         return result
     # let's work with a list
@@ -730,19 +732,16 @@ def inject_details(db, result, rule=None):
         result_list = [result]
         result_is_dict = True
 
-    result_list = inject_dispensers(db, result_list)
-    result_list = inject_fiat_prices(db, result_list)
-    result_list = inject_unpacked_data(db, result_list)
-    result_list = inject_issuances_and_block_times(db, result_list)
+    result_list = inject_dispensers(ledger_db, state_db, result_list)
+    result_list = inject_fiat_prices(ledger_db, result_list)
+    result_list = inject_unpacked_data(ledger_db, result_list)
+    result_list = inject_issuances_and_block_times(ledger_db, state_db, result_list)
     result_list = inject_normalized_quantities(result_list)
 
     if result_is_dict:
         result = result_list[0]
     else:
         result = result_list
-
-    if rule == "/v2/assets/<asset>":
-        result["holder_count"] = ledger.get_asset_holder_count(db, result["asset"])
 
     return result
 

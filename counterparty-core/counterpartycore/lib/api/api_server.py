@@ -30,7 +30,7 @@ from counterpartycore.lib.api.util import (
     inject_details,
     to_json,
 )
-from counterpartycore.lib.database import APIDBConnectionPool, DBConnectionPool
+from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
@@ -58,7 +58,7 @@ def verify_password(username, password):
 
 
 def api_root():
-    with APIDBConnectionPool().connection() as db:
+    with LedgerDBConnectionPool().connection() as db:
         counterparty_height = ledger.last_db_index(db)
     network = "mainnet"
     if config.TESTNET:
@@ -231,14 +231,14 @@ def execute_api_function(rule, route, function_args):
     with start_sentry_span(op="cache.put") as sentry_put_span:
         needed_db = function_needs_db(route["function"])
         if needed_db == "ledger_db":
-            with DBConnectionPool().connection() as ledger_db:
+            with LedgerDBConnectionPool().connection() as ledger_db:
                 result = route["function"](ledger_db, **function_args)
         elif needed_db == "state_db":
-            with APIDBConnectionPool().connection() as state_db:
+            with StateDBConnectionPool().connection() as state_db:
                 result = route["function"](state_db, **function_args)
         elif needed_db == "ledger_db state_db":
-            with DBConnectionPool().connection() as ledger_db:
-                with APIDBConnectionPool().connection() as state_db:
+            with LedgerDBConnectionPool().connection() as ledger_db:
+                with StateDBConnectionPool().connection() as state_db:
                     result = route["function"](ledger_db, state_db, **function_args)
         else:
             result = route["function"](**function_args)
@@ -360,8 +360,9 @@ def handle_route(**kwargs):
     # inject details
     verbose = request.args.get("verbose", "False")
     if verbose.lower() in ["true", "1"]:
-        with APIDBConnectionPool().connection() as db:
-            result = inject_details(db, result)
+        with LedgerDBConnectionPool().connection() as ledger_db:
+            with StateDBConnectionPool().connection() as state_db:
+                result = inject_details(ledger_db, state_db, result)
 
     return return_result(
         200,
@@ -393,7 +394,7 @@ def init_flask_app():
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        with DBConnectionPool().connection() as db:
+        with LedgerDBConnectionPool().connection() as db:
             util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         methods = ["OPTIONS", "GET"]
         # Add routes
@@ -496,7 +497,7 @@ def run_api_server(args, server_ready_value, stop_event):
             parent_checker.join()
 
         logger.trace("Closing API DB Connection Pool...")
-        APIDBConnectionPool().close()
+        StateDBConnectionPool().close()
 
 
 # This thread is used for the following two reasons:

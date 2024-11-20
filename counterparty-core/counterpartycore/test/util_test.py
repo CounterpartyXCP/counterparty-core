@@ -117,6 +117,7 @@ def dump_database(db):
         "balances",
         "undolog",
         "undolog_block",
+        "config",
     ]
     for table in base_tables + blocks.TABLES:
         output = io.StringIO()
@@ -838,6 +839,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             and method == "unpack"
         )
         or (tx_name in ["detach"] and method == "validate")
+        or method == "get_rows"
     ):
         return tested_method(*inputs)
     else:

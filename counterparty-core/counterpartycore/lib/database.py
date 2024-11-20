@@ -142,12 +142,12 @@ class APSWConnectionPool:
             db.close()
 
 
-class DBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+class LedgerDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
     def __init__(self):
         super().__init__(config.DATABASE, "Ledger DB")
 
 
-class APIDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+class StateDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
     def __init__(self):
         super().__init__(config.STATE_DATABASE, "API DB")
 
@@ -266,7 +266,7 @@ def optimize(db):
 def close(db):
     logger.info("Closing database connections...")
     db.close()
-    DBConnectionPool().close()
+    LedgerDBConnectionPool().close()
 
 
 def field_is_pk(cursor, table, field):

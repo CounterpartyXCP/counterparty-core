@@ -841,11 +841,11 @@ def start_all(args):
         rsfetcher.stop()
 
         # Wait for any leftover DB connections to close
-        open_connections = len(database.DBConnectionPool().connections)
+        open_connections = len(database.LedgerDBConnectionPool().connections)
         while open_connections > 0:
             logger.warning(f"Waiting for {open_connections} DB connections to close...")
             time.sleep(0.1)
-            open_connections = len(database.DBConnectionPool().connections)  # Update count
+            open_connections = len(database.LedgerDBConnectionPool().connections)  # Update count
 
         # Now it's safe to check for WAL files
         try:

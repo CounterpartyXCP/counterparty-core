@@ -1950,6 +1950,35 @@
                 "block_time": 310513000
             },
             {
+                "event_index": 1326,
+                "event": "ATTACH_TO_UTXO",
+                "params": {
+                    "asset": "DIVISIBLE",
+                    "block_index": 310508,
+                    "destination": "74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0",
+                    "fee_paid": 0,
+                    "msg_index": 0,
+                    "quantity": 1,
+                    "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "status": "valid",
+                    "tx_hash": "a568f169d4bb433072dd25793970d330fa51092012964a5bdc42d22835182726",
+                    "tx_index": 509,
+                    "block_time": 310508000,
+                    "asset_info": {
+                        "asset_longname": null,
+                        "description": "Divisible asset",
+                        "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "divisible": true,
+                        "locked": false
+                    },
+                    "quantity_normalized": "0.00000001",
+                    "fee_paid_normalized": "0.00000000"
+                },
+                "tx_hash": "a568f169d4bb433072dd25793970d330fa51092012964a5bdc42d22835182726",
+                "block_index": 310508,
+                "block_time": 310508000
+            },
+            {
                 "event_index": 1324,
                 "event": "DEBIT",
                 "params": {
@@ -2004,37 +2033,10 @@
                 "tx_hash": null,
                 "block_index": 310508,
                 "block_time": 310508000
-            },
-            {
-                "event_index": 1316,
-                "event": "DEBIT",
-                "params": {
-                    "action": "attach to utxo",
-                    "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "asset": "XCP",
-                    "block_index": 310507,
-                    "event": "c1a3885eac5247f363f6adcc0fbd6576b8b98f928065185074fe75d01c91af02",
-                    "quantity": 100,
-                    "tx_index": 508,
-                    "utxo": null,
-                    "utxo_address": null,
-                    "block_time": 310507000,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "The Counterparty protocol native currency",
-                        "issuer": null,
-                        "divisible": true,
-                        "locked": true
-                    },
-                    "quantity_normalized": "0.00000100"
-                },
-                "tx_hash": "c1a3885eac5247f363f6adcc0fbd6576b8b98f928065185074fe75d01c91af02",
-                "block_index": 310507,
-                "block_time": 310507000
             }
         ],
-        "next_cursor": 1314,
-        "result_count": 173
+        "next_cursor": 1318,
+        "result_count": 175
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
