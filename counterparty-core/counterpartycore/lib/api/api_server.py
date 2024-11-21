@@ -212,7 +212,9 @@ def prepare_args(route, **kwargs):
 
 def execute_api_function(rule, route, function_args):
     # cache everything for one block
-    cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
+    with StateDBConnectionPool().connection() as state_db:
+        current_block_index = api_watcher.get_last_block_parsed(state_db)
+    cache_key = f"{current_block_index}:{request.url}"
     # except for blocks and transactions cached forever
     if (
         request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/")

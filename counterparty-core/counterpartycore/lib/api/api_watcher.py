@@ -526,6 +526,8 @@ def search_matching_event(ledger_db, state_db):
             "SELECT * FROM messages WHERE message_index = ?",
             (parsed_event["event_index"],),
         )
+        if ledger_event is None:
+            continue
         if parsed_event["event_hash"] == ledger_event["event_hash"]:
             matching_event = parsed_event
             break
@@ -544,7 +546,7 @@ def check_reorg(ledger_db, state_db):
         "SELECT * FROM messages WHERE message_index = ?",
         (last_event_parsed["event_index"],),
     )
-    if last_event_parsed["event_hash"] != ledger_event["event_hash"]:
+    if ledger_event is None or last_event_parsed["event_hash"] != ledger_event["event_hash"]:
         logger.debug("API Watcher - Reorg detected")
         matching_event = search_matching_event(ledger_db, state_db)
         target_block_index = 0
@@ -552,6 +554,7 @@ def check_reorg(ledger_db, state_db):
             target_block_index = matching_event["block_index"]
         logger.debug(f"API Watcher - Rolling back to block: {target_block_index}")
         dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
+        database.StateDBConnectionPool().close()
 
 
 def parse_next_event(ledger_db, state_db):
