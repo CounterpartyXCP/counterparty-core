@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0003.create_and_populate_assets_info.py
+# file: counterpartycore/lib/api/migrations/0004.create_and_populate_assets_info.py
 #
 import logging
 import time
@@ -9,7 +9,7 @@ from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-__depends__ = {"0002.create_and_populate_all_expirations"}
+__depends__ = {"0003.create_and_populate_all_expirations"}
 
 
 def dict_factory(cursor, row):

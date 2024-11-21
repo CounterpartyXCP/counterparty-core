@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0002.create_and_populate_all_expirations.py
+# file: counterpartycore/lib/api/migrations/0003.create_and_populate_all_expirations.py
 #
 import logging
 import time
@@ -9,7 +9,7 @@ from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-__depends__ = {"0001.create_and_populate_address_events"}
+__depends__ = {"0002.create_and_populate_parsed_events"}
 
 
 def apply(db):

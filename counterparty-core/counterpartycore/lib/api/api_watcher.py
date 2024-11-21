@@ -125,19 +125,15 @@ def delete_all(db, query, bindings=None):
     return changes["deleted"]
 
 
-def get_last_parsed_message_index(state_db):
-    return database.get_config_value(state_db, "LAST_PARSED_EVENT") or 0
-
-
 def get_next_event_to_parse(ledger_db, state_db):
-    last_parsed_message_index = get_last_parsed_message_index(state_db)
+    last_parsed_message_index = get_last_parsed_event_index(state_db)
     sql = "SELECT * FROM messages WHERE message_index > ? ORDER BY message_index ASC LIMIT 1"
     next_event = fetch_one(ledger_db, sql, (last_parsed_message_index,))
     return next_event
 
 
 def get_event_to_parse_count(ledger_db, state_db):
-    last_parsed_message_index = get_last_parsed_message_index(state_db)
+    last_parsed_message_index = get_last_parsed_event_index(state_db)
     sql = "SELECT COUNT(*) AS message_count FROM messages WHERE message_index > ?"
     message_count = fetch_one(ledger_db, sql, (last_parsed_message_index,))
     if message_count is None:
@@ -458,12 +454,41 @@ def update_state_db_tables(state_db, event):
         update_consolidated_tables(state_db, event)
 
 
+def update_last_parsed_events(state_db, event):
+    sql = """
+    INSERT INTO parsed_events (event_index, event, event_hash, block_index)
+    VALUES (:message_index, :event, :event_hash, :block_index)
+    """
+    cursor = state_db.cursor()
+    cursor.execute(sql, event)
+
+
+def get_last_parsed_event_index(state_db):
+    cursor = state_db.cursor()
+    cursor.execute("SELECT event_index FROM parsed_events ORDER BY event_index DESC LIMIT 1")
+    parsed_event = cursor.fetchone()
+    if parsed_event:
+        return parsed_event["event_index"]
+    return 0
+
+
+def get_last_block_parsed(state_db):
+    cursor = state_db.cursor()
+    cursor.execute(
+        "SELECT block_index FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT 1"
+    )
+    parsed_event = cursor.fetchone()
+    if parsed_event:
+        return parsed_event["block_index"]
+    return 0
+
+
 def parse_event(state_db, event):
     with state_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
         update_state_db_tables(state_db, event)
         update_events_count(state_db, event)
-        database.set_config_value(state_db, "LAST_PARSED_EVENT", event["message_index"])
+        update_last_parsed_events(state_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 

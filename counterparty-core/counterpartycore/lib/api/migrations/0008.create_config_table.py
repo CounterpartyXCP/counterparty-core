@@ -1,5 +1,5 @@
 #
-# file: counterpartycore/lib/api/migrations/0007.create_config_table
+# file: counterpartycore/lib/api/migrations/0008.create_config_table
 #
 import logging
 import time
@@ -9,7 +9,7 @@ from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-__depends__ = {"0006.create_views"}
+__depends__ = {"0007.create_views"}
 
 
 def dict_factory(cursor, row):

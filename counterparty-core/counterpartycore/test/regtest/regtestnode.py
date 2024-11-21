@@ -66,7 +66,9 @@ class RegtestNode:
         self.burn_in_one_block = burn_in_one_block
 
     def api_call(self, url):
-        return json.loads(sh.curl(f"http://localhost:24000/v2/{url}").strip())
+        result = sh.curl(f"http://localhost:24000/v2/{url}").strip()
+        # print(result)
+        return json.loads(result)
 
     def get_mempool_event_count(self):
         result = self.api_call("mempool/events")
@@ -194,6 +196,7 @@ class RegtestNode:
 
     def wait_for_counterparty_server(self, block=None):
         target_block = block or self.block_count
+        print("target_block", target_block)
         while True:
             try:
                 result = self.api_call("")
