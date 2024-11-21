@@ -196,7 +196,6 @@ class RegtestNode:
 
     def wait_for_counterparty_server(self, block=None):
         target_block = block or self.block_count
-        print("target_block", target_block)
         while True:
             try:
                 result = self.api_call("")
@@ -525,6 +524,14 @@ class RegtestNode:
             time.sleep(2)
             return self.get_burn_count(address)
 
+    def get_xcp_balance(self, address):
+        try:
+            return self.api_call(f"addresses/{address}/balances/XCP")["result"][0]["quantity"]
+        except KeyError:
+            print("Error getting XCP balance, retrying in 2 seconds...")
+            time.sleep(2)
+            return self.get_xcp_balance(address)
+
     def test_reorg(self):
         print("Start a second node...")
         self.start_bitcoin_node_2()
@@ -544,12 +551,19 @@ class RegtestNode:
         print("Disconnect from the first node...")
         self.bitcoin_cli_2("disconnectnode", "localhost:18444")
 
+        initial_xcp_balance = self.get_xcp_balance(self.addresses[0])
+        print("Initial XCP balance: ", initial_xcp_balance)
+
         print("Make a burn transaction on first node...")
         self.mine_blocks(3)
         self.send_transaction(self.addresses[0], "burn", {"quantity": 5000})
 
         print("Burn count before reorganization: ", self.get_burn_count(self.addresses[0]))
         assert self.get_burn_count(self.addresses[0]) == 2
+
+        intermediate_xcp_balance = self.get_xcp_balance(self.addresses[0])
+        print("Intermediate XCP balance: ", intermediate_xcp_balance)
+        assert intermediate_xcp_balance > initial_xcp_balance
 
         print("Mine a longest chain on the second node...")
         self.bitcoin_cli_2("generatetoaddress", 6, self.addresses[0])
@@ -571,6 +585,10 @@ class RegtestNode:
         print("Burn count after reorganization: ", self.get_burn_count(self.addresses[0]))
         assert "Blockchain reorganization detected" in self.server_out.getvalue()
         assert self.get_burn_count(self.addresses[0]) == 1
+
+        final_xcp_balance = self.get_xcp_balance(self.addresses[0])
+        print("Final XCP balance: ", final_xcp_balance)
+        assert final_xcp_balance == initial_xcp_balance
 
     def test_invalid_detach(self):
         print("Test invalid detach...")

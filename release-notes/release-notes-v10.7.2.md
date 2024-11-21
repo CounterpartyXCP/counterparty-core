@@ -41,6 +41,7 @@ API breaking changes:
 - Use migrations to rollback `counterparty.state.db`
 - Remove rollback event by event in `counterparty.state.db`
 - Add version checking for `counterparty.state.db`: launch a rollback when a reparse or a rollback is necessary for the Ledger DB
+- Use `event_hash` to detect Blockchain reorganization and launch a rollback of `counterparty.state.db`
 
 ## API
 

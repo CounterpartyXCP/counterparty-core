@@ -5,6 +5,7 @@ import threading
 import time
 
 from counterpartycore.lib import config, database, exceptions
+from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.util import format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -515,7 +516,47 @@ def catch_up(ledger_db, state_db, watcher=None):
         logger.info("API Watcher - Catch up completed.")
 
 
+def search_matching_event(ledger_db, state_db):
+    state_db_cursor = state_db.cursor()
+    state_db_cursor.execute("SELECT * FROM parsed_events ORDER BY event_index DESC")
+    matching_event = None
+    for parsed_event in state_db_cursor:
+        ledger_event = fetch_one(
+            ledger_db,
+            "SELECT * FROM messages WHERE message_index = ?",
+            (parsed_event["event_index"],),
+        )
+        if parsed_event["event_hash"] == ledger_event["event_hash"]:
+            matching_event = parsed_event
+            break
+    state_db_cursor.close()
+    return matching_event
+
+
+def check_reorg(ledger_db, state_db):
+    last_event_parsed = fetch_one(
+        state_db, "SELECT * FROM parsed_events ORDER BY event_index DESC LIMIT 1"
+    )
+    if last_event_parsed is None:
+        return
+    ledger_event = fetch_one(
+        ledger_db,
+        "SELECT * FROM messages WHERE message_index = ?",
+        (last_event_parsed["event_index"],),
+    )
+    if last_event_parsed["event_hash"] != ledger_event["event_hash"]:
+        logger.debug("API Watcher - Reorg detected")
+        matching_event = search_matching_event(ledger_db, state_db)
+        target_block_index = 0
+        if matching_event is not None:
+            target_block_index = matching_event["block_index"]
+        logger.debug(f"API Watcher - Rolling back to block: {target_block_index}")
+        dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
+
+
 def parse_next_event(ledger_db, state_db):
+    check_reorg(ledger_db, state_db)
+
     next_event = get_next_event_to_parse(ledger_db, state_db)
 
     if next_event is None:

@@ -79,7 +79,6 @@ class PropertyTestNode:
         self.node.wait_for_counterparty_server()
 
         # check balances
-        time.sleep(0.1)
         given(hypothesis.strategies.sampled_from(self.balances))(self.check_balance)()
 
     def run_tests(self):

@@ -115,10 +115,8 @@ def get_tx_index(node, tx_hash):
 
 
 def get_last_tx_index(node):
+    time.sleep(2)  # wait for utils.CURRENT_BLOCK_INDEX to be updated and cache expired (each .5s)
     result = node.api_call("transactions?limit=1")
-    print(result)
-    result = node.api_call("transactions?limit=1")
-    print(result)
     if "result" in result:
         return result["result"][0]["tx_index"]
     return 0
@@ -132,7 +130,6 @@ def control_result(
     event_indexes = sorted([event["event_index"] for event in events])
 
     if no_confirmation:
-        time.sleep(2)  # wait cache expiration (when util.CURRENT_BLOCK_TIME is updated)
         tx_index = get_last_tx_index(node) + 1
     else:
         tx_index = get_tx_index(node, tx_hash)
@@ -307,7 +304,6 @@ def run_item(node, item, context):
 
     for name, value in item.get("set_variables", {}).items():
         if tx_hash is not None:
-            print("get tx index", tx_hash)
             tx_index = get_tx_index(node, tx_hash)
             if tx_index is None:
                 tx_index = get_last_tx_index(node) + 1
@@ -413,8 +409,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 _cwd=CURR_DIR,
             )
             print("Running Dredd...")
-            hookfiles = os.path.join(CURR_DIR, "dreddhooks.py")
-            sh.dredd(f"--hookfiles={hookfiles}", _cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
+            sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
             print("Testing invalid detach...")
             regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")

@@ -15336,13 +15336,13 @@
                         "name": "utxo",
                         "required": true,
                         "type": "str",
-                        "description": "The utxo from which the assets are moved"
+                        "description": "The utxo from which the assets are moved (e.g. $UTXO_WITH_BALANCE)"
                     },
                     {
                         "name": "destination",
                         "required": true,
                         "type": "str",
-                        "description": "The address to move the assets to"
+                        "description": "The address to move the assets to (e.g. $ADDRESS_1)"
                     },
                     {
                         "name": "encoding",

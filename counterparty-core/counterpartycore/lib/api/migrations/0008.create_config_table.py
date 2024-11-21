@@ -23,8 +23,6 @@ def apply(db):
 
     db.row_factory = dict_factory
 
-    db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
-
     sql = """
         CREATE TABLE config (
             name TEXT PRIMARY KEY,
@@ -33,17 +31,6 @@ def apply(db):
     """
     db.execute(sql)
     db.execute("CREATE INDEX config_config_name_idx ON config (name)")
-
-    last_parsed_event = db.execute(
-        "SELECT MAX(message_index) AS message_index FROM ledger_db.messages"
-    ).fetchone()
-    last_parsed_event_index = 0
-    if last_parsed_event:
-        last_parsed_event_index = last_parsed_event["message_index"]
-    db.execute(
-        "INSERT INTO config (name, value) VALUES (?, ?)",
-        ("LAST_PARSED_EVENT", last_parsed_event_index),
-    )
 
     database.update_version(db)
 

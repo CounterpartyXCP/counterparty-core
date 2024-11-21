@@ -128,6 +128,8 @@ DREDD_CONFIG = {
     "blueprint": "apiary.apib",
     "endpoint": "http://127.0.0.1:24000",
     "only": [],
+    "hookfiles": "counterparty-core/counterpartycore/test/regtest/dreddhooks.py",
+    "language": "python",
 }
 
 

@@ -58,8 +58,8 @@ def verify_password(username, password):
 
 
 def api_root():
-    with LedgerDBConnectionPool().connection() as db:
-        counterparty_height = ledger.last_db_index(db)
+    with StateDBConnectionPool().connection() as state_db:
+        counterparty_height = api_watcher.get_last_block_parsed(state_db)
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
