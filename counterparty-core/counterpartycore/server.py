@@ -246,7 +246,7 @@ def initialise_config(
         f"fetcherdb{network}",
     )
 
-    config.STATE_DATABASE = config.DATABASE.replace(".db", ".state.db")
+    config.STATE_DATABASE = os.path.join(os.path.dirname(config.DATABASE), "state.db")
 
     if not os.path.exists(config.STATE_DATABASE):
         old_db_name = config.DATABASE.replace(".db", ".api.db")
