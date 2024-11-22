@@ -539,7 +539,8 @@ def search_matching_event(ledger_db, state_db):
 
 def check_reorg(ledger_db, state_db):
     last_event_parsed = fetch_one(
-        state_db, "SELECT * FROM parsed_events ORDER BY event_index DESC LIMIT 1"
+        state_db,
+        "SELECT * FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT 1",
     )
     if last_event_parsed is None:
         return
@@ -549,12 +550,14 @@ def check_reorg(ledger_db, state_db):
         (last_event_parsed["event_index"],),
     )
     if ledger_event is None or last_event_parsed["event_hash"] != ledger_event["event_hash"]:
-        logger.debug("API Watcher - Reorg detected")
         matching_event = search_matching_event(ledger_db, state_db)
         target_block_index = 0
         if matching_event is not None:
-            target_block_index = matching_event["block_index"]
-        logger.debug(f"API Watcher - Rolling back to block: {target_block_index}")
+            target_block_index = matching_event["block_index"] + 1
+        logger.warning(
+            f"API Watcher -  Blockchain reorganization detected at Block {target_block_index}"
+        )
+        logger.info(f"API Watcher - Rolling back to block: {target_block_index}")
         dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
 
 

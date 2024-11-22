@@ -176,6 +176,18 @@ def get_backend_height():
     return block_count + blocks_behind
 
 
+class BackendHeight(metaclass=util.SingletonMeta):
+    def __init__(self):
+        self.backend_height = get_backend_height()
+        self.last_update = time.time()
+
+    def get(self):
+        if time.time() - self.last_update > 0:  # one second cache
+            self.backend_height = get_backend_height()
+            self.last_update = time.time()
+        return self.backend_height
+
+
 def init_api_access_log(flask_app):
     """Initialize API logger."""
     flask_app.logger.removeHandler(flask.logging.default_handler)

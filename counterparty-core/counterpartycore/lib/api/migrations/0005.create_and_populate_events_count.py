@@ -12,11 +12,26 @@ logger = logging.getLogger(config.LOGGER_NAME)
 __depends__ = {"0004.create_and_populate_assets_info"}
 
 
+def dict_factory(cursor, row):
+    fields = [column[0] for column in cursor.description]
+    return {key: value for key, value in zip(fields, row)}
+
+
 def apply(db):
     start_time = time.time()
     logger.debug("Populating the `events_count` table...")
 
-    db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+    if hasattr(db, "row_factory"):
+        db.row_factory = dict_factory
+
+    attached = (
+        db.execute(
+            "SELECT COUNT(*) AS count FROM pragma_database_list WHERE name = ?", ("ledger_db",)
+        ).fetchone()["count"]
+        > 0
+    )
+    if not attached:
+        db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
     db.execute("""
         CREATE TABLE events_count(
@@ -41,4 +56,5 @@ def rollback(db):
     db.execute("DROP TABLE events_count")
 
 
-steps = [step(apply, rollback)]
+if not __name__.startswith("apsw_"):
+    steps = [step(apply, rollback)]

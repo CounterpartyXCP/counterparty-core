@@ -1,5 +1,7 @@
+import importlib.util
 import logging
 import os
+import sys
 import time
 
 from counterpartycore.lib import config, log
@@ -38,8 +40,8 @@ def apply_outstanding_migration():
     backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
     migrations = read_migrations(MIGRATIONS_DIR)
     try:
-        with backend.lock():
-            backend.apply_migrations(backend.to_apply(migrations))
+        # with backend.lock():
+        backend.apply_migrations(backend.to_apply(migrations))
     except LockTimeout:
         logger.debug("API Watcher - Migration lock timeout. Breaking lock and retrying...")
         backend.break_lock()
@@ -47,18 +49,45 @@ def apply_outstanding_migration():
     backend.connection.close()
 
 
-def rollback_migrations(migration_ids):
-    backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
+def import_from_path(module_name, file_path):
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
 
-    migrations = read_migrations(MIGRATIONS_DIR)
-    migrations = filter_migrations(migrations, migration_ids)
 
-    # Apply migrations
-    with backend.lock():
-        for migration in reversed(migrations):
-            backend.rollback_one(migration)
+def import_migration(migration_id):
+    migration_path = os.path.join(MIGRATIONS_DIR, f"{migration_id}.py")
+    module_name = "apsw_" + migration_id.split(".")[1]
+    return import_from_path(module_name, migration_path)
 
-    backend.connection.close()
+
+def apply_migration(state_db, migration_id):
+    module = import_migration(migration_id)
+    module.apply(state_db)
+
+
+def rollback_migration(state_db, migration_id):
+    module = import_migration(migration_id)
+    module.rollback(state_db)
+
+
+def rollback_migrations(state_db, migration_ids):
+    for migration_id in reversed(migration_ids):
+        logger.debug(f"Rolling back migration `{migration_id}`")
+        rollback_migration(state_db, migration_id)
+
+
+def apply_migrations(state_db, migration_ids):
+    for migration_id in migration_ids:
+        logger.debug(f"Applying migration `{migration_id}`")
+        apply_migration(state_db, migration_id)
+
+
+def reapply_migrations(state_db, migration_ids):
+    rollback_migrations(state_db, migration_ids)
+    apply_migrations(state_db, migration_ids)
 
 
 def rollback_tables(state_db, block_index):
@@ -94,9 +123,7 @@ def rollback_state_db(state_db, block_index):
 
     with log.Spinner("Rolling back State DB tables"):
         rollback_tables(state_db, block_index)
-    with log.Spinner("Rollback migrations"):
-        rollback_migrations(MIGRATIONS_AFTER_ROLLBACK)
     with log.Spinner("Re-applying migrations"):
-        apply_outstanding_migration()
+        reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
 
     logger.info(f"State db rolled back in {time.time() - start_time} seconds")

@@ -12,16 +12,9 @@ logger = logging.getLogger(config.LOGGER_NAME)
 __depends__ = {"0007.create_views"}
 
 
-def dict_factory(cursor, row):
-    fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
-
-
 def apply(db):
     start_time = time.time()
     logger.debug("Creating `config` table...")
-
-    db.row_factory = dict_factory
 
     sql = """
         CREATE TABLE config (
@@ -41,4 +34,5 @@ def rollback(db):
     db.execute("DROP TABLE config")
 
 
-steps = [step(apply, rollback)]
+if not __name__.startswith("apsw_"):
+    steps = [step(apply, rollback)]

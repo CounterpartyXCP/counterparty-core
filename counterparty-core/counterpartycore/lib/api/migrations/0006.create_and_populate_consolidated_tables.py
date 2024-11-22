@@ -56,6 +56,11 @@ POST_QUERIES = {
 }
 
 
+def dict_factory(cursor, row):
+    fields = [column[0] for column in cursor.description]
+    return {key: value for key, value in zip(fields, row)}
+
+
 def build_consolidated_table(state_db, table_name):
     logger.debug(f"Copying the consolidated table `{table_name}` to State DB...")
     start_time = time.time()
@@ -106,18 +111,22 @@ def build_consolidated_table(state_db, table_name):
     )
 
 
-def dict_factory(cursor, row):
-    fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
-
-
 def apply(db):
-    db.row_factory = dict_factory
+    if hasattr(db, "row_factory"):
+        db.row_factory = dict_factory
 
     logger.debug("Copying consolidated tables from ledger db...")
 
     db.execute("""PRAGMA foreign_keys=OFF""")
-    db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+
+    attached = (
+        db.execute(
+            "SELECT COUNT(*) AS count FROM pragma_database_list WHERE name = ?", ("ledger_db",)
+        ).fetchone()["count"]
+        > 0
+    )
+    if not attached:
+        db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
     for table in CONSOLIDATED_TABLES.keys():
         build_consolidated_table(db, table)
@@ -130,4 +139,5 @@ def rollback(db):
         db.execute(f"DROP TABLE {table}")
 
 
-steps = [step(apply, rollback)]
+if not __name__.startswith("apsw_"):
+    steps = [step(apply, rollback)]

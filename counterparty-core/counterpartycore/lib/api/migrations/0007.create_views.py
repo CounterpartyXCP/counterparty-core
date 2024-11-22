@@ -87,4 +87,5 @@ def rollback(db):
     db.execute("DROP VIEW xcp_holders")
 
 
-steps = [step(apply, rollback)]
+if not __name__.startswith("apsw_"):
+    steps = [step(apply, rollback)]

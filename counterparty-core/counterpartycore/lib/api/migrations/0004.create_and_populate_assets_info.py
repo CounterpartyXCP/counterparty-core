@@ -20,9 +20,18 @@ def dict_factory(cursor, row):
 def apply(db):
     start_time = time.time()
     logger.debug("Populating the `assets_info` table...")
-    db.row_factory = dict_factory
 
-    db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+    if hasattr(db, "row_factory"):
+        db.row_factory = dict_factory
+
+    attached = (
+        db.execute(
+            "SELECT COUNT(*) AS count FROM pragma_database_list WHERE name = ?", ("ledger_db",)
+        ).fetchone()["count"]
+        > 0
+    )
+    if not attached:
+        db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
     db.execute("""
         CREATE TABLE assets_info(
@@ -122,4 +131,5 @@ def rollback(db):
     db.execute("DROP TABLE assets_info")
 
 
-steps = [step(apply, rollback)]
+if not __name__.startswith("apsw_"):
+    steps = [step(apply, rollback)]
