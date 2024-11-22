@@ -459,6 +459,20 @@ def update_state_db_tables(state_db, event):
         update_consolidated_tables(state_db, event)
 
 
+def update_last_parsed_events_cache(state_db, event=None):
+    if event is None:
+        last_event_parsed = get_last_parsed_event_index(state_db, no_cache=True)
+        last_block_parsed = get_last_block_parsed(state_db, no_cache=True)
+        database.set_config_value(state_db, "LAST_BLOCK_PARSED", last_block_parsed)
+        database.set_config_value(state_db, "LAST_EVENT_PARSED", last_event_parsed)
+    else:
+        last_event_parsed = event["message_index"]
+        last_block_parsed = event["block_index"]
+        if event["event"] == "BLOCK_PARSED":
+            database.set_config_value(state_db, "LAST_BLOCK_PARSED", last_block_parsed)
+        database.set_config_value(state_db, "LAST_EVENT_PARSED", last_event_parsed)
+
+
 def update_last_parsed_events(state_db, event):
     sql = """
     INSERT INTO parsed_events (event_index, event, event_hash, block_index)
@@ -466,9 +480,14 @@ def update_last_parsed_events(state_db, event):
     """
     cursor = state_db.cursor()
     cursor.execute(sql, event)
+    update_last_parsed_events_cache(state_db, event)
 
 
-def get_last_parsed_event_index(state_db):
+def get_last_parsed_event_index(state_db, no_cache=False):
+    if not no_cache:
+        event_index = database.get_config_value(state_db, "LAST_EVENT_PARSED")
+        if event_index is not None:
+            return int(event_index)
     cursor = state_db.cursor()
     cursor.execute("SELECT event_index FROM parsed_events ORDER BY event_index DESC LIMIT 1")
     parsed_event = cursor.fetchone()
@@ -477,7 +496,11 @@ def get_last_parsed_event_index(state_db):
     return 0
 
 
-def get_last_block_parsed(state_db):
+def get_last_block_parsed(state_db, no_cache=False):
+    if not no_cache:
+        block_index = database.get_config_value(state_db, "LAST_BLOCK_PARSED")
+        if block_index is not None:
+            return int(block_index)
     cursor = state_db.cursor()
     cursor.execute(
         "SELECT block_index FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT 1"
@@ -492,8 +515,8 @@ def parse_event(state_db, event):
     with state_db:
         logger.trace(f"API Watcher - Parsing event: {event}")
         update_state_db_tables(state_db, event)
-        update_events_count(state_db, event)
         update_last_parsed_events(state_db, event)
+        update_events_count(state_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 
@@ -642,6 +665,7 @@ class APIWatcher(threading.Thread):
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )
+        update_last_parsed_events_cache(self.state_db, event=None)
 
     def run(self):
         logger.info("Starting API Watcher thread...")
