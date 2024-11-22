@@ -47,7 +47,6 @@ SCENARIO = [
                         "earned_quantity": None,
                         "commission": None,
                         "paid_quantity": None,
-                        "confirmed": True,
                     }
                 ],
             }

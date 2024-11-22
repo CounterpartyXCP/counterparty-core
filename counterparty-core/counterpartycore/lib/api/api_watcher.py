@@ -269,14 +269,12 @@ def update_assets_info(state_db, event):
         return
     event_bindings = json.loads(event["bindings"])
 
-    event_bindings["confirmed"] = event["block_index"] != config.MEMPOOL_BLOCK_INDEX
-
     if event["event"] == "ASSET_CREATION":
         sql = """
             INSERT OR REPLACE INTO assets_info 
-                (asset, asset_id, asset_longname, first_issuance_block_index, confirmed) 
+                (asset, asset_id, asset_longname, first_issuance_block_index) 
             VALUES 
-                (:asset_name, :asset_id, :asset_longname, :block_index, :confirmed)
+                (:asset_name, :asset_id, :asset_longname, :block_index)
             """
         cursor = state_db.cursor()
         cursor.execute(sql, event_bindings)
@@ -297,8 +295,7 @@ def update_assets_info(state_db, event):
                 "SELECT * FROM assets_info WHERE asset_longname = :asset_longname",
                 {"asset_longname": event_bindings["asset_longname"]},
             )
-        if existing_asset is not None and not event_bindings["confirmed"]:
-            return
+
         set_data = []
         set_data.append("divisible = :divisible")
         set_data.append("description = :description")
@@ -306,7 +303,6 @@ def update_assets_info(state_db, event):
         set_data.append("supply = supply + :quantity")
         set_data.append("last_issuance_block_index = :block_index")
         set_data.append("asset_longname = :asset_longname")
-        set_data.append("confirmed = :confirmed")
         if event_bindings["locked"]:
             set_data.append("locked = :locked")
         if existing_asset is None or not existing_asset["issuer"]:  # first issuance
@@ -316,9 +312,6 @@ def update_assets_info(state_db, event):
         sql = f"UPDATE assets_info SET {set_data} WHERE asset = :asset"  # noqa: S608
         cursor = state_db.cursor()
         cursor.execute(sql, event_bindings)
-        return
-
-    if not event_bindings["confirmed"]:
         return
 
     if event["event"] == "ASSET_DESTRUCTION":

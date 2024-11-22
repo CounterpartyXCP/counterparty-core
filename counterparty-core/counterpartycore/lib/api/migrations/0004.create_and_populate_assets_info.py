@@ -46,8 +46,7 @@ def apply(db):
             description TEXT,
             description_locked BOOL DEFAULT 0,
             first_issuance_block_index INTEGER,
-            last_issuance_block_index INTEGER,
-            confirmed BOOLEAN DEFAULT TRUE
+            last_issuance_block_index INTEGER
     )""")
 
     sql = """
@@ -64,8 +63,7 @@ def apply(db):
         description,
         description_locked,
         first_issuance_block_index,
-        last_issuance_block_index,
-        confirmed
+        last_issuance_block_index
     FROM (
         SELECT
             asset,
@@ -86,7 +84,6 @@ def apply(db):
             SUM(description_locked) AS description_locked,
             MIN(ledger_db.issuances.block_index) AS first_issuance_block_index,
             MAX(ledger_db.issuances.block_index) AS last_issuance_block_index,
-            TRUE AS confirmed,
             MAX(ledger_db.issuances.rowid) AS rowid
         FROM ledger_db.issuances, ledger_db.assets
         WHERE ledger_db.issuances.asset = ledger_db.assets.asset_name

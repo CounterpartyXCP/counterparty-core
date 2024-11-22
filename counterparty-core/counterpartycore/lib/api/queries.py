@@ -2,9 +2,7 @@ import json
 import typing
 from typing import Literal
 
-from counterpartycore.lib import config
 from counterpartycore.lib.api.util import divide
-from flask import request
 from sentry_sdk import start_span as start_sentry_span
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
@@ -199,34 +197,8 @@ def select_rows(
     if or_where:
         where_clause = " OR ".join(or_where)
 
-    last_block = config.MEMPOOL_BLOCK_INDEX
-    include_unconfirmed = request is not None and request.args.get(
-        "show_unconfirmed", "false"
-    ).lower() in ["true", "1"]
-    if include_unconfirmed:
-        last_block += 1
-
-    no_block_index_tables = [
-        "mempool",
-        "assets_info",
-        "balances",
-        "address_events",
-        "asset_holders",
-        "xcp_holders",
-        "messages",
-        "events_count",
-    ]
-
     if where_clause:
         where_clause_count = f"WHERE {where_clause} "
-        if table not in no_block_index_tables:
-            where_clause_count += f"AND block_index < {last_block} "
-        elif table == "assets_info" and not include_unconfirmed:
-            where_clause_count += "AND confirmed = 1 "
-    elif table not in no_block_index_tables:
-        where_clause_count = f"WHERE block_index < {last_block}"
-    elif table == "assets_info" and not include_unconfirmed:
-        where_clause_count = "WHERE confirmed = 1"
     else:
         where_clause_count = ""
     bindings_count = list(bindings)
@@ -242,14 +214,6 @@ def select_rows(
 
     if where_clause:
         where_clause = f"WHERE ({where_clause}) "
-        if table not in no_block_index_tables:
-            where_clause += f"AND block_index < {last_block} "
-        elif table == "assets_info" and not include_unconfirmed:
-            where_clause += "AND confirmed = 1 "
-    elif table not in no_block_index_tables:
-        where_clause = f"WHERE block_index < {last_block} "
-    elif table == "assets_info" and not include_unconfirmed:
-        where_clause = "WHERE confirmed = 1"
     else:
         where_clause = ""
 
@@ -261,10 +225,6 @@ def select_rows(
         select = f"*, {cursor_field} AS {cursor_field}"
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
-    if table not in no_block_index_tables:
-        select = f"{select}, CASE WHEN block_index = {config.MEMPOOL_BLOCK_INDEX} THEN FALSE ELSE TRUE END AS confirmed"
-    elif table == "assets_info" and "confirmed" not in select:
-        select = f"{select}, confirmed"
     if table in ["transactions", "sends", "btcpays", "sweeps", "dispenses"]:
         select += ", NULLIF(destination, '') AS destination"
 

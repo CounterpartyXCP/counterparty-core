@@ -108,8 +108,6 @@ def clean_rowids_and_confirmed_fields(query_result):
                 del row["rowid"]
             if "MAX(rowid)" in row:
                 del row["MAX(rowid)"]
-            if "confirmed" in row:
-                row["confirmed"] = bool(row["confirmed"])
             if "block_index" in row and row["block_index"] in [0, config.MEMPOOL_BLOCK_INDEX]:
                 row["block_index"] = None
                 if "tx_index" in row:
@@ -122,8 +120,6 @@ def clean_rowids_and_confirmed_fields(query_result):
             del filtered_results["rowid"]
         if "MAX(rowid)" in filtered_results:
             del filtered_results["MAX(rowid)"]
-        if "confirmed" in filtered_results:
-            filtered_results["confirmed"] = bool(filtered_results["confirmed"])
         if "block_index" in filtered_results and filtered_results["block_index"] in [
             0,
             config.MEMPOOL_BLOCK_INDEX,
@@ -268,15 +264,6 @@ def prepare_route_args(function):
                 "type": "bool",
                 "default": "false",
                 "description": "Include asset and dispenser info and normalized quantities in the response.",
-                "required": False,
-            }
-        )
-        args.append(
-            {
-                "name": "show_unconfirmed",
-                "type": "bool",
-                "default": "false",
-                "description": "Include results from Mempool.",
                 "required": False,
             }
         )

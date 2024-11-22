@@ -47,7 +47,6 @@ SCENARIO = [
                         "earned_quantity": None,
                         "commission": None,
                         "paid_quantity": None,
-                        "confirmed": True,
                     }
                 ],
             },
@@ -652,7 +651,6 @@ SCENARIO = [
                     "asset": "FAIRMINTA",
                     "asset_id": "1046814266082",
                     "asset_longname": None,
-                    "confirmed": True,
                     "description": "",
                     "description_locked": False,
                     "divisible": True,
