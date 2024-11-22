@@ -42,7 +42,7 @@ API breaking changes:
 - Remove rollback event by event in `counterparty.state.db`
 - Add version checking for `counterparty.state.db`: launch a rollback when a reparse or a rollback is necessary for the Ledger DB
 - Use `event_hash` to detect Blockchain reorganization and launch a rollback of `counterparty.state.db`
-- Remove thread to update `util.CURRENT_BLOCK_INDEX` from `wsgi.py`; Use `api_watcher.py` instead.
+- Refactor functions to refresh `util.CURRENT_BLOCK_INDEX` in `wsgi.py`
 
 ## API
 

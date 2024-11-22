@@ -3,11 +3,14 @@ import multiprocessing
 import os
 import signal
 import sys
+import threading
 
 import gunicorn.app.base
 import waitress
 import waitress.server
-from counterpartycore.lib import config, log
+from counterpartycore.lib import backend, config, database, ledger, log, util
+from counterpartycore.lib.api import api_watcher
+from counterpartycore.lib.api.util import BackendHeight
 from gunicorn import util as gunicorn_util
 from gunicorn.arbiter import Arbiter
 from gunicorn.errors import AppImportError
@@ -16,6 +19,50 @@ from werkzeug.serving import make_server
 multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+
+def refresh_current_state(ledger_db, state_db):
+    util.CURRENT_BLOCK_INDEX = api_watcher.get_last_block_parsed(state_db)
+    util.CURRENT_BACKEND_HEIGHT = BackendHeight().get()
+    if util.CURRENT_BLOCK_INDEX:
+        last_block = ledger.get_block(ledger_db, util.CURRENT_BLOCK_INDEX)
+        if last_block:
+            util.CURRENT_BLOCK_TIME = last_block["block_time"]
+        else:
+            util.CURRENT_BLOCK_TIME = 0
+    else:
+        util.CURRENT_BLOCK_TIME = 0
+        util.CURRENT_BLOCK_INDEX = 0
+
+    backend.addrindexrs.clear_raw_transactions_cache()
+
+    if util.CURRENT_BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
+        logger.debug(
+            f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {util.CURRENT_BACKEND_HEIGHT})"
+        )
+    elif util.CURRENT_BACKEND_HEIGHT < util.CURRENT_BLOCK_INDEX:
+        logger.debug(
+            f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {util.CURRENT_BACKEND_HEIGHT})"
+        )
+
+
+class CurrentStateThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.state_db = database.get_db_connection(config.STATE_DATABASE)
+        self.ledger_db = database.get_db_connection(config.DATABASE)
+        self.stop_event = threading.Event()
+
+    def run(self):
+        while not self.stop_event.is_set():
+            refresh_current_state(self.ledger_db, self.state_db)
+            self.stop_event.wait(timeout=1)
+
+    def stop(self):
+        self.stop_event.set()
+        self.state_db.close()
+        self.ledger_db.close()
+        self.join()
 
 
 class GunicornArbiter(Arbiter):
@@ -103,6 +150,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.arbiter = None
         self.ledger_db = None
         self.state_db = None
+        self.current_state_thread = CurrentStateThread()
         super().__init__()
 
     def load_config(self):
@@ -115,6 +163,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             self.cfg.set(key.lower(), value)
 
     def load(self):
+        self.current_state_thread.start()
         return self.application
 
     def run(self):
@@ -128,6 +177,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
 
     def stop(self):
         logger.warning("Stopping Gunicorn")
+        self.current_state_thread.stop()
         if self.arbiter:
             self.arbiter.kill_all_workers()
 
@@ -136,12 +186,15 @@ class WerkzeugApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
+        self.current_state_thread = CurrentStateThread()
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
 
     def run(self):
+        self.current_state_thread.start()
         self.server.serve_forever()
 
     def stop(self):
+        self.current_state_thread.stop()
         self.server.shutdown()
         self.server.server_close()
 
@@ -150,14 +203,17 @@ class WaitressApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
+        self.current_state_thread = CurrentStateThread()
         self.server = waitress.server.create_server(
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )
 
     def run(self):
+        self.current_state_thread.start()
         self.server.run()
 
     def stop(self):
+        self.current_state_thread.stop()
         self.server.close()
 
 

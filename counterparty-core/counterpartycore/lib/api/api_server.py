@@ -57,6 +57,24 @@ def verify_password(username, password):
     return username == config.API_USER and password == config.API_PASSWORD
 
 
+def is_server_ready():
+    # TODO: find a way to mock this function for testing
+    try:
+        if request.url_root == "http://localhost:10009/":
+            return True
+    except RuntimeError:
+        pass
+    if util.CURRENT_BACKEND_HEIGHT is None:
+        return False
+    if util.CURRENT_BLOCK_INDEX in [util.CURRENT_BACKEND_HEIGHT, util.CURRENT_BACKEND_HEIGHT - 1]:
+        return True
+    if util.CURRENT_BLOCK_TIME is None:
+        return False
+    if time.time() - util.CURRENT_BLOCK_TIME < 60:
+        return True
+    return False
+
+
 def api_root():
     with StateDBConnectionPool().connection() as state_db:
         counterparty_height = api_watcher.get_last_block_parsed(state_db)
@@ -144,7 +162,7 @@ def return_result(
         api_result["error"] = error
     response = flask.make_response(to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
-    response.headers["X-COUNTERPARTY-READY"] = api_watcher.is_server_ready()
+    response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
     response.headers["X-BITCOIN-HEIGHT"] = util.CURRENT_BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
@@ -295,11 +313,7 @@ def handle_route(**kwargs):
     with configure_sentry_scope() as scope:
         scope.set_transaction_name(get_transaction_name(rule))
 
-    if (
-        not config.FORCE
-        and not api_watcher.is_server_ready()
-        and not return_result_if_not_ready(rule)
-    ):
+    if not config.FORCE and not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(
             503, error="Counterparty not ready", start_time=start_time, query_args=query_args
         )
