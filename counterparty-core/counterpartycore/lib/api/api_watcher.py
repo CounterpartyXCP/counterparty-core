@@ -84,6 +84,9 @@ EVENTS_ADDRESS_FIELDS = {
     "BURN": ["source"],
     "NEW_FAIRMINT": ["source"],
     "NEW_FAIRMINTER": ["source"],
+    "ATTACH_TO_UTXO": ["source", "destination"],
+    "DETACH_FROM_UTXO": ["source", "destination"],
+    "UTXO_MOVE": ["source", "destination"],
 }
 
 SKIP_EVENTS = ["NEW_TRANSACTION_OUTPUT"]
@@ -632,6 +635,8 @@ def update_address_events(api_db, event):
     event_bindings = json.loads(event["bindings"])
     cursor = api_db.cursor()
     for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
+        if field not in event_bindings:
+            continue
         sql = """
             INSERT INTO address_events (address, event_index)
             VALUES (:address, :event_index)
