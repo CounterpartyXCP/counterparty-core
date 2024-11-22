@@ -76,8 +76,6 @@ def is_server_ready():
 
 
 def api_root():
-    with StateDBConnectionPool().connection() as state_db:
-        counterparty_height = api_watcher.get_last_block_parsed(state_db)
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
@@ -85,8 +83,21 @@ def api_root():
         network = "regtest"
     elif config.TESTCOIN:
         network = "testcoin"
+
+    with StateDBConnectionPool().connection() as state_db:
+        counterparty_height = api_watcher.get_last_block_parsed(state_db)
+
+    backend_height = util.CURRENT_BACKEND_HEIGHT
+    if backend_height is None:
+        if config.FORCE:
+            server_ready = True
+        else:
+            server_ready = False
+    else:
+        server_ready = counterparty_height >= backend_height
+
     return {
-        "server_ready": counterparty_height >= util.CURRENT_BACKEND_HEIGHT,
+        "server_ready": server_ready,
         "network": network,
         "version": config.VERSION_STRING,
         "backend_height": util.CURRENT_BACKEND_HEIGHT,

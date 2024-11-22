@@ -290,7 +290,7 @@ def api_server_v2(request, cp_server):
         "api_user": "rpc",
         "api_password": None,
         "api_no_allow_cors": False,
-        "force": False,
+        "force": True,
         "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
         "rpc_batch_size": config.DEFAULT_RPC_BATCH_SIZE,
         "backend_ssl_verify": None,
@@ -343,6 +343,8 @@ def api_server_v2(request, cp_server):
 
     def is_server_ready():
         return True
+
+    util.CURRENT_BACKEND_HEIGHT = 0
 
     api_v2.is_server_ready = is_server_ready
 
