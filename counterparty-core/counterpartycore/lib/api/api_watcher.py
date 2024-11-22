@@ -211,6 +211,8 @@ def update_address_events(state_db, event):
     event_bindings = json.loads(event["bindings"])
     cursor = state_db.cursor()
     for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
+        if field not in event_bindings:
+            continue
         sql = """
             INSERT INTO address_events (address, event_index, block_index)
             VALUES (:address, :event_index, :block_index)
@@ -554,7 +556,6 @@ def check_reorg(ledger_db, state_db):
             target_block_index = matching_event["block_index"]
         logger.debug(f"API Watcher - Rolling back to block: {target_block_index}")
         dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
-        database.StateDBConnectionPool().close()
 
 
 def parse_next_event(ledger_db, state_db):

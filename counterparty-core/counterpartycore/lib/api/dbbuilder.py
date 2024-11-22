@@ -13,16 +13,17 @@ CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "migrations")
 
 MIGRATIONS_AFTER_ROLLBACK = [
-    "0003.create_and_populate_assets_info",
-    "0004.create_and_populate_events_count",
-    "0005.create_and_populate_consolidated_tables",
-    "0006.create_views",
-    "0007.create_config_table",
+    "0004.create_and_populate_assets_info",
+    "0005.create_and_populate_events_count",
+    "0006.create_and_populate_consolidated_tables",
+    "0007.create_views",
+    "0008.create_config_table",
 ]
 
 ROLLBACKABLE_TABLES = [
     "all_expirations",
     "address_events",
+    "parsed_events",
 ]
 
 
