@@ -68,10 +68,10 @@ def api_root():
     elif config.TESTCOIN:
         network = "testcoin"
     return {
-        "server_ready": counterparty_height >= wsgi.BACKEND_HEIGHT,
+        "server_ready": counterparty_height >= util.CURRENT_BACKEND_HEIGHT,
         "network": network,
         "version": config.VERSION_STRING,
-        "backend_height": wsgi.BACKEND_HEIGHT,
+        "backend_height": util.CURRENT_BACKEND_HEIGHT,
         "counterparty_height": counterparty_height,
         "documentation": "https://counterpartycore.docs.apiary.io/",
         "routes": f"{request.url_root}v2/routes",
@@ -144,9 +144,9 @@ def return_result(
         api_result["error"] = error
     response = flask.make_response(to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
-    response.headers["X-COUNTERPARTY-READY"] = wsgi.is_server_ready()
+    response.headers["X-COUNTERPARTY-READY"] = api_watcher.is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
-    response.headers["X-BITCOIN-HEIGHT"] = wsgi.BACKEND_HEIGHT
+    response.headers["X-BITCOIN-HEIGHT"] = util.CURRENT_BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
     set_cors_headers(response)
 
@@ -282,7 +282,7 @@ def handle_route(**kwargs):
     logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
     logger.debug(get_log_prefix(query_args))
 
-    if not config.FORCE and wsgi.BACKEND_HEIGHT is None:
+    if not config.FORCE and util.CURRENT_BACKEND_HEIGHT is None:
         return return_result(
             503,
             error="Backend still not ready. Please try again later.",
@@ -295,7 +295,11 @@ def handle_route(**kwargs):
     with configure_sentry_scope() as scope:
         scope.set_transaction_name(get_transaction_name(rule))
 
-    if not config.FORCE and not wsgi.is_server_ready() and not return_result_if_not_ready(rule):
+    if (
+        not config.FORCE
+        and not api_watcher.is_server_ready()
+        and not return_result_if_not_ready(rule)
+    ):
         return return_result(
             503, error="Counterparty not ready", start_time=start_time, query_args=query_args
         )

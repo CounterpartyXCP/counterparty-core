@@ -4,9 +4,11 @@ import os
 import threading
 import time
 
-from counterpartycore.lib import config, database, exceptions
+from counterpartycore.lib import backend, config, database, exceptions, ledger, util
 from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.api.util import BackendHeight
 from counterpartycore.lib.util import format_duration
+from flask import request
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -562,14 +564,69 @@ def check_reorg(ledger_db, state_db):
 
 
 def parse_next_event(ledger_db, state_db):
-    check_reorg(ledger_db, state_db)
-
     next_event = get_next_event_to_parse(ledger_db, state_db)
 
     if next_event is None:
         raise exceptions.NoEventToParse("No event to parse")
 
     parse_event(state_db, next_event)
+
+    if next_event["event"] == "BLOCK_PARSED":
+        check_reorg(ledger_db, state_db)
+
+
+def refresh_current_state(ledger_db, state_db):
+    util.CURRENT_BLOCK_INDEX = get_last_block_parsed(state_db)
+    util.CURRENT_BACKEND_HEIGHT = BackendHeight().get()
+    if util.CURRENT_BLOCK_INDEX:
+        last_block = ledger.get_block(ledger_db, util.CURRENT_BLOCK_INDEX)
+        util.CURRENT_BLOCK_TIME = last_block["block_time"]
+    else:
+        util.CURRENT_BLOCK_TIME = 0
+        util.CURRENT_BLOCK_INDEX = 0
+
+    backend.addrindexrs.clear_raw_transactions_cache()
+
+    if not is_server_ready():
+        if util.CURRENT_BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
+            logger.debug(
+                f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {util.CURRENT_BACKEND_HEIGHT})"
+            )
+        else:
+            logger.debug(
+                f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {util.CURRENT_BACKEND_HEIGHT})"
+            )
+
+
+class CurrentState(metaclass=util.SingletonMeta):
+    def __init__(self, ledger_db, state_db):
+        self.ledger_db = ledger_db
+        self.state_db = state_db
+        refresh_current_state(self.ledger_db, self.state_db)
+        self.last_update = time.time()
+
+    def refresh(self):
+        if time.time() - self.last_update > 0:  # one second cache
+            refresh_current_state(self.ledger_db, self.state_db)
+            self.last_update = time.time()
+
+
+def is_server_ready():
+    # TODO: find a way to mock this function for testing
+    try:
+        if request.url_root == "http://localhost:10009/":
+            return True
+    except RuntimeError:
+        pass
+    if util.CURRENT_BACKEND_HEIGHT is None:
+        return False
+    if util.CURRENT_BLOCK_INDEX in [util.CURRENT_BACKEND_HEIGHT, util.CURRENT_BACKEND_HEIGHT - 1]:
+        return True
+    if util.CURRENT_BLOCK_TIME is None:
+        return False
+    if time.time() - util.CURRENT_BLOCK_TIME < 60:
+        return True
+    return False
 
 
 class APIWatcher(threading.Thread):
@@ -595,6 +652,7 @@ class APIWatcher(threading.Thread):
     def follow(self):
         while not self.stop_event.is_set():
             try:
+                CurrentState(self.ledger_db, self.state_db).refresh()
                 parse_next_event(self.ledger_db, self.state_db)
             except exceptions.NoEventToParse:
                 logger.trace("API Watcher - No new events to parse")
