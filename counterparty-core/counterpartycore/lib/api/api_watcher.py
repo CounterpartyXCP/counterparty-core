@@ -519,6 +519,7 @@ def parse_event(state_db, event):
 
 
 def catch_up(ledger_db, state_db, watcher=None):
+    check_reorg(ledger_db, state_db)
     event_to_parse_count = get_event_to_parse_count(ledger_db, state_db)
     if event_to_parse_count > 0:
         logger.debug(f"API Watcher - {event_to_parse_count} events to catch up...")
@@ -563,7 +564,7 @@ def search_matching_event(ledger_db, state_db):
 def check_reorg(ledger_db, state_db):
     last_event_parsed = fetch_one(
         state_db,
-        "SELECT * FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT 1",
+        "SELECT * FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT 1 OFFSET 1",
     )
     if last_event_parsed is None:
         return
