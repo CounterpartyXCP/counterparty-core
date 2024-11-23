@@ -75,13 +75,13 @@ def rollback_migration(state_db, migration_id):
 
 def rollback_migrations(state_db, migration_ids):
     for migration_id in reversed(migration_ids):
-        logger.debug(f"Rolling back migration `{migration_id}`")
+        logger.debug(f"Rolling back migration `{migration_id}`...")
         rollback_migration(state_db, migration_id)
 
 
 def apply_migrations(state_db, migration_ids):
     for migration_id in migration_ids:
-        logger.debug(f"Applying migration `{migration_id}`")
+        logger.debug(f"Applying migration `{migration_id}`...")
         apply_migration(state_db, migration_id)
 
 
@@ -95,7 +95,7 @@ def rollback_tables(state_db, block_index):
     cursor.execute("""PRAGMA foreign_keys=OFF""")
 
     for table in ROLLBACKABLE_TABLES:
-        logger.debug(f"Rolling back table {table}")
+        logger.debug(f"Rolling back table `{table}`...")
         cursor.execute(f"DELETE FROM {table} WHERE block_index >= ?", (block_index,))  # noqa S608
 
     cursor.execute("""PRAGMA foreign_keys=ON""")
@@ -103,7 +103,7 @@ def rollback_tables(state_db, block_index):
 
 
 def build_state_db():
-    logger.info("Building state db")
+    logger.info("Building State DB...")
     start_time = time.time()
 
     # Remove existing state db
@@ -114,16 +114,16 @@ def build_state_db():
     with log.Spinner("Applying migrations"):
         apply_outstanding_migration()
 
-    logger.info(f"State db built in {time.time() - start_time} seconds")
+    logger.info(f"State DB built in {time.time() - start_time:.2f} seconds")
 
 
 def rollback_state_db(state_db, block_index):
-    logger.info(f"Rolling back state db to block index {block_index}")
+    logger.info(f"Rolling back State DB to block index {block_index}...")
     start_time = time.time()
 
-    with log.Spinner("Rolling back State DB tables"):
+    with log.Spinner("Rolling back State DB tables..."):
         rollback_tables(state_db, block_index)
-    with log.Spinner("Re-applying migrations"):
+    with log.Spinner("Re-applying migrations..."):
         reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
 
-    logger.info(f"State db rolled back in {time.time() - start_time} seconds")
+    logger.info(f"State DB rolled back in {time.time() - start_time:.2f} seconds")

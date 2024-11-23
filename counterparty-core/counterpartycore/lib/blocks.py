@@ -1095,8 +1095,8 @@ def rebuild_database(db, include_transactions=True):
 def rollback(db, block_index=0):
     block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
-    step = f"Rolling database back to Block {block_index}..."
-    done_message = f"Database rolled back to Block {block_index} ({{}}s)"
+    step = f"Rolling Ledger DB back to block {block_index}..."
+    done_message = f"Ledger DB rolled back to block {block_index} ({{}}s)"
     with log.Spinner(step, done_message):
         if block_index == config.BLOCK_FIRST:
             rebuild_database(db)
@@ -1138,7 +1138,7 @@ def reparse(db, block_index=0):
         return
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
-    with log.Spinner(f"Rolling database back to Block {block_index}..."):
+    with log.Spinner(f"Rolling database back to block {block_index}..."):
         clean_messages_tables(db, block_index=block_index)
 
     step = "Recalculating consensus hashes..."
@@ -1155,7 +1155,7 @@ def reparse(db, block_index=0):
     block_parsed_count = 0
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
-    step = f"Reparsing blocks from Block {block_index}..."
+    step = f"Reparsing blocks from block {block_index}..."
     message = ""
     with log.Spinner(step) as spinner:
         cursor.execute(
@@ -1255,7 +1255,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
             raw_current_block = backend.bitcoind.getblock(current_block_hash)
             decoded_block = deserialize.deserialize_block(raw_current_block, use_txid=True)
 
-            logger.warning("Blockchain reorganization detected at Block %s.", previous_block_index)
+            logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
             # rollback to the previous block
             rollback(db, block_index=previous_block_index + 1)
             util.CURRENT_BLOCK_INDEX = previous_block_index + 1
