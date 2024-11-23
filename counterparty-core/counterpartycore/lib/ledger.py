@@ -859,70 +859,8 @@ def get_asset_issuances_quantity(db, asset):
     return issuances[0]["issuances_count"]
 
 
-def get_asset_info(db, asset: str):
-    """
-    Returns the asset information
-    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
-    """
-    asset_name = resolve_subasset_longname(db, asset)
-
-    # Defaults.
-    asset_info = {
-        "asset": asset_name,
-        "asset_longname": None,
-        "owner": None,
-        "divisible": True,
-        "locked": False,
-        "supply": 0,
-        "description": "",
-        "issuer": None,
-    }
-
-    if asset_name == config.BTC:
-        asset_info["supply"] = backend.bitcoind.get_btc_supply(normalize=False)
-        return asset_info
-
-    if asset_name == config.XCP:
-        asset_info["supply"] = xcp_supply(db)
-        asset_info["holder_count"] = get_asset_holder_count(db, asset)
-        return asset_info
-
-    asset_info["supply"] = asset_supply(db, asset_name)
-    asset_info["holder_count"] = get_asset_holder_count(db, asset)
-
-    cursor = db.cursor()
-    query = """
-        SELECT *, MIN(block_index) AS first_issuance_block_index,
-                  MAX(rowid) AS rowid,
-                  block_index AS last_issuance_block_index
-        FROM issuances
-        WHERE (status = ? AND asset = ?)
-        GROUP BY asset
-        ORDER BY rowid DESC
-    """
-    bindings = ("valid", asset)
-    cursor.execute(query, bindings)
-    issuance = cursor.fetchone()
-
-    if not issuance:
-        return None
-
-    asset_info = asset_info | {
-        "asset_longname": issuance["asset_longname"],
-        "owner": issuance["issuer"],
-        "divisible": bool(issuance["divisible"]),
-        "locked": bool(issuance["locked"]),
-        "description": issuance["description"],
-        "issuer": issuance["issuer"],
-        "first_issuance_block_index": issuance["first_issuance_block_index"],
-        "last_issuance_block_index": issuance["last_issuance_block_index"],
-    }
-
-    return asset_info
-
-
-def get_assets_last_issuance(db, asset_list):
-    cursor = db.cursor()
+def get_assets_last_issuance(state_db, asset_list):
+    cursor = state_db.cursor()
     fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
     query = f"""
         SELECT {", ".join(fields)} FROM assets_info

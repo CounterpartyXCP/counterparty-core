@@ -296,6 +296,7 @@ def parse(db, tx, message):
         "source": tx["source"],
         "status": "valid",
         "fee_paid": 0,
+        "asset_events": "fairmint",
     }
 
     # we check if the hard cap is reached and in this case...
@@ -319,7 +320,7 @@ def parse(db, tx, message):
             ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance
-    ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE", {"asset_events": "fairmint"})
+    ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
     # log
     logger.info(

@@ -12,14 +12,16 @@ import requests
 from bitcoin.wallet import CBitcoinAddressError
 from counterpartycore import server
 from counterpartycore.lib import (
+    check,
     config,
+    database,
     exceptions,
     ledger,
     script,
     sentry,
     util,
 )
-from counterpartycore.lib.api import api_watcher, queries, wsgi
+from counterpartycore.lib.api import api_watcher, dbbuilder, queries, wsgi
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
     clean_rowids_and_confirmed_fields,
@@ -28,7 +30,7 @@ from counterpartycore.lib.api.util import (
     inject_details,
     to_json,
 )
-from counterpartycore.lib.database import APIDBConnectionPool
+from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception
@@ -55,9 +57,25 @@ def verify_password(username, password):
     return username == config.API_USER and password == config.API_PASSWORD
 
 
+def is_server_ready():
+    # TODO: find a way to mock this function for testing
+    try:
+        if request.url_root == "http://localhost:10009/":
+            return True
+    except RuntimeError:
+        pass
+    if util.CURRENT_BACKEND_HEIGHT is None:
+        return False
+    if util.CURRENT_BLOCK_INDEX in [util.CURRENT_BACKEND_HEIGHT, util.CURRENT_BACKEND_HEIGHT - 1]:
+        return True
+    if util.CURRENT_BLOCK_TIME is None:
+        return False
+    if time.time() - util.CURRENT_BLOCK_TIME < 60:
+        return True
+    return False
+
+
 def api_root():
-    with APIDBConnectionPool().connection() as db:
-        counterparty_height = ledger.last_db_index(db)
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
@@ -65,11 +83,24 @@ def api_root():
         network = "regtest"
     elif config.TESTCOIN:
         network = "testcoin"
+
+    with StateDBConnectionPool().connection() as state_db:
+        counterparty_height = api_watcher.get_last_block_parsed(state_db)
+
+    backend_height = util.CURRENT_BACKEND_HEIGHT
+    if backend_height is None:
+        if config.FORCE:
+            server_ready = True
+        else:
+            server_ready = False
+    else:
+        server_ready = counterparty_height >= backend_height
+
     return {
-        "server_ready": counterparty_height >= wsgi.BACKEND_HEIGHT,
+        "server_ready": server_ready,
         "network": network,
         "version": config.VERSION_STRING,
-        "backend_height": wsgi.BACKEND_HEIGHT,
+        "backend_height": util.CURRENT_BACKEND_HEIGHT,
         "counterparty_height": counterparty_height,
         "documentation": "https://counterpartycore.docs.apiary.io/",
         "routes": f"{request.url_root}v2/routes",
@@ -142,9 +173,9 @@ def return_result(
         api_result["error"] = error
     response = flask.make_response(to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
-    response.headers["X-COUNTERPARTY-READY"] = wsgi.is_server_ready()
+    response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
-    response.headers["X-BITCOIN-HEIGHT"] = wsgi.BACKEND_HEIGHT
+    response.headers["X-BITCOIN-HEIGHT"] = util.CURRENT_BACKEND_HEIGHT
     response.headers["Content-Type"] = "application/json"
     set_cors_headers(response)
 
@@ -169,7 +200,7 @@ def prepare_args(route, **kwargs):
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
-        if arg_name in ["verbose", "show_unconfirmed"]:
+        if arg_name in ["verbose"]:
             continue
         if arg_name in function_args:
             continue
@@ -208,9 +239,11 @@ def prepare_args(route, **kwargs):
     return function_args
 
 
-def execute_api_function(db, rule, route, function_args):
+def execute_api_function(rule, route, function_args):
     # cache everything for one block
-    cache_key = f"{util.CURRENT_BLOCK_INDEX}:{request.url}"
+    with StateDBConnectionPool().connection() as state_db:
+        current_block_index = api_watcher.get_last_block_parsed(state_db)
+    cache_key = f"{current_block_index}:{request.url}"
     # except for blocks and transactions cached forever
     if (
         request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/")
@@ -227,8 +260,17 @@ def execute_api_function(db, rule, route, function_args):
             sentry_get_span.set_data("cache.hit", False)
 
     with start_sentry_span(op="cache.put") as sentry_put_span:
-        if function_needs_db(route["function"]):
-            result = route["function"](db, **function_args)
+        needed_db = function_needs_db(route["function"])
+        if needed_db == "ledger_db":
+            with LedgerDBConnectionPool().connection() as ledger_db:
+                result = route["function"](ledger_db, **function_args)
+        elif needed_db == "state_db":
+            with StateDBConnectionPool().connection() as state_db:
+                result = route["function"](state_db, **function_args)
+        elif needed_db == "ledger_db state_db":
+            with LedgerDBConnectionPool().connection() as ledger_db:
+                with StateDBConnectionPool().connection() as state_db:
+                    result = route["function"](ledger_db, state_db, **function_args)
         else:
             result = route["function"](**function_args)
         # don't cache API v1 and mempool queries
@@ -269,7 +311,7 @@ def handle_route(**kwargs):
     logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
     logger.debug(get_log_prefix(query_args))
 
-    if not config.FORCE and wsgi.BACKEND_HEIGHT is None:
+    if not config.FORCE and util.CURRENT_BACKEND_HEIGHT is None:
         return return_result(
             503,
             error="Backend still not ready. Please try again later.",
@@ -282,7 +324,7 @@ def handle_route(**kwargs):
     with configure_sentry_scope() as scope:
         scope.set_transaction_name(get_transaction_name(rule))
 
-    if not config.FORCE and not wsgi.is_server_ready() and not return_result_if_not_ready(rule):
+    if not config.FORCE and not is_server_ready() and not return_result_if_not_ready(rule):
         return return_result(
             503, error="Counterparty not ready", start_time=start_time, query_args=query_args
         )
@@ -302,8 +344,7 @@ def handle_route(**kwargs):
 
     # call the function
     try:
-        with APIDBConnectionPool().connection() as db:
-            result = execute_api_function(db, rule, route, function_args)
+        result = execute_api_function(rule, route, function_args)
     except (
         exceptions.JSONRPCInvalidRequest,
         flask.wrappers.BadRequest,
@@ -350,7 +391,9 @@ def handle_route(**kwargs):
     # inject details
     verbose = request.args.get("verbose", "False")
     if verbose.lower() in ["true", "1"]:
-        result = inject_details(db, result)
+        with LedgerDBConnectionPool().connection() as ledger_db:
+            with StateDBConnectionPool().connection() as state_db:
+                result = inject_details(ledger_db, state_db, result)
 
     return return_result(
         200,
@@ -382,7 +425,7 @@ def init_flask_app():
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        with APIDBConnectionPool().connection() as db:
+        with LedgerDBConnectionPool().connection() as db:
             util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
         methods = ["OPTIONS", "GET"]
         # Add routes
@@ -419,12 +462,30 @@ def init_flask_app():
     return app
 
 
+def check_database_version():
+    try:
+        db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+        check.database_version(db)
+    except check.DatabaseVersionError as e:
+        logger.info(str(e))
+        # rollback or reparse the database
+        if e.required_action in ["rollback", "reparse"]:
+            dbbuilder.rollback_state_db(db, block_index=e.from_block_index)
+        # update the database version
+        database.update_version(db)
+    finally:
+        db.close()
+
+
 def run_api_server(args, server_ready_value, stop_event):
     logger.info("Starting API Server process...")
 
     # Initialize Sentry, logging, config, etc.
     sentry.init()
     server.initialise_log_and_config(argparse.Namespace(**args), api=True)
+
+    dbbuilder.apply_outstanding_migration()
+    check_database_version()
 
     watcher = api_watcher.APIWatcher()
     watcher.start()
@@ -467,7 +528,7 @@ def run_api_server(args, server_ready_value, stop_event):
             parent_checker.join()
 
         logger.trace("Closing API DB Connection Pool...")
-        APIDBConnectionPool().close()
+        StateDBConnectionPool().close()
 
 
 # This thread is used for the following two reasons:

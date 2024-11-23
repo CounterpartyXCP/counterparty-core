@@ -34,7 +34,8 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import compose as api_compose
 from counterpartycore.lib.api import util as api_util
-from counterpartycore.lib.database import APIDBConnectionPool
+from counterpartycore.lib.api.api_watcher import STATE_DB_TABLES
+from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -165,7 +166,6 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
 
 
 def get_rows(
-    db,
     table,
     filters=None,
     filterop="AND",
@@ -332,10 +332,15 @@ def get_rows(
         if offset:
             statement += f""" OFFSET {offset}"""
 
-    query_result = db_query(db, statement, tuple(bindings))
-
-    if table == "balances":
-        return adjust_get_balances_results(query_result, db)
+    if table.lower() in STATE_DB_TABLES:
+        with StateDBConnectionPool().connection() as state_db:
+            query_result = db_query(state_db, statement, tuple(bindings))
+            if table == "balances":
+                with LedgerDBConnectionPool().connection() as ledger_db:
+                    return adjust_get_balances_results(query_result, ledger_db)
+    else:
+        with LedgerDBConnectionPool().connection() as ledger_db:
+            query_result = db_query(ledger_db, statement, tuple(bindings))
 
     if table == "destructions":
         return adjust_get_destructions_results(query_result)
@@ -364,13 +369,13 @@ def remove_rowids(query_result):
     return filtered_results
 
 
-def adjust_get_balances_results(query_result, db):
+def adjust_get_balances_results(query_result, ledger_db):
     filtered_results = []
     assets = {}
     for balances_row in list(query_result):
         asset = balances_row["asset"]
         if asset not in assets:
-            assets[asset] = ledger.is_divisible(db, asset)
+            assets[asset] = ledger.is_divisible(ledger_db, asset)
 
         balances_row["divisible"] = assets[asset]
         filtered_results.append(balances_row)
@@ -462,7 +467,7 @@ class APIStatusPoller(threading.Thread):
     def run(self):
         logger.info("Starting v1 API Status Poller thread...")
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
-        self.db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        self.db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
 
         interval_if_ready = 5 * 60  # 5 minutes
         interval_if_not_ready = 60  # 1 minute
@@ -511,7 +516,7 @@ class APIServer(threading.Thread):
         self.is_ready = False
         self.server = None
         self.ctx = None
-        self.connection_pool = APIDBConnectionPool()
+        self.connection_pool = LedgerDBConnectionPool()
         threading.Thread.__init__(self)
         sentry.init()
 
@@ -541,8 +546,7 @@ class APIServer(threading.Thread):
         def generate_get_method(table):
             def get_method(**kwargs):
                 try:
-                    with self.connection_pool.connection() as db:
-                        return get_rows(db, table=table, **kwargs)
+                    return get_rows(table=table, **kwargs)
                 except TypeError as e:  # TODO: generalise for all API methods
                     raise APIError(str(e))  # noqa: B904
 
@@ -1244,13 +1248,11 @@ class APIServer(threading.Thread):
 
                 # Run the query.
                 try:
-                    with self.connection_pool.connection() as db:
-                        query_data = get_rows(
-                            db,
-                            table=query_type,
-                            filters=data_filter,
-                            filterop=operator,
-                        )
+                    query_data = get_rows(
+                        table=query_type,
+                        filters=data_filter,
+                        filterop=operator,
+                    )
                 except APIError as error:  # noqa: F841
                     return flask.Response("API Error", 400, mimetype="application/json")
 

@@ -126,6 +126,8 @@ CREATE INDEX blocks_block_index_block_hash_idx ON blocks (block_index, block_has
         ;
 CREATE INDEX blocks_block_index_idx ON blocks (block_index)
         ;
+CREATE INDEX blocks_ledger_hash_idx ON blocks (ledger_hash)
+        ;
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -289,6 +291,26 @@ CREATE TRIGGER block_update_balances
             BEFORE UPDATE ON balances BEGIN
                 SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
             END;
+
+COMMIT TRANSACTION;
+PRAGMA page_size=4096;
+-- PRAGMA encoding='UTF-8';
+-- PRAGMA auto_vacuum=FULL;
+-- PRAGMA max_page_count=4294967294;
+
+BEGIN TRANSACTION;
+
+-- Table  config
+DROP TABLE IF EXISTS config;
+CREATE TABLE config (
+            name TEXT PRIMARY KEY,
+            value TEXT
+        );
+INSERT INTO config VALUES('FIX_ISSUANCES_ASSET_LONGNAME_1','1');
+INSERT INTO config VALUES('FIX_ISSUANCES_ASSET_LONGNAME_2','1');
+INSERT INTO config VALUES('CLEAN_TRANSACTION_COUNT_1','1');
+-- Triggers and indices on  config
+CREATE INDEX config_config_name_idx ON config (name);
 
 COMMIT TRANSACTION;
 PRAGMA page_size=4096;
@@ -1440,32 +1462,33 @@ BEGIN TRANSACTION;
 -- Table  issuances
 DROP TABLE IF EXISTS issuances;
 CREATE TABLE issuances(
-                tx_index INTEGER,
-                tx_hash TEXT,
-                msg_index INTEGER DEFAULT 0,
-                block_index INTEGER,
-                asset TEXT,
-                quantity INTEGER,
-                divisible BOOL,
-                source TEXT,
-                issuer TEXT,
-                transfer BOOL,
-                callable BOOL,
-                call_date INTEGER,
-                call_price REAL,
-                description TEXT,
-                fee_paid INTEGER,
-                locked BOOL,
-                status TEXT,
-                asset_longname TEXT,
-                reset BOOL,
-                description_locked BOOL,
-                fair_minting BOOL DEFAULT 0,
-                PRIMARY KEY (tx_index, msg_index),
-                UNIQUE (tx_hash, msg_index)
-            );
-INSERT INTO issuances VALUES(6,'57b34dae586111eefeecae4d16f6d20d6447efa974b72931f7b2cd0f39890406',0,310005,'BBBB',1000000000,1,'3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid',NULL,0,0,0);
-INSERT INTO issuances VALUES(7,'6163ab5e7282e43a2f07a146d28b4b45c55820ee541881bc98d2592f4e6ba975',0,310006,'BBBC',100000,0,'3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0,0,0);
+            tx_index INTEGER,
+            tx_hash TEXT,
+            msg_index INTEGER DEFAULT 0,
+            block_index INTEGER,
+            asset TEXT,
+            quantity INTEGER,
+            divisible BOOL,
+            source TEXT,
+            issuer TEXT,
+            transfer BOOL,
+            callable BOOL,
+            call_date INTEGER,
+            call_price REAL,
+            description TEXT,
+            fee_paid INTEGER,
+            locked BOOL DEFAULT FALSE,
+            status TEXT,
+            asset_longname TEXT,
+            reset BOOL DEFAULT FALSE,
+            description_locked BOOL,
+            fair_minting BOOL DEFAULT FALSE,
+            asset_events TEXT,
+            PRIMARY KEY (tx_index, msg_index),
+            UNIQUE (tx_hash, msg_index)
+        );
+INSERT INTO issuances VALUES(6,'57b34dae586111eefeecae4d16f6d20d6447efa974b72931f7b2cd0f39890406',0,310005,'BBBB',1000000000,1,'3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'',50000000,0,'valid',NULL,0,0,0,'creation');
+INSERT INTO issuances VALUES(7,'6163ab5e7282e43a2f07a146d28b4b45c55820ee541881bc98d2592f4e6ba975',0,310006,'BBBC',100000,0,'3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','3_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3',0,0,0,0.0,'foobar',50000000,0,'valid',NULL,0,0,0,'creation');
 -- Triggers and indices on  issuances
 CREATE TRIGGER block_update_issuances
             BEFORE UPDATE ON issuances BEGIN
@@ -1901,6 +1924,7 @@ CREATE TABLE dispenses (
                                 asset TEXT,
                                 dispense_quantity INTEGER,
                                 dispenser_tx_hash TEXT,
+                                btc_amount INTEGER,
                                 PRIMARY KEY (tx_index, dispense_index, source, destination),
                                 FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index));
 -- Triggers and indices on  dispenses

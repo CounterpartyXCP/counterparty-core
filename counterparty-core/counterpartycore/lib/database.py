@@ -56,8 +56,8 @@ def get_db_connection(db_file, read_only=True, check_wal=False):
 
     if hasattr(config, "DATABASE") and db_file == config.DATABASE:
         db_file_name = "Ledger DB"
-    elif hasattr(config, "API_DATABASE") and db_file == config.API_DATABASE:
-        db_file_name = "API DB"
+    elif hasattr(config, "STATE_DATABASE") and db_file == config.STATE_DATABASE:
+        db_file_name = "State DB"
     else:
         db_file_name = db_file
     if hasattr(logger, "trace"):
@@ -142,14 +142,14 @@ class APSWConnectionPool:
             db.close()
 
 
-class DBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+class LedgerDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
     def __init__(self):
         super().__init__(config.DATABASE, "Ledger DB")
 
 
-class APIDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+class StateDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
     def __init__(self):
-        super().__init__(config.API_DATABASE, "API DB")
+        super().__init__(config.STATE_DATABASE, "API DB")
 
 
 def initialise_db():
@@ -217,10 +217,6 @@ def version(db):
 def init_config_table(db):
     cursor = db.cursor()
 
-    query = "SELECT name FROM sqlite_master WHERE type='table' AND name='config'"
-    if len(list(cursor.execute(query))) == 1:
-        return
-
     sql = """
         CREATE TABLE IF NOT EXISTS config (
             name TEXT PRIMARY KEY,
@@ -232,13 +228,11 @@ def init_config_table(db):
 
 
 def set_config_value(db, name, value):
-    init_config_table(db)
     cursor = db.cursor()
     cursor.execute("INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)", (name, value))
 
 
 def get_config_value(db, name):
-    init_config_table(db)
     cursor = db.cursor()
     cursor.execute("SELECT value FROM config WHERE name = ?", (name,))
     rows = cursor.fetchall()
@@ -272,7 +266,7 @@ def optimize(db):
 def close(db):
     logger.info("Closing database connections...")
     db.close()
-    DBConnectionPool().close()
+    LedgerDBConnectionPool().close()
 
 
 def field_is_pk(cursor, table, field):

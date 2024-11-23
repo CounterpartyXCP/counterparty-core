@@ -4,6 +4,10 @@
 
 # Upgrading
 
+API breaking changes:
+
+- Remove `show_unconfirmed` parameter and `confirmed` field
+
 
 # ChangeLog
 
@@ -23,9 +27,22 @@
 - Restart RSFetcher when it returns `None`
 - Clean up blocks without ledger hash before starting catch-up
 - Don't inject details before publishing events with ZMQ
+- Populate `address_events` also with UTXO events (attach, detach and move)
+- Fix `compose_movetoutxo` documentation
+- Fix `block.close_block_index` field type
+- Set `issuances.reset` and `issuances.locked` default value to False instead None 
 
 ## Codebase
 
+- Replace `counterparty.api.db` with `state.db`
+- Add `issuances.asset_events`, `dispenses.btc_amount` and `mempool.addresses` field in Ledger DB
+- Remove duplicate table from `state.db`
+- Add `api/dbbuilder.py` module and refactor migrations to build `state.db`
+- Use migrations to rollback `state.db`
+- Remove rollback event by event in `state.db`
+- Add version checking for `state.db`: launch a rollback when a reparse or a rollback is necessary for the Ledger DB
+- Use `event_hash` to detect Blockchain reorganization and launch a rollback of `state.db`
+- Refactor functions to refresh `util.CURRENT_BLOCK_INDEX` in `wsgi.py`
 
 ## API
 
@@ -34,12 +51,15 @@
 - Optimize events counts endpoints with `events_count` table
 - Add route `/v2/utxos/withbalances` to check if utxos have balances
 - Add `type` parameter for get balances endpoints (`all`, `utxo` or `address`)
+- Add `description_locked` in asset info
 
 ## CLI
 
 - Support the `SENTRY_SAMPLE_RATE` environment variable to set the Sentry sample rate
 - Show help if no actions are provided
 - Fix and rename `--check-asset-conservation` flag to `--skip-asset-conservation-check`
+- Add `build-state-db` command
+- `rollback` and `reparse` commands trigger a re-build of the State DB
 
 # Credits
 

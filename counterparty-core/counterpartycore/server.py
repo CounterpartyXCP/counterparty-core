@@ -30,7 +30,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1
+from counterpartycore.lib.api import api_v1, dbbuilder
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.public_keys import PUBLIC_KEYS
 from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
@@ -180,6 +180,7 @@ def initialise_config(
     gunicorn_workers=None,
     gunicorn_threads_per_worker=None,
     database_file=None,  # for tests
+    action=None,
 ):
     # log config already initialized
 
@@ -245,7 +246,15 @@ def initialise_config(
         f"fetcherdb{network}",
     )
 
-    config.API_DATABASE = config.DATABASE.replace(".db", ".api.db")
+    config.STATE_DATABASE = os.path.join(os.path.dirname(config.DATABASE), "state.db")
+
+    if not os.path.exists(config.STATE_DATABASE):
+        old_db_name = config.DATABASE.replace(".db", ".api.db")
+        # delete old API db
+        for ext in ["", "-wal", "-shm"]:
+            if os.path.exists(old_db_name + ext):
+                os.unlink(old_db_name + ext)
+
     config.API_LIMIT_ROWS = api_limit_rows
 
     ##############
@@ -654,6 +663,7 @@ def initialise_log_and_config(args, api=False):
         "waitress_threads": args.waitress_threads,
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
+        "action": args.action,
     }
     # for tests
     if "database_file" in args:
@@ -831,11 +841,11 @@ def start_all(args):
         rsfetcher.stop()
 
         # Wait for any leftover DB connections to close
-        open_connections = len(database.DBConnectionPool().connections)
+        open_connections = len(database.LedgerDBConnectionPool().connections)
         while open_connections > 0:
             logger.warning(f"Waiting for {open_connections} DB connections to close...")
             time.sleep(0.1)
-            open_connections = len(database.DBConnectionPool().connections)  # Update count
+            open_connections = len(database.LedgerDBConnectionPool().connections)  # Update count
 
         # Now it's safe to check for WAL files
         try:
@@ -850,29 +860,37 @@ def start_all(args):
             )
 
         logger.debug("Cleaning up WAL and SHM files...")
-        api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
+        api_db = database.get_db_connection(config.STATE_DATABASE, read_only=False, check_wal=False)
         api_db.close()
         logger.info("Shutdown complete.")
 
 
 def reparse(block_index):
     backend.addrindexrs.init()
-    db = database.initialise_db()
+    ledger_db = database.initialise_db()
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     try:
-        blocks.reparse(db, block_index=block_index)
+        blocks.reparse(ledger_db, block_index=block_index)
+        dbbuilder.rollback_state_db(state_db, block_index)
     finally:
         backend.addrindexrs.stop()
-        database.optimize(db)
-        db.close()
+        database.optimize(ledger_db)
+        database.optimize(state_db)
+        ledger_db.close()
+        state_db.close()
 
 
 def rollback(block_index=None):
-    db = database.initialise_db()
+    ledger_db = database.initialise_db()
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     try:
-        blocks.rollback(db, block_index=block_index)
+        blocks.rollback(ledger_db, block_index=block_index)
+        dbbuilder.rollback_state_db(state_db, block_index)
     finally:
-        database.optimize(db)
-        db.close()
+        database.optimize(ledger_db)
+        database.optimize(state_db)
+        ledger_db.close()
+        state_db.close()
 
 
 def vacuum():

@@ -12,10 +12,8 @@ SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_f
             BEFORE UPDATE ON fairminters BEGIN
                 SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
             END;] databa (17) SQLITE_SCHEMA
-SQLITE_LOG: statement aborts at 11: [SELECT name FROM sqlite_master WHERE type='table' AND name='config'] database schema has changed (17) SQLITE_SCHEMA
 SQLITE_LOG: statement aborts at 27: [INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)] database schema has changed (17) SQLITE_SCHEMA
 Cleaning `transaction_count` table
-SQLITE_LOG: statement aborts at 11: [SELECT name FROM sqlite_master WHERE type='table' AND name='config'] database schema has changed (17) SQLITE_SCHEMA
 Initialising asset cache...
 Asset cache initialised in 0.00 seconds
 Initialising asset cache...

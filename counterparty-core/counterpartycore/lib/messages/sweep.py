@@ -289,14 +289,9 @@ def parse(db, tx, message):
                             "status": status,
                             "asset_longname": last_issuance["asset_longname"],
                             "reset": False,
+                            "asset_events": "transfer",
                         }
-                        ledger.insert_record(
-                            db,
-                            "issuances",
-                            bindings,
-                            "ASSET_TRANSFER",
-                            {"asset_events": "transfer"},
-                        )
+                        ledger.insert_record(db, "issuances", bindings, "ASSET_TRANSFER")
                         sweep_pos += 1
 
         bindings = {

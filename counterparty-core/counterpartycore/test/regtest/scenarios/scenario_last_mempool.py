@@ -38,6 +38,17 @@ SCENARIO = [
         },
     },
     {
+        "title": "Send BTC to $ADDRESS_7",
+        "transaction": "send",
+        "source": "$ADDRESS_6",
+        "params": {
+            "asset": "BTC",
+            "quantity": 15000,
+            "destination": "$ADDRESS_7",
+            "exact_fee": 0,
+        },
+    },
+    {
         "title": "Dispense in mempool with UTXO with balances",
         "transaction": "dispense",
         "source": "$ADDRESS_9",

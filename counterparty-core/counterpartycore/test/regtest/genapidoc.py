@@ -233,6 +233,8 @@ def gen_blueprint(db):
             for arg in route["args"]:
                 required = "required" if arg["required"] else "optional"
                 description = arg.get("description", "")
+                if current_group.lower() == "compose" and arg["name"] == "exact_fee":
+                    description += " (e.g. 0)"
                 example_arg = ""
                 if "(e.g. " in description:
                     desc_arr = description.split("(e.g. ")
@@ -526,7 +528,7 @@ def generate_regtest_fixtures(db):
 
     # get utxo with balance
     cursor.execute(
-        "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
+        "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 AND asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
     )
     row = cursor.fetchone()
     regtest_fixtures["$UTXO_WITH_BALANCE"] = row["utxo"]
