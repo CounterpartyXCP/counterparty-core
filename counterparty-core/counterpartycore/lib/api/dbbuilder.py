@@ -106,7 +106,7 @@ def build_state_db():
     logger.info("Building State DB...")
     start_time = time.time()
 
-    # Remove existing state db
+    # Remove existing State DB
     for ext in ["", "-wal", "-shm"]:
         if os.path.exists(config.STATE_DATABASE + ext):
             os.unlink(config.STATE_DATABASE + ext)
