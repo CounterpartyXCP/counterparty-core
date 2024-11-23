@@ -23,6 +23,9 @@
 - Restart RSFetcher when it returns `None`
 - Clean up blocks without ledger hash before starting catch-up
 - Don't inject details before publishing events with ZMQ
+- Populate `address_events` also with UTXO events (attach, detach and move)
+- Fix `compose_movetoutxo` documentation
+- Fix error message when trying to compose a dispense with the dispenser address as the source
 
 ## Codebase
 
