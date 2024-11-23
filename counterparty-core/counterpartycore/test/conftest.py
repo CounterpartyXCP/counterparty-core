@@ -332,6 +332,8 @@ def api_server_v2(request, cp_server):
         }
     )
 
+    config.STATE_DATABASE = config.STATE_DATABASE.replace(".testnet.db", ".db")
+
     if os.path.exists(config.STATE_DATABASE):
         os.unlink(config.STATE_DATABASE)
     if os.path.exists(config.STATE_DATABASE + "-shm"):
