@@ -180,7 +180,7 @@ SCENARIO = [
             "dispenser": "$ADDRESS_1",
             "quantity": 4000,
         },
-        "expected_error": ["source and destination must be different"],
+        "expected_error": "source and destination must be different",
     },
     {
         "title": "Dispense 4: get 100 XCP",
