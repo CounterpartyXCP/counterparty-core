@@ -81,17 +81,29 @@ def build_consolidated_table(state_db, table_name):
     for sql in sqls:
         state_db.execute(sql)
 
-    columns = [column["name"] for column in state_db.execute(f"PRAGMA table_info({table_name})")]
+    state_db.execute(f"""
+        CREATE TEMP TABLE latest_ids AS
+        SELECT {CONSOLIDATED_TABLES[table_name]}, MAX(rowid) as max_id
+        FROM ledger_db.{table_name}
+        GROUP BY {CONSOLIDATED_TABLES[table_name]}
+    """)  # noqa S608
+
+    state_db.execute("""
+        CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)
+    """)
+
+    columns = [
+        f"b.{column['name']}" for column in state_db.execute(f"PRAGMA table_info({table_name})")
+    ]
     select_fields = ", ".join(columns)
 
-    sql = f"""
-        INSERT INTO {table_name} 
-            SELECT {select_fields} FROM (
-                SELECT *, MAX(rowid) as rowid FROM ledger_db.{table_name}
-                GROUP BY {CONSOLIDATED_TABLES[table_name]}
-            )
-    """  # noqa S608
-    state_db.execute(sql)
+    state_db.execute(f"""
+        INSERT INTO {table_name}
+        SELECT {select_fields}
+        FROM ledger_db.{table_name} b
+        JOIN latest_ids l ON b.rowid = l.max_id
+    """)  # noqa S608
+    state_db.execute("DROP TABLE latest_ids")
 
     # add additional columns
     if table_name in ADDITONAL_COLUMNS:
