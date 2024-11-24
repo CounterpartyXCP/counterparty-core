@@ -4,7 +4,7 @@
 import logging
 import time
 
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -24,7 +24,14 @@ def apply(db):
     if hasattr(db, "row_factory"):
         db.row_factory = dict_factory
 
-    database.attach_ledger_db(db)
+    attached = (
+        db.execute(
+            "SELECT COUNT(*) AS count FROM pragma_database_list WHERE name = ?", ("ledger_db",)
+        ).fetchone()["count"]
+        > 0
+    )
+    if not attached:
+        db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
     sqls = [
         """
