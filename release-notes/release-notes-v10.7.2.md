@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v10.7.2 (2024-11-24)
 
-
+This is a minor release with a large number of bugfixes and quality-of-life improvements.
 
 
 # Upgrading
