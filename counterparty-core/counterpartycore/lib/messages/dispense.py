@@ -64,6 +64,11 @@ def compose(db, source, destination, quantity, skip_validation: bool = False):
     problems = validate(db, source, destination, quantity)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
+
+    # not in validate() to not risk a protocol change
+    if source == destination:
+        raise exceptions.ComposeError("source and destination must be different")
+
     # create data
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser_module.DISPENSE_ID)
     data += b"\x00"

@@ -31,6 +31,7 @@ API breaking changes:
 - Fix `compose_movetoutxo` documentation
 - Fix `block.close_block_index` field type
 - Set `issuances.reset` and `issuances.locked` default value to False instead None 
+- Fix error message when trying to compose a dispense with the dispenser address as the source
 
 ## Codebase
 
