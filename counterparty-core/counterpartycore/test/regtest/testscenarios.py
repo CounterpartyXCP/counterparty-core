@@ -385,9 +385,6 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
 
         context = {}
 
-        regtest_node_thread.node.test_reorg()
-        raise KeyboardInterrupt
-
         check_api_v1(regtest_node_thread.node)
 
         # run all scenarios
