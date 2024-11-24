@@ -233,6 +233,8 @@ def gen_blueprint(db):
             for arg in route["args"]:
                 required = "required" if arg["required"] else "optional"
                 description = arg.get("description", "")
+                if current_group.lower() == "compose" and arg["name"] == "exact_fee":
+                    description += " (e.g. 0)"
                 example_arg = ""
                 if "(e.g. " in description:
                     desc_arr = description.split("(e.g. ")
