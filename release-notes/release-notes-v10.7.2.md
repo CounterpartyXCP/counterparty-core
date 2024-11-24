@@ -2,7 +2,10 @@
 
 
 
+
 # Upgrading
+
+This upgrade is not a protocol change and does not require an automatic reparse.
 
 
 # ChangeLog
@@ -11,7 +14,7 @@
 
 ## Bugfixes
 
-- Fix CORS headers for OPTIONS requests
+- Fix CORS headers for `OPTIONS` requests
 - Fix rounding error on normalized quantity
 - Use `null` instead of `''` for `asset_longname` and `asset_parent` fields
 - Correctly catch `ValueError` in unpack endpoint
