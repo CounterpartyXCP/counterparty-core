@@ -63,31 +63,31 @@ def import_migration(migration_id):
     return import_from_path(module_name, migration_path)
 
 
-def apply_migration(state_db, migration_id):
+def apply_migration(state_db, block_index, migration_id):
     module = import_migration(migration_id)
-    module.apply(state_db)
+    module.apply(state_db, block_index)
 
 
-def rollback_migration(state_db, migration_id):
+def rollback_migration(state_db, block_index, migration_id):
     module = import_migration(migration_id)
-    module.rollback(state_db)
+    module.rollback(state_db, block_index)
 
 
-def rollback_migrations(state_db, migration_ids):
+def rollback_migrations(state_db, block_index, migration_ids):
     for migration_id in reversed(migration_ids):
         logger.debug(f"Rolling back migration `{migration_id}`...")
-        rollback_migration(state_db, migration_id)
+        rollback_migration(state_db, block_index, migration_id)
 
 
-def apply_migrations(state_db, migration_ids):
+def apply_migrations(state_db, block_index, migration_ids):
     for migration_id in migration_ids:
         logger.debug(f"Applying migration `{migration_id}`...")
-        apply_migration(state_db, migration_id)
+        apply_migration(state_db, block_index, migration_id)
 
 
-def reapply_migrations(state_db, migration_ids):
-    rollback_migrations(state_db, migration_ids)
-    apply_migrations(state_db, migration_ids)
+def reapply_migrations(state_db, block_index, migration_ids):
+    rollback_migrations(state_db, block_index, migration_ids)
+    apply_migrations(state_db, block_index, migration_ids)
 
 
 def rollback_tables(state_db, block_index):
@@ -124,6 +124,6 @@ def rollback_state_db(state_db, block_index):
     with log.Spinner("Rolling back State DB tables..."):
         rollback_tables(state_db, block_index)
     with log.Spinner("Re-applying migrations..."):
-        reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
+        reapply_migrations(state_db, block_index, MIGRATIONS_AFTER_ROLLBACK)
 
     logger.info(f"State DB rolled back in {time.time() - start_time:.2f} seconds")

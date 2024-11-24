@@ -13,7 +13,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 __depends__ = {"0006.create_and_populate_consolidated_tables"}
 
 
-def apply(db):
+def apply(db, block_index=None):
     start_time = time.time()
     logger.debug("Building views...")
 
@@ -82,7 +82,7 @@ def apply(db):
     logger.debug(f"Built views in {time.time() - start_time:.2f} seconds")
 
 
-def rollback(db):
+def rollback(db, block_index=None):
     db.execute("DROP VIEW asset_holders")
     db.execute("DROP VIEW xcp_holders")
 

@@ -4,7 +4,7 @@
 import logging
 import time
 
-from counterpartycore.lib import config
+from counterpartycore.lib import config, database
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -17,21 +17,14 @@ def dict_factory(cursor, row):
     return {key: value for key, value in zip(fields, row)}
 
 
-def apply(db):
+def apply(db, block_index=None):
     start_time = time.time()
     logger.debug("Populating the `events_count` table...")
 
     if hasattr(db, "row_factory"):
         db.row_factory = dict_factory
 
-    attached = (
-        db.execute(
-            "SELECT COUNT(*) AS count FROM pragma_database_list WHERE name = ?", ("ledger_db",)
-        ).fetchone()["count"]
-        > 0
-    )
-    if not attached:
-        db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+    database.attach_ledger_db(db)
 
     db.execute("""
         CREATE TABLE events_count(
@@ -42,7 +35,7 @@ def apply(db):
 
     db.execute("""
         INSERT INTO events_count (event, count)
-        SELECT event, COUNT(*) AS counter
+        SELECT event, COUNT(*)
         FROM ledger_db.messages
         GROUP BY event;
     """)
@@ -52,7 +45,7 @@ def apply(db):
     logger.debug(f"Populated the `events_count` table in {time.time() - start_time:.2f} seconds")
 
 
-def rollback(db):
+def rollback(db, block_index=None):
     db.execute("DROP TABLE events_count")
 
 

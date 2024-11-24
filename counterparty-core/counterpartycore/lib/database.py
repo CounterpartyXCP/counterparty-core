@@ -339,3 +339,14 @@ def lock_update(db, table):
 def unlock_update(db, table):
     cursor = db.cursor()
     cursor.execute(f"DROP TRIGGER IF EXISTS block_update_{table}")
+
+
+def attach_ledger_db(state_db):
+    attached = (
+        state_db.execute(
+            "SELECT COUNT(*) AS count FROM pragma_database_list WHERE name = ?", ("ledger_db",)
+        ).fetchone()["count"]
+        > 0
+    )
+    if not attached:
+        state_db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))

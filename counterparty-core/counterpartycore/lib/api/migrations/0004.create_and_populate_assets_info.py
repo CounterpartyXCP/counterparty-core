@@ -17,38 +17,7 @@ def dict_factory(cursor, row):
     return {key: value for key, value in zip(fields, row)}
 
 
-def apply(db):
-    start_time = time.time()
-    logger.debug("Populating the `assets_info` table...")
-
-    if hasattr(db, "row_factory"):
-        db.row_factory = dict_factory
-
-    attached = (
-        db.execute(
-            "SELECT COUNT(*) AS count FROM pragma_database_list WHERE name = ?", ("ledger_db",)
-        ).fetchone()["count"]
-        > 0
-    )
-    if not attached:
-        db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
-
-    db.execute("""
-        CREATE TABLE assets_info(
-            asset TEXT UNIQUE,
-            asset_id TEXT UNIQUE,
-            asset_longname TEXT,
-            issuer TEXT,
-            owner TEXT,
-            divisible BOOL,
-            locked BOOL DEFAULT 0,
-            supply INTEGER DEFAULT 0,
-            description TEXT,
-            description_locked BOOL DEFAULT 0,
-            first_issuance_block_index INTEGER,
-            last_issuance_block_index INTEGER
-    )""")
-
+def insert_assets_info(db, block_index=None):
     sql = """
     INSERT INTO assets_info 
     SELECT 
@@ -89,13 +58,39 @@ def apply(db):
         WHERE ledger_db.issuances.asset = ledger_db.assets.asset_name
         AND ledger_db.issuances.status = 'valid'
         GROUP BY asset
-    );
-    """
-    cursor = db.cursor()
-    cursor.execute(sql)
+    )"""
+    if block_index:
+        sql += " WHERE last_issuance_block_index >= ?"
+        db.execute(sql, (block_index,))
+    else:
+        db.execute(sql)
+
+
+def build_assets_info(db):
+    logger.debug("Populating the `assets_info` table...")
+    start_time = time.time()
+
+    db.execute("""
+        CREATE TABLE assets_info(
+            asset TEXT UNIQUE,
+            asset_id TEXT UNIQUE,
+            asset_longname TEXT,
+            issuer TEXT,
+            owner TEXT,
+            divisible BOOL,
+            locked BOOL DEFAULT 0,
+            supply INTEGER DEFAULT 0,
+            description TEXT,
+            description_locked BOOL DEFAULT 0,
+            first_issuance_block_index INTEGER,
+            last_issuance_block_index INTEGER
+    )""")
+
+    insert_assets_info(db, block_index=None)
 
     ledger_db = database.get_db_connection(config.DATABASE)
-    cursor.execute(
+
+    db.execute(
         """
         INSERT INTO assets_info (
             asset, divisible, locked, supply, description,
@@ -124,8 +119,32 @@ def apply(db):
     logger.debug(f"Populated the `assets_info` table in {time.time() - start_time:.2f} seconds")
 
 
-def rollback(db):
-    db.execute("DROP TABLE assets_info")
+def rebuild_assets_info(db, block_index):
+    logger.debug(f"Rebuilding `assets_info` table from block {block_index}...")
+    start_time = time.time()
+
+    insert_assets_info(db, block_index)
+
+    logger.debug(f"Rebuilt `assets_info` table in {time.time() - start_time:.2f} seconds")
+
+
+def apply(db, block_index=None):
+    if hasattr(db, "row_factory"):
+        db.row_factory = dict_factory
+
+    database.attach_ledger_db(db)
+
+    if block_index:
+        rebuild_assets_info(db, block_index)
+    else:
+        build_assets_info(db)
+
+
+def rollback(db, block_index=None):
+    if block_index:
+        db.execute("DELETE FROM assets_info WHERE last_issuance_block_index >= ?", (block_index,))
+    else:
+        db.execute("DROP TABLE assets_info")
 
 
 if not __name__.startswith("apsw_"):

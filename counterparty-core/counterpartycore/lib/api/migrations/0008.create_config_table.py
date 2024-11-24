@@ -12,7 +12,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 __depends__ = {"0007.create_views"}
 
 
-def apply(db):
+def apply(db, block_index=None):
     start_time = time.time()
     logger.debug("Creating `config` table...")
 
@@ -30,7 +30,7 @@ def apply(db):
     logger.debug(f"`config` table created in {time.time() - start_time:.2f} seconds")
 
 
-def rollback(db):
+def rollback(db, block_index=None):
     db.execute("DROP TABLE config")
 
 
