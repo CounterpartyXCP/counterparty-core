@@ -537,7 +537,9 @@ def catch_up(ledger_db, state_db, watcher=None):
 
 def search_matching_event(ledger_db, state_db):
     state_db_cursor = state_db.cursor()
-    state_db_cursor.execute("SELECT * FROM parsed_events ORDER BY event_index DESC")
+    state_db_cursor.execute(
+        "SELECT * FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT -1 OFFSET 1"
+    )
     matching_event = None
     for parsed_event in state_db_cursor:
         ledger_event = fetch_one(
