@@ -26,6 +26,7 @@ from counterpartycore.lib import (
     database,
     exceptions,
     follow,
+    ledger,
     log,
     util,
 )
@@ -868,6 +869,14 @@ def start_all(args):
 def reparse(block_index):
     backend.addrindexrs.init()
     ledger_db = database.initialise_db()
+
+    last_block = ledger.get_last_block(ledger_db)
+    if last_block is None or block_index > last_block["block_index"]:
+        print(colored("Block index is higher than current block index. No need to reparse.", "red"))
+        backend.addrindexrs.stop()
+        ledger_db.close()
+        return
+
     state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     try:
         blocks.reparse(ledger_db, block_index=block_index)
@@ -882,6 +891,15 @@ def reparse(block_index):
 
 def rollback(block_index=None):
     ledger_db = database.initialise_db()
+
+    last_block = ledger.get_last_block(ledger_db)
+    if last_block is None or block_index > last_block["block_index"]:
+        print(
+            colored("Block index is higher than current block index. No need to rollback.", "red")
+        )
+        ledger_db.close()
+        return
+
     state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     try:
         blocks.rollback(ledger_db, block_index=block_index)

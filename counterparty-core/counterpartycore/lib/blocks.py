@@ -1094,6 +1094,9 @@ def rebuild_database(db, include_transactions=True):
 
 
 def rollback(db, block_index=0):
+    if block_index > util.CURRENT_BLOCK_INDEX:
+        logger.debug("Block index is higher than current block index. No need to reparse.")
+        return
     block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
     step = f"Rolling Ledger DB back to block {block_index}..."
