@@ -14496,7 +14496,7 @@
             },
             "/v2/utxos/<utxo>/compose/movetoutxo": {
                 "function": "compose_movetoutxo",
-                "description": "Composes a transaction to move assets from UTXO to another UTXO.",
+                "description": "Composes a transaction like a send but for moving from one UTXO to another, with the destination is specified as an address.",
                 "args": [
                     {
                         "name": "utxo",
