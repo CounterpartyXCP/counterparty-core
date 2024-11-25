@@ -44,6 +44,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 "log_file": config.FETCHER_LOG,
                 "log_level": config.LOG_LEVEL_STRING,
                 "json_format": config.JSON_LOGS,
+                "only_write_in_reorg_window": True,
             }
         else:
             self.config = indexer_config
