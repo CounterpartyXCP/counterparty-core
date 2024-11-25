@@ -59,7 +59,7 @@ SCENARIO = [
             "inputs_set": "$ATOMICSWAP_2_TX_HASH:1",
             "exact_fee": 1,
         },
-        "expected_error": "invalid UTXO: $ATOMICSWAP_2_TX_HASH:1",
+        "expected_error": "invalid UTXOs: $ATOMICSWAP_2_TX_HASH:1",
     },
     {
         "title": "Dispense in mempool",
