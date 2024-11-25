@@ -4,7 +4,7 @@ import os
 import threading
 import time
 
-from counterpartycore.lib import config, database, exceptions
+from counterpartycore.lib import config, database, exceptions, util
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.util import format_duration
 
@@ -205,6 +205,16 @@ def event_to_sql(event):
     return None, []
 
 
+def search_address_from_utxo(state_db, utxo):
+    cursor = state_db.cursor()
+    sql = "SELECT utxo_address FROM balances WHERE utxo = ? LIMIT 1"
+    cursor.execute(sql, (utxo,))
+    address = cursor.fetchone()
+    if address is not None:
+        return address["utxo_address"]
+    return None
+
+
 def update_address_events(state_db, event):
     if event["event"] not in EVENTS_ADDRESS_FIELDS:
         return
@@ -213,6 +223,7 @@ def update_address_events(state_db, event):
     for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
         if field not in event_bindings:
             continue
+        address = event_bindings[field]
         sql = """
             INSERT INTO address_events (address, event_index, block_index)
             VALUES (:address, :event_index, :block_index)
@@ -220,11 +231,22 @@ def update_address_events(state_db, event):
         cursor.execute(
             sql,
             {
-                "address": event_bindings[field],
+                "address": address,
                 "event_index": event["message_index"],
                 "block_index": event["block_index"],
             },
         )
+        if util.is_utxo_format(address):
+            utxo_address = search_address_from_utxo(state_db, address)
+            if utxo_address is not None:
+                cursor.execute(
+                    sql,
+                    {
+                        "address": utxo_address,
+                        "event_index": event["message_index"],
+                        "block_index": event["block_index"],
+                    },
+                )
 
 
 def update_all_expiration(state_db, event):

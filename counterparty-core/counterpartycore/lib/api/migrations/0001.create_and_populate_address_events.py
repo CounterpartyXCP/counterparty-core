@@ -1,12 +1,11 @@
 #
 # file: counterpartycore/lib/api/migrations/0001.populate_address_events.py
 #
-import json
 import logging
 import time
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api.api_watcher import EVENTS_ADDRESS_FIELDS
+from counterpartycore.lib.api.api_watcher import EVENTS_ADDRESS_FIELDS, update_address_events
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -55,19 +54,11 @@ def apply(db):
     cursor.execute(sql, event_names)
 
     inserted = 0
-    for row in cursor:
-        bindings = json.loads(row["bindings"])
-        for field in EVENTS_ADDRESS_FIELDS[row["event"]]:
-            if field not in bindings:
-                continue
-            sql = """
-                INSERT INTO address_events (address, event_index, block_index)
-                VALUES (?, ?, ?)
-            """
-            db.execute(sql, (bindings[field], row["message_index"], row["block_index"]))
-            inserted += 1
-            if inserted % 1000000 == 0:
-                logger.trace(f"Inserted {inserted} address events")
+    for event in cursor:
+        update_address_events(db, event)
+        inserted += 1
+        if inserted % 1000000 == 0:
+            logger.trace(f"Inserted {inserted} address events")
 
     cursor.execute("CREATE INDEX address_events_address_idx ON address_events (address)")
     cursor.execute("CREATE INDEX address_events_event_index_idx ON address_events (event_index)")
