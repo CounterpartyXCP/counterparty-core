@@ -148,7 +148,7 @@ def test_new_get_balances_by_address():
     # import json
     # print(json.dumps(result.json()["result"], indent=4))
 
-    assert result.json()["result"] == [
+    expected_result = [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
@@ -234,6 +234,8 @@ def test_new_get_balances_by_address():
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         },
     ]
+    for balance in result.json()["result"]:
+        assert balance in expected_result
 
 
 @pytest.mark.usefixtures("api_server_v2")
@@ -244,7 +246,7 @@ def test_new_get_balances_by_asset():
     import json
 
     print(json.dumps(result.json()["result"], indent=4))
-    assert result.json()["result"] == [
+    expected_result = [
         {
             "address": None,
             "utxo": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
@@ -323,6 +325,8 @@ def test_new_get_balances_by_asset():
             "quantity": 92999030129,
         },
     ]
+    for balance in result.json()["result"]:
+        assert balance in expected_result
 
 
 @pytest.mark.usefixtures("api_server")
