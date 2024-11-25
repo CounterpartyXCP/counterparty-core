@@ -1,12 +1,11 @@
-# Release Notes - Counterparty Core v10.7.2 (2024-11-??)
+# Release Notes - Counterparty Core v10.7.2 (2024-11-24)
 
+This is a minor release with a large number of bugfixes and quality-of-life improvements.
 
 
 # Upgrading
 
-API breaking changes:
-
-- Remove `show_unconfirmed` parameter and `confirmed` field
+This upgrade is not a protocol change and does not require an automatic reparse.
 
 
 # ChangeLog
@@ -15,7 +14,7 @@ API breaking changes:
 
 ## Bugfixes
 
-- Fix CORS headers for OPTIONS requests
+- Fix CORS headers for `OPTIONS` requests
 - Fix rounding error on normalized quantity
 - Use `null` instead of `''` for `asset_longname` and `asset_parent` fields
 - Correctly catch `ValueError` in unpack endpoint
