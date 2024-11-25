@@ -2008,6 +2008,51 @@
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
             {
+                "address": null,
+                "asset": "DIVISIBLE",
+                "quantity": 1,
+                "utxo": "74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0",
+                "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "0.00000001"
+            },
+            {
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "DIVISIBLE",
+                "quantity": 98799999999,
+                "utxo": null,
+                "utxo_address": null,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "Divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "987.99999999"
+            },
+            {
+                "address": null,
+                "asset": "XCP",
+                "quantity": 100,
+                "utxo": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
+                "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
+                },
+                "quantity_normalized": "0.00000100"
+            },
+            {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "XCP",
                 "quantity": 91674999900,
@@ -2039,6 +2084,36 @@
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "FREEFAIRMIN",
+                "quantity": 10,
+                "utxo": null,
+                "utxo_address": null,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "0.00000010"
+            },
+            {
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "A95428956661682277",
+                "quantity": 100000000,
+                "utxo": null,
+                "utxo_address": null,
+                "asset_info": {
+                    "asset_longname": "PARENT.already.issued",
+                    "description": "Child of parent",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": true,
+                    "locked": false
+                },
+                "quantity_normalized": "1.00000000"
+            },
+            {
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "PARENT",
                 "quantity": 100000000,
                 "utxo": null,
@@ -2051,21 +2126,6 @@
                     "locked": false
                 },
                 "quantity_normalized": "1.00000000"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "NODIVISIBLE",
-                "quantity": 985,
-                "utxo": null,
-                "utxo_address": null,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "985"
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -2084,6 +2144,21 @@
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "NODIVISIBLE",
+                "quantity": 985,
+                "utxo": null,
+                "utxo_address": null,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "No divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": false,
+                    "locked": false
+                },
+                "quantity_normalized": "985"
+            },
+            {
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "LOCKED",
                 "quantity": 1000,
                 "utxo": null,
@@ -2099,36 +2174,6 @@
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "FREEFAIRMIN",
-                "quantity": 10,
-                "utxo": null,
-                "utxo_address": null,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "0.00000010"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "DIVISIBLE",
-                "quantity": 98799999999,
-                "utxo": null,
-                "utxo_address": null,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "987.99999999"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "asset": "CALLABLE",
                 "quantity": 1000,
                 "utxo": null,
@@ -2141,51 +2186,6 @@
                     "locked": false
                 },
                 "quantity_normalized": "0.00001000"
-            },
-            {
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset": "A95428956661682277",
-                "quantity": 100000000,
-                "utxo": null,
-                "utxo_address": null,
-                "asset_info": {
-                    "asset_longname": "PARENT.already.issued",
-                    "description": "Child of parent",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "1.00000000"
-            },
-            {
-                "address": null,
-                "asset": "XCP",
-                "quantity": 100,
-                "utxo": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
-                "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "The Counterparty protocol native currency",
-                    "issuer": null,
-                    "divisible": true,
-                    "locked": true
-                },
-                "quantity_normalized": "0.00000100"
-            },
-            {
-                "address": null,
-                "asset": "DIVISIBLE",
-                "quantity": 1,
-                "utxo": "74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0",
-                "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "Divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": true,
-                    "locked": false
-                },
-                "quantity_normalized": "0.00000001"
             }
         ],
         "next_cursor": null,
@@ -5303,11 +5303,11 @@
     "http://localhost:10009/v2/assets/NODIVISIBLE/balances?verbose=true": {
         "result": [
             {
-                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                 "utxo": null,
                 "utxo_address": null,
                 "asset": "NODIVISIBLE",
-                "quantity": 10,
+                "quantity": 5,
                 "asset_info": {
                     "asset_longname": null,
                     "description": "No divisible asset",
@@ -5315,7 +5315,7 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "10"
+                "quantity_normalized": "5"
             },
             {
                 "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -5333,11 +5333,11 @@
                 "quantity_normalized": "985"
             },
             {
-                "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
                 "utxo": null,
                 "utxo_address": null,
                 "asset": "NODIVISIBLE",
-                "quantity": 5,
+                "quantity": 10,
                 "asset_info": {
                     "asset_longname": null,
                     "description": "No divisible asset",
@@ -5345,7 +5345,7 @@
                     "divisible": false,
                     "locked": false
                 },
-                "quantity_normalized": "5"
+                "quantity_normalized": "10"
             }
         ],
         "next_cursor": null,
@@ -5633,27 +5633,10 @@
         "result": [
             {
                 "asset": "NODIVISIBLE",
-                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "quantity": 985,
-                "escrow": null,
-                "cursor_id": "balances_15",
-                "holding_type": "balances",
-                "status": null,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "No divisible asset",
-                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "divisible": false,
-                    "locked": false
-                },
-                "quantity_normalized": "985"
-            },
-            {
-                "asset": "NODIVISIBLE",
                 "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                 "quantity": 5,
                 "escrow": null,
-                "cursor_id": "balances_26",
+                "cursor_id": "balances_6",
                 "holding_type": "balances",
                 "status": null,
                 "asset_info": {
@@ -5667,10 +5650,27 @@
             },
             {
                 "asset": "NODIVISIBLE",
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "quantity": 985,
+                "escrow": null,
+                "cursor_id": "balances_7",
+                "holding_type": "balances",
+                "status": null,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "No divisible asset",
+                    "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "divisible": false,
+                    "locked": false
+                },
+                "quantity_normalized": "985"
+            },
+            {
+                "asset": "NODIVISIBLE",
                 "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
                 "quantity": 10,
                 "escrow": null,
-                "cursor_id": "balances_4",
+                "cursor_id": "balances_8",
                 "holding_type": "balances",
                 "status": null,
                 "asset_info": {
@@ -6144,27 +6144,6 @@
     "http://localhost:10009/v2/bets?verbose=true": {
         "result": [
             {
-                "tx_index": 102,
-                "tx_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
-                "block_index": 310101,
-                "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                "bet_type": 3,
-                "deadline": 1388000200,
-                "wager_quantity": 10,
-                "wager_remaining": 10,
-                "counterwager_quantity": 10,
-                "counterwager_remaining": 10,
-                "target_value": 0.0,
-                "leverage": 5040,
-                "expiration": 1000,
-                "expire_index": 311101,
-                "fee_fraction_int": 5000000,
-                "status": "open",
-                "block_time": 310101000,
-                "fee_fraction_int_normalized": "0.05000000"
-            },
-            {
                 "tx_index": 113,
                 "tx_hash": "d79b590e4ec3e74cbc3eb4d0f956ce7abb0e3af2ccac85ff90ed8acf13f2e048",
                 "block_index": 310112,
@@ -6183,6 +6162,27 @@
                 "fee_fraction_int": 5000000,
                 "status": "open",
                 "block_time": 310112000,
+                "fee_fraction_int_normalized": "0.05000000"
+            },
+            {
+                "tx_index": 102,
+                "tx_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                "block_index": 310101,
+                "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "bet_type": 3,
+                "deadline": 1388000200,
+                "wager_quantity": 10,
+                "wager_remaining": 10,
+                "counterwager_quantity": 10,
+                "counterwager_remaining": 10,
+                "target_value": 0.0,
+                "leverage": 5040,
+                "expiration": 1000,
+                "expire_index": 311101,
+                "fee_fraction_int": 5000000,
+                "status": "open",
+                "block_time": 310101000,
                 "fee_fraction_int_normalized": "0.05000000"
             }
         ],
@@ -6340,44 +6340,6 @@
     "http://localhost:10009/v2/dispensers?verbose=true": {
         "result": [
             {
-                "tx_index": 108,
-                "tx_hash": "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec",
-                "block_index": 310107,
-                "source": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
-                "asset": "XCP",
-                "give_quantity": 100,
-                "escrow_quantity": 100,
-                "satoshirate": 100,
-                "status": 0,
-                "give_remaining": 100,
-                "oracle_address": null,
-                "last_status_tx_hash": null,
-                "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
-                "dispense_count": 0,
-                "last_status_tx_source": null,
-                "close_block_index": null,
-                "price": 1.0,
-                "fiat_price": null,
-                "oracle_price": null,
-                "fiat_unit": null,
-                "oracle_price_last_updated": null,
-                "satoshi_price": 100,
-                "block_time": 310107000,
-                "asset_info": {
-                    "asset_longname": null,
-                    "description": "The Counterparty protocol native currency",
-                    "issuer": null,
-                    "divisible": true,
-                    "locked": true
-                },
-                "give_quantity_normalized": "0.00000100",
-                "give_remaining_normalized": "0.00000100",
-                "escrow_quantity_normalized": "0.00000100",
-                "satoshirate_normalized": "0.00000100",
-                "satoshi_price_normalized": "0.00000100",
-                "price_normalized": "1.0000000000000000"
-            },
-            {
                 "tx_index": 511,
                 "tx_hash": "af67f6762d4b00b4bf5fb93a9d556e007a147aa80fbf6a84410df05a0182da9e",
                 "block_index": 310510,
@@ -6411,6 +6373,44 @@
                 "give_quantity_normalized": "100",
                 "give_remaining_normalized": "100",
                 "escrow_quantity_normalized": "100",
+                "satoshirate_normalized": "0.00000100",
+                "satoshi_price_normalized": "0.00000100",
+                "price_normalized": "1.0000000000000000"
+            },
+            {
+                "tx_index": 108,
+                "tx_hash": "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec",
+                "block_index": 310107,
+                "source": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+                "asset": "XCP",
+                "give_quantity": 100,
+                "escrow_quantity": 100,
+                "satoshirate": 100,
+                "status": 0,
+                "give_remaining": 100,
+                "oracle_address": null,
+                "last_status_tx_hash": null,
+                "origin": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+                "dispense_count": 0,
+                "last_status_tx_source": null,
+                "close_block_index": null,
+                "price": 1.0,
+                "fiat_price": null,
+                "oracle_price": null,
+                "fiat_unit": null,
+                "oracle_price_last_updated": null,
+                "satoshi_price": 100,
+                "block_time": 310107000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
+                },
+                "give_quantity_normalized": "0.00000100",
+                "give_remaining_normalized": "0.00000100",
+                "escrow_quantity_normalized": "0.00000100",
                 "satoshirate_normalized": "0.00000100",
                 "satoshi_price_normalized": "0.00000100",
                 "price_normalized": "1.0000000000000000"
