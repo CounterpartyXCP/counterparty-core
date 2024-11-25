@@ -461,6 +461,12 @@ def initialise(db):
             "addresses_idx",
             "block_index_message_index_idx",
             "asset_longname_idx",
+            "blocks_block_index_idx",
+            "transactions_block_index_idx",
+            "transactions_tx_index_idx",
+            "balances_address_idx",
+            "balances_utxo_idx",
+            "messages_block_index_idx",
         ],
     )
 
@@ -510,7 +516,6 @@ def initialise(db):
         cursor,
         "blocks",
         [
-            ["block_index"],
             ["block_index", "block_hash"],
             ["ledger_hash"],
         ],
@@ -555,8 +560,6 @@ def initialise(db):
         cursor,
         "transactions",
         [
-            ["block_index"],
-            ["tx_index"],
             ["tx_hash"],
             ["block_index", "tx_index"],
             ["tx_index", "tx_hash", "block_index"],
@@ -667,11 +670,9 @@ def initialise(db):
         [
             ["address", "asset"],
             ["utxo", "asset"],
-            ["address"],
             ["asset"],
             ["block_index"],
             ["quantity"],
-            ["utxo"],
             ["utxo_address"],
         ],
     )

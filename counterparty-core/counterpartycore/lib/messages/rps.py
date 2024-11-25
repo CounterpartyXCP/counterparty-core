@@ -54,6 +54,7 @@ def initialise(db):
             "block_index_idx",
             "tx0_address_idx",
             "tx1_address_idx",
+            "rps_tx_index_idx",
         ],
     )
 
@@ -83,7 +84,6 @@ def initialise(db):
             ["source"],
             ["wager", "possible_moves"],
             ["status"],
-            ["tx_index"],
             ["tx_hash"],
             ["expire_index"],
             ["tx_index", "tx_hash"],

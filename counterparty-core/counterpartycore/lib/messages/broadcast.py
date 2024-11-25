@@ -60,6 +60,7 @@ def initialise(db):
             "status_source_idx",
             "status_source_index_idx",
             "timestamp_idx",
+            "broadcasts_status_source_idx",
         ],
     )
 
@@ -82,7 +83,6 @@ def initialise(db):
         "broadcasts",
         [
             ["block_index"],
-            ["status", "source"],
             ["status", "source", "tx_index"],
             ["timestamp"],
         ],

@@ -14508,7 +14508,7 @@
                         "name": "destination",
                         "required": true,
                         "type": "str",
-                        "description": "The address to move the assets to (e.g. $ADDRESS_1)"
+                        "description": "the address for which the destination utxo will be created (e.g. $ADDRESS_1)"
                     },
                     {
                         "name": "encoding",

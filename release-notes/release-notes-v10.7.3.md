@@ -13,6 +13,7 @@
 - Fix `block.close_block_index` field type
 - Set `issuances.reset` and `issuances.locked` default value to False instead None 
 - Save also `utxo_address` in `address_events` table
+- Clean useless indexes
 
 ## Codebase
 

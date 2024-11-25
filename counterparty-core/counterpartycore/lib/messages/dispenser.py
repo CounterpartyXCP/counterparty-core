@@ -86,17 +86,24 @@ def initialise(db):
     if database.field_is_pk(cursor, "dispensers", "tx_index"):
         database.copy_old_table(cursor, "dispensers", create_dispensers_query)
 
+    # remove useless indexes
+    database.drop_indexes(
+        cursor,
+        [
+            "dispensers_source_idx",
+            "dispensers_status_idx",
+        ],
+    )
+
     # create indexes
     database.create_indexes(
         cursor,
         "dispensers",
         [
             ["block_index"],
-            ["source"],
             ["asset"],
             ["tx_index"],
             ["tx_hash"],
-            ["status"],
             ["give_remaining"],
             ["status", "block_index"],
             ["source", "origin"],
