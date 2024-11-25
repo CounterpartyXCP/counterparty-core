@@ -124,8 +124,6 @@ INSERT INTO blocks VALUES(310101,'369472409995ca1a2ebecbad6bf9dab38c378ab1e67e1b
 -- Triggers and indices on  blocks
 CREATE INDEX blocks_block_index_block_hash_idx ON blocks (block_index, block_hash)
         ;
-CREATE INDEX blocks_block_index_idx ON blocks (block_index)
-        ;
 CREATE INDEX blocks_ledger_hash_idx ON blocks (ledger_hash)
         ;
 
@@ -179,15 +177,11 @@ INSERT INTO transactions VALUES(22,'4408350196e71533e054ef84d1bdc4ba4b0f693d2d98
 INSERT INTO transactions VALUES(23,'181709b341ec136f90975fdaa362c767ebd789e72f16d4e17348ab2985c1bd01',310022,'44435f9a99a0aa12a9bfabdc4cb8119f6ea6a6e1350d2d65445fb66a456db5fc',310022000,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','mvCounterpartyXXXXXXXXXXXXXXW24Hef',100000000,5625,X'',1,' a64251be6598696807b458ee6811a35eefdcd8170ab68e36c37d1c5b0bb84350:0 2 ');
 INSERT INTO transactions VALUES(24,'f4a0c2582fb141e9451a7c00fa61afc147b9959c2dd20a1978950936fdb53831',310023,'d8cf5bec1bbcab8ca4f495352afde3b6572b7e1d61b3976872ebb8e9d30ccb08',310023000,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3',1000,7650,X'0000000000000000000047680000000000002710',1,' 806ec51cd29841b7bb12b0cb41cf9678b3e3e26f9a95d5aeba5e0868330b8e60:0 3 ');
 -- Triggers and indices on  transactions
-CREATE INDEX transactions_block_index_idx ON transactions (block_index)
-        ;
 CREATE INDEX transactions_block_index_tx_index_idx ON transactions (block_index, tx_index)
         ;
 CREATE INDEX transactions_source_idx ON transactions (source)
         ;
 CREATE INDEX transactions_tx_hash_idx ON transactions (tx_hash)
-        ;
-CREATE INDEX transactions_tx_index_idx ON transactions (tx_index)
         ;
 CREATE INDEX transactions_tx_index_tx_hash_block_index_idx ON transactions (tx_index, tx_hash, block_index)
         ;
@@ -273,8 +267,6 @@ INSERT INTO balances VALUES('2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZN
 -- Triggers and indices on  balances
 CREATE INDEX balances_address_asset_idx ON balances (address, asset)
         ;
-CREATE INDEX balances_address_idx ON balances (address)
-        ;
 CREATE INDEX balances_asset_idx ON balances (asset)
         ;
 CREATE INDEX balances_block_index_idx ON balances (block_index)
@@ -284,8 +276,6 @@ CREATE INDEX balances_quantity_idx ON balances (quantity)
 CREATE INDEX balances_utxo_address_idx ON balances (utxo_address)
         ;
 CREATE INDEX balances_utxo_asset_idx ON balances (utxo, asset)
-        ;
-CREATE INDEX balances_utxo_idx ON balances (utxo)
         ;
 CREATE TRIGGER block_update_balances
             BEFORE UPDATE ON balances BEGIN
@@ -373,8 +363,6 @@ INSERT INTO balances VALUES('2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZN
 -- Triggers and indices on  balances
 CREATE INDEX balances_address_asset_idx ON balances (address, asset)
         ;
-CREATE INDEX balances_address_idx ON balances (address)
-        ;
 CREATE INDEX balances_asset_idx ON balances (asset)
         ;
 CREATE INDEX balances_block_index_idx ON balances (block_index)
@@ -384,8 +372,6 @@ CREATE INDEX balances_quantity_idx ON balances (quantity)
 CREATE INDEX balances_utxo_address_idx ON balances (utxo_address)
         ;
 CREATE INDEX balances_utxo_asset_idx ON balances (utxo, asset)
-        ;
-CREATE INDEX balances_utxo_idx ON balances (utxo)
         ;
 CREATE TRIGGER block_update_balances
             BEFORE UPDATE ON balances BEGIN
@@ -1317,8 +1303,6 @@ CREATE TRIGGER block_update_broadcasts
             END;
 CREATE INDEX broadcasts_block_index_idx ON broadcasts (block_index)
         ;
-CREATE INDEX broadcasts_status_source_idx ON broadcasts (status, source)
-        ;
 CREATE INDEX broadcasts_status_source_tx_index_idx ON broadcasts (status, source, tx_index)
         ;
 CREATE INDEX broadcasts_timestamp_idx ON broadcasts (timestamp)
@@ -1496,8 +1480,6 @@ CREATE TRIGGER block_update_issuances
             END;
 CREATE INDEX issuances_asset_longname_idx ON issuances (asset_longname)
         ;
-CREATE INDEX issuances_asset_status_idx ON issuances (asset, status)
-        ;
 CREATE INDEX issuances_block_index_idx ON issuances (block_index)
         ;
 CREATE INDEX issuances_issuer_idx ON issuances (issuer)
@@ -1507,8 +1489,6 @@ CREATE INDEX issuances_source_idx ON issuances (source)
 CREATE INDEX issuances_status_asset_longname_tx_index_idx ON issuances (status, asset_longname, tx_index DESC)
         ;
 CREATE INDEX issuances_status_asset_tx_index_idx ON issuances (status, asset, tx_index DESC)
-        ;
-CREATE INDEX issuances_status_idx ON issuances (status)
         ;
 
 COMMIT TRANSACTION;
@@ -1719,8 +1699,6 @@ CREATE INDEX rps_status_idx ON rps (status)
         ;
 CREATE INDEX rps_tx_hash_idx ON rps (tx_hash)
         ;
-CREATE INDEX rps_tx_index_idx ON rps (tx_index)
-        ;
 CREATE INDEX rps_tx_index_tx_hash_idx ON rps (tx_index, tx_hash)
         ;
 CREATE INDEX rps_wager_possible_moves_idx ON rps (wager, possible_moves)
@@ -1891,13 +1869,9 @@ CREATE INDEX dispensers_last_status_tx_hash_idx ON dispensers (last_status_tx_ha
         ;
 CREATE INDEX dispensers_source_asset_origin_status_idx ON dispensers (source, asset, origin, status)
         ;
-CREATE INDEX dispensers_source_idx ON dispensers (source)
-        ;
 CREATE INDEX dispensers_source_origin_idx ON dispensers (source, origin)
         ;
 CREATE INDEX dispensers_status_block_index_idx ON dispensers (status, block_index)
-        ;
-CREATE INDEX dispensers_status_idx ON dispensers (status)
         ;
 CREATE INDEX dispensers_tx_hash_idx ON dispensers (tx_hash)
         ;

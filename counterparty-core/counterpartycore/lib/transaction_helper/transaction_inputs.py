@@ -175,6 +175,7 @@ def prepare_inputs_set(inputs_set):
         raise exceptions.ComposeError(
             f"too many UTXOs in inputs_set (max. {MAX_INPUTS_SET}): {len(utxos_list)}"
         )
+    invalid_utxos = []
     for str_input in utxos_list:
         str_input_split = str_input.split(":")
         amount = None
@@ -186,21 +187,24 @@ def prepare_inputs_set(inputs_set):
             try:
                 amount = int(str_input_split[2])
                 amount = amount / config.UNIT
-            except ValueError as e:
-                raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
+            except ValueError:
+                invalid_utxos.append(str_input)
+                continue
             if len(str_input_split) > 3:
                 script_pub_key = str_input_split[3]
 
         if not util.is_utxo_format(utxo):
-            raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
+            invalid_utxos.append(str_input)
+            continue
 
         txid, vout = str_input_split[0], int(str_input_split[1])
 
         if amount is None:
             try:
                 amount = backend.bitcoind.get_tx_out_amount(txid, vout)
-            except Exception as e:
-                raise exceptions.ComposeError(f"invalid UTXO: {str_input}") from e
+            except Exception:
+                invalid_utxos.append(str_input)
+                continue
 
         new_input = {
             "txid": txid,
@@ -210,6 +214,9 @@ def prepare_inputs_set(inputs_set):
         if script_pub_key is not None:
             new_input["script_pub_key"] = script_pub_key
         new_inputs_set.append(new_input)
+
+    if invalid_utxos:
+        raise exceptions.ComposeError(f"invalid UTXOs: {', '.join(invalid_utxos)}")
     return new_inputs_set
 
 
@@ -228,7 +235,7 @@ def insert_force_utxo(unspent, force_utxo):
         try:
             amount = backend.bitcoind.get_tx_out_amount(txid, int(vout))
         except Exception as e:
-            raise exceptions.ComposeError(f"invalid UTXO: {txid}:{vout}") from e
+            raise exceptions.ComposeError(f"invalid UTXOs: {txid}:{vout}") from e
         unspent.insert(
             0,
             {
@@ -305,13 +312,21 @@ def construct_coin_selection(
     # remove UTXOs with balances if not specified
     if not use_utxos_with_balances:
         filtered_unspent = []
+        invalid_utxos = []
         for utxo in unspent:
             str_input = f"{utxo['txid']}:{utxo['vout']}"
-            if len(ledger.get_utxo_balances(db, str_input)) > 0 and str_input != force_utxo:
+            utxo_balances = ledger.get_utxo_balances(db, str_input)
+            with_balances = len(utxo_balances) > 0 and any(
+                [balance["quantity"] > 0 for balance in utxo_balances]
+            )
+            if with_balances and str_input != force_utxo:
                 if not exclude_utxos_with_balances and inputs_set:
-                    raise exceptions.ComposeError(f"invalid UTXO: {str_input}")
+                    invalid_utxos.append(str_input)
+                    continue
             else:
                 filtered_unspent.append(utxo)
+        if invalid_utxos:
+            raise exceptions.ComposeError(f"invalid UTXOs: {', '.join(invalid_utxos)}")
         use_inputs = unspent = filtered_unspent
     else:
         use_inputs = unspent

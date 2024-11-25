@@ -44,6 +44,8 @@ def initialise(db):
             "source_idx",
             "asset_longname_idx",
             "status_asset_txindex_idx",
+            "issuances_status_idx",
+            "issuances_asset_status_idx",
         ],
     )
 
@@ -145,8 +147,6 @@ def initialise(db):
         "issuances",
         [
             ["block_index"],
-            ["asset", "status"],
-            ["status"],
             ["source"],
             ["asset_longname"],
             ["status", "asset", "tx_index DESC"],

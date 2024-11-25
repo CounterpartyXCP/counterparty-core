@@ -13,6 +13,8 @@
 - Fix `block.close_block_index` field type
 - Set `issuances.reset` and `issuances.locked` default value to False instead None 
 - Save also `utxo_address` in `address_events` table
+- Clean useless indexes
+- Don't rollback or reparse to a block index higher than current block index
 
 ## Codebase
 
@@ -29,6 +31,7 @@
 ## API
 
 - Add `description_locked` in asset info
+- Tweak `compose_movetoutxo` documentation
 
 ## CLI
 

@@ -31,6 +31,7 @@ This upgrade is not a protocol change and does not require an automatic reparse.
 - Fix `block.close_block_index` field type
 - Set `issuances.reset` and `issuances.locked` default value to False instead None 
 - Fix error message when trying to compose a dispense with the dispenser address as the source
+- Fix utxo balances checking
 
 ## Codebase
 
@@ -52,6 +53,7 @@ This upgrade is not a protocol change and does not require an automatic reparse.
 - Add route `/v2/utxos/withbalances` to check if utxos have balances
 - Add `type` parameter for get balances endpoints (`all`, `utxo` or `address`)
 - Add `description_locked` in asset info
+- Return a list of invalid UTXOs when possible
 
 ## CLI
 
