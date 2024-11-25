@@ -2002,8 +2002,8 @@
                 "block_time": 310508000
             }
         ],
-        "next_cursor": 1318,
-        "result_count": 175
+        "next_cursor": 1322,
+        "result_count": 177
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
