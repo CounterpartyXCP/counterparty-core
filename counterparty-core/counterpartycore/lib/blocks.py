@@ -1093,8 +1093,8 @@ def rebuild_database(db, include_transactions=True):
     initialise(db)
 
 
-def rollback(db, block_index=0):
-    if block_index > util.CURRENT_BLOCK_INDEX:
+def rollback(db, block_index=0, force=False):
+    if not force and block_index > util.CURRENT_BLOCK_INDEX:
         logger.debug("Block index is higher than current block index. No need to reparse.")
         return
     block_index = max(block_index, config.BLOCK_FIRST)
@@ -1339,7 +1339,7 @@ def rollback_empty_block(db):
         logger.warning(
             f"Ledger hashes are empty from block {block['block_index']}. Rolling back..."
         )
-        rollback(db, block_index=block["block_index"])
+        rollback(db, block_index=block["block_index"], force=True)
 
 
 def check_database_version(db):
