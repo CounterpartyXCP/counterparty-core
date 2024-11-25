@@ -741,7 +741,7 @@ def compose_movetoutxo(db, utxo: str, destination: str, **construct_args):
     """
     Composes a transaction to move assets from UTXO to another UTXO.
     :param utxo: The utxo from which the assets are moved (e.g. $UTXO_WITH_BALANCE)
-    :param destination: The address to move the assets to (e.g. $ADDRESS_1)
+    :param destination: the address for which the destination utxo will be created (e.g. $ADDRESS_1)
     """
     params = {
         "source": utxo,

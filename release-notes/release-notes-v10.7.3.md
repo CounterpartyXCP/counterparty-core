@@ -29,6 +29,7 @@
 ## API
 
 - Add `description_locked` in asset info
+- Tweak `compose_movetoutxo` documentation
 
 ## CLI
 
