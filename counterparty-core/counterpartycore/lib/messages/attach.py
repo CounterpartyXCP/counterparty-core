@@ -125,8 +125,8 @@ def unpack(message, return_dict=False):
             }
 
         return (asset, int(quantity), destination_vout)
-    except Exception as e:
-        raise exceptions.UnpackError(f"Cannot unpack utxo message: {e}") from e
+    except Exception:
+        return "", 0, None
 
 
 def pay_fee(db, tx, source, fee):
