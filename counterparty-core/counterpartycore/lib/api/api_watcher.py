@@ -406,7 +406,6 @@ def update_transaction_types_count(state_db, event):
             "UPDATE transaction_types_count SET count = count + 1 WHERE transaction_type = ?",
             (transaction_type,),
         )
-    logger.warning(f"API Watcher - transaction type: {transaction_type}")
 
 
 def update_balances(state_db, event):
