@@ -105,7 +105,8 @@ TransactionType = Literal[
     "fairmint",
     "attach",
     "detach",
-    "utxomove" "unknown",
+    "utxomove",
+    "unknown",
 ]
 
 SUPPORTED_SORT_FIELDS = {
