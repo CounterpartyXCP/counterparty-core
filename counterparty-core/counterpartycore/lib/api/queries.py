@@ -83,6 +83,30 @@ CreditAction = Literal[
     "wins",
 ]
 BalanceType = Literal["all", "utxo", "address"]
+TransactionType = Literal[
+    "all",
+    "bet",
+    "broadcast",
+    "btcpay",
+    "cancel",
+    "destroy",
+    "dispenser",
+    "dispense",
+    "dividend",
+    "issuance",
+    "order",
+    "send",
+    "enhanced_send",
+    "mpma",
+    "rps",
+    "rpsresolve",
+    "sweep",
+    "fairminter",
+    "fairmint",
+    "attach",
+    "detach",
+    "utxomove" "unknown",
+]
 
 SUPPORTED_SORT_FIELDS = {
     "balances": ["address", "asset", "quantity"],
@@ -352,9 +376,31 @@ def get_last_block(ledger_db):
     )
 
 
-def get_transactions(ledger_db, cursor: str = None, limit: int = 10, offset: int = None):
+def prepare_transactions_where(type, other_conditions=None):
+    where = []
+    type_list = type.split(",")
+    for transaction_type in type_list:
+        if transaction_type == "all":
+            where = [other_conditions] if other_conditions else []
+            break
+        if transaction_type in typing.get_args(TransactionType):
+            where_status = {"transaction_type": transaction_type}
+            if other_conditions:
+                where_status.update(other_conditions)
+            where.append(where_status)
+    return where
+
+
+def get_transactions(
+    ledger_db,
+    type: TransactionType = "all",
+    cursor: str = None,
+    limit: int = 10,
+    offset: int = None,
+):
     """
     Returns the list of the last ten transactions
+    :param str type: The type of the transaction to return
     :param str cursor: The index of the most recent transactions to return (e.g. $LAST_TX_INDEX)
     :param int limit: The number of transactions to return (e.g. 2)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -366,23 +412,31 @@ def get_transactions(ledger_db, cursor: str = None, limit: int = 10, offset: int
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        where=prepare_transactions_where(type),
     )
 
 
 def get_transactions_by_block(
-    ledger_db, block_index: int, cursor: str = None, limit: int = 10, offset: int = None
+    ledger_db,
+    block_index: int,
+    type: TransactionType = "all",
+    cursor: str = None,
+    limit: int = 10,
+    offset: int = None,
 ):
     """
     Returns the transactions of a block
     :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
+    :param str type: The type of the transaction to return
     :param str cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"block_index": block_index}
     return select_rows(
         ledger_db,
         "transactions",
-        where={"block_index": block_index},
+        where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,
@@ -391,19 +445,26 @@ def get_transactions_by_block(
 
 
 def get_transactions_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 10, offset: int = None
+    ledger_db,
+    address: str,
+    type: TransactionType = "all",
+    cursor: str = None,
+    limit: int = 10,
+    offset: int = None,
 ):
     """
     Returns the transactions of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str type: The type of the transaction to return
     :param str cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"source": address}
     return select_rows(
         ledger_db,
         "transactions",
-        where={"source": address},
+        where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,
@@ -412,19 +473,26 @@ def get_transactions_by_address(
 
 
 def get_transactions_by_addresses(
-    ledger_db, addresses: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    addresses: str,
+    type: TransactionType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the transactions of a list of addresses
     :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_1,$ADDRESS_2)
+    :param str type: The type of the transaction to return
     :param str cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"source__in": addresses.split(",")}
     return select_rows(
         ledger_db,
         "transactions",
-        where=[{"source__in": addresses.split(",")}],
+        where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,

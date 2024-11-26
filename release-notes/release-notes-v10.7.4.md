@@ -36,6 +36,7 @@
 
 - Add `description_locked` in asset info
 - Tweak `compose_movetoutxo` documentation
+- Add `transaction_type` parameter for Get Transactions endpoints
 
 ## CLI
 

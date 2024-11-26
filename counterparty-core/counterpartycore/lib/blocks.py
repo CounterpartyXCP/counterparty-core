@@ -451,7 +451,7 @@ def update_transaction_type(db):
         )
         counter += 1
         if counter % 500000 == 0:
-            logger.debug(f"Updated {counter} transactions")
+            logger.trace(f"Updated {counter} transactions")
 
     logger.info(f"Updated {counter} transactions in {time.time() - start:.2f} seconds")
 
@@ -582,7 +582,7 @@ def initialise(db):
 
     if "transaction_type" not in transactions_columns:
         cursor.execute("ALTER TABLE transactions ADD COLUMN transaction_type TEXT")
-    update_transaction_type(db)
+        update_transaction_type(db)
 
     database.create_indexes(
         cursor,
