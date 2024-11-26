@@ -387,6 +387,28 @@ def update_events_count(state_db, event):
         )
 
 
+def update_transaction_types_count(state_db, event):
+    if event["event"] != "NEW_TRANSACTION":
+        return
+    cursor = state_db.cursor()
+    binding = json.loads(event["bindings"])
+    transaction_type = binding["transaction_type"]
+    current_count = cursor.execute(
+        "SELECT count FROM transaction_types_count WHERE transaction_type = ?", (transaction_type,)
+    ).fetchone()
+    if current_count is None:
+        cursor.execute(
+            "INSERT INTO transaction_types_count (transaction_type, count) VALUES (?, 1)",
+            (transaction_type,),
+        )
+    else:
+        cursor.execute(
+            "UPDATE transaction_types_count SET count = count + 1 WHERE transaction_type = ?",
+            (transaction_type,),
+        )
+    logger.warning(f"API Watcher - transaction type: {transaction_type}")
+
+
 def update_balances(state_db, event):
     if event["event"] not in ["DEBIT", "CREDIT"]:
         return
@@ -530,6 +552,7 @@ def parse_event(state_db, event):
         update_state_db_tables(state_db, event)
         update_last_parsed_events(state_db, event)
         update_events_count(state_db, event)
+        update_transaction_types_count(state_db, event)
         logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
 
 
