@@ -1764,8 +1764,8 @@ def get_balances_by_address_and_asset(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = [
-        {"address": address, "asset": asset.upper()},
-        {"utxo_address": address, "asset": asset.upper()},
+        {"address": address, "asset": asset.upper(), "quantity__gt": 0},
+        {"utxo_address": address, "asset": asset.upper(), "quantity__gt": 0},
     ]
     if type == "utxo":
         where.pop(0)

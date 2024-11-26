@@ -16,6 +16,7 @@
 - Clean useless indexes
 - Don't rollback or reparse to a block index higher than current block index
 - Fix dividend distribution to UTXO order after a rollback
+- Exclude zero balances when getting balances by address and asset
 
 ## Codebase
 
