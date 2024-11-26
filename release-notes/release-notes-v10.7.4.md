@@ -37,6 +37,11 @@
 - Add `description_locked` in asset info
 - Tweak `compose_movetoutxo` documentation
 - Add `transaction_type` parameter for Get Transactions endpoints
+- Add `transaction_types_count` table in State DB
+- Add the following routes:
+    - `/v2/transactions/counts`
+    - `/v2/blocks/<int:block_index>/transactions/counts`
+    - `/v2/addresses/<address>/transactions/counts`
 
 ## CLI
 

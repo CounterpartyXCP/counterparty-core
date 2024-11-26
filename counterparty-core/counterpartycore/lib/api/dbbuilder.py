@@ -20,6 +20,7 @@ MIGRATIONS_AFTER_ROLLBACK = [
     "0006.create_and_populate_consolidated_tables",
     "0007.create_views",
     "0008.create_config_table",
+    "0009.create_and_populate_transaction_types_count",
 ]
 
 ROLLBACKABLE_TABLES = [

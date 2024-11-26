@@ -249,7 +249,10 @@ def select_rows(
         select = f"*, {cursor_field} AS {cursor_field}"
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
-    if table in ["transactions", "sends", "btcpays", "sweeps", "dispenses"]:
+    if (
+        table in ["transactions", "sends", "btcpays", "sweeps", "dispenses"]
+        and "COUNT(*)" not in select
+    ):
         select += ", NULLIF(destination, '') AS destination"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
@@ -497,6 +500,50 @@ def get_transactions_by_addresses(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+    )
+
+
+def get_transaction_types_count(state_db):
+    """
+    Returns the count of each transaction type
+    """
+    return select_rows(
+        state_db,
+        "transaction_types_count",
+        select="transaction_type, count",
+        cursor_field="count",
+        order="DESC",
+    )
+
+
+def get_transaction_types_count_by_block(ledger_db, block_index: int):
+    """
+    Returns the count of each transaction type
+    :param int block_index: The index of the block to return (e.g. $LAST_TX_INDEX)
+    """
+    return select_rows(
+        ledger_db,
+        "transactions",
+        select="transaction_type, COUNT(*) AS count",
+        where={"block_index": block_index},
+        group_by="transaction_type",
+        cursor_field="count",
+        order="DESC",
+    )
+
+
+def get_transaction_types_count_by_address(ledger_db, address: str):
+    """
+    Returns the count of each transaction type
+    """
+    return select_rows(
+        ledger_db,
+        "transactions",
+        select="transaction_type, COUNT(*) AS count",
+        where={"source": address},
+        group_by="transaction_type",
+        cursor_field="count",
+        order="DESC",
     )
 
 
