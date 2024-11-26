@@ -13,7 +13,7 @@ __depends__ = {"0005.create_and_populate_events_count"}
 
 CONSOLIDATED_TABLES = {
     "fairminters": "tx_hash",
-    "balances": "address, asset",
+    "balances": "address, utxo, asset",
     "addresses": "address",
     "dispensers": "source, asset",
     "bet_matches": "id",

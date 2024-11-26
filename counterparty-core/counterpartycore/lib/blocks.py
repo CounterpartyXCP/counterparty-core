@@ -670,6 +670,7 @@ def initialise(db):
         [
             ["address", "asset"],
             ["utxo", "asset"],
+            ["address", "utxo", "asset"],
             ["asset"],
             ["block_index"],
             ["quantity"],
