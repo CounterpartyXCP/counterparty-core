@@ -286,6 +286,7 @@ def replay_transactions_events(db, transactions):
             "fee": tx["fee"],
             "data": tx["data"],
             "utxos_info": tx["utxos_info"],
+            "transaction_type": tx["transaction_type"],
         }
         ledger.add_to_journal(
             db,
@@ -433,6 +434,29 @@ def parse_block(
     return None, None, None
 
 
+def update_transaction_type(db):
+    start = time.time()
+    logger.info("Updating `transaction_type` column in `transactions` table...")
+
+    cursor = db.cursor()
+    cursor.execute("SELECT tx_index, block_index, data, supported FROM transactions")
+    counter = 0
+    for tx in cursor.fetchall():
+        transaction_type = "unknown"
+        if tx["supported"]:
+            transaction_type = message_type.get_transaction_type(tx["data"], tx["block_index"])
+
+        cursor.execute(
+            "UPDATE transactions SET transaction_type = ? WHERE tx_index = ?",
+            (transaction_type, tx["tx_index"]),
+        )
+        counter += 1
+        if counter % 500000 == 0:
+            logger.trace(f"Updated {counter} transactions")
+
+    logger.info(f"Updated {counter} transactions in {time.time() - start:.2f} seconds")
+
+
 def initialise(db):
     """Initialise data, create and populate the database."""
     logger.info("Initializing database...")
@@ -545,6 +569,7 @@ def initialise(db):
                       data BLOB,
                       supported BOOL DEFAULT 1,
                       utxos_info TEXT,
+                      transaction_type TEXT,
                       FOREIGN KEY (block_index, block_hash) REFERENCES blocks(block_index, block_hash),
                       PRIMARY KEY (tx_index, tx_hash, block_index))
                     """
@@ -556,6 +581,10 @@ def initialise(db):
     if "utxos_info" not in transactions_columns:
         cursor.execute("""ALTER TABLE transactions ADD COLUMN utxos_info TEXT""")
 
+    if "transaction_type" not in transactions_columns:
+        cursor.execute("ALTER TABLE transactions ADD COLUMN transaction_type TEXT")
+        update_transaction_type(db)
+
     database.create_indexes(
         cursor,
         "transactions",
@@ -564,6 +593,7 @@ def initialise(db):
             ["block_index", "tx_index"],
             ["tx_index", "tx_hash", "block_index"],
             ["source"],
+            ["transaction_type"],
         ],
     )
 
@@ -670,6 +700,7 @@ def initialise(db):
         [
             ["address", "asset"],
             ["utxo", "asset"],
+            ["address", "utxo", "asset"],
             ["asset"],
             ["block_index"],
             ["quantity"],
@@ -1025,6 +1056,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             "fee": fee,
             "data": data,
             "utxos_info": " ".join(utxos_info),
+            "transaction_type": message_type.get_transaction_type(data, block_index),
         }
         ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
 

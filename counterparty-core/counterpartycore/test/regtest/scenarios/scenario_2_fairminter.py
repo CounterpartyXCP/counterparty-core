@@ -291,6 +291,7 @@ SCENARIO = [
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
                             "utxos_info": " $TX_HASH:1 2 ",
+                            "transaction_type": "fairmint",
                         },
                         "tx_hash": "$TX_HASH",
                     },

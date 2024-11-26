@@ -633,32 +633,12 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     return compose(db, "fairmint", params, **construct_args)
 
 
-def compose_utxo(
-    db,
-    source: str,
-    destination: str,
-    asset: str,
-    quantity: int,
-    **construct_args,
-):
-    if util.enabled("spend_utxo_to_detach"):
-        raise exceptions.ComposeError("Disbaled. Please use the new `attach` or `detach` instead.")
-    params = {
-        "source": source,
-        "destination": destination,
-        "asset": asset,
-        "quantity": quantity,
-    }
-    return compose(db, "utxo", params, **construct_args)
-
-
 def compose_attach(
     db,
     address: str,
     asset: str,
     quantity: int,
     destination_vout: str = None,
-    destination: str = None,
     **construct_args,
 ):
     """
@@ -667,67 +647,32 @@ def compose_attach(
     :param asset: The asset or subasset to attach (e.g. XCP)
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
     :param destination_vout: The vout of the destination output
-    :param destination: [Disabled after block 871900] The utxo to attach the assets to
     """
-    if util.enabled("spend_utxo_to_detach"):
-        params = {
-            "source": address,
-            "asset": asset,
-            "quantity": quantity,
-            "destination_vout": destination_vout,
-        }
-        return compose(db, "attach", params, **construct_args)
-
-    if util.CURRENT_BLOCK_INDEX > util.get_change_block_index("spend_utxo_to_detach") - 12:
-        raise exceptions.ComposeError(
-            "Attach is disabled from 12 blocks before block 871900 and the activation of the new attach/detach messages types"
-        )
-
-    return compose_utxo(
-        db,
-        source=address,
-        destination=destination,
-        asset=asset,
-        quantity=quantity,
-        **construct_args,
-    )
+    params = {
+        "source": address,
+        "asset": asset,
+        "quantity": quantity,
+        "destination_vout": destination_vout,
+    }
+    return compose(db, "attach", params, **construct_args)
 
 
 def compose_detach(
     db,
     utxo: str,
     destination: str = None,
-    asset: str = None,
-    quantity: int = None,
     **construct_args,
 ):
     """
     Composes a transaction to detach assets from UTXO to an address.
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
     :param destination: The address to detach the assets to, if not provided the addresse corresponding to the utxo is used (e.g. $ADDRESS_1)
-    :param asset: [Disabled after block 871900] The asset or subasset to detach
-    :param quantity: [Disabled after block 871900] The quantity of the asset to detach (in satoshis, hence integer)
     """
-    if util.enabled("spend_utxo_to_detach"):
-        params = {
-            "source": utxo,
-            "destination": destination,
-        }
-        return compose(db, "detach", params, **construct_args)
-
-    if util.CURRENT_BLOCK_INDEX > util.get_change_block_index("spend_utxo_to_detach") - 12:
-        raise exceptions.ComposeError(
-            "Attach is disabled from 12 blocks before block 871900 and the activation of the new attach/detach messages types"
-        )
-
-    return compose_utxo(
-        db,
-        source=utxo,
-        destination=destination,
-        asset=asset,
-        quantity=quantity,
-        **construct_args,
-    )
+    params = {
+        "source": utxo,
+        "destination": destination,
+    }
+    return compose(db, "detach", params, **construct_args)
 
 
 def get_attach_estimate_xcp_fee(db):
@@ -811,6 +756,7 @@ def unpack(db, datahex: str, block_index: int = None):
         data = binascii.unhexlify(datahex)
     except Exception as e:  # noqa
         raise exceptions.UnpackError("Data must be in hexadecimal format") from e
+
     if data[: len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX) :]
     message_type_id, message = message_type.unpack(data)

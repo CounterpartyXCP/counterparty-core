@@ -15,6 +15,8 @@
 - Save also `utxo_address` in `address_events` table
 - Clean useless indexes
 - Don't rollback or reparse to a block index higher than current block index
+- Fix dividend distribution to UTXO order after a rollback
+- Exclude zero balances when getting balances by address and asset
 
 ## Codebase
 
@@ -27,11 +29,19 @@
 - Add version checking for `state.db`: launch a rollback when a reparse or a rollback is necessary for the Ledger DB
 - Use `event_hash` to detect Blockchain reorganization and launch a rollback of `state.db`
 - Refactor functions to refresh `util.CURRENT_BLOCK_INDEX` in `wsgi.py`
+- Remove `compose_utxo()` function and clean `compose_attach()` and `compose_detach`
+- Add `transaction_type` field in `transactions` table
 
 ## API
 
 - Add `description_locked` in asset info
 - Tweak `compose_movetoutxo` documentation
+- Add `transaction_type` parameter for Get Transactions endpoints
+- Add `transaction_types_count` table in State DB
+- Add the following routes:
+    - `/v2/transactions/counts`
+    - `/v2/blocks/<int:block_index>/transactions/counts`
+    - `/v2/addresses/<address>/transactions/counts`
 
 ## CLI
 
