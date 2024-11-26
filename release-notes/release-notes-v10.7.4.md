@@ -30,6 +30,7 @@
 - Use `event_hash` to detect Blockchain reorganization and launch a rollback of `state.db`
 - Refactor functions to refresh `util.CURRENT_BLOCK_INDEX` in `wsgi.py`
 - Remove `compose_utxo()` function and clean `compose_attach()` and `compose_detach`
+- Add `transaction_type` field in `transactions` table
 
 ## API
 
