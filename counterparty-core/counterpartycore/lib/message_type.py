@@ -72,7 +72,7 @@ def get_transaction_type(data: bytes, block_index: int):
         messages.detach.ID: "detach",
     }
 
-    if not data and block_index >= 866000:
+    if not data and block_index >= util.get_change_block_index("utxo_support"):
         return "utxomove"
     elif not data:
         return "unknown"

@@ -286,6 +286,7 @@ def replay_transactions_events(db, transactions):
             "fee": tx["fee"],
             "data": tx["data"],
             "utxos_info": tx["utxos_info"],
+            "transaction_type": tx["transaction_type"],
         }
         ledger.add_to_journal(
             db,
