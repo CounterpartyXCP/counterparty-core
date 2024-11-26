@@ -54,8 +54,8 @@ def unpack(message, return_dict=False):
                 "destination": destination,
             }
         return destination
-    except Exception as e:
-        raise exceptions.UnpackError(f"Cannot unpack utxo message: {e}") from e
+    except Exception:
+        return None
 
 
 def detach_assets(db, tx, source, destination=None):
