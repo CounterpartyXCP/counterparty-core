@@ -2189,6 +2189,7 @@ def holders(db, asset, exclude_empty_holders=False):
         SELECT *, rowid
         FROM balances
         WHERE asset = ? AND utxo IS NOT NULL
+        ORDER BY rowid DESC
     """
     bindings = (asset,)
     cursor.execute(query, bindings)
