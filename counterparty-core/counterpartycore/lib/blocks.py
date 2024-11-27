@@ -1394,6 +1394,20 @@ def check_database_version(db):
         database.update_version(db)
 
 
+def start_rsfetcher():
+    fetcher = rsfetcher.RSFetcher()
+    try:
+        fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+    except exceptions.InvalidVersion as e:
+        logger.error(e)
+        exit(1)
+    except Exception:
+        logger.warning("Failed to start RSFetcher. Retrying in 5 seconds...")
+        time.sleep(5)
+        return start_rsfetcher()
+    return fetcher
+
+
 def catch_up(db, check_asset_conservation=True):
     logger.info("Catching up...")
 
@@ -1423,8 +1437,7 @@ def catch_up(db, check_asset_conservation=True):
         # Get block information and transactions
         fetch_time_start = time.time()
         if fetcher is None:
-            fetcher = rsfetcher.RSFetcher()
-            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+            fetcher = start_rsfetcher()
 
         retry = 0
         decoded_block = fetcher.get_block()
@@ -1435,8 +1448,7 @@ def catch_up(db, check_asset_conservation=True):
             logger.warning("RSFetcher returned None. Trying again in 5 seconds...")
             time.sleep(5)
             fetcher.stop()
-            fetcher = rsfetcher.RSFetcher()
-            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+            fetcher = start_rsfetcher()
             decoded_block = fetcher.get_block()
 
         block_height = decoded_block.get("height")
@@ -1453,8 +1465,7 @@ def catch_up(db, check_asset_conservation=True):
         # if not that means a reorg happened
         if parsed_block_index < block_height:
             fetcher.stop()
-            fetcher = rsfetcher.RSFetcher()
-            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+            fetcher = start_rsfetcher()
         else:
             assert parsed_block_index == block_height
         mempool.clean_mempool(db)

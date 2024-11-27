@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from counterparty_rs import indexer
 
-from counterpartycore.lib import config, util
+from counterpartycore.lib import config, exceptions, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -61,26 +61,19 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
     def start(self, start_height=0):
         logger.info("Starting RSFetcher thread...")
-        try:
-            self.config["start_height"] = start_height
-            self.next_height = start_height
-            self.fetcher = indexer.Indexer(self.config)
-            # check fetcher version
-            fetcher_version = self.fetcher.get_version()
-            logger.debug("Current Fetcher version: %s", fetcher_version)
-            if fetcher_version != config.__version__:
-                logger.error(
-                    "Fetcher version mismatch. Expected: %s, Got: %s. Please re-compile `counterparty-rs`.",
-                    config.__version__,
-                    fetcher_version,
-                )
-                raise ValueError(
-                    f"Fetcher version mismatch {config.__version__} != {fetcher_version}."
-                )
-            self.fetcher.start()
-        except Exception as e:
-            logger.error(f"Failed to initialize fetcher: {e}. Retrying in 5 seconds...")
-            raise e
+
+        self.config["start_height"] = start_height
+        self.next_height = start_height
+        self.fetcher = indexer.Indexer(self.config)
+        # check fetcher version
+        fetcher_version = self.fetcher.get_version()
+        logger.debug("Current Fetcher version: %s", fetcher_version)
+        if fetcher_version != config.__version__:
+            error_message = f"Fetcher version mismatch. Expected: {config.__version__}, Got: {fetcher_version}. "
+            error_message += "Please re-compile `counterparty-rs`."
+            raise exceptions.InvalidVersion(error_message)
+        self.fetcher.start()
+
         # prefetching
         self.stopped_event.clear()  # Clear the stop event
         self.prefetch_queue = queue.Queue(maxsize=PREFETCH_QUEUE_SIZE)  # Reset the queue
@@ -88,14 +81,20 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
         self.prefetch_queue_initialized = False
 
-    def get_block(self):
+    def get_block(self, retry=0):
         logger.trace("Fetching block with Rust backend.")
         block = self.get_prefetched_block()
 
         if block is None:
             # Fetcher has been stopped, handle accordingly
-            logger.debug("No block retrieved. Fetcher might have stopped.")
-            return None  # Handle as appropriate for your application
+            if retry < 5:
+                logger.debug(
+                    "No block retrieved. Fetcher might have stopped. Retrying in 5 seconds..."
+                )
+                time.sleep(5)
+                return self.get_block(retry + 1)
+            else:
+                raise exceptions.RSFetchError("RSFetcher returned None too many times.")
 
         # Handle potentially out-of-order blocks
         if block["height"] != self.next_height:

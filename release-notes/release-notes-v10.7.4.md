@@ -18,6 +18,7 @@
 - Fix dividend distribution to UTXO order after a rollback
 - Exclude zero balances when getting balances by address and asset
 - Remove lock file from RSFetcher
+- Handle correctly RSFetcher invalid version
 
 ## Codebase
 
