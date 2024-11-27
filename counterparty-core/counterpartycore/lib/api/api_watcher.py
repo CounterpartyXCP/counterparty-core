@@ -659,23 +659,25 @@ class APIWatcher(threading.Thread):
             self.follow()
 
     def follow(self):
-        while not self.stop_event.is_set():
-            try:
-                parse_next_event(self.ledger_db, self.state_db)
-            except exceptions.NoEventToParse:
-                logger.trace("API Watcher - No new events to parse")
-                self.stop_event.wait(timeout=0.1)
-            if self.stop_event.is_set():
-                break
+        try:
+            while not self.stop_event.is_set():
+                try:
+                    parse_next_event(self.ledger_db, self.state_db)
+                except exceptions.NoEventToParse:
+                    logger.trace("API Watcher - No new events to parse")
+                    self.stop_event.wait(timeout=0.1)
+                if self.stop_event.is_set():
+                    break
+        finally:
+            if self.state_db is not None:
+                self.state_db.close()
+            if self.ledger_db is not None:
+                self.ledger_db.close()
+            if self.current_state_thread is not None:
+                self.current_state_thread.stop()
 
     def stop(self):
         logger.info("Stopping API Watcher thread...")
         self.stop_event.set()
         self.join()
-        if self.state_db is not None:
-            self.state_db.close()
-        if self.ledger_db is not None:
-            self.ledger_db.close()
-        if self.current_state_thread is not None:
-            self.current_state_thread.stop()
         logger.info("API Watcher thread stopped.")

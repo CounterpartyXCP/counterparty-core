@@ -1411,6 +1411,8 @@ def start_rsfetcher():
 def catch_up(db, check_asset_conservation=True):
     logger.info("Catching up...")
 
+    fetcher = None
+
     try:
         util.BLOCK_PARSER_STATUS = "catching up"
         # update the current block index
@@ -1432,7 +1434,6 @@ def catch_up(db, check_asset_conservation=True):
 
         start_time = time.time()
         parsed_blocks = 0
-        fetcher = None
 
         while util.CURRENT_BLOCK_INDEX < block_count:
             # Get block information and transactions

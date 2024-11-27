@@ -2,6 +2,7 @@ import argparse
 import logging
 import multiprocessing
 import os
+import signal
 import threading
 import time
 from collections import OrderedDict
@@ -463,39 +464,46 @@ def init_flask_app():
 
 
 def check_database_version():
-    try:
-        db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-        check.database_version(db)
-    except check.DatabaseVersionError as e:
-        logger.info(str(e))
-        # rollback or reparse the database
-        if e.required_action in ["rollback", "reparse"]:
-            dbbuilder.rollback_state_db(db, block_index=e.from_block_index)
-        # update the database version
-        database.update_version(db)
-    finally:
-        db.close()
+    with StateDBConnectionPool().connection() as state_db:
+        try:
+            check.database_version(state_db)
+        except check.DatabaseVersionError as e:
+            logger.info(str(e))
+            # rollback or reparse the database
+            if e.required_action in ["rollback", "reparse"]:
+                dbbuilder.rollback_state_db(state_db, block_index=e.from_block_index)
+            # update the database version
+            database.update_version(state_db)
 
 
 def run_api_server(args, server_ready_value, stop_event):
     logger.info("Starting API Server process...")
 
-    # Initialize Sentry, logging, config, etc.
-    sentry.init()
-    server.initialise_log_and_config(argparse.Namespace(**args), api=True)
-
-    dbbuilder.apply_outstanding_migration()
-    check_database_version()
-
-    watcher = api_watcher.APIWatcher()
-    watcher.start()
-
-    app = init_flask_app()
+    def handle_interrupt_signal(signum, frame):
+        logger.warning("API Process - Keyboard interrupt received. Shutting down...")
+        raise KeyboardInterrupt
 
     wsgi_server = None
     parent_checker = None
+    watcher = None
 
     try:
+        # Set signal handlers for graceful shutdown
+        signal.signal(signal.SIGINT, handle_interrupt_signal)
+        signal.signal(signal.SIGTERM, handle_interrupt_signal)
+
+        # Initialize Sentry, logging, config, etc.
+        sentry.init()
+        server.initialise_log_and_config(argparse.Namespace(**args), api=True)
+
+        dbbuilder.apply_outstanding_migration()
+        check_database_version()
+
+        watcher = api_watcher.APIWatcher()
+        watcher.start()
+
+        app = init_flask_app()
+
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server)
         parent_checker.start()
@@ -507,28 +515,31 @@ def run_api_server(args, server_ready_value, stop_event):
 
         wsgi_server.run()
 
-    except Exception as e:
-        logger.error("Exception in API Server process!")
-        raise e
+    except KeyboardInterrupt as e:
+        print("API Server KeyboardInterrupt", e)
+        pass
 
     finally:
-        logger.trace("Shutting down API Server...")
-
-        if watcher is not None:
-            watcher.stop()
-            watcher.join()
+        logger.info("Stopping API Server...")
 
         if wsgi_server is not None:
             logger.trace("Stopping WSGI Server thread...")
             wsgi_server.stop()
+
+        logger.trace("Closing Ledger DB and State DB Connection Pool...")
+        LedgerDBConnectionPool().close()
+        StateDBConnectionPool().close()
+
+        if watcher is not None:
+            watcher.stop()
+            watcher.join()
 
         if parent_checker is not None:
             logger.trace("Stopping Parent Process Checker thread...")
             parent_checker.stop()
             parent_checker.join()
 
-        logger.trace("Closing API DB Connection Pool...")
-        StateDBConnectionPool().close()
+        logger.info("API Server stopped.")
 
 
 # This thread is used for the following two reasons:
@@ -539,12 +550,12 @@ class ParentProcessChecker(threading.Thread):
         super().__init__()
         self.daemon = True
         self.wsgi_server = wsgi_server
-        self._stop_event = threading.Event()
+        self.stop_event = threading.Event()
 
     def run(self):
         parent_pid = os.getppid()
         try:
-            while not self._stop_event.is_set():
+            while not self.stop_event.is_set():
                 if os.getppid() != parent_pid:
                     logger.debug("Parent process is dead. Exiting...")
                     self.wsgi_server.stop()
@@ -554,7 +565,7 @@ class ParentProcessChecker(threading.Thread):
             pass
 
     def stop(self):
-        self._stop_event.set()
+        self.stop_event.set()
 
 
 class APIServer(object):
