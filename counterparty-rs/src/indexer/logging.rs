@@ -95,7 +95,7 @@ where
         let metadata = event.metadata();
         write!(
             writer,
-            " - [{}] - RS Fetcher - ",
+            " - [RSFetcher] - [{}] - ",
             format!("{:>8}", metadata.level().to_string()).color(self.get_color(metadata.level()))
         )?;
         ctx.field_format().format_fields(writer.by_ref(), event)?;

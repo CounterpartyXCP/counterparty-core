@@ -6,6 +6,7 @@ import time
 import traceback
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+from multiprocessing import current_process
 
 import zmq
 from dateutil.tz import tzlocal
@@ -81,7 +82,11 @@ class CustomFormatter(logging.Formatter):
         if hasattr(record, "bold"):
             log_message = colored(log_message, attrs=attrs)
 
-        log_format = f"{time_format} - [{level_name_format}] - {log_message}"
+        process_name = "   Ledger"
+        if current_process().name != "MainProcess":
+            process_name = "      API"
+
+        log_format = f"{time_format} - [{process_name}] - [{level_name_format}] - {log_message}"
 
         formatter = logging.Formatter(log_format)
         if isinstance(record.args, dict):
