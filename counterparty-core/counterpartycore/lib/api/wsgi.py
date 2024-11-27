@@ -48,7 +48,7 @@ def refresh_current_state(ledger_db, state_db):
 
 class CurrentStateThread(threading.Thread):
     def __init__(self):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name="Current State Thread")
         self.state_db = database.get_db_connection(config.STATE_DATABASE)
         self.ledger_db = database.get_db_connection(config.DATABASE)
         self.stop_event = threading.Event()

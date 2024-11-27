@@ -452,7 +452,7 @@ class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
 
     def __init__(self):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name="API v1 Status Poller")
         self.last_database_check = 0
         self.stop_event = threading.Event()
 
@@ -508,7 +508,7 @@ class APIServer(threading.Thread):
         self.is_ready = False
         self.server = None
         self.ctx = None
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name="API Server v1")
         sentry.init()
 
     def stop(self):

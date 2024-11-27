@@ -50,7 +50,7 @@
 
 - Add `build-state-db` command
 - `rollback` and `reparse` commands trigger a re-build of the State DB
-- Add process name in logging messages
+- Add current process name and current thread name in logging messages
 
 # Credits
 

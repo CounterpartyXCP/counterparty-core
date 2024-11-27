@@ -77,7 +77,9 @@ class RSFetcher(metaclass=util.SingletonMeta):
         # prefetching
         self.stopped_event.clear()  # Clear the stop event
         self.prefetch_queue = queue.Queue(maxsize=PREFETCH_QUEUE_SIZE)  # Reset the queue
-        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
+        self.executor = ThreadPoolExecutor(
+            max_workers=WORKER_THREADS, thread_name_prefix="RSFetcher Prefetcher"
+        )
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
         self.prefetch_queue_initialized = False
 

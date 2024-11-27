@@ -695,7 +695,7 @@ def connect_to_backend():
 
 class AssetConservationChecker(threading.Thread):
     def __init__(self):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name="Asset Conservation Checker")
         self.daemon = True
         self.last_check = 0
         self.db = None
@@ -717,7 +717,7 @@ class AssetConservationChecker(threading.Thread):
             if self.db is not None:
                 self.db.close()
                 self.db = None
-            logger.info("Asset Conservation Checker thread stopped.")
+            logger.info("Thread stopped.")
 
     def stop(self):
         self.stop_event.set()
@@ -799,7 +799,7 @@ def start_all(args):
         follower_daemon.start()
 
     except KeyboardInterrupt:
-        logger.warning("Main Process - Keyboard interrupt received. Shutting down...")
+        logger.warning("Keyboard interrupt received. Shutting down...")
         pass
     except Exception as e:
         logger.error("Exception caught!", exc_info=e)

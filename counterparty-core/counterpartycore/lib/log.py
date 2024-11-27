@@ -86,6 +86,10 @@ class CustomFormatter(logging.Formatter):
         if current_process().name != "MainProcess":
             process_name = "      API"
 
+        thread_name = threading.current_thread().name
+        if thread_name != "MainThread":
+            log_message = f"{thread_name} - {log_message}"
+
         log_format = f"{time_format} - [{process_name}] - [{level_name_format}] - {log_message}"
 
         formatter = logging.Formatter(log_format)

@@ -480,7 +480,7 @@ def run_api_server(args, server_ready_value, stop_event):
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(signum, frame):
-        logger.warning("API Process - Keyboard interrupt received. Shutting down...")
+        logger.warning("Keyboard interrupt received. Shutting down...")
         raise KeyboardInterrupt
 
     wsgi_server = None
@@ -547,7 +547,7 @@ def run_api_server(args, server_ready_value, stop_event):
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
 class ParentProcessChecker(threading.Thread):
     def __init__(self, wsgi_server):
-        super().__init__()
+        super().__init__(name="ParentProcessChecker")
         self.daemon = True
         self.wsgi_server = wsgi_server
         self.stop_event = threading.Event()
