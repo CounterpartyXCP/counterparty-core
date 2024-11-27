@@ -160,7 +160,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                         except queue.Full:
                             logger.debug("Prefetch queue is full; waiting...")
                             time.sleep(0.1)
-                else:
+                elif not self.stopped_event.is_set():
                     logger.debug("No block fetched. Waiting before next fetch.")
                     # Use Event's wait method instead of time.sleep for better responsiveness
                     self.stopped_event.wait(timeout=random.uniform(0.2, 0.7))  # noqa: S311

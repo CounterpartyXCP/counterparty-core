@@ -1411,80 +1411,81 @@ def start_rsfetcher():
 def catch_up(db, check_asset_conservation=True):
     logger.info("Catching up...")
 
-    util.BLOCK_PARSER_STATUS = "catching up"
-    # update the current block index
-    util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
-    if util.CURRENT_BLOCK_INDEX == 0:
-        logger.info("New database.")
-        util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
+    try:
+        util.BLOCK_PARSER_STATUS = "catching up"
+        # update the current block index
+        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+        if util.CURRENT_BLOCK_INDEX == 0:
+            logger.info("New database.")
+            util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
 
-    # Get block count.
-    block_count = backend.bitcoind.getblockcount()
-
-    # Wait for bitcoind to catch up at least one block after util.CURRENT_BLOCK_INDEX
-    if backend.bitcoind.get_blocks_behind() > 0 and block_count <= util.CURRENT_BLOCK_INDEX:
-        backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+        # Get block count.
         block_count = backend.bitcoind.getblockcount()
 
-    # Get index of last transaction.
-    tx_index = get_next_tx_index(db)
-
-    start_time = time.time()
-    parsed_blocks = 0
-    fetcher = None
-
-    while util.CURRENT_BLOCK_INDEX < block_count:
-        # Get block information and transactions
-        fetch_time_start = time.time()
-        if fetcher is None:
-            fetcher = start_rsfetcher()
-
-        retry = 0
-        decoded_block = fetcher.get_block()
-        while decoded_block is None:
-            retry += 1
-            if retry > 5:
-                raise exceptions.RSFetchError("RSFetcher returned None too many times.")
-            logger.warning("RSFetcher returned None. Trying again in 5 seconds...")
-            time.sleep(5)
-            fetcher.stop()
-            fetcher = start_rsfetcher()
-            decoded_block = fetcher.get_block()
-
-        block_height = decoded_block.get("height")
-        fetch_time_end = time.time()
-        fetch_duration = fetch_time_end - fetch_time_start
-        logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
-
-        # Check for gaps in the blockchain
-        assert block_height <= util.CURRENT_BLOCK_INDEX + 1
-
-        # Parse the current block
-        tx_index, parsed_block_index = parse_new_block(db, decoded_block, tx_index=tx_index)
-        # check if the parsed block is the expected one
-        # if not that means a reorg happened
-        if parsed_block_index < block_height:
-            fetcher.stop()
-            fetcher = start_rsfetcher()
-        else:
-            assert parsed_block_index == block_height
-        mempool.clean_mempool(db)
-
-        parsed_blocks += 1
-        formatted_duration = util.format_duration(time.time() - start_time)
-        logger.debug(
-            f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
-        )
-
-        # Refresh block count.
-        if util.CURRENT_BLOCK_INDEX == block_count:
-            # if bitcoind is catching up, wait for the next block
-            if backend.bitcoind.get_blocks_behind() > 0:
-                backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+        # Wait for bitcoind to catch up at least one block after util.CURRENT_BLOCK_INDEX
+        if backend.bitcoind.get_blocks_behind() > 0 and block_count <= util.CURRENT_BLOCK_INDEX:
+            backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
             block_count = backend.bitcoind.getblockcount()
 
-    if fetcher is not None:
-        fetcher.stop()
+        # Get index of last transaction.
+        tx_index = get_next_tx_index(db)
+
+        start_time = time.time()
+        parsed_blocks = 0
+        fetcher = None
+
+        while util.CURRENT_BLOCK_INDEX < block_count:
+            # Get block information and transactions
+            fetch_time_start = time.time()
+            if fetcher is None:
+                fetcher = start_rsfetcher()
+
+            retry = 0
+            decoded_block = fetcher.get_block()
+            while decoded_block is None:
+                retry += 1
+                if retry > 5:
+                    raise exceptions.RSFetchError("RSFetcher returned None too many times.")
+                logger.warning("RSFetcher returned None. Trying again in 5 seconds...")
+                time.sleep(5)
+                fetcher.stop()
+                fetcher = start_rsfetcher()
+                decoded_block = fetcher.get_block()
+
+            block_height = decoded_block.get("height")
+            fetch_time_end = time.time()
+            fetch_duration = fetch_time_end - fetch_time_start
+            logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
+
+            # Check for gaps in the blockchain
+            assert block_height <= util.CURRENT_BLOCK_INDEX + 1
+
+            # Parse the current block
+            tx_index, parsed_block_index = parse_new_block(db, decoded_block, tx_index=tx_index)
+            # check if the parsed block is the expected one
+            # if not that means a reorg happened
+            if parsed_block_index < block_height:
+                fetcher.stop()
+                fetcher = start_rsfetcher()
+            else:
+                assert parsed_block_index == block_height
+            mempool.clean_mempool(db)
+
+            parsed_blocks += 1
+            formatted_duration = util.format_duration(time.time() - start_time)
+            logger.debug(
+                f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
+            )
+
+            # Refresh block count.
+            if util.CURRENT_BLOCK_INDEX == block_count:
+                # if bitcoind is catching up, wait for the next block
+                if backend.bitcoind.get_blocks_behind() > 0:
+                    backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+                block_count = backend.bitcoind.getblockcount()
+    finally:
+        if fetcher is not None:
+            fetcher.stop()
 
     logger.info("Catch up complete.")
 

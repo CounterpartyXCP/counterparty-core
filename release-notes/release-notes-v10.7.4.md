@@ -19,6 +19,7 @@
 - Exclude zero balances when getting balances by address and asset
 - Remove lock file from RSFetcher
 - Handle correctly RSFetcher invalid version
+- Close correctly Ledger DB on shutdown
 
 ## Codebase
 

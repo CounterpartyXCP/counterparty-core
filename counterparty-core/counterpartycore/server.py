@@ -728,6 +728,8 @@ class AssetConservationChecker(threading.Thread):
 
     def stop(self):
         self.stop_event.set()
+        logger.info("Stopping Asset Conservation Checker thread...")
+        self.join()
 
 
 def start_all(args):
@@ -829,12 +831,12 @@ def start_all(args):
             api_status_poller.stop()
         if api_server_v1:
             api_server_v1.stop()
-        if asset_conservation_checker:
-            asset_conservation_checker.stop()
         if follower_daemon:
             follower_daemon.stop()
         if not config.NO_TELEMETRY:
             TelemetryOneShot.close_instance()
+        if asset_conservation_checker:
+            asset_conservation_checker.stop()
         if db:
             database.close(db)
         backend.addrindexrs.stop()
