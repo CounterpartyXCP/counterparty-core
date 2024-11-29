@@ -12,6 +12,7 @@ FORMAT = ">QQ21s"
 LENGTH = 8 + 8 + 21
 MAX_MEMO_LENGTH = 34
 ID = 2  # 0x02
+QUANTITY_ALL = "ALL"
 
 
 def unpack(message, block_index):
@@ -118,6 +119,9 @@ def compose(
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)
 
+    if quantity == QUANTITY_ALL:
+        quantity = ledger.get_balance(db, source, asset)
+
     # quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
         raise exceptions.ComposeError("quantity must be an int (in satoshi)")
@@ -169,6 +173,9 @@ def parse(db, tx, message):
         )
 
         status = "valid"
+
+        if quantity == QUANTITY_ALL:
+            quantity = ledger.get_balance(db, tx["source"], asset)
 
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         asset, quantity, destination, memo_bytes = None, None, None, None
