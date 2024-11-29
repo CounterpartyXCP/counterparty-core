@@ -635,16 +635,14 @@ def parse_next_event(ledger_db, state_db):
 
 
 class APIWatcher(threading.Thread):
-    def __init__(self):
+    def __init__(self, state_db):
         threading.Thread.__init__(self, name="API Watcher")
         logger.debug("Initializing API Watcher...")
         self.state_db = None
         self.ledger_db = None
         self.current_state_thread = None
         self.stop_event = threading.Event()  # Add stop event
-        self.state_db = database.get_db_connection(
-            config.STATE_DATABASE, read_only=False, check_wal=False
-        )
+        self.state_db = state_db
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )

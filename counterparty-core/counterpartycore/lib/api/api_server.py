@@ -497,9 +497,13 @@ def run_api_server(args, server_ready_value, stop_event):
         server.initialise_log_and_config(argparse.Namespace(**args), api=True)
 
         dbbuilder.apply_outstanding_migration()
+
+        state_db = database.get_db_connection(
+            config.STATE_DATABASE, read_only=False, check_wal=False
+        )
         check_database_version()
 
-        watcher = api_watcher.APIWatcher()
+        watcher = api_watcher.APIWatcher(state_db)
         watcher.start()
 
         app = init_flask_app()
