@@ -45,14 +45,15 @@
     - `/v2/transactions/counts`
     - `/v2/blocks/<int:block_index>/transactions/counts`
     - `/v2/addresses/<address>/transactions/counts`
+- Add sortable field `asset_longname` in `balances` table
+- Add the ability to retrieve balances by asset long name
 
 ## CLI
 
 - Add `build-state-db` command
 - `rollback` and `reparse` commands trigger a re-build of the State DB
 - Add current process name and current thread name in logging messages
-- Add sortable field `asset_longname` in `balances` table
-- Add the ability to retrieve balances by asset long name
+
 
 # Credits
 
