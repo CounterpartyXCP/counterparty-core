@@ -152,6 +152,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 91674999900,
             "utxo": None,
             "utxo_address": None,
@@ -159,6 +160,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "RAIDFAIRMIN",
+            "asset_longname": None,
             "quantity": 20,
             "utxo": None,
             "utxo_address": None,
@@ -166,6 +168,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "PARENT",
+            "asset_longname": None,
             "quantity": 100000000,
             "utxo": None,
             "utxo_address": None,
@@ -173,6 +176,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "NODIVISIBLE",
+            "asset_longname": None,
             "quantity": 985,
             "utxo": None,
             "utxo_address": None,
@@ -180,6 +184,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "MAXI",
+            "asset_longname": None,
             "quantity": 9223372036854775807,
             "utxo": None,
             "utxo_address": None,
@@ -187,6 +192,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "LOCKED",
+            "asset_longname": None,
             "quantity": 1000,
             "utxo": None,
             "utxo_address": None,
@@ -194,6 +200,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "FREEFAIRMIN",
+            "asset_longname": None,
             "quantity": 10,
             "utxo": None,
             "utxo_address": None,
@@ -201,6 +208,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "DIVISIBLE",
+            "asset_longname": None,
             "quantity": 98799999999,
             "utxo": None,
             "utxo_address": None,
@@ -208,6 +216,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "CALLABLE",
+            "asset_longname": None,
             "quantity": 1000,
             "utxo": None,
             "utxo_address": None,
@@ -215,6 +224,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "A95428956661682277",
+            "asset_longname": "PARENT.already.issued",
             "quantity": 100000000,
             "utxo": None,
             "utxo_address": None,
@@ -222,6 +232,7 @@ def test_new_get_balances_by_address():
         {
             "address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 100,
             "utxo": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -229,6 +240,7 @@ def test_new_get_balances_by_address():
         {
             "address": None,
             "asset": "DIVISIBLE",
+            "asset_longname": None,
             "quantity": 1,
             "utxo": "74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -252,6 +264,7 @@ def test_new_get_balances_by_asset():
             "utxo": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 100,
         },
         {
@@ -259,6 +272,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 300000000,
         },
         {
@@ -266,6 +280,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 46449548498,
         },
         {
@@ -273,6 +288,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 91674999900,
         },
         {
@@ -280,6 +296,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 92945878046,
         },
         {
@@ -287,6 +304,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 14999857,
         },
         {
@@ -294,6 +312,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 99999990,
         },
         {
@@ -301,6 +320,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 92949130360,
         },
         {
@@ -308,6 +328,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 92949122099,
         },
         {
@@ -315,6 +336,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 92999138821,
         },
         {
@@ -322,6 +344,7 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 92999030129,
         },
     ]

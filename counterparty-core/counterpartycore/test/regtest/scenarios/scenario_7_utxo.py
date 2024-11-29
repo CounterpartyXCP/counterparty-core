@@ -641,6 +641,7 @@ SCENARIO = [
                     {
                         "address": "$ADDRESS_1",
                         "asset": "MYASSETA",
+                        "asset_longname": None,
                         "quantity": 98000000000,
                         "utxo": None,
                         "utxo_address": None,
@@ -648,6 +649,7 @@ SCENARIO = [
                     {
                         "address": None,
                         "asset": "MYASSETA",
+                        "asset_longname": None,
                         "quantity": 2000000000,
                         "utxo": "$TX_HASH:0",
                         "utxo_address": "$ADDRESS_6",
@@ -660,6 +662,7 @@ SCENARIO = [
                     {
                         "address": None,
                         "asset": "MYASSETA",
+                        "asset_longname": None,
                         "quantity": 2000000000,
                         "utxo": "$TX_HASH:0",
                         "utxo_address": "$ADDRESS_6",
@@ -667,6 +670,7 @@ SCENARIO = [
                     {
                         "address": "$ADDRESS_6",
                         "asset": "XCP",
+                        "asset_longname": None,
                         "quantity": 74999988167,
                         "utxo": None,
                         "utxo_address": None,
@@ -692,6 +696,7 @@ SCENARIO = [
                             },
                         ],
                         "asset": "MYASSETA",
+                        "asset_longname": None,
                         "total": 100000000000,
                     },
                     {
@@ -716,6 +721,7 @@ SCENARIO = [
                             },
                         ],
                         "asset": "XCP",
+                        "asset_longname": None,
                         "total": 234749974540,
                     },
                 ],
@@ -726,6 +732,7 @@ SCENARIO = [
                     {
                         "address": None,
                         "asset": "MYASSETA",
+                        "asset_longname": None,
                         "quantity": 2000000000,
                         "utxo": "$TX_HASH:0",
                         "utxo_address": "$ADDRESS_6",

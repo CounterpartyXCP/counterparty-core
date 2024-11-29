@@ -29,7 +29,10 @@ ADDITONAL_COLUMNS = {
         "earned_quantity INTEGER",
         "paid_quantity INTEGER",
         "commission INTEGER",
-    ]
+    ],
+    "balances": [
+        "asset_longname TEXT",
+    ],
 }
 
 POST_QUERIES = {
@@ -51,8 +54,21 @@ POST_QUERIES = {
                 FROM fairmints 
                 WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
             );
+        """,
+    ],
+    "balances": [
         """
-    ]
+        UPDATE balances SET
+            asset_longname = (
+                SELECT assets.asset_longname
+                FROM assets
+                WHERE assets.asset_name = balances.asset
+            );
+        """,
+        """
+        CREATE INDEX balances_asset_longname_idx ON balances (asset_longname)
+        """,
+    ],
 }
 
 
