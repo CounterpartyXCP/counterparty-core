@@ -508,11 +508,11 @@ def run_api_server(args, server_ready_value, stop_event):
 
         app = init_flask_app()
 
+        wsgi_server = wsgi.WSGIApplication(app, args=args)
+
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server)
         parent_checker.start()
-
-        wsgi_server = wsgi.WSGIApplication(app, args=args)
 
         app.app_context().push()
         server_ready_value.value = 1
@@ -562,7 +562,8 @@ class ParentProcessChecker(threading.Thread):
             while not self.stop_event.is_set():
                 if os.getppid() != parent_pid:
                     logger.debug("Parent process is dead. Exiting...")
-                    self.wsgi_server.stop()
+                    if self.wsgi_server is not None:
+                        self.wsgi_server.stop()
                     break
                 time.sleep(1)
         except KeyboardInterrupt:
