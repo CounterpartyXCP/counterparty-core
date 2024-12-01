@@ -1653,6 +1653,7 @@
         "result": [
             {
                 "asset": "A160361285792733729",
+                "asset_longname": null,
                 "total": 50,
                 "addresses": [
                     {
@@ -1674,6 +1675,7 @@
             },
             {
                 "asset": "A95428956661682277",
+                "asset_longname": null,
                 "total": 100000000,
                 "addresses": [
                     {
@@ -1695,6 +1697,7 @@
             },
             {
                 "asset": "CALLABLE",
+                "asset_longname": null,
                 "total": 1000,
                 "addresses": [
                     {
@@ -1716,6 +1719,7 @@
             },
             {
                 "asset": "DIVISIBLE",
+                "asset_longname": null,
                 "total": 98900000000,
                 "addresses": [
                     {
@@ -1751,6 +1755,7 @@
             },
             {
                 "asset": "FREEFAIRMIN",
+                "asset_longname": null,
                 "total": 10,
                 "addresses": [
                     {
@@ -1772,6 +1777,7 @@
             },
             {
                 "asset": "LOCKED",
+                "asset_longname": null,
                 "total": 1000,
                 "addresses": [
                     {
