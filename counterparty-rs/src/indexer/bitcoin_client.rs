@@ -438,18 +438,42 @@ impl ToBlock for Block {
                     }
                     Ok((parse_output, potential_dispenser)) => {
                         potential_dispensers.push(potential_dispenser);
-                        if data.is_empty()
-                            && parse_output.is_destination()
-                            && destinations != vec![config.unspendable()]
-                        {
-                            if let ParseOutput::Destination(destination) = parse_output {
-                                destinations.push(destination);
+
+                        if config.data_always_first_enabled(height) {
+
+                            if parse_output.is_destination() {
+                                if let ParseOutput::Destination(destination) = parse_output {
+                                    if data.is_empty() && destination != config.unspendable() {
+                                        err = Some(Error::ParseVout(
+                                            "destination before data".to_string(),
+                                        ));
+                                        break
+                                    }
+                                    destinations.push(destination);
+                                }
+                                btc_amount += output_value;
+                                break
                             }
-                            btc_amount += output_value;
-                        } else if parse_output.is_destination() {
-                            break;
-                        } else if let ParseOutput::Data(mut new_data) = parse_output {
-                            data.append(&mut new_data)
+                            if let ParseOutput::Data(mut new_data) = parse_output {
+                                data.append(&mut new_data)
+                            }
+
+                        } else {
+
+                            if data.is_empty()
+                                && parse_output.is_destination()
+                                && destinations != vec![config.unspendable()]
+                            {
+                                if let ParseOutput::Destination(destination) = parse_output {
+                                    destinations.push(destination);
+                                }
+                                btc_amount += output_value;
+                            } else if parse_output.is_destination() {
+                                break;
+                            } else if let ParseOutput::Data(mut new_data) = parse_output {
+                                data.append(&mut new_data)
+                            }
+
                         }
                     }
                 }

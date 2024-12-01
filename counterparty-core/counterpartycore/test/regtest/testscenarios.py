@@ -63,7 +63,7 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_21_fairminter.SCENARIO
+# SCENARIOS = scenario_18_utxo.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -372,6 +372,7 @@ def check_api_v1(node):
         },
     )
     # check that the hex transaction is generated
+    print(tx)
     int(tx["result"], 16)
 
 

@@ -100,7 +100,7 @@ def validate(db, source, destination, asset, quantity):
     except AddressError:
         raise ValidateError("source address invalid")  # noqa: B904, F405
 
-    if destination:
+    if destination and not util.enabled("data_always_first"):
         raise ValidateError("destination exists")  # noqa: F405
 
     if asset == config.BTC:

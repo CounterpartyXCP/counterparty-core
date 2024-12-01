@@ -28,6 +28,7 @@ GETTXINFO_VECTOR = {
                         "",
                     ],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             # data in OP_CHECKMULTISIG script
             {
@@ -52,6 +53,7 @@ GETTXINFO_VECTOR = {
                         "",
                     ],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             # data in OP_CHECKMULTISIG script, destination = p2sh
             {
@@ -76,10 +78,14 @@ GETTXINFO_VECTOR = {
                         "",
                     ],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             {
                 # 2 sources is actually invalid, but pre-first_input_is_source this was the consensus!
-                "mock_protocol_changes": {"first_input_is_source": False},
+                "mock_protocol_changes": {
+                    "first_input_is_source": False,
+                    "data_always_first": False,
+                },
                 "comment": "data in OP_CHECKMULTISIG script , without first_input_is_source, 2 sources",
                 "in": (
                     deserialize.deserialize_tx(
@@ -126,6 +132,7 @@ GETTXINFO_VECTOR = {
                         "",
                     ],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
         ],
         "get_tx_info_legacy": [
@@ -146,6 +153,7 @@ GETTXINFO_VECTOR = {
                     b"\x00\x00\x00(\x00\x00R\xbb3d\x00TESTXXXX\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00TESTXXXX\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00TESTXXXX\x00\x00\x00;\x10\x00\x00\x00\n\x9b\xb3Q\x92(6\xc8\x86\x81i\x87\xe1\x0b\x03\xb8_8v\x8b",
                     [],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             # # data in OP_CHECKMULTISIG script, unsupported by get_tx_info1
             # {
@@ -176,6 +184,7 @@ GETTXINFO_VECTOR = {
                     b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                     [],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             # data in OP_CHECKMULTISIG script
             {
@@ -194,6 +203,7 @@ GETTXINFO_VECTOR = {
                     b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                     [],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             # data in OP_CHECKMULTISIG script, destination = p2sh, unsupported by get_tx_info2
             {
@@ -212,6 +222,7 @@ GETTXINFO_VECTOR = {
                     b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                     [],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             #'get_tx_info3'
             # data in OP_CHECKSIG script
@@ -233,6 +244,7 @@ GETTXINFO_VECTOR = {
                     b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                     [],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             # data in OP_CHECKMULTISIG script
             {
@@ -253,6 +265,7 @@ GETTXINFO_VECTOR = {
                     b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                     [],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             # data in OP_CHECKMULTISIG script, destination = p2sh, unsupported by get_tx_info2
             {
@@ -273,6 +286,7 @@ GETTXINFO_VECTOR = {
                     b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
                     [],
                 ),
+                "mock_protocol_changes": {"data_always_first": False},
             },
             {
                 "in": (
@@ -284,7 +298,7 @@ GETTXINFO_VECTOR = {
                     None,
                     True,
                 ),
-                "error": (exceptions.BTCOnlyError, "no data and not unspendable"),
+                "error": (exceptions.DecodeError, "destination before data"),
                 #'out': (0,)
             },
         ],

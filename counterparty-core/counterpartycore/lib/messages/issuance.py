@@ -974,11 +974,13 @@ def parse(db, tx, message, message_type_id):
     else:
         asset_events = []
 
-        if tx["destination"]:
+        if tx["destination"] and (
+            (util.enabled("data_always_first") and tx["destination"] != tx["source"])
+            or not util.enabled("data_always_first")
+        ):
             issuer = tx["destination"]
             transfer = True
             asset_events.append("transfer")
-            # quantity = 0
         else:
             issuer = tx["source"]
             transfer = False

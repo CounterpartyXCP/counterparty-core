@@ -322,22 +322,33 @@ def parse_transaction_vouts(decoded_tx):
             if new_data == []:
                 raise DecodeError("new destination is `None`")
 
-        # All destinations come before all data.
-        if (
-            not data
-            and not new_data
-            and destinations
-            != [
-                config.UNSPENDABLE,
-            ]
-        ):
-            destinations.append(new_destination)
-            btc_amount += output_value
-        else:
-            if new_destination:  # Change.
+        if util.enabled("data_always_first"):
+            # data always comes first
+            if new_destination is not None:
+                # only burn have destination but no data
+                if not data and new_destination != config.UNSPENDABLE:
+                    raise DecodeError("destination before data")
+                destinations.append(new_destination)
+                btc_amount += output_value
                 break
-            else:  # Data.
-                data += new_data
+            data += new_data
+        else:
+            # All destinations come before all data.
+            if (
+                not data
+                and not new_data
+                and destinations
+                != [
+                    config.UNSPENDABLE,
+                ]
+            ):
+                destinations.append(new_destination)
+                btc_amount += output_value
+            else:
+                if new_destination:  # Change.
+                    break
+                else:  # Data.
+                    data += new_data
 
     return destinations, btc_amount, fee, data, potential_dispensers
 
@@ -601,7 +612,7 @@ def get_utxos_info(db, decoded_tx):
         ",".join(get_inputs_with_balance(db, decoded_tx)),  # sources
         get_first_non_op_return_output(decoded_tx) or "",  # destination
         str(len(decoded_tx["vout"])),  # number of outputs
-        str(op_return_vout) if op_return_vout else "",  # op_return output
+        str(op_return_vout) if op_return_vout is not None else "",  # op_return output
     ]
 
 

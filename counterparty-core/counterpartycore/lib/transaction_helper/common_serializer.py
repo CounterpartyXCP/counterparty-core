@@ -11,7 +11,7 @@ import logging
 
 from bitcoin.bech32 import CBech32Data
 
-from counterpartycore.lib import arc4, backend, config, exceptions, script  # noqa: F401
+from counterpartycore.lib import arc4, config, exceptions, script, util  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -181,6 +181,85 @@ def make_fully_valid(pubkey_start):
     return pubkey
 
 
+def add_destination_outputs(destination_outputs):
+    s = b""
+    # Destination output.
+    for destination, value in destination_outputs:
+        s += value.to_bytes(8, byteorder="little")  # Value
+
+        tx_script, witness_script = get_script(destination)
+        # if use_segwit and destination in witness_data: # Not deleteing, We will need this for P2WSH
+        #    witness_data[destination].append(witness_script)
+        #    tx_script = witness_script
+
+        # if witness_script:
+        #    tx_script = witness_script
+
+        s += var_int(int(len(tx_script)))  # Script length
+        s += tx_script
+    return s
+
+
+def add_data_output(inputs, data_array, data_output, encoding, dust_return_pubkey):
+    s = b""
+    # Data output.
+    for data_chunk in data_array:
+        data_array, value = data_output
+        s += value.to_bytes(8, byteorder="little")  # Value
+
+        data_chunk = config.PREFIX + data_chunk  # noqa: PLW2901
+
+        # Initialise encryption key (once per output).
+        assert isinstance(inputs[0]["txid"], str)
+        key = arc4.init_arc4(
+            binascii.unhexlify(inputs[0]["txid"])
+        )  # Arbitrary, easy‐to‐find, unique key.
+
+        if encoding == "multisig":
+            assert dust_return_pubkey
+            # Get data (fake) public key.
+            pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
+            assert pad_length >= 0
+            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")  # noqa: PLW2901
+            data_chunk = key.encrypt(data_chunk)  # noqa: PLW2901
+            data_pubkey_1 = make_fully_valid(data_chunk[:31])
+            data_pubkey_2 = make_fully_valid(data_chunk[31:])
+
+            # Construct script.
+            tx_script = OP_1  # OP_1
+            tx_script += op_push(33)  # Push bytes of data chunk (fake) public key    (1/2)
+            tx_script += data_pubkey_1  # (Fake) public key                  (1/2)
+            tx_script += op_push(33)  # Push bytes of data chunk (fake) public key    (2/2)
+            tx_script += data_pubkey_2  # (Fake) public key                  (2/2)
+            tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
+            tx_script += dust_return_pubkey  # Source public key
+            tx_script += OP_3  # OP_3
+            tx_script += OP_CHECKMULTISIG  # OP_CHECKMULTISIG
+        elif encoding == "opreturn":
+            data_chunk = key.encrypt(data_chunk)  # noqa: PLW2901
+            tx_script = OP_RETURN  # OP_RETURN
+            tx_script += op_push(len(data_chunk))  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
+            tx_script += data_chunk  # Data
+        elif encoding == "pubkeyhash":
+            pad_length = 20 - 1 - len(data_chunk)
+            assert pad_length >= 0
+            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")  # noqa: PLW2901
+            data_chunk = key.encrypt(data_chunk)  # noqa: PLW2901
+            # Construct script.
+            tx_script = OP_DUP  # OP_DUP
+            tx_script += OP_HASH160  # OP_HASH160
+            tx_script += op_push(20)  # Push 0x14 bytes
+            tx_script += data_chunk  # (Fake) pubKeyHash
+            tx_script += OP_EQUALVERIFY  # OP_EQUALVERIFY
+            tx_script += OP_CHECKSIG  # OP_CHECKSIG
+        else:
+            raise exceptions.TransactionError("Unknown encoding‐scheme.")
+
+        s += var_int(int(len(tx_script)))  # Script length
+        s += tx_script
+    return s
+
+
 def serialise(
     encoding,
     inputs,
@@ -239,76 +318,12 @@ def serialise(
         n += 1
     s += var_int(n)
 
-    # Destination output.
-    for destination, value in destination_outputs:
-        s += value.to_bytes(8, byteorder="little")  # Value
-
-        tx_script, witness_script = get_script(destination)
-        # if use_segwit and destination in witness_data: # Not deleteing, We will need this for P2WSH
-        #    witness_data[destination].append(witness_script)
-        #    tx_script = witness_script
-
-        # if witness_script:
-        #    tx_script = witness_script
-
-        s += var_int(int(len(tx_script)))  # Script length
-        s += tx_script
-
-    # Data output.
-    for data_chunk in data_array:
-        data_array, value = data_output
-        s += value.to_bytes(8, byteorder="little")  # Value
-
-        data_chunk = config.PREFIX + data_chunk  # noqa: PLW2901
-
-        # Initialise encryption key (once per output).
-        assert isinstance(inputs[0]["txid"], str)
-        key = arc4.init_arc4(
-            binascii.unhexlify(inputs[0]["txid"])
-        )  # Arbitrary, easy‐to‐find, unique key.
-
-        if encoding == "multisig":
-            assert dust_return_pubkey
-            # Get data (fake) public key.
-            pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
-            assert pad_length >= 0
-            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")  # noqa: PLW2901
-            data_chunk = key.encrypt(data_chunk)  # noqa: PLW2901
-            data_pubkey_1 = make_fully_valid(data_chunk[:31])
-            data_pubkey_2 = make_fully_valid(data_chunk[31:])
-
-            # Construct script.
-            tx_script = OP_1  # OP_1
-            tx_script += op_push(33)  # Push bytes of data chunk (fake) public key    (1/2)
-            tx_script += data_pubkey_1  # (Fake) public key                  (1/2)
-            tx_script += op_push(33)  # Push bytes of data chunk (fake) public key    (2/2)
-            tx_script += data_pubkey_2  # (Fake) public key                  (2/2)
-            tx_script += op_push(len(dust_return_pubkey))  # Push bytes of source public key
-            tx_script += dust_return_pubkey  # Source public key
-            tx_script += OP_3  # OP_3
-            tx_script += OP_CHECKMULTISIG  # OP_CHECKMULTISIG
-        elif encoding == "opreturn":
-            data_chunk = key.encrypt(data_chunk)  # noqa: PLW2901
-            tx_script = OP_RETURN  # OP_RETURN
-            tx_script += op_push(len(data_chunk))  # Push bytes of data chunk (NOTE: OP_SMALLDATA?)
-            tx_script += data_chunk  # Data
-        elif encoding == "pubkeyhash":
-            pad_length = 20 - 1 - len(data_chunk)
-            assert pad_length >= 0
-            data_chunk = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")  # noqa: PLW2901
-            data_chunk = key.encrypt(data_chunk)  # noqa: PLW2901
-            # Construct script.
-            tx_script = OP_DUP  # OP_DUP
-            tx_script += OP_HASH160  # OP_HASH160
-            tx_script += op_push(20)  # Push 0x14 bytes
-            tx_script += data_chunk  # (Fake) pubKeyHash
-            tx_script += OP_EQUALVERIFY  # OP_EQUALVERIFY
-            tx_script += OP_CHECKSIG  # OP_CHECKSIG
-        else:
-            raise exceptions.TransactionError("Unknown encoding‐scheme.")
-
-        s += var_int(int(len(tx_script)))  # Script length
-        s += tx_script
+    if util.enabled("data_always_first"):
+        s += add_data_output(inputs, data_array, data_output, encoding, dust_return_pubkey)
+        s += add_destination_outputs(destination_outputs)
+    else:
+        s += add_destination_outputs(destination_outputs)
+        s += add_data_output(inputs, data_array, data_output, encoding, dust_return_pubkey)
 
     # Change output.
     if change_output:

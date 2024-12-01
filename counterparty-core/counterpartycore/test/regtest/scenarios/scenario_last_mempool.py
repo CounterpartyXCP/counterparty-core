@@ -166,7 +166,7 @@ SCENARIO = [
             {
                 "url": "transactions/$TX_HASH/info",
                 "result": {
-                    "btc_amount": 0,
+                    "btc_amount": 4949930546,
                     "data": "$TX_DATA",
                     "decoded_tx": {
                         "coinbase": False,
@@ -199,7 +199,7 @@ SCENARIO = [
                             "0355f42b0e4c7b6e73addef75deab673b9727225a3d529511ef28f5df36472826c",
                         ],
                     },
-                    "destination": None,
+                    "destination": "$ADDRESS_4",
                     "fee": 10000,
                     "source": "$ADDRESS_4",
                     "unpacked_data": {

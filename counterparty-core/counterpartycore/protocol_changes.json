@@ -677,5 +677,12 @@
     "minimum_version_revision": 2,
     "block_index": 871900,
     "testnet_block_index": 3195137
+  },
+  "data_always_first": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 7,
+    "minimum_version_revision": 4,
+    "block_index": 900000,
+    "testnet_block_index": 3195137
   }
 }

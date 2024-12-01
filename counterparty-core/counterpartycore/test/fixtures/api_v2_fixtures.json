@@ -500,7 +500,7 @@
                 "fee": 6150,
                 "data": "0000000c00000023ded9aaeb00000000000000640000000000000064000000000000006400",
                 "supported": true,
-                "utxos_info": " b44885994dea259ac03a7c7b46076e05cd217a9f465d8f7c7be9cc831ba47291:1 2 ",
+                "utxos_info": " b44885994dea259ac03a7c7b46076e05cd217a9f465d8f7c7be9cc831ba47291:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "dispenser",
@@ -620,7 +620,7 @@
                 "fee": 5800,
                 "data": "5b413136303336313238353739323733333732397c3230",
                 "supported": true,
-                "utxos_info": " 33b22f767d86a1375935576b0b0b76fee0c080ab5dd4e8d9aa27537df84abef2:1 2 ",
+                "utxos_info": " 33b22f767d86a1375935576b0b0b76fee0c080ab5dd4e8d9aa27537df84abef2:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -643,7 +643,7 @@
                 "fee": 5800,
                 "data": "5b413136303336313238353739323733333732397c3130",
                 "supported": true,
-                "utxos_info": " f1a22cd5df828fe94c328ca0c39fd1120b98dcc333b2d1ac95465b4bc2a2ace1:1 2 ",
+                "utxos_info": " f1a22cd5df828fe94c328ca0c39fd1120b98dcc333b2d1ac95465b4bc2a2ace1:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -689,7 +689,7 @@
                 "fee": 6675,
                 "data": "5a51414944464149524d494e7c7c31307c317c307c35307c32307c307c307c32307c3430303030307c35303030303030307c307c307c307c317c",
                 "supported": true,
-                "utxos_info": " 3e7d029e0751dbdd5853f91b6e28f8df6b1b940ace7b8723d459905df4e0ef9c:1 2 ",
+                "utxos_info": " 3e7d029e0751dbdd5853f91b6e28f8df6b1b940ace7b8723d459905df4e0ef9c:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -712,7 +712,7 @@
                 "fee": 6375,
                 "data": "5a52414944464149524d494e7c7c31307c317c31307c33307c32307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxos_info": " c5ae7746f5282db0e11d580db3006fc6ff2e1b895e1513dbb4586343e08df687:1 2 ",
+                "utxos_info": " c5ae7746f5282db0e11d580db3006fc6ff2e1b895e1513dbb4586343e08df687:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -735,7 +735,7 @@
                 "fee": 5575,
                 "data": "5b46524545464149524d494e7c30",
                 "supported": true,
-                "utxos_info": " fe9a0647adff98bcc8289f2d6178db687d99be439cb64a1c8ae89d325552fd38:1 2 ",
+                "utxos_info": " fe9a0647adff98bcc8289f2d6178db687d99be439cb64a1c8ae89d325552fd38:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -810,7 +810,7 @@
             "fee": 5800,
             "data": "5b413136303336313238353739323733333732397c3230",
             "supported": true,
-            "utxos_info": " 33b22f767d86a1375935576b0b0b76fee0c080ab5dd4e8d9aa27537df84abef2:1 2 ",
+            "utxos_info": " 33b22f767d86a1375935576b0b0b76fee0c080ab5dd4e8d9aa27537df84abef2:1 2 0",
             "transaction_type": null,
             "unpacked_data": {
                 "message_type": "unknown",
@@ -1861,7 +1861,7 @@
                 "fee": 5800,
                 "data": "5b413136303336313238353739323733333732397c3230",
                 "supported": true,
-                "utxos_info": " 33b22f767d86a1375935576b0b0b76fee0c080ab5dd4e8d9aa27537df84abef2:1 2 ",
+                "utxos_info": " 33b22f767d86a1375935576b0b0b76fee0c080ab5dd4e8d9aa27537df84abef2:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -1884,7 +1884,7 @@
                 "fee": 5800,
                 "data": "5b413136303336313238353739323733333732397c3130",
                 "supported": true,
-                "utxos_info": " f1a22cd5df828fe94c328ca0c39fd1120b98dcc333b2d1ac95465b4bc2a2ace1:1 2 ",
+                "utxos_info": " f1a22cd5df828fe94c328ca0c39fd1120b98dcc333b2d1ac95465b4bc2a2ace1:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -1930,7 +1930,7 @@
                 "fee": 6675,
                 "data": "5a51414944464149524d494e7c7c31307c317c307c35307c32307c307c307c32307c3430303030307c35303030303030307c307c307c307c317c",
                 "supported": true,
-                "utxos_info": " 3e7d029e0751dbdd5853f91b6e28f8df6b1b940ace7b8723d459905df4e0ef9c:1 2 ",
+                "utxos_info": " 3e7d029e0751dbdd5853f91b6e28f8df6b1b940ace7b8723d459905df4e0ef9c:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -4549,7 +4549,7 @@
                 "fee": 6675,
                 "data": "5a51414944464149524d494e7c7c31307c317c307c35307c32307c307c307c32307c3430303030307c35303030303030307c307c307c307c317c",
                 "supported": true,
-                "utxos_info": " 3e7d029e0751dbdd5853f91b6e28f8df6b1b940ace7b8723d459905df4e0ef9c:1 2 ",
+                "utxos_info": " 3e7d029e0751dbdd5853f91b6e28f8df6b1b940ace7b8723d459905df4e0ef9c:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -4572,7 +4572,7 @@
                 "fee": 6375,
                 "data": "5a52414944464149524d494e7c7c31307c317c31307c33307c32307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxos_info": " c5ae7746f5282db0e11d580db3006fc6ff2e1b895e1513dbb4586343e08df687:1 2 ",
+                "utxos_info": " c5ae7746f5282db0e11d580db3006fc6ff2e1b895e1513dbb4586343e08df687:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -4595,7 +4595,7 @@
                 "fee": 5575,
                 "data": "5b46524545464149524d494e7c30",
                 "supported": true,
-                "utxos_info": " fe9a0647adff98bcc8289f2d6178db687d99be439cb64a1c8ae89d325552fd38:1 2 ",
+                "utxos_info": " fe9a0647adff98bcc8289f2d6178db687d99be439cb64a1c8ae89d325552fd38:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -4618,7 +4618,7 @@
                 "fee": 6300,
                 "data": "5a50414944464149524d494e7c7c31307c317c307c307c307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxos_info": " 63d204e6d293e32c74a4cab23f13a26ea8de60e9a5ff37959c992f1661848043:1 2 ",
+                "utxos_info": " 63d204e6d293e32c74a4cab23f13a26ea8de60e9a5ff37959c992f1661848043:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -4641,7 +4641,7 @@
                 "fee": 6300,
                 "data": "5a46524545464149524d494e7c7c307c317c31307c307c307c307c307c307c307c307c307c307c307c317c",
                 "supported": true,
-                "utxos_info": " 3c3cf4ecfbafac833fe6d141c3dd3a3a1f544da16513e14f2f3c344f443ae035:1 2 ",
+                "utxos_info": " 3c3cf4ecfbafac833fe6d141c3dd3a3a1f544da16513e14f2f3c344f443ae035:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "unknown",
@@ -4664,7 +4664,7 @@
                 "fee": 6550,
                 "data": "0000001501530821671b10650000000005f5e10001108e90a57dba9967c422e83080f22f0c684368696c64206f6620706172656e74",
                 "supported": true,
-                "utxos_info": " 0c2cc9e9cdd3a29c7a2fcd38a68d409c4c03ff78456fde49595d8fdfd6110b67:1 2 ",
+                "utxos_info": " 0c2cc9e9cdd3a29c7a2fcd38a68d409c4c03ff78456fde49595d8fdfd6110b67:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "issuance",
@@ -4698,7 +4698,7 @@
                 "fee": 6300,
                 "data": "00000014000000000aa4097d0000000005f5e100010000000000000000000c506172656e74206173736574",
                 "supported": true,
-                "utxos_info": " fccea6e9a0ad88c0b3a93594e176a9226095acdad38b63daabbdfe96737b8bf7:1 2 ",
+                "utxos_info": " fccea6e9a0ad88c0b3a93594e176a9226095acdad38b63daabbdfe96737b8bf7:1 2 0",
                 "transaction_type": null,
                 "unpacked_data": {
                     "message_type": "issuance",
