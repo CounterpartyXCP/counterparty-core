@@ -656,11 +656,15 @@ class APIWatcher(threading.Thread):
 
     def follow(self):
         try:
+            no_check_reorg_since = 0
             while not self.stop_event.is_set():
                 try:
                     parse_next_event(self.ledger_db, self.state_db)
                 except exceptions.NoEventToParse:
                     logger.trace("No new events to parse")
+                    if time.time() - no_check_reorg_since > 5:
+                        check_reorg(self.ledger_db, self.state_db)
+                        no_check_reorg_since = time.time()
                     self.stop_event.wait(timeout=0.1)
                 if self.stop_event.is_set():
                     break
