@@ -75,7 +75,7 @@ def move_balances(db, tx, source, destination):
 # call on each transaction
 def move_assets(db, tx):
     if "utxos_info" not in tx or not tx["utxos_info"]:
-        return
+        return False
 
     sources, destination, _outputs_count, _op_return_output = util.parse_utxos_info(
         tx["utxos_info"]
@@ -83,7 +83,7 @@ def move_assets(db, tx):
 
     # do nothing if no vin with attached assets
     if len(sources) == 0:
-        return
+        return False
 
     for source in sources:
         if not destination and util.enabled(
@@ -94,3 +94,5 @@ def move_assets(db, tx):
         elif destination:
             # we move all assets from the source to the destination
             move_balances(db, tx, source, destination)
+
+    return True

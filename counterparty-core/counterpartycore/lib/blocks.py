@@ -103,10 +103,40 @@ with open(CURR_DIR + "/../mainnet_burns.csv", "r") as f:
         MAINNET_BURNS[line["tx_hash"]] = line
 
 
+def update_transaction(db, tx, supported):
+    ledger.add_to_journal(
+        db,
+        tx["block_index"],
+        "parse",
+        "transactions",
+        "TRANSACTION_PARSED",
+        {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "supported": supported,
+        },
+    )
+
+    if not supported:
+        cursor = db.cursor()
+        cursor.execute(
+            """UPDATE transactions \
+                            SET supported=$supported \
+                            WHERE tx_hash=$tx_hash""",
+            {"supported": False, "tx_hash": tx["tx_hash"]},
+        )
+        if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
+            logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
+        cursor.close()
+
+
 def parse_tx(db, tx):
     util.CURRENT_TX_HASH = tx["tx_hash"]
     """Parse the transaction, return True for success."""
     cursor = db.cursor()
+
+    supported = True
+    moved = False
 
     try:
         with db:
@@ -126,17 +156,14 @@ def parse_tx(db, tx):
                 attach.ID,
                 detach.ID,
             ]:
-                move.move_assets(db, tx)
+                moved = move.move_assets(db, tx)
 
-            if not tx["source"]:  # utxos move only
+            if (
+                not tx["source"]
+                or len(tx["source"].split("-")) > 1
+                or (tx["destination"] and len(tx["destination"].split("-")) > 1)
+            ):
                 return
-
-            # Only one source and one destination allowed for now.
-            if len(tx["source"].split("-")) > 1:
-                return
-            if tx["destination"]:
-                if len(tx["destination"].split("-")) > 1:
-                    return
 
             # Burns.
             if tx["destination"] == config.UNSPENDABLE:
@@ -145,8 +172,6 @@ def parse_tx(db, tx):
 
             # Protocol change.
             rps_enabled = tx["block_index"] >= 308500 or config.TESTNET or config.REGTEST
-
-            supported = True
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
@@ -224,50 +249,19 @@ def parse_tx(db, tx):
             else:
                 supported = False
 
-            ledger.add_to_journal(
-                db,
-                tx["block_index"],
-                "parse",
-                "transactions",
-                "TRANSACTION_PARSED",
-                {
-                    "tx_index": tx["tx_index"],
-                    "tx_hash": tx["tx_hash"],
-                    "supported": supported,
-                },
-            )
-
-            if not supported:
-                cursor.execute(
-                    """UPDATE transactions \
-                                    SET supported=$supported \
-                                    WHERE tx_hash=$tx_hash""",
-                    {"supported": False, "tx_hash": tx["tx_hash"]},
-                )
-                if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
-                    logger.info(
-                        f"Unsupported transaction: hash {tx['tx_hash']}; ID: {message_type_id}; data {tx['data']}"
-                    )
-                cursor.close()
-                util.CURRENT_TX_HASH = None
-                return False
-
             # if attach or detach we move assets after parsing
             if util.enabled("spend_utxo_to_detach") and message_type_id == attach.ID:
-                move.move_assets(db, tx)
+                moved = move.move_assets(db, tx)
 
-            # NOTE: for debugging (check asset conservation after every `N` transactions).
-            # if not tx['tx_index'] % N:
-            #     check.asset_conservation(db)
-            util.CURRENT_TX_HASH = None
-            return True
     except Exception as e:
-        # import traceback
-        # print(traceback.format_exc())
         raise exceptions.ParseTransactionError(f"{e}") from e
     finally:
         cursor.close()
+        supported = supported or moved
+        update_transaction(db, tx, supported)
         util.CURRENT_TX_HASH = None
+
+    return supported
 
 
 def replay_transactions_events(db, transactions):

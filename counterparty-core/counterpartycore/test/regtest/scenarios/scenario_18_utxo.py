@@ -250,7 +250,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "UTXO_MOVE",
-                        "event_index": "$EVENT_INDEX_9",
+                        "event_index": "$EVENT_INDEX_10",
                         "params": {
                             "asset": "UTXOASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -266,7 +266,7 @@ SCENARIO = [
                     },
                     {
                         "event": "CREDIT",
-                        "event_index": "$EVENT_INDEX_8",
+                        "event_index": "$EVENT_INDEX_9",
                         "params": {
                             "address": None,
                             "asset": "UTXOASSET",
@@ -282,7 +282,7 @@ SCENARIO = [
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_7",
+                        "event_index": "$EVENT_INDEX_8",
                         "params": {
                             "action": "utxo move",
                             "address": None,

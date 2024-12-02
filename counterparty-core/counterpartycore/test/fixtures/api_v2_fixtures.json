@@ -7,7 +7,7 @@
                 "block_time": 310703000,
                 "ledger_hash": "fa9be6ec83c14604fbeede79c09404102eda193852f3c1965672bdbc07651bbf",
                 "txlist_hash": "ead5543d5ba4a13c6b7b09e468becc6ea499acf2a5cbc9b3e54e1477293760f4",
-                "messages_hash": "fa49f15263e4beec085ddd6ac1652e345fbfc5064c302e1cb79e35e18c6c77ab",
+                "messages_hash": "491ff0bc091a9a2c59d8487388375eb74b60c3c439277e21f773111041917575",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -18,7 +18,7 @@
                 "block_time": 310702000,
                 "ledger_hash": "66d9f92af4ee7422f6198541304c23dd776032a3b7680a88c99f57c747a8fe93",
                 "txlist_hash": "689d74dfb418e1674e6892afa5e865f45ea1c9ee9aebe930fab6e967cf8486f3",
-                "messages_hash": "1bcca06b7bf0b461ec040f094c11579c7a6dfabdd758bfad3315237d9eedfda6",
+                "messages_hash": "585db1567c87afc76a732f84c6efcd721bf4bda9d2ef7f2ff8a9127d2f7f6085",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -29,7 +29,7 @@
                 "block_time": 310701000,
                 "ledger_hash": "93f52d9dd1fe1606a1aa38ce4f00210ffacd37118495ec3a06fbbadc57b2deb4",
                 "txlist_hash": "724404753d10775f47ff861186fa24a13eaf71cb0e59b628103f36d38cc80d7d",
-                "messages_hash": "8c2fd6801e5167ef006be81b5f0797da54e590ddcc1c18366525ec2ef379a5c5",
+                "messages_hash": "2af0c9bc325e3450c9c98bee3c719fde34fcb6c1284f06dfc48fe9714b105f8e",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -40,7 +40,7 @@
                 "block_time": 310700000,
                 "ledger_hash": "fe90eac96beabb7e5313f8d3466a3e9e862318e51eafc3df5ebddd67c7174568",
                 "txlist_hash": "1d5586274427145daa34ab7839453930fdac69521c32c6e77d4947d03d157359",
-                "messages_hash": "1589fef0fc2767454db3728de10081e616dcb6e42b4fbfd6c6b269a4dad2b60c",
+                "messages_hash": "a68a9d41a65f9dc92d8e2bef043657db0aee7400e94327562395b82af6bb5662",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -51,7 +51,7 @@
                 "block_time": 310699000,
                 "ledger_hash": "5f578b303590202d182d2d126fc4ddfe614fada16ec33eda05e493c414f405e2",
                 "txlist_hash": "4c177e0da421e1833233d147c1ecd5aee21da2897ffbd1baa139320820587226",
-                "messages_hash": "c7fe9f88974e748096284651914781ed84ee45a7fab27e9e0ecafad6ee92b09b",
+                "messages_hash": "4d0eaa6889e7e09afbd03dd328c0eb9e5d5b7d7e3f727dd69be6ff0a00807fde",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -62,7 +62,7 @@
                 "block_time": 310698000,
                 "ledger_hash": "e4dd38ae1fe02d009d84128937505c9eb9f807fa5dea74e77a3a438f12a2bbeb",
                 "txlist_hash": "7c6eabb5934f99aae5c32cae53addec2fa66ba2e5b8a2801d29cccb0f1028b93",
-                "messages_hash": "4d6321b175ed231e6d13f0fededc98731dbd070364ac32d54aed5e999a3ed5d5",
+                "messages_hash": "d804a10e5ce0ed137ed1a3dda9a7be703b0f47d182459859de2e456960507870",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -73,7 +73,7 @@
                 "block_time": 310697000,
                 "ledger_hash": "b2ef3fb8b286c657e83f8707e86ad5190b0af834dc274017dce1bca26acad6a2",
                 "txlist_hash": "7b199c80505cad4703e6baf926cb858ffda7da594591cc4e8788f915a2b01248",
-                "messages_hash": "0133903fe00e33d6410da84013b7b018d091a272512cac6b0b23ceeaed0c446a",
+                "messages_hash": "65a9907494095bd7c0ec5f2c9d69ea04f201c3aa1bc42052eed330deeb727b6b",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -84,7 +84,7 @@
                 "block_time": 310696000,
                 "ledger_hash": "b12309d3cd3ae4a4e63af3bb49ab7be89086b3216483abe3df6ee3ef4cd4495a",
                 "txlist_hash": "97773014afb5e392271b317b2ee678ce467367afa586e9925d10580e1b6fa692",
-                "messages_hash": "4a5db2ac3baaba9560b05e941798d1ada0246b84b14b7f8b4df4f7508637db09",
+                "messages_hash": "14f78538130ca33ecad955edf436f35a4db66d74a4b7cfb2fad2a6c30213e9ed",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -95,7 +95,7 @@
                 "block_time": 310695000,
                 "ledger_hash": "90cede3b9e6ffcba3e0af2584bc07a01c2ce0465095f9e2830dd0d9cf1a71a85",
                 "txlist_hash": "1657e29445bc4c4600856690d40a7f04d8b0733eb3bffbaa525ba9770e9cd171",
-                "messages_hash": "8d3d3592e80685aaefb841909d65ab58005a4925983e3f7b4bc8a31728c36513",
+                "messages_hash": "fd28268019efe28434f4cec537cd64682b851d9344566c2364628bad9d1c6a11",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -106,7 +106,7 @@
                 "block_time": 310694000,
                 "ledger_hash": "fcc3fc1e1563344800ea86521b53b6b419e0495527386b67fd31ab23957a2a2f",
                 "txlist_hash": "46847e9822c68d2390adc97599452010bc2badc6decc88aedb9f58e57394cd52",
-                "messages_hash": "6698d65e288f2fc9f2e846cc42bed248c8c5f39fece7d30ec152f91be541e0de",
+                "messages_hash": "2a015f60a7d852f28125992701cd82eb8c0862106dcc10a72e1688c2b0f287af",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -122,7 +122,7 @@
             "block_time": 310703000,
             "ledger_hash": "fa9be6ec83c14604fbeede79c09404102eda193852f3c1965672bdbc07651bbf",
             "txlist_hash": "ead5543d5ba4a13c6b7b09e468becc6ea499acf2a5cbc9b3e54e1477293760f4",
-            "messages_hash": "fa49f15263e4beec085ddd6ac1652e345fbfc5064c302e1cb79e35e18c6c77ab",
+            "messages_hash": "491ff0bc091a9a2c59d8487388375eb74b60c3c439277e21f773111041917575",
             "previous_block_hash": null,
             "difficulty": null,
             "transaction_count": 0
@@ -135,7 +135,7 @@
             "block_time": 310491000,
             "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
             "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
-            "messages_hash": "b36a13ee6d0e5c14dc24a84358530a52e6ea450824a194612b6eb65d9320188c",
+            "messages_hash": "75d1acc55a17b6f1143f4e57c7bce7dd2d37eef811193923c360cd7c45fb91e9",
             "previous_block_hash": null,
             "difficulty": null,
             "transaction_count": 1
@@ -148,7 +148,7 @@
             "block_time": 310500000,
             "ledger_hash": "6c240f1f3a985ff91e6a280c4448b8d739a06caa6fa383c4b9a7b90d27bdb17b",
             "txlist_hash": "d21ed1a33a3ff157708a8e8c5a11062e0b33a7682896f695cd174ee93dce7767",
-            "messages_hash": "7e390aad9c33545e3d9724aa7e07454bafc8bbaf5d92c76cf2329762d7e4df9b",
+            "messages_hash": "df9bf2f168a7184ac23f782b6c6df5ffe4be88bbca3d16cc4304497fd9146236",
             "previous_block_hash": null,
             "difficulty": null,
             "transaction_count": 1
@@ -219,12 +219,12 @@
     "http://localhost:10009/v2/blocks/310491/events?verbose=true": {
         "result": [
             {
-                "event_index": 1184,
+                "event_index": 1191,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310491,
                     "ledger_hash": "3114d8091cfcaa9944c6fab49d51950535c4ef269877d58c372ed80b2b472ec6",
-                    "messages_hash": "b36a13ee6d0e5c14dc24a84358530a52e6ea450824a194612b6eb65d9320188c",
+                    "messages_hash": "75d1acc55a17b6f1143f4e57c7bce7dd2d37eef811193923c360cd7c45fb91e9",
                     "transaction_count": 1,
                     "txlist_hash": "f065728a3544adc085fae976759c0d040a34ca0a8ddd39260b55f0262cd5baa8",
                     "block_time": 310491000
@@ -232,7 +232,7 @@
                 "tx_hash": null
             },
             {
-                "event_index": 1183,
+                "event_index": 1190,
                 "event": "TRANSACTION_PARSED",
                 "params": {
                     "supported": true,
@@ -242,7 +242,7 @@
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
-                "event_index": 1182,
+                "event_index": 1189,
                 "event": "OPEN_ORDER",
                 "params": {
                     "block_index": 310491,
@@ -289,7 +289,7 @@
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
-                "event_index": 1181,
+                "event_index": 1188,
                 "event": "DEBIT",
                 "params": {
                     "action": "open order",
@@ -314,7 +314,7 @@
                 "tx_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
             },
             {
-                "event_index": 1180,
+                "event_index": 1187,
                 "event": "NEW_TRANSACTION",
                 "params": {
                     "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
@@ -363,7 +363,7 @@
                 "tx_hash": null
             },
             {
-                "event_index": 1179,
+                "event_index": 1186,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "811abd7cf2b768cfdaa84ab44c63f4463c96a368ead52125bf149cf0c7447b16",
@@ -825,7 +825,7 @@
     "http://localhost:10009/v2/transactions/2/events?verbose=true": {
         "result": [
             {
-                "event_index": 13,
+                "event_index": 14,
                 "event": "TRANSACTION_PARSED",
                 "params": {
                     "supported": true,
@@ -837,7 +837,7 @@
                 "block_time": 310001000
             },
             {
-                "event_index": 12,
+                "event_index": 13,
                 "event": "CREDIT",
                 "params": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -864,7 +864,7 @@
                 "block_time": 310001000
             },
             {
-                "event_index": 11,
+                "event_index": 12,
                 "event": "ASSET_ISSUANCE",
                 "params": {
                     "asset": "DIVISIBLE",
@@ -896,7 +896,7 @@
                 "block_time": 310001000
             },
             {
-                "event_index": 10,
+                "event_index": 11,
                 "event": "ASSET_CREATION",
                 "params": {
                     "asset_id": "697326324582",
@@ -910,7 +910,7 @@
                 "block_time": 310001000
             },
             {
-                "event_index": 9,
+                "event_index": 10,
                 "event": "DEBIT",
                 "params": {
                     "action": "issuance fee",
@@ -943,7 +943,7 @@
     "http://localhost:10009/v2/transactions/ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18/events?verbose=true": {
         "result": [
             {
-                "event_index": 1311,
+                "event_index": 1319,
                 "event": "TRANSACTION_PARSED",
                 "params": {
                     "supported": true,
@@ -955,7 +955,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1310,
+                "event_index": 1318,
                 "event": "ASSET_ISSUANCE",
                 "params": {
                     "asset": "A160361285792733729",
@@ -989,7 +989,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1309,
+                "event_index": 1317,
                 "event": "FAIRMINTER_UPDATE",
                 "params": {
                     "status": "closed",
@@ -1000,7 +1000,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1308,
+                "event_index": 1316,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1027,7 +1027,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1307,
+                "event_index": 1315,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1054,7 +1054,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1306,
+                "event_index": 1314,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1081,7 +1081,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1305,
+                "event_index": 1313,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1108,7 +1108,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1304,
+                "event_index": 1312,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1135,7 +1135,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1303,
+                "event_index": 1311,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1162,7 +1162,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1302,
+                "event_index": 1310,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1189,7 +1189,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1301,
+                "event_index": 1309,
                 "event": "DEBIT",
                 "params": {
                     "action": "unescrowed fairmint payment",
@@ -1216,7 +1216,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1300,
+                "event_index": 1308,
                 "event": "DEBIT",
                 "params": {
                     "action": "unescrowed fairmint",
@@ -1243,7 +1243,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1299,
+                "event_index": 1307,
                 "event": "NEW_FAIRMINT",
                 "params": {
                     "asset": "A160361285792733729",
@@ -1273,7 +1273,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1298,
+                "event_index": 1306,
                 "event": "CREDIT",
                 "params": {
                     "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
@@ -1300,7 +1300,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1297,
+                "event_index": 1305,
                 "event": "CREDIT",
                 "params": {
                     "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
@@ -1327,7 +1327,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1296,
+                "event_index": 1304,
                 "event": "DEBIT",
                 "params": {
                     "action": "escrowed fairmint",
@@ -1370,7 +1370,7 @@
     "http://localhost:10009/v2/transactions/2/events/CREDIT?verbose=true": {
         "result": [
             {
-                "event_index": 12,
+                "event_index": 13,
                 "event": "CREDIT",
                 "params": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -1403,7 +1403,7 @@
     "http://localhost:10009/v2/transactions/ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18/events/CREDIT?verbose=true": {
         "result": [
             {
-                "event_index": 1308,
+                "event_index": 1316,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1430,7 +1430,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1307,
+                "event_index": 1315,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1457,7 +1457,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1306,
+                "event_index": 1314,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1484,7 +1484,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1305,
+                "event_index": 1313,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1511,7 +1511,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1304,
+                "event_index": 1312,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1538,7 +1538,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1303,
+                "event_index": 1311,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1565,7 +1565,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1302,
+                "event_index": 1310,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1592,7 +1592,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1298,
+                "event_index": 1306,
                 "event": "CREDIT",
                 "params": {
                     "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
@@ -1619,7 +1619,7 @@
                 "block_time": 310506000
             },
             {
-                "event_index": 1297,
+                "event_index": 1305,
                 "event": "CREDIT",
                 "params": {
                     "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
@@ -1948,7 +1948,7 @@
     "http://localhost:10009/v2/addresses/events?verbose=true&limit=6&addresses=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc,mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns": {
         "result": [
             {
-                "event_index": 1351,
+                "event_index": 1359,
                 "event": "ORDER_MATCH_EXPIRATION",
                 "params": {
                     "block_index": 310513,
@@ -1962,7 +1962,7 @@
                 "block_time": 310513000
             },
             {
-                "event_index": 1326,
+                "event_index": 1334,
                 "event": "ATTACH_TO_UTXO",
                 "params": {
                     "asset": "DIVISIBLE",
@@ -1991,7 +1991,7 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1324,
+                "event_index": 1332,
                 "event": "DEBIT",
                 "params": {
                     "action": "attach to utxo",
@@ -2018,7 +2018,7 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1322,
+                "event_index": 1330,
                 "event": "NEW_TRANSACTION",
                 "params": {
                     "block_hash": "40cfaee344032c167d7317bb94d2e514f8dca023302303a908dd994e15d902cf",
@@ -2047,7 +2047,7 @@
                 "block_time": 310508000
             }
         ],
-        "next_cursor": 1322,
+        "next_cursor": 1330,
         "result_count": 177
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
@@ -6554,12 +6554,12 @@
     "http://localhost:10009/v2/events?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1735,
+                "event_index": 1743,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310703,
                     "ledger_hash": "fa9be6ec83c14604fbeede79c09404102eda193852f3c1965672bdbc07651bbf",
-                    "messages_hash": "fa49f15263e4beec085ddd6ac1652e345fbfc5064c302e1cb79e35e18c6c77ab",
+                    "messages_hash": "491ff0bc091a9a2c59d8487388375eb74b60c3c439277e21f773111041917575",
                     "transaction_count": 0,
                     "txlist_hash": "ead5543d5ba4a13c6b7b09e468becc6ea499acf2a5cbc9b3e54e1477293760f4",
                     "block_time": 310703000
@@ -6569,7 +6569,7 @@
                 "block_time": 310703000
             },
             {
-                "event_index": 1734,
+                "event_index": 1742,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "b8b21ab596ed7ad84e449d098c04d86cbb6623c5e88af7772166882efbd91218",
@@ -6585,12 +6585,12 @@
                 "block_time": 310703000
             },
             {
-                "event_index": 1733,
+                "event_index": 1741,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310702,
                     "ledger_hash": "66d9f92af4ee7422f6198541304c23dd776032a3b7680a88c99f57c747a8fe93",
-                    "messages_hash": "1bcca06b7bf0b461ec040f094c11579c7a6dfabdd758bfad3315237d9eedfda6",
+                    "messages_hash": "585db1567c87afc76a732f84c6efcd721bf4bda9d2ef7f2ff8a9127d2f7f6085",
                     "transaction_count": 0,
                     "txlist_hash": "689d74dfb418e1674e6892afa5e865f45ea1c9ee9aebe930fab6e967cf8486f3",
                     "block_time": 310702000
@@ -6600,7 +6600,7 @@
                 "block_time": 310702000
             },
             {
-                "event_index": 1732,
+                "event_index": 1740,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "69cb443673c221a8e157d61707d52cf980c87faf5c3b31a5850ff43be70883c8",
@@ -6616,12 +6616,12 @@
                 "block_time": 310702000
             },
             {
-                "event_index": 1731,
+                "event_index": 1739,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310701,
                     "ledger_hash": "93f52d9dd1fe1606a1aa38ce4f00210ffacd37118495ec3a06fbbadc57b2deb4",
-                    "messages_hash": "8c2fd6801e5167ef006be81b5f0797da54e590ddcc1c18366525ec2ef379a5c5",
+                    "messages_hash": "2af0c9bc325e3450c9c98bee3c719fde34fcb6c1284f06dfc48fe9714b105f8e",
                     "transaction_count": 0,
                     "txlist_hash": "724404753d10775f47ff861186fa24a13eaf71cb0e59b628103f36d38cc80d7d",
                     "block_time": 310701000
@@ -6631,19 +6631,32 @@
                 "block_time": 310701000
             }
         ],
-        "next_cursor": 1730,
-        "result_count": 1736
+        "next_cursor": 1738,
+        "result_count": 1744
     },
     "http://localhost:10009/v2/events/10?limit=5&verbose=true": {
         "result": {
             "event_index": 10,
-            "event": "ASSET_CREATION",
+            "event": "DEBIT",
             "params": {
-                "asset_id": "697326324582",
-                "asset_longname": null,
-                "asset_name": "DIVISIBLE",
+                "action": "issuance fee",
+                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "asset": "XCP",
                 "block_index": 310001,
-                "block_time": 310001000
+                "event": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
+                "quantity": 50000000,
+                "tx_index": 2,
+                "utxo": null,
+                "utxo_address": null,
+                "block_time": 310001000,
+                "asset_info": {
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
+                },
+                "quantity_normalized": "0.50000000"
             },
             "tx_hash": "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1",
             "block_index": 310001,
@@ -6654,7 +6667,7 @@
         "result": [
             {
                 "event": "TRANSACTION_PARSED",
-                "count": 56
+                "count": 64
             },
             {
                 "event": "SEND",
@@ -6679,7 +6692,7 @@
     "http://localhost:10009/v2/events/CREDIT?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1503,
+                "event_index": 1511,
                 "event": "CREDIT",
                 "params": {
                     "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
@@ -6706,7 +6719,7 @@
                 "block_time": 310588000
             },
             {
-                "event_index": 1334,
+                "event_index": 1342,
                 "event": "CREDIT",
                 "params": {
                     "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
@@ -6733,7 +6746,7 @@
                 "block_time": 310509000
             },
             {
-                "event_index": 1325,
+                "event_index": 1333,
                 "event": "CREDIT",
                 "params": {
                     "address": null,
@@ -6760,7 +6773,7 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1317,
+                "event_index": 1325,
                 "event": "CREDIT",
                 "params": {
                     "address": null,
@@ -6787,7 +6800,7 @@
                 "block_time": 310507000
             },
             {
-                "event_index": 1308,
+                "event_index": 1316,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -6814,7 +6827,7 @@
                 "block_time": 310506000
             }
         ],
-        "next_cursor": 1307,
+        "next_cursor": 1315,
         "result_count": 53
     },
     "http://localhost:10009/v2/events/CREDIT/count?limit=5&verbose=true": {
