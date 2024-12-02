@@ -20,7 +20,7 @@ def compose(db, source, destination, skip_validation=False):
         except script.AddressError as e:
             raise exceptions.ComposeError("destination must be an address") from e
 
-    return (source, [(destination, None)], None)
+    return (source, [(destination, config.DEFAULT_UTXO_VALUE)], None)
 
 
 def move_balances(db, tx, source, destination):

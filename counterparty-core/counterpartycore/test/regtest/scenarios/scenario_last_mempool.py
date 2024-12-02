@@ -166,7 +166,7 @@ SCENARIO = [
             {
                 "url": "transactions/$TX_HASH/info",
                 "result": {
-                    "btc_amount": 4949930546,
+                    "btc_amount": 4949940000,
                     "data": "$TX_DATA",
                     "decoded_tx": {
                         "coinbase": False,

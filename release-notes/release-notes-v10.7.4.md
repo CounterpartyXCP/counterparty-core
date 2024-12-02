@@ -47,6 +47,7 @@
     - `/v2/addresses/<address>/transactions/counts`
 - Add sortable field `asset_longname` in `balances` table
 - Add the ability to retrieve balances by asset long name
+- When composing an attach / move, use 10,000 sats for the value, rather than 546
 
 ## CLI
 
