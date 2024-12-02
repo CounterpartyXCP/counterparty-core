@@ -439,12 +439,14 @@ def update_transaction_type(db):
     logger.info("Updating `transaction_type` column in `transactions` table...")
 
     cursor = db.cursor()
-    cursor.execute("SELECT tx_index, block_index, data, supported FROM transactions")
+    cursor.execute("SELECT tx_index, destination, block_index, data, supported FROM transactions")
     counter = 0
     for tx in cursor.fetchall():
         transaction_type = "unknown"
         if tx["supported"]:
-            transaction_type = message_type.get_transaction_type(tx["data"], tx["block_index"])
+            transaction_type = message_type.get_transaction_type(
+                tx["data"], tx["destination"], tx["block_index"]
+            )
 
         cursor.execute(
             "UPDATE transactions SET transaction_type = ? WHERE tx_index = ?",
@@ -1056,7 +1058,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             "fee": fee,
             "data": data,
             "utxos_info": " ".join(utxos_info),
-            "transaction_type": message_type.get_transaction_type(data, block_index),
+            "transaction_type": message_type.get_transaction_type(data, destination, block_index),
         }
         ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
 
