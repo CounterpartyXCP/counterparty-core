@@ -20,6 +20,7 @@
 - Remove lock file from RSFetcher
 - Handle correctly RSFetcher invalid version
 - Clean shutdown; Correctly close the Ledger DB and State DB (ensure that all connections are closed and that the one with write permission is closed last)
+- Fix `get_price` and `give_price` fields: returns 0 not null
 
 ## Codebase
 

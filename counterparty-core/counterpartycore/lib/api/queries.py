@@ -2567,8 +2567,8 @@ def prepare_order_matches_where(status, other_conditions=None):
 
 
 SELECT_ORDERS = "*, "
-SELECT_ORDERS += "(get_quantity * 1.0) / (give_quantity * 1.0) AS give_price, "
-SELECT_ORDERS += "(give_quantity * 1.0) / (get_quantity * 1.0) AS get_price"
+SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
+SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
 
 
 def get_orders(
