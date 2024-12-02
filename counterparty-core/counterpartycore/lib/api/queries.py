@@ -108,6 +108,7 @@ TransactionType = Literal[
     "utxomove",
     "unknown",
 ]
+SendType = Literal["all", "send", "attach", "move", "detach"]
 
 SUPPORTED_SORT_FIELDS = {
     "balances": ["address", "asset", "asset_longname", "quantity"],
@@ -1169,9 +1170,34 @@ def get_debits_by_asset(
     )
 
 
-def get_sends(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+def prepare_sends_where(send_type: SendType, other_conditions=None):
+    where = []
+    send_type_list = send_type.split(",")
+    for send_type in send_type_list:
+        if send_type == "all":
+            where = [other_conditions] if other_conditions else []
+            break
+        if send_type in typing.get_args(SendType):
+            if send_type == "send":
+                where_send = {"source__notlike": "%:%", "destination__notlike": "%:%"}
+            elif send_type == "move":
+                where_send = {"source__like": "%:%", "destination__like": "%:%"}
+            elif send_type == "attach":
+                where_send = {"source__notlike": "%:%", "destination__like": "%:%"}
+            elif send_type == "detach":
+                where_send = {"source__like": "%:%", "destination__notlike": "%:%"}
+            if other_conditions:
+                where_send.update(other_conditions)
+            where.append(where_send)
+    return where
+
+
+def get_sends(
+    ledger_db, send_type: SendType = "all", cursor: str = None, limit: int = 100, offset: int = None
+):
     """
     Returns all the sends include Enhanced and MPMA sends
+    :param str send_type: The type of the send to return
     :param str cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1179,6 +1205,7 @@ def get_sends(ledger_db, cursor: str = None, limit: int = 100, offset: int = Non
     return select_rows(
         ledger_db,
         "sends",
+        where=prepare_sends_where(send_type),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1186,11 +1213,17 @@ def get_sends(ledger_db, cursor: str = None, limit: int = 100, offset: int = Non
 
 
 def get_sends_by_block(
-    ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    block_index: int,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of a block
     :param int block_index: The index of the block to return (e.g. $LAST_SEND_BLOCK)
+    :param str send_type: The type of the send to return
     :param str cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1198,7 +1231,7 @@ def get_sends_by_block(
     return select_rows(
         ledger_db,
         "sends",
-        where={"block_index": block_index},
+        where=prepare_sends_where(send_type, {"block_index": block_index}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1206,11 +1239,17 @@ def get_sends_by_block(
 
 
 def get_sends_by_transaction_hash(
-    ledger_db, tx_hash: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    tx_hash: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of a block
     :param str tx_hash: The hash of the transaction to return (e.g. $LAST_SEND_TX_HASH)
+    :param str send_type: The type of the send to return
     :param str cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1218,7 +1257,7 @@ def get_sends_by_transaction_hash(
     return select_rows(
         ledger_db,
         "sends",
-        where={"tx_hash": tx_hash},
+        where=prepare_sends_where(send_type, {"tx_hash": tx_hash}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1226,11 +1265,17 @@ def get_sends_by_transaction_hash(
 
 
 def get_sends_by_asset(
-    ledger_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    asset: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an asset
     :param str asset: The asset to return (e.g. XCP)
+    :param str send_type: The type of the send to return
     :param str cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1238,7 +1283,7 @@ def get_sends_by_asset(
     return select_rows(
         ledger_db,
         "sends",
-        where={"asset": asset.upper()},
+        where=prepare_sends_where(send_type, {"asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2041,11 +2086,17 @@ def get_burns_by_address(
 
 
 def get_sends_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str send_type: The type of sends to return
     :param str cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2053,7 +2104,7 @@ def get_sends_by_address(
     return select_rows(
         ledger_db,
         "sends",
-        where={"source": address},
+        where=prepare_sends_where(send_type, {"source": address}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2061,12 +2112,19 @@ def get_sends_by_address(
 
 
 def get_sends_by_address_and_asset(
-    ledger_db, address: str, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    asset: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address and asset
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset: The asset to return (e.g. $ASSET_5)
+    :param str send_type: The type of sends to return
     :param str cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2074,7 +2132,7 @@ def get_sends_by_address_and_asset(
     return select_rows(
         ledger_db,
         "sends",
-        where={"source": address, "asset": asset.upper()},
+        where=prepare_sends_where(send_type, {"source": address, "asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2082,11 +2140,17 @@ def get_sends_by_address_and_asset(
 
 
 def get_receive_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the receives of an address
     :param str address: The address to return (e.g. $ADDRESS_5)
+    :param str send_type: The type of sends to return
     :param str cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2094,7 +2158,7 @@ def get_receive_by_address(
     return select_rows(
         ledger_db,
         "sends",
-        where={"destination": address},
+        where=prepare_sends_where(send_type, {"destination": address}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2102,12 +2166,19 @@ def get_receive_by_address(
 
 
 def get_receive_by_address_and_asset(
-    ledger_db, address: str, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    asset: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the receives of an address and asset
     :param str address: The address to return (e.g. $ADDRESS_5)
     :param str asset: The asset to return (e.g. $ASSET_5)
+    :param str send_type: The type of sends to return
     :param str cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2115,7 +2186,7 @@ def get_receive_by_address_and_asset(
     return select_rows(
         ledger_db,
         "sends",
-        where={"destination": address, "asset": asset.upper()},
+        where=prepare_sends_where(send_type, {"destination": address, "asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
