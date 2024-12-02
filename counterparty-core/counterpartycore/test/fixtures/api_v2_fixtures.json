@@ -8661,6 +8661,20 @@
                         "description": "The index of the block to return (e.g. $LAST_SEND_BLOCK)"
                     },
                     {
+                        "name": "send_type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "send",
+                            "attach",
+                            "move",
+                            "detach"
+                        ],
+                        "description": "The type of the send to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -9154,6 +9168,20 @@
                         "required": true,
                         "type": "str",
                         "description": "The hash of the transaction to return (e.g. $LAST_SEND_TX_HASH)"
+                    },
+                    {
+                        "name": "send_type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "send",
+                            "attach",
+                            "move",
+                            "detach"
+                        ],
+                        "description": "The type of the send to return"
                     },
                     {
                         "name": "cursor",
@@ -9933,6 +9961,20 @@
                         "description": "The address to return (e.g. $ADDRESS_1)"
                     },
                     {
+                        "name": "send_type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "send",
+                            "attach",
+                            "move",
+                            "detach"
+                        ],
+                        "description": "The type of sends to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -9971,6 +10013,20 @@
                         "required": true,
                         "type": "str",
                         "description": "The address to return (e.g. $ADDRESS_5)"
+                    },
+                    {
+                        "name": "send_type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "send",
+                            "attach",
+                            "move",
+                            "detach"
+                        ],
+                        "description": "The type of sends to return"
                     },
                     {
                         "name": "cursor",
@@ -10019,6 +10075,20 @@
                         "description": "The asset to return (e.g. $ASSET_5)"
                     },
                     {
+                        "name": "send_type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "send",
+                            "attach",
+                            "move",
+                            "detach"
+                        ],
+                        "description": "The type of sends to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -10063,6 +10133,20 @@
                         "required": true,
                         "type": "str",
                         "description": "The asset to return (e.g. $ASSET_5)"
+                    },
+                    {
+                        "name": "send_type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "send",
+                            "attach",
+                            "move",
+                            "detach"
+                        ],
+                        "description": "The type of sends to return"
                     },
                     {
                         "name": "cursor",
@@ -15463,6 +15547,20 @@
                         "description": "The asset to return (e.g. XCP)"
                     },
                     {
+                        "name": "send_type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "send",
+                            "attach",
+                            "move",
+                            "detach"
+                        ],
+                        "description": "The type of the send to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -16804,6 +16902,20 @@
                 "function": "get_sends",
                 "description": "Returns all the sends include Enhanced and MPMA sends",
                 "args": [
+                    {
+                        "name": "send_type",
+                        "default": "all",
+                        "required": false,
+                        "type": "enum[str]",
+                        "members": [
+                            "all",
+                            "send",
+                            "attach",
+                            "move",
+                            "detach"
+                        ],
+                        "description": "The type of the send to return"
+                    },
                     {
                         "name": "cursor",
                         "default": null,
