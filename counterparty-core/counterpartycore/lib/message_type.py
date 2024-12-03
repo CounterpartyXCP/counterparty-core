@@ -80,7 +80,8 @@ def get_transaction_type(data: bytes, destination: str, block_index: int):
         if block_index >= util.get_change_block_index("dispensers"):
             return "dispense"
         return "unknown"
-    elif (
+
+    if (
         data == b"CNTRPRTY\x00\x00\x00<ProofOfBurn"
         and destination == config.UNSPENDABLE
         and block_index <= config.BURN_END

@@ -347,8 +347,7 @@ def parse_transaction_vouts(decoded_tx):
             else:
                 if new_destination:  # Change.
                     break
-                else:  # Data.
-                    data += new_data
+                data += new_data  # Data.
 
     return destinations, btc_amount, fee, data, potential_dispensers
 
@@ -647,7 +646,7 @@ def get_tx_info(db, decoded_tx, block_index):
         if (
             util.enabled("enable_attach_chaining")
             and not util.PARSING_MEMPOOL
-            and len(utxos_info)
+            and len(utxos_info) > 0
             and (
                 (utxos_info[0] != "" and utxos_info[1] != "")  # move
                 or message_type.get_transaction_type(data, destination, block_index) == "attach"

@@ -95,8 +95,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 )
                 time.sleep(5)
                 return self.get_block(retry + 1)
-            else:
-                raise exceptions.RSFetchError("RSFetcher returned None too many times.")
+            raise exceptions.RSFetchError("RSFetcher returned None too many times.")
 
         # Handle potentially out-of-order blocks
         if block["height"] != self.next_height:

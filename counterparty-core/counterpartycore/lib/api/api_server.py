@@ -521,7 +521,6 @@ def run_api_server(args, server_ready_value, stop_event):
 
     except KeyboardInterrupt as e:
         print("API Server KeyboardInterrupt", e)
-        pass
 
     finally:
         logger.info("Stopping API Server...")

@@ -1173,22 +1173,24 @@ def get_debits_by_asset(
 def prepare_sends_where(send_type: SendType, other_conditions=None):
     where = []
     send_type_list = send_type.split(",")
-    for send_type in send_type_list:
-        if send_type == "all":
+    for type_send in send_type_list:
+        if type_send == "all":
             where = [other_conditions] if other_conditions else []
             break
-        if send_type in typing.get_args(SendType):
-            if send_type == "send":
+        if type_send in typing.get_args(SendType):
+            where_send = {}
+            if type_send == "send":
                 where_send = {"source__notlike": "%:%", "destination__notlike": "%:%"}
-            elif send_type == "move":
+            elif type_send == "move":
                 where_send = {"source__like": "%:%", "destination__like": "%:%"}
-            elif send_type == "attach":
+            elif type_send == "attach":
                 where_send = {"source__notlike": "%:%", "destination__like": "%:%"}
-            elif send_type == "detach":
+            elif type_send == "detach":
                 where_send = {"source__like": "%:%", "destination__notlike": "%:%"}
             if other_conditions:
                 where_send.update(other_conditions)
-            where.append(where_send)
+            if where_send:
+                where.append(where_send)
     return where
 
 
