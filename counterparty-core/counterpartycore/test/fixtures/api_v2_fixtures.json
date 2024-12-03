@@ -12916,7 +12916,7 @@
                         "name": "assets",
                         "required": true,
                         "type": "str",
-                        "description": "comma-separated list of assets to send (e.g. XCP,$ASSET_5)"
+                        "description": "comma-separated list of assets to send (e.g. XCP,FAIRMINTC)"
                     },
                     {
                         "name": "destinations",
