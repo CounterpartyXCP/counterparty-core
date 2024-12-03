@@ -4,6 +4,33 @@ import hypothesis
 from hypothesis import settings
 from properytestnode import PropertyTestNode
 
+MESSAGE_IDS = [
+    0,
+    2,
+    3,
+    4,
+    10,
+    11,
+    12,
+    13,
+    20,
+    21,
+    22,
+    23,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    91,
+    100,
+    101,
+    102,
+    110,
+]
+
 
 class UTXOSupportPropertyTest(PropertyTestNode):
     def run_tests(self):
@@ -14,14 +41,14 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             hypothesis.strategies.text(
                 alphabet="BCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=5, max_size=10
             ),
-            hypothesis.strategies.integers(min_value=10 * 10e8, max_value=1000 * 10e8),
+            hypothesis.strategies.integers(min_value=10 * 1e8, max_value=1000 * 1e8),
         )
 
         # attach assets
         self.test_with_given_data(
             self.attach_asset,
             hypothesis.strategies.sampled_from(self.balances),
-            hypothesis.strategies.integers(min_value=1 * 10e8, max_value=10 * 10e8),
+            hypothesis.strategies.integers(min_value=1 * 1e8, max_value=10 * 1e8),
         )
 
         # move assets
@@ -36,6 +63,14 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             self.detach_asset,
             hypothesis.strategies.sampled_from(self.balances),
             hypothesis.strategies.sampled_from(self.addresses + [None]),
+        )
+
+        # random invalid transactions
+        self.test_with_given_data(
+            self.invalid_transaction,
+            hypothesis.strategies.sampled_from(self.addresses),
+            hypothesis.strategies.sampled_from(MESSAGE_IDS),
+            hypothesis.strategies.binary(min_size=20, max_size=30),
         )
 
     @settings(deadline=None)
@@ -108,6 +143,20 @@ class UTXOSupportPropertyTest(PropertyTestNode):
         )
         self.upsert_balance(source, asset, -quantity, utxo_address)
         self.upsert_balance(destination or utxo_address, asset, quantity, None)
+
+    @settings(deadline=None)
+    def invalid_transaction(self, source, message_id, data):
+        utxo, tx_hash = self.node.compose_and_send_transaction(
+            source, message_id, data, no_confirmation=True, dont_wait_mempool=True
+        )
+        upserts = []
+        # check if no utxo moves
+        for address_or_utxo, asset, quantity, utxo_address in self.balances:
+            if utxo == address_or_utxo:
+                upserts.append([utxo, asset, -quantity, utxo_address])
+                upserts.append([f"{tx_hash}:1", asset, quantity, utxo_address])
+        for upsert in upserts:
+            self.upsert_balance(*upsert)
 
 
 if __name__ == "__main__":
