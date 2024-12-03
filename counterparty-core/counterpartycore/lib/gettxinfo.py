@@ -616,30 +616,6 @@ def get_utxos_info(db, decoded_tx):
     ]
 
 
-def get_utxos_info_old(db, decoded_tx):
-    """
-    Get the UTXO move info.
-    Returns a list of UTXOs. Last UTXO is the destination, previous UTXOs are the sources.
-    """
-    sources = []
-    # we check that each vin does not contain assets..
-    for vin in decoded_tx["vin"]:
-        if isinstance(vin["hash"], str):
-            vin_hash = vin["hash"]
-        else:
-            vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
-        utxo = vin_hash + ":" + str(vin["n"])
-        if ledger.utxo_has_balance(db, utxo):
-            sources.append(utxo)
-    destination = None
-    # the destination is the first non-OP_RETURN vout
-    n = select_utxo_destination(decoded_tx["vout"])
-    if n is not None:
-        destination = decoded_tx["tx_hash"] + ":" + str(n)
-        return sources + [destination]
-    return []
-
-
 def get_tx_info(db, decoded_tx, block_index):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     if util.enabled("utxo_support", block_index=block_index):
@@ -648,10 +624,16 @@ def get_tx_info(db, decoded_tx, block_index):
         utxos_info = get_utxos_info(db, decoded_tx)
         # update utxo balances cache before parsing the transaction
         # to catch chained utxo moves
-        if utxos_info[0] != "" and utxos_info[1] != "" and not util.PARSING_MEMPOOL:
+        if (
+            not util.enabled("enable_attach_chaining")
+            and not util.PARSING_MEMPOOL
+            and utxos_info[0] != ""
+            and utxos_info[1] != ""
+        ):
             ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
     else:
         utxos_info = []
+    data, destination = None, None
     try:
         source, destination, btc_amount, fee, data, dispensers_outs = _get_tx_info(
             db, decoded_tx, block_index
@@ -661,3 +643,14 @@ def get_tx_info(db, decoded_tx, block_index):
         return b"", None, None, None, None, None, utxos_info
     except BTCOnlyError as e:  # noqa: F841
         return b"", None, None, None, None, None, utxos_info
+    finally:
+        if (
+            util.enabled("enable_attach_chaining")
+            and not util.PARSING_MEMPOOL
+            and len(utxos_info)
+            and (
+                (utxos_info[0] != "" and utxos_info[1] != "")  # move
+                or message_type.get_transaction_type(data, destination, block_index) == "attach"
+            )
+        ):
+            ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])

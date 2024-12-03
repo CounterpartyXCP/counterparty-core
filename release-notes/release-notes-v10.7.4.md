@@ -21,6 +21,7 @@
 - Handle correctly RSFetcher invalid version
 - Clean shutdown; Correctly close the Ledger DB and State DB (ensure that all connections are closed and that the one with write permission is closed last)
 - Fix `get_price` and `give_price` fields: returns 0 not null
+- Enable transaction chaining after an attach
 
 ## Codebase
 
@@ -36,6 +37,7 @@
 - Remove `compose_utxo()` function and clean `compose_attach()` and `compose_detach`
 - Add `transaction_type` field in `transactions` table
 - Clean `block.parse_tx()`; One `TRANSACTION_PARSED` event for each `NEW_TRANSACTION` event
+- API Watcher checks reorg if no event to parse
 
 ## API
 

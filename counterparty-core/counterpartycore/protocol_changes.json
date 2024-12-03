@@ -684,5 +684,12 @@
     "minimum_version_revision": 4,
     "block_index": 900000,
     "testnet_block_index": 3195137
+  },
+  "enable_attach_chaining": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 7,
+    "minimum_version_revision": 4,
+    "block_index": 900000,
+    "testnet_block_index": 3195137
   }
 }
