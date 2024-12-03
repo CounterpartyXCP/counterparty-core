@@ -630,9 +630,6 @@ def parse_next_event(ledger_db, state_db):
 
     parse_event(state_db, next_event)
 
-    if next_event["event"] == "BLOCK_PARSED":
-        check_reorg(ledger_db, state_db)
-
 
 class APIWatcher(threading.Thread):
     def __init__(self, state_db):
