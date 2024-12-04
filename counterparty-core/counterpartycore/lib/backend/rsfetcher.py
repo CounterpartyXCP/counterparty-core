@@ -55,7 +55,6 @@ class RSFetcher(metaclass=util.SingletonMeta):
                     self.config["log_level"] = "OFF"
             else:
                 self.config["log_level"] = config.LOG_LEVEL_STRING
-            print("LOG_LEVEL_STRING: ", self.config["log_level"])
         else:
             self.config = indexer_config
         self.config["network"] = config.NETWORK_NAME
