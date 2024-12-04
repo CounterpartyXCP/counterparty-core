@@ -4,6 +4,7 @@ import binascii
 import json
 import os
 import signal
+import struct
 import sys
 import threading
 import time
@@ -11,9 +12,15 @@ import urllib.parse
 from io import StringIO
 
 import sh
-from counterpartycore.lib import arc4, database
+from bitcoinutils.keys import P2wpkhAddress
+from bitcoinutils.script import Script, b_to_h
+from bitcoinutils.setup import setup
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from counterpartycore.lib import arc4, config, database
 
 WALLET_NAME = "xcpwallet"
+
+setup("regtest")
 
 
 class ServerNotReady(Exception):
@@ -114,6 +121,47 @@ class RegtestNode:
         self.tx_index += 1
         self.wait_for_counterparty_server()
         return tx_hash, block_hash, block_time
+
+    def compose_and_send_transaction(
+        self, source, messsage_id=None, data=None, no_confirmation=False, dont_wait_mempool=False
+    ):
+        list_unspent = json.loads(
+            self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([source])).strip()
+        )
+        sorted(list_unspent, key=lambda x: -x["amount"])
+        utxo = list_unspent[0]
+
+        tx_inputs = [TxInput(utxo["txid"], utxo["vout"])]
+        tx_outputs = []
+
+        if data is not None:
+            tx_data = b"CNTRPRTY"
+            if messsage_id is not None:
+                tx_data += struct.pack(config.SHORT_TXTYPE_FORMAT, messsage_id)
+            tx_data += data
+            key = arc4.init_arc4(binascii.unhexlify(utxo["txid"]))
+            encrypted_data = key.encrypt(data)
+            tx_outputs.append(TxOutput(0, Script(["OP_RETURN", b_to_h(encrypted_data)])))
+
+        tx_outputs.append(
+            TxOutput(int(utxo["amount"] * 1e8), P2wpkhAddress(source).to_script_pub_key())
+        )
+
+        tx = Transaction(tx_inputs, tx_outputs)
+        tx_hex = tx.to_hex()
+
+        signed_transaction_json = self.bitcoin_wallet(
+            "signrawtransactionwithwallet", tx_hex
+        ).strip()
+        signed_transaction = json.loads(signed_transaction_json)["hex"]
+
+        tx_hash, _block_hash, _block_time = self.broadcast_transaction(
+            signed_transaction, no_confirmation, dont_wait_mempool
+        )
+
+        print(f"Transaction sent: {source} {data} ({tx_hash})")
+
+        return f"{utxo['txid']}:{utxo['vout']}", tx_hash
 
     def send_transaction(
         self,
