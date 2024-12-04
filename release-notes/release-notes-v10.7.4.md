@@ -61,6 +61,7 @@
 - Add `build-state-db` command
 - `rollback` and `reparse` commands trigger a re-build of the State DB
 - Add current process name and current thread name in logging messages
+- Add `--log-exclude-filters` and `--log-include-filters` flags
 
 
 # Credits

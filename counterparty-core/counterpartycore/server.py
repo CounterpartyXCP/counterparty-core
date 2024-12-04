@@ -76,6 +76,8 @@ def initialise_log_config(
     json_logs=False,
     max_log_file_size=40 * 1024 * 1024,
     max_log_file_rotations=20,
+    log_exclude_filters=None,
+    log_include_filters=None,
 ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -126,6 +128,9 @@ def initialise_log_config(
 
     config.MAX_LOG_FILE_SIZE = max_log_file_size
     config.MAX_LOG_FILE_ROTATIONS = max_log_file_rotations
+
+    config.LOG_EXCLUDE_FILTERS = log_exclude_filters
+    config.LOG_INCLUDE_FILTERS = log_include_filters
 
 
 def initialise_config(
@@ -674,6 +679,8 @@ def initialise_log_and_config(args, api=False):
         regtest=args.regtest,
         action=args.action,
         json_logs=args.json_logs,
+        log_exclude_filters=args.log_exclude_filters,
+        log_include_filters=args.log_include_filters,
     )
 
     # set up logging
@@ -695,7 +702,7 @@ def connect_to_backend():
 
 class AssetConservationChecker(threading.Thread):
     def __init__(self):
-        threading.Thread.__init__(self, name="Asset Conservation Checker")
+        threading.Thread.__init__(self, name="AssetConservationChecker")
         self.daemon = True
         self.last_check = 0
         self.db = None

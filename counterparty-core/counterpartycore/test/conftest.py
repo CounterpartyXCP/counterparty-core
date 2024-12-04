@@ -321,6 +321,8 @@ def api_server_v2(request, cp_server):
         "waitress_threads": 1,
         "max_log_file_size": 40 * 1024 * 1024,
         "max_log_file_rotations": 20,
+        "log_exclude_filters": None,
+        "log_include_filters": None,
     }
     server_config = (
         default_config
