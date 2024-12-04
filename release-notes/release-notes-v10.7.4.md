@@ -54,6 +54,7 @@
 - When composing an attach / move, use 10,000 sats for the value, rather than 546
 - Add `send_type` filter for `sends` table (`send`, `attach`, `move` or `detach`)
 - Document how mempool events work
+- Add `events` field in transactions results when `verbose=true`
 
 ## CLI
 
