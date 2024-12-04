@@ -382,9 +382,11 @@ def handle_route(**kwargs):
 
     next_cursor = None
     result_count = None
+    table = None
     if isinstance(result, queries.QueryResult):
         next_cursor = result.next_cursor
         result_count = result.result_count
+        table = result.table
         result = result.result
 
     result = clean_rowids_and_confirmed_fields(result)
@@ -394,7 +396,7 @@ def handle_route(**kwargs):
     if verbose.lower() in ["true", "1"]:
         with LedgerDBConnectionPool().connection() as ledger_db:
             with StateDBConnectionPool().connection() as state_db:
-                result = inject_details(ledger_db, state_db, result)
+                result = inject_details(ledger_db, state_db, result, table)
 
     return return_result(
         200,

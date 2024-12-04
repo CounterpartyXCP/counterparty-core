@@ -155,10 +155,11 @@ ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
 
 
 class QueryResult:
-    def __init__(self, result, next_cursor, result_count=None):
+    def __init__(self, result, next_cursor, table, result_count=None):
         self.result = result
         self.next_cursor = next_cursor
         self.result_count = result_count
+        self.table = table
 
 
 def select_rows(
@@ -321,13 +322,13 @@ def select_rows(
                 break
             row["params"] = json.loads(row["params"])
 
-    return QueryResult(result, next_cursor, result_count)
+    return QueryResult(result, next_cursor, table, result_count)
 
 
 def select_row(db, table, where, select="*", group_by=""):
     query_result = select_rows(db, table, where, limit=1, select=select, group_by=group_by)
     if query_result.result:
-        return QueryResult(query_result.result[0], None, 1)
+        return QueryResult(query_result.result[0], None, table, 1)
     return None
 
 
@@ -841,7 +842,7 @@ def get_events_by_addresses(
         offset=offset,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
-    return QueryResult(result.result, events.next_cursor, events.result_count)
+    return QueryResult(result.result, events.next_cursor, "messages", events.result_count)
 
 
 def get_all_mempool_events(
@@ -1817,7 +1818,7 @@ def utxos_with_balances(state_db, utxos: str):
         if utxo not in result:
             result[utxo] = False
 
-    return QueryResult(result, None, len(utxo_list))
+    return QueryResult(result, None, "balances", len(utxo_list))
 
 
 def get_balances_by_addresses(
@@ -1907,7 +1908,7 @@ def get_balances_by_addresses(
             )
         result.append(current_balances)
 
-    return QueryResult(result, assets_result.next_cursor, assets_result.result_count)
+    return QueryResult(result, assets_result.next_cursor, "balances", assets_result.result_count)
 
 
 def get_balances_by_address_and_asset(
@@ -2789,7 +2790,9 @@ def get_orders_by_two_assets(
         else:
             order["market_dir"] = "BUY"
             order["market_price"] = divide(order["get_quantity"], order["give_quantity"])
-    return QueryResult(query_result.result, query_result.next_cursor, query_result.result_count)
+    return QueryResult(
+        query_result.result, query_result.next_cursor, "orders", query_result.result_count
+    )
 
 
 def get_asset_holders(
@@ -2964,7 +2967,9 @@ def get_order_matches_by_two_assets(
         else:
             order["market_dir"] = "BUY"
             order["market_price"] = divide(order["backward_quantity"], order["forward_quantity"])
-    return QueryResult(query_result.result, query_result.next_cursor, query_result.result_count)
+    return QueryResult(
+        query_result.result, query_result.next_cursor, "order_matches", query_result.result_count
+    )
 
 
 def get_btcpays_by_order(

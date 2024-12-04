@@ -69,6 +69,13 @@ Or to know the events triggered by a given transaction:
 
 `/v2/transactions/<tx_hash>/events`
 
+You can also obtain the events triggered by a transaction using the `verbose` flag:
+
+`/v2/transactions?verbose=true`
+
+However, please note that in this way, the following events are excluded from the list of events:
+`NEW_TRANSACTION`, `TRANSACTION_PARSED`, `CREDIT`, `DEBIT`, `INCREMENT_TRANSACTION_COUNT`, `NEW_TRANSACTION_OUTPUT`.
+
 ### ZeroMQ Publisher
 
 You can enable the ZeroMQ server by starting `counterparty-server` with the `--enable-zmq-publisher` flag.

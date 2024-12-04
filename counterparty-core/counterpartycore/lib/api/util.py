@@ -721,7 +721,49 @@ def inject_unpacked_data(ledger_db, result_list):
     return enriched_result_list
 
 
-def inject_details(ledger_db, state_db, result):
+def inject_transactions_events(ledger_db, state_db, result_list):
+    if len(result_list) == 0:
+        return result_list
+    if "tx_hash" not in result_list[0]:
+        return result_list
+
+    cursor = ledger_db.cursor()
+
+    transaction_hashes = [tx["tx_hash"] for tx in result_list]
+    exclude_events = [
+        "NEW_TRANSACTION",
+        "TRANSACTION_PARSED",
+        "CREDIT",
+        "DEBIT",
+        "INCREMENT_TRANSACTION_COUNT",
+        "NEW_TRANSACTION_OUTPUT",
+    ]
+    sql = f"""
+        SELECT message_index AS event_index, event, bindings AS params, tx_hash, block_index 
+        FROM messages 
+        WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))}) 
+        AND event NOT IN ({",".join("?" * len(exclude_events))})
+    """  # noqa S608
+    events = cursor.execute(sql, transaction_hashes + exclude_events).fetchall()
+    for event in events:
+        event["params"] = json.loads(event["params"])
+
+    events = inject_dispensers(ledger_db, state_db, events)
+    events = inject_fiat_prices(ledger_db, events)
+    events = inject_issuances_and_block_times(ledger_db, state_db, events)
+    events = inject_normalized_quantities(events)
+
+    events_by_tx_hash = {}
+    for event in events:
+        if event["tx_hash"] not in events_by_tx_hash:
+            events_by_tx_hash[event["tx_hash"]] = []
+        events_by_tx_hash[event["tx_hash"]].append(event)
+    for result_item in result_list:
+        result_item["events"] = events_by_tx_hash.get(result_item["tx_hash"], [])
+    return result_list
+
+
+def inject_details(ledger_db, state_db, result, table=None):
     if isinstance(result, (int, str)):
         return result
     # let's work with a list
@@ -731,11 +773,14 @@ def inject_details(ledger_db, state_db, result):
         result_list = [result]
         result_is_dict = True
 
-    result_list = inject_dispensers(ledger_db, state_db, result_list)
-    result_list = inject_fiat_prices(ledger_db, result_list)
-    result_list = inject_unpacked_data(ledger_db, result_list)
-    result_list = inject_issuances_and_block_times(ledger_db, state_db, result_list)
-    result_list = inject_normalized_quantities(result_list)
+    if table == "transactions":
+        result_list = inject_transactions_events(ledger_db, state_db, result_list)
+        result_list = inject_unpacked_data(ledger_db, result_list)
+    else:
+        result_list = inject_dispensers(ledger_db, state_db, result_list)
+        result_list = inject_fiat_prices(ledger_db, result_list)
+        result_list = inject_issuances_and_block_times(ledger_db, state_db, result_list)
+        result_list = inject_normalized_quantities(result_list)
 
     if result_is_dict:
         result = result_list[0]
