@@ -122,9 +122,10 @@ def rollback_state_db(state_db, block_index):
     logger.info(f"Rolling back State DB to block index {block_index}...")
     start_time = time.time()
 
-    with log.Spinner("Rolling back State DB tables..."):
-        rollback_tables(state_db, block_index)
-    with log.Spinner("Re-applying migrations..."):
-        reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
+    with state_db:
+        with log.Spinner("Rolling back State DB tables..."):
+            rollback_tables(state_db, block_index)
+        with log.Spinner("Re-applying migrations..."):
+            reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
 
     logger.info(f"State DB rolled back in {time.time() - start_time:.2f} seconds")
