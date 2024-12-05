@@ -199,7 +199,7 @@ SCENARIO = [
                             "0355f42b0e4c7b6e73addef75deab673b9727225a3d529511ef28f5df36472826c",
                         ],
                     },
-                    "destination": "",
+                    "destination": None,
                     "fee": 10000,
                     "source": "$ADDRESS_4",
                     "unpacked_data": {

@@ -108,7 +108,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             },
         )
         self.upsert_balance(source, asset, -attach_quantity, None)
-        self.upsert_balance(f"{tx_hash}:1", asset, attach_quantity, source)
+        self.upsert_balance(f"{tx_hash}:0", asset, attach_quantity, source)
 
     @settings(deadline=None)
     def move_asset(self, balance, destination):
