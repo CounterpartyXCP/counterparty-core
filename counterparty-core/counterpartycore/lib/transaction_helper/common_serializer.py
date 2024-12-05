@@ -318,12 +318,8 @@ def serialise(
         n += 1
     s += var_int(n)
 
-    if util.enabled("data_always_first"):
-        s += add_data_output(inputs, data_array, data_output, encoding, dust_return_pubkey)
-        s += add_destination_outputs(destination_outputs)
-    else:
-        s += add_destination_outputs(destination_outputs)
-        s += add_data_output(inputs, data_array, data_output, encoding, dust_return_pubkey)
+    s += add_destination_outputs(destination_outputs)
+    s += add_data_output(inputs, data_array, data_output, encoding, dust_return_pubkey)
 
     # Change output.
     if change_output:

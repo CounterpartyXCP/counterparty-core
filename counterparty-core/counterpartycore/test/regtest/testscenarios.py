@@ -31,7 +31,6 @@ from scenarios import (
     scenario_19_mpma,
     scenario_20_fairminter,
     scenario_21_fairminter,
-    scenario_22_chaining,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -58,7 +57,6 @@ SCENARIOS += scenario_18_utxo.SCENARIO
 SCENARIOS += scenario_19_mpma.SCENARIO
 SCENARIOS += scenario_20_fairminter.SCENARIO
 SCENARIOS += scenario_21_fairminter.SCENARIO
-SCENARIOS += scenario_22_chaining.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
@@ -219,14 +217,14 @@ def control_result(
         try:
             assert result["result"] == expected_result
             print(f"{item['title']}: " + colored("Success", "green"))
-        except AssertionError:
+        except AssertionError as e:
             print(colored(f"Failed: {item['title']}", "red"))
             expected_result_str = json.dumps(expected_result, indent=4, sort_keys=True)
             got_result_str = json.dumps(result["result"], indent=4, sort_keys=True)
             print(f"Expected: {expected_result_str}")
             print(f"Got: {got_result_str}")
             compare_strings(expected_result_str, got_result_str)
-            # raise e from e
+            raise e from e
 
 
 def run_item(node, item, context):

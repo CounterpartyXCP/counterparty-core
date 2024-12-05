@@ -322,32 +322,21 @@ def parse_transaction_vouts(decoded_tx):
             if new_data == []:
                 raise DecodeError("new destination is `None`")
 
-        if util.enabled("data_always_first"):
-            # data always comes first
-            if new_destination is not None:
-                # only burn have destination but no data
-                if not data and new_destination != config.UNSPENDABLE:
-                    raise DecodeError("destination before data")
-                destinations.append(new_destination)
-                btc_amount += output_value
-                break
-            data += new_data
+        # All destinations come before all data.
+        if (
+            not data
+            and not new_data
+            and destinations
+            != [
+                config.UNSPENDABLE,
+            ]
+        ):
+            destinations.append(new_destination)
+            btc_amount += output_value
         else:
-            # All destinations come before all data.
-            if (
-                not data
-                and not new_data
-                and destinations
-                != [
-                    config.UNSPENDABLE,
-                ]
-            ):
-                destinations.append(new_destination)
-                btc_amount += output_value
-            else:
-                if new_destination:  # Change.
-                    break
-                data += new_data  # Data.
+            if new_destination:  # Change.
+                break
+            data += new_data  # Data.
 
     return destinations, btc_amount, fee, data, potential_dispensers
 
@@ -623,16 +612,10 @@ def get_tx_info(db, decoded_tx, block_index):
         utxos_info = get_utxos_info(db, decoded_tx)
         # update utxo balances cache before parsing the transaction
         # to catch chained utxo moves
-        if (
-            not util.enabled("enable_attach_chaining")
-            and not util.PARSING_MEMPOOL
-            and utxos_info[0] != ""
-            and utxos_info[1] != ""
-        ):
+        if not util.PARSING_MEMPOOL and utxos_info[0] != "" and utxos_info[1] != "":
             ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
     else:
         utxos_info = []
-    data, destination = None, None
     try:
         source, destination, btc_amount, fee, data, dispensers_outs = _get_tx_info(
             db, decoded_tx, block_index
@@ -642,14 +625,3 @@ def get_tx_info(db, decoded_tx, block_index):
         return b"", None, None, None, None, None, utxos_info
     except BTCOnlyError as e:  # noqa: F841
         return b"", None, None, None, None, None, utxos_info
-    finally:
-        if (
-            util.enabled("enable_attach_chaining")
-            and not util.PARSING_MEMPOOL
-            and len(utxos_info) > 0
-            and (
-                (utxos_info[0] != "" and utxos_info[1] != "")  # move
-                or message_type.get_transaction_type(data, destination, block_index) == "attach"
-            )
-        ):
-            ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])

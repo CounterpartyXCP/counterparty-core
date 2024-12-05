@@ -108,7 +108,7 @@ SCENARIO = [
                         "params": {
                             "asset": "UTXOASSET",
                             "block_index": "$BLOCK_INDEX",
-                            "destination": "$TX_HASH:1",
+                            "destination": "$TX_HASH:0",
                             "fee_paid": 0,
                             "msg_index": 0,
                             "quantity": 1000000000,
@@ -130,7 +130,7 @@ SCENARIO = [
                             "event": "$TX_HASH",
                             "quantity": 1000000000,
                             "tx_index": "$TX_INDEX",
-                            "utxo": "$TX_HASH:1",
+                            "utxo": "$TX_HASH:0",
                             "utxo_address": "$ADDRESS_7",
                         },
                         "tx_hash": "$TX_HASH",
@@ -168,7 +168,7 @@ SCENARIO = [
     {
         "title": "Move assets from UTXO to UTXO",
         "transaction": "movetoutxo",
-        "source": "$UTXOASSET_UTXO_1_TX_HASH:1",  # first output of attach transaction, second is OP_RETURN
+        "source": "$UTXOASSET_UTXO_1_TX_HASH:0",  # first output of attach transaction, second is OP_RETURN
         "no_confirmation": True,
         "params": {
             "destination": "$ADDRESS_8",
@@ -190,7 +190,7 @@ SCENARIO = [
                             "destination": "$TX_HASH:0",
                             "msg_index": 0,
                             "quantity": 1000000000,
-                            "source": "$UTXOASSET_UTXO_1_TX_HASH:1",
+                            "source": "$UTXOASSET_UTXO_1_TX_HASH:0",
                             "status": "valid",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
@@ -222,7 +222,7 @@ SCENARIO = [
                             "event": "$TX_HASH",
                             "quantity": 1000000000,
                             "tx_index": "$TX_INDEX",
-                            "utxo": "$UTXOASSET_UTXO_1_TX_HASH:1",
+                            "utxo": "$UTXOASSET_UTXO_1_TX_HASH:0",
                             "utxo_address": "$ADDRESS_7",
                         },
                         "tx_hash": "$TX_HASH",
@@ -305,7 +305,7 @@ SCENARIO = [
                             "destination": "$UTXOASSET_UTXO_2_TX_HASH:0",
                             "msg_index": 0,
                             "quantity": 1000000000,
-                            "source": "$UTXOASSET_UTXO_1_TX_HASH:1",
+                            "source": "$UTXOASSET_UTXO_1_TX_HASH:0",
                             "status": "valid",
                             "tx_hash": "$UTXOASSET_UTXO_2_TX_HASH",
                             "tx_index": "$TX_INDEX - 1",
@@ -339,7 +339,7 @@ SCENARIO = [
                             "event": "$UTXOASSET_UTXO_2_TX_HASH",
                             "quantity": 1000000000,
                             "tx_index": "$TX_INDEX - 1",
-                            "utxo": "$UTXOASSET_UTXO_1_TX_HASH:1",
+                            "utxo": "$UTXOASSET_UTXO_1_TX_HASH:0",
                             "utxo_address": "$ADDRESS_7",
                         },
                         "tx_hash": "$UTXOASSET_UTXO_2_TX_HASH",

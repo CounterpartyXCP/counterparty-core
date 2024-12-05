@@ -2134,7 +2134,6 @@ UNITTEST_VECTOR = (
                 {
                     "in": (ADDR[0], ADDR[1], "XCP", 1),
                     "error": (exceptions.ValidateError, "destination exists"),
-                    "mock_protocol_changes": {"data_always_first": False},
                 },
                 {
                     "in": (ADDR[0], None, "BTC", 1),
@@ -2203,7 +2202,6 @@ UNITTEST_VECTOR = (
             ],
             "parse": [
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         {
                             "tx_hash": "db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d",
@@ -2236,7 +2234,6 @@ UNITTEST_VECTOR = (
                     ],
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         {
                             "tx_hash": "db6d9052b576d973196363e11163d492f50926c2f1d1efd67b3d999817b0d04d",
@@ -6050,7 +6047,6 @@ UNITTEST_VECTOR = (
             ],
             "serialise": [
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "multisig",
                         [
@@ -6078,7 +6074,6 @@ UNITTEST_VECTOR = (
                     "out": b"\x01\x00\x00\x00\x01\xc1\xd8\xc0u\x93l4\x95\xf6\xd6S\xc5\x0fs\xd9\x87\xf7TH\xd9zu\x02I\xb1\xeb\x83\xbe\xe7\x1b$\xae\x00\x00\x00\x00\x19v\xa9\x14H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607\x88\xac\xff\xff\xff\xff\x036\x15\x00\x00\x00\x00\x00\x00\x19v\xa9\x14\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x88\xacx\x1e\x00\x00\x00\x00\x00\x00iQ!\x02bA[\xf0J\xf84B==\xd7\xad\xa4\xdcrz\x03\x08eu\x9f\x9f\xbaZ\xeex\xc9\xeaq\xe5\x87\x98!\x02T\xdaT\x0f\xb2f;u\xe6\xc3\xcca\x19\n\xd0\xc2C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$G!\x02\x82\xb8\x86\xc0\x87\xeb7\xdc\x81\x82\xf1K\xa6\xcc>\x94\x85\xeda\x8b\x95\x80MD\xae\xcc\x17\xc3\x00\xb5\x85\xb0S\xaeV\x04\xea\x0b\x00\x00\x00\x00\x19v\xa9\x14H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607\x88\xac\x00\x00\x00\x00",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "multisig",
                         [
@@ -6999,7 +6994,6 @@ UNITTEST_VECTOR = (
         "util": {
             "api": [
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_burn",
                         {
@@ -7011,7 +7005,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac87bf4302000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_send",
                         {
@@ -7025,7 +7018,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae283bea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_send",
                         {
@@ -7041,7 +7033,6 @@ UNITTEST_VECTOR = (
                     "out": "01000000015001af2c4c3bc2c43b6233261394910d10fb157a082d9b3038c65f2d01e4ff200000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87ffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210397b51de78b0f3a171f5ed27fff56d17dcba739c8b00035c8bbb9c380fdc4ed1321036932bcbeac2a4d8846b7feb4bf93b2b88efd02f2d8dc1fc0067bcc972257e3912111111111111111111111111111111111111111111111111111111111111111111153ae00aaf5050000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_issuance",
                         {
@@ -7057,7 +7048,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210358415bf04af834423d3dd7adb2dc727a03086e897d9fba5aee7a331919e487d6210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_issuance",
                         {
@@ -7073,7 +7063,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210258415bf04af834423d3dd7adb2dc727aa153863ef89fba5aee7a331af1e4874b210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae283bea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_order",
                         {
@@ -7091,7 +7080,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210348415bf04af834423d3dd7adaedc727a030865759e9fba5aee78c9ea71e5870f210354da540fb2673b75e6c3c994f80ad0c8431643bab28ced783cd94079bbe72445210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aeec18db0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_order",
                         {
@@ -7108,7 +7096,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210248415bf04af834423d3dd7adaedc727a030865759f9fba5aee7c7136b1e58715210354da540fb2663b75e6c3ce9be98ad0c8431643bab28156d83cd94079bbe72460210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_burn",
                         {
@@ -7120,7 +7107,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac87dafa02000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_send",
                         {
@@ -7134,7 +7120,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aee8030000000000006951210362415bf04af834423d3dd7ada4dc727a030865759f9fba5aee7fc6fbf1e5875a210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae6239ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_send",
                         {
@@ -7148,7 +7133,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff0322020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ace8030000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae14bdf505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_send",
                         {
@@ -7162,7 +7146,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff03e8030000000000004751210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977210378ee11c3fb97054877a809ce083db292b16d971bcdc6aa4c8f92087133729d8b52aee8030000000000006951210334caf7ca87f0fd78a01d9a0d68221e55beef3722da8be72d254dd351c26108892102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4ebbf505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_issuance",
                         {
@@ -7178,7 +7161,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02e803000000000000695121020ecaf7ca87f0fd78a01d9a0d7e221e55beef3cde388be72d254826b32a6008382102bc14528340c27d005aa9e2913fd8c032ffa94625307a450077125d580099b57d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae88c2f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_issuance",
                         {
@@ -7194,7 +7176,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff03e8030000000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aee8030000000000006951210258415bf04af834423d3dd7adb2dc727aa153863ef89fba5aee7a331af1e4874b210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae6239ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_issuance",
                         {
@@ -7207,7 +7188,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e8030000000000006951210255415bf04af834423d3dd7adb2238d85fcf79a8a619fba5aee7a331919e4870d210254da540fb2663b75268d992d550ad0c2431643bab28ced783cd94079bbe7244d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "comment": "1",
                     "in": (
                         "create_order",
@@ -7226,7 +7206,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02e803000000000000695121021ecaf7ca87f0fd78a01d9a0d62221e55beef3722db8be72d254adc40426108d02103bc14528340c37d005aa9e764ded8c038ffa94625307a450077125d580099b53b210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed89ae605000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_order",
                         {
@@ -7243,7 +7222,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001051511b66ba309e3dbff1fde22aefaff4190675235a010a5c6acb1e43da8005f000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752aeffffffff02e803000000000000695121031ecaf7ca87f0fd78a01d9a0d62221e55beef3722da8be72d254e649c8261083d2102bc14528340c27d005aa9e06bcf58c038ffa946253077fea077125d580099b5bb210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae88c2f505000000004751210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97752ae00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_dividend",
                         {
@@ -7257,7 +7235,6 @@ UNITTEST_VECTOR = (
                     "out": "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff02e803000000000000695121035a415bf04af834423d3dd7ad96dc727a030d90949e9fba5a4c21d05197e58735210254da540fb2673b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe7246f210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae9c40ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "in": (
                         "create_dividend",
                         {
@@ -7273,7 +7250,7 @@ UNITTEST_VECTOR = (
                 },
                 {
                     "comment": "standard op return send",
-                    "mock_protocol_changes": {"enhanced_sends": False, "data_always_first": False},
+                    "mock_protocol_changes": {"enhanced_sends": False},
                     "in": (
                         "create_send",
                         {
@@ -7304,7 +7281,7 @@ UNITTEST_VECTOR = (
                 },
                 {
                     "comment": "standard op return send (with API parameter)",
-                    "mock_protocol_changes": {"enhanced_sends": True, "data_always_first": False},
+                    "mock_protocol_changes": {"enhanced_sends": True},
                     "in": (
                         "create_send",
                         {
@@ -7336,7 +7313,7 @@ UNITTEST_VECTOR = (
                 },
                 {
                     "comment": "CIP 9 enhanced_send (op_return)",
-                    "mock_protocol_changes": {"enhanced_sends": True, "data_always_first": False},
+                    "mock_protocol_changes": {"enhanced_sends": True},
                     "in": (
                         "create_send",
                         {
@@ -7364,7 +7341,7 @@ UNITTEST_VECTOR = (
                 },
                 {
                     "comment": "CIP 9 enhanced_send with memo",
-                    "mock_protocol_changes": {"enhanced_sends": True, "data_always_first": False},
+                    "mock_protocol_changes": {"enhanced_sends": True},
                     "in": (
                         "create_send",
                         {
@@ -7394,7 +7371,7 @@ UNITTEST_VECTOR = (
                 },
                 {
                     "comment": "CIP 9 enhanced_send with memo as hex",
-                    "mock_protocol_changes": {"enhanced_sends": True, "data_always_first": False},
+                    "mock_protocol_changes": {"enhanced_sends": True},
                     "in": (
                         "create_send",
                         {
@@ -7425,7 +7402,7 @@ UNITTEST_VECTOR = (
                 },
                 {
                     "comment": "CIP 9 enhanced_send before enabled",
-                    "mock_protocol_changes": {"enhanced_sends": False, "data_always_first": False},
+                    "mock_protocol_changes": {"enhanced_sends": False},
                     "in": (
                         "create_send",
                         {
@@ -7447,7 +7424,6 @@ UNITTEST_VECTOR = (
                     "mock_protocol_changes": {
                         "enhanced_sends": True,
                         "options_require_memo": True,
-                        "data_always_first": False,
                     },
                     "in": (
                         "create_send",
@@ -7468,7 +7444,6 @@ UNITTEST_VECTOR = (
                     "mock_protocol_changes": {
                         "enhanced_sends": True,
                         "options_require_memo": True,
-                        "data_always_first": False,
                     },
                     "in": (
                         "create_send",
@@ -7500,7 +7475,6 @@ UNITTEST_VECTOR = (
                     # get_tx_info API method
                 },
                 {
-                    "mock_protocol_changes": {"data_always_first": False},
                     "comment": "get_tx_info for a legacy send",
                     "in": (
                         "get_tx_info",
@@ -7537,7 +7511,6 @@ UNITTEST_VECTOR = (
                     "comment": "get_tx_info for an enhanced send",
                     "mock_protocol_changes": {
                         "enhanced_sends": True,
-                        "data_always_first": False,
                     },
                     "in": (
                         "get_tx_info",

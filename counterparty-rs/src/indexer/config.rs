@@ -87,7 +87,6 @@ pub struct Heights {
     pub p2sh_dispensers: u32,
     pub correct_segwit_txids: u32,
     pub multisig_addresses: u32,
-    pub data_always_first: u32,
 }
 
 impl Heights {
@@ -99,7 +98,6 @@ impl Heights {
                 p2sh_dispensers: 724000,
                 correct_segwit_txids: 662000,
                 multisig_addresses: 333500,
-                data_always_first: 900000,
             },
             Network::Testnet => Heights {
                 segwit: 1440200,
@@ -107,7 +105,6 @@ impl Heights {
                 p2sh_dispensers: 2163328,
                 correct_segwit_txids: 1666625,
                 multisig_addresses: 0,
-                data_always_first: 3195137,
             },
             Network::Regtest => Heights {
                 segwit: 0,
@@ -115,7 +112,6 @@ impl Heights {
                 p2sh_dispensers: 0,
                 correct_segwit_txids: 0,
                 multisig_addresses: 0,
-                data_always_first: 0,
             },
         }
     }
@@ -160,10 +156,6 @@ impl Config {
 
     pub fn multisig_addresses_enabled(&self, height: u32) -> bool {
         height >= self.heights.multisig_addresses
-    }
-
-    pub fn data_always_first_enabled(&self, height: u32) -> bool {
-        height >= self.heights.data_always_first
     }
 
     pub fn unspendable(&self) -> String {
