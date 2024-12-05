@@ -275,7 +275,7 @@ class RegtestNode:
 
     def wait_for_counterparty_watcher(self):
         while True:
-            if "API Watcher - Catch up completed." in self.server_out.getvalue():
+            if "API.Watcher - Catch up completed." in self.server_out.getvalue():
                 print("Server ready")
                 return
             print("Waiting for counterparty server...")
