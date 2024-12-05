@@ -40,10 +40,21 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 "rpc_password": config.BACKEND_PASSWORD,
                 "db_dir": config.FETCHER_DB,
                 "log_file": config.FETCHER_LOG,
-                "log_level": config.LOG_LEVEL_STRING,
                 "json_format": config.JSON_LOGS,
                 "only_write_in_reorg_window": True,
             }
+            if (
+                isinstance(config.LOG_EXCLUDE_FILTERS, list)
+                and "RSFETCHER" in config.LOG_EXCLUDE_FILTERS
+            ):
+                self.config["log_level"] = "OFF"
+            elif isinstance(config.LOG_INCLUDE_FILTERS, list):
+                if "RSFETCHER" in config.LOG_INCLUDE_FILTERS:
+                    self.config["log_level"] = config.LOG_LEVEL_STRING
+                else:
+                    self.config["log_level"] = "OFF"
+            else:
+                self.config["log_level"] = config.LOG_LEVEL_STRING
         else:
             self.config = indexer_config
         self.config["network"] = config.NETWORK_NAME
@@ -78,7 +89,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.stopped_event.clear()  # Clear the stop event
         self.prefetch_queue = queue.Queue(maxsize=PREFETCH_QUEUE_SIZE)  # Reset the queue
         self.executor = ThreadPoolExecutor(
-            max_workers=WORKER_THREADS, thread_name_prefix="RSFetcher Prefetcher"
+            max_workers=WORKER_THREADS, thread_name_prefix="RSFetcher.Prefetcher"
         )
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
         self.prefetch_queue_initialized = False

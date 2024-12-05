@@ -633,7 +633,7 @@ def parse_next_event(ledger_db, state_db):
 
 class APIWatcher(threading.Thread):
     def __init__(self, state_db):
-        threading.Thread.__init__(self, name="API Watcher")
+        threading.Thread.__init__(self, name="Watcher")
         logger.debug("Initializing API Watcher...")
         self.state_db = None
         self.ledger_db = None

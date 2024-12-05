@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use pyo3::{exceptions::PyValueError, types::PyDict, FromPyObject, PyAny, PyErr, PyResult};
-use tracing::Level;
+use tracing::{level_filters::LevelFilter, Level};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -23,9 +23,9 @@ impl<'source> FromPyObject<'source> for Mode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LogLevel(Level);
+pub struct LogLevel(LevelFilter);
 
-impl From<LogLevel> for Level {
+impl From<LogLevel> for LevelFilter {
     fn from(log_level: LogLevel) -> Self {
         log_level.0
     }
@@ -35,13 +35,14 @@ impl<'source> FromPyObject<'source> for LogLevel {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
         let level_str: String = obj.extract()?;
         match level_str.trim().to_lowercase().as_str() {
-            "trace" => Ok(LogLevel(Level::TRACE)),
-            "debug" => Ok(LogLevel(Level::DEBUG)),
-            "info" => Ok(LogLevel(Level::INFO)),
-            "warn" => Ok(LogLevel(Level::WARN)),
-            "error" => Ok(LogLevel(Level::ERROR)),
+            "trace" => Ok(LogLevel(LevelFilter::TRACE)),
+            "debug" => Ok(LogLevel(LevelFilter::DEBUG)),
+            "info" => Ok(LogLevel(LevelFilter::INFO)),
+            "warn" => Ok(LogLevel(LevelFilter::WARN)),
+            "error" => Ok(LogLevel(LevelFilter::ERROR)),
+            "off" => Ok(LogLevel(LevelFilter::OFF)),
             _ => Err(PyErr::new::<PyValueError, _>(
-                "'log_level' must be one of 'trace', 'debug', 'info', 'warn', or 'error'",
+                "'log_level' must be one of 'trace', 'debug', 'info', 'warn', 'error' or 'off'",
             )),
         }
     }
@@ -216,7 +217,7 @@ impl<'source> FromPyObject<'source> for Config {
 
         let log_level = match dict.get_item("log_level") {
             Ok(Some(item)) => item.extract()?,
-            _ => LogLevel(Level::INFO),
+            _ => LogLevel(LevelFilter::INFO),
         };
 
         let json_format = match dict.get_item("json_format") {

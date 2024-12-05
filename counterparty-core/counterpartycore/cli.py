@@ -266,6 +266,17 @@ CONFIG_ARGS = [
         {"type": int, "default": 20, "help": "maximum number of log file rotations"},
     ],
     [
+        ("--log-exclude-filters",),
+        {"nargs": "*", "help": "excludes messages whose topic starts with the provided values"},
+    ],
+    [
+        ("--log-include-filters",),
+        {
+            "nargs": "*",
+            "help": "includes only messages whose topic starts with the provided values",
+        },
+    ],
+    [
         ("--utxo-locks-max-addresses",),
         {
             "type": int,
