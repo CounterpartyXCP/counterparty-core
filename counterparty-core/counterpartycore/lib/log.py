@@ -51,7 +51,7 @@ def formatTime(record, datefmt=None):
 
 
 def get_full_topic(record):
-    process_name = "LEDGER"
+    process_name = "Ledger"
     if current_process().name != "MainProcess":
         process_name = "API"
     thread_name = threading.current_thread().name
