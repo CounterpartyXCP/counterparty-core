@@ -89,8 +89,8 @@ def check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inp
         if desired_destination_outputs
         else ""
     )
-    if desired_data == None:  # noqa: E711
-        desired_data = b""
+    if desired_data is None:
+        return  # TODO: don't use get_tx_info_new
 
     # Parsed transaction info.
     try:
@@ -115,13 +115,21 @@ def check_transaction_sanity(db, source, tx_info, unsigned_tx_hex, encoding, inp
     desired_source = script.make_canonical(desired_source)
 
     # Check desired info against parsed info.
-    desired = (desired_source, desired_destination, desired_data)
-    parsed = (parsed_source, parsed_destination, parsed_data)
-    if desired != parsed:
+    errors = []
+    if desired_source != parsed_source:
+        errors.append(f"desired source: {desired_source} ≠ parsed source: {parsed_source}")
+    if desired_destination and desired_destination != parsed_destination:
+        errors.append(
+            f"desired destination: {desired_destination} ≠ parsed destination: {parsed_destination}"
+        )
+    if desired_data != parsed_data:
+        errors.append(f"desired data: {desired_data} ≠ parsed data: {parsed_data}")
+
+    if errors:
         transaction_inputs.UTXOLocks().unlock_utxos(source, inputs)
 
         raise exceptions.TransactionError(
-            f"Constructed transaction does not parse correctly: {desired} ≠ {parsed}"
+            f"Constructed transaction does not parse correctly: {', '.join(errors)}"
         )
 
 

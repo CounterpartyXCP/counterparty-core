@@ -547,19 +547,19 @@ def get_last_block_parsed(state_db, no_cache=False):
 
 def parse_event(state_db, event):
     with state_db:
-        logger.trace(f"API Watcher - Parsing event: {event}")
+        logger.trace(f"Parsing event: {event}")
         update_state_db_tables(state_db, event)
         update_last_parsed_events(state_db, event)
         update_events_count(state_db, event)
         update_transaction_types_count(state_db, event)
-        logger.event(f"API Watcher - Event parsed: {event['message_index']} {event['event']}")
+        logger.event(f"Event parsed: {event['message_index']} {event['event']}")
 
 
 def catch_up(ledger_db, state_db, watcher=None):
     check_reorg(ledger_db, state_db)
     event_to_parse_count = get_event_to_parse_count(ledger_db, state_db)
     if event_to_parse_count > 0:
-        logger.debug(f"API Watcher - {event_to_parse_count} events to catch up...")
+        logger.debug(f"{event_to_parse_count} events to catch up...")
         start_time = time.time()
         event_parsed = 0
         next_event = get_next_event_to_parse(ledger_db, state_db)
@@ -569,14 +569,14 @@ def catch_up(ledger_db, state_db, watcher=None):
             if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
                 logger.debug(
-                    f"API Watcher - {event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
+                    f"{event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
                 )
             next_event = get_next_event_to_parse(ledger_db, state_db)
         if not watcher.stop_event.is_set():
             duration = time.time() - start_time
-            logger.info(f"API Watcher - Catch up completed. ({format_duration(duration)})")
+            logger.info(f"Catch up completed. ({format_duration(duration)})")
     else:
-        logger.info("API Watcher - Catch up completed.")
+        logger.info("Catch up completed.")
 
 
 def search_matching_event(ledger_db, state_db):
@@ -617,10 +617,8 @@ def check_reorg(ledger_db, state_db):
         target_block_index = 0
         if matching_event is not None:
             target_block_index = matching_event["block_index"] + 1
-        logger.warning(
-            f"API Watcher -  Blockchain reorganization detected at Block {target_block_index}"
-        )
-        logger.info(f"API Watcher - Rolling back to block: {target_block_index}")
+        logger.warning(f"Blockchain reorganization detected at Block {target_block_index}")
+        logger.info(f"Rolling back to block: {target_block_index}")
         dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
 
 
@@ -632,21 +630,16 @@ def parse_next_event(ledger_db, state_db):
 
     parse_event(state_db, next_event)
 
-    if next_event["event"] == "BLOCK_PARSED":
-        check_reorg(ledger_db, state_db)
-
 
 class APIWatcher(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
+    def __init__(self, state_db):
+        threading.Thread.__init__(self, name="Watcher")
         logger.debug("Initializing API Watcher...")
         self.state_db = None
         self.ledger_db = None
         self.current_state_thread = None
         self.stop_event = threading.Event()  # Add stop event
-        self.state_db = database.get_db_connection(
-            config.STATE_DATABASE, read_only=False, check_wal=False
-        )
+        self.state_db = state_db
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )
@@ -659,23 +652,29 @@ class APIWatcher(threading.Thread):
             self.follow()
 
     def follow(self):
-        while not self.stop_event.is_set():
-            try:
-                parse_next_event(self.ledger_db, self.state_db)
-            except exceptions.NoEventToParse:
-                logger.trace("API Watcher - No new events to parse")
-                self.stop_event.wait(timeout=0.1)
-            if self.stop_event.is_set():
-                break
+        try:
+            no_check_reorg_since = 0
+            while not self.stop_event.is_set():
+                try:
+                    parse_next_event(self.ledger_db, self.state_db)
+                except exceptions.NoEventToParse:
+                    logger.trace("No new events to parse")
+                    if time.time() - no_check_reorg_since > 5:
+                        check_reorg(self.ledger_db, self.state_db)
+                        no_check_reorg_since = time.time()
+                    self.stop_event.wait(timeout=0.1)
+                if self.stop_event.is_set():
+                    break
+        finally:
+            if self.state_db is not None:
+                self.state_db.close()
+            if self.ledger_db is not None:
+                self.ledger_db.close()
+            if self.current_state_thread is not None:
+                self.current_state_thread.stop()
 
     def stop(self):
         logger.info("Stopping API Watcher thread...")
         self.stop_event.set()
         self.join()
-        if self.state_db is not None:
-            self.state_db.close()
-        if self.ledger_db is not None:
-            self.ledger_db.close()
-        if self.current_state_thread is not None:
-            self.current_state_thread.stop()
         logger.info("API Watcher thread stopped.")

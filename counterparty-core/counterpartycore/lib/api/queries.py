@@ -108,9 +108,10 @@ TransactionType = Literal[
     "utxomove",
     "unknown",
 ]
+SendType = Literal["all", "send", "attach", "move", "detach"]
 
 SUPPORTED_SORT_FIELDS = {
-    "balances": ["address", "asset", "quantity"],
+    "balances": ["address", "asset", "asset_longname", "quantity"],
     "order_matches": [
         "block_index",
         "forward_asset",
@@ -154,10 +155,11 @@ ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
 
 
 class QueryResult:
-    def __init__(self, result, next_cursor, result_count=None):
+    def __init__(self, result, next_cursor, table, result_count=None):
         self.result = result
         self.next_cursor = next_cursor
         self.result_count = result_count
+        self.table = table
 
 
 def select_rows(
@@ -320,13 +322,13 @@ def select_rows(
                 break
             row["params"] = json.loads(row["params"])
 
-    return QueryResult(result, next_cursor, result_count)
+    return QueryResult(result, next_cursor, table, result_count)
 
 
 def select_row(db, table, where, select="*", group_by=""):
     query_result = select_rows(db, table, where, limit=1, select=select, group_by=group_by)
     if query_result.result:
-        return QueryResult(query_result.result[0], None, 1)
+        return QueryResult(query_result.result[0], None, table, 1)
     return None
 
 
@@ -840,7 +842,7 @@ def get_events_by_addresses(
         offset=offset,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
-    return QueryResult(result.result, events.next_cursor, events.result_count)
+    return QueryResult(result.result, events.next_cursor, "messages", events.result_count)
 
 
 def get_all_mempool_events(
@@ -1169,9 +1171,36 @@ def get_debits_by_asset(
     )
 
 
-def get_sends(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+def prepare_sends_where(send_type: SendType, other_conditions=None):
+    where = []
+    send_type_list = send_type.split(",")
+    for type_send in send_type_list:
+        if type_send == "all":
+            where = [other_conditions] if other_conditions else []
+            break
+        if type_send in typing.get_args(SendType):
+            where_send = {}
+            if type_send == "send":
+                where_send = {"source__notlike": "%:%", "destination__notlike": "%:%"}
+            elif type_send == "move":
+                where_send = {"source__like": "%:%", "destination__like": "%:%"}
+            elif type_send == "attach":
+                where_send = {"source__notlike": "%:%", "destination__like": "%:%"}
+            elif type_send == "detach":
+                where_send = {"source__like": "%:%", "destination__notlike": "%:%"}
+            if other_conditions:
+                where_send.update(other_conditions)
+            if where_send:
+                where.append(where_send)
+    return where
+
+
+def get_sends(
+    ledger_db, send_type: SendType = "all", cursor: str = None, limit: int = 100, offset: int = None
+):
     """
     Returns all the sends include Enhanced and MPMA sends
+    :param str send_type: The type of the send to return
     :param str cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1179,6 +1208,7 @@ def get_sends(ledger_db, cursor: str = None, limit: int = 100, offset: int = Non
     return select_rows(
         ledger_db,
         "sends",
+        where=prepare_sends_where(send_type),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1186,11 +1216,17 @@ def get_sends(ledger_db, cursor: str = None, limit: int = 100, offset: int = Non
 
 
 def get_sends_by_block(
-    ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    block_index: int,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of a block
     :param int block_index: The index of the block to return (e.g. $LAST_SEND_BLOCK)
+    :param str send_type: The type of the send to return
     :param str cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1198,7 +1234,7 @@ def get_sends_by_block(
     return select_rows(
         ledger_db,
         "sends",
-        where={"block_index": block_index},
+        where=prepare_sends_where(send_type, {"block_index": block_index}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1206,11 +1242,17 @@ def get_sends_by_block(
 
 
 def get_sends_by_transaction_hash(
-    ledger_db, tx_hash: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    tx_hash: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of a block
     :param str tx_hash: The hash of the transaction to return (e.g. $LAST_SEND_TX_HASH)
+    :param str send_type: The type of the send to return
     :param str cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1218,7 +1260,7 @@ def get_sends_by_transaction_hash(
     return select_rows(
         ledger_db,
         "sends",
-        where={"tx_hash": tx_hash},
+        where=prepare_sends_where(send_type, {"tx_hash": tx_hash}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1226,11 +1268,17 @@ def get_sends_by_transaction_hash(
 
 
 def get_sends_by_asset(
-    ledger_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    asset: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an asset
     :param str asset: The asset to return (e.g. XCP)
+    :param str send_type: The type of the send to return
     :param str cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1238,7 +1286,7 @@ def get_sends_by_asset(
     return select_rows(
         ledger_db,
         "sends",
-        where={"asset": asset.upper()},
+        where=prepare_sends_where(send_type, {"asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -1722,7 +1770,7 @@ def get_address_balances(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="address, asset, quantity, utxo, utxo_address",
+        select="address, asset, asset_longname, quantity, utxo, utxo_address",
         sort=sort,
     )
 
@@ -1744,7 +1792,7 @@ def get_utxo_balances(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        select="asset, quantity, utxo, utxo_address",
+        select="asset, asset_longname, quantity, utxo, utxo_address",
     )
 
 
@@ -1770,7 +1818,7 @@ def utxos_with_balances(state_db, utxos: str):
         if utxo not in result:
             result[utxo] = False
 
-    return QueryResult(result, None, len(utxo_list))
+    return QueryResult(result, None, "balances", len(utxo_list))
 
 
 def get_balances_by_addresses(
@@ -1826,7 +1874,7 @@ def get_balances_by_addresses(
         state_db,
         "balances",
         where=where,
-        select="address, asset, quantity, utxo, utxo_address",
+        select="address, asset, asset_longname, quantity, utxo, utxo_address",
         order="ASC",
         cursor_field="asset",
         sort=sort,
@@ -1836,6 +1884,7 @@ def get_balances_by_addresses(
     if len(balances) > 0:
         current_balances = {
             "asset": balances[0]["asset"],
+            "asset_longname": balances[0]["asset_longname"],
             "total": 0,
             "addresses": [],
         }
@@ -1844,6 +1893,7 @@ def get_balances_by_addresses(
                 result.append(current_balances)
                 current_balances = {
                     "asset": balance["asset"],
+                    "asset_longname": balances[0]["asset_longname"],
                     "total": 0,
                     "addresses": [],
                 }
@@ -1858,7 +1908,7 @@ def get_balances_by_addresses(
             )
         result.append(current_balances)
 
-    return QueryResult(result, assets_result.next_cursor, assets_result.result_count)
+    return QueryResult(result, assets_result.next_cursor, "balances", assets_result.result_count)
 
 
 def get_balances_by_address_and_asset(
@@ -1881,17 +1931,21 @@ def get_balances_by_address_and_asset(
     """
     where = [
         {"address": address, "asset": asset.upper(), "quantity__gt": 0},
+        {"address": address, "asset_longname": asset.upper(), "quantity__gt": 0},
         {"utxo_address": address, "asset": asset.upper(), "quantity__gt": 0},
+        {"utxo_address": address, "asset_longname": asset.upper(), "quantity__gt": 0},
     ]
     if type == "utxo":
         where.pop(0)
-    elif type == "address":
         where.pop(1)
+    elif type == "address":
+        where.pop(2)
+        where.pop(3)
 
     return select_rows(
         state_db,
         "balances",
-        select="address, asset, quantity, utxo, utxo_address",
+        select="address, asset, asset_longname, quantity, utxo, utxo_address",
         where=where,
         last_cursor=cursor,
         offset=offset,
@@ -2035,11 +2089,17 @@ def get_burns_by_address(
 
 
 def get_sends_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str send_type: The type of sends to return
     :param str cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2047,7 +2107,7 @@ def get_sends_by_address(
     return select_rows(
         ledger_db,
         "sends",
-        where={"source": address},
+        where=prepare_sends_where(send_type, {"source": address}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2055,12 +2115,19 @@ def get_sends_by_address(
 
 
 def get_sends_by_address_and_asset(
-    ledger_db, address: str, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    asset: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address and asset
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset: The asset to return (e.g. $ASSET_5)
+    :param str send_type: The type of sends to return
     :param str cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2068,7 +2135,7 @@ def get_sends_by_address_and_asset(
     return select_rows(
         ledger_db,
         "sends",
-        where={"source": address, "asset": asset.upper()},
+        where=prepare_sends_where(send_type, {"source": address, "asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2076,11 +2143,17 @@ def get_sends_by_address_and_asset(
 
 
 def get_receive_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the receives of an address
     :param str address: The address to return (e.g. $ADDRESS_5)
+    :param str send_type: The type of sends to return
     :param str cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2088,7 +2161,7 @@ def get_receive_by_address(
     return select_rows(
         ledger_db,
         "sends",
-        where={"destination": address},
+        where=prepare_sends_where(send_type, {"destination": address}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2096,12 +2169,19 @@ def get_receive_by_address(
 
 
 def get_receive_by_address_and_asset(
-    ledger_db, address: str, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    asset: str,
+    send_type: SendType = "all",
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the receives of an address and asset
     :param str address: The address to return (e.g. $ADDRESS_5)
     :param str asset: The asset to return (e.g. $ASSET_5)
+    :param str send_type: The type of sends to return
     :param str cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2109,7 +2189,7 @@ def get_receive_by_address_and_asset(
     return select_rows(
         ledger_db,
         "sends",
-        where={"destination": address, "asset": asset.upper()},
+        where=prepare_sends_where(send_type, {"destination": address, "asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2513,17 +2593,22 @@ def get_asset_balances(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
-    where = [{"asset": asset.upper(), "quantity__gt": 0}]
+    where = [
+        {"asset": asset.upper(), "quantity__gt": 0},
+        {"asset_longname": asset.upper(), "quantity__gt": 0},
+    ]
     if type == "utxo":
-        where.append({"utxo__notnull": True})
+        where[0]["utxo__notnull"] = True
+        where[1]["utxo__notnull"] = True
     elif type == "address":
-        where.append({"address__notnull": True})
+        where[0]["address__notnull"] = True
+        where[1]["address__notnull"] = True
 
     return select_rows(
         state_db,
         "balances",
         where=where,
-        select="address, utxo, utxo_address, asset, quantity",
+        select="address, utxo, utxo_address, asset, asset_longname, quantity",
         order="ASC",
         last_cursor=cursor,
         limit=limit,
@@ -2556,8 +2641,8 @@ def prepare_order_matches_where(status, other_conditions=None):
 
 
 SELECT_ORDERS = "*, "
-SELECT_ORDERS += "(get_quantity * 1.0) / (give_quantity * 1.0) AS give_price, "
-SELECT_ORDERS += "(give_quantity * 1.0) / (get_quantity * 1.0) AS get_price"
+SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
+SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
 
 
 def get_orders(
@@ -2705,7 +2790,9 @@ def get_orders_by_two_assets(
         else:
             order["market_dir"] = "BUY"
             order["market_price"] = divide(order["get_quantity"], order["give_quantity"])
-    return QueryResult(query_result.result, query_result.next_cursor, query_result.result_count)
+    return QueryResult(
+        query_result.result, query_result.next_cursor, "orders", query_result.result_count
+    )
 
 
 def get_asset_holders(
@@ -2880,7 +2967,9 @@ def get_order_matches_by_two_assets(
         else:
             order["market_dir"] = "BUY"
             order["market_price"] = divide(order["backward_quantity"], order["forward_quantity"])
-    return QueryResult(query_result.result, query_result.next_cursor, query_result.result_count)
+    return QueryResult(
+        query_result.result, query_result.next_cursor, "order_matches", query_result.result_count
+    )
 
 
 def get_btcpays_by_order(

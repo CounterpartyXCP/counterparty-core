@@ -69,5 +69,4 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
         return getattr(config, key, default)
 
     def close(self):
-        logger.trace("Closing connection telemetry collector base")
-        self.db.close()
+        pass

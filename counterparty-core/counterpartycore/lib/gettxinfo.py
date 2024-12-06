@@ -336,8 +336,7 @@ def parse_transaction_vouts(decoded_tx):
         else:
             if new_destination:  # Change.
                 break
-            else:  # Data.
-                data += new_data
+            data += new_data  # Data.
 
     return destinations, btc_amount, fee, data, potential_dispensers
 
@@ -601,32 +600,8 @@ def get_utxos_info(db, decoded_tx):
         ",".join(get_inputs_with_balance(db, decoded_tx)),  # sources
         get_first_non_op_return_output(decoded_tx) or "",  # destination
         str(len(decoded_tx["vout"])),  # number of outputs
-        str(op_return_vout) if op_return_vout else "",  # op_return output
+        str(op_return_vout) if op_return_vout is not None else "",  # op_return output
     ]
-
-
-def get_utxos_info_old(db, decoded_tx):
-    """
-    Get the UTXO move info.
-    Returns a list of UTXOs. Last UTXO is the destination, previous UTXOs are the sources.
-    """
-    sources = []
-    # we check that each vin does not contain assets..
-    for vin in decoded_tx["vin"]:
-        if isinstance(vin["hash"], str):
-            vin_hash = vin["hash"]
-        else:
-            vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
-        utxo = vin_hash + ":" + str(vin["n"])
-        if ledger.utxo_has_balance(db, utxo):
-            sources.append(utxo)
-    destination = None
-    # the destination is the first non-OP_RETURN vout
-    n = select_utxo_destination(decoded_tx["vout"])
-    if n is not None:
-        destination = decoded_tx["tx_hash"] + ":" + str(n)
-        return sources + [destination]
-    return []
 
 
 def get_tx_info(db, decoded_tx, block_index):
@@ -637,7 +612,7 @@ def get_tx_info(db, decoded_tx, block_index):
         utxos_info = get_utxos_info(db, decoded_tx)
         # update utxo balances cache before parsing the transaction
         # to catch chained utxo moves
-        if utxos_info[0] != "" and utxos_info[1] != "" and not util.PARSING_MEMPOOL:
+        if not util.PARSING_MEMPOOL and utxos_info[0] != "" and utxos_info[1] != "":
             ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
     else:
         utxos_info = []

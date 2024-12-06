@@ -978,7 +978,6 @@ def parse(db, tx, message, message_type_id):
             issuer = tx["destination"]
             transfer = True
             asset_events.append("transfer")
-            # quantity = 0
         else:
             issuer = tx["source"]
             transfer = False

@@ -265,8 +265,8 @@ def optimize(db):
 
 def close(db):
     logger.info("Closing database connections...")
-    db.close()
     LedgerDBConnectionPool().close()
+    db.close()  # always close connection with write access last
 
 
 def field_is_pk(cursor, table, field):

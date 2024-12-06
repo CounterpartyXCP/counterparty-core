@@ -48,20 +48,22 @@ def refresh_current_state(ledger_db, state_db):
 
 class CurrentStateThread(threading.Thread):
     def __init__(self):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name="CurrentStateUpdater")
         self.state_db = database.get_db_connection(config.STATE_DATABASE)
         self.ledger_db = database.get_db_connection(config.DATABASE)
         self.stop_event = threading.Event()
 
     def run(self):
-        while not self.stop_event.is_set():
-            refresh_current_state(self.ledger_db, self.state_db)
-            self.stop_event.wait(timeout=1)
+        try:
+            while not self.stop_event.is_set():
+                refresh_current_state(self.ledger_db, self.state_db)
+                self.stop_event.wait(timeout=1)
+        finally:
+            self.state_db.close()
+            self.ledger_db.close()
 
     def stop(self):
         self.stop_event.set()
-        self.state_db.close()
-        self.ledger_db.close()
         self.join()
 
 

@@ -55,15 +55,15 @@ LEDGER_VECTOR = {
             {
                 "in": (),
                 "out": {
-                    "message_index": 1735,
+                    "message_index": 1743,
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"94a62752f851c8ec439fbbd46fbd0bd0d75987fb22416187a48a70e6e9af308a","messages_hash":"d712fc779e33fdbe64e45df1ee3e30620f0c87570ea8d10bab7d82a8cea15a91","transaction_count":0,"txlist_hash":"75ba50d1c638cfdfbbf050abe6646376e9a65e13bd56dce814de9959d6ba3ac1"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"fa9be6ec83c14604fbeede79c09404102eda193852f3c1965672bdbc07651bbf","messages_hash":"491ff0bc091a9a2c59d8487388375eb74b60c3c439277e21f773111041917575","transaction_count":0,"txlist_hash":"ead5543d5ba4a13c6b7b09e468becc6ea499acf2a5cbc9b3e54e1477293760f4"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "38eaff081f0b16eb0e7ad73e38cffef30049fe2b3db16ee317451153ca5d82f7",
+                    "event_hash": "03257d438b3c5041da5d646e5a36d6b2ac8c492de3386d7ef380b607c717474d",
                 },
             }
         ],
@@ -327,7 +327,7 @@ LEDGER_VECTOR = {
                         "escrow": None,
                     },
                     {
-                        "address": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
+                        "address": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0",
                         "address_quantity": 100,
                         "escrow": None,
                     },
@@ -392,7 +392,7 @@ LEDGER_VECTOR = {
                         "escrow": None,
                     },
                     {
-                        "address": "74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0",
+                        "address": "b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0",
                         "address_quantity": 1,
                         "escrow": None,
                     },

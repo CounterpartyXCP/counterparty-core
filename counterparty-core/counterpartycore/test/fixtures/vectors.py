@@ -7421,7 +7421,10 @@ UNITTEST_VECTOR = (
                 },
                 {
                     "comment": "CIP 9 enhanced send to a REQUIRE_MEMO address without memo",
-                    "mock_protocol_changes": {"enhanced_sends": True, "options_require_memo": True},
+                    "mock_protocol_changes": {
+                        "enhanced_sends": True,
+                        "options_require_memo": True,
+                    },
                     "in": (
                         "create_send",
                         {
@@ -7438,7 +7441,10 @@ UNITTEST_VECTOR = (
                 },
                 {
                     "comment": "CIP 9 enhanced send to a REQUIRE_MEMO address with memo",
-                    "mock_protocol_changes": {"enhanced_sends": True, "options_require_memo": True},
+                    "mock_protocol_changes": {
+                        "enhanced_sends": True,
+                        "options_require_memo": True,
+                    },
                     "in": (
                         "create_send",
                         {
@@ -7753,37 +7759,43 @@ UNITTEST_VECTOR = (
             ],
             "get_transaction_type": [
                 {
-                    "in": (b"CNTRPRTY00", 3000000),
+                    "in": (b"CNTRPRTY00", "", 3000000),
                     "out": "unknown",
                     "mock_protocol_changes": {"short_tx_type_id": True},
                 },
                 {
-                    "in": (b"[A95428957753448833|1", 3000000),
+                    "in": (b"[A95428957753448833|1", "", 3000000),
                     "out": "fairmint",
                     "mock_protocol_changes": {"short_tx_type_id": True},
                 },
                 {
-                    "in": (None, 3000000),
+                    "in": (None, "", 3000000),
                     "out": "utxomove",
                     "mock_protocol_changes": {"short_tx_type_id": True, "utxo_support": True},
                 },
                 {
-                    "in": (b"eXCPMEME|25000000000|", 3000000),
+                    "in": (b"eXCPMEME|25000000000|", "", 3000000),
                     "out": "attach",
                     "mock_protocol_changes": {"short_tx_type_id": True},
                 },
                 {
-                    "in": (b"fbc1qcxlwq8x9fnhyhgywlnja35l7znt58tud9duqay", 3000000),
+                    "in": (b"fbc1qcxlwq8x9fnhyhgywlnja35l7znt58tud9duqay", "", 3000000),
                     "out": "detach",
                     "mock_protocol_changes": {"short_tx_type_id": True},
                 },
                 {
                     "in": (
                         b"\x02\x00>\xc7\xd9>|n\x19\x00\x00\x00\x00\x00\x00\x00P\x00%?\x9e\x96I\xb3\xf9u\x15$\xb2\x90\xf93Pra\x0c\xcc\x01",
+                        "",
                         3000000,
                     ),
                     "out": "enhanced_send",
                     "mock_protocol_changes": {"short_tx_type_id": True},
+                },
+                {
+                    "in": (None, config.UNSPENDABLE_TESTNET, 3000000),
+                    "out": "burn",
+                    "mock_protocol_changes": {"short_tx_type_id": True, "utxo_support": True},
                 },
             ],
         },

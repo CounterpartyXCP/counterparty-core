@@ -43,14 +43,14 @@ pub fn setup_logging(config: &Config) {
                     .json()
                     .with_timer(custom_time_format())
                     .with_writer(stderr_writer)
-                    .with_filter(LevelFilter::from_level(Level::from(config.log_level))),
+                    .with_filter(LevelFilter::from(config.log_level)),
             )
         } else {
             Box::new(
                 layer()
                     .event_format(new_custom_formatter())
                     .with_writer(stderr_writer)
-                    .with_filter(LevelFilter::from_level(Level::from(config.log_level))),
+                    .with_filter(LevelFilter::from(config.log_level)),
             )
         };
 
@@ -95,7 +95,7 @@ where
         let metadata = event.metadata();
         write!(
             writer,
-            " - [{}] - RS Fetcher - ",
+            " - [{}] - RSFetcher - ",
             format!("{:>8}", metadata.level().to_string()).color(self.get_color(metadata.level()))
         )?;
         ctx.field_format().format_fields(writer.by_ref(), event)?;

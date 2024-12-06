@@ -63,9 +63,7 @@ def get_zmq_notifications_addresses():
 
 def start_blockchain_watcher(db):
     try:
-        follower_daemon = BlockchainWatcher(db)
-        follower_daemon.start()
-        return follower_daemon
+        return BlockchainWatcher(db)
     except exceptions.BitcoindZMQError as e:
         logger.error(e)
         logger.warning("Sleeping 5 seconds, catching up again, then retrying...")
@@ -255,13 +253,8 @@ class BlockchainWatcher:
         logger.debug("Stopping blockchain watcher...")
         # Cancel the handle task
         self.task.cancel()
-        try:
-            # Run the event loop until the task has been cancelled
-            self.loop.run_until_complete(self.task)
-        except asyncio.CancelledError:
-            logger.debug("BlockchainWatcher.handle() cancelled successfully.")
-        # Stop and close the event loop
         self.loop.stop()
         self.loop.close()
         # Clean up ZMQ context
         self.zmq_context.destroy()
+        logger.debug("Blockchain watcher stopped.")

@@ -63,7 +63,7 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_21_fairminter.SCENARIO
+# SCENARIOS = scenario_22_chaining.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -175,6 +175,9 @@ def control_result(
             .replace('"$BLOCK_INDEX"', str(block_index))
             .replace('"$TX_INDEX"', str(tx_index))
             .replace('"$TX_INDEX - 1"', str(tx_index - 1))
+            .replace('"$TX_INDEX - 2"', str(tx_index - 2))
+            .replace('"$TX_INDEX - 3"', str(tx_index - 3))
+            .replace('"$TX_INDEX - 4"', str(tx_index - 4))
             .replace('"$TX_INDEX + 1"', str(tx_index + 1))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
@@ -232,6 +235,7 @@ def run_item(node, item, context):
         node.disable_protocol_changes(item["disable_protocol_changes"])
 
     no_confirmation = item.get("no_confirmation", False)
+    dont_wait_mempool = item.get("dont_wait_mempool", False)
 
     if item["transaction"] == "mine_blocks":
         block_hash, block_time = node.mine_blocks(item["params"]["blocks"])
@@ -265,6 +269,7 @@ def run_item(node, item, context):
                     item["transaction"],
                     item["params"],
                     no_confirmation=no_confirmation,
+                    dont_wait_mempool=dont_wait_mempool,
                 )
             # test that the mempool is properly cleaned after each regtest transaction is confirmed
             if not no_confirmation:
@@ -372,6 +377,7 @@ def check_api_v1(node):
         },
     )
     # check that the hex transaction is generated
+    print(tx)
     int(tx["result"], 16)
 
 
