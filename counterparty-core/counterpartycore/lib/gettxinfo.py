@@ -156,76 +156,114 @@ def get_vin_info(vin):
     return vout["value"], vout["script_pub_key"], is_segwit
 
 
-def is_der_signature_and_not_sighash_all(value):
-    if isinstance(value, str):
-        value = binascii.unhexlify(value)
+def get_der_signature_sighash_flag(value):
     if not isinstance(value, bytes):
-        return False
-    if not (
-        value.startswith(binascii.unhexlify("3044"))
-        or value.startswith(binascii.unhexlify("3045"))
-        and (len(value) == 71 or len(value) == 72)
-    ):
-        return False
-    if not value.endswith(b"\x01"):  # 01 is SIGHASH_ALL
-        return True
-    return False
+        return None
+    if value.startswith(binascii.unhexlify("3043")) and len(value) == 70:
+        return value[-1:]
+    if value.startswith(binascii.unhexlify("3044")) and len(value) == 71:
+        return value[-1:]
+    if value.startswith(binascii.unhexlify("3045")) and len(value) == 72:
+        return value[-1:]
+    return None
 
 
-def is_schnorr_signature_and_not_sighash_all(value):
-    if isinstance(value, str):
-        value = binascii.unhexlify(value)
+def get_schnorr_signature_sighash_flag(value):
     if not isinstance(value, bytes):
-        return False
-    # sighash flag is optionnal for schnorr signature
+        return None
     if len(value) not in [64, 65]:
-        return False
-    # all flags except 0x01 or no flag are invalid
-    if len(value) == 65 and not value.endswith(b"\x01"):
-        return True
-    return False
+        return None
+    if len(value) == 65:
+        return value[-1:]
+    return b"\x01"  # SIGHASH_ALL by default
 
 
-# We use the following heuristic to check the SIGHASH flag:
-# - We look for all items that have the characteristics of a DER encoded signature
-# (starting with 3044 or 3045 and of length 70 or 71) in the witnesses and scripts of all inputs.
-# - If one of these items ends with something other than '01' (SIGHASH_ALL) the transaction is invalid
-# - If the witnesses contain an odd number of elements we assume that one of them
-# is a schnorr signature for a P2TR input: if one of the items is 65 in length and
-# ends with something other than '01' (SIGHASH_ALL) the transaction is invalid
+def collect_sighash_flagss(script_sig, witnesses):
+    flags = []
+
+    # P2PK, P2PKH, P2MS
+    if script_sig != b"":
+        asm = script.script_to_asm(script_sig)
+        for item in asm:
+            flag = get_der_signature_sighash_flag(item)
+            if flag is not None:
+                flags.append(flag)
+        return flags
+
+    witnesses = [
+        binascii.unhexlify(witness) if isinstance(witness, str) else witness
+        for witness in witnesses
+    ]
+
+    # P2WPKH
+    if len(witnesses) == 2:
+        flag = get_der_signature_sighash_flag(witnesses[0])
+        if flag is not None:
+            flags.append(flag)
+        return flags
+
+    # P2TR key path spend
+    if len(witnesses) == 1:
+        flag = get_schnorr_signature_sighash_flag(witnesses[0])
+        if flag is not None:
+            flags.append(flag)
+        return flags
+
+    # P2TR script path spend
+    if len(witnesses) >= 3:
+        for item in witnesses[:-2]:  # ignore script and control block
+            flag = get_schnorr_signature_sighash_flag(item)
+            if flag is not None:
+                flags.append(flag)
+        return flags
+
+    return flags
 
 
-def check_witnesses_sighash(decoded_tx):
-    if not decoded_tx["segwit"]:
+# class SighashFlagError(DecodeError):
+class SighashFlagError(Exception):
+    pass
+
+
+# known transactions with invalid SIGHASH flag
+SIGHASH_FLAG_TRANSACTION_WHITELIST = [
+    "c8091f1ef768a2f00d48e6d0f7a2c2d272a5d5c8063db78bf39977adcb12e103"
+]
+
+
+def check_signatures_sighash_flag(decoded_tx):
+    if decoded_tx["tx_hash"] in SIGHASH_FLAG_TRANSACTION_WHITELIST:
         return
 
-    for item in decoded_tx["vtxinwit"]:
-        if is_der_signature_and_not_sighash_all(item):
-            raise DecodeError("invalid SIGHASH flag")
-        # if there is an odd number of items, we assume than one of the item is a schnorr signature
-        # for a P2TR key path spend
-        if len(decoded_tx["vtxinwit"]) % 2 == 1 and is_schnorr_signature_and_not_sighash_all(item):
-            raise DecodeError("invalid SIGHASH flag")
+    script_sig = decoded_tx["vin"][0]["script_sig"]
+    witnesses = []
+    if decoded_tx["segwit"]:
+        witnesses = decoded_tx["vtxinwit"][0]
 
+    flags = collect_sighash_flagss(script_sig, witnesses)
 
-def check_script_sighash(asm):
-    for item in asm:
-        if is_der_signature_and_not_sighash_all(item):
-            raise DecodeError("invalid SIGHASH flag")
+    if len(flags) == 0:
+        raise SighashFlagError(
+            f"impossible to determine SIGHASH flag for transaction {decoded_tx['tx_hash']}"
+        )
+
+    # first input must be signed with SIGHASH_ALL or SIGHASH_ALL|SIGHASH_ANYONECANPAY
+    authorized_flags = [b"\x01", b"\x81"]
+    for flag in flags:
+        if flag not in authorized_flags:
+            raise SighashFlagError(f"invalid SIGHASH flag for transaction {decoded_tx['tx_hash']}")
 
 
 def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
 
-    for vin in decoded_tx["vin"][:]:  # Loop through inputs.
+    for vin in decoded_tx["vin"]:  # Loop through inputs.
         vout_value, script_pubkey, _is_segwit = get_vin_info(vin)
 
         outputs_value += vout_value
 
         asm = script.script_to_asm(script_pubkey)
-
-        check_script_sighash(asm)
 
         if asm[-1] == OP_CHECKSIG:  # noqa: F405
             new_source, new_data = decode_checksig(asm, decoded_tx)
@@ -452,9 +490,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         else:
             raise BTCOnlyError("no data and not unspendable")
 
-    # check for invalid SIGHASH flags in witness data
-    # each in input is also checked in get_transaction_sources()
-    check_witnesses_sighash(decoded_tx)
+    check_signatures_sighash_flag(decoded_tx)
 
     # Collect all (unique) source addresses.
     #   if we haven't found them yet

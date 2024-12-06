@@ -58,10 +58,15 @@ def read_transaction(vds, use_txid=True):
         offset_before_tx_witnesses = vds.read_cursor - start_pos
         for vin in transaction["vin"]:  # noqa: B007
             witnesses_count = vds.read_compact_size()
-            for i in range(witnesses_count):  # noqa: B007
-                witness_length = vds.read_compact_size()
-                witness = vds.read_bytes(witness_length)
-                transaction["vtxinwit"].append(witness)
+            if witnesses_count == 0:
+                transaction["vtxinwit"].append([])
+            else:
+                vin_witnesses = []
+                for i in range(witnesses_count):  # noqa: B007
+                    witness_length = vds.read_compact_size()
+                    witness = vds.read_bytes(witness_length)
+                    vin_witnesses.append(witness)
+                transaction["vtxinwit"].append(vin_witnesses)
 
     transaction["lock_time"] = vds.read_uint32()
     data = vds.input[start_pos : vds.read_cursor]
