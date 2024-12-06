@@ -231,9 +231,27 @@
                         "get_quantity": 800000,
                         "expiration": 2000,
                         "fee_required": 900000,
-                        "status": "open"
+                        "status": "open",
+                        "give_asset_info": {
+                            "asset_longname": null,
+                            "description": "The Counterparty protocol native currency",
+                            "issuer": null,
+                            "divisible": true,
+                            "locked": true
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": null,
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "1.00000000",
+                        "get_quantity_normalized": "0.00800000",
+                        "fee_required_normalized": "0.00900000"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             }
         ],
         "next_cursor": null,
@@ -553,9 +571,19 @@
                         "dispenser_status": 0,
                         "action_address": null,
                         "oracle_address": null,
-                        "status": "valid"
+                        "status": "valid",
+                        "asset_info": {
+                            "asset_longname": null,
+                            "description": "Test dispensers asset",
+                            "issuer": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+                            "divisible": false,
+                            "locked": false
+                        },
+                        "give_quantity_normalized": "100",
+                        "escrow_quantity_normalized": "100"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 510,
@@ -634,9 +662,11 @@
                         "call_date": 0,
                         "call_price": 0.0,
                         "description": "Test dispensers asset",
-                        "status": "valid"
+                        "status": "valid",
+                        "quantity_normalized": "1000"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 509,
@@ -689,7 +719,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00010000"
             },
             {
                 "tx_index": 508,
@@ -742,7 +773,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00010000"
             },
             {
                 "tx_index": 507,
@@ -841,7 +873,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 506,
@@ -929,7 +962,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 505,
@@ -1039,7 +1073,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 504,
@@ -1149,7 +1184,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 503,
@@ -1259,7 +1295,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 502,
@@ -1347,7 +1384,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             }
         ],
         "next_cursor": 501,
@@ -1441,9 +1479,11 @@
                     "call_date": 0,
                     "call_price": 0.0,
                     "description": "Divisible asset",
-                    "status": "valid"
+                    "status": "valid",
+                    "quantity_normalized": "1000.00000000"
                 }
-            }
+            },
+            "btc_amount_normalized": "0.00000000"
         }
     },
     "http://localhost:10009/v2/transactions/ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18?verbose=true": {
@@ -1544,7 +1584,8 @@
                 "message_data": {
                     "error": "Unknown message type"
                 }
-            }
+            },
+            "btc_amount_normalized": "0.00000000"
         }
     },
     "http://localhost:10009/v2/transactions/2/events?verbose=true": {
@@ -2579,7 +2620,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00010000"
             },
             {
                 "tx_index": 508,
@@ -2632,7 +2674,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00010000"
             },
             {
                 "tx_index": 507,
@@ -2731,7 +2774,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 506,
@@ -2819,7 +2863,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 505,
@@ -2929,7 +2974,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 504,
@@ -3039,7 +3085,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             }
         ],
         "next_cursor": 503,
@@ -5635,7 +5682,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00010000"
             },
             {
                 "tx_index": 508,
@@ -5688,7 +5736,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00010000"
             },
             {
                 "tx_index": 504,
@@ -5798,7 +5847,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 503,
@@ -5908,7 +5958,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 502,
@@ -5996,7 +6047,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 501,
@@ -6106,7 +6158,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 500,
@@ -6216,7 +6269,8 @@
                     "message_data": {
                         "error": "Unknown message type"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 499,
@@ -6297,7 +6351,8 @@
                         "description": null,
                         "status": "invalid: could not unpack"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 498,
@@ -6376,9 +6431,11 @@
                         "call_date": 0,
                         "call_price": 0.0,
                         "description": "Parent asset",
-                        "status": "valid"
+                        "status": "valid",
+                        "quantity_normalized": "1.00000000"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             },
             {
                 "tx_index": 492,
@@ -6455,9 +6512,27 @@
                         "get_quantity": 800000,
                         "expiration": 2000,
                         "fee_required": 900000,
-                        "status": "open"
+                        "status": "open",
+                        "give_asset_info": {
+                            "asset_longname": null,
+                            "description": "The Counterparty protocol native currency",
+                            "issuer": null,
+                            "divisible": true,
+                            "locked": true
+                        },
+                        "get_asset_info": {
+                            "divisible": true,
+                            "asset_longname": null,
+                            "description": "The Bitcoin cryptocurrency",
+                            "locked": false,
+                            "issuer": null
+                        },
+                        "give_quantity_normalized": "1.00000000",
+                        "get_quantity_normalized": "0.00800000",
+                        "fee_required_normalized": "0.00900000"
                     }
-                }
+                },
+                "btc_amount_normalized": "0.00000000"
             }
         ],
         "next_cursor": 482,
