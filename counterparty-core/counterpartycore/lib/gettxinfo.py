@@ -242,6 +242,10 @@ def check_signatures_sighash_flag(decoded_tx):
 
     flags = collect_sighash_flagss(script_sig, witnesses)
 
+    print("script_sig", script_sig)
+    print("witnesses", witnesses)
+    print("flags", flags)
+
     if len(flags) == 0:
         raise SighashFlagError(
             f"impossible to determine SIGHASH flag for transaction {decoded_tx['tx_hash']}"
@@ -490,11 +494,11 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         else:
             raise BTCOnlyError("no data and not unspendable")
 
-    check_signatures_sighash_flag(decoded_tx)
-
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
     if p2sh_encoding_source is None:
+        if not composing:
+            check_signatures_sighash_flag(decoded_tx)
         sources, outputs_value = get_transaction_sources(decoded_tx)
         if not fee_added:
             fee += outputs_value
@@ -625,7 +629,7 @@ def get_tx_info_legacy(decoded_tx, block_index):
     return source, destination, btc_amount, fee, data, []
 
 
-def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False):
+def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
@@ -636,12 +640,14 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False):
             decoded_tx,
             block_index,
             p2sh_is_segwit=p2sh_is_segwit,
+            composing=composing,
         )
     elif util.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(
             db,
             decoded_tx,
             block_index,
+            composing=composing,
         )
     else:
         return get_tx_info_legacy(decoded_tx, block_index)
@@ -705,7 +711,7 @@ def get_utxos_info(db, decoded_tx):
     ]
 
 
-def get_tx_info(db, decoded_tx, block_index):
+def get_tx_info(db, decoded_tx, block_index, composing=False):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     if util.enabled("utxo_support", block_index=block_index):
         # utxos_info is a space-separated list of UTXOs, last element is the destination,
@@ -719,7 +725,7 @@ def get_tx_info(db, decoded_tx, block_index):
         utxos_info = []
     try:
         source, destination, btc_amount, fee, data, dispensers_outs = _get_tx_info(
-            db, decoded_tx, block_index
+            db, decoded_tx, block_index, composing=composing
         )
         return source, destination, btc_amount, fee, data, dispensers_outs, utxos_info
     except DecodeError as e:  # noqa: F841

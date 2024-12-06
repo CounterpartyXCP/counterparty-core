@@ -535,6 +535,7 @@ def test_p2sh_encoding_manual_multisig_transaction(server_db):
                 server_db,
                 deserialize.deserialize_tx(datatxhex, True),
                 util.CURRENT_BLOCK_INDEX,
+                composing=True,
             )
         )
         assert parsed_source == source

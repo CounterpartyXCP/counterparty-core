@@ -206,7 +206,7 @@ def insert_raw_transaction(raw_transaction, db):
     try:
         deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-            db, deserialized_tx, block_index
+            db, deserialized_tx, block_index, composing=True
         )
         utxos_info = gettxinfo.get_utxos_info(db, deserialized_tx)
         bindings = {
@@ -256,7 +256,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
 
     deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-        db, deserialized_tx, util.CURRENT_BLOCK_INDEX
+        db, deserialized_tx, util.CURRENT_BLOCK_INDEX, composing=True
     )
     utxos_info = gettxinfo.get_utxos_info(db, deserialized_tx)
     tx = {

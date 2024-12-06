@@ -13,6 +13,7 @@ GETTXINFO_VECTOR = {
                         use_txid=True,
                     ),
                     DP["default_block_index"],
+                    True,
                 ),
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -37,6 +38,7 @@ GETTXINFO_VECTOR = {
                         use_txid=True,
                     ),
                     DP["default_block_index"],
+                    True,
                 ),
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -61,6 +63,7 @@ GETTXINFO_VECTOR = {
                         use_txid=True,
                     ),
                     DP["default_block_index"],
+                    True,
                 ),
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -87,6 +90,7 @@ GETTXINFO_VECTOR = {
                         use_txid=True,
                     ),
                     DP["default_block_index"],
+                    True,
                 ),
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns-mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
@@ -111,6 +115,7 @@ GETTXINFO_VECTOR = {
                         use_txid=True,
                     ),
                     DP["default_block_index"],
+                    True,
                 ),
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -167,6 +172,8 @@ GETTXINFO_VECTOR = {
                         use_txid=True,
                     ),
                     DP["default_block_index"],
+                    False,
+                    True,
                 ),
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -185,6 +192,8 @@ GETTXINFO_VECTOR = {
                         use_txid=True,
                     ),
                     DP["default_block_index"],
+                    False,
+                    True,
                 ),
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -203,6 +212,8 @@ GETTXINFO_VECTOR = {
                         use_txid=True,
                     ),
                     DP["default_block_index"],
+                    False,
+                    True,
                 ),
                 "out": (
                     "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
