@@ -159,6 +159,8 @@ def get_vin_info(vin):
 def get_der_signature_sighash_flag(value):
     if not isinstance(value, bytes):
         return None
+    if value.startswith(binascii.unhexlify("3042")) and len(value) == 69:
+        return value[-1:]
     if value.startswith(binascii.unhexlify("3043")) and len(value) == 70:
         return value[-1:]
     if value.startswith(binascii.unhexlify("3044")) and len(value) == 71:
