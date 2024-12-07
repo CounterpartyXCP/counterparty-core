@@ -236,7 +236,7 @@ SIGHASH_FLAG_TRANSACTION_WHITELIST = [
 
 
 def check_signatures_sighash_flag(decoded_tx):
-    if decoded_tx["tx_hash"] in SIGHASH_FLAG_TRANSACTION_WHITELIST:
+    if decoded_tx["tx_id"] in SIGHASH_FLAG_TRANSACTION_WHITELIST:
         return
 
     script_sig = decoded_tx["vin"][0]["script_sig"]
@@ -247,7 +247,7 @@ def check_signatures_sighash_flag(decoded_tx):
     flags = collect_sighash_flags(script_sig, witnesses)
 
     if len(flags) == 0:
-        error = f"impossible to determine SIGHASH flag for transaction {decoded_tx['tx_hash']}"
+        error = f"impossible to determine SIGHASH flag for transaction {decoded_tx['tx_id']}"
         logger.debug(error)
         raise SighashFlagError(error)
 
@@ -255,7 +255,7 @@ def check_signatures_sighash_flag(decoded_tx):
     authorized_flags = [b"\x01", b"\x81"]
     for flag in flags:
         if flag not in authorized_flags:
-            error = f"invalid SIGHASH flag for transaction {decoded_tx['tx_hash']}"
+            error = f"invalid SIGHASH flag for transaction {decoded_tx['tx_id']}"
             logger.debug(error)
             raise SighashFlagError(error)
 

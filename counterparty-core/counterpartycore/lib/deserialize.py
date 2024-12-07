@@ -72,6 +72,7 @@ def read_transaction(vds, use_txid=True):
     data = vds.input[start_pos : vds.read_cursor]
 
     transaction["tx_hash"] = ib2h(double_hash(data))
+    transaction["tx_id"] = transaction["tx_hash"]
     if transaction["segwit"]:
         hash_data = data[:4] + data[6:offset_before_tx_witnesses] + data[-4:]
         transaction["tx_id"] = ib2h(double_hash(hash_data))
