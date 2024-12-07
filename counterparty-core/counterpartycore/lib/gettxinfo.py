@@ -215,9 +215,9 @@ def collect_sighash_flags(script_sig, witnesses):
             flags.append(flag)
         return flags
 
-    # P2TR script path spend
+    # Other cases
     if len(witnesses) >= 3:
-        for item in witnesses[:-2]:  # ignore script and control block
+        for item in witnesses:
             flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
             if flag is not None:
                 flags.append(flag)
