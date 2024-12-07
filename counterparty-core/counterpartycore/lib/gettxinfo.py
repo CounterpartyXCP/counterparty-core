@@ -159,16 +159,16 @@ def get_vin_info(vin):
 def get_der_signature_sighash_flag(value):
     if not isinstance(value, bytes):
         return None
-    if value.startswith(binascii.unhexlify("3042")) and len(value) == 69:
-        return value[-1:]
-    if value.startswith(binascii.unhexlify("3043")) and len(value) == 70:
-        return value[-1:]
-    if value.startswith(binascii.unhexlify("3044")) and len(value) == 71:
-        return value[-1:]
-    if value.startswith(binascii.unhexlify("3045")) and len(value) == 72:
-        return value[-1:]
-    if value.startswith(binascii.unhexlify("3046")) and len(value) == 73:
-        return value[-1:]
+    lenght_by_prefix = {
+        "3042": 69,
+        "3043": 70,
+        "3044": 71,
+        "3045": 72,
+        "3046": 73,
+    }
+    for prefix, length in lenght_by_prefix.items():
+        if value.startswith(binascii.unhexlify(prefix)) and len(value) == length:
+            return value[-1:]
     return None
 
 
