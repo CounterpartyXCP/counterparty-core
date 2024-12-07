@@ -182,7 +182,7 @@ def get_schnorr_signature_sighash_flag(value):
     return b"\x01"  # SIGHASH_ALL by default
 
 
-def collect_sighash_flagss(script_sig, witnesses):
+def collect_sighash_flags(script_sig, witnesses):
     flags = []
 
     # P2PK, P2PKH, P2MS
@@ -244,7 +244,7 @@ def check_signatures_sighash_flag(decoded_tx):
     if decoded_tx["segwit"]:
         witnesses = decoded_tx["vtxinwit"][0]
 
-    flags = collect_sighash_flagss(script_sig, witnesses)
+    flags = collect_sighash_flags(script_sig, witnesses)
 
     if len(flags) == 0:
         error = f"impossible to determine SIGHASH flag for transaction {decoded_tx['tx_hash']}"

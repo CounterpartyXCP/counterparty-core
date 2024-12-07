@@ -812,8 +812,15 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                 ]
             )
         )
-        or method == "get_tx_info_legacy"
-        or method == "select_utxo_destination"
+        or method
+        in [
+            "get_tx_info_legacy",
+            "select_utxo_destination",
+            "collect_sighash_flags",
+            "get_der_signature_sighash_flag",
+            "get_schnorr_signature_sighash_flag",
+            "check_signatures_sighash_flag",
+        ]
         or tx_name
         in [
             "script",

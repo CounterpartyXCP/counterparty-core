@@ -1,4 +1,7 @@
+import binascii
+
 from counterpartycore.lib import deserialize, exceptions
+from counterpartycore.lib.gettxinfo import SighashFlagError
 
 from ..params import DEFAULT_PARAMS as DP
 
@@ -363,6 +366,389 @@ GETTXINFO_VECTOR = {
                     ],
                 ),
                 "out": 0,
+            },
+        ],
+        "get_der_signature_sighash_flag": [
+            {
+                "comment": "69 length",
+                "in": (
+                    binascii.unhexlify(
+                        "30420229a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                    ),
+                ),
+                "out": b"\x01",
+            },
+            {
+                "comment": "70 length",
+                "in": (
+                    binascii.unhexlify(
+                        "304302c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                    ),
+                ),
+                "out": b"\x01",
+            },
+            {
+                "comment": "71 length",
+                "in": (
+                    binascii.unhexlify(
+                        "30442100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                    ),
+                ),
+                "out": b"\x01",
+            },
+            {
+                "comment": "72 length",
+                "in": (
+                    binascii.unhexlify(
+                        "3045022100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                    ),
+                ),
+                "out": b"\x01",
+            },
+            {
+                "comment": "73 length",
+                "in": (
+                    binascii.unhexlify(
+                        "304600022100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                    ),
+                ),
+                "out": b"\x01",
+            },
+            {
+                "comment": "invalid length",
+                "in": (
+                    binascii.unhexlify(
+                        "304600022100c219a522e65ca8500ebe05a70d5840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                    ),
+                ),
+                "out": None,
+            },
+        ],
+        "get_schnorr_signature_sighash_flag": [
+            {
+                "in": (
+                    binascii.unhexlify(
+                        "b693a0797b24bae12ed0516a2f5ba765618dca89b75e498ba5b745b71644362298a45ca39230d10a02ee6290a91cebf9839600f7e35158a447ea182ea0e022ae"
+                    ),
+                ),
+                "out": b"\x01",
+            },
+            {
+                "in": (
+                    binascii.unhexlify(
+                        "b693a0797b24bae12ed0516a2f5ba765618dca89b75e498ba5b745b71644362298a45ca39230d10a02ee6290a91cebf9839600f7e35158a447ea182ea0e022ae01"
+                    ),
+                ),
+                "out": b"\x01",
+            },
+            {
+                "in": (
+                    binascii.unhexlify(
+                        "b693a0797b24bae12ed0516a2f5ba765618dca89b75e498ba5b745b71644362298a45ca39230d10a02ee6290a91cebf9839600f7e35158a447ea182ea0e022ae83"
+                    ),
+                ),
+                "out": b"\x83",
+            },
+        ],
+        "collect_sighash_flags": [
+            {
+                "comment": "P2PK",
+                "in": (
+                    binascii.unhexlify(
+                        "483045022100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                    ),
+                    [],
+                ),
+                "out": [b"\x01"],
+            },
+            {
+                "comment": "P2PKH",
+                "in": (
+                    binascii.unhexlify(
+                        "483045022100c233c3a8a510e03ad18b0a24694ef00c78101bfd5ac075b8c1037952ce26e91e02205aa5f8f88f29bb4ad5808ebc12abfd26bd791256f367b04c6d955f01f28a7724012103f0609c81a45f8cab67fc2d050c21b1acd3d37c7acfd54041be6601ab4cef4f31"
+                    ),
+                    [],
+                ),
+                "out": [b"\x01"],
+            },
+            {
+                "comment": "P2MS",
+                "in": (
+                    binascii.unhexlify(
+                        "00483045022100af204ef91b8dba5884df50f87219ccef22014c21dd05aa44470d4ed800b7f6e40220428fe058684db1bb2bfb6061bff67048592c574effc217f0d150daedcf36787601483045022100e8547aa2c2a2761a5a28806d3ae0d1bbf0aeff782f9081dfea67b86cacb321340220771a166929469c34959daf726a2ac0c253f9aff391e58a3c7cb46d8b7e0fdc4801"
+                    ),
+                    [],
+                ),
+                "out": [b"\x01", b"\x01"],
+            },
+            {
+                "comment": "P2WPKH",
+                "in": (
+                    b"",
+                    [
+                        "3045022100c7fb3bd38bdceb315a28a0793d85f31e4e1d9983122b4a5de741d6ddca5caf8202207b2821abd7a1a2157a9d5e69d2fdba3502b0a96be809c34981f8445555bdafdb01",
+                        "03f465315805ed271eb972e43d84d2a9e19494d10151d9f6adb32b8534bfd764ab",
+                    ],
+                ),
+                "out": [b"\x01"],
+            },
+            {
+                "comment": "P2TR key path spend",
+                "in": (
+                    b"",
+                    [
+                        "b693a0797b24bae12ed0516a2f5ba765618dca89b75e498ba5b745b71644362298a45ca39230d10a02ee6290a91cebf9839600f7e35158a447ea182ea0e022ae01"
+                    ],
+                ),
+                "out": [b"\x01"],
+            },
+            {
+                "comment": "P2TR script path spend",
+                "in": (
+                    b"",
+                    [
+                        "b693a0797b24bae12ed0516a2f5ba765618dca89b75e498ba5b745b71644362298a45ca39230d10a02ee6290a91cebf9839600f7e35158a447ea182ea0e022ae",
+                        "5387",
+                        "c1a2fc329a085d8cfc4fa28795993d7b666cee024e94c40115141b8e9be4a29fa41324300a84045033ec539f60c70d582c48b9acf04150da091694d83171b44ec9bf2c4bf1ca72f7b8538e9df9bdfd3ba4c305ad11587f12bbfafa00d58ad6051d54962df196af2827a86f4bde3cf7d7c1a9dcb6e17f660badefbc892309bb145f",
+                    ],
+                ),
+                "out": [b"\x01"],
+            },
+        ],
+        "check_signatures_sighash_flag": [
+            {
+                "in": (
+                    {"tx_hash": "c8091f1ef768a2f00d48e6d0f7a2c2d272a5d5c8063db78bf39977adcb12e103"},
+                ),
+                "out": None,
+            },
+            {
+                "comment": "P2PK",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": False,
+                        "vin": [
+                            {
+                                "script_sig": binascii.unhexlify(
+                                    "483045022100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                                ),
+                            }
+                        ],
+                    },
+                ),
+                "out": None,
+            },
+            {
+                "comment": "P2PK",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": False,
+                        "vin": [
+                            {
+                                "script_sig": binascii.unhexlify(
+                                    "483045022100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c83"
+                                ),
+                            }
+                        ],
+                    },
+                ),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+            },
+            {
+                "comment": "P2PKH",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": False,
+                        "vin": [
+                            {
+                                "script_sig": binascii.unhexlify(
+                                    "483045022100c233c3a8a510e03ad18b0a24694ef00c78101bfd5ac075b8c1037952ce26e91e02205aa5f8f88f29bb4ad5808ebc12abfd26bd791256f367b04c6d955f01f28a7724012103f0609c81a45f8cab67fc2d050c21b1acd3d37c7acfd54041be6601ab4cef4f31"
+                                ),
+                            }
+                        ],
+                    },
+                ),
+                "out": None,
+            },
+            {
+                "comment": "P2PKH",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": False,
+                        "vin": [
+                            {
+                                "script_sig": binascii.unhexlify(
+                                    "483045022100c233c3a8a510e03ad18b0a24694ef00c78101bfd5ac075b8c1037952ce26e91e02205aa5f8f88f29bb4ad5808ebc12abfd26bd791256f367b04c6d955f01f28a7724832103f0609c81a45f8cab67fc2d050c21b1acd3d37c7acfd54041be6601ab4cef4f31"
+                                ),
+                            }
+                        ],
+                    },
+                ),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+            },
+            {
+                "comment": "P2MS",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": False,
+                        "vin": [
+                            {
+                                "script_sig": binascii.unhexlify(
+                                    "00483045022100af204ef91b8dba5884df50f87219ccef22014c21dd05aa44470d4ed800b7f6e40220428fe058684db1bb2bfb6061bff67048592c574effc217f0d150daedcf36787601483045022100e8547aa2c2a2761a5a28806d3ae0d1bbf0aeff782f9081dfea67b86cacb321340220771a166929469c34959daf726a2ac0c253f9aff391e58a3c7cb46d8b7e0fdc4801"
+                                ),
+                            }
+                        ],
+                    },
+                ),
+                "out": None,
+            },
+            {
+                "comment": "P2MS",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": False,
+                        "vin": [
+                            {
+                                "script_sig": binascii.unhexlify(
+                                    "00483045022100af204ef91b8dba5884df50f87219ccef22014c21dd05aa44470d4ed800b7f6e40220428fe058684db1bb2bfb6061bff67048592c574effc217f0d150daedcf36787601483045022100e8547aa2c2a2761a5a28806d3ae0d1bbf0aeff782f9081dfea67b86cacb321340220771a166929469c34959daf726a2ac0c253f9aff391e58a3c7cb46d8b7e0fdc4883"
+                                ),
+                            }
+                        ],
+                    },
+                ),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+            },
+            {
+                "comment": "P2WPKH",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": True,
+                        "vin": [
+                            {
+                                "script_sig": b"",
+                            }
+                        ],
+                        "vtxinwit": [
+                            [
+                                "3045022100c7fb3bd38bdceb315a28a0793d85f31e4e1d9983122b4a5de741d6ddca5caf8202207b2821abd7a1a2157a9d5e69d2fdba3502b0a96be809c34981f8445555bdafdb01",
+                                "03f465315805ed271eb972e43d84d2a9e19494d10151d9f6adb32b8534bfd764ab",
+                            ]
+                        ],
+                    },
+                ),
+                "out": None,
+            },
+            {
+                "comment": "P2WPKH",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": True,
+                        "vin": [
+                            {
+                                "script_sig": b"",
+                            }
+                        ],
+                        "vtxinwit": [
+                            [
+                                "3045022100c7fb3bd38bdceb315a28a0793d85f31e4e1d9983122b4a5de741d6ddca5caf8202207b2821abd7a1a2157a9d5e69d2fdba3502b0a96be809c34981f8445555bdafdb83",
+                                "03f465315805ed271eb972e43d84d2a9e19494d10151d9f6adb32b8534bfd764ab",
+                            ]
+                        ],
+                    },
+                ),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+            },
+            {
+                "comment": "P2TR key path spend",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": True,
+                        "vin": [
+                            {
+                                "script_sig": b"",
+                            }
+                        ],
+                        "vtxinwit": [
+                            [
+                                "b693a0797b24bae12ed0516a2f5ba765618dca89b75e498ba5b745b71644362298a45ca39230d10a02ee6290a91cebf9839600f7e35158a447ea182ea0e022ae01"
+                            ]
+                        ],
+                    },
+                ),
+                "out": None,
+            },
+            {
+                "comment": "P2TR key path spend",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": True,
+                        "vin": [
+                            {
+                                "script_sig": b"",
+                            }
+                        ],
+                        "vtxinwit": [
+                            [
+                                "b693a0797b24bae12ed0516a2f5ba765618dca89b75e498ba5b745b71644362298a45ca39230d10a02ee6290a91cebf9839600f7e35158a447ea182ea0e022ae83"
+                            ]
+                        ],
+                    },
+                ),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+            },
+            {
+                "comment": "P2TR script path spend",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": True,
+                        "vin": [
+                            {
+                                "script_sig": b"",
+                            }
+                        ],
+                        "vtxinwit": [
+                            [
+                                "b693a0797b24bae12ed0516a2f5ba765618dca89b75e498ba5b745b71644362298a45ca39230d10a02ee6290a91cebf9839600f7e35158a447ea182ea0e022ae",
+                                "5387",
+                                "c1a2fc329a085d8cfc4fa28795993d7b666cee024e94c40115141b8e9be4a29fa41324300a84045033ec539f60c70d582c48b9acf04150da091694d83171b44ec9bf2c4bf1ca72f7b8538e9df9bdfd3ba4c305ad11587f12bbfafa00d58ad6051d54962df196af2827a86f4bde3cf7d7c1a9dcb6e17f660badefbc892309bb145f",
+                            ]
+                        ],
+                    },
+                ),
+                "out": None,
+            },
+            {
+                "comment": "P2TR script path spend",
+                "in": (
+                    {
+                        "tx_hash": "tx_hash",
+                        "segwit": True,
+                        "vin": [
+                            {
+                                "script_sig": b"",
+                            }
+                        ],
+                        "vtxinwit": [
+                            [
+                                "b693a0797b24bae12ed0516a2f5ba765618dca89b75e498ba5b745b71644362298a45ca39230d10a02ee6290a91cebf9839600f7e35158a447ea182ea0e022ae83",
+                                "5387",
+                                "c1a2fc329a085d8cfc4fa28795993d7b666cee024e94c40115141b8e9be4a29fa41324300a84045033ec539f60c70d582c48b9acf04150da091694d83171b44ec9bf2c4bf1ca72f7b8538e9df9bdfd3ba4c305ad11587f12bbfafa00d58ad6051d54962df196af2827a86f4bde3cf7d7c1a9dcb6e17f660badefbc892309bb145f",
+                            ]
+                        ],
+                    },
+                ),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
             },
         ],
     },
