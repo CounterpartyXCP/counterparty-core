@@ -513,7 +513,7 @@ def run_api_server(args, server_ready_value, stop_event):
         wsgi_server = wsgi.WSGIApplication(app, args=args)
 
         logger.info("Starting Parent Process Checker thread...")
-        parent_checker = ParentProcessChecker(wsgi_server)
+        parent_checker = ParentProcessChecker(wsgi_server, stop_event)
         parent_checker.start()
 
         app.app_context().push()
@@ -539,11 +539,6 @@ def run_api_server(args, server_ready_value, stop_event):
             watcher.stop()
             watcher.join()
 
-        if parent_checker is not None:
-            logger.trace("Stopping Parent Process Checker thread...")
-            parent_checker.stop()
-            parent_checker.join()
-
         logger.info("API Server stopped.")
 
 
@@ -551,34 +546,28 @@ def run_api_server(args, server_ready_value, stop_event):
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
 class ParentProcessChecker(threading.Thread):
-    def __init__(self, wsgi_server):
+    def __init__(self, wsgi_server, stop_event):
         super().__init__(name="ParentProcessChecker")
         self.daemon = True
         self.wsgi_server = wsgi_server
-        self.stop_event = threading.Event()
+        self.stop_event = stop_event
 
     def run(self):
-        parent_pid = os.getppid()
         try:
             while not self.stop_event.is_set():
-                if os.getppid() != parent_pid:
-                    logger.debug("Parent process is dead. Exiting...")
-                    if self.wsgi_server is not None:
-                        self.wsgi_server.stop()
-                    break
                 time.sleep(1)
+            logger.debug("Parent process stopped. Exiting...")
+            if self.wsgi_server is not None:
+                self.wsgi_server.stop()
         except KeyboardInterrupt:
             pass
 
-    def stop(self):
-        self.stop_event.set()
-
 
 class APIServer(object):
-    def __init__(self):
+    def __init__(self, stop_event):
         self.process = None
         self.server_ready_value = Value("I", 0)
-        self.stop_event = multiprocessing.Event()
+        self.stop_event = stop_event
 
     def start(self, args):
         if self.process is not None:
