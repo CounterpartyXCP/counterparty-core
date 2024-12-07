@@ -165,6 +165,8 @@ def get_der_signature_sighash_flag(value):
         return value[-1:]
     if value.startswith(binascii.unhexlify("3045")) and len(value) == 72:
         return value[-1:]
+    if value.startswith(binascii.unhexlify("3046")) and len(value) == 73:
+        return value[-1:]
     return None
 
 
@@ -242,20 +244,18 @@ def check_signatures_sighash_flag(decoded_tx):
 
     flags = collect_sighash_flagss(script_sig, witnesses)
 
-    print("script_sig", script_sig)
-    print("witnesses", witnesses)
-    print("flags", flags)
-
     if len(flags) == 0:
-        raise SighashFlagError(
-            f"impossible to determine SIGHASH flag for transaction {decoded_tx['tx_hash']}"
-        )
+        error = f"impossible to determine SIGHASH flag for transaction {decoded_tx['tx_hash']}"
+        logger.debug(error)
+        raise SighashFlagError(error)
 
     # first input must be signed with SIGHASH_ALL or SIGHASH_ALL|SIGHASH_ANYONECANPAY
     authorized_flags = [b"\x01", b"\x81"]
     for flag in flags:
         if flag not in authorized_flags:
-            raise SighashFlagError(f"invalid SIGHASH flag for transaction {decoded_tx['tx_hash']}")
+            error = f"invalid SIGHASH flag for transaction {decoded_tx['tx_hash']}"
+            logger.debug(error)
+            raise SighashFlagError(error)
 
 
 def get_transaction_sources(decoded_tx):
