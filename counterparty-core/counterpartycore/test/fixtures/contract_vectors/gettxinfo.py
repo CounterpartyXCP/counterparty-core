@@ -518,7 +518,7 @@ GETTXINFO_VECTOR = {
         "check_signatures_sighash_flag": [
             {
                 "in": (
-                    {"tx_hash": "c8091f1ef768a2f00d48e6d0f7a2c2d272a5d5c8063db78bf39977adcb12e103"},
+                    {"tx_id": "c8091f1ef768a2f00d48e6d0f7a2c2d272a5d5c8063db78bf39977adcb12e103"},
                 ),
                 "out": None,
             },
@@ -526,7 +526,7 @@ GETTXINFO_VECTOR = {
                 "comment": "P2PK",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": False,
                         "vin": [
                             {
@@ -543,7 +543,7 @@ GETTXINFO_VECTOR = {
                 "comment": "P2PK",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": False,
                         "vin": [
                             {
@@ -554,13 +554,13 @@ GETTXINFO_VECTOR = {
                         ],
                     },
                 ),
-                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_id"),
             },
             {
                 "comment": "P2PKH",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": False,
                         "vin": [
                             {
@@ -577,7 +577,7 @@ GETTXINFO_VECTOR = {
                 "comment": "P2PKH",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": False,
                         "vin": [
                             {
@@ -588,13 +588,13 @@ GETTXINFO_VECTOR = {
                         ],
                     },
                 ),
-                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_id"),
             },
             {
                 "comment": "P2MS",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": False,
                         "vin": [
                             {
@@ -611,7 +611,7 @@ GETTXINFO_VECTOR = {
                 "comment": "P2MS",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": False,
                         "vin": [
                             {
@@ -622,13 +622,13 @@ GETTXINFO_VECTOR = {
                         ],
                     },
                 ),
-                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_id"),
             },
             {
                 "comment": "P2WPKH",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": True,
                         "vin": [
                             {
@@ -649,28 +649,35 @@ GETTXINFO_VECTOR = {
                 "comment": "P2WPKH",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",  # c8091f1ef768a2f00d48e6d0f7a2c2d272a5d5c8063db78bf39977adcb12e103
                         "segwit": True,
                         "vin": [
                             {
                                 "script_sig": b"",
-                            }
+                            },
+                            {
+                                "script_sig": b"",
+                            },
                         ],
                         "vtxinwit": [
                             [
-                                "3045022100c7fb3bd38bdceb315a28a0793d85f31e4e1d9983122b4a5de741d6ddca5caf8202207b2821abd7a1a2157a9d5e69d2fdba3502b0a96be809c34981f8445555bdafdb83",
-                                "03f465315805ed271eb972e43d84d2a9e19494d10151d9f6adb32b8534bfd764ab",
-                            ]
+                                "304502210095dfc652a9c03911b7c4a0bc7de574ee4764cd1de78ab6599c196c69c741efbe022078ba83e9756e7d0751cb97402f031886bb34e00c70758710b4507db17649795983",
+                                "03fef14a1660447a52f507af16a81b6e05ca8e579e0b74b11b44c6d9db6109a415",
+                            ],
+                            [
+                                "3044022031150e6703f6fb7e924446b021211a1d216724693d78634c5a47a43c4edf8e1102203652e2879e9bd62dc1e5994045d81fdb4adacaec4b6c366cb18be74fc020d99601",
+                                "031e9c58fa7828643a91fa06cc0146d97fe75b982218bf38745d6579309cfba5fe",
+                            ],
                         ],
                     },
                 ),
-                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_id"),
             },
             {
                 "comment": "P2TR key path spend",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": True,
                         "vin": [
                             {
@@ -690,7 +697,7 @@ GETTXINFO_VECTOR = {
                 "comment": "P2TR key path spend",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": True,
                         "vin": [
                             {
@@ -704,13 +711,13 @@ GETTXINFO_VECTOR = {
                         ],
                     },
                 ),
-                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_id"),
             },
             {
                 "comment": "P2TR script path spend",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": True,
                         "vin": [
                             {
@@ -732,7 +739,7 @@ GETTXINFO_VECTOR = {
                 "comment": "P2TR script path spend",
                 "in": (
                     {
-                        "tx_hash": "tx_hash",
+                        "tx_id": "tx_id",
                         "segwit": True,
                         "vin": [
                             {
@@ -748,7 +755,56 @@ GETTXINFO_VECTOR = {
                         ],
                     },
                 ),
-                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_hash"),
+                "error": (SighashFlagError, "invalid SIGHASH flag for transaction tx_id"),
+            },
+            {
+                "comment": "P2SH segwit",
+                "in": (
+                    {
+                        "tx_id": "fa7e8c4a582b4284bd4726de620cd87dfef6b634ee3ebb043ed0dc08901eee83",
+                        "segwit": True,
+                        "vin": [
+                            {
+                                "script_sig": binascii.unhexlify(
+                                    "16001415a13032cb59a7b51dd761223e189a48a7f67338"
+                                ),
+                            }
+                        ],
+                        "vtxinwit": [
+                            [
+                                "3045022100ceeccea697ed5fc7583387ba298ba1a84b6cdc24eeb97cf4021e967d795b27ca022070b398697abb41eb402994984c122fc6b4edccaeed819188be5c5ef40b8c685a01",
+                                "039db968bfd35439d215dd26196266e8859a1fae89c462b587416779f0b8854e48",
+                            ]
+                        ],
+                    },
+                ),
+                "out": None,
+            },
+            {
+                "comment": "P2SH segwit",
+                "in": (
+                    {
+                        "tx_id": "fa7e8c4a582b4284bd4726de620cd87dfef6b634ee3ebb043ed0dc08901eee83",
+                        "segwit": True,
+                        "vin": [
+                            {
+                                "script_sig": binascii.unhexlify(
+                                    "16001415a13032cb59a7b51dd761223e189a48a7f67338"
+                                ),
+                            }
+                        ],
+                        "vtxinwit": [
+                            [
+                                "3045022100ceeccea697ed5fc7583387ba298ba1a84b6cdc24eeb97cf4021e967d795b27ca022070b398697abb41eb402994984c122fc6b4edccaeed819188be5c5ef40b8c685a83",
+                                "039db968bfd35439d215dd26196266e8859a1fae89c462b587416779f0b8854e48",
+                            ]
+                        ],
+                    },
+                ),
+                "error": (
+                    SighashFlagError,
+                    "invalid SIGHASH flag for transaction fa7e8c4a582b4284bd4726de620cd87dfef6b634ee3ebb043ed0dc08901eee83",
+                ),
             },
         ],
     },
