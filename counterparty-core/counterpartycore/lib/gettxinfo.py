@@ -192,6 +192,8 @@ def collect_sighash_flags(script_sig, witnesses):
             flag = get_der_signature_sighash_flag(item)
             if flag is not None:
                 flags.append(flag)
+
+    if len(witnesses) == 0:
         return flags
 
     witnesses = [
