@@ -107,9 +107,8 @@ def extract_bitcoincore_config():
                 "rpcssl": "backend-ssl",
             }
 
-            for bitcoind_key in config_keys:
+            for bitcoind_key, counterparty_key in config_keys.items():
                 if bitcoind_key in conf:
-                    counterparty_key = config_keys[bitcoind_key]
                     bitcoincore_config[counterparty_key] = conf[bitcoind_key]
 
     return bitcoincore_config
@@ -144,9 +143,8 @@ def server_to_client_config(server_config):
         "rpc-password": "counterparty-rpc-password",
     }
 
-    for server_key in config_keys:
+    for server_key, client_key in config_keys.items():
         if server_key in server_config:
-            client_key = config_keys[server_key]
             client_config[client_key] = server_config[server_key]
 
     return client_config
