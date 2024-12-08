@@ -37,6 +37,7 @@
 - Add `transaction_type` field in `transactions` table
 - Clean `block.parse_tx()`; One `TRANSACTION_PARSED` event for each `NEW_TRANSACTION` event
 - API Watcher checks reorg if no event to parse and not on each block
+- Use `multiprocessing.Event` to stop API process when the Ledger process dies
 
 ## API
 

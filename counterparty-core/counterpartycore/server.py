@@ -4,6 +4,7 @@ import _thread
 import binascii
 import decimal
 import logging
+import multiprocessing
 import os
 import sys
 import tarfile
@@ -739,6 +740,7 @@ def start_all(args):
     follower_daemon = None
     asset_conservation_checker = None
     db = None
+    api_stop_event = None
 
     # Log all config parameters, sorted by key
     # Filter out default values #TODO: these should be set in a different way
@@ -766,7 +768,8 @@ def start_all(args):
         check.software_version()
 
         # API Server v2
-        api_server_v2 = api_v2.APIServer()
+        api_stop_event = multiprocessing.Event()
+        api_server_v2 = api_v2.APIServer(api_stop_event)
         api_server_v2.start(args)
         while not api_server_v2.is_ready() and not api_server_v2.has_stopped():
             logger.trace("Waiting for API server to start...")
@@ -812,6 +815,8 @@ def start_all(args):
         logger.error("Exception caught!", exc_info=e)
     finally:
         # Ensure all threads are stopped
+        if api_stop_event:
+            api_stop_event.set()
         if api_status_poller:
             api_status_poller.stop()
         if api_server_v1:
