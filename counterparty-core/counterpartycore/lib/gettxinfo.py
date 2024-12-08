@@ -160,12 +160,12 @@ def get_der_signature_sighash_flag(value):
     if not isinstance(value, bytes):
         return None
     lenght_by_prefix = {
-        "3041": 68,
-        "3042": 69,
-        "3043": 70,
         "3044": 71,
         "3045": 72,
         "3046": 73,
+        "3041": 68,
+        "3042": 69,
+        "3043": 70,
     }
     for prefix, length in lenght_by_prefix.items():
         if value.startswith(binascii.unhexlify(prefix)) and len(value) == length:
