@@ -478,7 +478,7 @@ def check_database_version():
             database.update_version(state_db)
 
 
-def run_api_server(args, server_ready_value, stop_event):
+def run_api_server(args, server_ready_value, stop_event, parent_pid):
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(signum, frame):
@@ -513,7 +513,7 @@ def run_api_server(args, server_ready_value, stop_event):
         wsgi_server = wsgi.WSGIApplication(app, args=args)
 
         logger.info("Starting Parent Process Checker thread...")
-        parent_checker = ParentProcessChecker(wsgi_server, stop_event)
+        parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid)
         parent_checker.start()
 
         app.app_context().push()
@@ -542,19 +542,30 @@ def run_api_server(args, server_ready_value, stop_event):
         logger.info("API Server stopped.")
 
 
+def is_process_alive(pid):
+    """Check For the existence of a unix pid."""
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
+
+
 # This thread is used for the following two reasons:
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
 class ParentProcessChecker(threading.Thread):
-    def __init__(self, wsgi_server, stop_event):
+    def __init__(self, wsgi_server, stop_event, parent_pid):
         super().__init__(name="ParentProcessChecker")
         self.daemon = True
         self.wsgi_server = wsgi_server
         self.stop_event = stop_event
+        self.parent_pid = parent_pid
 
     def run(self):
         try:
-            while not self.stop_event.is_set():
+            while not self.stop_event.is_set() and is_process_alive(self.parent_pid):
                 time.sleep(1)
             logger.debug("Parent process stopped. Exiting...")
             if self.wsgi_server is not None:
@@ -573,7 +584,8 @@ class APIServer(object):
         if self.process is not None:
             raise Exception("API Server is already running")
         self.process = Process(
-            target=run_api_server, args=(vars(args), self.server_ready_value, self.stop_event)
+            target=run_api_server,
+            args=(vars(args), self.server_ready_value, self.stop_event, os.getpid()),
         )
         self.process.start()
         return self.process
