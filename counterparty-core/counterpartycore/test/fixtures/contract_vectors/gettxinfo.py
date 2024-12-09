@@ -370,19 +370,19 @@ GETTXINFO_VECTOR = {
         ],
         "get_der_signature_sighash_flag": [
             {
-                "comment": "69 length",
+                "comment": "68 length",
                 "in": (
                     binascii.unhexlify(
-                        "30420229a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                        "3041021d067f716293ffdaa144d5281185f5f9ca35f09e24f10af0ba7aa8e9ae8f0220555f644564e472d835d707200e03ae7c3728d5e2fee00eb7c351d025d8c6e16701"
                     ),
                 ),
                 "out": b"\x01",
             },
             {
-                "comment": "70 length",
+                "comment": "69 length",
                 "in": (
                     binascii.unhexlify(
-                        "304302c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                        "3042021e78565f3de8b3b526ee9c3a07b396f4e18e082f77175f4aa444b63f66c9ad02205813ea177ac1d9b2dbb43f63cd3a00d47a3a525f3030c5233b8240239f9c15e401"
                     ),
                 ),
                 "out": b"\x01",
@@ -391,7 +391,7 @@ GETTXINFO_VECTOR = {
                 "comment": "71 length",
                 "in": (
                     binascii.unhexlify(
-                        "30442100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                        "3044022063c96d6644f7d325bc7fed3362fd6cc81d81bf4a4af8df8d5f13147d6c74267a02201340b3b01b1f29d2d0e180abf5e3d14cc832b412cb27a5a68135f98493bb006e01"
                     ),
                 ),
                 "out": b"\x01",
@@ -409,7 +409,7 @@ GETTXINFO_VECTOR = {
                 "comment": "73 length",
                 "in": (
                     binascii.unhexlify(
-                        "304600022100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c01"
+                        "3046022100d8697a511eea7c0949f4295dc185d3e19cbd80aed547a2c0d29dd635b04430ef022100b334f949949ad19a3e78c9c3eb82320d877a5acc094e7ed3b15987a45ffca89101"
                     ),
                 ),
                 "out": b"\x01",

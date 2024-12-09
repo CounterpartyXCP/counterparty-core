@@ -1,6 +1,7 @@
 import binascii
 import logging
 import struct
+from io import BytesIO
 
 from counterpartycore.lib import arc4, backend, config, ledger, message_type, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
@@ -156,31 +157,65 @@ def get_vin_info(vin):
     return vout["value"], vout["script_pub_key"], is_segwit
 
 
+def is_valid_der(der):
+    if not isinstance(der, bytes):
+        return False
+    try:
+        s = BytesIO(der)
+        compound = s.read(1)[0]
+        if compound != 0x30:
+            return False
+        length = s.read(1)[0]
+        if length + 2 != len(der):
+            return False
+        marker = s.read(1)[0]
+        if marker != 0x02:
+            return False
+        rlength = s.read(1)[0]
+        _r = int(s.read(rlength).hex(), 16)
+        marker = s.read(1)[0]
+        if marker != 0x02:
+            return False
+        slength = s.read(1)[0]
+        s = int(s.read(slength).hex(), 16)
+        if len(der) != 6 + rlength + slength:
+            return False
+        return True
+    except Exception:
+        return False
+
+
+def is_valid_schnorr(schnorr):
+    p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+    n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+
+    if not isinstance(schnorr, bytes):
+        return False
+    if len(schnorr) not in [64, 65]:
+        return False
+    if len(schnorr) == 65:
+        schnorr = schnorr[:-1]
+    try:
+        r = int.from_bytes(schnorr[0:32], byteorder="big")
+        s = int.from_bytes(schnorr[32:64], byteorder="big")
+    except Exception:
+        return False
+    if (r >= p) or (s >= n):
+        return False
+    return True
+
+
 def get_der_signature_sighash_flag(value):
-    if not isinstance(value, bytes):
-        return None
-    lenght_by_prefix = {
-        "3044": 71,
-        "3045": 72,
-        "3046": 73,
-        "3041": 68,
-        "3042": 69,
-        "3043": 70,
-    }
-    for prefix, length in lenght_by_prefix.items():
-        if value.startswith(binascii.unhexlify(prefix)) and len(value) == length:
-            return value[-1:]
+    if is_valid_der(value[:-1]):
+        return value[-1:]
     return None
 
 
 def get_schnorr_signature_sighash_flag(value):
-    if not isinstance(value, bytes):
-        return None
-    if len(value) not in [64, 65]:
-        return None
-    if len(value) == 65:
-        return value[-1:]
-    return b"\x01"  # SIGHASH_ALL by default
+    if is_valid_schnorr(value):
+        if len(value) == 65:
+            return value[-1:]
+        return b"\x01"  # SIGHASH_ALL
 
 
 def collect_sighash_flags(script_sig, witnesses):
