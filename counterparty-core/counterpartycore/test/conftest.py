@@ -353,7 +353,7 @@ def api_server_v2(request, cp_server):
     api_v2.is_server_ready = is_server_ready
 
     args = argparse.Namespace(**server_config)
-    api_server = api_v2.APIServer()
+    api_server = api_v2.APIServer(None)
     api_server.start(args)
 
     # wait for server to be ready

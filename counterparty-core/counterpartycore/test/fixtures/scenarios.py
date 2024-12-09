@@ -582,8 +582,8 @@ INTEGRATION_SCENARIOS = {
     "parseblock_unittest_fixture": (PARSEBLOCKS_FIXTURE, "parseblock_unittest_fixture"),
 }
 # Generate special tests for simplesig, multisig2 and multisig3 using standard scenario.
-for scenario_name in standard_scenarios_params:
+for scenario_name, params in standard_scenarios_params.items():
     INTEGRATION_SCENARIOS[scenario_name] = (
-        generate_standard_scenario(**standard_scenarios_params[scenario_name]),
+        generate_standard_scenario(**params),
         scenario_name,
     )
