@@ -4,7 +4,7 @@ This is a hotfix release that addresses a deterministic node crash due to the fa
 
 # Upgrading
 
-This upgrade is required to address a critical protocol-level  bug. No reparse is necessary.
+This upgrade is required to address a critical protocol-level bug. No reparse is necessary.
 
 
 # ChangeLog
