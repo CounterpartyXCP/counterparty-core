@@ -18,6 +18,8 @@ This upgrade is required to address a critical protocol-level bug. No reparse is
 
 ## Codebase
 
+- Add Checkpoint for block 873982
+
 ## API
 
 ## CLI
