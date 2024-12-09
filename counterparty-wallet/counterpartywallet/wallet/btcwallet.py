@@ -20,8 +20,8 @@ def get_btc_balances():
             addresses[output["address"]] = 0
         addresses[output["address"]] += output["amount"]
 
-    for address in addresses:
-        yield [address, addresses[address]]
+    for address, balance in addresses.items():
+        yield [address, balance]
 
 
 def list_unspent():

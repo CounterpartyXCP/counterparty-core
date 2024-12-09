@@ -2163,7 +2163,7 @@ def _get_holders(
     return holders
 
 
-def holders(db, asset, exclude_empty_holders=False):
+def holders(db, asset, exclude_empty_holders=False, block_index=None):
     """Return holders of the asset."""
     holders = []
     cursor = db.cursor()
@@ -2189,8 +2189,9 @@ def holders(db, asset, exclude_empty_holders=False):
         SELECT *, rowid
         FROM balances
         WHERE asset = ? AND utxo IS NOT NULL
-        ORDER BY rowid DESC
+        ORDER BY utxo
     """
+
     bindings = (asset,)
     cursor.execute(query, bindings)
     holders += _get_holders(

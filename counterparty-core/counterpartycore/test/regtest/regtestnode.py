@@ -18,9 +18,9 @@ from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from counterpartycore.lib import arc4, config, database
 
-WALLET_NAME = "xcpwallet"
-
 setup("regtest")
+
+WALLET_NAME = "xcpwallet"
 
 
 class ServerNotReady(Exception):
@@ -56,6 +56,7 @@ class RegtestNode:
             f"-datadir={self.datadir}/node2",
         )
         self.bitcoin_wallet = self.bitcoin_cli.bake(f"-rpcwallet={WALLET_NAME}")
+        self.bitcoin_wallet_2 = self.bitcoin_cli_2.bake(f"-rpcwallet={WALLET_NAME}")
         self.bitcoind_process = None
         self.addresses = []
         self.block_count = 0
@@ -163,6 +164,22 @@ class RegtestNode:
 
         return f"{utxo['txid']}:{utxo['vout']}", tx_hash
 
+    def compose(self, source, tx_name, params):
+        query_string = []
+        for key, value in params.items():
+            if not isinstance(value, list):
+                query_string.append(urllib.parse.urlencode({key: value}))
+            else:
+                for i in range(len(value)):
+                    query_string.append(urllib.parse.urlencode({key: value[i]}))
+        query_string = "&".join(query_string)
+
+        if tx_name in ["detach", "movetoutxo"]:
+            compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
+        else:
+            compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
+        return self.api_call(compose_url)
+
     def send_transaction(
         self,
         source,
@@ -182,20 +199,8 @@ class RegtestNode:
         #    params["inputs_set"] = self.get_inputs_set(source)
         # print("Inputs set:", params["inputs_set"])
 
-        query_string = []
-        for key, value in params.items():
-            if not isinstance(value, list):
-                query_string.append(urllib.parse.urlencode({key: value}))
-            else:
-                for i in range(len(value)):
-                    query_string.append(urllib.parse.urlencode({key: value[i]}))
-        query_string = "&".join(query_string)
+        result = self.compose(source, tx_name, params)
 
-        if tx_name in ["detach", "movetoutxo"]:
-            compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
-        else:
-            compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
-        result = self.api_call(compose_url)
         # print(result)
         if "error" in result:
             if result["error"] == "Counterparty not ready":
@@ -317,10 +322,15 @@ class RegtestNode:
             self.mine_blocks(1)
             self.wait_for_counterparty_server()
 
-    def get_inputs_set(self, address):
-        list_unspent = json.loads(
-            self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([address])).strip()
-        )
+    def get_inputs_set(self, address, node=1):
+        if node == 1:
+            list_unspent = json.loads(
+                self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([address])).strip()
+            )
+        else:
+            list_unspent = json.loads(
+                self.bitcoin_cli_2("listunspent", 0, 9999999, json.dumps([address])).strip()
+            )
         sorted(list_unspent, key=lambda x: -x["amount"])
         inputs = []
         for utxo in list_unspent:
@@ -575,6 +585,8 @@ class RegtestNode:
     def get_xcp_balance(self, address):
         try:
             return self.api_call(f"addresses/{address}/balances/XCP")["result"][0]["quantity"]
+        except IndexError:  # no XCP balance
+            return 0
         except KeyError:
             print("Error getting XCP balance, retrying in 2 seconds...")
             time.sleep(2)

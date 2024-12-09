@@ -96,8 +96,12 @@ def get_transaction_type(data: bytes, destination: str, block_index: int):
         return "unknown"
 
     if message_type_id == messages.utxo.ID:
-        message_data = messages.utxo.unpack(message, return_dict=True)
-        if util.is_utxo_format(message_data["source"]):
-            return "detach"
-        return "attach"
+        try:
+            message_data = messages.utxo.unpack(message, return_dict=True)
+            if util.is_utxo_format(message_data["source"]):
+                return "detach"
+            return "attach"
+        except Exception:
+            return "unknown"
+
     return TRANSACTION_TYPE_BY_ID.get(message_type_id, "unknown")

@@ -968,6 +968,7 @@ class APIServer(threading.Thread):
                         db,
                         deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
                         block_index=block_index,
+                        composing=True,
                     )
                 )
             return (
