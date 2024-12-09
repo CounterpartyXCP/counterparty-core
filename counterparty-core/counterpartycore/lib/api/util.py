@@ -776,11 +776,11 @@ def inject_details(ledger_db, state_db, result, table=None):
     if table == "transactions":
         result_list = inject_transactions_events(ledger_db, state_db, result_list)
         result_list = inject_unpacked_data(ledger_db, result_list)
-    else:
-        result_list = inject_dispensers(ledger_db, state_db, result_list)
-        result_list = inject_fiat_prices(ledger_db, result_list)
-        result_list = inject_issuances_and_block_times(ledger_db, state_db, result_list)
-        result_list = inject_normalized_quantities(result_list)
+
+    result_list = inject_dispensers(ledger_db, state_db, result_list)
+    result_list = inject_fiat_prices(ledger_db, result_list)
+    result_list = inject_issuances_and_block_times(ledger_db, state_db, result_list)
+    result_list = inject_normalized_quantities(result_list)
 
     if result_is_dict:
         result = result_list[0]
