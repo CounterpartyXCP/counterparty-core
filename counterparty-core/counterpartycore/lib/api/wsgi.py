@@ -46,14 +46,15 @@ def refresh_current_state(ledger_db, state_db):
         )
 
 
-class CurrentStateThread(threading.Thread):
+class NodeStatusCheckerThread(threading.Thread):
     def __init__(self):
-        threading.Thread.__init__(self, name="CurrentStateUpdater")
+        threading.Thread.__init__(self, name="NodeStatusChecker")
         self.state_db = database.get_db_connection(config.STATE_DATABASE)
         self.ledger_db = database.get_db_connection(config.DATABASE)
         self.stop_event = threading.Event()
 
     def run(self):
+        logger.debug("Starting NodeStatusChecker thread...")
         try:
             while not self.stop_event.is_set():
                 refresh_current_state(self.ledger_db, self.state_db)
@@ -64,7 +65,8 @@ class CurrentStateThread(threading.Thread):
 
     def stop(self):
         self.stop_event.set()
-        self.join()
+        if self.is_alive():
+            self.join()
 
 
 class GunicornArbiter(Arbiter):
@@ -152,7 +154,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.arbiter = None
         self.ledger_db = None
         self.state_db = None
-        self.current_state_thread = CurrentStateThread()
+        self.current_state_thread = NodeStatusCheckerThread()
         super().__init__()
 
     def load_config(self):
@@ -188,7 +190,7 @@ class WerkzeugApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.current_state_thread = CurrentStateThread()
+        self.current_state_thread = NodeStatusCheckerThread()
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
 
     def run(self):
@@ -205,7 +207,7 @@ class WaitressApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.current_state_thread = CurrentStateThread()
+        self.current_state_thread = NodeStatusCheckerThread()
         self.server = waitress.server.create_server(
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )

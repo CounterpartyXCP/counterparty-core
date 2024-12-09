@@ -218,6 +218,15 @@ class BlockchainWatcher:
             capture_exception(e)
             raise e
 
+    def catch_up_if_needed(self):
+        last_parsed_block = ledger.get_last_block(self.db)
+        if last_parsed_block:
+            last_parsed_block_index = last_parsed_block["block_index"]
+            bitcoind_block_index = backend.bitcoind.getblockcount()
+            if last_parsed_block_index < bitcoind_block_index:
+                logger.debug("ZMQ is late. Catching up to block %s...", bitcoind_block_index)
+                blocks.catch_up(self.db, check_asset_conservation=False)
+
     async def handle(self):
         self.check_software_version_if_needed()
         util.BLOCK_PARSER_STATUS = "following"
@@ -231,6 +240,7 @@ class BlockchainWatcher:
                 check_block_delay = 10 if config.NETWORK_NAME == "mainnet" else 0.5
                 if time.time() - self.last_block_check_time > check_block_delay:
                     await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
+                    self.catch_up_if_needed()
                     self.last_block_check_time = time.time()
 
                 # Yield control to the event loop to allow other tasks to run
