@@ -2163,7 +2163,37 @@ def _get_holders(
     return holders
 
 
-def holders(db, asset, exclude_empty_holders=False):
+LEGACY_UTXO_ORDERS_868653 = [
+    "088168de5c1d550f9b5141409682e7979b24679b25fb5b017a762e9d672122ae:0",
+    "11e2ca04fad51f813d51c917a45e215e081c5789a30bfcf5e532807ce40df3bb:0",
+    "16cb2c8a82938aa38ed2cb425941bf837cc0fe4da0528b1663634bb757a334fe:0",
+    "264b393c8cf41b87cf8f22f393953dab6e9389005275fb673e90a4f10b6d79f3:0",
+    "295a54a4ed84b8cda485b22c996cc01241f7fbb00d6ab5ad07a74b8845320c35:0",
+    "2ad7039793004b76223d707706c9e5631c65a960c0ec63da5321e50a2fdcc532:0",
+    "351fefcbc87dc0e0b01ebc7fe7381ef12a5b953aefbc25b01c246df2071e011b:0",
+    "3b64aa022e808429d37740f612cd168379b74d0f5809f9b1d003d1ecc2489f95:0",
+    "4abf342039e2ea6f700df4d974d76e1f894bf1816b4e2e710c41404ef9364faf:0",
+    "4b842a057a8f19eec86c8adb09b46dc18a9e01956ba62006f5d4f9567396f8b0:0",
+    "4df5e4084db507b51de89296b6cb2f4ab358ea1460b4da5ede9b18936058c0ea:0",
+    "55dd8ca9d66271bbf956250ae6c6dd57db0bd439fbb6f2dc5ee0f403f346af6c:0",
+    "6d924137888f4c640fd6742ff66e048e8b991969422ff70f553359e145c0b749:0",
+    "9ffb4b0854f2a183c645054a0cf77dd62bd1b03a6de8e1c014e3c80fe79acaf9:0",
+    "abae764e31354d4cd6cdb194ed82a865fbf9c18a498a5cffd3c5297351d45b6d:0",
+    "abf21fa64be2fb88e2a8c9dc0e507f7f5597b5aef3a759f0eae8532bb5848895:0",
+    "b1163ccf2f5aacb47e3cbe7042dcbdd30bb934da7e47164ee9d7f0b127adf715:0",
+    "b5bf237311eeeec2ebf68e38a13a3c340e22146e2ca6b86594360f4ddd64f9f5:0",
+    "b61f1e7b537399c91851d0a4f66d265b135ce9167a8ea9da990e0369409e233d:0",
+    "d7458507ed05b9a7cd621542ad86d067bf7c3146a0e6d807d8e5bb2d3281589a:0",
+    "dad232054957d435899b7925e5ea5872e46aa9ed93ef86275040fd02c66c0249:0",
+    "df9fbdbc92e9d367b70cebcd45a7c29a6edf603c4c775f9cf9cb481f2d435a74:0",
+    "ef35a966635fe3d9727a08c43a009133391c33aa477c9b06cf3846b006d003d1:0",
+    "f17b2d9507f65459f8eb8c0be666bf464cf37ec0ac8ba4ca54236832f9cfa3d0:0",
+    "fa327997e70a74b16003c19de2b21909da32d951f2cff9b96635ae3266cd15f1:0",
+    "fa451fc89fb0661a949318e84025bb90744100420c2b863aef9d61e694f2c2ed:0",
+]
+
+
+def holders(db, asset, exclude_empty_holders=False, block_index=None):
     """Return holders of the asset."""
     holders = []
     cursor = db.cursor()
@@ -2191,15 +2221,26 @@ def holders(db, asset, exclude_empty_holders=False):
         WHERE asset = ? AND utxo IS NOT NULL
         ORDER BY rowid DESC
     """
+
     bindings = (asset,)
     cursor.execute(query, bindings)
-    holders += _get_holders(
+    utxo_holders = _get_holders(
         cursor,
         ["asset", "utxo"],
         {"address": "utxo", "address_quantity": "quantity"},
         exclude_empty_holders=exclude_empty_holders,
         table="balances",
     )
+
+    if block_index == 868653:
+        ordered_holders = []
+        for utxo in LEGACY_UTXO_ORDERS_868653:
+            for holder in utxo_holders:
+                if holder["address"] == utxo:
+                    ordered_holders.append(holder)
+        utxo_holders = ordered_holders
+
+    holders += utxo_holders
 
     # Funds escrowed in orders. (Protocol change.)
     query = """
