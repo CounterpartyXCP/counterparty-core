@@ -99,14 +99,8 @@ class RSFetcher(metaclass=util.SingletonMeta):
         block = self.get_prefetched_block()
 
         if block is None:
-            # Fetcher has been stopped, handle accordingly
-            if retry < 5:
-                logger.debug(
-                    "No block retrieved. Fetcher might have stopped. Retrying in 5 seconds..."
-                )
-                time.sleep(5)
-                return self.get_block(retry + 1)
-            raise exceptions.RSFetchError("RSFetcher returned None too many times.")
+            # handled in blocks.catch_up()
+            return None
 
         # Handle potentially out-of-order blocks
         if block["height"] != self.next_height:
