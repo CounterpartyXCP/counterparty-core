@@ -2,7 +2,6 @@ import errno
 import logging
 import multiprocessing
 import os
-import signal
 import sys
 import threading
 
@@ -178,11 +177,7 @@ class GunicornArbiter(Arbiter):
                 raise
 
     def kill_all_workers(self):
-        for pid in list(self.WORKERS.keys()):
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+        self.reap_workers()
 
 
 class GunicornApplication(gunicorn.app.base.BaseApplication):
