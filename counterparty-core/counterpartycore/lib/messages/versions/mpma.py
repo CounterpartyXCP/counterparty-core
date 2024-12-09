@@ -225,7 +225,7 @@ def parse(db, tx, message):
 
         # Enumeration of the plain sends needs to be deterministic, so we sort them by asset and then by address
         plain_sends = sorted(plain_sends, key=lambda x: "".join([x[0], x[1]]))
-        for i, op in enumerate(plain_sends):
+        for op in plain_sends:
             if len(op) > 3:
                 memo_bytes = op[3]
             else:
@@ -241,7 +241,7 @@ def parse(db, tx, message):
                 "quantity": op[2],
                 "status": status,
                 "memo": memo_bytes,
-                "msg_index": i,
+                "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
             }
 
             ledger.insert_record(db, "sends", bindings, "MPMA_SEND")
