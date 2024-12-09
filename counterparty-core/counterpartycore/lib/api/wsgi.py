@@ -54,6 +54,7 @@ class CurrentStateThread(threading.Thread):
         self.stop_event = threading.Event()
 
     def run(self):
+        logger.debug("Starting CurrentStateUpdater thread...")
         try:
             while not self.stop_event.is_set():
                 refresh_current_state(self.ledger_db, self.state_db)
@@ -64,7 +65,8 @@ class CurrentStateThread(threading.Thread):
 
     def stop(self):
         self.stop_event.set()
-        self.join()
+        if self.is_alive():
+            self.join()
 
 
 class GunicornArbiter(Arbiter):
