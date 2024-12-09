@@ -218,6 +218,7 @@ def parse(db, tx, message):
         "quantity": quantity,
         "status": status,
         "memo": memo_bytes,
+        "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:
         ledger.insert_record(db, "sends", bindings, "ENHANCED_SEND")
