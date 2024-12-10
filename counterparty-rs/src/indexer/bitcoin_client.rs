@@ -419,6 +419,8 @@ impl ToBlock for Block {
                     value: vout.value.to_sat(),
                     script_pub_key: vout.script_pubkey.to_bytes(),
                 });
+            }
+            for (vi, vout) in tx.output.iter().enumerate() {
                 if !config.multisig_addresses_enabled(height) {
                     continue;
                 }
