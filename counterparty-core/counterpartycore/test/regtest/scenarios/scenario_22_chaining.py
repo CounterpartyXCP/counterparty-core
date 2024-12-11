@@ -36,13 +36,13 @@ SCENARIO = [
     {
         "title": "Move CHAINING from UTXO to UTXO",
         "transaction": "movetoutxo",
-        "source": "$ATTACH_CHAINING_TX_HASH:1",  # second output of attach transaction, first is OP_RETURN
+        "source": "$ATTACH_CHAINING_TX_HASH:0",  # second output of attach transaction, first is OP_RETURN
         "no_confirmation": True,
         "dont_wait_mempool": True,
         "params": {
             "destination": "$ADDRESS_8",
             "validate": False,
-            "inputs_set": "$ATTACH_CHAINING_TX_HASH:1,$ATTACH_CHAINING_TX_HASH:2",
+            "inputs_set": "$ATTACH_CHAINING_TX_HASH:2",
         },
         "set_variables": {
             "MOVETOUTXO_CHAINING_TX_HASH": "$TX_HASH",
@@ -152,7 +152,7 @@ SCENARIO = [
                             "destination": "$MOVETOUTXO_CHAINING_TX_HASH:0",
                             "msg_index": 0,
                             "quantity": 100000000,
-                            "source": "$ATTACH_CHAINING_TX_HASH:1",
+                            "source": "$ATTACH_CHAINING_TX_HASH:0",
                             "status": "valid",
                             "tx_hash": "$MOVETOUTXO_CHAINING_TX_HASH",
                             "tx_index": "$TX_INDEX - 1",
@@ -186,7 +186,7 @@ SCENARIO = [
                             "event": "$MOVETOUTXO_CHAINING_TX_HASH",
                             "quantity": 100000000,
                             "tx_index": "$TX_INDEX - 1",
-                            "utxo": "$ATTACH_CHAINING_TX_HASH:1",
+                            "utxo": "$ATTACH_CHAINING_TX_HASH:0",
                             "utxo_address": "$ADDRESS_10",
                         },
                         "tx_hash": "$MOVETOUTXO_CHAINING_TX_HASH",
@@ -207,7 +207,7 @@ SCENARIO = [
                         "params": {
                             "asset": "CHAINING",
                             "block_index": "$BLOCK_INDEX",
-                            "destination": "$ATTACH_CHAINING_TX_HASH:1",
+                            "destination": "$ATTACH_CHAINING_TX_HASH:0",
                             "fee_paid": 0,
                             "msg_index": 0,
                             "quantity": 100000000,
@@ -229,7 +229,7 @@ SCENARIO = [
                             "event": "$ATTACH_CHAINING_TX_HASH",
                             "quantity": 100000000,
                             "tx_index": "$TX_INDEX - 2",
-                            "utxo": "$ATTACH_CHAINING_TX_HASH:1",
+                            "utxo": "$ATTACH_CHAINING_TX_HASH:0",
                             "utxo_address": "$ADDRESS_10",
                         },
                         "tx_hash": "$ATTACH_CHAINING_TX_HASH",

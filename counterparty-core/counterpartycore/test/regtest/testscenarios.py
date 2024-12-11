@@ -65,7 +65,7 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-SCENARIOS = scenario_22_chaining.SCENARIO
+# SCENARIOS = scenario_22_chaining.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -435,12 +435,12 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
     except KeyboardInterrupt:
+        print(regtest_node_thread.node.server_out.getvalue())
         pass
     except Exception as e:
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 
