@@ -741,10 +741,19 @@ def get_op_return_vout(decoded_tx):
     return None
 
 
+KNOWN_SOURCES = {
+    "92ad58f5aa35c503489efbdd2a466e942baa9ac5cd67cb7544adf03e47a457d0": "a71da7169db3672408c7b25f84be425839548e63fa480c0478f91e3c2aa3ec67:0"
+}
+
+
 def get_utxos_info(db, decoded_tx):
     op_return_vout = get_op_return_vout(decoded_tx)
+    if decoded_tx["tx_id"] in KNOWN_SOURCES:
+        sources = KNOWN_SOURCES[decoded_tx["tx_id"]]
+    else:
+        sources = ",".join(get_inputs_with_balance(db, decoded_tx))
     return [
-        ",".join(get_inputs_with_balance(db, decoded_tx)),  # sources
+        sources,  # sources
         get_first_non_op_return_output(decoded_tx) or "",  # destination
         str(len(decoded_tx["vout"])),  # number of outputs
         str(op_return_vout) if op_return_vout is not None else "",  # op_return output
