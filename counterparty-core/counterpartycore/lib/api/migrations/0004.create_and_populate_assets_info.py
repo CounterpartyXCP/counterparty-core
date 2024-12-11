@@ -35,8 +35,8 @@ def apply(db):
 
     db.execute("""
         CREATE TABLE assets_info(
-            asset TEXT UNIQUE,
-            asset_id TEXT UNIQUE,
+            asset TEXT,
+            asset_id TEXT,
             asset_longname TEXT,
             issuer TEXT,
             owner TEXT,
@@ -116,7 +116,8 @@ def apply(db):
         },
     )
 
-    db.execute("CREATE INDEX assets_info_asset_idx ON assets_info (asset)")
+    db.execute("CREATE UNIQUE INDEX assets_info_asset_idx ON assets_info (asset)")
+    db.execute("CREATE UNIQUE INDEX assets_info_asset_id_idx ON assets_info (asset_id)")
     db.execute("CREATE INDEX assets_info_asset_longname_idx ON assets_info (asset_longname)")
     db.execute("CREATE INDEX assets_info_issuer_idx ON assets_info (issuer)")
     db.execute("CREATE INDEX assets_info_owner_idx ON assets_info (owner)")
