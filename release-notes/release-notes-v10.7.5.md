@@ -23,6 +23,7 @@
 - Fix `get_price` and `give_price` fields: returns 0 not null
 - Always includes all outputs in transaction decoded by RSFetcher
 - Fix UTXO balances cache: don't cache `detach`, add cache fir `attach`, clean cache when balance is empty
+- Fix XCP price calculation in `fairmint.validate()`
 
 ## Codebase
 
