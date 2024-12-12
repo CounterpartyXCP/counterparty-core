@@ -85,7 +85,10 @@ def validate(
         if fairminter["hard_cap"] > 0 and asset_supply + quantity > fairminter["hard_cap"]:
             problems.append("asset supply quantity exceeds hard cap")
         # check if the user has enough XCP
-        xcp_total_price = quantity * fairminter["price"]
+        xcp_total_price = (D(quantity) / D(fairminter["quantity_by_price"])) * D(
+            fairminter["price"]
+        )
+        xcp_total_price = int(math.ceil(xcp_total_price))
         balance = ledger.get_balance(db, source, config.XCP)
         if balance < xcp_total_price:
             problems.append("insufficient XCP balance")

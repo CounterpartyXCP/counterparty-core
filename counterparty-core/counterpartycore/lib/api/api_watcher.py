@@ -392,7 +392,7 @@ def update_transaction_types_count(state_db, event):
         return
     cursor = state_db.cursor()
     binding = json.loads(event["bindings"])
-    transaction_type = binding["transaction_type"]
+    transaction_type = binding.get("transaction_type", "unknown")
     current_count = cursor.execute(
         "SELECT count FROM transaction_types_count WHERE transaction_type = ?", (transaction_type,)
     ).fetchone()

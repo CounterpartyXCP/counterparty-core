@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import hypothesis
+from counterpartycore.lib import util
 from hypothesis import settings
 from properytestnode import PropertyTestNode
 
@@ -58,13 +59,6 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             hypothesis.strategies.sampled_from(self.addresses),
         )
 
-        # detach assets
-        self.test_with_given_data(
-            self.detach_asset,
-            hypothesis.strategies.sampled_from(self.balances),
-            hypothesis.strategies.sampled_from(self.addresses + [None]),
-        )
-
         # random invalid transactions
         self.test_with_given_data(
             self.invalid_transaction,
@@ -85,12 +79,28 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             hypothesis.strategies.sampled_from(self.addresses),
         )
 
+        # test move with counterparty data
+        self.alrady_used = []
+        self.test_with_given_data(
+            self.move_with_counterparty_data,
+            hypothesis.strategies.sampled_from(self.get_utxos_balances()),
+            hypothesis.strategies.sampled_from(self.addresses),
+        )
+
+        # detach assets
+        self.alrady_used = []
+        self.test_with_given_data(
+            self.detach_asset,
+            hypothesis.strategies.sampled_from(self.balances),
+            hypothesis.strategies.sampled_from(self.addresses + [None]),
+        )
+
     @settings(deadline=None)
     def issue_assets(self, source, asset_name, quantity):
         # don't issue the same asset twice
         # and don't issue twice from the same source
         for balance in self.balances:
-            if balance[1] == asset_name or balance[0] == source:
+            if balance[1] == asset_name or (balance[0] == source and balance[1] != "XCP"):
                 return
         self.send_transaction(
             source,
@@ -102,10 +112,14 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             },
         )
         self.upsert_balance(source, asset_name, quantity)
+        # issuance fee
+        self.upsert_balance(source, "XCP", -50000000, None)
 
     @settings(deadline=None)
     def attach_asset(self, balance, attach_quantity):
         source, asset, quantity, utxo_address = balance
+        if asset == "XCP":
+            return
         # don't attach assets already attached or with 0 quantity
         for balance in self.balances:
             if balance[3] == source or balance[2] == 0:
@@ -140,23 +154,6 @@ class UTXOSupportPropertyTest(PropertyTestNode):
         self.upsert_balance(f"{tx_hash}:0", asset, quantity, destination)
 
     @settings(deadline=None)
-    def detach_asset(self, balance, destination):
-        source, asset, quantity, utxo_address = balance
-        # don't detach assets not attached or with 0 quantity
-        if utxo_address is None or quantity == 0:
-            return
-        self.send_transaction(
-            source,
-            "detach",
-            {
-                "exact_fee": 0,
-                "destination": destination,
-            },
-        )
-        self.upsert_balance(source, asset, -quantity, utxo_address)
-        self.upsert_balance(destination or utxo_address, asset, quantity, None)
-
-    @settings(deadline=None)
     def invalid_transaction(self, source, message_id, data):
         utxo, tx_hash = self.node.compose_and_send_transaction(
             source, message_id, data, no_confirmation=True, dont_wait_mempool=True
@@ -174,6 +171,8 @@ class UTXOSupportPropertyTest(PropertyTestNode):
     def issue_attach_move_detach_send(self, source, asset_name, quantity, destination):
         # don't issue the same asset twice
         # and don't issue twice from the same source
+        if asset_name == "XCP":
+            return
         for balance in self.balances:
             if balance[1] == asset_name or (balance[0] == source and len(balance[1]) > 8):
                 return
@@ -231,8 +230,10 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "inputs_set": f"{tx_hash}:0",
             },
         )
+
+        # issuance fee
+        self.upsert_balance(source, "XCP", -50000000, None)
         if destination != source:
-            print(f"source: {source}, destination: {destination}")
             tx_hash = self.send_transaction(
                 source,
                 "send",
@@ -249,6 +250,108 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             self.upsert_balance(destination, asset_name, 10 * 1e8)
         else:
             self.upsert_balance(source, asset_name, quantity)
+
+    @settings(deadline=None)
+    def move_with_counterparty_data(self, utxo_balance, destination):
+        utxo, utxo_asset, utxo_quantity, utxo_address = utxo_balance
+
+        if utxo in self.alrady_used or utxo_quantity == 0 or utxo_asset == "XCP":
+            return
+        self.alrady_used.append(utxo)
+
+        tx_hash = self.send_transaction(
+            utxo_address,
+            "send",
+            {
+                "destination": destination,
+                "asset": "XCP",
+                "quantity": 100,
+                "exact_fee": 0,
+                "inputs_set": utxo,
+                "use_utxos_with_balances": True,
+            },
+        )
+        tx_hash = self.send_transaction(
+            utxo_address,
+            "broadcast",
+            {
+                "timestamp": 4003903983,
+                "value": 999,
+                "fee_fraction": 0.0,
+                "text": "Hello, world!",
+                "exact_fee": 0,
+                "inputs_set": f"{tx_hash}:1",
+                "use_utxos_with_balances": True,
+            },
+        )
+        tx_hash = self.send_transaction(
+            utxo_address,
+            "attach",
+            {
+                "asset": "XCP",
+                "quantity": 200,
+                "exact_fee": 0,
+                "inputs_set": f"{tx_hash}:1",
+                "use_utxos_with_balances": True,
+            },
+        )
+        tx_hash = self.send_transaction(
+            utxo_address,
+            "order",
+            {
+                "give_asset": "XCP",
+                "give_quantity": 1000,
+                "get_asset": "BTC",
+                "get_quantity": 1000,
+                "expiration": 21,
+                "fee_required": 0,
+                "exact_fee": 0,
+                "inputs_set": f"{tx_hash}:0",
+                "use_utxos_with_balances": True,
+            },
+        )
+        tx_hash = self.send_transaction(
+            utxo_address,
+            "fairminter",
+            {
+                "asset": util.gen_random_asset_name(utxo_asset),
+                "price": 1,
+                "quantity_by_price": 5,
+                "exact_fee": 0,
+                "inputs_set": f"{tx_hash}:1",
+                "use_utxos_with_balances": True,
+            },
+        )
+
+        self.upsert_balance(utxo, utxo_asset, -utxo_quantity, utxo_address)
+        self.upsert_balance(f"{tx_hash}:1", utxo_asset, utxo_quantity, utxo_address)
+        self.upsert_balance(utxo_address, "XCP", -1300)
+        self.upsert_balance(destination, "XCP", 100)
+        self.upsert_balance(f"{tx_hash}:1", "XCP", 200, utxo_address)
+
+    @settings(deadline=None)
+    def detach_asset(self, balance, destination):
+        source, asset, quantity, utxo_address = balance
+        # don't detach assets not attached or with 0 quantity
+        if utxo_address is None or quantity == 0:
+            return
+        if source in self.alrady_used:
+            return
+        self.alrady_used.append(source)
+
+        self.send_transaction(
+            source,
+            "detach",
+            {
+                "exact_fee": 0,
+                "destination": destination,
+            },
+        )
+        for balance in self.balances:
+            if balance[0] == source:
+                asset, quantity = balance[1], balance[2]
+                self.upsert_balance(source, asset, -quantity, utxo_address)
+                self.upsert_balance(destination or utxo_address, asset, quantity, None)
 
 
 if __name__ == "__main__":
