@@ -36,7 +36,7 @@ def filter_migrations(migrations, wanted_ids):
 
 
 def apply_outstanding_migration():
-    logger.debug("API Watcher - Applying migrations...")
+    logger.info("Applying migrations...")
     # Apply migrations
     backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
     migrations = read_migrations(MIGRATIONS_DIR)

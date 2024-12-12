@@ -465,17 +465,16 @@ def init_flask_app():
     return app
 
 
-def check_database_version():
-    with StateDBConnectionPool().connection() as state_db:
-        try:
-            check.database_version(state_db)
-        except check.DatabaseVersionError as e:
-            logger.info(str(e))
-            # rollback or reparse the database
-            if e.required_action in ["rollback", "reparse"]:
-                dbbuilder.rollback_state_db(state_db, block_index=e.from_block_index)
-            # update the database version
-            database.update_version(state_db)
+def check_database_version(state_db):
+    try:
+        check.database_version(state_db)
+    except check.DatabaseVersionError as e:
+        logger.info(str(e))
+        # rollback or reparse the database
+        if e.required_action in ["rollback", "reparse"]:
+            dbbuilder.rollback_state_db(state_db, block_index=e.from_block_index)
+        # update the database version
+        database.update_version(state_db)
 
 
 def run_api_server(args, server_ready_value, stop_event, parent_pid):
@@ -503,7 +502,7 @@ def run_api_server(args, server_ready_value, stop_event, parent_pid):
         state_db = database.get_db_connection(
             config.STATE_DATABASE, read_only=False, check_wal=False
         )
-        check_database_version()
+        check_database_version(state_db)
 
         watcher = api_watcher.APIWatcher(state_db)
         watcher.start()
