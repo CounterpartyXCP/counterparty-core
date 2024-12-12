@@ -796,10 +796,3 @@ def get_tx_info(db, decoded_tx, block_index, composing=False):
         # update utxo balances cache before parsing the transaction
         # to catch chained utxo moves
         update_utxo_balances_cache(db, utxos_info, data, destination, block_index)
-        if (
-            decoded_tx["tx_id"]
-            == "40ffb0b8fc8b89ee43f3feb94cec0f9ee2bb481eb7df01ffe062fb60943759c5"
-        ):
-            print(decoded_tx)
-            print(source, destination, btc_amount, fee, data, dispensers_outs, utxos_info)
-            raise Exception("40ffb0b8fc8b89ee43f3feb94cec0f9ee2bb481eb7df01ffe062fb60943759c5")
