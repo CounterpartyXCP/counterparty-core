@@ -433,23 +433,27 @@ def update_transaction_type(db):
     start = time.time()
     logger.info("Updating `transaction_type` column in `transactions` table...")
 
-    cursor = db.cursor()
-    cursor.execute("SELECT tx_index, destination, block_index, data, supported FROM transactions")
-    counter = 0
-    for tx in cursor.fetchall():
-        transaction_type = "unknown"
-        if tx["supported"]:
-            transaction_type = message_type.get_transaction_type(
-                tx["data"], tx["destination"], tx["block_index"]
-            )
-
+    with db:
+        cursor = db.cursor()
+        cursor.execute("ALTER TABLE transactions ADD COLUMN transaction_type TEXT")
         cursor.execute(
-            "UPDATE transactions SET transaction_type = ? WHERE tx_index = ?",
-            (transaction_type, tx["tx_index"]),
+            "SELECT tx_index, destination, block_index, data, supported FROM transactions"
         )
-        counter += 1
-        if counter % 500000 == 0:
-            logger.trace(f"Updated {counter} transactions")
+        counter = 0
+        for tx in cursor.fetchall():
+            transaction_type = "unknown"
+            if tx["supported"]:
+                transaction_type = message_type.get_transaction_type(
+                    tx["data"], tx["destination"], tx["block_index"]
+                )
+
+            cursor.execute(
+                "UPDATE transactions SET transaction_type = ? WHERE tx_index = ?",
+                (transaction_type, tx["tx_index"]),
+            )
+            counter += 1
+            if counter % 500000 == 0:
+                logger.trace(f"Updated {counter} transactions")
 
     logger.info(f"Updated {counter} transactions in {time.time() - start:.2f} seconds")
 
@@ -579,7 +583,6 @@ def initialise(db):
         cursor.execute("""ALTER TABLE transactions ADD COLUMN utxos_info TEXT""")
 
     if "transaction_type" not in transactions_columns:
-        cursor.execute("ALTER TABLE transactions ADD COLUMN transaction_type TEXT")
         update_transaction_type(db)
 
     database.create_indexes(
