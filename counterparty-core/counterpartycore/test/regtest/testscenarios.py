@@ -31,6 +31,7 @@ from scenarios import (
     scenario_19_mpma,
     scenario_20_fairminter,
     scenario_21_fairminter,
+    scenario_22_chaining,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -57,6 +58,7 @@ SCENARIOS += scenario_18_utxo.SCENARIO
 SCENARIOS += scenario_19_mpma.SCENARIO
 SCENARIOS += scenario_20_fairminter.SCENARIO
 SCENARIOS += scenario_21_fairminter.SCENARIO
+SCENARIOS += scenario_22_chaining.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
@@ -433,12 +435,12 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
     except KeyboardInterrupt:
+        print(regtest_node_thread.node.server_out.getvalue())
         pass
     except Exception as e:
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

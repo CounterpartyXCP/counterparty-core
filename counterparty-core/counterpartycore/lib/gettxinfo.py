@@ -741,28 +741,49 @@ def get_op_return_vout(decoded_tx):
     return None
 
 
+KNOWN_SOURCES = {
+    "92ad58f5aa35c503489efbdd2a466e942baa9ac5cd67cb7544adf03e47a457d0": "a71da7169db3672408c7b25f84be425839548e63fa480c0478f91e3c2aa3ec67:0"
+}
+
+
 def get_utxos_info(db, decoded_tx):
     op_return_vout = get_op_return_vout(decoded_tx)
+    if decoded_tx["tx_id"] in KNOWN_SOURCES:
+        sources = KNOWN_SOURCES[decoded_tx["tx_id"]]
+    else:
+        sources = ",".join(get_inputs_with_balance(db, decoded_tx))
     return [
-        ",".join(get_inputs_with_balance(db, decoded_tx)),  # sources
+        sources,  # sources
         get_first_non_op_return_output(decoded_tx) or "",  # destination
         str(len(decoded_tx["vout"])),  # number of outputs
         str(op_return_vout) if op_return_vout is not None else "",  # op_return output
     ]
 
 
+def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
+    if util.enabled("utxo_support", block_index=block_index) and not util.PARSING_MEMPOOL:
+        transaction_type = message_type.get_transaction_type(data, destination, block_index)
+        if utxos_info[0] != "":
+            # always remove from cache inputs with balance
+            ledger.UTXOBalancesCache(db).remove_balance(utxos_info[0])
+            # add to cache the destination if it's not a detach
+            if utxos_info[1] != "" and transaction_type != "detach":
+                ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
+        elif utxos_info[1] != "" and transaction_type == "attach":
+            # add to cache the destination if it's an attach
+            ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
+
+
 def get_tx_info(db, decoded_tx, block_index, composing=False):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
+    data, destination, utxos_info = None, None, []
+
     if util.enabled("utxo_support", block_index=block_index):
-        # utxos_info is a space-separated list of UTXOs, last element is the destination,
-        # the rest are the inputs with a balance
+        # utxos_info contains sources (inputs with balances),
+        # destination (first non-OP_RETURN output),
+        # number of outputs and the OP_RETURN index
         utxos_info = get_utxos_info(db, decoded_tx)
-        # update utxo balances cache before parsing the transaction
-        # to catch chained utxo moves
-        if not util.PARSING_MEMPOOL and utxos_info[0] != "" and utxos_info[1] != "":
-            ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
-    else:
-        utxos_info = []
+
     try:
         source, destination, btc_amount, fee, data, dispensers_outs = _get_tx_info(
             db, decoded_tx, block_index, composing=composing
@@ -772,3 +793,7 @@ def get_tx_info(db, decoded_tx, block_index, composing=False):
         return b"", None, None, None, None, None, utxos_info
     except BTCOnlyError as e:  # noqa: F841
         return b"", None, None, None, None, None, utxos_info
+    finally:
+        # update utxo balances cache before parsing the transaction
+        # to catch chained utxo moves
+        update_utxo_balances_cache(db, utxos_info, data, destination, block_index)

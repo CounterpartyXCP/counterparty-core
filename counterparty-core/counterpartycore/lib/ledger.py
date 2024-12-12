@@ -281,6 +281,8 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         balance_address = None
         utxo = address
+        if not util.PARSING_MEMPOOL and balance == 0:
+            UTXOBalancesCache(db).remove_balance(utxo)
 
     if not no_balance:  # don't create balance if quantity is 0 and there is no balance
         bindings = {
@@ -363,6 +365,8 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         balance_address = None
         utxo = address
+        if not util.PARSING_MEMPOOL and balance > 0:
+            UTXOBalancesCache(db).add_balance(utxo)
 
     bindings = {
         "quantity": balance,
@@ -409,8 +413,6 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
         credit_address = None
         utxo = address
         utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
-        if block_index != config.MEMPOOL_BLOCK_INDEX and not util.PARSING_MEMPOOL:
-            UTXOBalancesCache(db).add_balance(utxo)
 
     add_to_balance(db, address, asset, quantity, tx_index, utxo_address)
 
@@ -478,6 +480,9 @@ class UTXOBalancesCache(metaclass=util.SingletonMeta):
 
     def add_balance(self, utxo):
         self.utxos_with_balance[utxo] = True
+
+    def remove_balance(self, utxo):
+        self.utxos_with_balance.pop(utxo, None)
 
 
 def utxo_has_balance(db, utxo):
