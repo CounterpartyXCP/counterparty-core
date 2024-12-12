@@ -27,6 +27,8 @@ CURRENT_BLOCK_INDEX = None
 CURRENT_TX_HASH = None
 PARSING_MEMPOOL = False
 BLOCK_PARSER_STATUS = "starting"
+CURRENT_BACKEND_HEIGHT = None
+CURRENT_BLOCK_TIME = None
 
 D = decimal.Decimal
 B26_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -700,7 +702,7 @@ def parse_utxos_info(utxos_info):
         sources = [source for source in info[0].split(",") if source]
         destination = info[1] or None
         outputs_count = int(info[2])
-        op_return_output = int(info[3]) if info[3] else None
+        op_return_output = int(info[3]) if info[3] != "" else None
         return sources, destination, outputs_count, op_return_output
 
     # old format

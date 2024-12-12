@@ -31,6 +31,7 @@ from scenarios import (
     scenario_19_mpma,
     scenario_20_fairminter,
     scenario_21_fairminter,
+    scenario_22_chaining,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -57,13 +58,14 @@ SCENARIOS += scenario_18_utxo.SCENARIO
 SCENARIOS += scenario_19_mpma.SCENARIO
 SCENARIOS += scenario_20_fairminter.SCENARIO
 SCENARIOS += scenario_21_fairminter.SCENARIO
+SCENARIOS += scenario_22_chaining.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_21_fairminter.SCENARIO
+# SCENARIOS = scenario_22_chaining.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -115,6 +117,7 @@ def get_tx_index(node, tx_hash):
 
 
 def get_last_tx_index(node):
+    time.sleep(2)  # wait for utils.CURRENT_BLOCK_INDEX to be updated and cache expired (each .5s)
     result = node.api_call("transactions?limit=1")
     if "result" in result:
         return result["result"][0]["tx_index"]
@@ -174,6 +177,10 @@ def control_result(
             .replace('"$BLOCK_INDEX"', str(block_index))
             .replace('"$TX_INDEX"', str(tx_index))
             .replace('"$TX_INDEX - 1"', str(tx_index - 1))
+            .replace('"$TX_INDEX - 2"', str(tx_index - 2))
+            .replace('"$TX_INDEX - 3"', str(tx_index - 3))
+            .replace('"$TX_INDEX - 4"', str(tx_index - 4))
+            .replace('"$TX_INDEX + 1"', str(tx_index + 1))
             .replace('"$BLOCK_TIME"', str(block_time))
         )
         if data:
@@ -230,6 +237,7 @@ def run_item(node, item, context):
         node.disable_protocol_changes(item["disable_protocol_changes"])
 
     no_confirmation = item.get("no_confirmation", False)
+    dont_wait_mempool = item.get("dont_wait_mempool", False)
 
     if item["transaction"] == "mine_blocks":
         block_hash, block_time = node.mine_blocks(item["params"]["blocks"])
@@ -263,6 +271,7 @@ def run_item(node, item, context):
                     item["transaction"],
                     item["params"],
                     no_confirmation=no_confirmation,
+                    dont_wait_mempool=dont_wait_mempool,
                 )
             # test that the mempool is properly cleaned after each regtest transaction is confirmed
             if not no_confirmation:
@@ -302,7 +311,6 @@ def run_item(node, item, context):
 
     for name, value in item.get("set_variables", {}).items():
         if tx_hash is not None:
-            print("get tx index", tx_hash)
             tx_index = get_tx_index(node, tx_hash)
             if tx_index is None:
                 tx_index = get_last_tx_index(node) + 1
@@ -352,7 +360,9 @@ def rpc_call(command, params=None):
 
 
 def check_api_v1(node):
+    print("Checking API v1")
     running_info = rpc_call("get_running_info")
+    print(running_info)
 
     if not running_info["result"]["server_ready"]:
         raise Exception("Server not ready")
@@ -369,6 +379,7 @@ def check_api_v1(node):
         },
     )
     # check that the hex transaction is generated
+    print(tx)
     int(tx["result"], 16)
 
 
@@ -408,7 +419,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 _cwd=CURR_DIR,
             )
             print("Running Dredd...")
-            sh.dredd(_cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
+            sh.dredd("--language", "python", _cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
             print("Testing invalid detach...")
             regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")
@@ -424,12 +435,12 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
     except KeyboardInterrupt:
+        print(regtest_node_thread.node.server_out.getvalue())
         pass
     except Exception as e:
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:
-        # print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
 
 

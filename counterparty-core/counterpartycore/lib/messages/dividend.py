@@ -107,7 +107,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     exclude_empty = False
     if util.enabled("zero_quantity_value_adjustment_1"):
         exclude_empty = True
-    holders = ledger.holders(db, asset, exclude_empty)
+    holders = ledger.holders(db, asset, exclude_empty, block_index=block_index)
 
     outputs = []
     addresses = []

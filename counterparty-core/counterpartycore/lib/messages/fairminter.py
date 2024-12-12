@@ -567,10 +567,9 @@ def parse(db, tx, message):
         "status": "valid",
         "asset_longname": asset_longname or None,
         "fair_minting": True,
+        "asset_events": "open_fairminter",
     }
-    ledger.insert_record(
-        db, "issuances", bindings, "ASSET_ISSUANCE", {"asset_events": "open_fairminter"}
-    )
+    ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
     if pre_minted:
         # issuer is credited with the preminted quantity
@@ -663,10 +662,9 @@ def close_fairminter(db, fairminter, block_index):
         last_issuance["locked"] = True
     if fairminter["lock_description"]:
         last_issuance["description_locked"] = True
+    last_issuance["asset_events"] = "close_fairminter"
     del last_issuance["supply"]
-    ledger.insert_record(
-        db, "issuances", last_issuance, "ASSET_ISSUANCE", {"asset_events": "close_fairminter"}
-    )
+    ledger.insert_record(db, "issuances", last_issuance, "ASSET_ISSUANCE")
 
 
 def close_fairminters(db, block_index):

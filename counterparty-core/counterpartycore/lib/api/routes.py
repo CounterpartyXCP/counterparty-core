@@ -16,6 +16,7 @@ ROUTES = util.prepare_routes(
         "/v2/blocks/<int:block_index>": queries.get_block_by_height,
         "/v2/blocks/<block_hash>": queries.get_block_by_hash,
         "/v2/blocks/<int:block_index>/transactions": queries.get_transactions_by_block,
+        "/v2/blocks/<int:block_index>/transactions/counts": queries.get_transaction_types_count_by_block,
         "/v2/blocks/<int:block_index>/events": queries.get_events_by_block,
         "/v2/blocks/<int:block_index>/events/counts": queries.get_event_counts_by_block,
         "/v2/blocks/<int:block_index>/events/<event>": queries.get_events_by_block_and_event,
@@ -32,6 +33,7 @@ ROUTES = util.prepare_routes(
         "/v2/blocks/<int:block_index>/fairmints": queries.get_fairmints_by_block,
         ### /transactions ###
         "/v2/transactions": queries.get_transactions,
+        "/v2/transactions/counts": queries.get_transaction_types_count,
         "/v2/transactions/info": compose.info,
         "/v2/transactions/<tx_hash>/info": compose.info_by_tx_hash,
         "/v2/transactions/unpack": compose.unpack,
@@ -71,6 +73,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/assets/issued": queries.get_valid_assets_by_issuer,
         "/v2/addresses/<address>/assets/owned": queries.get_valid_assets_by_owner,
         "/v2/addresses/<address>/transactions": queries.get_transactions_by_address,
+        "/v2/addresses/<address>/transactions/counts": queries.get_transaction_types_count_by_address,
         "/v2/addresses/<address>/dividends": queries.get_dividends_distributed_by_address,
         "/v2/addresses/<address>/orders": queries.get_orders_by_address,
         "/v2/addresses/<address>/fairminters": queries.get_fairminters_by_address,

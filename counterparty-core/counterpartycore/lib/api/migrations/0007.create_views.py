@@ -1,6 +1,24 @@
--- depends: 0002.add_default_values_to_issuances
+#
+# file: counterpartycore/lib/api/migrations/0007.create_views.py
+#
+import logging
+import time
 
-CREATE VIEW IF NOT EXISTS asset_holders AS 
+from counterpartycore.lib import config
+from yoyo import step
+
+logger = logging.getLogger(config.LOGGER_NAME)
+
+
+__depends__ = {"0006.create_and_populate_consolidated_tables"}
+
+
+def apply(db):
+    start_time = time.time()
+    logger.debug("Building views...")
+
+    db.execute("""
+         CREATE VIEW asset_holders AS 
             SELECT asset, address, quantity, NULL AS escrow,
                 ('balances_' || CAST(rowid AS VARCAHR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
             FROM balances
@@ -24,9 +42,10 @@ CREATE VIEW IF NOT EXISTS asset_holders AS
             tx_hash AS escrow, ('open_dispenser_' || CAST(rowid AS VARCAHR)) AS cursor_id,
             'open_dispenser' AS holding_type, status
             FROM dispensers WHERE status = 0;
+      """)
 
-
-CREATE VIEW  IF NOT EXISTS xcp_holders AS
+    db.execute("""
+         CREATE VIEW xcp_holders AS
             SELECT * FROM asset_holders
          UNION ALL 
             SELECT 'XCP' AS asset, source AS address, wager_remaining AS quantity,
@@ -58,8 +77,15 @@ CREATE VIEW  IF NOT EXISTS xcp_holders AS
             id AS escrow, ('rps_match_' || CAST(rowid AS VARCAHR)) AS cursor_id,
             'pending_rps_match' AS holding_type, status
             FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
-         UNION ALL 
-            SELECT asset, source AS address, give_remaining AS quantity,
-            tx_hash AS escrow, ('open_dispenser_' || CAST(rowid AS VARCAHR)) AS cursor_id,
-            'open_dispenser' AS holding_type, status
-            FROM dispensers WHERE status = 0;
+    """)
+
+    logger.debug(f"Built views in {time.time() - start_time:.2f} seconds")
+
+
+def rollback(db):
+    db.execute("DROP VIEW asset_holders")
+    db.execute("DROP VIEW xcp_holders")
+
+
+if not __name__.startswith("apsw_"):
+    steps = [step(apply, rollback)]

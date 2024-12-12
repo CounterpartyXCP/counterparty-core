@@ -3,16 +3,14 @@ import multiprocessing
 import os
 import signal
 import sys
-import time
-from threading import Timer
+import threading
 
 import gunicorn.app.base
 import waitress
 import waitress.server
-from counterpartycore.lib import backend, config, ledger, log, util
-from counterpartycore.lib.api.util import get_backend_height
-from counterpartycore.lib.database import get_db_connection
-from flask import request
+from counterpartycore.lib import backend, config, database, ledger, log, util
+from counterpartycore.lib.api import api_watcher
+from counterpartycore.lib.api.util import BackendHeight
 from gunicorn import util as gunicorn_util
 from gunicorn.arbiter import Arbiter
 from gunicorn.errors import AppImportError
@@ -22,78 +20,53 @@ multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-BACKEND_HEIGHT = None
-CURRENT_BLOCK_TIME = None
-REFRESH_BACKEND_HEIGHT_INTERVAL = 10
-BACKEND_HEIGHT_TIMER = None
 
-
-def is_server_ready():
-    # TODO: find a way to mock this function for testing
-    try:
-        if request.url_root == "http://localhost:10009/":
-            return True
-    except RuntimeError:
-        pass
-    if BACKEND_HEIGHT is None:
-        return False
-    if util.CURRENT_BLOCK_INDEX in [BACKEND_HEIGHT, BACKEND_HEIGHT - 1]:
-        return True
-    if CURRENT_BLOCK_TIME is None:
-        return False
-    if time.time() - CURRENT_BLOCK_TIME < 60:
-        return True
-    return False
-
-
-def refresh_current_block(db):
-    # update the current block index
-    global CURRENT_BLOCK_TIME  # noqa F811
-    last_block = ledger.get_last_block(db)
-    if last_block:
-        util.CURRENT_BLOCK_INDEX = last_block["block_index"]
-        CURRENT_BLOCK_TIME = last_block["block_time"]
+def refresh_current_state(ledger_db, state_db):
+    util.CURRENT_BLOCK_INDEX = api_watcher.get_last_block_parsed(state_db)
+    util.CURRENT_BACKEND_HEIGHT = BackendHeight().get()
+    if util.CURRENT_BLOCK_INDEX:
+        last_block = ledger.get_block(ledger_db, util.CURRENT_BLOCK_INDEX)
+        if last_block:
+            util.CURRENT_BLOCK_TIME = last_block["block_time"]
+        else:
+            util.CURRENT_BLOCK_TIME = 0
     else:
+        util.CURRENT_BLOCK_TIME = 0
         util.CURRENT_BLOCK_INDEX = 0
-        CURRENT_BLOCK_TIME = 0
+
+    backend.addrindexrs.clear_raw_transactions_cache()
+
+    if util.CURRENT_BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
+        logger.debug(
+            f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {util.CURRENT_BACKEND_HEIGHT})"
+        )
+    elif util.CURRENT_BACKEND_HEIGHT < util.CURRENT_BLOCK_INDEX:
+        logger.debug(
+            f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {util.CURRENT_BACKEND_HEIGHT})"
+        )
 
 
-def refresh_backend_height(db, start=False):
-    global BACKEND_HEIGHT, BACKEND_HEIGHT_TIMER  # noqa F811
-    if not start:
-        BACKEND_HEIGHT = get_backend_height()
-        # print(f"BACKEND_HEIGHT: {BACKEND_HEIGHT} ({os.getpid()})")
-        refresh_current_block(db)
-        backend.addrindexrs.clear_raw_transactions_cache()
-        if not is_server_ready():
-            if BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
-                logger.debug(
-                    f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {BACKEND_HEIGHT})"
-                )
-            else:
-                logger.debug(
-                    f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {BACKEND_HEIGHT})"
-                )
-    else:
-        # starting the timer is not blocking in case of Addrindexrs is not ready
-        BACKEND_HEIGHT_TIMER = Timer(0.5, refresh_backend_height, (db,))
-        BACKEND_HEIGHT_TIMER.start()
-        return
-    if BACKEND_HEIGHT_TIMER:
-        BACKEND_HEIGHT_TIMER.cancel()
-    BACKEND_HEIGHT_TIMER = Timer(REFRESH_BACKEND_HEIGHT_INTERVAL, refresh_backend_height, (db,))
-    BACKEND_HEIGHT_TIMER.start()
+class NodeStatusCheckerThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self, name="NodeStatusChecker")
+        self.state_db = database.get_db_connection(config.STATE_DATABASE)
+        self.ledger_db = database.get_db_connection(config.DATABASE)
+        self.stop_event = threading.Event()
 
+    def run(self):
+        logger.debug("Starting NodeStatusChecker thread...")
+        try:
+            while not self.stop_event.is_set():
+                refresh_current_state(self.ledger_db, self.state_db)
+                self.stop_event.wait(timeout=1)
+        finally:
+            self.state_db.close()
+            self.ledger_db.close()
 
-def start_refresh_backend_height(timer_db, args):
-    # run the scheduler to refresh the backend height
-    # `no_refresh_backend_height` used only for testing. TODO: find a way to mock it
-    if "no_refresh_backend_height" not in args or not args["no_refresh_backend_height"]:
-        refresh_backend_height(timer_db, start=True)
-    else:
-        refresh_current_block(timer_db)
-        global BACKEND_HEIGHT  # noqa F811
-        BACKEND_HEIGHT = 0
+    def stop(self):
+        self.stop_event.set()
+        if self.is_alive():
+            self.join()
 
 
 class GunicornArbiter(Arbiter):
@@ -179,7 +152,9 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.application = app
         self.args = args
         self.arbiter = None
-        self.timer_db = None
+        self.ledger_db = None
+        self.state_db = None
+        self.current_state_thread = NodeStatusCheckerThread()
         super().__init__()
 
     def load_config(self):
@@ -192,8 +167,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             self.cfg.set(key.lower(), value)
 
     def load(self):
-        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
-        start_refresh_backend_height(self.timer_db, self.args)
+        self.current_state_thread.start()
         return self.application
 
     def run(self):
@@ -207,8 +181,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
 
     def stop(self):
         logger.warning("Stopping Gunicorn")
-        if BACKEND_HEIGHT_TIMER:
-            BACKEND_HEIGHT_TIMER.cancel()
+        self.current_state_thread.stop()
         if self.arbiter:
             self.arbiter.kill_all_workers()
 
@@ -217,14 +190,15 @@ class WerkzeugApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        self.current_state_thread = NodeStatusCheckerThread()
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
 
     def run(self):
-        start_refresh_backend_height(self.timer_db, self.args)
+        self.current_state_thread.start()
         self.server.serve_forever()
 
     def stop(self):
+        self.current_state_thread.stop()
         self.server.shutdown()
         self.server.server_close()
 
@@ -233,16 +207,17 @@ class WaitressApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.timer_db = get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
+        self.current_state_thread = NodeStatusCheckerThread()
         self.server = waitress.server.create_server(
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )
 
     def run(self):
-        start_refresh_backend_height(self.timer_db, self.args)
+        self.current_state_thread.start()
         self.server.run()
 
     def stop(self):
+        self.current_state_thread.stop()
         self.server.close()
 
 

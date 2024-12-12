@@ -118,7 +118,7 @@ ATTACH_VECTOR = {
                 ),
                 "out": (
                     ADDR[0],
-                    [(ADDR[0], None)],
+                    [(ADDR[0], 10000)],
                     b"eXCP|100|",
                 ),
             },

@@ -281,6 +281,8 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         balance_address = None
         utxo = address
+        if not util.PARSING_MEMPOOL and balance == 0:
+            UTXOBalancesCache(db).remove_balance(utxo)
 
     if not no_balance:  # don't create balance if quantity is 0 and there is no balance
         bindings = {
@@ -363,6 +365,8 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         balance_address = None
         utxo = address
+        if not util.PARSING_MEMPOOL and balance > 0:
+            UTXOBalancesCache(db).add_balance(utxo)
 
     bindings = {
         "quantity": balance,
@@ -409,8 +413,6 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
         credit_address = None
         utxo = address
         utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
-        if block_index != config.MEMPOOL_BLOCK_INDEX and not util.PARSING_MEMPOOL:
-            UTXOBalancesCache(db).add_balance(utxo)
 
     add_to_balance(db, address, asset, quantity, tx_index, utxo_address)
 
@@ -478,6 +480,9 @@ class UTXOBalancesCache(metaclass=util.SingletonMeta):
 
     def add_balance(self, utxo):
         self.utxos_with_balance[utxo] = True
+
+    def remove_balance(self, utxo):
+        self.utxos_with_balance.pop(utxo, None)
 
 
 def utxo_has_balance(db, utxo):
@@ -859,70 +864,8 @@ def get_asset_issuances_quantity(db, asset):
     return issuances[0]["issuances_count"]
 
 
-def get_asset_info(db, asset: str):
-    """
-    Returns the asset information
-    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
-    """
-    asset_name = resolve_subasset_longname(db, asset)
-
-    # Defaults.
-    asset_info = {
-        "asset": asset_name,
-        "asset_longname": None,
-        "owner": None,
-        "divisible": True,
-        "locked": False,
-        "supply": 0,
-        "description": "",
-        "issuer": None,
-    }
-
-    if asset_name == config.BTC:
-        asset_info["supply"] = backend.bitcoind.get_btc_supply(normalize=False)
-        return asset_info
-
-    if asset_name == config.XCP:
-        asset_info["supply"] = xcp_supply(db)
-        asset_info["holder_count"] = get_asset_holder_count(db, asset)
-        return asset_info
-
-    asset_info["supply"] = asset_supply(db, asset_name)
-    asset_info["holder_count"] = get_asset_holder_count(db, asset)
-
-    cursor = db.cursor()
-    query = """
-        SELECT *, MIN(block_index) AS first_issuance_block_index,
-                  MAX(rowid) AS rowid,
-                  block_index AS last_issuance_block_index
-        FROM issuances
-        WHERE (status = ? AND asset = ?)
-        GROUP BY asset
-        ORDER BY rowid DESC
-    """
-    bindings = ("valid", asset)
-    cursor.execute(query, bindings)
-    issuance = cursor.fetchone()
-
-    if not issuance:
-        return None
-
-    asset_info = asset_info | {
-        "asset_longname": issuance["asset_longname"],
-        "owner": issuance["issuer"],
-        "divisible": bool(issuance["divisible"]),
-        "locked": bool(issuance["locked"]),
-        "description": issuance["description"],
-        "issuer": issuance["issuer"],
-        "first_issuance_block_index": issuance["first_issuance_block_index"],
-        "last_issuance_block_index": issuance["last_issuance_block_index"],
-    }
-
-    return asset_info
-
-
-def get_assets_last_issuance(db, asset_list):
-    cursor = db.cursor()
+def get_assets_last_issuance(state_db, asset_list):
+    cursor = state_db.cursor()
     fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
     query = f"""
         SELECT {", ".join(fields)} FROM assets_info
@@ -2225,7 +2168,7 @@ def _get_holders(
     return holders
 
 
-def holders(db, asset, exclude_empty_holders=False):
+def holders(db, asset, exclude_empty_holders=False, block_index=None):
     """Return holders of the asset."""
     holders = []
     cursor = db.cursor()
@@ -2251,7 +2194,9 @@ def holders(db, asset, exclude_empty_holders=False):
         SELECT *, rowid
         FROM balances
         WHERE asset = ? AND utxo IS NOT NULL
+        ORDER BY utxo
     """
+
     bindings = (asset,)
     cursor.execute(query, bindings)
     holders += _get_holders(

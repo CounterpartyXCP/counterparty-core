@@ -22,6 +22,7 @@ from counterpartycore import server
 from counterpartycore.lib import arc4, config, database, exceptions, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
+from counterpartycore.lib.api import dbbuilder
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -245,7 +246,7 @@ def api_server(request, cp_server):
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
 
-    print("api_server", config.DATABASE, config.API_DATABASE)
+    print("api_server", config.DATABASE, config.STATE_DATABASE)
 
     # start RPC server and wait for server to be ready
     api_server = api.APIServer()
@@ -289,7 +290,7 @@ def api_server_v2(request, cp_server):
         "api_user": "rpc",
         "api_password": None,
         "api_no_allow_cors": False,
-        "force": False,
+        "force": True,
         "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
         "rpc_batch_size": config.DEFAULT_RPC_BATCH_SIZE,
         "backend_ssl_verify": None,
@@ -320,6 +321,8 @@ def api_server_v2(request, cp_server):
         "waitress_threads": 1,
         "max_log_file_size": 40 * 1024 * 1024,
         "max_log_file_rotations": 20,
+        "log_exclude_filters": None,
+        "log_include_filters": None,
     }
     server_config = (
         default_config
@@ -331,20 +334,26 @@ def api_server_v2(request, cp_server):
         }
     )
 
-    if os.path.exists(config.API_DATABASE):
-        os.unlink(config.API_DATABASE)
-    if os.path.exists(config.API_DATABASE + "-shm"):
-        os.unlink(config.API_DATABASE + "-shm")
-    if os.path.exists(config.API_DATABASE + "-wal"):
-        os.unlink(config.API_DATABASE + "-wal")
+    config.STATE_DATABASE = config.STATE_DATABASE.replace(".testnet.db", ".db")
+
+    if os.path.exists(config.STATE_DATABASE):
+        os.unlink(config.STATE_DATABASE)
+    if os.path.exists(config.STATE_DATABASE + "-shm"):
+        os.unlink(config.STATE_DATABASE + "-shm")
+    if os.path.exists(config.STATE_DATABASE + "-wal"):
+        os.unlink(config.STATE_DATABASE + "-wal")
+
+    dbbuilder.build_state_db()
 
     def is_server_ready():
         return True
 
+    util.CURRENT_BACKEND_HEIGHT = 0
+
     api_v2.is_server_ready = is_server_ready
 
     args = argparse.Namespace(**server_config)
-    api_server = api_v2.APIServer()
+    api_server = api_v2.APIServer(None)
     api_server.start(args)
 
     # wait for server to be ready

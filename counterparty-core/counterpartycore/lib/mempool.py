@@ -1,7 +1,9 @@
+import json
 import logging
 import time
 
 from counterpartycore.lib import backend, blocks, config, deserialize, exceptions, ledger, util
+from counterpartycore.lib.api.api_watcher import EVENTS_ADDRESS_FIELDS
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -84,8 +86,21 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
                 event["timestamp"] = timestamps.get(event["tx_hash"], now)
             else:
                 event["timestamp"] = now
+
+            # collect addresses
+            addresses = []
+            event_bindings = json.loads(event["bindings"])
+            if event["event"] in EVENTS_ADDRESS_FIELDS:
+                for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
+                    if field in event_bindings and event_bindings[field] is not None:
+                        addresses.append(event_bindings[field])
+            addresses = list(set(addresses))
+            event["addresses"] = " ".join(addresses)
+
             cursor.execute(
-                """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp, :event)""",
+                """INSERT INTO mempool VALUES(
+                    :tx_hash, :command, :category, :bindings, :timestamp, :event, :addresses
+                )""",
                 event,
             )
     logger.trace("Mempool transaction parsed successfully")

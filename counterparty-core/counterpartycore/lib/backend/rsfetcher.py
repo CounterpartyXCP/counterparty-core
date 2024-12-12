@@ -1,5 +1,3 @@
-import errno
-import fcntl
 import logging
 import os
 import queue
@@ -11,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from counterparty_rs import indexer
 
-from counterpartycore.lib import config, util
+from counterpartycore.lib import config, exceptions, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -42,18 +40,27 @@ class RSFetcher(metaclass=util.SingletonMeta):
                 "rpc_password": config.BACKEND_PASSWORD,
                 "db_dir": config.FETCHER_DB,
                 "log_file": config.FETCHER_LOG,
-                "log_level": config.LOG_LEVEL_STRING,
                 "json_format": config.JSON_LOGS,
+                "only_write_in_reorg_window": True,
             }
+            if (
+                isinstance(config.LOG_EXCLUDE_FILTERS, list)
+                and "RSFETCHER" in config.LOG_EXCLUDE_FILTERS
+            ):
+                self.config["log_level"] = "OFF"
+            elif isinstance(config.LOG_INCLUDE_FILTERS, list):
+                if "RSFETCHER" in config.LOG_INCLUDE_FILTERS:
+                    self.config["log_level"] = config.LOG_LEVEL_STRING
+                else:
+                    self.config["log_level"] = "OFF"
+            else:
+                self.config["log_level"] = config.LOG_LEVEL_STRING
         else:
             self.config = indexer_config
         self.config["network"] = config.NETWORK_NAME
         self.fetcher = None
         self.prefetch_task = None
         self.running = False
-        self.lock = threading.Lock()
-        self.lockfile_path = os.path.join(self.config["db_dir"], "rocksdb.lock")
-        self.lockfile = None
 
         # Initialize additional attributes
         self.executor = None
@@ -63,76 +70,37 @@ class RSFetcher(metaclass=util.SingletonMeta):
         self.prefetch_queue_initialized = False
         self.next_height = 0
 
-    def acquire_lockfile(self):
-        # Ensure the directory exists
-        os.makedirs(self.config["db_dir"], exist_ok=True)
-        logger.debug(
-            f"RSFetcher - Ensured that directory {self.config['db_dir']} exists for lockfile."
-        )
-
-        try:
-            fd = os.open(self.lockfile_path, os.O_CREAT | os.O_RDWR)
-            self.lockfile = os.fdopen(fd, "w")
-            fcntl.flock(self.lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            logger.debug("RSFetcher - Lockfile acquired.")
-        except IOError as e:
-            if e.errno in (errno.EACCES, errno.EAGAIN):
-                logger.error(
-                    f"RSFetcher - Another instance is running. Unable to acquire lockfile: {e}"
-                )
-                raise RuntimeError("Failed to acquire lockfile.") from e
-            else:
-                logger.error(f"RSFetcher - Unexpected error acquiring lockfile: {e}")
-                raise
-
-    def release_lockfile(self):
-        if self.lockfile:
-            if not self.lockfile.closed:
-                fcntl.flock(self.lockfile, fcntl.LOCK_UN)
-                self.lockfile.close()
-                os.remove(self.lockfile_path)
-                logger.debug("RSFetcher - Lockfile released.")
-            else:
-                logger.debug("RSFetcher - Lockfile was already closed.")
-
     def start(self, start_height=0):
         logger.info("Starting RSFetcher thread...")
-        self.acquire_lockfile()
-        try:
-            self.config["start_height"] = start_height
-            self.next_height = start_height
-            self.fetcher = indexer.Indexer(self.config)
-            # check fetcher version
-            fetcher_version = self.fetcher.get_version()
-            logger.debug("Current Fetcher version: %s", fetcher_version)
-            if fetcher_version != config.__version__:
-                logger.error(
-                    "Fetcher version mismatch. Expected: %s, Got: %s. Please re-compile `counterparty-rs`.",
-                    config.__version__,
-                    fetcher_version,
-                )
-                raise ValueError(
-                    f"Fetcher version mismatch {config.__version__} != {fetcher_version}."
-                )
-            self.fetcher.start()
-        except Exception as e:
-            logger.error(f"Failed to initialize fetcher: {e}. Retrying in 5 seconds...")
-            raise e
+
+        self.config["start_height"] = start_height
+        self.next_height = start_height
+        self.fetcher = indexer.Indexer(self.config)
+        # check fetcher version
+        fetcher_version = self.fetcher.get_version()
+        logger.debug("Current Fetcher version: %s", fetcher_version)
+        if fetcher_version != config.__version__:
+            error_message = f"Fetcher version mismatch. Expected: {config.__version__}, Got: {fetcher_version}. "
+            error_message += "Please re-compile `counterparty-rs`."
+            raise exceptions.InvalidVersion(error_message)
+        self.fetcher.start()
+
         # prefetching
         self.stopped_event.clear()  # Clear the stop event
         self.prefetch_queue = queue.Queue(maxsize=PREFETCH_QUEUE_SIZE)  # Reset the queue
-        self.executor = ThreadPoolExecutor(max_workers=WORKER_THREADS)
+        self.executor = ThreadPoolExecutor(
+            max_workers=WORKER_THREADS, thread_name_prefix="RSFetcher.Prefetcher"
+        )
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
         self.prefetch_queue_initialized = False
 
-    def get_block(self):
+    def get_block(self, retry=0):
         logger.trace("Fetching block with Rust backend.")
         block = self.get_prefetched_block()
 
         if block is None:
-            # Fetcher has been stopped, handle accordingly
-            logger.debug("No block retrieved. Fetcher might have stopped.")
-            return None  # Handle as appropriate for your application
+            # handled in blocks.catch_up()
+            return None
 
         # Handle potentially out-of-order blocks
         if block["height"] != self.next_height:
@@ -198,7 +166,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
                         except queue.Full:
                             logger.debug("Prefetch queue is full; waiting...")
                             time.sleep(0.1)
-                else:
+                elif not self.stopped_event.is_set():
                     logger.debug("No block fetched. Waiting before next fetch.")
                     # Use Event's wait method instead of time.sleep for better responsiveness
                     self.stopped_event.wait(timeout=random.uniform(0.2, 0.7))  # noqa: S311
@@ -234,7 +202,6 @@ class RSFetcher(metaclass=util.SingletonMeta):
         finally:
             self.fetcher = None
             self.prefetch_task = None
-            self.release_lockfile()
             logger.info("RSFetcher thread stopped.")
 
     def restart(self):

@@ -4,6 +4,7 @@ import binascii
 import json
 import os
 import signal
+import struct
 import sys
 import threading
 import time
@@ -11,7 +12,13 @@ import urllib.parse
 from io import StringIO
 
 import sh
-from counterpartycore.lib import arc4, database
+from bitcoinutils.keys import P2wpkhAddress
+from bitcoinutils.script import Script, b_to_h
+from bitcoinutils.setup import setup
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from counterpartycore.lib import arc4, config, database
+
+setup("regtest")
 
 WALLET_NAME = "xcpwallet"
 
@@ -49,6 +56,7 @@ class RegtestNode:
             f"-datadir={self.datadir}/node2",
         )
         self.bitcoin_wallet = self.bitcoin_cli.bake(f"-rpcwallet={WALLET_NAME}")
+        self.bitcoin_wallet_2 = self.bitcoin_cli_2.bake(f"-rpcwallet={WALLET_NAME}")
         self.bitcoind_process = None
         self.addresses = []
         self.block_count = 0
@@ -66,7 +74,9 @@ class RegtestNode:
         self.burn_in_one_block = burn_in_one_block
 
     def api_call(self, url):
-        return json.loads(sh.curl(f"http://localhost:24000/v2/{url}").strip())
+        result = sh.curl(f"http://localhost:24000/v2/{url}").strip()
+        # print(result)
+        return json.loads(result)
 
     def get_mempool_event_count(self):
         result = self.api_call("mempool/events")
@@ -113,6 +123,63 @@ class RegtestNode:
         self.wait_for_counterparty_server()
         return tx_hash, block_hash, block_time
 
+    def compose_and_send_transaction(
+        self, source, messsage_id=None, data=None, no_confirmation=False, dont_wait_mempool=False
+    ):
+        list_unspent = json.loads(
+            self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([source])).strip()
+        )
+        sorted(list_unspent, key=lambda x: -x["amount"])
+        utxo = list_unspent[0]
+
+        tx_inputs = [TxInput(utxo["txid"], utxo["vout"])]
+        tx_outputs = []
+
+        if data is not None:
+            tx_data = b"CNTRPRTY"
+            if messsage_id is not None:
+                tx_data += struct.pack(config.SHORT_TXTYPE_FORMAT, messsage_id)
+            tx_data += data
+            key = arc4.init_arc4(binascii.unhexlify(utxo["txid"]))
+            encrypted_data = key.encrypt(data)
+            tx_outputs.append(TxOutput(0, Script(["OP_RETURN", b_to_h(encrypted_data)])))
+
+        tx_outputs.append(
+            TxOutput(int(utxo["amount"] * 1e8), P2wpkhAddress(source).to_script_pub_key())
+        )
+
+        tx = Transaction(tx_inputs, tx_outputs)
+        tx_hex = tx.to_hex()
+
+        signed_transaction_json = self.bitcoin_wallet(
+            "signrawtransactionwithwallet", tx_hex
+        ).strip()
+        signed_transaction = json.loads(signed_transaction_json)["hex"]
+
+        tx_hash, _block_hash, _block_time = self.broadcast_transaction(
+            signed_transaction, no_confirmation, dont_wait_mempool
+        )
+
+        print(f"Transaction sent: {source} {data} ({tx_hash})")
+
+        return f"{utxo['txid']}:{utxo['vout']}", tx_hash
+
+    def compose(self, source, tx_name, params):
+        query_string = []
+        for key, value in params.items():
+            if not isinstance(value, list):
+                query_string.append(urllib.parse.urlencode({key: value}))
+            else:
+                for i in range(len(value)):
+                    query_string.append(urllib.parse.urlencode({key: value[i]}))
+        query_string = "&".join(query_string)
+
+        if tx_name in ["detach", "movetoutxo"]:
+            compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
+        else:
+            compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
+        return self.api_call(compose_url)
+
     def send_transaction(
         self,
         source,
@@ -132,20 +199,8 @@ class RegtestNode:
         #    params["inputs_set"] = self.get_inputs_set(source)
         # print("Inputs set:", params["inputs_set"])
 
-        query_string = []
-        for key, value in params.items():
-            if not isinstance(value, list):
-                query_string.append(urllib.parse.urlencode({key: value}))
-            else:
-                for i in range(len(value)):
-                    query_string.append(urllib.parse.urlencode({key: value[i]}))
-        query_string = "&".join(query_string)
+        result = self.compose(source, tx_name, params)
 
-        if tx_name in ["detach", "movetoutxo"]:
-            compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
-        else:
-            compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
-        result = self.api_call(compose_url)
         # print(result)
         if "error" in result:
             if result["error"] == "Counterparty not ready":
@@ -225,7 +280,7 @@ class RegtestNode:
 
     def wait_for_counterparty_watcher(self):
         while True:
-            if "API Watcher - Catch up completed." in self.server_out.getvalue():
+            if "API.Watcher - Catch up completed." in self.server_out.getvalue():
                 print("Server ready")
                 return
             print("Waiting for counterparty server...")
@@ -267,10 +322,15 @@ class RegtestNode:
             self.mine_blocks(1)
             self.wait_for_counterparty_server()
 
-    def get_inputs_set(self, address):
-        list_unspent = json.loads(
-            self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([address])).strip()
-        )
+    def get_inputs_set(self, address, node=1):
+        if node == 1:
+            list_unspent = json.loads(
+                self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([address])).strip()
+            )
+        else:
+            list_unspent = json.loads(
+                self.bitcoin_cli_2("listunspent", 0, 9999999, json.dumps([address])).strip()
+            )
         sorted(list_unspent, key=lambda x: -x["amount"])
         inputs = []
         for utxo in list_unspent:
@@ -522,6 +582,16 @@ class RegtestNode:
             time.sleep(2)
             return self.get_burn_count(address)
 
+    def get_xcp_balance(self, address):
+        try:
+            return self.api_call(f"addresses/{address}/balances/XCP")["result"][0]["quantity"]
+        except IndexError:  # no XCP balance
+            return 0
+        except KeyError:
+            print("Error getting XCP balance, retrying in 2 seconds...")
+            time.sleep(2)
+            return self.get_xcp_balance(address)
+
     def test_reorg(self):
         print("Start a second node...")
         self.start_bitcoin_node_2()
@@ -541,12 +611,19 @@ class RegtestNode:
         print("Disconnect from the first node...")
         self.bitcoin_cli_2("disconnectnode", "localhost:18444")
 
+        initial_xcp_balance = self.get_xcp_balance(self.addresses[0])
+        print("Initial XCP balance: ", initial_xcp_balance)
+
         print("Make a burn transaction on first node...")
         self.mine_blocks(3)
         self.send_transaction(self.addresses[0], "burn", {"quantity": 5000})
 
         print("Burn count before reorganization: ", self.get_burn_count(self.addresses[0]))
         assert self.get_burn_count(self.addresses[0]) == 2
+
+        intermediate_xcp_balance = self.get_xcp_balance(self.addresses[0])
+        print("Intermediate XCP balance: ", intermediate_xcp_balance)
+        assert intermediate_xcp_balance > initial_xcp_balance
 
         print("Mine a longest chain on the second node...")
         self.bitcoin_cli_2("generatetoaddress", 6, self.addresses[0])
@@ -568,6 +645,10 @@ class RegtestNode:
         print("Burn count after reorganization: ", self.get_burn_count(self.addresses[0]))
         assert "Blockchain reorganization detected" in self.server_out.getvalue()
         assert self.get_burn_count(self.addresses[0]) == 1
+
+        final_xcp_balance = self.get_xcp_balance(self.addresses[0])
+        print("Final XCP balance: ", final_xcp_balance)
+        assert final_xcp_balance == initial_xcp_balance
 
     def test_invalid_detach(self):
         print("Test invalid detach...")
@@ -794,6 +875,9 @@ class RegtestNode:
         # mine a block
         self.mine_blocks(1)
         self.wait_for_counterparty_server()
+        # wait for event to be parsed
+        # TODO:find a way to check the event is parsed
+        time.sleep(2)
 
         # check the dispenser is created
         dispensers = self.api_call(f"addresses/{new_address}/dispensers")["result"]

@@ -104,8 +104,7 @@ def compose(db, source, asset, quantity, destination_vout=None, skip_validation=
     destinations = []
     if destination_vout is None:
         # else we use the source address as the destination
-        # with dust value
-        destinations.append((source, None))
+        destinations.append((source, config.DEFAULT_UTXO_VALUE))
 
     return (source, destinations, data)
 

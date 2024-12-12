@@ -142,7 +142,10 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    asset_id = ledger.get_asset_id(db, asset, block_index)
+    if not skip_validation:
+        asset_id = ledger.get_asset_id(db, asset, block_index)
+    else:
+        asset_id = ledger.generate_asset_id(asset, block_index)
 
     short_address_bytes = address.pack(destination)
 

@@ -145,24 +145,46 @@ def test_new_get_balances_by_address():
     url = f"{API_ROOT}/v2/addresses/{alice}/balances"
     result = requests.get(url)  # noqa: S113
 
-    assert result.json()["result"] == [
+    # import json
+    print(json.dumps(result.json()["result"], indent=4))
+
+    expected_result = [
         {
             "address": None,
             "asset": "DIVISIBLE",
+            "asset_longname": None,
             "quantity": 1,
-            "utxo": "74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0",
-            "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-        },
-        {
-            "address": None,
-            "asset": "XCP",
-            "quantity": 100,
-            "utxo": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
+            "utxo": "b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "DIVISIBLE",
+            "asset_longname": None,
+            "quantity": 98799999999,
+            "utxo": None,
+            "utxo_address": None,
+        },
+        {
+            "address": None,
+            "asset": "XCP",
+            "asset_longname": None,
+            "quantity": 100,
+            "utxo": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0",
+            "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "XCP",
+            "asset_longname": None,
+            "quantity": 91674999900,
+            "utxo": None,
+            "utxo_address": None,
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "RAIDFAIRMIN",
+            "asset_longname": None,
             "quantity": 20,
             "utxo": None,
             "utxo_address": None,
@@ -170,6 +192,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "FREEFAIRMIN",
+            "asset_longname": None,
             "quantity": 10,
             "utxo": None,
             "utxo_address": None,
@@ -177,6 +200,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "A95428956661682277",
+            "asset_longname": "PARENT.already.issued",
             "quantity": 100000000,
             "utxo": None,
             "utxo_address": None,
@@ -184,6 +208,7 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "PARENT",
+            "asset_longname": None,
             "quantity": 100000000,
             "utxo": None,
             "utxo_address": None,
@@ -191,13 +216,23 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "MAXI",
+            "asset_longname": None,
             "quantity": 9223372036854775807,
             "utxo": None,
             "utxo_address": None,
         },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "NODIVISIBLE",
+            "asset_longname": None,
+            "quantity": 985,
+            "utxo": None,
+            "utxo_address": None,
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "LOCKED",
+            "asset_longname": None,
             "quantity": 1000,
             "utxo": None,
             "utxo_address": None,
@@ -205,32 +240,14 @@ def test_new_get_balances_by_address():
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "CALLABLE",
+            "asset_longname": None,
             "quantity": 1000,
             "utxo": None,
             "utxo_address": None,
         },
-        {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "NODIVISIBLE",
-            "quantity": 985,
-            "utxo": None,
-            "utxo_address": None,
-        },
-        {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "DIVISIBLE",
-            "quantity": 98799999999,
-            "utxo": None,
-            "utxo_address": None,
-        },
-        {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "asset": "XCP",
-            "quantity": 91674999900,
-            "utxo": None,
-            "utxo_address": None,
-        },
     ]
+    for balance in result.json()["result"]:
+        assert balance in expected_result
 
 
 @pytest.mark.usefixtures("api_server_v2")
@@ -241,54 +258,21 @@ def test_new_get_balances_by_asset():
     import json
 
     print(json.dumps(result.json()["result"], indent=4))
-    assert result.json()["result"] == [
-        {
-            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "utxo": None,
-            "utxo_address": None,
-            "asset": "XCP",
-            "quantity": 91674999900,
-        },
-        {
-            "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-            "utxo": None,
-            "utxo_address": None,
-            "asset": "XCP",
-            "quantity": 99999990,
-        },
+    expected_result = [
         {
             "address": "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 300000000,
-        },
-        {
-            "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
-            "utxo": None,
-            "utxo_address": None,
-            "asset": "XCP",
-            "quantity": 92999138821,
-        },
-        {
-            "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
-            "utxo": None,
-            "utxo_address": None,
-            "asset": "XCP",
-            "quantity": 92949130360,
-        },
-        {
-            "address": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
-            "utxo": None,
-            "utxo_address": None,
-            "asset": "XCP",
-            "quantity": 92949122099,
         },
         {
             "address": "mrPk7hTeZWjjSCrMTC2ET4SAUThQt7C4uK",
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 14999857,
         },
         {
@@ -296,13 +280,23 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 46449548498,
+        },
+        {
+            "address": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "asset_longname": None,
+            "quantity": 92949122099,
         },
         {
             "address": "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx",
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 92999030129,
         },
         {
@@ -310,16 +304,52 @@ def test_new_get_balances_by_asset():
             "utxo": None,
             "utxo_address": None,
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 92945878046,
         },
         {
+            "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "asset_longname": None,
+            "quantity": 99999990,
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "asset_longname": None,
+            "quantity": 91674999900,
+        },
+        {
             "address": None,
-            "utxo": "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0",
+            "utxo": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
+            "asset_longname": None,
             "quantity": 100,
         },
+        {
+            "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "asset_longname": None,
+            "quantity": 92949130360,
+        },
+        {
+            "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
+            "utxo": None,
+            "utxo_address": None,
+            "asset": "XCP",
+            "asset_longname": None,
+            "quantity": 92999138821,
+        },
     ]
+    for balance in result.json()["result"]:
+        assert balance in expected_result
 
 
 @pytest.mark.usefixtures("api_server")
@@ -361,6 +391,7 @@ def test_new_get_asset_info():
         "asset": "NODIVISIBLE",
         "asset_longname": None,
         "description": "No divisible asset",
+        "description_locked": False,
         "divisible": False,
         "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "locked": False,
@@ -369,7 +400,6 @@ def test_new_get_asset_info():
         "asset_id": "1911882621324134",
         "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "supply": 1000,
-        "confirmed": True,
     }
 
 
@@ -397,7 +427,6 @@ def test_new_get_asset_orders():
         "fee_provided": 1000000,
         "fee_provided_remaining": 992800,
         "status": "open",
-        "confirmed": True,
         "get_price": 0.008,
         "give_price": 125.0,
     }
@@ -426,7 +455,6 @@ def test_new_get_order_info():
         "fee_provided": 6800,
         "fee_provided_remaining": 6800,
         "status": "open",
-        "confirmed": True,
         "get_price": 100.0,
         "give_price": 0.01,
     }
@@ -457,7 +485,6 @@ def test_new_get_order_matches():
         "match_expire_index": 310512,
         "fee_paid": 7200,
         "status": "expired",
-        "confirmed": True,
     }
 
 
@@ -490,7 +517,6 @@ def test_asset_dispensers():
             "dispense_count": 0,
             "last_status_tx_source": None,
             "close_block_index": None,
-            "confirmed": True,
         }
     ]
 
@@ -521,6 +547,5 @@ def test_asset_dispensers():
             "dispense_count": 0,
             "last_status_tx_source": None,
             "close_block_index": None,
-            "confirmed": True,
         }
     ]

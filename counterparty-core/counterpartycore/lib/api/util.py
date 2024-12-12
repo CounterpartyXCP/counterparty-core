@@ -108,8 +108,6 @@ def clean_rowids_and_confirmed_fields(query_result):
                 del row["rowid"]
             if "MAX(rowid)" in row:
                 del row["MAX(rowid)"]
-            if "confirmed" in row:
-                row["confirmed"] = bool(row["confirmed"])
             if "block_index" in row and row["block_index"] in [0, config.MEMPOOL_BLOCK_INDEX]:
                 row["block_index"] = None
                 if "tx_index" in row:
@@ -122,8 +120,6 @@ def clean_rowids_and_confirmed_fields(query_result):
             del filtered_results["rowid"]
         if "MAX(rowid)" in filtered_results:
             del filtered_results["MAX(rowid)"]
-        if "confirmed" in filtered_results:
-            filtered_results["confirmed"] = bool(filtered_results["confirmed"])
         if "block_index" in filtered_results and filtered_results["block_index"] in [
             0,
             config.MEMPOOL_BLOCK_INDEX,
@@ -176,6 +172,18 @@ def get_backend_height():
     return block_count + blocks_behind
 
 
+class BackendHeight(metaclass=util.SingletonMeta):
+    def __init__(self):
+        self.backend_height = get_backend_height()
+        self.last_update = time.time()
+
+    def get(self):
+        if time.time() - self.last_update > 0:  # one second cache
+            self.backend_height = get_backend_height()
+            self.last_update = time.time()
+        return self.backend_height
+
+
 def init_api_access_log(flask_app):
     """Initialize API logger."""
     flask_app.logger.removeHandler(flask.logging.default_handler)
@@ -206,7 +214,13 @@ def get_args_description(function):
 
 
 def function_needs_db(function):
-    return "db" in inspect.signature(function).parameters
+    dbs = []
+    parameters = inspect.signature(function).parameters
+    if "ledger_db" in parameters or "db" in parameters:
+        dbs.append("ledger_db")
+    if "state_db" in parameters:
+        dbs.append("state_db")
+    return " ".join(dbs)
 
 
 def prepare_route_args(function):
@@ -250,15 +264,6 @@ def prepare_route_args(function):
                 "type": "bool",
                 "default": "false",
                 "description": "Include asset and dispenser info and normalized quantities in the response.",
-                "required": False,
-            }
-        )
-        args.append(
-            {
-                "name": "show_unconfirmed",
-                "type": "bool",
-                "default": "false",
-                "description": "Include results from Mempool.",
                 "required": False,
             }
         )
@@ -308,7 +313,7 @@ def normalize_price(value):
     return "{0:.16f}".format(D(value))
 
 
-def inject_issuances_and_block_times(db, result_list):
+def inject_issuances_and_block_times(ledger_db, state_db, result_list):
     asset_fields = [
         "asset",
         "give_asset",
@@ -373,10 +378,10 @@ def inject_issuances_and_block_times(db, result_list):
                     asset_list.append(item[field_name])
 
     # get asset issuances
-    issuance_by_asset = ledger.get_assets_last_issuance(db, asset_list)
+    issuance_by_asset = ledger.get_assets_last_issuance(state_db, asset_list)
 
     # get block_time for each block_index
-    block_times = ledger.get_blocks_time(db, block_indexes)
+    block_times = ledger.get_blocks_time(ledger_db, block_indexes)
 
     # inject issuance and block_time
     for result_item in result_list:
@@ -635,7 +640,7 @@ def inject_normalized_quantities(result_list):
     return enriched_result_list
 
 
-def inject_fiat_price(db, dispenser):
+def inject_fiat_price(ledger_db, dispenser):
     if "satoshirate" not in dispenser:
         return dispenser
     if dispenser["oracle_address"] != None:  # noqa: E711
@@ -645,7 +650,9 @@ def inject_fiat_price(db, dispenser):
             _oracle_fee,
             dispenser["fiat_unit"],
             dispenser["oracle_price_last_updated"],
-        ) = ledger.get_oracle_last_price(db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX)
+        ) = ledger.get_oracle_last_price(
+            ledger_db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
+        )
 
         if dispenser["oracle_price"] > 0:
             dispenser["satoshi_price"] = math.ceil(
@@ -662,14 +669,14 @@ def inject_fiat_price(db, dispenser):
     return dispenser
 
 
-def inject_fiat_prices(db, result_list):
+def inject_fiat_prices(ledger_db, result_list):
     enriched_result_list = []
     for result_item in result_list:
-        enriched_result_list.append(inject_fiat_price(db, result_item))
+        enriched_result_list.append(inject_fiat_price(ledger_db, result_item))
     return enriched_result_list
 
 
-def inject_dispensers(db, result_list):
+def inject_dispensers(ledger_db, state_db, result_list):
     # gather dispenser list
     dispenser_list = []
     for result_item in result_list:
@@ -678,7 +685,7 @@ def inject_dispensers(db, result_list):
                 dispenser_list.append(result_item["dispenser_tx_hash"])
 
     # get dispenser info
-    dispenser_info = ledger.get_dispensers_info(db, dispenser_list)
+    dispenser_info = ledger.get_dispensers_info(state_db, dispenser_list)
 
     # inject dispenser info
     enriched_result_list = []
@@ -688,33 +695,75 @@ def inject_dispensers(db, result_list):
             and result_item["dispenser_tx_hash"] in dispenser_info
         ):
             result_item["dispenser"] = inject_fiat_price(
-                db, dispenser_info[result_item["dispenser_tx_hash"]]
+                ledger_db, dispenser_info[result_item["dispenser_tx_hash"]]
             )
         enriched_result_list.append(result_item)
 
     return enriched_result_list
 
 
-def inject_unpacked_data_in_dict(db, item):
+def inject_unpacked_data_in_dict(ledger_db, item):
     if "data" in item:
         data = binascii.hexlify(item["data"]) if isinstance(item["data"], bytes) else item["data"]
         if data:
             block_index = item.get("block_index")
-            item["unpacked_data"] = compose.unpack(db, data, block_index=block_index)
+            item["unpacked_data"] = compose.unpack(ledger_db, data, block_index=block_index)
     return item
 
 
-def inject_unpacked_data(db, result_list):
+def inject_unpacked_data(ledger_db, result_list):
     enriched_result_list = []
     for result_item in result_list:
-        result_item = inject_unpacked_data_in_dict(db, result_item)  # noqa PLW2901
+        result_item = inject_unpacked_data_in_dict(ledger_db, result_item)  # noqa PLW2901
         if "params" in result_item:
-            result_item["params"] = inject_unpacked_data_in_dict(db, result_item["params"])
+            result_item["params"] = inject_unpacked_data_in_dict(ledger_db, result_item["params"])
         enriched_result_list.append(result_item)
     return enriched_result_list
 
 
-def inject_details(db, result, rule=None):
+def inject_transactions_events(ledger_db, state_db, result_list):
+    if len(result_list) == 0:
+        return result_list
+    if "tx_hash" not in result_list[0]:
+        return result_list
+
+    cursor = ledger_db.cursor()
+
+    transaction_hashes = [tx["tx_hash"] for tx in result_list]
+    exclude_events = [
+        "NEW_TRANSACTION",
+        "TRANSACTION_PARSED",
+        "CREDIT",
+        "DEBIT",
+        "INCREMENT_TRANSACTION_COUNT",
+        "NEW_TRANSACTION_OUTPUT",
+    ]
+    sql = f"""
+        SELECT message_index AS event_index, event, bindings AS params, tx_hash, block_index 
+        FROM messages 
+        WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))}) 
+        AND event NOT IN ({",".join("?" * len(exclude_events))})
+    """  # noqa S608
+    events = cursor.execute(sql, transaction_hashes + exclude_events).fetchall()
+    for event in events:
+        event["params"] = json.loads(event["params"])
+
+    events = inject_dispensers(ledger_db, state_db, events)
+    events = inject_fiat_prices(ledger_db, events)
+    events = inject_issuances_and_block_times(ledger_db, state_db, events)
+    events = inject_normalized_quantities(events)
+
+    events_by_tx_hash = {}
+    for event in events:
+        if event["tx_hash"] not in events_by_tx_hash:
+            events_by_tx_hash[event["tx_hash"]] = []
+        events_by_tx_hash[event["tx_hash"]].append(event)
+    for result_item in result_list:
+        result_item["events"] = events_by_tx_hash.get(result_item["tx_hash"], [])
+    return result_list
+
+
+def inject_details(ledger_db, state_db, result, table=None):
     if isinstance(result, (int, str)):
         return result
     # let's work with a list
@@ -724,19 +773,19 @@ def inject_details(db, result, rule=None):
         result_list = [result]
         result_is_dict = True
 
-    result_list = inject_dispensers(db, result_list)
-    result_list = inject_fiat_prices(db, result_list)
-    result_list = inject_unpacked_data(db, result_list)
-    result_list = inject_issuances_and_block_times(db, result_list)
+    if table == "transactions":
+        result_list = inject_transactions_events(ledger_db, state_db, result_list)
+        result_list = inject_unpacked_data(ledger_db, result_list)
+
+    result_list = inject_dispensers(ledger_db, state_db, result_list)
+    result_list = inject_fiat_prices(ledger_db, result_list)
+    result_list = inject_issuances_and_block_times(ledger_db, state_db, result_list)
     result_list = inject_normalized_quantities(result_list)
 
     if result_is_dict:
         result = result_list[0]
     else:
         result = result_list
-
-    if rule == "/v2/assets/<asset>":
-        result["holder_count"] = ledger.get_asset_holder_count(db, result["asset"])
 
     return result
 

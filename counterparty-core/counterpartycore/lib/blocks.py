@@ -10,6 +10,7 @@ import decimal
 import logging  # noqa: E402
 import os
 import struct
+import sys
 import time
 from datetime import timedelta
 
@@ -103,10 +104,40 @@ with open(CURR_DIR + "/../mainnet_burns.csv", "r") as f:
         MAINNET_BURNS[line["tx_hash"]] = line
 
 
+def update_transaction(db, tx, supported):
+    ledger.add_to_journal(
+        db,
+        tx["block_index"],
+        "parse",
+        "transactions",
+        "TRANSACTION_PARSED",
+        {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "supported": supported,
+        },
+    )
+
+    if not supported:
+        cursor = db.cursor()
+        cursor.execute(
+            """UPDATE transactions \
+                            SET supported=$supported \
+                            WHERE tx_hash=$tx_hash""",
+            {"supported": False, "tx_hash": tx["tx_hash"]},
+        )
+        if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
+            logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
+        cursor.close()
+
+
 def parse_tx(db, tx):
     util.CURRENT_TX_HASH = tx["tx_hash"]
     """Parse the transaction, return True for success."""
     cursor = db.cursor()
+
+    supported = True
+    moved = False
 
     try:
         with db:
@@ -126,17 +157,14 @@ def parse_tx(db, tx):
                 attach.ID,
                 detach.ID,
             ]:
-                move.move_assets(db, tx)
+                moved = move.move_assets(db, tx)
 
-            if not tx["source"]:  # utxos move only
+            if (
+                not tx["source"]
+                or len(tx["source"].split("-")) > 1
+                or (tx["destination"] and len(tx["destination"].split("-")) > 1)
+            ):
                 return
-
-            # Only one source and one destination allowed for now.
-            if len(tx["source"].split("-")) > 1:
-                return
-            if tx["destination"]:
-                if len(tx["destination"].split("-")) > 1:
-                    return
 
             # Burns.
             if tx["destination"] == config.UNSPENDABLE:
@@ -145,8 +173,6 @@ def parse_tx(db, tx):
 
             # Protocol change.
             rps_enabled = tx["block_index"] >= 308500 or config.TESTNET or config.REGTEST
-
-            supported = True
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
@@ -224,50 +250,19 @@ def parse_tx(db, tx):
             else:
                 supported = False
 
-            ledger.add_to_journal(
-                db,
-                tx["block_index"],
-                "parse",
-                "transactions",
-                "TRANSACTION_PARSED",
-                {
-                    "tx_index": tx["tx_index"],
-                    "tx_hash": tx["tx_hash"],
-                    "supported": supported,
-                },
-            )
-
-            if not supported:
-                cursor.execute(
-                    """UPDATE transactions \
-                                    SET supported=$supported \
-                                    WHERE tx_hash=$tx_hash""",
-                    {"supported": False, "tx_hash": tx["tx_hash"]},
-                )
-                if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
-                    logger.info(
-                        f"Unsupported transaction: hash {tx['tx_hash']}; ID: {message_type_id}; data {tx['data']}"
-                    )
-                cursor.close()
-                util.CURRENT_TX_HASH = None
-                return False
-
             # if attach or detach we move assets after parsing
             if util.enabled("spend_utxo_to_detach") and message_type_id == attach.ID:
-                move.move_assets(db, tx)
+                moved = move.move_assets(db, tx)
 
-            # NOTE: for debugging (check asset conservation after every `N` transactions).
-            # if not tx['tx_index'] % N:
-            #     check.asset_conservation(db)
-            util.CURRENT_TX_HASH = None
-            return True
     except Exception as e:
-        # import traceback
-        # print(traceback.format_exc())
         raise exceptions.ParseTransactionError(f"{e}") from e
     finally:
         cursor.close()
+        supported = supported or moved
+        update_transaction(db, tx, supported)
         util.CURRENT_TX_HASH = None
+
+    return supported
 
 
 def replay_transactions_events(db, transactions):
@@ -286,6 +281,7 @@ def replay_transactions_events(db, transactions):
             "fee": tx["fee"],
             "data": tx["data"],
             "utxos_info": tx["utxos_info"],
+            "transaction_type": tx["transaction_type"],
         }
         ledger.add_to_journal(
             db,
@@ -433,6 +429,35 @@ def parse_block(
     return None, None, None
 
 
+def update_transaction_type(db):
+    start = time.time()
+    logger.info("Updating `transaction_type` column in `transactions` table...")
+
+    with db:
+        cursor = db.cursor()
+        cursor.execute("ALTER TABLE transactions ADD COLUMN transaction_type TEXT")
+        cursor.execute(
+            "SELECT tx_index, destination, block_index, data, supported FROM transactions"
+        )
+        counter = 0
+        for tx in cursor.fetchall():
+            transaction_type = "unknown"
+            if tx["supported"]:
+                transaction_type = message_type.get_transaction_type(
+                    tx["data"], tx["destination"], tx["block_index"]
+                )
+
+            cursor.execute(
+                "UPDATE transactions SET transaction_type = ? WHERE tx_index = ?",
+                (transaction_type, tx["tx_index"]),
+            )
+            counter += 1
+            if counter % 500000 == 0:
+                logger.trace(f"Updated {counter} transactions")
+
+    logger.info(f"Updated {counter} transactions in {time.time() - start:.2f} seconds")
+
+
 def initialise(db):
     """Initialise data, create and populate the database."""
     logger.info("Initializing database...")
@@ -441,6 +466,8 @@ def initialise(db):
     # Drop views that are going to be recreated
     cursor.execute("DROP VIEW IF EXISTS all_expirations")
     cursor.execute("DROP VIEW IF EXISTS all_holders")
+
+    database.init_config_table(db)
 
     # remove misnamed indexes
     database.drop_indexes(
@@ -459,6 +486,12 @@ def initialise(db):
             "addresses_idx",
             "block_index_message_index_idx",
             "asset_longname_idx",
+            "blocks_block_index_idx",
+            "transactions_block_index_idx",
+            "transactions_tx_index_idx",
+            "balances_address_idx",
+            "balances_utxo_idx",
+            "messages_block_index_idx",
         ],
     )
 
@@ -508,8 +541,8 @@ def initialise(db):
         cursor,
         "blocks",
         [
-            ["block_index"],
             ["block_index", "block_hash"],
+            ["ledger_hash"],
         ],
     )
 
@@ -537,6 +570,7 @@ def initialise(db):
                       data BLOB,
                       supported BOOL DEFAULT 1,
                       utxos_info TEXT,
+                      transaction_type TEXT,
                       FOREIGN KEY (block_index, block_hash) REFERENCES blocks(block_index, block_hash),
                       PRIMARY KEY (tx_index, tx_hash, block_index))
                     """
@@ -548,16 +582,18 @@ def initialise(db):
     if "utxos_info" not in transactions_columns:
         cursor.execute("""ALTER TABLE transactions ADD COLUMN utxos_info TEXT""")
 
+    if "transaction_type" not in transactions_columns:
+        update_transaction_type(db)
+
     database.create_indexes(
         cursor,
         "transactions",
         [
-            ["block_index"],
-            ["tx_index"],
             ["tx_hash"],
             ["block_index", "tx_index"],
             ["tx_index", "tx_hash", "block_index"],
             ["source"],
+            ["transaction_type"],
         ],
     )
 
@@ -664,11 +700,10 @@ def initialise(db):
         [
             ["address", "asset"],
             ["utxo", "asset"],
-            ["address"],
+            ["address", "utxo", "asset"],
             ["asset"],
             ["block_index"],
             ["quantity"],
-            ["utxo"],
             ["utxo_address"],
         ],
     )
@@ -814,12 +849,15 @@ def initialise(db):
                       category TEXT,
                       bindings TEXT,
                       timestamp INTEGER,
-                      event TEXT)
+                      event TEXT,
+                      addresses TEXT)
                   """
     )
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(mempool)""")]
     if "event" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
+    if "addresses" not in columns:
+        cursor.execute("""ALTER TABLE mempool ADD COLUMN addresses TEXT""")
 
     create_views(db)
 
@@ -1018,6 +1056,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             "fee": fee,
             "data": data,
             "utxos_info": " ".join(utxos_info),
+            "transaction_type": message_type.get_transaction_type(data, destination, block_index),
         }
         ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
 
@@ -1086,11 +1125,14 @@ def rebuild_database(db, include_transactions=True):
     initialise(db)
 
 
-def rollback(db, block_index=0):
+def rollback(db, block_index=0, force=False):
+    if not force and block_index > util.CURRENT_BLOCK_INDEX:
+        logger.debug("Block index is higher than current block index. No need to reparse.")
+        return
     block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
-    step = f"Rolling database back to Block {block_index}..."
-    done_message = f"Database rolled back to Block {block_index} ({{}}s)"
+    step = f"Rolling Ledger DB back to block {block_index}..."
+    done_message = f"Ledger DB rolled back to block {block_index} ({{}}s)"
     with log.Spinner(step, done_message):
         if block_index == config.BLOCK_FIRST:
             rebuild_database(db)
@@ -1132,7 +1174,7 @@ def reparse(db, block_index=0):
         return
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
-    with log.Spinner(f"Rolling database back to Block {block_index}..."):
+    with log.Spinner(f"Rolling database back to block {block_index}..."):
         clean_messages_tables(db, block_index=block_index)
 
     step = "Recalculating consensus hashes..."
@@ -1149,7 +1191,7 @@ def reparse(db, block_index=0):
     block_parsed_count = 0
     count_query = "SELECT COUNT(*) AS cnt FROM blocks WHERE block_index >= ?"
     block_count = cursor.execute(count_query, (block_index,)).fetchone()["cnt"]
-    step = f"Reparsing blocks from Block {block_index}..."
+    step = f"Reparsing blocks from block {block_index}..."
     message = ""
     with log.Spinner(step) as spinner:
         cursor.execute(
@@ -1249,7 +1291,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
             raw_current_block = backend.bitcoind.getblock(current_block_hash)
             decoded_block = deserialize.deserialize_block(raw_current_block, use_txid=True)
 
-            logger.warning("Blockchain reorganization detected at Block %s.", previous_block_index)
+            logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
             # rollback to the previous block
             rollback(db, block_index=previous_block_index + 1)
             util.CURRENT_BLOCK_INDEX = previous_block_index + 1
@@ -1329,7 +1371,7 @@ def rollback_empty_block(db):
         logger.warning(
             f"Ledger hashes are empty from block {block['block_index']}. Rolling back..."
         )
-        rollback(db, block_index=block["block_index"])
+        rollback(db, block_index=block["block_index"], force=True)
 
 
 def check_database_version(db):
@@ -1352,86 +1394,99 @@ def check_database_version(db):
         database.update_version(db)
 
 
+def start_rsfetcher():
+    fetcher = rsfetcher.RSFetcher()
+    try:
+        fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+    except exceptions.InvalidVersion as e:
+        logger.error(e)
+        sys.exit(1)
+    except Exception:
+        logger.warning("Failed to start RSFetcher. Retrying in 5 seconds...")
+        time.sleep(5)
+        return start_rsfetcher()
+    return fetcher
+
+
 def catch_up(db, check_asset_conservation=True):
     logger.info("Catching up...")
 
-    util.BLOCK_PARSER_STATUS = "catching up"
-    # update the current block index
-    util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
-    if util.CURRENT_BLOCK_INDEX == 0:
-        logger.info("New database.")
-        util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
-
-    # Get block count.
-    block_count = backend.bitcoind.getblockcount()
-
-    # Wait for bitcoind to catch up at least one block after util.CURRENT_BLOCK_INDEX
-    if backend.bitcoind.get_blocks_behind() > 0 and block_count <= util.CURRENT_BLOCK_INDEX:
-        backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
-        block_count = backend.bitcoind.getblockcount()
-
-    # Get index of last transaction.
-    tx_index = get_next_tx_index(db)
-
-    start_time = time.time()
-    parsed_blocks = 0
     fetcher = None
 
-    while util.CURRENT_BLOCK_INDEX < block_count:
-        # Get block information and transactions
-        fetch_time_start = time.time()
-        if fetcher is None:
-            fetcher = rsfetcher.RSFetcher()
-            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+    try:
+        util.BLOCK_PARSER_STATUS = "catching up"
+        # update the current block index
+        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+        if util.CURRENT_BLOCK_INDEX == 0:
+            logger.info("New database.")
+            util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
 
-        retry = 0
-        decoded_block = fetcher.get_block()
-        while decoded_block is None:
-            retry += 1
-            if retry > 5:
-                raise exceptions.RSFetchError("RSFetcher returned None too many times.")
-            logger.warning("RSFetcher returned None. Trying again in 5 seconds...")
-            time.sleep(5)
-            fetcher.stop()
-            fetcher = rsfetcher.RSFetcher()
-            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
-            decoded_block = fetcher.get_block()
+        # Get block count.
+        block_count = backend.bitcoind.getblockcount()
 
-        block_height = decoded_block.get("height")
-        fetch_time_end = time.time()
-        fetch_duration = fetch_time_end - fetch_time_start
-        logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
-
-        # Check for gaps in the blockchain
-        assert block_height <= util.CURRENT_BLOCK_INDEX + 1
-
-        # Parse the current block
-        tx_index, parsed_block_index = parse_new_block(db, decoded_block, tx_index=tx_index)
-        # check if the parsed block is the expected one
-        # if not that means a reorg happened
-        if parsed_block_index < block_height:
-            fetcher.stop()
-            fetcher = rsfetcher.RSFetcher()
-            fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
-        else:
-            assert parsed_block_index == block_height
-        mempool.clean_mempool(db)
-
-        parsed_blocks += 1
-        formatted_duration = util.format_duration(time.time() - start_time)
-        logger.debug(
-            f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
-        )
-
-        # Refresh block count.
-        if util.CURRENT_BLOCK_INDEX == block_count:
-            # if bitcoind is catching up, wait for the next block
-            if backend.bitcoind.get_blocks_behind() > 0:
-                backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+        # Wait for bitcoind to catch up at least one block after util.CURRENT_BLOCK_INDEX
+        if backend.bitcoind.get_blocks_behind() > 0 and block_count <= util.CURRENT_BLOCK_INDEX:
+            backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
             block_count = backend.bitcoind.getblockcount()
 
-    if fetcher is not None:
-        fetcher.stop()
+        # Get index of last transaction.
+        tx_index = get_next_tx_index(db)
+
+        start_time = time.time()
+        parsed_blocks = 0
+
+        while util.CURRENT_BLOCK_INDEX < block_count:
+            # Get block information and transactions
+            fetch_time_start = time.time()
+            if fetcher is None:
+                fetcher = start_rsfetcher()
+
+            retry = 0
+            decoded_block = fetcher.get_block()
+            while decoded_block is None:
+                retry += 1
+                if retry > 5:
+                    raise exceptions.RSFetchError("RSFetcher returned None too many times.")
+                logger.warning("RSFetcher returned None. Trying again in 5 seconds...")
+                time.sleep(5)
+                fetcher.stop()
+                fetcher = start_rsfetcher()
+                decoded_block = fetcher.get_block()
+
+            block_height = decoded_block.get("height")
+            fetch_time_end = time.time()
+            fetch_duration = fetch_time_end - fetch_time_start
+            logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
+
+            # Check for gaps in the blockchain
+            assert block_height <= util.CURRENT_BLOCK_INDEX + 1
+
+            # Parse the current block
+            tx_index, parsed_block_index = parse_new_block(db, decoded_block, tx_index=tx_index)
+            # check if the parsed block is the expected one
+            # if not that means a reorg happened
+            if parsed_block_index < block_height:
+                fetcher.stop()
+                fetcher = start_rsfetcher()
+            else:
+                assert parsed_block_index == block_height
+            mempool.clean_mempool(db)
+
+            parsed_blocks += 1
+            formatted_duration = util.format_duration(time.time() - start_time)
+            logger.debug(
+                f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
+            )
+
+            # Refresh block count.
+            if util.CURRENT_BLOCK_INDEX == block_count:
+                # if bitcoind is catching up, wait for the next block
+                if backend.bitcoind.get_blocks_behind() > 0:
+                    backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+                block_count = backend.bitcoind.getblockcount()
+    finally:
+        if fetcher is not None:
+            fetcher.stop()
 
     logger.info("Catch up complete.")
 

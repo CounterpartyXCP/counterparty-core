@@ -63,9 +63,7 @@ def get_zmq_notifications_addresses():
 
 def start_blockchain_watcher(db):
     try:
-        follower_daemon = BlockchainWatcher(db)
-        follower_daemon.start()
-        return follower_daemon
+        return BlockchainWatcher(db)
     except exceptions.BitcoindZMQError as e:
         logger.error(e)
         logger.warning("Sleeping 5 seconds, catching up again, then retrying...")
@@ -220,9 +218,18 @@ class BlockchainWatcher:
             capture_exception(e)
             raise e
 
+    def is_late(self):
+        last_parsed_block = ledger.get_last_block(self.db)
+        if last_parsed_block:
+            last_parsed_block_index = last_parsed_block["block_index"]
+            bitcoind_block_index = backend.bitcoind.getblockcount()
+            return last_parsed_block_index < bitcoind_block_index
+        return False
+
     async def handle(self):
         self.check_software_version_if_needed()
         util.BLOCK_PARSER_STATUS = "following"
+        late_since = None
 
         while True:
             try:
@@ -231,9 +238,19 @@ class BlockchainWatcher:
                     await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
                 # check rawblock topic
                 check_block_delay = 10 if config.NETWORK_NAME == "mainnet" else 0.5
+
                 if time.time() - self.last_block_check_time > check_block_delay:
                     await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
                     self.last_block_check_time = time.time()
+
+                    if self.is_late() and late_since is None:
+                        late_since = time.time()
+                    else:
+                        late_since = None
+                    if late_since is not None and time.time() - late_since > 60:
+                        logger.warning("ZMQ is late. Catching up...")
+                        blocks.catch_up(self.db, check_asset_conservation=False)
+                        late_since = None
 
                 # Yield control to the event loop to allow other tasks to run
                 await asyncio.sleep(0)
@@ -255,13 +272,8 @@ class BlockchainWatcher:
         logger.debug("Stopping blockchain watcher...")
         # Cancel the handle task
         self.task.cancel()
-        try:
-            # Run the event loop until the task has been cancelled
-            self.loop.run_until_complete(self.task)
-        except asyncio.CancelledError:
-            logger.debug("BlockchainWatcher.handle() cancelled successfully.")
-        # Stop and close the event loop
         self.loop.stop()
         self.loop.close()
         # Clean up ZMQ context
         self.zmq_context.destroy()
+        logger.debug("Blockchain watcher stopped.")

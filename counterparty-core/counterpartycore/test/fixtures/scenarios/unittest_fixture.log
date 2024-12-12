@@ -12,10 +12,8 @@ SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_f
             BEFORE UPDATE ON fairminters BEGIN
                 SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
             END;] databa (17) SQLITE_SCHEMA
-SQLITE_LOG: statement aborts at 11: [SELECT name FROM sqlite_master WHERE type='table' AND name='config'] database schema has changed (17) SQLITE_SCHEMA
 SQLITE_LOG: statement aborts at 27: [INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)] database schema has changed (17) SQLITE_SCHEMA
 Cleaning `transaction_count` table
-SQLITE_LOG: statement aborts at 11: [SELECT name FROM sqlite_master WHERE type='table' AND name='config'] database schema has changed (17) SQLITE_SCHEMA
 Initialising asset cache...
 Asset cache initialised in 0.00 seconds
 Initialising asset cache...
@@ -155,9 +153,9 @@ TX Construct - Transaction constructed.
 TX Construct - Transaction constructed.
 20 A160361285792733729 minted for 200 XCP by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 TX Construct - Transaction constructed.
-Attach XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0 (c1a3885eac5247f363f6adcc0fbd6576b8b98f928065185074fe75d01c91af02) [valid]
+Attach XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0 (f75e8d65a22120cb2c16de7f11f6f0f3e19b5d5d49f5dae93fa9663dee8cda30) [valid]
 TX Construct - Transaction constructed.
-Attach DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0 (a568f169d4bb433072dd25793970d330fa51092012964a5bdc42d22835182726) [valid]
+Attach DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0 (6d82e72e296882c73768a230de12c85e871712d7f9a51448ecb2b4dde1abf881) [valid]
 TX Construct - Transaction constructed.
 Issuance of 1000 TESTDISP by munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b [01e52e3770a932827a4b4e5db193eef916fcf69bda1a7944298210a74f1633a1] (valid)
 TX Construct - Transaction constructed.

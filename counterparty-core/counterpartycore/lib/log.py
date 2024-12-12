@@ -6,6 +6,7 @@ import time
 import traceback
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+from multiprocessing import current_process
 
 import zmq
 from dateutil.tz import tzlocal
@@ -49,6 +50,48 @@ def formatTime(record, datefmt=None):
     return date_string
 
 
+def get_full_topic(record):
+    process_name = "Ledger"
+    if current_process().name != "MainProcess":
+        process_name = "API"
+    thread_name = threading.current_thread().name
+    if thread_name == "MainThread":
+        thread_name = "Main"
+    topic = getattr(record, "topic", None)
+
+    if (
+        topic is None
+        and util.CURRENT_BLOCK_INDEX is not None
+        and "/counterpartycore/lib/messages/" in record.pathname
+        and util.PARSING_MEMPOOL
+    ):
+        topic = "Mempool"
+
+    full_topic = f"{process_name}.{thread_name}"
+    if topic:
+        full_topic = f"{full_topic}.{topic}"
+
+    return full_topic
+
+
+class CustomFilter(logging.Filter):
+    def filter(self, record):
+        full_topic = get_full_topic(record)
+
+        if isinstance(config.LOG_EXCLUDE_FILTERS, list):
+            for include_filter in config.LOG_EXCLUDE_FILTERS:
+                if full_topic.startswith(include_filter):
+                    return False
+
+        if isinstance(config.LOG_INCLUDE_FILTERS, list):
+            for include_filter in config.LOG_INCLUDE_FILTERS:
+                if full_topic.startswith(include_filter):
+                    return True
+            return False
+
+        return True
+
+
 class CustomFormatter(logging.Formatter):
     FORMAT = "%(asctime)s - [%(levelname)8s] - %(message)s"
 
@@ -66,22 +109,21 @@ class CustomFormatter(logging.Formatter):
 
         time_format = colored("%(asctime)s", attrs=attrs)
         level_name_format = colored("%(levelname)8s", self.COLORS.get(record.levelno), attrs=attrs)
+        full_topic = get_full_topic(record)
 
+        log_message = "%(message)s"
         if (
             record.levelno != logging.EVENT
             and util.CURRENT_BLOCK_INDEX is not None
             and "/counterpartycore/lib/messages/" in record.pathname
+            and not util.PARSING_MEMPOOL
         ):
-            if util.PARSING_MEMPOOL:
-                log_message = "Mempool - %(message)s"
-            else:
-                log_message = f"Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
-        else:
-            log_message = "%(message)s"
+            log_message = f"Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
+
         if hasattr(record, "bold"):
             log_message = colored(log_message, attrs=attrs)
 
-        log_format = f"{time_format} - [{level_name_format}] - {log_message}"
+        log_format = f"{time_format} - [{level_name_format}] - {full_topic} - {log_message}"
 
         formatter = logging.Formatter(log_format)
         if isinstance(record.args, dict):
@@ -196,6 +238,7 @@ def set_up(
             console.setFormatter(CustomisedJSONFormatter())
         else:
             console.setFormatter(CustomFormatter())
+        console.addFilter(CustomFilter())
         logger.addHandler(console)
 
     # Log unhandled errors.

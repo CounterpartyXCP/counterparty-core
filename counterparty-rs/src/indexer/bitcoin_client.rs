@@ -380,7 +380,7 @@ impl ToBlock for Block {
             let tx_bytes = serialize(tx);
             let mut vins = Vec::new();
             let mut segwit = false;
-            let mut vtxinwit = Vec::new();
+            let mut vtxinwit: Vec<Vec<String>> = Vec::new();
             let mut key = Vec::new();
             for vin in tx.input.iter() {
                 if key.is_empty() {
@@ -389,14 +389,15 @@ impl ToBlock for Block {
                 }
                 let hash = vin.previous_output.txid.to_string();
                 if !vin.witness.is_empty() {
-                    vtxinwit.append(
-                        &mut vin
-                            .witness
+                    vtxinwit.push(
+                        vin.witness
                             .iter()
                             .map(|w| w.as_hex().to_string())
                             .collect::<Vec<_>>(),
                     );
-                    segwit = true
+                    segwit = true;
+                } else {
+                    vtxinwit.push(Vec::new());
                 }
                 vins.push(Vin {
                     hash,
@@ -418,6 +419,8 @@ impl ToBlock for Block {
                     value: vout.value.to_sat(),
                     script_pub_key: vout.script_pubkey.to_bytes(),
                 });
+            }
+            for (vi, vout) in tx.output.iter().enumerate() {
                 if !config.multisig_addresses_enabled(height) {
                     continue;
                 }

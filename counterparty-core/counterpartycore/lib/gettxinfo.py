@@ -1,6 +1,7 @@
 import binascii
 import logging
 import struct
+from io import BytesIO
 
 from counterpartycore.lib import arc4, backend, config, ledger, message_type, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
@@ -146,7 +147,8 @@ def get_vin_info(vin):
     if "value" in vin:
         return vin["value"], vin["script_pub_key"], vin["is_segwit"]
 
-    # Note: We don't know what block the `vin` is in, and the block might have been from a while ago, so this call may not hit the cache.
+    # Note: We don't know what block the `vin` is in, and the block might
+    # have been from a while ago, so this call may not hit the cache.
     vin_ctx = backend.bitcoind.get_decoded_transaction(vin["hash"])
 
     is_segwit = len(vin_ctx["vtxinwit"]) > 0
@@ -155,11 +157,151 @@ def get_vin_info(vin):
     return vout["value"], vout["script_pub_key"], is_segwit
 
 
+def is_valid_der(der):
+    if not isinstance(der, bytes):
+        return False
+    try:
+        s = BytesIO(der)
+        compound = s.read(1)[0]
+        if compound != 0x30:
+            return False
+        length = s.read(1)[0]
+        if length + 2 != len(der):
+            return False
+        marker = s.read(1)[0]
+        if marker != 0x02:
+            return False
+        rlength = s.read(1)[0]
+        _r = int(s.read(rlength).hex(), 16)
+        marker = s.read(1)[0]
+        if marker != 0x02:
+            return False
+        slength = s.read(1)[0]
+        s = int(s.read(slength).hex(), 16)
+        if len(der) != 6 + rlength + slength:
+            return False
+        return True
+    except Exception:
+        return False
+
+
+def is_valid_schnorr(schnorr):
+    p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+    n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+
+    if not isinstance(schnorr, bytes):
+        return False
+    if len(schnorr) not in [64, 65]:
+        return False
+    if len(schnorr) == 65:
+        schnorr = schnorr[:-1]
+    try:
+        r = int.from_bytes(schnorr[0:32], byteorder="big")
+        s = int.from_bytes(schnorr[32:64], byteorder="big")
+    except Exception:
+        return False
+    if (r >= p) or (s >= n):
+        return False
+    return True
+
+
+def get_der_signature_sighash_flag(value):
+    if is_valid_der(value[:-1]):
+        return value[-1:]
+    return None
+
+
+def get_schnorr_signature_sighash_flag(value):
+    if is_valid_schnorr(value):
+        if len(value) == 65:
+            return value[-1:]
+        return b"\x01"  # SIGHASH_ALL
+
+
+def collect_sighash_flags(script_sig, witnesses):
+    flags = []
+
+    # P2PK, P2PKH, P2MS
+    if script_sig != b"":
+        asm = script.script_to_asm(script_sig)
+        for item in asm:
+            flag = get_der_signature_sighash_flag(item)
+            if flag is not None:
+                flags.append(flag)
+
+    if len(witnesses) == 0:
+        return flags
+
+    witnesses = [
+        binascii.unhexlify(witness) if isinstance(witness, str) else witness
+        for witness in witnesses
+    ]
+
+    # P2WPKH
+    if len(witnesses) == 2:
+        flag = get_der_signature_sighash_flag(witnesses[0])
+        if flag is not None:
+            flags.append(flag)
+        return flags
+
+    # P2TR key path spend
+    if len(witnesses) == 1:
+        flag = get_schnorr_signature_sighash_flag(witnesses[0])
+        if flag is not None:
+            flags.append(flag)
+        return flags
+
+    # Other cases
+    if len(witnesses) >= 3:
+        for item in witnesses:
+            flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
+            if flag is not None:
+                flags.append(flag)
+        return flags
+
+    return flags
+
+
+class SighashFlagError(DecodeError):
+    pass
+
+
+# known transactions with invalid SIGHASH flag
+SIGHASH_FLAG_TRANSACTION_WHITELIST = [
+    "c8091f1ef768a2f00d48e6d0f7a2c2d272a5d5c8063db78bf39977adcb12e103"
+]
+
+
+def check_signatures_sighash_flag(decoded_tx):
+    if decoded_tx["tx_id"] in SIGHASH_FLAG_TRANSACTION_WHITELIST:
+        return
+
+    script_sig = decoded_tx["vin"][0]["script_sig"]
+    witnesses = []
+    if decoded_tx["segwit"]:
+        witnesses = decoded_tx["vtxinwit"][0]
+
+    flags = collect_sighash_flags(script_sig, witnesses)
+
+    if len(flags) == 0:
+        error = f"impossible to determine SIGHASH flag for transaction {decoded_tx['tx_id']}"
+        logger.debug(error)
+        raise SighashFlagError(error)
+
+    # first input must be signed with SIGHASH_ALL or SIGHASH_ALL|SIGHASH_ANYONECANPAY
+    authorized_flags = [b"\x01", b"\x81"]
+    for flag in flags:
+        if flag not in authorized_flags:
+            error = f"invalid SIGHASH flag for transaction {decoded_tx['tx_id']}"
+            logger.debug(error)
+            raise SighashFlagError(error)
+
+
 def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
 
-    for vin in decoded_tx["vin"][:]:  # Loop through inputs.
+    for vin in decoded_tx["vin"]:  # Loop through inputs.
         vout_value, script_pubkey, _is_segwit = get_vin_info(vin)
 
         outputs_value += vout_value
@@ -336,8 +478,7 @@ def parse_transaction_vouts(decoded_tx):
         else:
             if new_destination:  # Change.
                 break
-            else:  # Data.
-                data += new_data
+            data += new_data  # Data.
 
     return destinations, btc_amount, fee, data, potential_dispensers
 
@@ -395,6 +536,8 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
     if p2sh_encoding_source is None:
+        if not composing:
+            check_signatures_sighash_flag(decoded_tx)
         sources, outputs_value = get_transaction_sources(decoded_tx)
         if not fee_added:
             fee += outputs_value
@@ -525,7 +668,7 @@ def get_tx_info_legacy(decoded_tx, block_index):
     return source, destination, btc_amount, fee, data, []
 
 
-def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False):
+def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
@@ -536,12 +679,14 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False):
             decoded_tx,
             block_index,
             p2sh_is_segwit=p2sh_is_segwit,
+            composing=composing,
         )
     elif util.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(
             db,
             decoded_tx,
             block_index,
+            composing=composing,
         )
     else:
         return get_tx_info_legacy(decoded_tx, block_index)
@@ -595,58 +740,59 @@ def get_op_return_vout(decoded_tx):
     return None
 
 
+KNOWN_SOURCES = {
+    "92ad58f5aa35c503489efbdd2a466e942baa9ac5cd67cb7544adf03e47a457d0": "a71da7169db3672408c7b25f84be425839548e63fa480c0478f91e3c2aa3ec67:0"
+}
+
+
 def get_utxos_info(db, decoded_tx):
     op_return_vout = get_op_return_vout(decoded_tx)
+    if decoded_tx["tx_id"] in KNOWN_SOURCES:
+        sources = KNOWN_SOURCES[decoded_tx["tx_id"]]
+    else:
+        sources = ",".join(get_inputs_with_balance(db, decoded_tx))
     return [
-        ",".join(get_inputs_with_balance(db, decoded_tx)),  # sources
+        sources,  # sources
         get_first_non_op_return_output(decoded_tx) or "",  # destination
         str(len(decoded_tx["vout"])),  # number of outputs
-        str(op_return_vout) if op_return_vout else "",  # op_return output
+        str(op_return_vout) if op_return_vout is not None else "",  # op_return output
     ]
 
 
-def get_utxos_info_old(db, decoded_tx):
-    """
-    Get the UTXO move info.
-    Returns a list of UTXOs. Last UTXO is the destination, previous UTXOs are the sources.
-    """
-    sources = []
-    # we check that each vin does not contain assets..
-    for vin in decoded_tx["vin"]:
-        if isinstance(vin["hash"], str):
-            vin_hash = vin["hash"]
-        else:
-            vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
-        utxo = vin_hash + ":" + str(vin["n"])
-        if ledger.utxo_has_balance(db, utxo):
-            sources.append(utxo)
-    destination = None
-    # the destination is the first non-OP_RETURN vout
-    n = select_utxo_destination(decoded_tx["vout"])
-    if n is not None:
-        destination = decoded_tx["tx_hash"] + ":" + str(n)
-        return sources + [destination]
-    return []
-
-
-def get_tx_info(db, decoded_tx, block_index):
-    """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
-    if util.enabled("utxo_support", block_index=block_index):
-        # utxos_info is a space-separated list of UTXOs, last element is the destination,
-        # the rest are the inputs with a balance
-        utxos_info = get_utxos_info(db, decoded_tx)
-        # update utxo balances cache before parsing the transaction
-        # to catch chained utxo moves
-        if utxos_info[0] != "" and utxos_info[1] != "" and not util.PARSING_MEMPOOL:
+def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
+    if util.enabled("utxo_support", block_index=block_index) and not util.PARSING_MEMPOOL:
+        transaction_type = message_type.get_transaction_type(data, destination, block_index)
+        if utxos_info[0] != "":
+            # always remove from cache inputs with balance
+            ledger.UTXOBalancesCache(db).remove_balance(utxos_info[0])
+            # add to cache the destination if it's not a detach
+            if utxos_info[1] != "" and transaction_type != "detach":
+                ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
+        elif utxos_info[1] != "" and transaction_type == "attach":
+            # add to cache the destination if it's an attach
             ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
-    else:
-        utxos_info = []
+
+
+def get_tx_info(db, decoded_tx, block_index, composing=False):
+    """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
+    data, destination, utxos_info = None, None, []
+
+    if util.enabled("utxo_support", block_index=block_index):
+        # utxos_info contains sources (inputs with balances),
+        # destination (first non-OP_RETURN output),
+        # number of outputs and the OP_RETURN index
+        utxos_info = get_utxos_info(db, decoded_tx)
+
     try:
         source, destination, btc_amount, fee, data, dispensers_outs = _get_tx_info(
-            db, decoded_tx, block_index
+            db, decoded_tx, block_index, composing=composing
         )
         return source, destination, btc_amount, fee, data, dispensers_outs, utxos_info
     except DecodeError as e:  # noqa: F841
         return b"", None, None, None, None, None, utxos_info
     except BTCOnlyError as e:  # noqa: F841
         return b"", None, None, None, None, None, utxos_info
+    finally:
+        # update utxo balances cache before parsing the transaction
+        # to catch chained utxo moves
+        update_utxo_balances_cache(db, utxos_info, data, destination, block_index)

@@ -17,17 +17,25 @@ class PropertyTestNode:
             self.addresses = self.node.addresses[:-1]  # skip last empty legacy address
             self.balances = []
 
+            balances = self.node.api_call("assets/XCP/balances")["result"]
+            for balance in balances:
+                self.balances.append([balance["address"], "XCP", balance["quantity"], None])
+
+            print(self.balances)
+
             self.run_tests()
         except KeyboardInterrupt:
+            print(regtest_node_thread.node.server_out.getvalue())
             pass
         except Exception as e:
             print(regtest_node_thread.node.server_out.getvalue())
             raise e
         finally:
-            # print(regtest_node_thread.node.server_out.getvalue())
             regtest_node_thread.stop()
 
     def send_transaction(self, source, transaction_name, params):
+        if "inputs_set" not in params and ":" not in source:
+            params["inputs_set"] = self.node.get_inputs_set(source)
         tx_hash, _block_hash, _block_time, _data = self.node.send_transaction(
             source,
             transaction_name,
@@ -38,11 +46,15 @@ class PropertyTestNode:
         return tx_hash
 
     def upsert_balance(self, address_or_utxo, asset, quantity, utxo_address=None):
+        # print(f"Upserting balance for {address_or_utxo}: {asset} {quantity}")
         for balance in self.balances:
             if balance[0] == address_or_utxo and balance[1] == asset and balance[3] == utxo_address:
                 balance[2] += quantity
                 return
         self.balances.append([address_or_utxo, asset, quantity, utxo_address])
+
+    def get_utxos_balances(self):
+        return [balance for balance in self.balances if util.is_utxo_format(balance[0])]
 
     def check_balance(self, balance):
         address_or_utxo, asset, quantity, utxo_address = balance
