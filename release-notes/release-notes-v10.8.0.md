@@ -43,10 +43,10 @@ This upgrade requires a mandatory, automatic reparse from block 871780.
 - Fix API Watcher reorg checks
 - Use `multiprocessing.Event` to stop API process when the Ledger process dies
 - Catch up with RPC when ZMQ is late
-- Restart RSFetcher when it returns None too many times
+- Restart RSFetcher when it returns `None` too many times
 - Exclude transactions by `SIGHASH`
-- Add several checkpoints
-- Be able to trigger a rollback on minor version change
+- Be able to trigger a rollback on a minor version change
+- Add several new checkpoints
 
 ## API
 
