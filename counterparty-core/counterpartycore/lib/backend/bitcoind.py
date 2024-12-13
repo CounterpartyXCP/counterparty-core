@@ -22,7 +22,6 @@ def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
     response = None
-    start_time = time.time()
 
     tries = 0
     broken_error = None
@@ -79,15 +78,15 @@ def rpc_call(payload, retry=0):
 
     # Batch query returns a list
     if isinstance(response_json, list):
-        result = response_json
-    elif "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
-        result = response_json["result"]
-    elif response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
+        return response_json
+    if "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
+        return response_json["result"]
+    if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
         raise exceptions.BitcoindRPCError(
             f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
         )
-    elif response_json["error"]["code"] in [-28, -8, -2]:
-        # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!"
+    if response_json["error"]["code"] in [-28, -8, -2]:
+        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
         logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
         logger.debug(f"Payload: {payload}")
         if retry >= 10:
@@ -95,15 +94,10 @@ def rpc_call(payload, retry=0):
                 f"Backend not ready after {retry} retries. ({response_json['error']})"
             )
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-        # seconds to start, this'll hit the maximum recursion depth limit.
+        # seconds to start, this’ll hit the maximum recursion depth limit.
         time.sleep(10)
         return rpc_call(payload, retry=retry + 1)
-    else:
-        raise exceptions.BitcoindRPCError(response_json["error"]["message"])
-
-    elapsed = time.time() - start_time
-    logger.trace(f"Bitcoin Core RPC call {payload['method']} took {elapsed:.3f}s")
-    return result
+    raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
 
 def rpc(method, params):
