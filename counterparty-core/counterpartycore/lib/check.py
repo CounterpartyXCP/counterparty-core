@@ -1114,6 +1114,6 @@ def database_version(db):
                 message = "`VERSION_STRING` not found in dataase. "
             else:
                 message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
-            message += "Checking if a reparse is needed..."
+            message += "Checking if a rollback or a reparse is needed..."
             check_need_rollback(version_minor, message)
             check_need_reparse(version_minor, message)
