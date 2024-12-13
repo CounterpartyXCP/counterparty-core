@@ -1060,6 +1060,24 @@ def check_need_reparse(version_minor, message):
                 )
 
 
+def check_need_rollback(version_minor, message):
+    if config.FORCE:
+        return
+    need_rollback_from = (
+        config.NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET
+        if config.TESTNET
+        else config.NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN
+    )
+    if need_rollback_from is not None:
+        for min_version_minor, min_version_block_index in need_rollback_from:
+            if version_minor < min_version_minor:
+                raise DatabaseVersionError(
+                    message=message,
+                    required_action="rollback",
+                    from_block_index=min_version_block_index,
+                )
+
+
 def database_version(db):
     if config.FORCE:
         return
@@ -1078,7 +1096,8 @@ def database_version(db):
         message = (
             f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}. "
         )
-        message += "Checking if a reparse is needed..."
+        message += "Checking if a rollback or a reparse is needed..."
+        check_need_rollback(version_minor, message)
         check_need_reparse(version_minor, message)
         raise DatabaseVersionError(message=message, required_action=None)
     else:

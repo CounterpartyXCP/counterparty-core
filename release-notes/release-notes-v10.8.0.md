@@ -44,6 +44,8 @@
 - Catch up with RPC when ZMQ is late
 - Restart RSFetcher when it returns None too many times
 - Exclude transaction with SIGHASH
+- Add several checkpoints
+- Be able to trigger a rollback on minor version change
 
 ## API
 

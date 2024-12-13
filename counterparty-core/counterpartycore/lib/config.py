@@ -20,14 +20,16 @@ ADDRINDEXRS_VERSION = "0.4.6"
 # Fo example:
 # NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (1, 800000)
 # means that we need to reparse from block 800000 if database minor version is less than 1
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN = [(3, 0), (5, 865999), (6, 867000), (7, 869900), (8, 871780)]
+NEED_REPARSE_IF_MINOR_IS_LESS_THAN = [(3, 0), (5, 865999), (6, 867000), (7, 869900)]
 NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = [
     (3, 0),
     (5, 2925799),
     (6, 2925799),
     (7, 2925799),
-    (8, 3522632),
 ]
+NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN = [(8, 871780)]
+NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET = [(8, 3522632)]
+
 # Counterparty protocol
 TXTYPE_FORMAT = ">I"
 SHORT_TXTYPE_FORMAT = "B"
