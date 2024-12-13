@@ -131,22 +131,22 @@ def parse_raw_mempool(db):
     timestamps = {}
     cursor = db.cursor()
     logger.debug(f"Found {len(raw_mempool)} transaction(s) in the mempool...")
+    txhash_list = []
     for txid, tx_info in raw_mempool.items():
         existing_tx_in_mempool = cursor.execute(
             "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (txid,)
         ).fetchone()
         if existing_tx_in_mempool:
             continue
-        try:
-            logger.trace(f"Getting raw transaction `{txid}` from the mempool...")
-            raw_tx = backend.bitcoind.getrawtransaction(txid)
-            raw_tx_list.append(raw_tx)
-            timestamps[txid] = tx_info["time"]
-        except exceptions.BitcoindRPCError as e:
-            if "No such mempool or blockchain transaction" in str(e):
-                pass
-            else:
-                raise e
+        txhash_list.append(txid)
+        timestamps[txid] = tx_info["time"]
+
+    logger.debug(f"Getting {len(raw_tx_list)} raw transactions by batch from the mempool...")
+    raw_transactions_by_hash = backend.addrindexrs.getrawtransaction_batch(
+        txhash_list, skip_missing=True
+    )
+    raw_tx_list = raw_transactions_by_hash.values()
+
     logger.debug(f"Parsing {len(raw_tx_list)} transaction(s) from the mempool...")
     parse_mempool_transactions(db, raw_tx_list, timestamps)
     logger.debug("Raw mempool parsed successfully.")
