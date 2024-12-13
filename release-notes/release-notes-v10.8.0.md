@@ -44,6 +44,9 @@ This upgrade requires a mandatory, automatic reparse from block 871780.
 - Use `multiprocessing.Event` to stop API process when the Ledger process dies
 - Catch up with RPC when ZMQ is late
 - Restart RSFetcher when it returns `None` too many times
+- Exclude transactions by `SIGHASH`
+- Be able to trigger a rollback on a minor version change
+- Add several new checkpoints
 
 ## API
 
