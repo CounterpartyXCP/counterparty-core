@@ -141,11 +141,11 @@ def parse_raw_mempool(db):
         txhash_list.append(txid)
         timestamps[txid] = tx_info["time"]
 
-    logger.debug(f"Getting {len(raw_tx_list)} raw transactions by batch from the mempool...")
+    logger.debug(f"Getting {len(txhash_list)} raw transactions by batch from the mempool...")
     raw_transactions_by_hash = backend.addrindexrs.getrawtransaction_batch(
         txhash_list, skip_missing=True
     )
-    raw_tx_list = raw_transactions_by_hash.values()
+    raw_tx_list = [raw_hex for raw_hex in raw_transactions_by_hash.values() if raw_hex is not None]
 
     logger.debug(f"Parsing {len(raw_tx_list)} transaction(s) from the mempool...")
     parse_mempool_transactions(db, raw_tx_list, timestamps)
