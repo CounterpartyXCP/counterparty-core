@@ -87,7 +87,7 @@ def rpc_call(payload, retry=0):
             f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
         )
     elif response_json["error"]["code"] in [-28, -8, -2]:
-        # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!"
+        # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
         logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
         logger.debug(f"Payload: {payload}")
         if retry >= 10:
@@ -101,8 +101,15 @@ def rpc_call(payload, retry=0):
     else:
         raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
+    if isinstance(payload, dict):
+        method = payload["method"]
+    elif isinstance(payload, list):
+        method = payload[0]["method"]
+    else:
+        method = "unknown"
     elapsed = time.time() - start_time
-    logger.trace(f"Bitcoin Core RPC call {payload['method']} took {elapsed:.3f}s")
+    logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
+
     return result
 
 
