@@ -988,13 +988,18 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
     if config.TESTNET:
         ledger_database_path += ".testnet"
     ledger_database_path += ".db"
-    api_database_path = ledger_database_path.replace(".db", ".api.db")
+
+    old_api_database_path = ledger_database_path.replace(".db", ".api.db")
+    if config.TESTNET:
+        api_database_path = os.path.join(config.DATA_DIR, "state.testnet.db")
+    else:
+        api_database_path = os.path.join(config.DATA_DIR, "state.db")
 
     # Prepare Directory.
     if not os.path.exists(config.DATA_DIR):
         os.makedirs(config.DATA_DIR, mode=0o755)
 
-    for database_path in [ledger_database_path, api_database_path]:
+    for database_path in [ledger_database_path, api_database_path, old_api_database_path]:
         if os.path.exists(database_path):
             os.remove(database_path)
         # Delete SQLite Write-Ahead-Log
