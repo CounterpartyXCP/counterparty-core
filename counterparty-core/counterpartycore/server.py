@@ -1042,10 +1042,13 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
             tar_file.extractall(path=config.DATA_DIR)  # nosec B202  # noqa: S202
 
     assert os.path.exists(ledger_database_path)
-    assert os.path.exists(api_database_path)
+    assert os.path.exists(api_database_path) or os.path.exists(old_api_database_path)
     # user and group have "rw" access
     os.chmod(ledger_database_path, 0o660)  # nosec B103
-    os.chmod(api_database_path, 0o660)  # nosec B103
+    if os.path.exists(api_database_path):
+        os.chmod(api_database_path, 0o660)  # nosec B103
+    if os.path.exists(old_api_database_path):
+        os.chmod(old_api_database_path, 0o660)  # nosec B103
 
     with log.Spinner("Cleaning up..."):
         os.remove(tarball_path)
