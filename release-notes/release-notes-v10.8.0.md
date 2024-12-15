@@ -5,7 +5,7 @@ This release includes some significant architectural changes to the codebase to 
 
 # Upgrading
 
-This upgrade requires a mandatory, automatic reparse from block 871780.
+This upgrade requires a mandatory, automatic rollback from block 871780.
 
 
 # ChangeLog
