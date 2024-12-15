@@ -692,6 +692,10 @@ GET_OLDEST_TX_HARDCODED = {
         "block_index": 820321,
         "tx_hash": "b61ac3ab1ba9d63d484e8f83e8b9607bd932c8f4b742095445c3527ab575d972",
     },  # {}
+    "842375-bc1q2rn0c89mylzj6c26exda5y2nkezmzh4lh5rkkl": {
+        "block_index": 842374,
+        "tx_hash": "3043db292b7f64cbe1cafa32bc733316b162d8a1f41f31a1e6cd224fd5b72415",
+    },
 }
 ADDRINDEXRS_CLIENT = None
 

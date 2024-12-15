@@ -5,7 +5,7 @@ This release includes some significant architectural changes to the codebase to 
 
 # Upgrading
 
-This upgrade requires a mandatory, automatic reparse from block 871780.
+This upgrade requires a mandatory, automatic rollback from block 871780.
 
 
 # ChangeLog
@@ -47,6 +47,8 @@ This upgrade requires a mandatory, automatic reparse from block 871780.
 - Exclude transactions by `SIGHASH`
 - Be able to trigger a rollback on a minor version change
 - Add several new checkpoints
+- Parse raw mempool by batch before following
+- Set `BACKEND_RAW_TRANSACTIONS_CACHE_SIZE` to 1000
 
 ## API
 

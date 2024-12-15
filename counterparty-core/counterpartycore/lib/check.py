@@ -691,6 +691,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "8e55b64d0dfd85a58e3a9dd27ce49efd98559d96f16f53beb66a10b7671ea857",
         "txlist_hash": "b3f549168f56702287c7b06c0348c4ac0adffcd219bab386d2f19326c0cd491c",
     },
+    874883: {
+        "ledger_hash": "4c4d6b660af23bb03a04bbf93ddd0a4b8e615dd7b883ecf827274cabe658bfc2",
+        "txlist_hash": "f6a99d60337c33c1822c048f56e241455cd7e45bb5a9515096f1ac609d50f669",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET = 7
@@ -1114,5 +1118,6 @@ def database_version(db):
                 message = "`VERSION_STRING` not found in dataase. "
             else:
                 message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
-            message += "Checking if a reparse is needed..."
+            message += "Checking if a rollback or a reparse is needed..."
+            check_need_rollback(version_minor, message)
             check_need_reparse(version_minor, message)
