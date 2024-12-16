@@ -191,7 +191,8 @@ class BlockchainWatcher:
                 # parse mempool block if needed
                 if self.need_to_parse_mempool_block():
                     # parse mempool block
-                    mempool.parse_mempool_transactions(self.db, self.mempool_block)
+                    not_supported = mempool.parse_mempool_transactions(self.db, self.mempool_block)
+                    NotSupportedTransactionsCache().add(not_supported)
                     self.last_mempool_parsing_time = time.time()
                     # reset mempool block
                     self.mempool_block = []
@@ -386,7 +387,7 @@ class NotSupportedTransactionsCache(metaclass=util.SingletonMeta):
 
     def backup(self):
         with open(self.cache_path, "w") as f:
-            f.write("\n".join(self.not_suppported_txs[:200000]))  # limit to 200k txs
+            f.write("\n".join(self.not_suppported_txs[-200000:]))  # limit to 200k txs
         logger.trace(
             f"Backed up {len(self.not_suppported_txs)} not supported transactions to cache"
         )
