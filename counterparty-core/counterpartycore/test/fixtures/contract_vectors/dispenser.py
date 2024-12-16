@@ -299,11 +299,21 @@ DISPENSER_VECTOR = {
     "dispense": {
         "compose": [
             {
-                "in": (ADDR[0], ADDR[5], 10),
+                "in": (ADDR[0], ADDR[5], 100),
                 "out": (
                     ADDR[0],
-                    [(ADDR[5], 10)],
+                    [(ADDR[5], 100)],
                     b"\r\x00",
+                ),
+            },
+            {
+                "in": (ADDR[0], ADDR[5], 10),
+                "error": (
+                    exceptions.ComposeError,
+                    [
+                        "not enough BTC to trigger dispenser for XCP",
+                        "not enough BTC to trigger dispenser for TESTDISP",
+                    ],
                 ),
             },
             {
