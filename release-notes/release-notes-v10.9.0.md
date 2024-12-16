@@ -14,9 +14,11 @@
 
 ## Codebase
 
-- Refactor raw mempool parsing. Don't block following.
+- Refactor raw mempool parsing; Don't block following
 
 ## API
+
+- Throw Error if BTC Quantity in Dispense isn't enough to Trigger Dispenser
 
 ## CLI
 
