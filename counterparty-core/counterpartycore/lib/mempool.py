@@ -15,6 +15,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     now = time.time()
     transaction_events = []
     cursor = db.cursor()
+    not_supported_txs = []
     try:
         with db:
             # insert fake block
@@ -46,6 +47,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             for raw_tx in raw_tx_list:
                 decoded_tx = deserialize.deserialize_tx(raw_tx, use_txid=True)
                 existing_tx = ledger.get_transaction(db, decoded_tx["tx_hash"])
+                not_supported_txs.append(decoded_tx["tx_hash"])
                 if existing_tx:
                     logger.trace(f"Transaction {decoded_tx['tx_hash']} already in the database")
                     continue
@@ -82,6 +84,9 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     except exceptions.MempoolError:
         # save events in the mempool table
         for event in transaction_events:
+            if event["tx_hash"] in not_supported_txs:
+                not_supported_txs.remove(event["tx_hash"])
+
             if timestamps:
                 event["timestamp"] = timestamps.get(event["tx_hash"], now)
             else:
@@ -105,6 +110,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             )
     logger.trace("Mempool transaction parsed successfully.")
     util.PARSING_MEMPOOL = False
+    return not_supported_txs
 
 
 def clean_transaction_events(db, tx_hash):

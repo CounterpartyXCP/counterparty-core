@@ -323,6 +323,7 @@ def api_server_v2(request, cp_server):
         "max_log_file_rotations": 20,
         "log_exclude_filters": None,
         "log_include_filters": None,
+        "cache_dir": None,
     }
     server_config = (
         default_config
