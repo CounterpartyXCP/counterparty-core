@@ -193,6 +193,10 @@ def initialise_config(
         os.makedirs(data_dir, mode=0o755)
     config.DATA_DIR = data_dir
 
+    config.CACHE_DIR = appdirs.user_cache_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
+    if not os.path.isdir(config.CACHE_DIR):
+        os.makedirs(config.CACHE_DIR, mode=0o755)
+
     # testnet
     if testnet:
         config.TESTNET = testnet
@@ -888,6 +892,7 @@ def rollback(block_index=None):
     try:
         blocks.rollback(ledger_db, block_index=block_index)
         dbbuilder.rollback_state_db(state_db, block_index)
+        follow.NotSupportedTransactionsCache().clear()
     finally:
         database.optimize(ledger_db)
         database.optimize(state_db)

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import struct
 import threading
 import time
@@ -258,9 +259,10 @@ class BlockchainWatcher:
                         logger.trace(
                             f"Processing {len(mempool_block)} transaction(s) from the raw mempool..."
                         )
-                        mempool.parse_mempool_transactions(
+                        not_supported_tx_hashes = mempool.parse_mempool_transactions(
                             self.db, mempool_block, timestamps=self.mempool_parser.timestamps
                         )
+                        NotSupportedTransactionsCache().add(not_supported_tx_hashes)
                     else:
                         # sequence topic
                         await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
@@ -319,6 +321,8 @@ def get_raw_mempool(db):
     cursor = db.cursor()
     txhash_list = []
     for txid, tx_info in raw_mempool.items():
+        if NotSupportedTransactionsCache().is_not_supported(txid):
+            continue
         existing_tx_in_mempool = cursor.execute(
             "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (txid,)
         ).fetchone()
@@ -362,3 +366,37 @@ class RawMempoolParser(threading.Thread):
             logger.debug("Stopping RawMempoolParser...")
             self.stop_event.set()
             self.join()
+
+
+class NotSupportedTransactionsCache(metaclass=util.SingletonMeta):
+    def __init__(self):
+        self.not_suppported_txs = []
+        self.cache_path = os.path.join(config.CACHE_DIR, "not_supported_tx_cache.txt")
+        self.restore()
+
+    def restore(self):
+        if os.path.exists(self.cache_path):
+            with open(self.cache_path, "r") as f:
+                self.not_suppported_txs = [line.strip() for line in f]
+            logger.debug(
+                f"Restored {len(self.not_suppported_txs)} not supported transactions from cache"
+            )
+
+    def backup(self):
+        with open(self.cache_path, "w") as f:
+            f.write("\n".join(self.not_suppported_txs[:200000]))  # limit to 200k txs
+        logger.trace(
+            f"Backed up {len(self.not_suppported_txs)} not supported transactions to cache"
+        )
+
+    def clear(self):
+        self.not_suppported_txs = []
+        if os.path.exists(self.cache_path):
+            os.remove(self.cache_path)
+
+    def add(self, more_not_supported_txs):
+        self.not_suppported_txs += more_not_supported_txs
+        self.backup()
+
+    def is_not_supported(self, tx_hash):
+        return tx_hash in self.not_suppported_txs
