@@ -143,9 +143,13 @@ def compose(
         raise exceptions.ComposeError(problems)
 
     data = message_type.pack(ID)
-    data += _encode_mpma_send(
-        db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex
-    )
+
+    try:
+        data += _encode_mpma_send(
+            db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex
+        )
+    except Exception as e:
+        raise exceptions.ComposeError(f"couldn't encode MPMA send: {e}") from e
 
     return (source, [], data)
 

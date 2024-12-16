@@ -149,6 +149,26 @@ def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
 
 
+def getrawtransaction_batch(tx_hashes):
+    if len(tx_hashes) == 0:
+        return {}
+    if len(tx_hashes) > config.MAX_RPC_BATCH_SIZE:
+        raise exceptions.BitcoindRPCError("Too many transactions requested")
+
+    payload = [
+        {"method": "getrawtransaction", "params": [tx_hash], "jsonrpc": "2.0", "id": i}
+        for i, tx_hash in enumerate(tx_hashes)
+    ]
+    results = rpc_call(payload)
+
+    raw_transactions = []
+    for result in results:
+        if "result" in result and result["result"] is not None:
+            raw_transactions.append(result["result"])
+
+    return raw_transactions
+
+
 def createrawtransaction(inputs, outputs):
     return rpc("createrawtransaction", [inputs, outputs])
 
