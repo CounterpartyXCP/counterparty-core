@@ -244,7 +244,9 @@ class BlockchainWatcher:
                         logger.trace(
                             f"Processing {len(mempool_block)} transaction(s) from the raw mempool..."
                         )
-                        mempool.parse_mempool_transactions(self.db, mempool_block)
+                        mempool.parse_mempool_transactions(
+                            self.db, mempool_block, timestamps=self.mempool_parser.timestamps
+                        )
                     else:
                         # sequence topic
                         await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
