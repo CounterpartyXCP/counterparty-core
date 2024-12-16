@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import struct
+import threading
 import time
 
 import zmq
@@ -28,6 +29,8 @@ MEMPOOL_BLOCK_MAX_SIZE = 100
 ZMQ_TIMEOUT = 3000
 
 NOTIFICATION_TYPES = ["pubrawtx", "pubhashtx", "pubsequence", "pubrawblock"]
+
+RAW_MEMPOOL = []
 
 
 def get_zmq_notifications_addresses():
@@ -88,9 +91,11 @@ class BlockchainWatcher:
         self.last_block_check_time = 0
         self.last_software_version_check_time = 0
         # catch up and clean mempool before starting
+        self.mempool_parser = None
         if not config.NO_MEMPOOL:
-            mempool.parse_raw_mempool(self.db)
             mempool.clean_mempool(self.db)
+            self.mempool_parser = RawMempoolParser(self.db)
+            self.mempool_parser.start()
 
     def connect_to_zmq(self):
         self.zmq_context = zmq.asyncio.Context()
@@ -233,9 +238,17 @@ class BlockchainWatcher:
 
         while True:
             try:
-                # sequence topic
                 if not config.NO_MEMPOOL:
-                    await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
+                    if len(RAW_MEMPOOL) > 0:
+                        mempool_block = RAW_MEMPOOL.pop(0)
+                        logger.trace(
+                            f"Processing {len(mempool_block)} transaction(s) from the raw mempool..."
+                        )
+                        mempool.parse_mempool_transactions(self.db, mempool_block)
+                    else:
+                        # sequence topic
+                        await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
+
                 # check rawblock topic
                 check_block_delay = 10 if config.NETWORK_NAME == "mainnet" else 0.5
 
@@ -259,6 +272,9 @@ class BlockchainWatcher:
                 break  # Exit the loop if the task is cancelled
             except Exception as e:
                 logger.error("Error in handle loop: %s", e)
+                import traceback
+
+                print(traceback.format_exc())  # for debugging
                 capture_exception(e)
                 break  # Optionally break the loop on other exceptions
 
@@ -276,4 +292,60 @@ class BlockchainWatcher:
         self.loop.close()
         # Clean up ZMQ context
         self.zmq_context.destroy()
+        # Stop mempool parser
+        if self.mempool_parser:
+            self.mempool_parser.stop()
         logger.debug("Blockchain watcher stopped.")
+
+
+def get_raw_mempool(db):
+    logger.debug("Getting raw mempool...")
+    raw_mempool = backend.bitcoind.getrawmempool(verbose=True)
+
+    timestamps = {}
+    cursor = db.cursor()
+    txhash_list = []
+    for txid, tx_info in raw_mempool.items():
+        existing_tx_in_mempool = cursor.execute(
+            "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (txid,)
+        ).fetchone()
+        if existing_tx_in_mempool:
+            continue
+        txhash_list.append(txid)
+        timestamps[txid] = tx_info["time"]
+
+    chunks = util.chunkify(txhash_list, config.MAX_RPC_BATCH_SIZE)
+
+    logger.debug(f"Found {len(txhash_list)} transaction(s) in the raw mempool...")
+    return chunks, timestamps
+
+
+class RawMempoolParser(threading.Thread):
+    def __init__(self, db):
+        threading.Thread.__init__(self, name="RawMempoolParser")
+        self.daemon = True
+        self.tx_hashes_chunks, self.timestamps = get_raw_mempool(db)
+        self.stop_event = threading.Event()
+
+    def run(self):
+        logger.debug("Starting RawMempoolParser...")
+        start = time.time()
+        counter = 0
+        while len(self.tx_hashes_chunks) > 0 and not self.stop_event.is_set():
+            txhash_list = self.tx_hashes_chunks.pop(0)
+            logger.trace(
+                f"Getting {len(txhash_list)} raw transactions by batch from the raw mempool..."
+            )
+            raw_transactions = backend.bitcoind.getrawtransaction_batch(txhash_list)
+            RAW_MEMPOOL.append(raw_transactions)
+            counter += len(txhash_list)
+        elapsed = time.time() - start
+        logger.debug(
+            f"RawMempoolParser stopped. {counter} transactions processed in {elapsed:.2f} seconds."
+        )
+
+    def stop(self):
+        if self.is_alive():
+            logger.debug("Stopping RawMempoolParser...")
+            self.stop_event.set()
+            self.join()

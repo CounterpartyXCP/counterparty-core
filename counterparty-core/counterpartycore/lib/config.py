@@ -151,6 +151,7 @@ DEFAULT_FEE_FRACTION_PROVIDED = 0.01  # 1.00%
 
 DEFAULT_REQUESTS_TIMEOUT = 20  # 20 seconds
 DEFAULT_RPC_BATCH_SIZE = 20  # A 1 MB block can hold about 4200 transactions.
+MAX_RPC_BATCH_SIZE = 100  # Maximum number of transactions to send in a single RPC call.
 
 # Custom exit codes
 EXITCODE_UPDATE_REQUIRED = 5
