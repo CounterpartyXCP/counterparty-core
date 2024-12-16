@@ -136,6 +136,7 @@ def initialise_log_config(
 
 def initialise_config(
     data_dir=None,
+    cache_dir=None,
     testnet=False,
     testcoin=False,
     regtest=False,
@@ -193,9 +194,11 @@ def initialise_config(
         os.makedirs(data_dir, mode=0o755)
     config.DATA_DIR = data_dir
 
-    config.CACHE_DIR = appdirs.user_cache_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
-    if not os.path.isdir(config.CACHE_DIR):
+    if not cache_dir:
+        cache_dir = appdirs.user_cache_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
+    if not os.path.isdir(cache_dir):
         os.makedirs(config.CACHE_DIR, mode=0o755)
+    config.CACHE_DIR = cache_dir
 
     # testnet
     if testnet:
@@ -245,10 +248,7 @@ def initialise_config(
         config.DATABASE = os.path.join(data_dir, filename)
 
     config.FETCHER_DB_OLD = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
-    config.FETCHER_DB = os.path.join(
-        appdirs.user_cache_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME),
-        f"fetcherdb{network}",
-    )
+    config.FETCHER_DB = os.path.join(config.CACHE_DIR, f"fetcherdb{network}")
 
     config.STATE_DATABASE = os.path.join(os.path.dirname(config.DATABASE), f"state{network}.db")
 
@@ -627,6 +627,7 @@ def initialise_log_and_config(args, api=False):
     # Configuration
     init_args = {
         "data_dir": args.data_dir,
+        "cache_dir": args.cache_dir,
         "testnet": args.testnet,
         "testcoin": args.testcoin,
         "regtest": args.regtest,

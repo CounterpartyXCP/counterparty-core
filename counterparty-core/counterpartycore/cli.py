@@ -240,6 +240,7 @@ CONFIG_ARGS = [
         {"action": "store_true", "default": False, "help": "don't ask for confirmation"},
     ],
     [("--data-dir",), {"default": None, "help": "the path to the data directory"}],
+    [("--cache-dir",), {"default": None, "help": "the path to the cache directory"}],
     [
         ("--log-file",),
         {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},

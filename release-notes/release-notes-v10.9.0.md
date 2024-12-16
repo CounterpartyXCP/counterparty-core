@@ -24,6 +24,8 @@
 
 ## CLI
 
+- Add `--cache-dir` flag
+
 # Credits
 
 - Ouziel Slama
