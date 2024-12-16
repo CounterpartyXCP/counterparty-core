@@ -371,7 +371,9 @@ class RawMempoolParser(threading.Thread):
 class NotSupportedTransactionsCache(metaclass=util.SingletonMeta):
     def __init__(self):
         self.not_suppported_txs = []
-        self.cache_path = os.path.join(config.CACHE_DIR, "not_supported_tx_cache.txt")
+        self.cache_path = os.path.join(
+            config.CACHE_DIR, f"not_supported_tx_cache.{config.NETWORK_NAME}.txt"
+        )
         self.restore()
 
     def restore(self):
