@@ -15,6 +15,7 @@
 ## Codebase
 
 - Refactor raw mempool parsing; Don't block following
+- Add a timeout to parse mempool transaction from ZMQ
 
 ## API
 

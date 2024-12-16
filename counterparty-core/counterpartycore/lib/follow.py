@@ -90,6 +90,7 @@ class BlockchainWatcher:
         self.hash_by_sequence = {}
         self.last_block_check_time = 0
         self.last_software_version_check_time = 0
+        self.last_mempool_parsing_time = 0
         # catch up and clean mempool before starting
         self.mempool_parser = None
         if not config.NO_MEMPOOL:
@@ -155,6 +156,18 @@ class BlockchainWatcher:
         else:
             self.raw_tx_cache.pop(tx_hash)
 
+    def need_to_parse_mempool_block(self):
+        mempool_block_max_size = 100 if config.NETWORK_NAME == "mainnet" else 1
+        mempool_block_timeout = 60 if config.NETWORK_NAME == "mainnet" else 5
+        if len(self.mempool_block) == 0:
+            return False
+        if len(self.mempool_block) >= mempool_block_max_size:
+            return True
+        time_since_last_mempool_parsing = time.time() - self.last_mempool_parsing_time
+        if time_since_last_mempool_parsing > mempool_block_timeout:
+            return True
+        return False
+
     def receive_sequence(self, body):
         item_hash = body[:32].hex()
         label = chr(body[32])
@@ -174,10 +187,11 @@ class BlockchainWatcher:
                 # logger.trace("Adding transaction to mempool block: %s", item_hash)
                 # logger.trace("Mempool block size: %s", len(self.mempool_block))
                 self.mempool_block.append(raw_tx)
-                mempool_block_max_size = 100 if config.NETWORK_NAME == "mainnet" else 1
-                if len(self.mempool_block) == mempool_block_max_size:
+                # parse mempool block if needed
+                if self.need_to_parse_mempool_block():
                     # parse mempool block
                     mempool.parse_mempool_transactions(self.db, self.mempool_block)
+                    self.last_mempool_parsing_time = time.time()
                     # reset mempool block
                     self.mempool_block = []
                     self.mempool_block_hashes = []
