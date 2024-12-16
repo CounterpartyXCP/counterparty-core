@@ -725,7 +725,7 @@ def info(db, rawtransaction: str, block_index: int = None):
             gettxinfo.get_tx_info(
                 db,
                 decoded_tx,
-                block_index=block_index,
+                block_index=block_index or util.CURRENT_BLOCK_INDEX,
             )
         )
     except exceptions.BitcoindRPCError:

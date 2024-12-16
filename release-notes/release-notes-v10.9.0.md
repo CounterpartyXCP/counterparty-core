@@ -9,6 +9,8 @@
 
 ## Bugfixes
 
+- Fix endpoint to get info from raw transaction when block index is not provided
+
 ## Codebase
 
 - Refactor raw mempool parsing. Don't block following.
