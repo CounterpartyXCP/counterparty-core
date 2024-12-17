@@ -434,7 +434,7 @@ def inject_normalized_quantity(item, field_name, asset_info):
         return item
 
     if item[field_name] is not None:
-        if field_name in ["give_price", "get_price", "price"]:
+        if field_name in ["give_price", "get_price", "foward_price", "backward_price", "price"]:
             # use 16 decimal places for prices
             item[field_name + "_normalized"] = normalize_price(item[field_name])
         else:
@@ -483,6 +483,8 @@ def inject_normalized_quantities(result_list):
         "paid_quantity": {"asset_field": "asset_info", "divisible": None},
         "give_price": {"asset_field": "give_asset_info", "divisible": None},
         "get_price": {"asset_field": "get_asset_info", "divisible": None},
+        "forward_price": {"asset_field": "forward_asset_info", "divisible": None},
+        "backward_price": {"asset_field": "backward_asset_info", "divisible": None},
     }
 
     enriched_result_list = []

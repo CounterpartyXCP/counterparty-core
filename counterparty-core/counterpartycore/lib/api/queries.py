@@ -2644,6 +2644,8 @@ SELECT_ORDERS = "*, "
 SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
 SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
 
+SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
+
 
 def get_orders(
     state_db,
@@ -2870,6 +2872,7 @@ def get_all_order_matches(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDER_MATCHES,
     )
 
 
@@ -2902,6 +2905,7 @@ def get_order_matches_by_order(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDER_MATCHES,
     )
 
 
@@ -2948,6 +2952,7 @@ def get_order_matches_by_asset(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDER_MATCHES,
     )
 
 

@@ -23,6 +23,7 @@
 - Throw Error if BTC Quantity in Dispense isn't enough to Trigger Dispenser
 - Add `get_asset` and `give_asset` parameters for get orders by asset endpoint
 - Add `forward_asset` and `backward_asset` parameters for get order matches by asset endpoint
+- Add `forward_price` and `backward_price` in order matches results
 
 ## CLI
 
