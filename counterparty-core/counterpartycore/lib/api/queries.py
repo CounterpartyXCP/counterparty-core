@@ -2687,6 +2687,8 @@ def get_orders_by_asset(
     state_db,
     asset: str,
     status: OrderStatus = "all",
+    get_asset: str = None,
+    give_asset: str = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2696,14 +2698,25 @@ def get_orders_by_asset(
     Returns the orders of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param str status: The status of the orders to return
+    :param str get_asset: The get asset to return
+    :param str give_asset: The give asset to return
     :param str cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
     """
-    where = prepare_order_where(status, {"give_asset": asset.upper()}) + prepare_order_where(
-        status, {"get_asset": asset.upper()}
-    )
+    if get_asset:
+        where = prepare_order_where(
+            status, {"get_asset": get_asset.upper(), "give_asset": asset.upper()}
+        )
+    elif give_asset:
+        where = prepare_order_where(
+            status, {"give_asset": give_asset.upper(), "get_asset": asset.upper()}
+        )
+    else:
+        where = prepare_order_where(status, {"give_asset": asset.upper()}) + prepare_order_where(
+            status, {"get_asset": asset.upper()}
+        )
 
     return select_rows(
         state_db,

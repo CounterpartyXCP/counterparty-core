@@ -21,6 +21,7 @@
 ## API
 
 - Throw Error if BTC Quantity in Dispense isn't enough to Trigger Dispenser
+- Add `get_asset` and `give_asset` parameters for get orders by asset endpoint
 
 ## CLI
 
