@@ -2909,6 +2909,8 @@ def get_order_matches_by_asset(
     state_db,
     asset: str,
     status: OrderMatchesStatus = "all",
+    forward_asset: str = None,
+    backward_asset: str = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2918,14 +2920,25 @@ def get_order_matches_by_asset(
     Returns the orders of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param str status: The status of the order matches to return
+    :param str forward_asset: The forward asset to return
+    :param str backward_asset: The backward asset to return
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
-    where = prepare_order_matches_where(
-        status, {"forward_asset": asset.upper()}
-    ) + prepare_order_matches_where(status, {"backward_asset": asset.upper()})
+    if forward_asset:
+        where = prepare_order_matches_where(
+            status, {"forward_asset": forward_asset.upper(), "backward_asset": asset.upper()}
+        )
+    elif backward_asset:
+        where = prepare_order_matches_where(
+            status, {"forward_asset": asset.upper(), "backward_asset": backward_asset.upper()}
+        )
+    else:
+        where = prepare_order_matches_where(
+            status, {"forward_asset": asset.upper()}
+        ) + prepare_order_matches_where(status, {"backward_asset": asset.upper()})
 
     return select_rows(
         state_db,
