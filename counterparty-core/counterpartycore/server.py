@@ -3,19 +3,22 @@
 import _thread
 import binascii
 import decimal
+import glob
+import io
 import logging
 import multiprocessing
 import os
 import sys
-import tarfile
 import tempfile
 import threading
 import time
 import urllib
+from multiprocessing import Process
 from urllib.parse import quote_plus as urlencode
 
 import appdirs
 import bitcoin as bitcoinlib
+import pyzstd
 from termcolor import colored, cprint
 
 from counterpartycore.lib import (
@@ -959,7 +962,99 @@ def configure_rpc(rpc_password=None):
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
 
 
-def bootstrap(no_confirm=False, snapshot_url=None):
+def download_zst(data_dir, zst_url):
+    print(f"Downloading {zst_url}...")
+    start_time = time.time()
+    zst_filename = os.path.basename(zst_url)
+    zst_filepath = os.path.join(data_dir, zst_filename)
+    urllib.request.urlretrieve(zst_url, zst_filepath)  # nosec B310  # noqa: S310
+    print(f"Downloaded {zst_url} in {time.time() - start_time:.2f}s")
+    return zst_filepath
+
+
+def decompress_zst(zst_filepath):
+    print(f"Decompressing {zst_filepath}...")
+    start_time = time.time()
+    filename = zst_filepath.replace(".latest.zst", "")
+    filepath = os.path.join(os.path.dirname(zst_filepath), filename)
+    with io.open(filepath, "wb") as output_file:
+        with open(zst_filepath, "rb") as input_file:
+            pyzstd.decompress_stream(input_file, output_file, read_size=16 * 1024)
+    os.remove(zst_filepath)
+    os.chmod(filepath, 0o660)
+    print(f"Decompressed {zst_filepath} in {time.time() - start_time:.2f}s")
+    return filepath
+
+
+def download_and_decompress(data_dir, zst_url):
+    # download and decompress .tar.zst file
+    print(f"Downloading and decompressing {zst_url}...")
+    start_time = time.time()
+    response = urllib.request.urlopen(zst_url)  # nosec B310  # noqa: S310
+    zst_filename = os.path.basename(zst_url)
+    filename = zst_filename.replace(".latest.zst", "")
+    filepath = os.path.join(data_dir, filename)
+    with io.open(filepath, "wb") as output_file:
+        pyzstd.decompress_stream(response, output_file, read_size=16 * 1024)
+    os.chmod(filepath, 0o660)
+    print(f"Downloaded and decompressed {zst_url} in {time.time() - start_time:.2f}s")
+    return filepath
+
+
+def verify_signature(filepath, sig_url):
+    sig_filename = os.path.basename(sig_url)
+    sig_filepath = os.path.join(tempfile.gettempdir(), sig_filename)
+    urllib.request.urlretrieve(sig_url, sig_filepath)  # nosec B310  # noqa: S310
+
+    print(f"Verifying signature for {filepath}...")
+    start_time = time.time()
+    signature_verified = False
+    for key in PUBLIC_KEYS:
+        if util.verify_signature(key, sig_filepath, filepath):
+            signature_verified = True
+            break
+    os.remove(sig_filepath)
+    print(f"Verified signature in {time.time() - start_time:.2f}s")
+
+    if not signature_verified:
+        print(f"{filepath} was not signed by any trusted keys, deleting...")
+        os.remove(filepath)
+        sys.exit(1)
+
+
+def decompress_and_verify(zst_filepath, sig_url):
+    filepath = decompress_zst(zst_filepath)
+    verify_signature(filepath, sig_url)
+
+
+def clean_data_dir():
+    if not os.path.exists(config.DATA_DIR):
+        os.makedirs(config.DATA_DIR, mode=0o755)
+        return
+    files_to_delete = glob.glob(os.path.join(config.DATA_DIR, "*.db"))
+    files_to_delete += glob.glob(os.path.join(config.DATA_DIR, "*.db-wal"))
+    files_to_delete += glob.glob(os.path.join(config.DATA_DIR, "*.db-shm"))
+    for file in files_to_delete:
+        os.remove(file)
+
+
+def download_bootstrap_files():
+    files = config.BOOTSTRAP_URLS[config.NETWORK_NAME]
+    decompressors = []
+    for zst_url, sig_url in files:
+        zst_filepath = download_zst(config.DATA_DIR, zst_url)
+        decompressor = Process(
+            target=decompress_and_verify,
+            args=(zst_filepath, sig_url),
+        )
+        decompressor.start()
+        decompressors.append(decompressor)
+
+    for decompressor in decompressors:
+        decompressor.join()
+
+
+def confirm_bootstrap():
     warning_message = """WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
 from a centralized server maintained by the Counterparty Core development team.
 Because this method does not involve verifying the history of Counterparty transactions yourself,
@@ -967,99 +1062,21 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
         """
     cprint(warning_message, "yellow")
 
+    confirmation_message = colored("Continue? (y/N): ", "magenta")
+    if input(confirmation_message).lower() != "y":
+        exit()
+
+
+def bootstrap(no_confirm=False, snapshot_url=None):
     if not no_confirm:
-        confirmation_message = colored("Continue? (y/N): ", "magenta")
-        if input(confirmation_message).lower() != "y":
-            exit()
+        confirm_bootstrap()
 
-    # Set Constants.
-    if snapshot_url is None:
-        bootstrap_url = (
-            config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
-        )
-        bootstrap_sig_url = (
-            config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
-        )
-    else:
-        bootstrap_url = snapshot_url
-        bootstrap_sig_url = snapshot_url.replace(".tar.gz", ".sig")
+    clean_data_dir()
 
-    tar_filename = os.path.basename(bootstrap_url)
-    sig_filename = os.path.basename(bootstrap_sig_url)
-    tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
-    sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
-
-    ledger_database_path = os.path.join(config.DATA_DIR, config.APP_NAME)
-
-    if config.TESTNET:
-        ledger_database_path += ".testnet"
-    ledger_database_path += ".db"
-
-    old_api_database_path = ledger_database_path.replace(".db", ".api.db")
-    if config.TESTNET:
-        api_database_path = os.path.join(config.DATA_DIR, "state.testnet.db")
-    else:
-        api_database_path = os.path.join(config.DATA_DIR, "state.db")
-
-    # Prepare Directory.
-    if not os.path.exists(config.DATA_DIR):
-        os.makedirs(config.DATA_DIR, mode=0o755)
-
-    for database_path in [ledger_database_path, api_database_path, old_api_database_path]:
-        if os.path.exists(database_path):
-            os.remove(database_path)
-        # Delete SQLite Write-Ahead-Log
-        wal_path = database_path + "-wal"
-        shm_path = database_path + "-shm"
-        if os.path.exists(wal_path):
-            os.remove(wal_path)
-        if os.path.exists(shm_path):
-            os.remove(shm_path)
-
-    # Define Progress Bar.
-    spinner = log.Spinner(f"Downloading database from {bootstrap_url}...")
-
-    def bootstrap_progress(blocknum, blocksize, totalsize):
-        readsofar = blocknum * blocksize
-        if totalsize > 0:
-            percent = readsofar * 1e2 / totalsize
-            message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
-            spinner.set_messsage(message)
-
-    # Downloading
-    spinner.start()
-    urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
-    urllib.request.urlretrieve(bootstrap_sig_url, sig_path)  # nosec B310  # noqa: S310
-    spinner.stop()
-
-    with log.Spinner("Verifying signature..."):
-        signature_verified = False
-        for key in PUBLIC_KEYS:
-            if util.verify_signature(key, sig_path, tarball_path):
-                signature_verified = True
-                break
-        if not signature_verified:
-            print("Snapshot was not signed by any trusted keys")
-            sys.exit(1)
-
-    # TODO: check checksum, filenames, etc.
-    with log.Spinner(f"Extracting database to {config.DATA_DIR}..."):
-        with tarfile.open(tarball_path, "r:gz") as tar_file:
-            tar_file.extractall(path=config.DATA_DIR)  # nosec B202  # noqa: S202
-
-    assert os.path.exists(ledger_database_path)
-    assert os.path.exists(api_database_path) or os.path.exists(old_api_database_path)
-    # user and group have "rw" access
-    os.chmod(ledger_database_path, 0o660)  # nosec B103
-    if os.path.exists(api_database_path):
-        os.chmod(api_database_path, 0o660)  # nosec B103
-    if os.path.exists(old_api_database_path):
-        os.chmod(old_api_database_path, 0o660)  # nosec B103
-
-    with log.Spinner("Cleaning up..."):
-        os.remove(tarball_path)
+    with log.Spinner("Downloading and decompressing database..."):
+        download_bootstrap_files()
 
     cprint(
-        f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
+        f"Databases have been successfully bootstrapped to {config.DATA_DIR}.",
         "green",
     )
