@@ -142,6 +142,7 @@ class CustomisedJSONFormatter(JSONFormatter):
         extra["pathname"] = record.pathname
         extra["process"] = record.process
         extra["processName"] = record.processName
+        extra["levelName"] = record.levelname
         extra["severity"] = record.levelname
         if hasattr(record, "stack_info"):
             extra["stack_info"] = record.stack_info
