@@ -227,6 +227,7 @@ def server_db(request, cp_server, api_server):
     cursor = db.cursor()
     cursor.execute("""BEGIN""")
     util_test.reset_current_block_index(db)
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
     request.addfinalizer(lambda: cursor.execute("""ROLLBACK"""))
     request.addfinalizer(lambda: util_test.reset_current_block_index(db))
@@ -245,6 +246,7 @@ def api_server(request, cp_server):
 
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
     print("api_server", config.DATABASE, config.STATE_DATABASE)
 
@@ -323,7 +325,7 @@ def api_server_v2(request, cp_server):
         "max_log_file_rotations": 20,
         "log_exclude_filters": None,
         "log_include_filters": None,
-        "cache_dir": None,
+        "cache_dir": os.path.dirname(request.module.FIXTURE_DB),
     }
     server_config = (
         default_config
@@ -336,6 +338,7 @@ def api_server_v2(request, cp_server):
     )
 
     config.STATE_DATABASE = config.STATE_DATABASE.replace(".testnet.db", ".db")
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
     if os.path.exists(config.STATE_DATABASE):
         os.unlink(config.STATE_DATABASE)

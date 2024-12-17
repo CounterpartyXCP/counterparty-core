@@ -197,7 +197,7 @@ def initialise_config(
     if not cache_dir:
         cache_dir = appdirs.user_cache_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
     if not os.path.isdir(cache_dir):
-        os.makedirs(config.CACHE_DIR, mode=0o755)
+        os.makedirs(cache_dir, mode=0o755)
     config.CACHE_DIR = cache_dir
 
     # testnet
