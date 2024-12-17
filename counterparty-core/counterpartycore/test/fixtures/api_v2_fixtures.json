@@ -7907,6 +7907,8 @@
                 "match_expire_index": 310512,
                 "fee_paid": 7200,
                 "status": "expired",
+                "backward_price": 125.0,
+                "forward_price": 0.008,
                 "block_time": 310513000,
                 "forward_asset_info": {
                     "asset_longname": null,
@@ -7924,7 +7926,9 @@
                 },
                 "forward_quantity_normalized": "1.00000000",
                 "backward_quantity_normalized": "0.00800000",
-                "fee_paid_normalized": "0.00007200"
+                "fee_paid_normalized": "0.00007200",
+                "forward_price_normalized": "0.0080000000000000",
+                "backward_price_normalized": "125.0000000000000000"
             }
         ],
         "next_cursor": null,
@@ -7967,6 +7971,8 @@
                 "match_expire_index": 310512,
                 "fee_paid": 7200,
                 "status": "expired",
+                "backward_price": 125.0,
+                "forward_price": 0.008,
                 "block_time": 310513000,
                 "forward_asset_info": {
                     "asset_longname": null,
@@ -7984,7 +7990,9 @@
                 },
                 "forward_quantity_normalized": "1.00000000",
                 "backward_quantity_normalized": "0.00800000",
-                "fee_paid_normalized": "0.00007200"
+                "fee_paid_normalized": "0.00007200",
+                "forward_price_normalized": "0.0080000000000000",
+                "backward_price_normalized": "125.0000000000000000"
             }
         ],
         "next_cursor": null,
@@ -17037,6 +17045,20 @@
                             "expired"
                         ],
                         "description": "The status of the order matches to return"
+                    },
+                    {
+                        "name": "forward_asset",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The forward asset to return"
+                    },
+                    {
+                        "name": "backward_asset",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The backward asset to return"
                     },
                     {
                         "name": "cursor",
