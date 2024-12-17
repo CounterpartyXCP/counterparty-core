@@ -1027,6 +1027,11 @@ def decompress_and_verify(zst_filepath, sig_url):
     verify_signature(filepath, sig_url)
 
 
+def verfif_and_decompress(zst_filepath, sig_url):
+    verify_signature(zst_filepath, sig_url)
+    decompress_zst(zst_filepath)
+
+
 def clean_data_dir():
     if not os.path.exists(config.DATA_DIR):
         os.makedirs(config.DATA_DIR, mode=0o755)
@@ -1044,7 +1049,7 @@ def download_bootstrap_files():
     for zst_url, sig_url in files:
         zst_filepath = download_zst(config.DATA_DIR, zst_url)
         decompressor = Process(
-            target=decompress_and_verify,
+            target=verfif_and_decompress,
             args=(zst_filepath, sig_url),
         )
         decompressor.start()

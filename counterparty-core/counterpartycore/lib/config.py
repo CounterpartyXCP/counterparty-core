@@ -182,21 +182,21 @@ BOOTSTRAP_URLS = {
     "mainnet": [
         (
             "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.sig",
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.sig",
         ),
         (
             "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.db.sig",
+            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.sig",
         ),
     ],
     "testnet": [
         (
             "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.sig",
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.sig",
         ),
         (
             "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.sig",
+            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.sig",
         ),
     ],
 }
