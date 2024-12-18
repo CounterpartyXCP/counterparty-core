@@ -360,12 +360,16 @@ def handle_route(**kwargs):
         script.AddressError,
         exceptions.ElectrError,
     ) as e:
+        import traceback
+
+        print(traceback.format_exc())
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        # import traceback
-        # print(traceback.format_exc())
+        import traceback
+
+        print(traceback.format_exc())
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )

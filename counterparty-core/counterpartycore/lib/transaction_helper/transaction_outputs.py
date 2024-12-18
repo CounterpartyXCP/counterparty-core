@@ -19,6 +19,30 @@ def chunks(l, n):  # noqa: E741
         yield l[i : i + n]
 
 
+def pubkey_from_tx(tx, pubkeyhash):
+    for vin in tx["vin"]:
+        if "witness" in vin:
+            if len(vin["witness"]) >= 2:
+                # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
+                try:
+                    pubkey = vin["witness"][1]
+                    if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                        return pubkey
+                except binascii.Error:
+                    pass
+        elif "is_coinbase" not in vin or not vin["is_coinbase"]:
+            asm = vin["scriptsig_asm"].split(" ")
+            if len(asm) >= 2:
+                # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+                try:
+                    pubkey = asm[1]
+                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                        return pubkey
+                except binascii.Error:
+                    pass
+    return None
+
+
 def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
     # Search provided pubkeys.
     if provided_pubkeys:
@@ -34,26 +58,9 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
     raw_transactions = backend.electr.get_history(pubkeyhash)
     for tx_id in raw_transactions:
         tx = raw_transactions[tx_id]
-        for vin in tx["vin"]:
-            if "witness" in vin:
-                if len(vin["witness"]) >= 2:
-                    # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
-                    try:
-                        pubkey = vin["witness"][1]
-                        if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
-                            return pubkey
-                    except binascii.Error:
-                        pass
-            elif "is_coinbase" not in vin or not vin["is_coinbase"]:
-                asm = vin["scriptsig_asm"].split(" ")
-                if len(asm) >= 2:
-                    # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
-                    try:
-                        pubkey = asm[1]
-                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
-                            return pubkey
-                    except binascii.Error:
-                        pass
+        pubkey = pubkey_from_tx(tx, pubkeyhash)
+        if pubkey:
+            return pubkey
 
     raise exceptions.UnknownPubKeyError(
         "Public key was neither provided nor published in blockchain."

@@ -376,6 +376,7 @@ def check_api_v1(node):
             "destination": node.addresses[1],
             "asset": "XCP",
             "quantity": 1,
+            "inputs_set": node.get_inputs_set(node.addresses[0]),
         },
     )
     # check that the hex transaction is generated

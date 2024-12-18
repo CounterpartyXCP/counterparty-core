@@ -1,6 +1,15 @@
 import requests
 
-from counterpartycore.lib import config
+from counterpartycore.lib import config, exceptions
+
+
+def electr_query(url):
+    if config.ELECTR_URL is None:
+        raise exceptions.ElectrError("Electr server not configured")
+    try:
+        return requests.get(f"{config.ELECTR_URL}/{url}", timeout=10).json()
+    except requests.exceptions.RequestException as e:
+        raise exceptions.ElectrError(f"Electr error: {e}") from e
 
 
 def get_utxos(address, unconfirmed: bool = False, unspent_tx_hash: str = None):
@@ -10,8 +19,7 @@ def get_utxos(address, unconfirmed: bool = False, unspent_tx_hash: str = None):
     :param unconfirmed: Include unconfirmed transactions
     :param unspent_tx_hash: Filter by unspent_tx_hash
     """
-    url = f"{config.ELECTR_URL}/address/{address}/utxo"
-    utxo_list = requests.get(url, timeout=10).json()
+    utxo_list = electr_query(f"address/{address}/utxo")
     result = []
     for utxo in utxo_list:
         if not utxo["status"]["confirmed"] and not unconfirmed:
@@ -27,8 +35,7 @@ def get_history(address: str, unconfirmed: bool = False):
     Returns all transactions involving a given address
     :param address: The address to search for (e.g. $ADDRESS_3)
     """
-    url = f"{config.ELECTR_URL}/address/{address}/history"
-    tx_list = requests.get(url, timeout=10).json()
+    tx_list = electr_query(f"address/{address}/history")
     result = []
     for tx in tx_list:
         if tx["status"]["confirmed"] or unconfirmed:

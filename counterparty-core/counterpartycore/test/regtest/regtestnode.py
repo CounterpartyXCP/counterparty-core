@@ -17,6 +17,13 @@ from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from counterpartycore.lib import arc4, config, database
+from counterpartycore.lib.backend.bitcoind import pubkey_from_inputs_set
+
+config.BACKEND_URL = "http://rpc:rpc@localhost:18443"
+config.BACKEND_SSL_NO_VERIFY = True
+config.REQUESTS_TIMEOUT = 20
+config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+config.NETWORK_NAME = "regtest"
 
 setup("regtest")
 
@@ -191,12 +198,20 @@ class RegtestNode:
         retry=0,
     ):
         self.wait_for_counterparty_server()
+        if "inputs_source" in params:
+            inputs_source = params.pop("inputs_source")
+            params["inputs_set"] = self.get_inputs_set(inputs_source)
+        if "inputs_set" not in params and ":" not in source:
+            params["inputs_set"] = self.get_inputs_set(source)
+
+        pubkey = pubkey_from_inputs_set(params["inputs_set"], source)
+        if pubkey:
+            params["pubkeys"] = pubkey
+
         if return_only_data:
             params["return_only_data"] = True
         if "exact_fee" not in params:
             params["exact_fee"] = 10000  # fixed fee
-        # if "inputs_set" not in params and len(source.split(":")) == 1:
-        #    params["inputs_set"] = self.get_inputs_set(source)
         # print("Inputs set:", params["inputs_set"])
 
         result = self.compose(source, tx_name, params)

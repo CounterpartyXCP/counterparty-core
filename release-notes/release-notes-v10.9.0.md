@@ -18,6 +18,7 @@
 - Add a timeout to parse mempool transaction from ZMQ
 - Add cache for unsupported transactions when parsing raw 
 - Refactor bootstrap: clean code, use `zstd` instead `gzip`, decompress and verify signature in parallel
+- Remove Addrindexrs dependency: mock `get_oldest_tx()`, use Electr to get utxos and address history
 
 ## API
 

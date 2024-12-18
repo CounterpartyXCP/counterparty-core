@@ -280,8 +280,6 @@ def api_server_v2(request, cp_server):
         "backend_port": None,
         "backend_user": None,
         "backend_password": None,
-        "indexd_connect": None,
-        "indexd_port": None,
         "backend_ssl": False,
         "backend_ssl_no_verify": False,
         "backend_poll_interval": None,
