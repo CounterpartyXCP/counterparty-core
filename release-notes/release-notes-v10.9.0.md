@@ -30,6 +30,7 @@
 ## CLI
 
 - Add `--cache-dir` flag
+- Add `severity` field to JSON logs for compatibility
 
 # Credits
 
