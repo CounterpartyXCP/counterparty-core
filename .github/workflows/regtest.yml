@@ -35,9 +35,6 @@ jobs:
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
         pip install evdev
-        git clone https://github.com/CounterpartyXCP/addrindexrs.git
-        cd addrindexrs
-        cargo install --path=.
         wget https://bitcoincore.org/bin/bitcoin-core-27.1/bitcoin-27.1-x86_64-linux-gnu.tar.gz
         tar -xvf bitcoin-27.1-x86_64-linux-gnu.tar.gz
         sudo cp bitcoin-27.1/bin/bitcoin-cli /usr/local/bin/bitcoin-cli

@@ -399,19 +399,6 @@ class RegtestNode:
 
         # print(self.bitcoin_cli("listreceivedbyaddress"))
 
-        self.addrindexrs_process = sh.addrindexrs(
-            "--network=regtest",
-            "-vvvv",
-            "--cookie=rpc:rpc",
-            f"--db-dir={self.datadir}",
-            f"--daemon-dir={self.datadir}",
-            "--daemon-rpc-port=18443",
-            "--jsonrpc-import",
-            _bg=True,
-            # _out=sys.stdout,
-            # _err=sys.stdout,
-        )
-
         self.server_out = StringIO()
         self.counterparty_server_process = self.counterparty_server(
             "start",
@@ -477,13 +464,6 @@ class RegtestNode:
         except sh.ErrorReturnCode:
             pass
 
-    def stop_addrindexrs(self):
-        try:
-            os.kill(self.addrindexrs_process.pid, signal.SIGKILL)
-        except Exception as e:
-            print(e)
-            pass
-
     def stop(self):
         print("Stopping bitcoin node 1...")
         self.stop_bitcoin_node()
@@ -491,8 +471,6 @@ class RegtestNode:
         self.stop_bitcoin_node(node=2)
         print("Stopping counterparty-server...")
         self.stop_counterparty_server()
-        print("Stopping addrindexrs...")
-        self.stop_addrindexrs()
 
     def get_node_state(self):
         try:

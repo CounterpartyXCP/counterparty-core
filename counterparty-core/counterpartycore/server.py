@@ -141,8 +141,6 @@ def initialise_config(
     backend_port=None,
     backend_user=None,
     backend_password=None,
-    indexd_connect=None,
-    indexd_port=None,
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
@@ -178,6 +176,7 @@ def initialise_config(
     gunicorn_threads_per_worker=None,
     database_file=None,  # for tests
     action=None,
+    electr_url=None,
 ):
     # log config already initialized
 
@@ -260,9 +259,6 @@ def initialise_config(
     ##############
     # THINGS WE CONNECT TO
 
-    # Backend name
-    config.BACKEND_NAME = "addrindexrs"
-
     # Backend RPC host (Bitcoin Core)
     if backend_connect:
         config.BACKEND_CONNECT = backend_connect
@@ -344,35 +340,6 @@ def initialise_config(
         config.BACKEND_URL = "https://" + config.BACKEND_URL
     else:
         config.BACKEND_URL = "http://" + config.BACKEND_URL
-
-    # Indexd RPC host
-    if indexd_connect:
-        config.INDEXD_CONNECT = indexd_connect
-    else:
-        config.INDEXD_CONNECT = "localhost"
-
-    # Indexd RPC port
-    if indexd_port:
-        config.INDEXD_PORT = indexd_port
-    else:
-        if config.TESTNET:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_TESTNET
-        elif config.REGTEST:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_REGTEST
-        else:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT
-
-    try:
-        config.INDEXD_PORT = int(config.INDEXD_PORT)
-        if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
-            raise ConfigurationError("invalid Indexd API port number")
-    except:  # noqa: E722
-        raise ConfigurationError(  # noqa: B904
-            "Please specific a valid port number indexd-port configuration parameter"
-        )
-
-    # Construct Indexd URL.
-    config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
 
     ##############
     # THINGS WE SERVE
@@ -618,6 +585,16 @@ def initialise_config(
     config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
     config.GUNICORN_WORKERS = gunicorn_workers
 
+    if electr_url:
+        config.ELECTR_URL = electr_url
+    else:
+        if config.NETWORK_NAME == "testnet":
+            config.ELECTR_URL = config.DEFAULT_ELECTR_URL_TESTNET
+        elif config.NETWORK_NAME == "mainnet":
+            config.ELECTR_URL = config.DEFAULT_ELECTR_URL_MAINNET
+        else:
+            config.ELECTR_URL = None
+
 
 def initialise_log_and_config(args, api=False):
     # Configuration
@@ -636,8 +613,6 @@ def initialise_log_and_config(args, api=False):
         "backend_ssl": args.backend_ssl,
         "backend_ssl_no_verify": args.backend_ssl_no_verify,
         "backend_poll_interval": args.backend_poll_interval,
-        "indexd_connect": args.indexd_connect,
-        "indexd_port": args.indexd_port,
         "rpc_host": args.rpc_host,
         "rpc_port": args.rpc_port,
         "rpc_user": args.rpc_user,
@@ -665,6 +640,7 @@ def initialise_log_and_config(args, api=False):
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
         "action": args.action,
+        "electr_url": args.electr_url,
     }
     # for tests
     if "database_file" in args:
@@ -829,7 +805,6 @@ def start_all(args):
         # then close the database with write access
         if db:
             database.close(db)
-        backend.addrindexrs.stop()
         log.shutdown()
 
         # Now it's safe to check for WAL files
@@ -852,13 +827,11 @@ def start_all(args):
 
 
 def reparse(block_index):
-    backend.addrindexrs.init()
     ledger_db = database.initialise_db()
 
     last_block = ledger.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:
         print(colored("Block index is higher than current block index. No need to reparse.", "red"))
-        backend.addrindexrs.stop()
         ledger_db.close()
         return
 
@@ -867,7 +840,6 @@ def reparse(block_index):
         blocks.reparse(ledger_db, block_index=block_index)
         dbbuilder.rollback_state_db(state_db, block_index)
     finally:
-        backend.addrindexrs.stop()
         database.optimize(ledger_db)
         database.optimize(state_db)
         ledger_db.close()
