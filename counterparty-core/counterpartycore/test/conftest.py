@@ -223,11 +223,12 @@ def rawtransactions_db(request):
 @pytest.fixture(scope="function")
 def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
+
     db = database.get_connection(read_only=False)
     cursor = db.cursor()
     cursor.execute("""BEGIN""")
     util_test.reset_current_block_index(db)
-    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
     request.addfinalizer(lambda: cursor.execute("""ROLLBACK"""))
     request.addfinalizer(lambda: util_test.reset_current_block_index(db))

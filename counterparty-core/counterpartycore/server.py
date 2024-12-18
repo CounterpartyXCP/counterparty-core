@@ -6,12 +6,8 @@ import decimal
 import logging
 import multiprocessing
 import os
-import sys
-import tarfile
-import tempfile
 import threading
 import time
-import urllib
 from urllib.parse import quote_plus as urlencode
 
 import appdirs
@@ -21,6 +17,7 @@ from termcolor import colored, cprint
 from counterpartycore.lib import (
     backend,
     blocks,
+    bootstrap,
     check,
     config,
     database,
@@ -32,7 +29,6 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1, dbbuilder
-from counterpartycore.lib.public_keys import PUBLIC_KEYS
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -957,109 +953,3 @@ def configure_rpc(rpc_password=None):
     else:
         config.API_ROOT = "http://" + config.RPC_HOST + ":" + str(config.RPC_PORT)
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
-
-
-def bootstrap(no_confirm=False, snapshot_url=None):
-    warning_message = """WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
-from a centralized server maintained by the Counterparty Core development team.
-Because this method does not involve verifying the history of Counterparty transactions yourself,
-the `bootstrap` command should not be used for mission-critical, commercial or public-facing nodes.
-        """
-    cprint(warning_message, "yellow")
-
-    if not no_confirm:
-        confirmation_message = colored("Continue? (y/N): ", "magenta")
-        if input(confirmation_message).lower() != "y":
-            exit()
-
-    # Set Constants.
-    if snapshot_url is None:
-        bootstrap_url = (
-            config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
-        )
-        bootstrap_sig_url = (
-            config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
-        )
-    else:
-        bootstrap_url = snapshot_url
-        bootstrap_sig_url = snapshot_url.replace(".tar.gz", ".sig")
-
-    tar_filename = os.path.basename(bootstrap_url)
-    sig_filename = os.path.basename(bootstrap_sig_url)
-    tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
-    sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
-
-    ledger_database_path = os.path.join(config.DATA_DIR, config.APP_NAME)
-
-    if config.TESTNET:
-        ledger_database_path += ".testnet"
-    ledger_database_path += ".db"
-
-    old_api_database_path = ledger_database_path.replace(".db", ".api.db")
-    if config.TESTNET:
-        api_database_path = os.path.join(config.DATA_DIR, "state.testnet.db")
-    else:
-        api_database_path = os.path.join(config.DATA_DIR, "state.db")
-
-    # Prepare Directory.
-    if not os.path.exists(config.DATA_DIR):
-        os.makedirs(config.DATA_DIR, mode=0o755)
-
-    for database_path in [ledger_database_path, api_database_path, old_api_database_path]:
-        if os.path.exists(database_path):
-            os.remove(database_path)
-        # Delete SQLite Write-Ahead-Log
-        wal_path = database_path + "-wal"
-        shm_path = database_path + "-shm"
-        if os.path.exists(wal_path):
-            os.remove(wal_path)
-        if os.path.exists(shm_path):
-            os.remove(shm_path)
-
-    # Define Progress Bar.
-    spinner = log.Spinner(f"Downloading database from {bootstrap_url}...")
-
-    def bootstrap_progress(blocknum, blocksize, totalsize):
-        readsofar = blocknum * blocksize
-        if totalsize > 0:
-            percent = readsofar * 1e2 / totalsize
-            message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
-            spinner.set_messsage(message)
-
-    # Downloading
-    spinner.start()
-    urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
-    urllib.request.urlretrieve(bootstrap_sig_url, sig_path)  # nosec B310  # noqa: S310
-    spinner.stop()
-
-    with log.Spinner("Verifying signature..."):
-        signature_verified = False
-        for key in PUBLIC_KEYS:
-            if util.verify_signature(key, sig_path, tarball_path):
-                signature_verified = True
-                break
-        if not signature_verified:
-            print("Snapshot was not signed by any trusted keys")
-            sys.exit(1)
-
-    # TODO: check checksum, filenames, etc.
-    with log.Spinner(f"Extracting database to {config.DATA_DIR}..."):
-        with tarfile.open(tarball_path, "r:gz") as tar_file:
-            tar_file.extractall(path=config.DATA_DIR)  # nosec B202  # noqa: S202
-
-    assert os.path.exists(ledger_database_path)
-    assert os.path.exists(api_database_path) or os.path.exists(old_api_database_path)
-    # user and group have "rw" access
-    os.chmod(ledger_database_path, 0o660)  # nosec B103
-    if os.path.exists(api_database_path):
-        os.chmod(api_database_path, 0o660)  # nosec B103
-    if os.path.exists(old_api_database_path):
-        os.chmod(old_api_database_path, 0o660)  # nosec B103
-
-    with log.Spinner("Cleaning up..."):
-        os.remove(tarball_path)
-
-    cprint(
-        f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
-        "green",
-    )
