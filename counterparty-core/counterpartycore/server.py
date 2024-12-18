@@ -757,7 +757,7 @@ def start_all(args):
         if (
             not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap"
         ) or args.catch_up == "bootstrap-always":
-            bootstrap(no_confirm=True, snapshot_url=args.bootstrap_url)
+            bootstrap.bootstrap(no_confirm=True, snapshot_url=args.bootstrap_url)
 
         # Initialise database
         db = database.initialise_db()
