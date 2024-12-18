@@ -10,6 +10,8 @@ import hashlib
 import bitcoin as bitcoinlib
 from bitcoin.bech32 import CBech32Data
 from bitcoin.core.key import CPubKey
+from bitcoinutils.keys import PublicKey
+from bitcoinutils.setup import setup
 from counterparty_rs import b58, utils
 
 # TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
@@ -303,6 +305,12 @@ def pubkey_to_p2whash(pubkey):
     pubkeyhash = hash160(pubkey)
     pubkey = CBech32Data.from_bytes(0, pubkeyhash)
     return str(pubkey)
+
+
+def pubkey_to_p2whash2(pubkey):
+    setup(config.NETWORK_NAME)
+    address = PublicKey.from_hex(pubkey).get_segwit_address().to_string()
+    return address
 
 
 def bech32_to_scripthash(address):
