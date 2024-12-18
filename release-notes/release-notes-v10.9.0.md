@@ -17,7 +17,7 @@
 - Refactor raw mempool parsing; Don't block following
 - Add a timeout to parse mempool transaction from ZMQ
 - Add cache for unsupported transactions when parsing raw 
-- Refactor bootstrap: clean code, use `zstd` instead `gzip`, decompress and verify signature in parallel
+- Refactor and optimize bootstrap process, using `zstd` instead of `gzip`
 
 ## API
 

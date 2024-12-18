@@ -83,7 +83,7 @@ def check_signature(filepath, sig_url):
             signature_verified = True
             break
     os.remove(sig_filepath)
-    print(f"Verified signature in {time.time() - start_time:.2f}s")
+    print(f"Verified signature for {filepath} in {time.time() - start_time:.2f}s")
 
     if not signature_verified:
         print(f"{filepath} was not signed by any trusted keys, deleting...")
