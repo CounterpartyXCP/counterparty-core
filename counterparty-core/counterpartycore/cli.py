@@ -8,7 +8,7 @@ from urllib.parse import quote_plus as urlencode
 from termcolor import cprint
 
 from counterpartycore import server
-from counterpartycore.lib import config, sentry, setup
+from counterpartycore.lib import bootstrap, config, sentry, setup
 from counterpartycore.lib.api import dbbuilder
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -504,7 +504,7 @@ def main():
 
     # Bootstrapping
     if args.action == "bootstrap":
-        server.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
+        bootstrap.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
 
     # PARSING
     elif args.action == "reparse":

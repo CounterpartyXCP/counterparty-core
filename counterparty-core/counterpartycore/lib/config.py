@@ -173,10 +173,29 @@ MPMA_LIMIT = 1000
 PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 # PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
 
-BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
-BOOTSTRAP_URL_MAINNET_SIG = "https://bootstrap.counterparty.io/counterparty.latest.sig"
-BOOTSTRAP_URL_TESTNET = "https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz"
-BOOTSTRAP_URL_TESTNET_SIG = "https://bootstrap.counterparty.io/counterparty-testnet.latest.sig"
+
+BOOTSTRAP_URLS = {
+    "mainnet": [
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.sig",
+        ),
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.sig",
+        ),
+    ],
+    "testnet": [
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.sig",
+        ),
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.sig",
+        ),
+    ],
+}
 
 API_MAX_LOG_SIZE = (
     10 * 1024 * 1024
