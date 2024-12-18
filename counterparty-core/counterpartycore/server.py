@@ -3,27 +3,21 @@
 import _thread
 import binascii
 import decimal
-import glob
-import io
 import logging
 import multiprocessing
 import os
-import sys
-import tempfile
 import threading
 import time
-import urllib
-from multiprocessing import Process
 from urllib.parse import quote_plus as urlencode
 
 import appdirs
 import bitcoin as bitcoinlib
-import pyzstd
 from termcolor import colored, cprint
 
 from counterpartycore.lib import (
     backend,
     blocks,
+    bootstrap,
     check,
     config,
     database,
@@ -35,7 +29,6 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1, dbbuilder
-from counterpartycore.lib.public_keys import PUBLIC_KEYS
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -960,128 +953,3 @@ def configure_rpc(rpc_password=None):
     else:
         config.API_ROOT = "http://" + config.RPC_HOST + ":" + str(config.RPC_PORT)
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
-
-
-def download_zst(data_dir, zst_url):
-    print(f"Downloading {zst_url}...")
-    start_time = time.time()
-    zst_filename = os.path.basename(zst_url)
-    zst_filepath = os.path.join(data_dir, zst_filename)
-    urllib.request.urlretrieve(zst_url, zst_filepath)  # nosec B310  # noqa: S310
-    print(f"Downloaded {zst_url} in {time.time() - start_time:.2f}s")
-    return zst_filepath
-
-
-def decompress_zst(zst_filepath):
-    print(f"Decompressing {zst_filepath}...")
-    start_time = time.time()
-    filename = zst_filepath.replace(".latest.zst", "")
-    filepath = os.path.join(os.path.dirname(zst_filepath), filename)
-    with io.open(filepath, "wb") as output_file:
-        with open(zst_filepath, "rb") as input_file:
-            pyzstd.decompress_stream(input_file, output_file, read_size=16 * 1024)
-    os.remove(zst_filepath)
-    os.chmod(filepath, 0o660)
-    print(f"Decompressed {zst_filepath} in {time.time() - start_time:.2f}s")
-    return filepath
-
-
-def download_and_decompress(data_dir, zst_url):
-    # download and decompress .tar.zst file
-    print(f"Downloading and decompressing {zst_url}...")
-    start_time = time.time()
-    response = urllib.request.urlopen(zst_url)  # nosec B310  # noqa: S310
-    zst_filename = os.path.basename(zst_url)
-    filename = zst_filename.replace(".latest.zst", "")
-    filepath = os.path.join(data_dir, filename)
-    with io.open(filepath, "wb") as output_file:
-        pyzstd.decompress_stream(response, output_file, read_size=16 * 1024)
-    os.chmod(filepath, 0o660)
-    print(f"Downloaded and decompressed {zst_url} in {time.time() - start_time:.2f}s")
-    return filepath
-
-
-def verify_signature(filepath, sig_url):
-    sig_filename = os.path.basename(sig_url)
-    sig_filepath = os.path.join(tempfile.gettempdir(), sig_filename)
-    urllib.request.urlretrieve(sig_url, sig_filepath)  # nosec B310  # noqa: S310
-
-    print(f"Verifying signature for {filepath}...")
-    start_time = time.time()
-    signature_verified = False
-    for key in PUBLIC_KEYS:
-        if util.verify_signature(key, sig_filepath, filepath):
-            signature_verified = True
-            break
-    os.remove(sig_filepath)
-    print(f"Verified signature in {time.time() - start_time:.2f}s")
-
-    if not signature_verified:
-        print(f"{filepath} was not signed by any trusted keys, deleting...")
-        os.remove(filepath)
-        sys.exit(1)
-
-
-def decompress_and_verify(zst_filepath, sig_url):
-    filepath = decompress_zst(zst_filepath)
-    verify_signature(filepath, sig_url)
-
-
-def verfif_and_decompress(zst_filepath, sig_url):
-    verify_signature(zst_filepath, sig_url)
-    decompress_zst(zst_filepath)
-
-
-def clean_data_dir():
-    if not os.path.exists(config.DATA_DIR):
-        os.makedirs(config.DATA_DIR, mode=0o755)
-        return
-    files_to_delete = glob.glob(os.path.join(config.DATA_DIR, "*.db"))
-    files_to_delete += glob.glob(os.path.join(config.DATA_DIR, "*.db-wal"))
-    files_to_delete += glob.glob(os.path.join(config.DATA_DIR, "*.db-shm"))
-    for file in files_to_delete:
-        os.remove(file)
-
-
-def download_bootstrap_files():
-    files = config.BOOTSTRAP_URLS[config.NETWORK_NAME]
-    decompressors = []
-    for zst_url, sig_url in files:
-        zst_filepath = download_zst(config.DATA_DIR, zst_url)
-        decompressor = Process(
-            target=verfif_and_decompress,
-            args=(zst_filepath, sig_url),
-        )
-        decompressor.start()
-        decompressors.append(decompressor)
-
-    for decompressor in decompressors:
-        decompressor.join()
-
-
-def confirm_bootstrap():
-    warning_message = """WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
-from a centralized server maintained by the Counterparty Core development team.
-Because this method does not involve verifying the history of Counterparty transactions yourself,
-the `bootstrap` command should not be used for mission-critical, commercial or public-facing nodes.
-        """
-    cprint(warning_message, "yellow")
-
-    confirmation_message = colored("Continue? (y/N): ", "magenta")
-    if input(confirmation_message).lower() != "y":
-        exit()
-
-
-def bootstrap(no_confirm=False, snapshot_url=None):
-    if not no_confirm:
-        confirm_bootstrap()
-
-    clean_data_dir()
-
-    with log.Spinner("Downloading and decompressing database..."):
-        download_bootstrap_files()
-
-    cprint(
-        f"Databases have been successfully bootstrapped to {config.DATA_DIR}.",
-        "green",
-    )
