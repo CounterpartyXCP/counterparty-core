@@ -27,7 +27,7 @@ jobs:
         elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref }} == 'refs/heads/develop' ]]; then
           export VERSION=develop
         else
-          export VERSION={{ github.sha }}
+          export VERSION=${{ github.sha }}
         fi
         docker build -t $DOCKER_REPO:$VERSION .
         docker tag $DOCKER_REPO:$VERSION $DOCKER_REPO:latest
