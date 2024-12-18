@@ -1,5 +1,5 @@
 from counterpartycore.lib.api import compose, queries, util
-from counterpartycore.lib.backend import addrindexrs, bitcoind
+from counterpartycore.lib.backend import bitcoind, electr
 
 
 def get_routes():
@@ -172,10 +172,9 @@ ROUTES = util.prepare_routes(
         "/v2/fairmints": queries.get_all_fairmints,
         "/v2/fairmints/<tx_hash>": queries.get_fairmint,
         ### /bitcoin ###
-        "/v2/bitcoin/addresses/utxos": addrindexrs.get_unspent_txouts_by_addresses,
-        "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
-        "/v2/bitcoin/addresses/<address>/transactions/oldest": util.get_oldest_transaction_by_address,
-        "/v2/bitcoin/addresses/<address>/utxos": addrindexrs.get_unspent_txouts,
+        "/v2/bitcoin/addresses/utxos": electr.get_utxos_by_addresses,
+        "/v2/bitcoin/addresses/<address>/transactions": electr.get_history,
+        "/v2/bitcoin/addresses/<address>/utxos": electr.get_utxos,
         "/v2/bitcoin/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
         "/v2/bitcoin/transactions/<tx_hash>": util.get_transaction,
         "/v2/bitcoin/estimatesmartfee": bitcoind.fee_per_kb,

@@ -141,3 +141,7 @@ class NoPriceError(Exception):
 
 class RSFetchError(Exception):
     pass
+
+
+class ElectrError(Exception):
+    pass

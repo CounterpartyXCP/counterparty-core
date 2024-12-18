@@ -13,7 +13,8 @@ VERSION_MINOR = int(version[1])
 VERSION_REVISION = int(version[2])
 VERSION_PRE_RELEASE = "-".join(VERSION_STRING.split("-")[1:])
 
-ADDRINDEXRS_VERSION = "0.4.6"
+DEFAULT_ELECTR_URL_MAINNET = "https://api.counterparty.io:3000"
+DEFAULT_ELECTR_URL_TESTNET = "https://api.counterparty.io:13000"
 
 # When updating to a new verion, we are making a rollback if major version changes.
 # If minor version changes and if needed, we are making a reparse from a given block.
@@ -70,10 +71,6 @@ DEFAULT_RPC_PORT = 4100
 DEFAULT_BACKEND_PORT_REGTEST = 18443
 DEFAULT_BACKEND_PORT_TESTNET = 18332
 DEFAULT_BACKEND_PORT = 8332
-
-DEFAULT_INDEXD_PORT_REGTEST = 18543
-DEFAULT_INDEXD_PORT_TESTNET = 18432
-DEFAULT_INDEXD_PORT = 8432
 
 DEFAULT_ZMQ_SEQUENCE_PORT_REGTEST = 29332
 DEFAULT_ZMQ_SEQUENCE_PORT_TESTNET = 19332

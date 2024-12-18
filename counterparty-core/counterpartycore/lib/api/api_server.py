@@ -358,6 +358,7 @@ def handle_route(**kwargs):
         exceptions.UnpackError,
         CBitcoinAddressError,
         script.AddressError,
+        exceptions.ElectrError,
     ) as e:
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:

@@ -325,7 +325,7 @@ def select_any_coin_from_source(
     """Get the first (biggest) input from the source address"""
 
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
-    unspent = backend.addrindexrs.get_unspent_txouts(source, unconfirmed=allow_unconfirmed_inputs)
+    unspent = backend.electr.get_utxos(source, unconfirmed=allow_unconfirmed_inputs)
 
     unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
 
@@ -544,7 +544,7 @@ def serialise_p2sh_datatx(
         s += binascii.unhexlify(bytes(source_input["txid"], "utf-8"))[::-1]  # TxOutHash
         s += source_input["vout"].to_bytes(4, byteorder="little")  # TxOutIndex
 
-        # since pubkey is not returned from indexd, add it from bitcoind
+        # ensure pubkey is present
         source_inputs = script.ensure_script_pub_key_for_inputs([source_input])
         source_input = source_inputs[0]
         tx_script = binascii.unhexlify(bytes(source_input["script_pub_key"], "utf-8"))
