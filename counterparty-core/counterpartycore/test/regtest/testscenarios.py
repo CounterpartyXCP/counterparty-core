@@ -420,7 +420,11 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 _cwd=CURR_DIR,
             )
             print("Running Dredd...")
-            sh.dredd("--language", "python", _cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
+            sh.dredd(
+                _cwd=BASE_DIR,
+                _out=sys.stdout,
+                _err_to_out=True,
+            )
             print("Testing invalid detach...")
             regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")

@@ -204,9 +204,10 @@ class RegtestNode:
         if "inputs_set" not in params and ":" not in source:
             params["inputs_set"] = self.get_inputs_set(source)
 
-        pubkey = pubkey_from_inputs_set(params["inputs_set"], source)
-        if pubkey:
-            params["pubkeys"] = pubkey
+        if "inputs_set" in params and "pubkeys" not in params:
+            pubkey = pubkey_from_inputs_set(params["inputs_set"], source)
+            if pubkey:
+                params["pubkeys"] = pubkey
 
         if return_only_data:
             params["return_only_data"] = True
@@ -348,7 +349,7 @@ class RegtestNode:
             )
         sorted(list_unspent, key=lambda x: -x["amount"])
         inputs = []
-        for utxo in list_unspent:
+        for utxo in list_unspent[0:99]:
             inputs.append(f"{utxo['txid']}:{utxo['vout']}")
         return ",".join(inputs)
 
@@ -665,7 +666,11 @@ class RegtestNode:
         data = self.send_transaction(
             utxo,
             "detach",
-            {"destination": test_address, "exact_fee": 1},
+            {
+                "destination": test_address,
+                "exact_fee": 1,
+                "inputs_set": self.get_inputs_set(test_address),
+            },
             return_only_data=True,
         )
 
@@ -779,6 +784,7 @@ class RegtestNode:
         # prepare transaction
         # send 100 sats XCP to a new empty address
         api_call_url = f"addresses/{source_address}/compose/send?destination={new_address}&quantity=100&asset=XCP"
+        api_call_url += "&inputs_set=" + self.get_inputs_set(source_address)
         result = self.api_call(api_call_url)
         raw_transaction_1 = result["result"]["rawtransaction"]
 

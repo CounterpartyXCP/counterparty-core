@@ -6,8 +6,15 @@ import sys
 import requests
 import sh
 import yaml
-from counterpartycore.lib import database
+from counterpartycore.lib import config, database
 from counterpartycore.lib.api import routes
+from counterpartycore.lib.backend.bitcoind import pubkey_from_inputs_set
+
+config.BACKEND_URL = "http://rpc:rpc@localhost:18443"
+config.BACKEND_SSL_NO_VERIFY = True
+config.REQUESTS_TIMEOUT = 20
+config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+config.NETWORK_NAME = "regtest"
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../apiary.apib")
@@ -124,11 +131,28 @@ EVENT_LIST = [
 
 DREDD_CONFIG = {
     "loglevel": "error",
+    "language": "python",
+    "hookfiles": "./counterparty-core/counterpartycore/test/regtest/dreddhooks.py",
     "path": [],
     "blueprint": "apiary.apib",
     "endpoint": "http://127.0.0.1:24000",
     "only": [],
 }
+
+
+def get_inputs_set(address):
+    bitcoin_cli = sh.bitcoin_cli.bake(
+        "-regtest",
+        "-rpcuser=rpc",
+        "-rpcpassword=rpc",
+        "-rpcconnect=localhost",
+    )
+    list_unspent = json.loads(bitcoin_cli("listunspent", 0, 9999999, json.dumps([address])).strip())
+    sorted(list_unspent, key=lambda x: -x["amount"])
+    inputs = []
+    for utxo in list_unspent[0:99]:
+        inputs.append(f"{utxo['txid']}:{utxo['vout']}")
+    return ",".join(inputs)
 
 
 def get_example_output(path, args):
@@ -146,6 +170,24 @@ def get_example_output(path, args):
     print(f"GET {url}")
     if "v2/" in path:
         args["verbose"] = "true"
+
+    if "/compose" in path:
+        source = None
+        if "/addresses/" in path:
+            source = path.split("/addresses/")[1].split("/")[0]
+        elif "/utxos/" in path:
+            utxo = path.split("/utxos/")[1].split("/")[0]
+            source = requests.get(f"{API_ROOT}/v2/utxos/{utxo}/balances?limit=1").json()["result"][  # noqa S113
+                0
+            ]["utxo_address"]
+        if source is not None:
+            print(f"source: {source}")
+            inputs_set = get_inputs_set(source)
+            args["inputs_set"] = inputs_set
+            args["exclude_utxos_with_balances"] = True
+            args["pubkeys"] = pubkey_from_inputs_set(inputs_set, source)
+            args["validate"] = False
+
     response = requests.get(url, params=args)  # noqa S113
     return response.json()
 
@@ -154,6 +196,8 @@ def include_in_dredd(group, path):
     if "/bet" in path:
         return False
     if "_old" in path:
+        return False
+    if "/v2/bitcoin/addresses/" in path:
         return False
     return True
 
