@@ -13000,7 +13000,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -13204,7 +13204,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -13390,7 +13390,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -13583,7 +13583,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -13769,7 +13769,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -13967,7 +13967,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -14191,7 +14191,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -14389,7 +14389,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -14616,7 +14616,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -14842,7 +14842,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -15058,7 +15058,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -15277,7 +15277,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -15475,7 +15475,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -15667,7 +15667,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -15965,7 +15965,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -16158,7 +16158,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -16357,7 +16357,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -16544,7 +16544,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
@@ -16730,7 +16730,7 @@
                         "name": "inputs_set",
                         "type": "str",
                         "default": null,
-                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+                        "description": "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
                         "required": false
                     },
                     {
