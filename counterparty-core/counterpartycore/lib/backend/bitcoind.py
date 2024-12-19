@@ -1,3 +1,4 @@
+import binascii
 import functools
 import json
 import logging
@@ -7,7 +8,7 @@ from collections import OrderedDict
 import requests
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
-from counterpartycore.lib import config, deserialize, exceptions, util
+from counterpartycore.lib import config, deserialize, exceptions, script, util
 from counterpartycore.lib.util import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -101,14 +102,15 @@ def rpc_call(payload, retry=0):
     else:
         raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
-    if isinstance(payload, dict):
-        method = payload["method"]
-    elif isinstance(payload, list):
-        method = payload[0]["method"]
-    else:
-        method = "unknown"
-    elapsed = time.time() - start_time
-    logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
+    if hasattr(logger, "trace"):
+        if isinstance(payload, dict):
+            method = payload["method"]
+        elif isinstance(payload, list):
+            method = payload[0]["method"]
+        else:
+            method = "unknown"
+        elapsed = time.time() - start_time
+        logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
 
     return result
 
@@ -149,22 +151,33 @@ def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
 
 
-def getrawtransaction_batch(tx_hashes):
+def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False):
     if len(tx_hashes) == 0:
         return {}
     if len(tx_hashes) > config.MAX_RPC_BATCH_SIZE:
         raise exceptions.BitcoindRPCError("Too many transactions requested")
 
     payload = [
-        {"method": "getrawtransaction", "params": [tx_hash], "jsonrpc": "2.0", "id": i}
+        {
+            "method": "getrawtransaction",
+            "params": [tx_hash, 1 if verbose else 0],
+            "jsonrpc": "2.0",
+            "id": i,
+        }
         for i, tx_hash in enumerate(tx_hashes)
     ]
     results = rpc_call(payload)
 
-    raw_transactions = []
-    for result in results:
-        if "result" in result and result["result"] is not None:
-            raw_transactions.append(result["result"])
+    if return_dict:
+        raw_transactions = {}
+        for result in results:
+            if "result" in result and result["result"] is not None:
+                raw_transactions[tx_hashes[result["id"]]] = result["result"]
+    else:
+        raw_transactions = []
+        for result in results:
+            if "result" in result and result["result"] is not None:
+                raw_transactions.append(result["result"])
 
     return raw_transactions
 
@@ -344,3 +357,32 @@ def decoderawtransaction(rawtx: str):
     :param rawtx: The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)
     """
     return rpc("decoderawtransaction", [rawtx])
+
+
+def pubkey_from_inputs_set(inputs_set, pubkeyhash):
+    utxos = inputs_set.split(",")
+    utxos = [utxo.split(":")[0] for utxo in utxos]
+    for tx_hash in utxos:
+        tx = getrawtransaction(tx_hash, True)
+        for vin in tx["vin"]:
+            if "txinwitness" in vin:
+                if len(vin["txinwitness"]) >= 2:
+                    # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
+                    try:
+                        pubkey = vin["txinwitness"][1]
+                        if pubkeyhash == script.pubkey_to_p2whash2(pubkey):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+            elif "coinbase" not in vin:
+                scriptsig = vin["scriptSig"]
+                asm = scriptsig["asm"].split(" ")
+                if len(asm) >= 2:
+                    # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+                    try:
+                        pubkey = asm[1]
+                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+    return None

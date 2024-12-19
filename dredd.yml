@@ -1,5 +1,7 @@
 blueprint: apiary.apib
 endpoint: http://127.0.0.1:24000
+hookfiles: ./counterparty-core/counterpartycore/test/regtest/dreddhooks.py
+language: python
 loglevel: error
 only:
 - Blocks > Get Blocks > Get Blocks
@@ -146,11 +148,6 @@ only:
 - Fairminters > Get Fairmints By Fairminter > Get Fairmints By Fairminter
 - Fairmints > Get All Fairmints > Get All Fairmints
 - Fairmints > Get Fairmint > Get Fairmint
-- Bitcoin > Get Unspent Txouts By Addresses > Get Unspent Txouts By Addresses
-- Bitcoin > Get Transactions By Address > Get Transactions By Address
-- Bitcoin > Get Oldest Transaction By Address > Get Oldest Transaction By Address
-- Bitcoin > Get Unspent Txouts > Get Unspent Txouts
-- Bitcoin > PubKeyHash To Pubkey > PubKeyHash To Pubkey
 - Bitcoin > Get Transaction > Get Transaction
 - Bitcoin > Fee Per Kb > Fee Per Kb
 - Bitcoin > Sendrawtransaction > Sendrawtransaction

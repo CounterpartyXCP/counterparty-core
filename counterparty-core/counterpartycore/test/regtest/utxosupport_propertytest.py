@@ -148,6 +148,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             {
                 "destination": destination,
                 "exact_fee": 0,
+                "inputs_source": utxo_address,
             },
         )
         self.upsert_balance(source, asset, -quantity, utxo_address)
@@ -345,6 +346,8 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             {
                 "exact_fee": 0,
                 "destination": destination,
+                "inputs_source": utxo_address,
+                "exclude_utxos_with_balances": True,
             },
         )
         for balance in self.balances:

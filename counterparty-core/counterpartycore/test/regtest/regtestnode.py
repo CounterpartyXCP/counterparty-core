@@ -17,6 +17,13 @@ from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from counterpartycore.lib import arc4, config, database
+from counterpartycore.lib.backend.bitcoind import pubkey_from_inputs_set
+
+config.BACKEND_URL = "http://rpc:rpc@localhost:18443"
+config.BACKEND_SSL_NO_VERIFY = True
+config.REQUESTS_TIMEOUT = 20
+config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+config.NETWORK_NAME = "regtest"
 
 setup("regtest")
 
@@ -191,12 +198,21 @@ class RegtestNode:
         retry=0,
     ):
         self.wait_for_counterparty_server()
+        if "inputs_source" in params:
+            inputs_source = params.pop("inputs_source")
+            params["inputs_set"] = self.get_inputs_set(inputs_source)
+        if "inputs_set" not in params and ":" not in source:
+            params["inputs_set"] = self.get_inputs_set(source)
+
+        if "inputs_set" in params and "pubkeys" not in params:
+            pubkey = pubkey_from_inputs_set(params["inputs_set"], source)
+            if pubkey:
+                params["pubkeys"] = pubkey
+
         if return_only_data:
             params["return_only_data"] = True
         if "exact_fee" not in params:
             params["exact_fee"] = 10000  # fixed fee
-        # if "inputs_set" not in params and len(source.split(":")) == 1:
-        #    params["inputs_set"] = self.get_inputs_set(source)
         # print("Inputs set:", params["inputs_set"])
 
         result = self.compose(source, tx_name, params)
@@ -333,7 +349,7 @@ class RegtestNode:
             )
         sorted(list_unspent, key=lambda x: -x["amount"])
         inputs = []
-        for utxo in list_unspent:
+        for utxo in list_unspent[0:99]:
             inputs.append(f"{utxo['txid']}:{utxo['vout']}")
         return ",".join(inputs)
 
@@ -398,19 +414,6 @@ class RegtestNode:
         self.generate_addresses_with_btc()
 
         # print(self.bitcoin_cli("listreceivedbyaddress"))
-
-        self.addrindexrs_process = sh.addrindexrs(
-            "--network=regtest",
-            "-vvvv",
-            "--cookie=rpc:rpc",
-            f"--db-dir={self.datadir}",
-            f"--daemon-dir={self.datadir}",
-            "--daemon-rpc-port=18443",
-            "--jsonrpc-import",
-            _bg=True,
-            # _out=sys.stdout,
-            # _err=sys.stdout,
-        )
 
         self.server_out = StringIO()
         self.counterparty_server_process = self.counterparty_server(
@@ -477,13 +480,6 @@ class RegtestNode:
         except sh.ErrorReturnCode:
             pass
 
-    def stop_addrindexrs(self):
-        try:
-            os.kill(self.addrindexrs_process.pid, signal.SIGKILL)
-        except Exception as e:
-            print(e)
-            pass
-
     def stop(self):
         print("Stopping bitcoin node 1...")
         self.stop_bitcoin_node()
@@ -491,8 +487,6 @@ class RegtestNode:
         self.stop_bitcoin_node(node=2)
         print("Stopping counterparty-server...")
         self.stop_counterparty_server()
-        print("Stopping addrindexrs...")
-        self.stop_addrindexrs()
 
     def get_node_state(self):
         try:
@@ -672,7 +666,11 @@ class RegtestNode:
         data = self.send_transaction(
             utxo,
             "detach",
-            {"destination": test_address, "exact_fee": 1},
+            {
+                "destination": test_address,
+                "exact_fee": 1,
+                "inputs_set": self.get_inputs_set(test_address),
+            },
             return_only_data=True,
         )
 
@@ -786,6 +784,7 @@ class RegtestNode:
         # prepare transaction
         # send 100 sats XCP to a new empty address
         api_call_url = f"addresses/{source_address}/compose/send?destination={new_address}&quantity=100&asset=XCP"
+        api_call_url += "&inputs_set=" + self.get_inputs_set(source_address)
         result = self.api_call(api_call_url)
         raw_transaction_1 = result["result"]["rawtransaction"]
 

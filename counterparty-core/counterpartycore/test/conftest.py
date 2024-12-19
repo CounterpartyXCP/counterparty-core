@@ -280,8 +280,6 @@ def api_server_v2(request, cp_server):
         "backend_port": None,
         "backend_user": None,
         "backend_password": None,
-        "indexd_connect": None,
-        "indexd_port": None,
         "backend_ssl": False,
         "backend_ssl_no_verify": False,
         "backend_poll_interval": None,
@@ -327,6 +325,7 @@ def api_server_v2(request, cp_server):
         "log_exclude_filters": None,
         "log_include_filters": None,
         "cache_dir": os.path.dirname(request.module.FIXTURE_DB),
+        "electrs_url": None,
     }
     server_config = (
         default_config
@@ -423,9 +422,7 @@ class MockUTXOSet(object):
         self.rawtransactions_db = rawtransactions_db
         # logger.warning('MockUTXOSet %d' % len(utxos))
 
-    def get_unspent_txouts(
-        self, address, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None
-    ):
+    def get_utxos(self, address, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None):
         # filter by address
         txouts = [output for output in self.txouts if output["address"] == address]
 
@@ -555,8 +552,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
     util_test.rawtransactions_db = rawtransactions_db
 
-    def get_unspent_txouts(*args, **kwargs):
-        return mock_utxos.get_unspent_txouts(*args, **kwargs)
+    def get_utxos(*args, **kwargs):
+        return mock_utxos.get_utxos(*args, **kwargs)
 
     def isodt(epoch_time):
         return datetime.utcfromtimestamp(epoch_time).isoformat()
@@ -590,8 +587,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
         return util_test.getrawtransaction_batch(rawtransactions_db, txhash_list, verbose=verbose)
 
-    def mocked_search_raw_transactions(address, unconfirmed=False):
-        return util_test.search_raw_transactions(rawtransactions_db, address, unconfirmed)
+    def mocked_get_history(address, unconfirmed=False):
+        return util_test.get_history(rawtransactions_db, address, unconfirmed)
 
     # mock the arc4 with a fixed seed to keep data from changing based on inputs
     _init_arc4 = arc4.init_arc4
@@ -634,9 +631,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         return encoding
 
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
-    monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
-    )
+    monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
@@ -652,12 +647,12 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         get_utxo_address_and_value,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction_batch",
         mocked_getrawtransaction_batch,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.search_raw_transactions",
-        mocked_search_raw_transactions,
+        "counterpartycore.lib.backend.electrs.get_history",
+        mocked_get_history,
     )
     monkeypatch.setattr(
         "counterpartycore.lib.transaction_helper.transaction_outputs.pubkeyhash_to_pubkey",

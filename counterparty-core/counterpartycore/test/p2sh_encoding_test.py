@@ -74,8 +74,7 @@ def test_p2sh_encoding(server_db):
         ),
     ):
         utxos = dict(
-            ((utxo["txid"], utxo["vout"]), utxo)
-            for utxo in backend.addrindexrs.get_unspent_txouts(source)
+            ((utxo["txid"], utxo["vout"]), utxo) for utxo in backend.electrs.get_utxos(source)
         )
 
         fee = 20000
@@ -257,8 +256,7 @@ def test_p2sh_encoding_long_data(server_db):
         ),
     ):
         utxos = dict(
-            ((utxo["txid"], utxo["vout"]), utxo)
-            for utxo in backend.addrindexrs.get_unspent_txouts(source)
+            ((utxo["txid"], utxo["vout"]), utxo) for utxo in backend.electrs.get_utxos(source)
         )
 
         # pprint.pprint(utxos)

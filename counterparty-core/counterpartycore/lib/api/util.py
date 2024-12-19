@@ -155,17 +155,6 @@ def get_transaction(tx_hash: str, format: str = "json"):
     return backend.bitcoind.getrawtransaction(tx_hash, verbose=format == "json")
 
 
-def get_oldest_transaction_by_address(address: str, block_index: int = None):
-    """
-    Get the oldest transaction for an address.
-    :param address: The address to search for. (e.g. $ADDRESS_9)
-    :param block_index: The block index to search from.
-    """
-    return backend.addrindexrs.get_oldest_tx(
-        address, block_index=block_index or util.CURRENT_BLOCK_INDEX
-    )
-
-
 def get_backend_height():
     block_count = backend.bitcoind.getblockcount()
     blocks_behind = backend.bitcoind.get_blocks_behind()

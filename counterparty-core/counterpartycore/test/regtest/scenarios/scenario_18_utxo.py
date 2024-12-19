@@ -239,6 +239,7 @@ SCENARIO = [
             "destination": "$ADDRESS_7",
             "exact_fee": 0,
             "validate": False,
+            "inputs_source": "$ADDRESS_8",
         },
         "set_variables": {
             "UTXOASSET_UTXO_3_TX_HASH": "$TX_HASH",
@@ -354,6 +355,7 @@ SCENARIO = [
         "source": "$UTXOASSET_UTXO_3_TX_HASH:0",
         "params": {
             "exact_fee": 0,
+            "inputs_source": "$ADDRESS_7",
         },
         "controls": [
             {
