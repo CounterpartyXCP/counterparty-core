@@ -1,6 +1,7 @@
 import logging
 
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config
+from counterpartycore.lib.database import LedgerDBConnectionPool
 from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
 from counterpartycore.lib.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
@@ -13,22 +14,17 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 class TelemetryOneShot(metaclass=SingletonMeta):
     def __init__(self):
-        self.db = database.get_connection(read_only=True)
-        self.collector = TelemetryCollectorInfluxDB(db=self.db)
+        logger.debug("Initializing TelemetryOneShot")
         self.client = TelemetryClientInfluxDB()
 
     def submit(self):
         try:
-            data = self.collector.collect()
+            with LedgerDBConnectionPool().connection() as ledger_db:
+                collector = TelemetryCollectorInfluxDB(db=ledger_db)
+                data = collector.collect()
+                collector.close()
             if data:
                 self.client.send(data)
         except Exception as e:
             capture_exception(e)
-            logger.error(f"Error in telemetry one shot: {e}")
-
-    def close(self):
-        self.db.close()
-        self.db = None
-        self.collector.close()
-        self.collector = None
-        self.client = None
+            logger.warning(f"Error in telemetry one shot: {e}")

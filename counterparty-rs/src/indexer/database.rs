@@ -9,9 +9,9 @@ use crate::indexer::{constants::CP_HEIGHT, types::entry::BlockAtHeightSpentOutpu
 
 use super::types::{
     entry::{
-        get_cf_index_names, get_cf_names, make_key, to_cf_name, BlockAtHeightHasHash, FromEntry,
-        ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxidVoutPrefix, CF_INDEX_PREFIX_LENGTHS,
-        CF_PREFIX_LENGTHS, INDEX_CF_NAME_SUFFIX,
+        get_cf_index_names, get_cf_names, make_key, to_cf_name, BlockAtHeightHasHash, Entry,
+        FromEntry, ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxidVoutPrefix,
+        CF_INDEX_PREFIX_LENGTHS, CF_PREFIX_LENGTHS, INDEX_CF_NAME_SUFFIX,
     },
     error::Error,
 };
@@ -36,6 +36,7 @@ pub trait DatabaseOps: Clone + Send + 'static {
         min_index_height: Option<u32>,
         entries: &Vec<Box<dyn ToEntry>>,
     ) -> Result<(), Error>;
+    #[allow(dead_code)]
     fn delete_indexes_below_height(
         &self,
         cf: &ColumnFamily,
@@ -48,6 +49,7 @@ pub trait DatabaseOps: Clone + Send + 'static {
     ) -> Result<(), Error>;
     fn block_at_height_has_hash(&self, height: u32) -> Result<Option<Vec<u8>>, Error>;
     fn rollback_to_height(&self, batch: &mut WriteBatch, height: u32) -> Result<(), Error>;
+    fn delete_below_height(&self, batch: &mut WriteBatch, height: u32) -> Result<(), Error>;
 }
 
 #[derive(Clone)]
@@ -80,6 +82,26 @@ impl Database {
         opts.create_missing_column_families(true);
         let db = Arc::new(DB::open_cf_descriptors(&opts, path, cfs)?);
         Ok(Database { db })
+    }
+
+    #[allow(dead_code)]
+    pub fn list_all_values(&self) -> Result<Vec<(String, Vec<Entry>)>, Error> {
+        let mut all_values = Vec::new();
+
+        for cf_name in get_cf_names().into_iter().chain(get_cf_index_names()) {
+            let cf_handle = self.cf(cf_name.clone())?;
+            let iter = self.db.iterator_cf(cf_handle, IteratorMode::Start);
+
+            let mut values = Vec::new();
+            for item in iter {
+                let (key, value) = item?;
+                values.push((key.to_vec(), value.to_vec()));
+            }
+
+            all_values.push((cf_name, values));
+        }
+
+        Ok(all_values)
     }
 
     fn cf(&self, cf_name: String) -> Result<&ColumnFamily, Error> {
@@ -172,9 +194,7 @@ impl DatabaseOps for Database {
         }
 
         if let Some(height) = min_index_height {
-            for cf_name in get_cf_index_names() {
-                self.delete_indexes_below_height(self.cf(cf_name)?, batch, height)?
-            }
+            self.delete_below_height(batch, height)?;
         }
         Ok(())
     }
@@ -228,6 +248,34 @@ impl DatabaseOps for Database {
             }
         }
         self.put_max_block_height(batch, height)
+    }
+
+    fn delete_below_height(&self, batch: &mut WriteBatch, height: u32) -> Result<(), Error> {
+        for cf_name in get_cf_names() {
+            let entry_cf = self.cf(cf_name.clone())?;
+            let index_cf = self.cf(cf_name + INDEX_CF_NAME_SUFFIX)?;
+
+            let index_iter = self.db.iterator_cf(index_cf, IteratorMode::Start);
+            for entry in index_iter {
+                let (index_key, _) = entry.or(Err(Error::RocksDBIter(
+                    "Encounted unwrappable entry in delete below iter".into(),
+                )))?;
+                let block_height =
+                    u32::from_be_bytes(index_key[0..4].try_into().map_err(|_| {
+                        Error::U32Conversion("Could not convert index key block height".into())
+                    })?);
+                if block_height >= height {
+                    break;
+                }
+                batch.delete_cf(index_cf, &index_key);
+                let mut entry_key = index_key.to_vec();
+                if entry_key.len() > 4 {
+                    entry_key = make_key(&[index_key[4..].to_vec(), index_key[0..4].to_vec()]);
+                }
+                batch.delete_cf(entry_cf, entry_key)
+            }
+        }
+        Ok(())
     }
 }
 
@@ -530,7 +578,7 @@ mod tests {
     fn test_put_entries_some() {
         let db = new_test_db!().unwrap();
 
-        let min_index_height = 1000;
+        let min_index_height = 999;
         let entries_data = [
             (test_h160_hash(0), 999),
             (test_h160_hash(1), 1000),
@@ -671,5 +719,100 @@ mod tests {
         }
 
         assert_eq!(db.get_max_block_height().unwrap(), 2);
+    }
+
+    #[test]
+    fn test_delete_below_height() {
+        let db = new_test_db!().unwrap();
+
+        let pre_reorg_entries: Vec<Box<dyn ToEntry>> = vec![
+            Box::new(ScriptHashHasOutputsInBlockAtHeight {
+                script_hash: test_h160_hash(1),
+                height: 1,
+            }),
+            Box::new(BlockAtHeightSpentOutputInTx {
+                txid: test_sha256_hash(2),
+                vout: 1,
+                height: 2,
+            }),
+            Box::new(TxInBlockAtHeight {
+                txid: test_sha256_hash(5),
+                height: 2,
+            }),
+            Box::new(BlockAtHeightHasHash {
+                height: 2,
+                hash: test_sha256_hash(6),
+            }),
+        ];
+
+        let post_reorg_entries: Vec<Box<dyn ToEntry>> = vec![
+            Box::new(ScriptHashHasOutputsInBlockAtHeight {
+                script_hash: test_h160_hash(3),
+                height: 3,
+            }),
+            Box::new(BlockAtHeightSpentOutputInTx {
+                txid: test_sha256_hash(4),
+                vout: 2,
+                height: 4,
+            }),
+            Box::new(TxInBlockAtHeight {
+                txid: test_sha256_hash(7),
+                height: 5,
+            }),
+            Box::new(BlockAtHeightHasHash {
+                height: 5,
+                hash: test_sha256_hash(8),
+            }),
+        ];
+
+        let entries = pre_reorg_entries
+            .into_iter()
+            .chain(post_reorg_entries)
+            .collect();
+        let height = 3;
+        db.write_batch(|batch| db.put_entries(batch, Some(0), &entries))
+            .unwrap();
+
+        db.write_batch(|batch| db.delete_below_height(batch, height))
+            .unwrap();
+
+        for entry in entries {
+            if entry.height() < height {
+                assert!(
+                    db.db
+                        .get_cf(db.cf(entry.cf_name()).unwrap(), entry.to_entry().0)
+                        .unwrap()
+                        .is_none(),
+                    "Entry should not exist"
+                );
+            } else {
+                assert!(
+                    db.db
+                        .get_cf(db.cf(entry.cf_name()).unwrap(), entry.to_entry().0)
+                        .unwrap()
+                        .is_some(),
+                    "Entry should exist"
+                );
+            }
+        }
+    }
+
+    #[test]
+    #[ignore]
+    pub fn test_pretty_print_all_values() {
+        let db = Database::new("/tmp/counterparty_test_db".to_string()).unwrap();
+        let all_values = db.list_all_values().unwrap();
+        for (cf_name, entries) in all_values {
+            println!("Column Family: {}", cf_name);
+            for (i, (key, value)) in entries.iter().enumerate() {
+                println!("  Entry {}:", i + 1);
+                println!(
+                    "    Key: {:?}",
+                    u32::from_be_bytes(key[0..4].try_into().unwrap())
+                );
+                println!("    Value: {:?}", value);
+            }
+            println!("---------------------------------------------");
+        }
     }
 }

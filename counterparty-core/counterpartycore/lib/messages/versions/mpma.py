@@ -98,8 +98,28 @@ def validate(db, source, asset_dest_quant_list, block_index):
     return problems
 
 
-def compose(db, source: str, asset_dest_quant_list: list, memo: str, memo_is_hex: bool):
+def compose(
+    db,
+    source: str,
+    asset_dest_quant_list: list,
+    memo: str = None,
+    memo_is_hex: bool = None,
+    skip_validation: bool = False,
+):
+    """
+    Compose a MPMA send message.
+    :param db: sqlite3 database
+    :param source: source address
+    :param asset_dest_quant_list: list of tuples of the form (asset, destination, quantity, memo, is_hex), where memo and is_hex are optional; if not specified for a send, memo is used.
+    :param memo: optional memo for the entire send
+    :param memo_is_hex: optional boolean indicating if the memo is in hex format
+    """
     cursor = db.cursor()
+
+    if memo and not isinstance(memo, str):
+        raise exceptions.ComposeError("`memo` must be a string")
+    if memo_is_hex and not isinstance(memo_is_hex, bool):
+        raise exceptions.ComposeError("`memo_is_hex` must be a boolean")
 
     out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
     for asset, quantity in out_balances:
@@ -111,7 +131,7 @@ def compose(db, source: str, asset_dest_quant_list: list, memo: str, memo_is_hex
             raise exceptions.ComposeError(f"quantities must be an int (in satoshis) for {asset}")
 
         balance = ledger.get_balance(db, source, asset)
-        if balance < quantity:
+        if balance < quantity and not skip_validation:
             raise exceptions.ComposeError(f"insufficient funds for {asset}")
 
     block_index = util.CURRENT_BLOCK_INDEX
@@ -119,13 +139,17 @@ def compose(db, source: str, asset_dest_quant_list: list, memo: str, memo_is_hex
     cursor.close()
 
     problems = validate(db, source, asset_dest_quant_list, block_index)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     data = message_type.pack(ID)
-    data += _encode_mpma_send(
-        db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex
-    )
+
+    try:
+        data += _encode_mpma_send(
+            db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex
+        )
+    except Exception as e:
+        raise exceptions.ComposeError(f"couldn't encode MPMA send: {e}") from e
 
     return (source, [], data)
 
@@ -205,7 +229,7 @@ def parse(db, tx, message):
 
         # Enumeration of the plain sends needs to be deterministic, so we sort them by asset and then by address
         plain_sends = sorted(plain_sends, key=lambda x: "".join([x[0], x[1]]))
-        for i, op in enumerate(plain_sends):
+        for op in plain_sends:
             if len(op) > 3:
                 memo_bytes = op[3]
             else:
@@ -221,7 +245,7 @@ def parse(db, tx, message):
                 "quantity": op[2],
                 "status": status,
                 "memo": memo_bytes,
-                "msg_index": i,
+                "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
             }
 
             ledger.insert_record(db, "sends", bindings, "MPMA_SEND")

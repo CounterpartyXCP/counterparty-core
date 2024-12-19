@@ -1,5 +1,7 @@
 blueprint: apiary.apib
 endpoint: http://127.0.0.1:24000
+hookfiles: ./counterparty-core/counterpartycore/test/regtest/dreddhooks.py
+language: python
 loglevel: error
 only:
 - Blocks > Get Blocks > Get Blocks
@@ -7,6 +9,7 @@ only:
 - Blocks > Get Block By Height > Get Block By Height
 - Blocks > Get Block By Hash > Get Block By Hash
 - Blocks > Get Transactions By Block > Get Transactions By Block
+- Blocks > Get Transaction Types Count By Block > Get Transaction Types Count By Block
 - Blocks > Get Events By Block > Get Events By Block
 - Blocks > Get Event Counts By Block > Get Event Counts By Block
 - Blocks > Get Events By Block And Event > Get Events By Block And Event
@@ -19,7 +22,10 @@ only:
 - Blocks > Get Sends By Block > Get Sends By Block
 - Blocks > Get Dispenses By Block > Get Dispenses By Block
 - Blocks > Get Sweeps By Block > Get Sweeps By Block
+- Blocks > Get Fairminters By Block > Get Fairminters By Block
+- Blocks > Get Fairmints By Block > Get Fairmints By Block
 - Transactions > Get Transactions > Get Transactions
+- Transactions > Get Transaction Types Count > Get Transaction Types Count
 - Transactions > Info > Info
 - Transactions > Info By Tx Hash > Info By Tx Hash
 - Transactions > Unpack > Unpack
@@ -39,7 +45,7 @@ only:
 - Addresses > Get Events By Addresses > Get Events By Addresses
 - Addresses > Get Mempool Events By Addresses > Get Mempool Events By Addresses
 - Addresses > Get Address Balances > Get Address Balances
-- Addresses > Get Balance By Address And Asset > Get Balance By Address And Asset
+- Addresses > Get Balances By Address And Asset > Get Balances By Address And Asset
 - Addresses > Get Credits By Address > Get Credits By Address
 - Addresses > Get Debits By Address > Get Debits By Address
 - Addresses > Get Broadcasts By Source > Get Broadcasts By Source
@@ -62,12 +68,16 @@ only:
 - Addresses > Get Valid Assets By Issuer > Get Valid Assets By Issuer
 - Addresses > Get Valid Assets By Owner > Get Valid Assets By Owner
 - Addresses > Get Transactions By Address > Get Transactions By Address
+- Addresses > Get Transaction Types Count By Address > Get Transaction Types Count
+  By Address
 - Addresses > Get Dividends Distributed By Address > Get Dividends Distributed By
   Address
 - Addresses > Get Orders By Address > Get Orders By Address
 - Addresses > Get Fairminters By Address > Get Fairminters By Address
 - Addresses > Get Fairmints By Address > Get Fairmints By Address
 - Addresses > Get Fairmints By Address And Asset > Get Fairmints By Address And Asset
+- Utxos > Get Utxo Balances > Get Utxo Balances
+- Utxos > Utxos With Balances > Utxos With Balances
 - Compose > Compose Broadcast > Compose Broadcast
 - Compose > Compose BTCPay > Compose BTCPay
 - Compose > Compose Burn > Compose Burn
@@ -86,10 +96,11 @@ only:
 - Compose > Compose Attach > Compose Attach
 - Compose > Compose Detach > Compose Detach
 - Compose > Compose Movetoutxo > Compose Movetoutxo
+- Compose > Get Attach Estimate Xcp Fee > Get Attach Estimate Xcp Fee
 - Assets > Get Valid Assets > Get Valid Assets
 - Assets > Get Asset > Get Asset
 - Assets > Get Asset Balances > Get Asset Balances
-- Assets > Get Balance By Asset And Address > Get Balance By Asset And Address
+- Assets > Get Balances By Asset And Address > Get Balances By Asset And Address
 - Assets > Get Orders By Asset > Get Orders By Asset
 - Assets > Get Order Matches By Asset > Get Order Matches By Asset
 - Assets > Get Credits By Asset > Get Credits By Asset
@@ -135,14 +146,12 @@ only:
 - Fairminters > Get All Fairminters > Get All Fairminters
 - Fairminters > Get Fairminter > Get Fairminter
 - Fairminters > Get Fairmints By Fairminter > Get Fairmints By Fairminter
-- Bitcoin > Get Unspent Txouts By Addresses > Get Unspent Txouts By Addresses
-- Bitcoin > Get Transactions By Address > Get Transactions By Address
-- Bitcoin > Get Oldest Transaction By Address > Get Oldest Transaction By Address
-- Bitcoin > Get Unspent Txouts > Get Unspent Txouts
-- Bitcoin > PubKeyHash To Pubkey > PubKeyHash To Pubkey
+- Fairmints > Get All Fairmints > Get All Fairmints
+- Fairmints > Get Fairmint > Get Fairmint
 - Bitcoin > Get Transaction > Get Transaction
 - Bitcoin > Fee Per Kb > Fee Per Kb
 - Bitcoin > Sendrawtransaction > Sendrawtransaction
+- Bitcoin > Decoderawtransaction > Decoderawtransaction
 - Bitcoin > Get Mempool Info > Get Mempool Info
 - Mempool > Get All Mempool Events > Get All Mempool Events
 - Mempool > Get Mempool Events By Name > Get Mempool Events By Name

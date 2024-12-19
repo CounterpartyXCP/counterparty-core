@@ -5,17 +5,8 @@ x-bitcoind-common: &bitcoind-common
     - data:/bitcoin/.bitcoin
   restart: unless-stopped
 
-x-addrindexrs-common: &addrindexrs-common
-  image: counterparty/addrindexrs:v0.4.6
-  volumes:
-    - data:/root/.bitcoin
-    - data:/data
-  environment:
-    - ADDRINDEXRS_JSONRPC_IMPORT=${ADDRINDEXRS_JSONRPC_IMPORT:-false}
-  restart: unless-stopped
-
 x-counterparty-common: &counterparty-common
-  image: counterparty/counterparty:v10.4.2
+  image: counterparty/counterparty:v10.8.0
   stop_grace_period: 1m
   volumes:
     - data:/root/.bitcoin
@@ -58,35 +49,18 @@ services:
       - "-zmqpubsequence=tcp://0.0.0.0:9332"
       - "-zmqpubrawblock=tcp://0.0.0.0:9333"
 
-  addrindexrs:
-    <<: *addrindexrs-common
-    profiles:
-      - mainnet
-    links:
-      - bitcoind
-    ports:
-      - "8432:8432"
-    command:
-      - "--indexer-rpc-host=0.0.0.0"
-      - "--daemon-rpc-host=bitcoind"
-      - "--cookie=rpc:rpc"
-      - "-vvv"
-      - "--db-dir=/data/"
-
   counterparty-core:
     <<: *counterparty-common
     profiles:
       - mainnet
     links:
       - bitcoind
-      - addrindexrs
     ports:
       - "4000:4000"                                        # API v2
       - "4100:4100"                                        # API v1
     command:
       - start
       - "--backend-connect=bitcoind"
-      - "--indexd-connect=addrindexrs"
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
@@ -123,29 +97,12 @@ services:
       - "-zmqpubsequence=tcp://0.0.0.0:19332"
       - "-zmqpubrawblock=tcp://0.0.0.0:19333"
 
-  addrindexrs-testnet:
-    <<: *addrindexrs-common
-    profiles:
-      - testnet
-    links:
-      - bitcoind-testnet
-    ports:
-      - "18432:18432"
-    command:
-      - "--network=testnet"
-      - "--indexer-rpc-host=0.0.0.0"
-      - "--daemon-rpc-host=bitcoind-testnet"
-      - "--cookie=rpc:rpc"
-      - "-vvv"
-      - "--db-dir=/data/"
-
   counterparty-core-testnet:
     <<: *counterparty-common
     profiles:
       - testnet
     links:
       - bitcoind-testnet
-      - addrindexrs-testnet
     ports:
       - "14000:14000"                                      # API v2
       - "14100:14100"                                      # API v1
@@ -153,7 +110,6 @@ services:
       - start
       - "--testnet"
       - "--backend-connect=bitcoind-testnet"
-      - "--indexd-connect=addrindexrs-testnet"
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"

@@ -1,5 +1,5 @@
 from counterpartycore.lib.api import compose, queries, util
-from counterpartycore.lib.backend import addrindexrs, bitcoind
+from counterpartycore.lib.backend import bitcoind, electrs
 
 
 def get_routes():
@@ -16,6 +16,7 @@ ROUTES = util.prepare_routes(
         "/v2/blocks/<int:block_index>": queries.get_block_by_height,
         "/v2/blocks/<block_hash>": queries.get_block_by_hash,
         "/v2/blocks/<int:block_index>/transactions": queries.get_transactions_by_block,
+        "/v2/blocks/<int:block_index>/transactions/counts": queries.get_transaction_types_count_by_block,
         "/v2/blocks/<int:block_index>/events": queries.get_events_by_block,
         "/v2/blocks/<int:block_index>/events/counts": queries.get_event_counts_by_block,
         "/v2/blocks/<int:block_index>/events/<event>": queries.get_events_by_block_and_event,
@@ -28,8 +29,11 @@ ROUTES = util.prepare_routes(
         "/v2/blocks/<int:block_index>/sends": queries.get_sends_by_block,
         "/v2/blocks/<int:block_index>/dispenses": queries.get_dispenses_by_block,
         "/v2/blocks/<int:block_index>/sweeps": queries.get_sweeps_by_block,
+        "/v2/blocks/<int:block_index>/fairminters": queries.get_fairminters_by_block,
+        "/v2/blocks/<int:block_index>/fairmints": queries.get_fairmints_by_block,
         ### /transactions ###
         "/v2/transactions": queries.get_transactions,
+        "/v2/transactions/counts": queries.get_transaction_types_count,
         "/v2/transactions/info": compose.info,
         "/v2/transactions/<tx_hash>/info": compose.info_by_tx_hash,
         "/v2/transactions/unpack": compose.unpack,
@@ -47,7 +51,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/events": queries.get_events_by_addresses,
         "/v2/addresses/mempool": queries.get_mempool_events_by_addresses,
         "/v2/addresses/<address>/balances": queries.get_address_balances,
-        "/v2/addresses/<address>/balances/<asset>": queries.get_balance_by_address_and_asset,
+        "/v2/addresses/<address>/balances/<asset>": queries.get_balances_by_address_and_asset,
         "/v2/addresses/<address>/credits": queries.get_credits_by_address,
         "/v2/addresses/<address>/debits": queries.get_debits_by_address,
         "/v2/addresses/<address>/bets": queries.get_bet_by_feed,
@@ -69,11 +73,14 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/assets/issued": queries.get_valid_assets_by_issuer,
         "/v2/addresses/<address>/assets/owned": queries.get_valid_assets_by_owner,
         "/v2/addresses/<address>/transactions": queries.get_transactions_by_address,
+        "/v2/addresses/<address>/transactions/counts": queries.get_transaction_types_count_by_address,
         "/v2/addresses/<address>/dividends": queries.get_dividends_distributed_by_address,
         "/v2/addresses/<address>/orders": queries.get_orders_by_address,
         "/v2/addresses/<address>/fairminters": queries.get_fairminters_by_address,
         "/v2/addresses/<address>/fairmints": queries.get_fairmints_by_address,
         "/v2/addresses/<address>/fairmints/<asset>": queries.get_fairmints_by_address_and_asset,
+        "/v2/utxos/<utxo>/balances": queries.get_utxo_balances,
+        "/v2/utxos/withbalances": queries.utxos_with_balances,
         ### /addresses/<address>/compose/ ###
         "/v2/addresses/<address>/compose/bet": compose.compose_bet,
         "/v2/addresses/<address>/compose/broadcast": compose.compose_broadcast,
@@ -94,11 +101,12 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/attach": compose.compose_attach,
         "/v2/utxos/<utxo>/compose/detach": compose.compose_detach,
         "/v2/utxos/<utxo>/compose/movetoutxo": compose.compose_movetoutxo,
+        "/v2/compose/attach/estimatexcpfees": compose.get_attach_estimate_xcp_fee,
         ### /assets ###
         "/v2/assets": queries.get_valid_assets,
         "/v2/assets/<asset>": queries.get_asset,
         "/v2/assets/<asset>/balances": queries.get_asset_balances,
-        "/v2/assets/<asset>/balances/<address>": queries.get_balance_by_asset_and_address,
+        "/v2/assets/<asset>/balances/<address>": queries.get_balances_by_asset_and_address,
         "/v2/assets/<asset>/orders": queries.get_orders_by_asset,
         "/v2/assets/<asset>/matches": queries.get_order_matches_by_asset,
         "/v2/assets/<asset>/credits": queries.get_credits_by_asset,
@@ -159,16 +167,19 @@ ROUTES = util.prepare_routes(
         ### /fairminters ###
         "/v2/fairminters": queries.get_all_fairminters,
         "/v2/fairminters/<tx_hash>": queries.get_fairminter,
-        "/v2/fairminters/<tx_hash>/mints": queries.get_fairmints_by_fairminter,
+        "/v2/fairminters/<tx_hash>/fairmints": queries.get_fairmints_by_fairminter,
+        ### /fairmints ###
+        "/v2/fairmints": queries.get_all_fairmints,
+        "/v2/fairmints/<tx_hash>": queries.get_fairmint,
         ### /bitcoin ###
-        "/v2/bitcoin/addresses/utxos": addrindexrs.get_unspent_txouts_by_addresses,
-        "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
-        "/v2/bitcoin/addresses/<address>/transactions/oldest": util.get_oldest_transaction_by_address,
-        "/v2/bitcoin/addresses/<address>/utxos": addrindexrs.get_unspent_txouts,
+        "/v2/bitcoin/addresses/utxos": electrs.get_utxos_by_addresses,
+        "/v2/bitcoin/addresses/<address>/transactions": electrs.get_history,
+        "/v2/bitcoin/addresses/<address>/utxos": electrs.get_utxos,
         "/v2/bitcoin/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
         "/v2/bitcoin/transactions/<tx_hash>": util.get_transaction,
         "/v2/bitcoin/estimatesmartfee": bitcoind.fee_per_kb,
         "/v2/bitcoin/transactions": bitcoind.sendrawtransaction,
+        "/v2/bitcoin/transactions/decode": bitcoind.decoderawtransaction,
         "/v2/bitcoin/getmempoolinfo": bitcoind.get_mempool_info,
         ### /mempool ###
         "/v2/mempool/events": queries.get_all_mempool_events,

@@ -1,3 +1,4 @@
+import binascii
 import functools
 import json
 import logging
@@ -7,7 +8,7 @@ from collections import OrderedDict
 import requests
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
-from counterpartycore.lib import config, deserialize, exceptions, util
+from counterpartycore.lib import config, deserialize, exceptions, script, util
 from counterpartycore.lib.util import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -18,10 +19,11 @@ TRANSACTIONS_CACHE = OrderedDict()
 TRANSACTIONS_CACHE_MAX_SIZE = 10000
 
 
-def rpc_call(payload):
+def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
     response = None
+    start_time = time.time()
 
     tries = 0
     broken_error = None
@@ -50,12 +52,13 @@ def rpc_call(payload):
                 raise exceptions.BitcoindRPCError(
                     f"Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}"
                 )
+            if response.status_code == 503:
+                raise ConnectionError("Received 503 error from backend")
             if response.status_code not in (200, 500):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             break
         except KeyboardInterrupt:
-            logger.warning("Interrupted by user")
-            exit(0)
+            raise
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.warning(
                 f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Attempt: {tries})"
@@ -77,21 +80,39 @@ def rpc_call(payload):
 
     # Batch query returns a list
     if isinstance(response_json, list):
-        return response_json
-    if "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
-        return response_json["result"]
-    if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
+        result = response_json
+    elif "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
+        result = response_json["result"]
+    elif response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
         raise exceptions.BitcoindRPCError(
             f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
         )
-    if response_json["error"]["code"] in [-28, -8, -2]:
-        # “Verifying blocks...” or “Block height out of range” or “The network does not appear to fully agree!“
+    elif response_json["error"]["code"] in [-28, -8, -2]:
+        # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
         logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
+        logger.debug(f"Payload: {payload}")
+        if retry >= 10:
+            raise exceptions.BitcoindRPCError(
+                f"Backend not ready after {retry} retries. ({response_json['error']})"
+            )
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-        # seconds to start, this’ll hit the maximum recursion depth limit.
+        # seconds to start, this'll hit the maximum recursion depth limit.
         time.sleep(10)
-        return rpc_call(payload)
-    raise exceptions.BitcoindRPCError(response_json["error"]["message"])
+        return rpc_call(payload, retry=retry + 1)
+    else:
+        raise exceptions.BitcoindRPCError(response_json["error"]["message"])
+
+    if hasattr(logger, "trace"):
+        if isinstance(payload, dict):
+            method = payload["method"]
+        elif isinstance(payload, list):
+            method = payload[0]["method"]
+        else:
+            method = "unknown"
+        elapsed = time.time() - start_time
+        logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
+
+    return result
 
 
 def rpc(method, params):
@@ -128,6 +149,37 @@ def convert_to_psbt(rawtx):
 @functools.lru_cache(maxsize=10000)
 def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
+
+
+def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False):
+    if len(tx_hashes) == 0:
+        return {}
+    if len(tx_hashes) > config.MAX_RPC_BATCH_SIZE:
+        raise exceptions.BitcoindRPCError("Too many transactions requested")
+
+    payload = [
+        {
+            "method": "getrawtransaction",
+            "params": [tx_hash, 1 if verbose else 0],
+            "jsonrpc": "2.0",
+            "id": i,
+        }
+        for i, tx_hash in enumerate(tx_hashes)
+    ]
+    results = rpc_call(payload)
+
+    if return_dict:
+        raw_transactions = {}
+        for result in results:
+            if "result" in result and result["result"] is not None:
+                raw_transactions[tx_hashes[result["id"]]] = result["result"]
+    else:
+        raw_transactions = []
+        for result in results:
+            if "result" in result and result["result"] is not None:
+                raw_transactions.append(result["result"])
+
+    return raw_transactions
 
 
 def createrawtransaction(inputs, outputs):
@@ -312,3 +364,40 @@ def sendrawtransaction(signedhex: str):
     :param signedhex: The signed transaction hex.
     """
     return rpc("sendrawtransaction", [signedhex])
+
+
+def decoderawtransaction(rawtx: str):
+    """
+    Proxy to `decoderawtransaction` RPC call.
+    :param rawtx: The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)
+    """
+    return rpc("decoderawtransaction", [rawtx])
+
+
+def pubkey_from_inputs_set(inputs_set, pubkeyhash):
+    utxos = inputs_set.split(",")
+    utxos = [utxo.split(":")[0] for utxo in utxos]
+    for tx_hash in utxos:
+        tx = getrawtransaction(tx_hash, True)
+        for vin in tx["vin"]:
+            if "txinwitness" in vin:
+                if len(vin["txinwitness"]) >= 2:
+                    # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
+                    try:
+                        pubkey = vin["txinwitness"][1]
+                        if pubkeyhash == script.pubkey_to_p2whash2(pubkey):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+            elif "coinbase" not in vin:
+                scriptsig = vin["scriptSig"]
+                asm = scriptsig["asm"].split(" ")
+                if len(asm) >= 2:
+                    # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+                    try:
+                        pubkey = asm[1]
+                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+    return None

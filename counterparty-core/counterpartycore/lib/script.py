@@ -10,6 +10,8 @@ import hashlib
 import bitcoin as bitcoinlib
 from bitcoin.bech32 import CBech32Data
 from bitcoin.core.key import CPubKey
+from bitcoinutils.keys import PublicKey
+from bitcoinutils.setup import setup
 from counterparty_rs import b58, utils
 
 # TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
@@ -305,6 +307,12 @@ def pubkey_to_p2whash(pubkey):
     return str(pubkey)
 
 
+def pubkey_to_p2whash2(pubkey):
+    setup(config.NETWORK_NAME)
+    address = PublicKey.from_hex(pubkey).get_segwit_address().to_string()
+    return address
+
+
 def bech32_to_scripthash(address):
     bech32 = CBech32Data(address)
     return bytes(bech32)
@@ -524,13 +532,18 @@ def ensure_script_pub_key_for_inputs(coins):
             txhash_set.add(coin["txid"])
 
     if len(txhash_set) > 0:
-        txs = backend.addrindexrs.getrawtransaction_batch(
-            list(txhash_set), verbose=True, skip_missing=False
-        )
+        txhash_list_chunks = util.chunkify(list(txhash_set), config.MAX_RPC_BATCH_SIZE)
+        txs = {}
+        for txhash_list in txhash_list_chunks:
+            txs = txs | backend.bitcoind.getrawtransaction_batch(
+                txhash_list, verbose=True, return_dict=True
+            )
         for coin in coins:
             if "script_pub_key" not in coin:
                 # get the scriptPubKey
                 txid = coin["txid"]
+                if txid not in txs:
+                    raise exceptions.ComposeError(f"Transaction {txid} not found")
                 for vout in txs[txid]["vout"]:
                     if vout["n"] == coin["vout"]:
                         coin["script_pub_key"] = vout["scriptPubKey"]["hex"]

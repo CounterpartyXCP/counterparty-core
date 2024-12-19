@@ -8,14 +8,11 @@ import logging
 import os
 import random
 import re
-import shutil
 import sys
-import tempfile
 import threading
 import time
 from operator import itemgetter
 
-import gnupg
 import requests
 from counterparty_rs import utils as pycoin_rs_utils
 
@@ -27,6 +24,8 @@ CURRENT_BLOCK_INDEX = None
 CURRENT_TX_HASH = None
 PARSING_MEMPOOL = False
 BLOCK_PARSER_STATUS = "starting"
+CURRENT_BACKEND_HEIGHT = None
+CURRENT_BLOCK_TIME = None
 
 D = decimal.Decimal
 B26_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -311,6 +310,32 @@ def generate_random_asset(subasset_longname=None):
     return "A" + str(random.randint(26**12 + 1, 2**64 - 1))  # nosec B311  # noqa: S311
 
 
+def gen_random_asset_name(seed, add=0):
+    return "A" + str(
+        int(hashlib.shake_256(bytes(seed, "utf8")).hexdigest(4), 16) + 26**12 + 1 + add
+    )
+
+
+def asset_exists(db, name):
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT * FROM issuances WHERE asset = ?",
+        (name,),
+    )
+    if cursor.fetchall():
+        return True
+    return False
+
+
+def deterministic_random_asset_name(db, seed):
+    asset_name = gen_random_asset_name(seed)
+    add = 0
+    while asset_exists(db, asset_name):
+        asset_name = gen_random_asset_name(seed, add=add)
+        add += 1
+    return asset_name
+
+
 def parse_options_from_string(string):
     """Parse options integer from string, if exists."""
     string_list = string.split(" ")
@@ -507,24 +532,6 @@ def clean_url_for_log(url):
     return url
 
 
-def verify_signature(public_key_data, signature_path, snapshot_path):
-    temp_dir = tempfile.mkdtemp()
-    verified = False
-
-    try:
-        gpg = gnupg.GPG(gnupghome=temp_dir)
-
-        gpg.import_keys(public_key_data)
-
-        with open(signature_path, "rb") as s:
-            verified = gpg.verify_file(s, snapshot_path, close_file=False)
-
-    finally:
-        shutil.rmtree(temp_dir)
-
-    return verified
-
-
 # ORACLES
 def satoshirate_to_fiat(satoshirate):
     return round(satoshirate / 100.0, 2)
@@ -566,6 +573,18 @@ def enabled(change_name, block_index=None):
         return True
     else:
         return False
+
+
+def get_change_block_index(change_name):
+    if config.REGTEST:
+        return 0
+
+    if config.TESTNET:
+        index_name = "testnet_block_index"
+    else:
+        index_name = "block_index"
+
+    return PROTOCOL_CHANGES[change_name][index_name]
 
 
 def get_value_by_block_index(change_name, block_index=None):
@@ -652,3 +671,40 @@ def is_utxo_format(value):
     if len(values[0]) != 64:
         return False
     return True
+
+
+def parse_utxos_info(utxos_info):
+    info = utxos_info.split(" ")
+
+    # new format
+    if len(info) == 4 and not is_utxo_format(info[-1]):
+        sources = [source for source in info[0].split(",") if source]
+        destination = info[1] or None
+        outputs_count = int(info[2])
+        op_return_output = int(info[3]) if info[3] != "" else None
+        return sources, destination, outputs_count, op_return_output
+
+    # old format
+    destination = info[-1]
+    sources = info[:-1]
+    return sources, destination, None, None
+
+
+def get_destination_from_utxos_info(utxos_info):
+    _sources, destination, _outputs_count, _op_return_output = parse_utxos_info(utxos_info)
+    return destination
+
+
+def get_sources_from_utxos_info(utxos_info):
+    sources, _destination, _outputs_count, _op_return_output = parse_utxos_info(utxos_info)
+    return sources
+
+
+def get_outputs_count_from_utxos_info(utxos_info):
+    _sources, _destination, outputs_count, _op_return_output = parse_utxos_info(utxos_info)
+    return outputs_count
+
+
+def get_op_return_output_from_utxos_info(utxos_info):
+    _sources, _destination, _outputs_count, op_return_output = parse_utxos_info(utxos_info)
+    return op_return_output

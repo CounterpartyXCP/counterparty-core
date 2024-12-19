@@ -234,10 +234,10 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "DISPENSER_UPDATE",
-                        "event_index": 266,
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "XCP",
-                            "close_block_index": 150,
+                            "close_block_index": "$BLOCK_INDEX + 5",
                             "last_status_tx_hash": "$TX_HASH",
                             "last_status_tx_source": "$ADDRESS_1",
                             "source": "$ADDRESS_1",
@@ -370,5 +370,15 @@ SCENARIO = [
                 ],
             },
         ],
+    },
+    {
+        "title": "Dispense with not enough BTC to trigger dispenser",
+        "transaction": "dispense",
+        "source": "$ADDRESS_7",
+        "params": {
+            "dispenser": "$ADDRESS_6",
+            "quantity": 1,
+        },
+        "expected_error": ["not enough BTC to trigger dispenser for XCP"],
     },
 ]

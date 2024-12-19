@@ -21,7 +21,6 @@ import jsonrpc
 from counterpartycore.lib import (
     backend,
     config,
-    database,
     deserialize,
     exceptions,
     gettxinfo,
@@ -34,7 +33,8 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import compose as api_compose
 from counterpartycore.lib.api import util as api_util
-from counterpartycore.lib.database import APIDBConnectionPool
+from counterpartycore.lib.api.api_watcher import STATE_DB_TABLES
+from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -53,7 +53,6 @@ from counterpartycore.lib.messages import (
 )
 from counterpartycore.lib.messages.versions import enhanced_send  # noqa: E402
 from counterpartycore.lib.telemetry.util import (  # noqa: E402
-    get_addrindexrs_version,
     get_uptime,
     is_docker,
     is_force_enabled,
@@ -132,7 +131,7 @@ def check_backend_state():
     # check backend index
     blocks_behind = backend.bitcoind.get_blocks_behind()
     if blocks_behind > 5:
-        raise BackendError(f"Indexd is running {blocks_behind} blocks behind.")
+        raise BackendError(f"Bitcoind is running {blocks_behind} blocks behind.")
 
     logger.debug("API Status Poller - Backend state check passed.")
 
@@ -165,7 +164,6 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
 
 
 def get_rows(
-    db,
     table,
     filters=None,
     filterop="AND",
@@ -332,10 +330,15 @@ def get_rows(
         if offset:
             statement += f""" OFFSET {offset}"""
 
-    query_result = db_query(db, statement, tuple(bindings))
-
-    if table == "balances":
-        return adjust_get_balances_results(query_result, db)
+    if table.lower() in STATE_DB_TABLES:
+        with StateDBConnectionPool().connection() as state_db:
+            query_result = db_query(state_db, statement, tuple(bindings))
+            if table == "balances":
+                with LedgerDBConnectionPool().connection() as ledger_db:
+                    return adjust_get_balances_results(query_result, ledger_db)
+    else:
+        with LedgerDBConnectionPool().connection() as ledger_db:
+            query_result = db_query(ledger_db, statement, tuple(bindings))
 
     if table == "destructions":
         return adjust_get_destructions_results(query_result)
@@ -364,13 +367,13 @@ def remove_rowids(query_result):
     return filtered_results
 
 
-def adjust_get_balances_results(query_result, db):
+def adjust_get_balances_results(query_result, ledger_db):
     filtered_results = []
     assets = {}
     for balances_row in list(query_result):
         asset = balances_row["asset"]
         if asset not in assets:
-            assets[asset] = ledger.is_divisible(db, asset)
+            assets[asset] = ledger.is_divisible(ledger_db, asset)
 
         balances_row["divisible"] = assets[asset]
         filtered_results.append(balances_row)
@@ -427,7 +430,8 @@ def adjust_get_transactions_results(query_result):
     """Format the data field.  Try and decode the data from a utf-8 uncoded string. Invalid utf-8 strings return an empty data."""
     filtered_results = []
     for transaction_row in list(query_result):
-        transaction_row["data"] = transaction_row["data"].hex()
+        if isinstance(transaction_row["data"], bytes):
+            transaction_row["data"] = transaction_row["data"].hex()
         filtered_results.append(transaction_row)
     return filtered_results
 
@@ -447,43 +451,38 @@ class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
 
     def __init__(self):
+        threading.Thread.__init__(self, name="APIv1StatusPoller")
         self.last_database_check = 0
-        threading.Thread.__init__(self)
         self.stop_event = threading.Event()
-        self.stopping = False
-        self.stopped = False
-        self.db = None
 
     def stop(self):
-        logger.info("Stopping API Status Poller...")
-        self.stopping = True
-        if self.db is not None:
-            self.db.close()
-            self.db = None
+        logger.info("Stopping API v1 Status Poller thread...")
+        self.stop_event.set()
         self.join()
+        logger.info("API v1 Status Poller thread stopped.")
 
     def run(self):
-        logger.debug("Starting API Status Poller...")
+        logger.info("Starting v1 API Status Poller thread...")
         global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
-        self.db = database.get_db_connection(config.API_DATABASE, read_only=True, check_wal=False)
 
         interval_if_ready = 5 * 60  # 5 minutes
-        interval_if_not_ready = 60  # 1 minutes
+        interval_if_not_ready = 60  # 1 minute
         interval = interval_if_not_ready
 
-        while not self.stopping:  # noqa: E712
+        while not self.stop_event.is_set():
             try:
                 # Check that backend is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
-                if (
-                    time.time() - self.last_database_check > interval
-                ):  # Ten minutes since last check.
+                if time.time() - self.last_database_check > interval:
                     self.last_database_check = time.time()
-                    if not config.FORCE and self.db is not None:
+                    if not config.FORCE:
                         code = 11
                         check_backend_state()
                         code = 12
-                        api_util.check_last_parsed_block(self.db, backend.bitcoind.getblockcount())
+                        with LedgerDBConnectionPool().connection() as ledger_db:
+                            api_util.check_last_parsed_block(
+                                ledger_db, backend.bitcoind.getblockcount()
+                            )
                         interval = interval_if_ready
             except (BackendError, exceptions.DatabaseError) as e:
                 interval = interval_if_not_ready
@@ -498,8 +497,7 @@ class APIStatusPoller(threading.Thread):
             else:
                 CURRENT_API_STATUS_CODE = None
                 CURRENT_API_STATUS_RESPONSE_JSON = None
-            if not self.stopping:
-                time.sleep(0.5)  # sleep for 0.5 seconds
+            self.stop_event.wait(timeout=0.5)
 
 
 class APIServer(threading.Thread):
@@ -509,20 +507,18 @@ class APIServer(threading.Thread):
         self.is_ready = False
         self.server = None
         self.ctx = None
-        self.connection_pool = APIDBConnectionPool()
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name="APIv1Server")
         sentry.init()
 
     def stop(self):
-        logger.info("Stopping API Server v1...")
-        if self.connection_pool:
-            self.connection_pool.close()
+        logger.info("Stopping API Server v1 thread...")
         if self.server:
             self.server.shutdown()
         self.join()
+        logger.info("API Server v1 thread stopped.")
 
     def run(self):
-        logger.info("Starting API Server v1...")
+        logger.info("Starting API Server v1 thread...")
         app = flask.Flask(__name__)
         auth = HTTPBasicAuth()
 
@@ -539,8 +535,7 @@ class APIServer(threading.Thread):
         def generate_get_method(table):
             def get_method(**kwargs):
                 try:
-                    with self.connection_pool.connection() as db:
-                        return get_rows(db, table=table, **kwargs)
+                    return get_rows(table=table, **kwargs)
                 except TypeError as e:  # TODO: generalise for all API methods
                     raise APIError(str(e))  # noqa: B904
 
@@ -555,7 +550,7 @@ class APIServer(threading.Thread):
         def sql(query, bindings=None):
             if bindings == None:  # noqa: E711
                 bindings = []
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 return db_query(db, query, tuple(bindings))
 
         ######################
@@ -579,7 +574,7 @@ class APIServer(threading.Thread):
                 if "fee" in transaction_args and "exact_fee" not in common_args:
                     common_args["exact_fee"] = transaction_args.pop("fee")
                 try:
-                    with self.connection_pool.connection() as db:
+                    with LedgerDBConnectionPool().connection() as db:
                         transaction_info = transaction.compose_transaction(
                             db,
                             name=tx,
@@ -620,7 +615,7 @@ class APIServer(threading.Thread):
                 ) as error:
                     # TypeError happens when unexpected keyword arguments are passed in
                     error_msg = f"Error composing {tx} transaction via API: {str(error)}"
-                    logging.warning(error_msg)
+                    logger.trace(error_msg)
                     raise JSONRPCDispatchException(  # noqa: B904
                         code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg
                     )
@@ -636,7 +631,7 @@ class APIServer(threading.Thread):
         def get_messages(block_index):
             if not isinstance(block_index, int):
                 raise APIError("block_index must be an integer.")
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 messages = ledger.get_messages(db, block_index=block_index)
             return messages
 
@@ -653,13 +648,13 @@ class APIServer(threading.Thread):
             for idx in message_indexes:  # make sure the data is clean
                 if not isinstance(idx, int):
                     raise APIError("All items in message_indexes are not integers")
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 messages = ledger.get_messages(db, message_index_in=message_indexes)
             return messages
 
         @dispatcher.add_method
         def get_supply(asset):
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 if asset == "BTC":
                     return backend.bitcoind.get_btc_supply(normalize=False)
                 elif asset == "XCP":
@@ -671,7 +666,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_xcp_supply():
             logger.warning("Deprecated method: `get_xcp_supply`")
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 return ledger.xcp_supply(db)
 
         @dispatcher.add_method
@@ -684,7 +679,7 @@ class APIServer(threading.Thread):
                     "assets must be a list of asset names, even if it just contains one entry"
                 )
             assets_info = []
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 for asset in assets:
                     asset = ledger.resolve_subasset_longname(db, asset)  # noqa: PLW2901
 
@@ -738,7 +733,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_block_info(block_index):
             assert isinstance(block_index, int)
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 cursor = db.cursor()
                 cursor.execute("""SELECT * FROM blocks WHERE block_index = ?""", (block_index,))
                 blocks = list(cursor)  # noqa: F811
@@ -777,7 +772,7 @@ class APIServer(threading.Thread):
                 if not isinstance(block_index, int):
                     raise APIError(must_be_non_empty_list_int)
 
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 cursor = db.cursor()
 
                 block_indexes_placeholder = f"{','.join(['?'] * len(block_indexes))}"
@@ -808,7 +803,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_running_info():
             latest_block_index = backend.bitcoind.getblockcount()
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 try:
                     api_util.check_last_parsed_block(db, latest_block_index)
                 except exceptions.DatabaseError:
@@ -816,19 +811,7 @@ class APIServer(threading.Thread):
                 else:
                     caught_up = True
 
-                try:
-                    cursor = db.cursor()
-                    blocks = list(
-                        cursor.execute(
-                            """SELECT * FROM blocks WHERE block_index = ?""",
-                            (util.CURRENT_BLOCK_INDEX,),
-                        )
-                    )
-                    assert len(blocks) == 1
-                    last_block = blocks[0]
-                    cursor.close()
-                except:  # noqa: E722
-                    last_block = None
+                last_block = ledger.get_last_block(db)
 
                 try:
                     last_message = ledger.last_message(db)
@@ -836,22 +819,20 @@ class APIServer(threading.Thread):
                     last_message = None
 
             try:
-                indexd_blocks_behind = backend.bitcoind.get_blocks_behind()
+                bitcoind_blocks_behind = backend.bitcoind.get_blocks_behind()
             except:  # noqa: E722
-                indexd_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
-            indexd_caught_up = indexd_blocks_behind <= 1
+                bitcoind_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
+            bitcoind_caught_up = bitcoind_blocks_behind <= 1
 
-            server_ready = caught_up and indexd_caught_up
-
-            addrindexrs_version = get_addrindexrs_version().split(".")
+            server_ready = caught_up and bitcoind_caught_up
 
             return {
                 "server_ready": server_ready,
                 "db_caught_up": caught_up,
                 "bitcoin_block_count": latest_block_index,
                 "last_block": last_block,
-                "indexd_caught_up": indexd_caught_up,
-                "indexd_blocks_behind": indexd_blocks_behind,
+                "bitcoind_caught_up": bitcoind_caught_up,
+                "bitcoind_blocks_behind": bitcoind_blocks_behind,
                 "last_message_index": (last_message["message_index"] if last_message else -1),
                 "api_limit_rows": config.API_LIMIT_ROWS,
                 "running_testnet": config.TESTNET,
@@ -860,9 +841,6 @@ class APIServer(threading.Thread):
                 "version_major": config.VERSION_MAJOR,
                 "version_minor": config.VERSION_MINOR,
                 "version_revision": config.VERSION_REVISION,
-                "addrindexrs_version_major": int(addrindexrs_version[0]),
-                "addrindexrs_version_minor": int(addrindexrs_version[1]),
-                "addrindexrs_version_revision": int(addrindexrs_version[2]),
                 "uptime": int(get_uptime()),
                 "dockerized": is_docker(),
                 "force_enabled": is_force_enabled(),
@@ -870,7 +848,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_element_counts():
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 counts = {}
                 cursor = db.cursor()
                 for element in [
@@ -907,7 +885,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_asset_names(longnames=False):
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 all_assets = ledger.get_valid_assets(db)
             if longnames:
                 names = [
@@ -924,7 +902,7 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holder_count(asset):
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 asset = ledger.resolve_subasset_longname(db, asset)
                 holders = ledger.holders(db, asset, True)
             addresses = []
@@ -934,24 +912,20 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def get_holders(asset):
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 asset = ledger.resolve_subasset_longname(db, asset)
                 holders = ledger.holders(db, asset, True)
             return holders
 
         @dispatcher.add_method
         def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-            return backend.addrindexrs.search_raw_transactions(
+            return backend.electrs.get_history(
                 address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes
             )
 
         @dispatcher.add_method
-        def get_oldest_tx(address):
-            return backend.addrindexrs.get_oldest_tx(address, block_index=util.CURRENT_BLOCK_INDEX)
-
-        @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
-            results = backend.addrindexrs.get_unspent_txouts(
+            results = backend.electrs.get_utxos(
                 address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash
             )
             if order_by is None:
@@ -969,21 +943,22 @@ class APIServer(threading.Thread):
             return backend.bitcoind.getrawtransaction(tx_hash, verbose=verbose)
 
         @dispatcher.add_method
-        def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
-            return backend.addrindexrs.getrawtransaction_batch(
-                txhash_list, verbose=verbose, skip_missing=skip_missing
+        def getrawtransaction_batch(txhash_list, verbose=False):
+            return backend.bitcoind.getrawtransaction_batch(
+                txhash_list, verbose=verbose, return_dict=True
             )
 
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
             use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
                     gettxinfo.get_tx_info(
                         db,
                         deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
                         block_index=block_index,
+                        composing=True,
                     )
                 )
             return (
@@ -1001,7 +976,7 @@ class APIServer(threading.Thread):
 
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
-                with self.connection_pool.connection() as db:
+                with LedgerDBConnectionPool().connection() as db:
                     unpacked = send.unpack(db, message, util.CURRENT_BLOCK_INDEX)
             elif message_type_id == enhanced_send.ID:
                 unpacked = enhanced_send.unpack(message, util.CURRENT_BLOCK_INDEX)
@@ -1022,7 +997,7 @@ class APIServer(threading.Thread):
                 raise APIError("You must provided a tx hash or a tx index")
 
             dispensers = []
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 if tx_hash is not None:
                     dispensers = ledger.get_dispenser_info(db, tx_hash=tx_hash)
                 else:
@@ -1089,7 +1064,7 @@ class APIServer(threading.Thread):
             with configure_sentry_scope() as scope:
                 scope.set_transaction_name("healthcheck")
             check_type = request.args.get("type", "light")
-            with self.connection_pool.connection() as db:
+            with LedgerDBConnectionPool().connection() as db:
                 return api_util.handle_healthz_route(db, check_type)
 
         @app.route("/", defaults={"args_path": ""}, methods=["GET", "POST", "OPTIONS"])
@@ -1228,7 +1203,7 @@ class APIServer(threading.Thread):
 
                 # Compose the transaction.
                 try:
-                    with self.connection_pool.connection() as db:
+                    with LedgerDBConnectionPool().connection() as db:
                         query_data, data = transaction.compose_transaction(
                             db, name=query_type, params=transaction_args, **common_args
                         )
@@ -1238,7 +1213,7 @@ class APIServer(threading.Thread):
                     exceptions.TransactionError,
                     exceptions.BalanceError,
                 ) as error:
-                    error_msg = logging.warning(
+                    error_msg = logger.trace(
                         f"{error.__class__.__name__} -- error composing {query_type} transaction via API: {error}"
                     )
                     return flask.Response(error_msg, 400, mimetype="application/json")
@@ -1254,13 +1229,11 @@ class APIServer(threading.Thread):
 
                 # Run the query.
                 try:
-                    with self.connection_pool.connection() as db:
-                        query_data = get_rows(
-                            db,
-                            table=query_type,
-                            filters=data_filter,
-                            filterop=operator,
-                        )
+                    query_data = get_rows(
+                        table=query_type,
+                        filters=data_filter,
+                        filterop=operator,
+                    )
                 except APIError as error:  # noqa: F841
                     return flask.Response("API Error", 400, mimetype="application/json")
 

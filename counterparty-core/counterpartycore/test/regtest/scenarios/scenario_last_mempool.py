@@ -1,4 +1,70 @@
 SCENARIO = [
+    # open order for dredd Cancel test
+    {
+        "title": "Open Sell UTXOASSET for BTC order",
+        "transaction": "order",
+        "source": "$ADDRESS_7",
+        "params": {
+            "give_asset": "UTXOASSET",
+            "give_quantity": 1000,
+            "get_asset": "BTC",
+            "get_quantity": 1000,
+            "expiration": 21,
+            "fee_required": 0,
+            "exclude_utxos_with_balances": True,
+        },
+    },
+    # order match for dredd test
+    {
+        "title": "Open Sell UTXOASSET for BTC order",
+        "transaction": "order",
+        "source": "$ADDRESS_6",
+        "params": {
+            "give_asset": "BTC",
+            "give_quantity": 1000,
+            "get_asset": "UTXOASSET",
+            "get_quantity": 1000,
+            "expiration": 21,
+            "fee_required": 0,
+            "exclude_utxos_with_balances": True,
+        },
+    },
+    # fairmint for dredd test
+    {
+        "title": "Create fairminter OPENFAIR",
+        "transaction": "fairminter",
+        "source": "$ADDRESS_6",
+        "params": {
+            "asset": "OPENFAIR",
+            "max_mint_per_tx": 10,
+            "exclude_utxos_with_balances": True,
+        },
+    },
+    {
+        "title": "Send BTC to $ADDRESS_7",
+        "transaction": "send",
+        "source": "$ADDRESS_6",
+        "params": {
+            "asset": "BTC",
+            "quantity": 15000,
+            "destination": "$ADDRESS_7",
+            "exact_fee": 0,
+            "exclude_utxos_with_balances": True,
+        },
+    },
+    {
+        "title": "Dispense in mempool with UTXO with balances",
+        "transaction": "dispense",
+        "source": "$ADDRESS_9",
+        "no_confirmation": True,
+        "params": {
+            "dispenser": "$ADDRESS_6",
+            "quantity": 1000,
+            "inputs_set": "$ATOMICSWAP_2_TX_HASH:1",
+            "exact_fee": 1,
+        },
+        "expected_error": "invalid UTXOs: $ATOMICSWAP_2_TX_HASH:1",
+    },
     {
         "title": "Dispense in mempool",
         "transaction": "dispense",
@@ -7,6 +73,9 @@ SCENARIO = [
         "params": {
             "dispenser": "$ADDRESS_6",
             "quantity": 1000,
+            "inputs_set": "$ATOMICSWAP_2_TX_HASH:1",
+            "use_utxos_with_balances": True,
+            "exact_fee": 1,
         },
         "controls": [
             {
@@ -42,6 +111,7 @@ SCENARIO = [
             "asset": "XCP",
             "quantity": 10000,
             "destination": "$ADDRESS_3",
+            "exclude_utxos_with_balances": True,
         },
         "set_variables": {
             "SEND_MEMPOOL_1_HASH": "$TX_HASH",
@@ -63,6 +133,7 @@ SCENARIO = [
                             "status": "valid",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
+                            "msg_index": 0,
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -148,6 +219,10 @@ SCENARIO = [
                         "message_type_id": 2,
                     },
                 },
+            },
+            {
+                "url": "healthz",
+                "result": {"status": "Healthy"},
             },
         ],
     },

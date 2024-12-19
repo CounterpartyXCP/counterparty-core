@@ -6,8 +6,15 @@ import sys
 import requests
 import sh
 import yaml
-from counterpartycore.lib import database
+from counterpartycore.lib import config, database
 from counterpartycore.lib.api import routes
+from counterpartycore.lib.backend.bitcoind import pubkey_from_inputs_set
+
+config.BACKEND_URL = "http://rpc:rpc@localhost:18443"
+config.BACKEND_SSL_NO_VERIFY = True
+config.REQUESTS_TIMEOUT = 20
+config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+config.NETWORK_NAME = "regtest"
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../apiary.apib")
@@ -124,11 +131,28 @@ EVENT_LIST = [
 
 DREDD_CONFIG = {
     "loglevel": "error",
+    "language": "python",
+    "hookfiles": "./counterparty-core/counterpartycore/test/regtest/dreddhooks.py",
     "path": [],
     "blueprint": "apiary.apib",
     "endpoint": "http://127.0.0.1:24000",
     "only": [],
 }
+
+
+def get_inputs_set(address):
+    bitcoin_cli = sh.bitcoin_cli.bake(
+        "-regtest",
+        "-rpcuser=rpc",
+        "-rpcpassword=rpc",
+        "-rpcconnect=localhost",
+    )
+    list_unspent = json.loads(bitcoin_cli("listunspent", 0, 9999999, json.dumps([address])).strip())
+    sorted(list_unspent, key=lambda x: -x["amount"])
+    inputs = []
+    for utxo in list_unspent[0:99]:
+        inputs.append(f"{utxo['txid']}:{utxo['vout']}")
+    return ",".join(inputs)
 
 
 def get_example_output(path, args):
@@ -146,12 +170,34 @@ def get_example_output(path, args):
     print(f"GET {url}")
     if "v2/" in path:
         args["verbose"] = "true"
+
+    if "/compose" in path:
+        source = None
+        if "/addresses/" in path:
+            source = path.split("/addresses/")[1].split("/")[0]
+        elif "/utxos/" in path:
+            utxo = path.split("/utxos/")[1].split("/")[0]
+            source = requests.get(f"{API_ROOT}/v2/utxos/{utxo}/balances?limit=1").json()["result"][  # noqa S113
+                0
+            ]["utxo_address"]
+        if source is not None:
+            print(f"source: {source}")
+            inputs_set = get_inputs_set(source)
+            args["inputs_set"] = inputs_set
+            args["exclude_utxos_with_balances"] = True
+            args["pubkeys"] = pubkey_from_inputs_set(inputs_set, source)
+            args["validate"] = False
+
     response = requests.get(url, params=args)  # noqa S113
     return response.json()
 
 
 def include_in_dredd(group, path):
     if "/bet" in path:
+        return False
+    if "_old" in path:
+        return False
+    if "/v2/bitcoin/addresses/" in path:
         return False
     return True
 
@@ -231,6 +277,8 @@ def gen_blueprint(db):
             for arg in route["args"]:
                 required = "required" if arg["required"] else "optional"
                 description = arg.get("description", "")
+                if current_group.lower() == "compose" and arg["name"] == "exact_fee":
+                    description += " (e.g. 0)"
                 example_arg = ""
                 if "(e.g. " in description:
                     desc_arr = description.split("(e.g. ")
@@ -342,6 +390,8 @@ def gen_unpack_doc(db):
         "enhanced_send",
         "mpma_send",
         "sweep",
+        "attach",
+        "detach",
         # "send",
         # "bet",
     ]
@@ -358,6 +408,8 @@ def gen_unpack_doc(db):
         "dividend": get_event_tx_hash(db, "ASSET_DIVIDEND"),
         "sweep": get_event_tx_hash(db, "SWEEP"),
         "btcpay": get_event_tx_hash(db, "BTC_PAY"),
+        "attach": get_event_tx_hash(db, "ATTACH_TO_UTXO"),
+        "detach": get_event_tx_hash(db, "DETACH_FROM_UTXO"),
         # "send": ,
         # "bet": ,
     }
@@ -477,11 +529,35 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_ORDER_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_ORDER_TX_HASH"] = row["tx_hash"]
 
+    # block and tx with UTXOASSET orders
+    cursor.execute(
+        "SELECT block_index, tx_hash FROM orders WHERE give_asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
+    )
+    row = cursor.fetchone()
+    regtest_fixtures["$LAST_UTXOASSET_ORDER_BLOCK"] = row["block_index"]
+    regtest_fixtures["$LAST_UTXOASSET_ORDER_TX_HASH"] = row["tx_hash"]
+
+    # last open order tx_hash
+    cursor.execute("SELECT tx_hash FROM orders WHERE status='open' ORDER BY rowid DESC LIMIT 1")
+    row = cursor.fetchone()
+    regtest_fixtures["$LAST_OPEN_ORDER_TX_HASH"] = row["tx_hash"]
+
     # block and tx with fairminter
     cursor.execute("SELECT block_index, tx_hash FROM fairminters ORDER BY rowid DESC LIMIT 1")
     row = cursor.fetchone()
     regtest_fixtures["$LAST_FAIRMINTER_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_FAIRMINTER_TX_HASH"] = row["tx_hash"]
+
+    # tx with fairmint
+    cursor.execute("SELECT block_index, tx_hash FROM fairmints ORDER BY rowid DESC LIMIT 1")
+    row = cursor.fetchone()
+    regtest_fixtures["$LAST_FAIRMINT_BLOCK"] = row["block_index"]
+    regtest_fixtures["$LAST_FAIRMINT_TX_HASH"] = row["tx_hash"]
+
+    # open fairminter asset
+    cursor.execute("SELECT asset FROM fairminters WHERE status='open' ORDER BY rowid DESC LIMIT 1")
+    row = cursor.fetchone()
+    regtest_fixtures["$OPEN_FAIRMINTER_ASSET"] = row["asset"]
 
     # get utxo from bitcoin-cli
     utxo = json.loads(
@@ -496,7 +572,7 @@ def generate_regtest_fixtures(db):
 
     # get utxo with balance
     cursor.execute(
-        "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
+        "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 AND asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
     )
     row = cursor.fetchone()
     regtest_fixtures["$UTXO_WITH_BALANCE"] = row["utxo"]
@@ -572,5 +648,7 @@ if __name__ == "__main__":
     print("Generating API documentation...")
     data_dir = sys.argv[1] if len(sys.argv) > 1 else "regtestnode"
     print(f"Using data directory: {data_dir}")
-    db = database.get_db_connection(f"{data_dir}/counterparty.db", read_only=True, check_wal=False)
+    db = database.get_db_connection(
+        f"{data_dir}/counterparty.regtest.db", read_only=True, check_wal=False
+    )
     update_doc(db)

@@ -1,15 +1,13 @@
 #! /usr/bin/env python3
 
+import _thread
 import binascii
 import decimal
 import logging
+import multiprocessing
 import os
-import signal
-import sys
-import tarfile
-import tempfile
+import threading
 import time
-import urllib
 from urllib.parse import quote_plus as urlencode
 
 import appdirs
@@ -19,19 +17,18 @@ from termcolor import colored, cprint
 from counterpartycore.lib import (
     backend,
     blocks,
+    bootstrap,
     check,
     config,
     database,
     exceptions,
     follow,
+    ledger,
     log,
     util,
 )
 from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1
-from counterpartycore.lib.backend import rsfetcher
-from counterpartycore.lib.public_keys import PUBLIC_KEYS
-from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
+from counterpartycore.lib.api import api_v1, dbbuilder
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -42,10 +39,6 @@ SPINNER_STYLE = "bouncingBar"
 
 class ConfigurationError(Exception):
     pass
-
-
-def handle_interrupt_signal(signum, _frame):
-    raise KeyboardInterrupt(f"Received signal {signal.strsignal(signum)}")
 
 
 def initialise(*args, **kwargs):
@@ -60,6 +53,8 @@ def initialise(*args, **kwargs):
         regtest=kwargs.get("regtest", False),
         action=kwargs.get("action", None),
         json_logs=kwargs.get("json_logs", False),
+        max_log_file_size=kwargs.get("max_log_file_size", None),
+        max_log_file_rotations=kwargs.get("max_log_file_rotations", None),
     )
     initialise_config(*args, **kwargs)
     return database.initialise_db()
@@ -76,6 +71,10 @@ def initialise_log_config(
     regtest=False,
     action=None,
     json_logs=False,
+    max_log_file_size=40 * 1024 * 1024,
+    max_log_file_rotations=20,
+    log_exclude_filters=None,
+    log_include_filters=None,
 ):
     # Log directory
     log_dir = appdirs.user_log_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
@@ -124,9 +123,16 @@ def initialise_log_config(
     config.LOG_IN_CONSOLE = action == "start" or config.VERBOSE > 0
     config.JSON_LOGS = json_logs
 
+    config.MAX_LOG_FILE_SIZE = max_log_file_size
+    config.MAX_LOG_FILE_ROTATIONS = max_log_file_rotations
+
+    config.LOG_EXCLUDE_FILTERS = log_exclude_filters
+    config.LOG_INCLUDE_FILTERS = log_include_filters
+
 
 def initialise_config(
-    database_file=None,
+    data_dir=None,
+    cache_dir=None,
     testnet=False,
     testcoin=False,
     regtest=False,
@@ -135,8 +141,6 @@ def initialise_config(
     backend_port=None,
     backend_user=None,
     backend_password=None,
-    indexd_connect=None,
-    indexd_port=None,
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
@@ -153,7 +157,7 @@ def initialise_config(
     force=False,
     requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
     rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
-    check_asset_conservation=False,
+    skip_asset_conservation_check=False,
     backend_ssl_verify=None,
     rpc_allow_cors=None,
     p2sh_dust_return_pubkey=None,
@@ -165,16 +169,31 @@ def initialise_config(
     no_telemetry=False,
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
-    db_connection_pool_size=None,
+    db_connection_pool_size=config.DEFAULT_DB_CONNECTION_POOL_SIZE,
+    wsgi_server=None,
+    waitress_threads=None,
+    gunicorn_workers=None,
+    gunicorn_threads_per_worker=None,
+    database_file=None,  # for tests
+    action=None,
+    electrs_url=None,
 ):
     # log config already initialized
 
     # Data directory
-    data_dir = appdirs.user_data_dir(
-        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
-    )
+    if not data_dir:
+        data_dir = appdirs.user_data_dir(
+            appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
+        )
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir, mode=0o755)
+    config.DATA_DIR = data_dir
+
+    if not cache_dir:
+        cache_dir = appdirs.user_cache_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
+    if not os.path.isdir(cache_dir):
+        os.makedirs(cache_dir, mode=0o755)
+    config.CACHE_DIR = cache_dir
 
     # testnet
     if testnet:
@@ -223,15 +242,22 @@ def initialise_config(
         filename = f"{config.APP_NAME}{network}.db"
         config.DATABASE = os.path.join(data_dir, filename)
 
-    config.FETCHER_DB = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
-    config.API_DATABASE = config.DATABASE.replace(".db", ".api.db")
+    config.FETCHER_DB_OLD = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
+    config.FETCHER_DB = os.path.join(config.CACHE_DIR, f"fetcherdb{network}")
+
+    config.STATE_DATABASE = os.path.join(os.path.dirname(config.DATABASE), f"state{network}.db")
+
+    if not os.path.exists(config.STATE_DATABASE):
+        old_db_name = config.DATABASE.replace(".db", ".api.db")
+        # delete old API db
+        for ext in ["", "-wal", "-shm"]:
+            if os.path.exists(old_db_name + ext):
+                os.unlink(old_db_name + ext)
+
     config.API_LIMIT_ROWS = api_limit_rows
 
     ##############
     # THINGS WE CONNECT TO
-
-    # Backend name
-    config.BACKEND_NAME = "addrindexrs"
 
     # Backend RPC host (Bitcoin Core)
     if backend_connect:
@@ -315,35 +341,6 @@ def initialise_config(
     else:
         config.BACKEND_URL = "http://" + config.BACKEND_URL
 
-    # Indexd RPC host
-    if indexd_connect:
-        config.INDEXD_CONNECT = indexd_connect
-    else:
-        config.INDEXD_CONNECT = "localhost"
-
-    # Indexd RPC port
-    if indexd_port:
-        config.INDEXD_PORT = indexd_port
-    else:
-        if config.TESTNET:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_TESTNET
-        elif config.REGTEST:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_REGTEST
-        else:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT
-
-    try:
-        config.INDEXD_PORT = int(config.INDEXD_PORT)
-        if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
-            raise ConfigurationError("invalid Indexd API port number")
-    except:  # noqa: E722
-        raise ConfigurationError(  # noqa: B904
-            "Please specific a valid port number indexd-port configuration parameter"
-        )
-
-    # Construct Indexd URL.
-    config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
-
     ##############
     # THINGS WE SERVE
 
@@ -351,7 +348,7 @@ def initialise_config(
     if rpc_host:
         config.RPC_HOST = rpc_host
     else:
-        config.RPC_HOST = "localhost"
+        config.RPC_HOST = "127.0.0.1"
 
     # The web root directory for API calls, eg. localhost:14000/rpc/
     config.RPC_WEBROOT = "/rpc/"
@@ -411,7 +408,7 @@ def initialise_config(
     if api_host:
         config.API_HOST = api_host
     else:
-        config.API_HOST = "localhost"
+        config.API_HOST = "127.0.0.1"
 
     # Server API port
     if api_port:
@@ -571,7 +568,7 @@ def initialise_config(
 
     # Misc
     config.REQUESTS_TIMEOUT = requests_timeout
-    config.CHECK_ASSET_CONSERVATION = check_asset_conservation
+    config.CHECK_ASSET_CONSERVATION = not skip_asset_conservation_check
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
 
@@ -582,16 +579,28 @@ def initialise_config(
 
     config.NO_TELEMETRY = no_telemetry
 
-    if db_connection_pool_size:
-        config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
+    config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
+    config.WSGI_SERVER = wsgi_server
+    config.WAITRESS_THREADS = waitress_threads
+    config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
+    config.GUNICORN_WORKERS = gunicorn_workers
+
+    if electrs_url:
+        config.ELECTRS_URL = electrs_url
     else:
-        config.DB_CONNECTION_POOL_SIZE = config.DEFAULT_DB_CONNECTION_POOL_SIZE
+        if config.NETWORK_NAME == "testnet":
+            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET
+        elif config.NETWORK_NAME == "mainnet":
+            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_MAINNET
+        else:
+            config.ELECTRS_URL = None
 
 
-def initialise_log_and_config(args):
+def initialise_log_and_config(args, api=False):
     # Configuration
     init_args = {
-        "database_file": args.database_file,
+        "data_dir": args.data_dir,
+        "cache_dir": args.cache_dir,
         "testnet": args.testnet,
         "testcoin": args.testcoin,
         "regtest": args.regtest,
@@ -604,8 +613,6 @@ def initialise_log_and_config(args):
         "backend_ssl": args.backend_ssl,
         "backend_ssl_no_verify": args.backend_ssl_no_verify,
         "backend_poll_interval": args.backend_poll_interval,
-        "indexd_connect": args.indexd_connect,
-        "indexd_port": args.indexd_port,
         "rpc_host": args.rpc_host,
         "rpc_port": args.rpc_port,
         "rpc_user": args.rpc_user,
@@ -618,7 +625,7 @@ def initialise_log_and_config(args):
         "api_no_allow_cors": args.api_no_allow_cors,
         "requests_timeout": args.requests_timeout,
         "rpc_batch_size": args.rpc_batch_size,
-        "check_asset_conservation": args.check_asset_conservation,
+        "skip_asset_conservation_check": args.skip_asset_conservation_check,
         "force": args.force,
         "p2sh_dust_return_pubkey": args.p2sh_dust_return_pubkey,
         "utxo_locks_max_addresses": args.utxo_locks_max_addresses,
@@ -628,7 +635,16 @@ def initialise_log_and_config(args):
         "enable_zmq_publisher": args.enable_zmq_publisher,
         "zmq_publisher_port": args.zmq_publisher_port,
         "db_connection_pool_size": args.db_connection_pool_size,
+        "wsgi_server": args.wsgi_server,
+        "waitress_threads": args.waitress_threads,
+        "gunicorn_workers": args.gunicorn_workers,
+        "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
+        "action": args.action,
+        "electrs_url": args.electrs_url,
     }
+    # for tests
+    if "database_file" in args:
+        init_args["database_file"] = args.database_file
 
     initialise_log_config(
         verbose=args.verbose,
@@ -641,14 +657,18 @@ def initialise_log_and_config(args):
         regtest=args.regtest,
         action=args.action,
         json_logs=args.json_logs,
+        log_exclude_filters=args.log_exclude_filters,
+        log_include_filters=args.log_include_filters,
     )
 
     # set up logging
     log.set_up(
         verbose=config.VERBOSE,
         quiet=config.QUIET,
-        log_file=config.LOG,
+        log_file=config.LOG if not api else config.API_LOG,
         json_logs=config.JSON_LOGS,
+        max_log_file_size=config.MAX_LOG_FILE_SIZE,
+        max_log_file_rotations=config.MAX_LOG_FILE_ROTATIONS,
     )
     initialise_config(**init_args)
 
@@ -658,51 +678,104 @@ def connect_to_backend():
         backend.bitcoind.getblockcount()
 
 
+class AssetConservationChecker(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self, name="AssetConservationChecker")
+        self.daemon = True
+        self.last_check = 0
+        self.db = None
+        self.stop_event = threading.Event()
+
+    def run(self):
+        self.db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
+        try:
+            while not self.stop_event.is_set():
+                if time.time() - self.last_check > 60 * 60 * 12:
+                    try:
+                        check.asset_conservation(self.db, self.stop_event)
+                    except check.SanityError as e:
+                        logger.error("Asset conservation check failed: %s" % e)
+                        _thread.interrupt_main()
+                    self.last_check = time.time()
+                time.sleep(1)
+        finally:
+            if self.db is not None:
+                self.db.close()
+                self.db = None
+            logger.info("Thread stopped.")
+
+    def stop(self):
+        self.stop_event.set()
+        logger.info("Stopping Asset Conservation Checker thread...")
+        self.join()
+
+
 def start_all(args):
     api_status_poller = None
     api_server_v1 = None
     api_server_v2 = None
-    telemetry_daemon = None
     follower_daemon = None
+    asset_conservation_checker = None
     db = None
+    api_stop_event = None
+
+    # Log all config parameters, sorted by key
+    # Filter out default values #TODO: these should be set in a different way
+    custom_config = {
+        k: v
+        for k, v in sorted(config.__dict__.items())
+        if not k.startswith("__") and not k.startswith("DEFAULT_")
+    }
+    logger.debug(f"Config: {custom_config}")
 
     try:
-        # set signal handlers (needed for graceful shutdown on SIGINT/SIGTERM)
-        signal.signal(signal.SIGINT, handle_interrupt_signal)
-        signal.signal(signal.SIGTERM, handle_interrupt_signal)
-
         # download bootstrap if necessary
-        if not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap":
-            bootstrap(no_confirm=True)
+        if (
+            not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap"
+        ) or args.catch_up == "bootstrap-always":
+            bootstrap.bootstrap(no_confirm=True, snapshot_url=args.bootstrap_url)
 
-        # initialise database
+        # Initialise database
         db = database.initialise_db()
         blocks.initialise(db)
         blocks.check_database_version(db)
         database.optimize(db)
 
-        # check software version
+        # Check software version
         check.software_version()
 
-        # API Server v2.
-        api_server_v2 = api_v2.APIServer()
+        # API Server v2
+        api_stop_event = multiprocessing.Event()
+        api_server_v2 = api_v2.APIServer(api_stop_event)
         api_server_v2.start(args)
-        while not api_server_v2.is_ready():
+        while not api_server_v2.is_ready() and not api_server_v2.has_stopped():
             logger.trace("Waiting for API server to start...")
             time.sleep(0.1)
 
-        # Backend.
+        # Backend
         connect_to_backend()
 
-        # API Status Poller.
+        # API Status Poller
         api_status_poller = api_v1.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
 
-        # API Server v1.
+        # API Server v1
         api_server_v1 = api_v1.APIServer()
         api_server_v1.daemon = True
         api_server_v1.start()
+
+        # delete blocks with no ledger hashes
+        # in case of reparse interrupted
+        blocks.rollback_empty_block(db)
+
+        # Asset conservation checker
+        if config.CHECK_ASSET_CONSERVATION:
+            asset_conservation_checker = AssetConservationChecker()
+            asset_conservation_checker.start()
+
+        # Reset (delete) rust fetcher database
+        blocks.reset_rust_fetcher_database()
 
         # catch up
         blocks.catch_up(db)
@@ -710,63 +783,90 @@ def start_all(args):
         # Blockchain watcher
         logger.info("Watching for new blocks...")
         follower_daemon = follow.start_blockchain_watcher(db)
+        follower_daemon.start()
 
     except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt!")
+        logger.warning("Keyboard interrupt received. Shutting down...")
+        pass
     except Exception as e:
         logger.error("Exception caught!", exc_info=e)
     finally:
-        if api_server_v2:
-            api_server_v2.stop()
-        if telemetry_daemon:
-            telemetry_daemon.stop()
+        # Ensure all threads are stopped
+        if api_stop_event:
+            api_stop_event.set()
         if api_status_poller:
             api_status_poller.stop()
         if api_server_v1:
             api_server_v1.stop()
         if follower_daemon:
             follower_daemon.stop()
-        if not config.NO_TELEMETRY:
-            TelemetryOneShot().close()
+        if asset_conservation_checker:
+            asset_conservation_checker.stop()
+        # then close the database with write access
         if db:
             database.close(db)
-        backend.addrindexrs.stop()
         log.shutdown()
-        rsfetcher.stop()
-        try:
-            database.check_wal_file(config.DATABASE)
-        except exceptions.WALFileFoundError:
-            logger.warning(
-                "Database WAL file detected. To ensure no data corruption has occurred, run `counterpary-server check-db`."
-            )
-        except exceptions.DatabaseError:
-            logger.warning(
-                "Database is in use by another process and was unable to be closed correctly."
-            )
-        # Ensure that the last closed connection is not read-only in order to delete WAL and SHM files
-        api_db = database.get_db_connection(config.API_DATABASE, read_only=False, check_wal=False)
-        api_db.close()
+
+        # Now it's safe to check for WAL files
+        for db_name, db_path in [
+            ("Ledger DB", config.DATABASE),
+            ("State DB", config.STATE_DATABASE),
+        ]:
+            try:
+                database.check_wal_file(db_path)
+            except exceptions.WALFileFoundError:
+                logger.warning(
+                    f"{db_name} WAL file detected. To ensure no data corruption has occurred, run `counterparty-server check-db`."
+                )
+            except exceptions.DatabaseError:
+                logger.warning(
+                    f"{db_name} is in use by another process and was unable to be closed correctly."
+                )
+
         logger.info("Shutdown complete.")
 
 
 def reparse(block_index):
-    backend.addrindexrs.init()
-    db = database.initialise_db()
+    ledger_db = database.initialise_db()
+
+    last_block = ledger.get_last_block(ledger_db)
+    if last_block is None or block_index > last_block["block_index"]:
+        print(colored("Block index is higher than current block index. No need to reparse.", "red"))
+        ledger_db.close()
+        return
+
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     try:
-        blocks.reparse(db, block_index=block_index)
+        blocks.reparse(ledger_db, block_index=block_index)
+        dbbuilder.rollback_state_db(state_db, block_index)
     finally:
-        backend.addrindexrs.stop()
-        database.optimize(db)
-        db.close()
+        database.optimize(ledger_db)
+        database.optimize(state_db)
+        ledger_db.close()
+        state_db.close()
 
 
 def rollback(block_index=None):
-    db = database.initialise_db()
+    ledger_db = database.initialise_db()
+
+    last_block = ledger.get_last_block(ledger_db)
+    if last_block is None or block_index > last_block["block_index"]:
+        print(
+            colored("Block index is higher than current block index. No need to rollback.", "red")
+        )
+        ledger_db.close()
+        return
+
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
     try:
-        blocks.rollback(db, block_index=block_index)
+        blocks.rollback(ledger_db, block_index=block_index)
+        dbbuilder.rollback_state_db(state_db, block_index)
+        follow.NotSupportedTransactionsCache().clear()
     finally:
-        database.optimize(db)
-        db.close()
+        database.optimize(ledger_db)
+        database.optimize(state_db)
+        ledger_db.close()
+        state_db.close()
 
 
 def vacuum():
@@ -825,98 +925,3 @@ def configure_rpc(rpc_password=None):
     else:
         config.API_ROOT = "http://" + config.RPC_HOST + ":" + str(config.RPC_PORT)
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
-
-
-def bootstrap(no_confirm=False, snapshot_url=None):
-    warning_message = """WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
-from a centralized server maintained by the Counterparty Core development team.
-Because this method does not involve verifying the history of Counterparty transactions yourself,
-the `bootstrap` command should not be used for mission-critical, commercial or public-facing nodes.
-        """
-    cprint(warning_message, "yellow")
-
-    if not no_confirm:
-        confirmation_message = colored("Continue? (y/N): ", "magenta")
-        if input(confirmation_message).lower() != "y":
-            exit()
-
-    data_dir = appdirs.user_data_dir(
-        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
-    )
-
-    # Set Constants.
-    if snapshot_url is None:
-        bootstrap_url = (
-            config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
-        )
-        bootstrap_sig_url = (
-            config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
-        )
-    else:
-        bootstrap_url = snapshot_url
-        bootstrap_sig_url = snapshot_url.replace(".tar.gz", ".sig")
-
-    tar_filename = os.path.basename(bootstrap_url)
-    sig_filename = os.path.basename(bootstrap_sig_url)
-    tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
-    sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
-    ledger_database_path = os.path.join(data_dir, config.APP_NAME)
-    if config.TESTNET:
-        ledger_database_path += ".testnet"
-    ledger_database_path += ".db"
-    api_database_path = ledger_database_path.replace(".db", ".api.db")
-
-    # Prepare Directory.
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir, mode=0o755)
-
-    for database_path in [ledger_database_path, api_database_path]:
-        if os.path.exists(database_path):
-            os.remove(database_path)
-        # Delete SQLite Write-Ahead-Log
-        wal_path = database_path + "-wal"
-        shm_path = database_path + "-shm"
-        if os.path.exists(wal_path):
-            os.remove(wal_path)
-        if os.path.exists(shm_path):
-            os.remove(shm_path)
-
-    # Define Progress Bar.
-    spinner = log.Spinner(f"Downloading database from {bootstrap_url}...")
-
-    def bootstrap_progress(blocknum, blocksize, totalsize):
-        readsofar = blocknum * blocksize
-        if totalsize > 0:
-            percent = readsofar * 1e2 / totalsize
-            message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
-            spinner.set_messsage(message)
-
-    # Downloading
-    spinner.start()
-    urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
-    urllib.request.urlretrieve(bootstrap_sig_url, sig_path)  # nosec B310  # noqa: S310
-    spinner.stop()
-
-    with log.Spinner("Verifying signature..."):
-        if not any(util.verify_signature(k, sig_path, tarball_path) for k in PUBLIC_KEYS):
-            print("Snaptshot was not signed by any trusted keys")
-            sys.exit(1)
-
-    # TODO: check checksum, filenames, etc.
-    with log.Spinner(f"Extracting database to {data_dir}..."):
-        with tarfile.open(tarball_path, "r:gz") as tar_file:
-            tar_file.extractall(path=data_dir)  # nosec B202  # noqa: S202
-
-    assert os.path.exists(ledger_database_path)
-    assert os.path.exists(api_database_path)
-    # user and group have "rw" access
-    os.chmod(ledger_database_path, 0o660)  # nosec B103
-    os.chmod(api_database_path, 0o660)  # nosec B103
-
-    with log.Spinner("Cleaning up..."):
-        os.remove(tarball_path)
-
-    cprint(
-        f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
-        "green",
-    )

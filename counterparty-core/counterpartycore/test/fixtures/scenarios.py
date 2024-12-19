@@ -324,21 +324,20 @@ UNITTEST_FIXTURE = [
         {"short_tx_type_id": True, "fairminter": True},
     ],
     [
-        "utxo",
-        (ADDR[0], "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1", "XCP", 100),
+        "attach",
+        (ADDR[0], "XCP", 100),
         {"encoding": "multisig"},
-        {"short_tx_type_id": True, "utxo_support": True},
+        {"short_tx_type_id": True, "utxo_support": True, "spend_utxo_to_detach": True},
     ],
     [
-        "utxo",
+        "attach",
         (
             ADDR[0],
-            "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
             "DIVISIBLE",
             1,
         ),
         {"encoding": "multisig"},
-        {"short_tx_type_id": True, "utxo_support": True},
+        {"short_tx_type_id": True, "utxo_support": True, "spend_utxo_to_detach": True},
     ],
     [
         "issuance",
@@ -583,8 +582,8 @@ INTEGRATION_SCENARIOS = {
     "parseblock_unittest_fixture": (PARSEBLOCKS_FIXTURE, "parseblock_unittest_fixture"),
 }
 # Generate special tests for simplesig, multisig2 and multisig3 using standard scenario.
-for scenario_name in standard_scenarios_params:
+for scenario_name, params in standard_scenarios_params.items():
     INTEGRATION_SCENARIOS[scenario_name] = (
-        generate_standard_scenario(**standard_scenarios_params[scenario_name]),
+        generate_standard_scenario(**params),
         scenario_name,
     )

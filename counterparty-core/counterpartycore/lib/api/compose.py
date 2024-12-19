@@ -6,13 +6,14 @@ from counterpartycore.lib import (
     config,
     deserialize,
     exceptions,
+    gas,
     gettxinfo,
     message_type,
     messages,
-    script,
     transaction,
     util,
 )
+from counterpartycore.lib.messages.utxo import ID as UTXO_ID
 
 D = decimal.Decimal
 
@@ -34,6 +35,9 @@ COMPOSABLE_TRANSACTIONS = [
     "utxo",
     "fairminter",
     "fairmint",
+    "attach",
+    "detach",
+    "move",
 ]
 
 COMPOSE_COMMONS_ARGS = {
@@ -107,7 +111,7 @@ COMPOSE_COMMONS_ARGS = {
     "inputs_set": (
         str,
         None,
-        "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+        "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
     ),
     "return_psbt": (
         bool,
@@ -128,6 +132,21 @@ COMPOSE_COMMONS_ARGS = {
         bool,
         False,
         "(API v1 only) Returns a single hex-encoded string instead of an array",
+    ),
+    "use_utxos_with_balances": (
+        bool,
+        False,
+        "Use UTXO with balances",
+    ),
+    "exclude_utxos_with_balances": (
+        bool,
+        False,
+        "Exclude silently UTXO with balances instead of raising an exception",
+    ),
+    "validate": (
+        bool,
+        True,
+        "Validate the transaction",
     ),
 }
 
@@ -263,8 +282,8 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
 def compose_cancel(db, address: str, offer_hash: str, **construct_args):
     """
     Composes a transaction to cancel an open order or bet.
-    :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_1)
-    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_ORDER_TX_HASH)
+    :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_6)
+    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)
     """
     params = {"source": address, "offer_hash": offer_hash}
     return compose(db, "cancel", params, **construct_args)
@@ -296,13 +315,13 @@ def compose_dispenser(
 ):
     """
     Composes a transaction to opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
-    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. $ADDRESS_7)
+    :param address: The address that will be dispensing (must have the necessary escrow_quantity of the specified asset) (e.g. $ADDRESS_9)
     :param asset: The asset or subasset to dispense (e.g. XCP)
     :param give_quantity: The quantity of the asset to dispense (in satoshis, hence integer) (e.g. 1000)
     :param escrow_quantity: The quantity of the asset to reserve for this dispenser (in satoshis, hence integer) (e.g. 1000)
     :param mainchainrate: The quantity of the main chain asset (BTC) per dispensed portion (in satoshis, hence integer) (e.g. 100)
     :param status: The state of the dispenser. 0 for open, 1 for open using open_address, 10 for closed (e.g. 0)
-    :param open_address: The address that you would like to open the dispenser on; MUST be equal to `address` from block 900000 onwards
+    :param open_address: The address that you would like to open the dispenser on; MUST be equal to `address` from block 866000 onwards
     :param oracle_address: The address that you would like to use as a price oracle for this dispenser
     """
     params = {
@@ -325,7 +344,7 @@ def compose_dividend(
     Composes a transaction to issue a dividend to holders of a given asset.
     :param address: The address that will be issuing the dividend (must have the ownership of the asset which the dividend is being issued on) (e.g. $ADDRESS_1)
     :param quantity_per_unit: The amount of dividend_asset rewarded (in satoshis, hence integer) (e.g. 1)
-    :param asset: The asset or subasset that the dividends are being rewarded on (e.g. $ASSET_1)
+    :param asset: The asset or subasset that the dividends are being rewarded on (e.g. MYASSETA)
     :param dividend_asset: The asset or subasset that the dividends are paid in (e.g. XCP)
     """
     params = {
@@ -379,18 +398,22 @@ def compose_mpma(
     assets: str,
     destinations: str,
     quantities: str,
+    memos: list = None,
+    memos_are_hex: bool = None,
     memo: str = None,
     memo_is_hex: bool = False,
     **construct_args,
 ):
     """
     Composes a transaction to send multiple payments to multiple addresses.
-    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_1)
-    :param assets: comma-separated list of assets to send (e.g. XCP,$ASSET_5)
+    :param address: The address that will be sending (must have the necessary quantity of the specified asset) (e.g. $ADDRESS_2)
+    :param assets: comma-separated list of assets to send (e.g. XCP,FAIRMINTC)
     :param destinations: comma-separated list of addresses to send to (e.g. $ADDRESS_1,$ADDRESS_2)
     :param quantities: comma-separated list of quantities to send (in satoshis, hence integer) (e.g. 1,2)
-    :param memo: The Memo associated with this transaction (e.g. "Hello, world!")
-    :param memo_is_hex: Whether the memo field is a hexadecimal string (e.g. False)
+    :param memos: One `memos` argument by send, if any
+    :param memos_are_hex: Whether the memos are in hexadecimal format
+    :param memo: The Memo associated with this transaction, used by default for all sends if no `memos` are specified
+    :param memo_is_hex: Whether the memo field is a hexadecimal string
     """
     asset_list = assets.split(",")
     destination_list = destinations.split(",")
@@ -404,6 +427,17 @@ def compose_mpma(
             raise exceptions.ComposeError("Quantity must be an integer")
     quantity_list = [int(quantity) for quantity in quantity_list]
     asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
+
+    if memos:
+        if not isinstance(memos, list):
+            raise exceptions.ComposeError("Memos must be a list")
+        if len(memos) != len(asset_dest_quant_list):
+            raise exceptions.ComposeError(
+                "The number of memos must be equal to the number of sends"
+            )
+        for i, send_memo in enumerate(memos):
+            if send_memo:
+                asset_dest_quant_list[i] += (send_memo, memos_are_hex)
 
     params = {
         "source": address,
@@ -489,7 +523,7 @@ def compose_dispense(
 ):
     """
     Composes a transaction to send BTC to a dispenser.
-    :param address: The address that will be sending (must have the necessary quantity of BTC) (e.g. $ADDRESS_2)
+    :param address: The address that will be sending (must have the necessary quantity of BTC) (e.g. $ADDRESS_1)
     :param dispenser: The dispenser that will be receiving the asset (e.g. $ADDRESS_4)
     :param quantity: The quantity of BTC to send (in satoshis, hence integer) (e.g. 1000)
     """
@@ -563,7 +597,7 @@ def compose_fairminter(
     :param lock_description: If True, the description of the asset is locked
     :param lock_quantity: If True, the quantity of the asset cannot be changed after the minting
     :param divisible: If True, the asset is divisible
-    :param description: The description of the asset
+    :param description: The description of the asset. Overrides the current description if the asset already exists.
     """
     params = {
         "source": address,
@@ -592,28 +626,11 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     """
     Composes a transaction to mint a quantity of an asset using the FairMinter protocol.
     :param address: The address that will be minting the asset (e.g. $ADDRESS_1)
-    :param asset: The asset to mint (e.g. $ASSET_3)
-    :param quantity: The quantity of the asset to mint (in satoshis, hence integer) (e.g. 1)
+    :param asset: The asset to mint (e.g. OPENFAIR)
+    :param quantity: The quantity of the asset to mint (in satoshis, hence integer)
     """
     params = {"source": address, "asset": asset, "quantity": quantity}
     return compose(db, "fairmint", params, **construct_args)
-
-
-def compose_utxo(
-    db,
-    source: str,
-    destination: str,
-    asset: str,
-    quantity: int,
-    **construct_args,
-):
-    params = {
-        "source": source,
-        "destination": destination,
-        "asset": asset,
-        "quantity": quantity,
-    }
-    return compose(db, "utxo", params, **construct_args)
 
 
 def compose_attach(
@@ -621,110 +638,61 @@ def compose_attach(
     address: str,
     asset: str,
     quantity: int,
-    destination: str = None,
+    destination_vout: str = None,
     **construct_args,
 ):
     """
     Composes a transaction to attach assets from an address to UTXO.
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
-    :param destination: The utxo to attach the assets to (e.g. $UTXO_1_ADDRESS_1)
     :param asset: The asset or subasset to attach (e.g. XCP)
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
+    :param destination_vout: The vout of the destination output
     """
-    return compose_utxo(
-        db,
-        source=address,
-        destination=destination,
-        asset=asset,
-        quantity=quantity,
-        **construct_args,
-    )
+    params = {
+        "source": address,
+        "asset": asset,
+        "quantity": quantity,
+        "destination_vout": destination_vout,
+    }
+    return compose(db, "attach", params, **construct_args)
 
 
 def compose_detach(
     db,
     utxo: str,
-    destination: str,
-    asset: str,
-    quantity: int,
+    destination: str = None,
     **construct_args,
 ):
     """
     Composes a transaction to detach assets from UTXO to an address.
     :param utxo: The utxo from which the assets are detached (e.g. $UTXO_WITH_BALANCE)
-    :param destination: The address to detach the assets to (e.g. $ADDRESS_1)
-    :param asset: The asset or subasset to detach (e.g. XCP)
-    :param quantity: The quantity of the asset to detach (in satoshis, hence integer) (e.g. 1000)
+    :param destination: The address to detach the assets to, if not provided the addresse corresponding to the utxo is used (e.g. $ADDRESS_1)
     """
-    return compose_utxo(
-        db,
-        source=utxo,
-        destination=destination,
-        asset=asset,
-        quantity=quantity,
-        **construct_args,
-    )
-
-
-def compose_movetoutxo(db, utxo: str, destination: str, more_utxos: str = ""):
-    """
-    Composes a transaction to move assets from UTXO to another UTXO.
-    :param utxo: The utxo from which the assets are moved
-    :param destination: The address to move the assets to
-    :param more_utxos: The additional utxos to fund the transaction
-    """
-    decimal.getcontext().prec = 8
-
-    more_utxos_list = []
-    input_count = 1
-    total_value = D("0")
-    try:
-        source_address, source_value = backend.bitcoind.get_utxo_address_and_value(utxo)
-        total_value += D(source_value)
-        for more_utxo in more_utxos.split(","):
-            if more_utxo == "":
-                continue
-            _more_utxo_address, more_utxo_value = backend.bitcoind.get_utxo_address_and_value(
-                more_utxo
-            )
-            more_utxo_tx_hash, more_utxo_vout = more_utxo.split(":")
-            more_utxos_list.append({"txid": more_utxo_tx_hash, "vout": int(more_utxo_vout)})
-            input_count += 1
-            total_value += D(more_utxo_value)
-    except exceptions.InvalidUTXOError as e:
-        raise exceptions.ComposeError("Invalid UTXO for source") from e
-
-    try:
-        script.validate(destination)
-    except Exception as e:
-        raise exceptions.ComposeError("Invalid address for destination") from e
-
-    tx_hash, vout = utxo.split(":")
-
-    fee_per_kb = backend.bitcoind.fee_per_kb()
-    # Transaction Size (in bytes) = (Number of Inputs x 148) + (Number of Outputs x 34) + 10
-    tx_size = (input_count * 148) + (2 * 34) + 10
-    fee = (D(fee_per_kb) / config.UNIT) * (D(tx_size) / 1024)
-
-    dust = D("0.0000546")
-    change = D(total_value) - dust - fee
-
-    if change < 0:
-        raise exceptions.ComposeError("Insufficient funds for fee")
-
-    inputs = [{"txid": tx_hash, "vout": int(vout)}] + more_utxos_list
-    outputs = [{destination: str(dust)}, {source_address: str(change)}]
-    rawtransaction = backend.bitcoind.createrawtransaction(inputs, outputs)
-
-    return {
-        "rawtransaction": rawtransaction,
-        "params": {
-            "source": utxo,
-            "destination": destination,
-        },
-        "name": "movetoutxo",
-        "data": None,
+    params = {
+        "source": utxo,
+        "destination": destination,
     }
+    return compose(db, "detach", params, **construct_args)
+
+
+def get_attach_estimate_xcp_fee(db):
+    """
+    Returns the estimated fee for attaching assets to a UTXO.
+    """
+    return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
+
+
+def compose_movetoutxo(db, utxo: str, destination: str, **construct_args):
+    """
+    Composes a transaction like a send but for moving from one UTXO to another, with the destination is specified as an address.
+    :param utxo: The utxo from which the assets are moved (e.g. $UTXO_WITH_BALANCE)
+    :param destination: the address for which the destination utxo will be created (e.g. $ADDRESS_1)
+    """
+    params = {
+        "source": utxo,
+        "destination": destination,
+    }
+    return compose(db, "move", params, **construct_args)
 
 
 def info_by_tx_hash(db, tx_hash: str):
@@ -752,13 +720,17 @@ def info(db, rawtransaction: str, block_index: int = None):
     except Exception as e:
         raise exceptions.ComposeError("Invalid rawtransaction") from e
 
-    source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
-        gettxinfo.get_tx_info(
-            db,
-            decoded_tx,
-            block_index=block_index,
+    try:
+        source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
+            gettxinfo.get_tx_info(
+                db,
+                decoded_tx,
+                block_index=block_index or util.CURRENT_BLOCK_INDEX,
+            )
         )
-    )
+    except exceptions.BitcoindRPCError:
+        source, destination, btc_amount, fee, data = None, None, None, None, None
+
     del decoded_tx["__data__"]
     result = {
         "source": source,
@@ -780,7 +752,11 @@ def unpack(db, datahex: str, block_index: int = None):
     :param datahex: Data in hex format (e.g. 020000000001016a65c1624e53f4d33ce02e726a6606faed60cc014d5b1a578ba3e09b4b3f8f890100000000ffffffff020000000000000000176a150d55e8b6118808b7b663b365473f142274028b8af60245092701000000160014a3df8a5a83d4e2827b59b43f5ce6ce5d2e52093f0247304402204b7a2859cbce34e725a1132fec2dd4b075503dadff0a0c407ae7c22a7712fe4d0220563ceb2ceebdf649343bb24819fc808639cce7781305b4588ffbe4a20390d2780121020ace9adf60fe4ec05dab922ccdc5727cbf664cafc7cdb845de534855266314c800000000)
     :param block_index: Block index of the transaction containing this data
     """
-    data = binascii.unhexlify(datahex)
+    try:
+        data = binascii.unhexlify(datahex)
+    except Exception as e:  # noqa
+        raise exceptions.UnpackError("Data must be in hexadecimal format") from e
+
     if data[: len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX) :]
     message_type_id, message = message_type.unpack(data)
@@ -876,11 +852,23 @@ def unpack(db, datahex: str, block_index: int = None):
         # Fair Minter
         elif message_type_id == messages.fairminter.ID:
             message_type_name = "fairminter"
-            message_data = messages.fairminter.unpack(message)
+            message_data = messages.fairminter.unpack(message, return_dict=True)
         # Fair Mint
         elif message_type_id == messages.fairmint.ID:
             message_type_name = "fairmint"
-            message_data = messages.fairmint.unpack(message)
+            message_data = messages.fairmint.unpack(message, return_dict=True)
+        # utxo
+        elif message_type_id == messages.utxo.ID:
+            message_type_name = "utxo"
+            message_data = messages.utxo.unpack(message, return_dict=True)
+        # Attach
+        elif message_type_id == messages.attach.ID:
+            message_type_name = "attach"
+            message_data = messages.attach.unpack(message, return_dict=True)
+        # Detach
+        elif message_type_id == messages.detach.ID:
+            message_type_name = "detach"
+            message_data = messages.detach.unpack(message, return_dict=True)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 

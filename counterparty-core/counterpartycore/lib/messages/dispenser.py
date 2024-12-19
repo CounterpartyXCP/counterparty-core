@@ -6,13 +6,13 @@
 # of units of an asset for a given amount of BTC satoshis received.
 # It's a very simple but powerful semantic to allow swaps to operate on-chain.
 #
-
+import json
 import logging
+import os
 import struct
 from math import floor
 
 from counterpartycore.lib import (
-    backend,
     config,
     database,
     exceptions,
@@ -36,6 +36,17 @@ STATUS_OPEN_EMPTY_ADDRESS = 1
 # STATUS_OPEN_ORACLE_PRICE_EMPTY_ADDRESS = 21
 STATUS_CLOSED = 10
 STATUS_CLOSING = 11
+
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+with open(os.path.join(CURR_DIR, "data", "get_oldest_tx.json")) as f:
+    GET_OLDEST_TX_DATA = json.load(f)
+
+
+def get_oldest_tx(address: str, block_index: int):
+    key = f"{address}-{block_index}"
+    if key in GET_OLDEST_TX_DATA:
+        return GET_OLDEST_TX_DATA[key]
+    return {}
 
 
 def initialise(db):
@@ -80,11 +91,20 @@ def initialise(db):
     if "last_status_tx_source" not in columns:
         cursor.execute("ALTER TABLE dispensers ADD COLUMN last_status_tx_source TEXT")
     if "close_block_index" not in columns:
-        cursor.execute("ALTER TABLE dispensers ADD COLUMN close_block_index TEXT")
+        cursor.execute("ALTER TABLE dispensers ADD COLUMN close_block_index INTEGER")
 
     # migrate old table
     if database.field_is_pk(cursor, "dispensers", "tx_index"):
         database.copy_old_table(cursor, "dispensers", create_dispensers_query)
+
+    # remove useless indexes
+    database.drop_indexes(
+        cursor,
+        [
+            "dispensers_source_idx",
+            "dispensers_status_idx",
+        ],
+    )
 
     # create indexes
     database.create_indexes(
@@ -92,11 +112,9 @@ def initialise(db):
         "dispensers",
         [
             ["block_index"],
-            ["source"],
             ["asset"],
             ["tx_index"],
             ["tx_hash"],
-            ["status"],
             ["give_remaining"],
             ["status", "block_index"],
             ["source", "origin"],
@@ -118,6 +136,7 @@ def initialise(db):
                                 asset TEXT,
                                 dispense_quantity INTEGER,
                                 dispenser_tx_hash TEXT,
+                                btc_amount INTEGER,
                                 PRIMARY KEY (tx_index, dispense_index, source, destination),
                                 FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
                                 """
@@ -128,6 +147,50 @@ def initialise(db):
     columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(dispenses)""")]
     if "dispenser_tx_hash" not in columns:
         cursor.execute("ALTER TABLE dispenses ADD COLUMN dispenser_tx_hash TEXT")
+
+    if "btc_amount" not in columns:
+        cursor.execute("ALTER TABLE dispenses ADD COLUMN btc_amount INTEGER")
+        database.unlock_update(db, "dispenses")
+        cursor.execute("""
+            UPDATE dispenses SET 
+                btc_amount = (
+                    SELECT
+                    CAST (
+                        json_extract(bindings, '$.btc_amount')
+                        AS INTEGER
+                    )
+                    FROM messages
+                    WHERE messages.tx_hash = dispenses.tx_hash
+                )
+        """)
+        database.lock_update(db, "dispenses")
+
+    close_block_index_type = cursor.execute("""
+         SELECT type FROM PRAGMA_TABLE_INFO('dispensers') WHERE name='close_block_index'
+    """).fetchone()["type"]
+    if close_block_index_type != "INTEGER":
+        cursor.execute("""
+            ALTER TABLE dispensers RENAME TO old_dispensers;
+            CREATE TABLE IF NOT EXISTS dispensers(
+                tx_index INTEGER,
+                tx_hash TEXT,
+                block_index INTEGER,
+                source TEXT,
+                asset TEXT,
+                give_quantity INTEGER,
+                escrow_quantity INTEGER,
+                satoshirate INTEGER,
+                status INTEGER,
+                give_remaining INTEGER,
+                oracle_address TEXT,
+                last_status_tx_hash TEXT,
+                origin TEXT,
+                dispense_count INTEGER DEFAULT 0,
+                last_status_tx_source TEXT,
+                close_block_index INTEGER);
+            INSERT INTO dispensers SELECT * FROM old_dispensers;
+            DROP TABLE old_dispensers;
+        """)
 
     # create indexes
     database.create_indexes(
@@ -229,10 +292,10 @@ def validate(
     available = ledger.get_balance(db, source, asset, return_list=True)
 
     if len(available) == 0:
-        problems.append(f"address doesn't has the asset {asset}")
+        problems.append(f"address doesn't have the asset {asset}")
     elif len(available) >= 1 and available[0]["quantity"] < escrow_quantity:
         problems.append(
-            f"address doesn't has enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})"
+            f"address doesn't have enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})"
         )
     elif (
         util.enabled("dispenser_must_be_created_by_source")
@@ -307,7 +370,7 @@ def validate(
                             )
             elif status == STATUS_CLOSED:
                 if len(open_dispensers) == 0:
-                    problems.append(f"address doesnt has an open dispenser for asset {asset}")
+                    problems.append(f"address doesn't have an open dispenser for asset {asset}")
 
             if status == STATUS_OPEN_EMPTY_ADDRESS:
                 # If an address is trying to refill a dispenser in a different address and it's the creator
@@ -333,7 +396,7 @@ def validate(
                             )
 
                         if util.enabled("dispenser_origin_permission_extended", block_index):
-                            address_oldest_transaction = backend.addrindexrs.get_oldest_tx(
+                            address_oldest_transaction = get_oldest_tx(
                                 query_address, block_index=util.CURRENT_BLOCK_INDEX
                             )
                             if (
@@ -391,6 +454,7 @@ def compose(
     status: int,
     open_address: str = None,
     oracle_address: str = None,
+    skip_validation: bool = False,
 ):
     assetid, problems = validate(
         db,
@@ -405,7 +469,10 @@ def compose(
         oracle_address,
     )
     if problems:
-        raise exceptions.ComposeError(problems)
+        if not skip_validation:
+            raise exceptions.ComposeError(problems)
+        else:
+            assetid = ledger.generate_asset_id(asset, block_index=util.CURRENT_BLOCK_INDEX)
 
     destination = []
     data = message_type.pack(ID)

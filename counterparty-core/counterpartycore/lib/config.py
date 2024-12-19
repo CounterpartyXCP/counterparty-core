@@ -5,7 +5,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "10.4.2"  # for hatch
+__version__ = "10.8.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-")[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -13,15 +13,24 @@ VERSION_MINOR = int(version[1])
 VERSION_REVISION = int(version[2])
 VERSION_PRE_RELEASE = "-".join(VERSION_STRING.split("-")[1:])
 
-ADDRINDEXRS_VERSION = "0.4.6"
+DEFAULT_ELECTRS_URL_MAINNET = "https://api.counterparty.io:3000"
+DEFAULT_ELECTRS_URL_TESTNET = "https://api.counterparty.io:13000"
 
 # When updating to a new verion, we are making a rollback if major version changes.
 # If minor version changes and if needed, we are making a reparse from a given block.
 # Fo example:
 # NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (1, 800000)
 # means that we need to reparse from block 800000 if database minor version is less than 1
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (3, 0)
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = (3, 0)
+NEED_REPARSE_IF_MINOR_IS_LESS_THAN = [(3, 0), (5, 865999), (6, 867000), (7, 869900)]
+NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = [
+    (3, 0),
+    (5, 2925799),
+    (6, 2925799),
+    (7, 2925799),
+]
+NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN = [(8, 871780)]
+NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET = [(8, 3522632)]
+
 # Counterparty protocol
 TXTYPE_FORMAT = ">I"
 SHORT_TXTYPE_FORMAT = "B"
@@ -62,10 +71,6 @@ DEFAULT_RPC_PORT = 4100
 DEFAULT_BACKEND_PORT_REGTEST = 18443
 DEFAULT_BACKEND_PORT_TESTNET = 18332
 DEFAULT_BACKEND_PORT = 8332
-
-DEFAULT_INDEXD_PORT_REGTEST = 18543
-DEFAULT_INDEXD_PORT_TESTNET = 18432
-DEFAULT_INDEXD_PORT = 8432
 
 DEFAULT_ZMQ_SEQUENCE_PORT_REGTEST = 29332
 DEFAULT_ZMQ_SEQUENCE_PORT_TESTNET = 19332
@@ -143,11 +148,12 @@ DEFAULT_FEE_FRACTION_PROVIDED = 0.01  # 1.00%
 
 DEFAULT_REQUESTS_TIMEOUT = 20  # 20 seconds
 DEFAULT_RPC_BATCH_SIZE = 20  # A 1 MB block can hold about 4200 transactions.
+MAX_RPC_BATCH_SIZE = 100  # Maximum number of transactions to send in a single RPC call.
 
 # Custom exit codes
 EXITCODE_UPDATE_REQUIRED = 5
 
-BACKEND_RAW_TRANSACTIONS_CACHE_SIZE = 20000
+BACKEND_RAW_TRANSACTIONS_CACHE_SIZE = 1000
 BACKEND_RPC_BATCH_NUM_WORKERS = 6
 
 DEFAULT_UTXO_LOCKS_MAX_ADDRESSES = 1000
@@ -162,10 +168,31 @@ API_LIMIT_ROWS = 1000
 MPMA_LIMIT = 1000
 
 PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
-BOOTSTRAP_URL_MAINNET = "https://bootstrap.counterparty.io/counterparty.latest.tar.gz"
-BOOTSTRAP_URL_MAINNET_SIG = "https://bootstrap.counterparty.io/counterparty.latest.sig"
-BOOTSTRAP_URL_TESTNET = "https://bootstrap.counterparty.io/counterparty-testnet.latest.tar.gz"
-BOOTSTRAP_URL_TESTNET_SIG = "https://bootstrap.counterparty.io/counterparty-testnet.latest.sig"
+# PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
+
+
+BOOTSTRAP_URLS = {
+    "mainnet": [
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.sig",
+        ),
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.sig",
+        ),
+    ],
+    "testnet": [
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.sig",
+        ),
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.sig",
+        ),
+    ],
+}
 
 API_MAX_LOG_SIZE = (
     10 * 1024 * 1024
@@ -184,3 +211,5 @@ INFLUX_DB_BUCKET = "node-telemetry"
 LOG_IN_CONSOLE = False
 
 DEFAULT_DB_CONNECTION_POOL_SIZE = 10
+
+DEFAULT_UTXO_VALUE = 10000

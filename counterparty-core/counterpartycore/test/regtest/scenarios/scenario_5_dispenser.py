@@ -12,6 +12,8 @@ SCENARIO = [
         },
         "set_variables": {
             "DISPENSER_1_TX_HASH": "$TX_HASH",
+            "DISPENSER_1_TX_INDEX": "$TX_INDEX",
+            "DISPENSER_1_BLOCK_INDEX": "$BLOCK_INDEX",
         },
         "controls": [
             {
@@ -142,7 +144,8 @@ SCENARIO = [
                             "source": "$ADDRESS_2",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
-                            "utxos_info": "$TX_HASH:0",
+                            "utxos_info": " $TX_HASH:0 3 1",
+                            "transaction_type": "dispense",
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -158,7 +161,7 @@ SCENARIO = [
             "dispenser": "$ADDRESS_1",
             "quantity": 4001,
         },
-        "expected_error": ["dispenser doesn't have enough asset to give"],
+        "expected_error": ["dispenser for XCP doesn't have enough asset to give"],
     },
     {
         "title": "Dispense 3: no dispenser error",
@@ -171,12 +174,25 @@ SCENARIO = [
         "expected_error": ["address doesn't have any open dispenser"],
     },
     {
+        "title": "Dispense from the dispenser",
+        "transaction": "dispense",
+        "source": "$ADDRESS_1",
+        "params": {
+            "dispenser": "$ADDRESS_1",
+            "quantity": 4000,
+        },
+        "expected_error": "source and destination must be different",
+    },
+    {
         "title": "Dispense 4: get 100 XCP",
         "transaction": "dispense",
         "source": "$ADDRESS_2",
         "params": {
             "dispenser": "$ADDRESS_1",
             "quantity": 4000,
+        },
+        "set_variables": {
+            "DISPENSER_1_LAST_UPDATE_BLOCK_INDEX": "$BLOCK_INDEX",
         },
         "controls": [
             {
@@ -255,7 +271,8 @@ SCENARIO = [
                             "source": "$ADDRESS_2",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
-                            "utxos_info": "$TX_HASH:0",
+                            "utxos_info": " $TX_HASH:0 3 1",
+                            "transaction_type": "dispense",
                         },
                         "tx_hash": "$TX_HASH",
                     },
@@ -271,7 +288,7 @@ SCENARIO = [
             "dispenser": "$ADDRESS_1",
             "quantity": 4001,
         },
-        "expected_error": ["dispenser is not open", "dispenser is empty"],
+        "expected_error": ["dispenser for XCP is not open", "dispenser for XCP is empty"],
     },
     {
         "title": "Create Dispenser 2: dispenser must be created by source",

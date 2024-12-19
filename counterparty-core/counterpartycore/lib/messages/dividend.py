@@ -107,7 +107,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     exclude_empty = False
     if util.enabled("zero_quantity_value_adjustment_1"):
         exclude_empty = True
-    holders = ledger.holders(db, asset, exclude_empty)
+    holders = ledger.holders(db, asset, exclude_empty, block_index=block_index)
 
     outputs = []
     addresses = []
@@ -185,7 +185,14 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     return dividend_total, outputs, problems, fee
 
 
-def compose(db, source: str, quantity_per_unit: int, asset: str, dividend_asset: str):
+def compose(
+    db,
+    source: str,
+    quantity_per_unit: int,
+    asset: str,
+    dividend_asset: str,
+    skip_validation: bool = False,
+):
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)
     dividend_asset = ledger.resolve_subasset_longname(db, dividend_asset)
@@ -193,7 +200,7 @@ def compose(db, source: str, quantity_per_unit: int, asset: str, dividend_asset:
     dividend_total, outputs, problems, fee = validate(
         db, source, quantity_per_unit, asset, dividend_asset, util.CURRENT_BLOCK_INDEX
     )
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
     logger.info(
         f"Total quantity to be distributed in dividends: {ledger.value_out(db, dividend_total, dividend_asset)} {dividend_asset}"

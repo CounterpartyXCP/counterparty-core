@@ -5,7 +5,7 @@ SCENARIO = [
         "source": "$ADDRESS_1",
         "params": {
             "asset": "TESTLOCKDESC",
-            "quantity": int(100 * 1e8),
+            "quantity": int(10 * 10e8),
             "description": "Test Locking Description",
         },
         "controls": [
@@ -176,7 +176,7 @@ SCENARIO = [
                         "params": {
                             "asset": "TESTLOCKDESC",
                             "asset_longname": None,
-                            "asset_events": "lock_description reissuance",
+                            "asset_events": "lock_description",
                             "block_index": "$BLOCK_INDEX",
                             "call_date": 0,
                             "call_price": 0.0,

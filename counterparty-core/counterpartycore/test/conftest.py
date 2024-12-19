@@ -22,6 +22,7 @@ from counterpartycore import server
 from counterpartycore.lib import arc4, config, database, exceptions, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
+from counterpartycore.lib.api import dbbuilder
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -166,6 +167,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("skip", [not metafunc.config.getoption("comparehashes")])
     elif metafunc.function.__name__ == "test_mainnet_api_db":
         metafunc.parametrize("skip", [not metafunc.config.getoption("testapidb")])
+    elif metafunc.function.__name__ == "test_mainnet_healthz":
+        metafunc.parametrize("skip", [not metafunc.config.getoption("testapidb")])
 
 
 def pytest_addoption(parser):
@@ -220,6 +223,8 @@ def rawtransactions_db(request):
 @pytest.fixture(scope="function")
 def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
+
     db = database.get_connection(read_only=False)
     cursor = db.cursor()
     cursor.execute("""BEGIN""")
@@ -242,8 +247,9 @@ def api_server(request, cp_server):
 
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
-    print("api_server", config.DATABASE, config.API_DATABASE)
+    print("api_server", config.DATABASE, config.STATE_DATABASE)
 
     # start RPC server and wait for server to be ready
     api_server = api.APIServer()
@@ -274,8 +280,6 @@ def api_server_v2(request, cp_server):
         "backend_port": None,
         "backend_user": None,
         "backend_password": None,
-        "indexd_connect": None,
-        "indexd_port": None,
         "backend_ssl": False,
         "backend_ssl_no_verify": False,
         "backend_poll_interval": None,
@@ -287,10 +291,9 @@ def api_server_v2(request, cp_server):
         "api_user": "rpc",
         "api_password": None,
         "api_no_allow_cors": False,
-        "force": False,
+        "force": True,
         "requests_timeout": config.DEFAULT_REQUESTS_TIMEOUT,
         "rpc_batch_size": config.DEFAULT_RPC_BATCH_SIZE,
-        "check_asset_conservation": False,
         "backend_ssl_verify": None,
         "rpc_allow_cors": None,
         "p2sh_dust_return_pubkey": None,
@@ -303,7 +306,7 @@ def api_server_v2(request, cp_server):
         "log_file": None,
         "api_log_file": None,
         "no_log_files": False,
-        "no_check_asset_conservation": True,
+        "skip_asset_conservation_check": True,
         "action": "",
         "no_refresh_backend_height": True,
         "no_mempool": False,
@@ -311,32 +314,50 @@ def api_server_v2(request, cp_server):
         "no_telemetry": True,
         "enable_zmq_publisher": False,
         "zmq_publisher_port": None,
-        "db_connection_pool_size": None,
+        "db_connection_pool_size": 10,
         "json_logs": False,
+        "wsgi_server": "waitress",
+        "gunicorn_workers": 2,
+        "gunicorn_threads_per_worker": 1,
+        "waitress_threads": 1,
+        "max_log_file_size": 40 * 1024 * 1024,
+        "max_log_file_rotations": 20,
+        "log_exclude_filters": None,
+        "log_include_filters": None,
+        "cache_dir": os.path.dirname(request.module.FIXTURE_DB),
+        "electrs_url": None,
     }
     server_config = (
         default_config
         | util_test.COUNTERPARTYD_OPTIONS
         | {
+            "data_dir": os.path.dirname(request.module.FIXTURE_DB),
             "database_file": request.module.FIXTURE_DB,
             "api_port": TEST_RPC_PORT + 10,
         }
     )
 
-    if os.path.exists(config.API_DATABASE):
-        os.unlink(config.API_DATABASE)
-    if os.path.exists(config.API_DATABASE + "-shm"):
-        os.unlink(config.API_DATABASE + "-shm")
-    if os.path.exists(config.API_DATABASE + "-wal"):
-        os.unlink(config.API_DATABASE + "-wal")
+    config.STATE_DATABASE = config.STATE_DATABASE.replace(".testnet.db", ".db")
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
+
+    if os.path.exists(config.STATE_DATABASE):
+        os.unlink(config.STATE_DATABASE)
+    if os.path.exists(config.STATE_DATABASE + "-shm"):
+        os.unlink(config.STATE_DATABASE + "-shm")
+    if os.path.exists(config.STATE_DATABASE + "-wal"):
+        os.unlink(config.STATE_DATABASE + "-wal")
+
+    dbbuilder.build_state_db()
 
     def is_server_ready():
         return True
 
+    util.CURRENT_BACKEND_HEIGHT = 0
+
     api_v2.is_server_ready = is_server_ready
 
     args = argparse.Namespace(**server_config)
-    api_server = api_v2.APIServer()
+    api_server = api_v2.APIServer(None)
     api_server.start(args)
 
     # wait for server to be ready
@@ -401,9 +422,7 @@ class MockUTXOSet(object):
         self.rawtransactions_db = rawtransactions_db
         # logger.warning('MockUTXOSet %d' % len(utxos))
 
-    def get_unspent_txouts(
-        self, address, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None
-    ):
+    def get_utxos(self, address, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None):
         # filter by address
         txouts = [output for output in self.txouts if output["address"] == address]
 
@@ -533,8 +552,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
     util_test.rawtransactions_db = rawtransactions_db
 
-    def get_unspent_txouts(*args, **kwargs):
-        return mock_utxos.get_unspent_txouts(*args, **kwargs)
+    def get_utxos(*args, **kwargs):
+        return mock_utxos.get_utxos(*args, **kwargs)
 
     def isodt(epoch_time):
         return datetime.utcfromtimestamp(epoch_time).isoformat()
@@ -568,8 +587,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
         return util_test.getrawtransaction_batch(rawtransactions_db, txhash_list, verbose=verbose)
 
-    def mocked_search_raw_transactions(address, unconfirmed=False):
-        return util_test.search_raw_transactions(rawtransactions_db, address, unconfirmed)
+    def mocked_get_history(address, unconfirmed=False):
+        return util_test.get_history(rawtransactions_db, address, unconfirmed)
 
     # mock the arc4 with a fixed seed to keep data from changing based on inputs
     _init_arc4 = arc4.init_arc4
@@ -618,9 +637,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         return encoding
 
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
-    monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
-    )
+    monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
@@ -636,12 +653,12 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         get_utxo_address_and_value,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction_batch",
         mocked_getrawtransaction_batch,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.search_raw_transactions",
-        mocked_search_raw_transactions,
+        "counterpartycore.lib.backend.electrs.get_history",
+        mocked_get_history,
     )
     monkeypatch.setattr(
         "counterpartycore.lib.transaction_helper.transaction_outputs.pubkeyhash_to_pubkey",
@@ -667,3 +684,18 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.satoshis_per_vbyte", satoshis_per_vbyte
     )
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.asset_issued_total", ledger.asset_issued_total_no_cache
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.get_last_issuance", ledger.get_last_issuance_no_cache
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.asset_destroyed_total", ledger.asset_destroyed_total_no_cache
+    )
+
+    class MockSingletonMeta:
+        pass
+
+    monkeypatch.setattr("counterpartycore.lib.util.SingletonMeta", MockSingletonMeta)

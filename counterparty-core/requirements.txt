@@ -18,7 +18,7 @@ tendo==0.3.0
 xmltodict==0.13.0
 cachetools==5.3.2
 bitstring==4.1.4
-Werkzeug==3.0.1
+Werkzeug==3.0.6
 itsdangerous==2.1.2
 plyvel==1.5.1
 arc4==0.4.0
@@ -32,5 +32,10 @@ python-gnupg==0.5.2
 pyzmq==26.0.3
 JSON-log-formatter==1.0
 yoyo-migrations==8.2.0
+gunicorn==23.0.0
+waitress==3.0.1
+hypothesis==6.116.0
 bitcoin-utils==0.7.1
-counterparty-rs==10.4.2
+pyzstd==0.16.2
+dredd_hooks==0.2.0
+counterparty-rs==10.8.0

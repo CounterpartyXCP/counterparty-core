@@ -1,5 +1,21 @@
-Creating connection to `:memory:`...
 Initializing database...
+Fixing issuances `asset_longname` field
+SQLITE_LOG: statement aborts at 12: [SELECT value FROM config WHERE name = ?] database schema has changed (17) SQLITE_SCHEMA
+Fixing issuances `asset_longname` field
+SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_issuances] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_fairminters] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_issuances
+            BEFORE UPDATE ON issuances BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;] database s (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_fairminters
+            BEFORE UPDATE ON fairminters BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;] databa (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 27: [INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)] database schema has changed (17) SQLITE_SCHEMA
+Cleaning `transaction_count` table
+Initialising asset cache...
+Asset cache initialised in 0.00 seconds
 TX Construct - Transaction constructed.
 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 62000000 BTC for 93000000000 XCP (5fde1c728d8d00aaa1b5f8dae963ceb4fd30c415eb0b8a982ba2d8d676fec0bb) [valid]
 TX Construct - Transaction constructed.
@@ -90,7 +106,4 @@ Bet Expiration c36b65e3d4c105739d5c8cef470c0878d2e8da138416e09cb499edcec343c0b8
 Send BBBC from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (abc5e16e5a7a1a7dd7d38ff1351b252a3813d40a695ab798f6a26cb904f91ab1) [valid]
 Order cancelled BBBB / XCP (6d3c6a9ea36e82a0e8162f69c68fc8bb95d316ad5586a30553fbaf1717f4121e) [expired]
 Checking for conservation of assets.
-XCP has been conserved (1498.99847262 XCP both issued and held)
-BBBB has been conserved (10.0 BBBB both issued and held)
-BBBC has been conserved (100000 BBBC both issued and held)
 All assets have been conserved.

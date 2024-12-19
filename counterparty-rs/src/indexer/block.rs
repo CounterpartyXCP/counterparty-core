@@ -97,7 +97,7 @@ pub struct Transaction {
     pub lock_time: u32,
     pub tx_id: String,
     pub tx_hash: String,
-    pub vtxinwit: Vec<String>,
+    pub vtxinwit: Vec<Vec<String>>,
     pub parsed_vouts: Result<ParsedVouts, String>,
     pub vin: Vec<Vin>,
     pub vout: Vec<Vout>,

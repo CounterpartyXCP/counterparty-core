@@ -13,14 +13,14 @@ LOCAL_API_URL = "http://localhost:4000"
 
 # [server_url, api_version, server_version]
 CHECK_SERVERS = [
-    ["http://rpc:rpc@api1.counterparty.io:4000", "v1", "v9.61.1"],
-    ["https://api.counterparty.io:4000", "v2", "v10.4.1"],
-    ["https://dev.counterparty.io:4000", "v2", "v10.4.1"],
-    ["https://api.counterparty.info", "v2", "v10.4.1"],
-    ["http://rpc:1234@public.coindaddy.io:4000", "v1", "v9.61.3"],
-    ["https://api.xcp.dev/v9_61/", "xcpdev", "v9.61.3"],
-    ["https://api.xcp.dev/v10_1/", "xcpdev", "v10.1.2.CNTRPRTY"],
-    ["https://memepool.wtf/api/", "wtf", "v10.2.0"],
+    # ["http://rpc:rpc@api1.counterparty.io:4000", "v1", "v9.61.1"],
+    ["https://api.counterparty.io:4000", "v2", "v10.6.1"],
+    ["https://dev.counterparty.io:4000", "v2", "v10.7.0"],
+    ["https://api.counterparty.info", "v2", "v10.6.0"],
+    # ["http://rpc:1234@public.coindaddy.io:4000", "v1", "v9.61.3"],
+    # ["https://api.xcp.dev/v9_61/", "xcpdev", "v9.61.3"],
+    # ["https://api.xcp.dev/v10_1/", "xcpdev", "v10.1.2.CNTRPRTY"],
+    ["https://memepool.wtf/api/", "wtf", "v10.6.0"],
 ]
 
 
@@ -172,7 +172,7 @@ def test_mainnet_api_db(skip):
         f"{MAINNET_DB_DIR}counterparty.api.db", read_only=True, check_wal=False
     )
 
-    api_sql = "SELECT * FROM balances ORDER BY random() LIMIT 10000"
+    api_sql = "SELECT * FROM balances WHERE address IS NOT NULL ORDER BY random() LIMIT 10000"
     api_balances = api_db.execute(api_sql)
     i = 0
     for api_balance in api_balances:
@@ -206,3 +206,28 @@ def test_mainnet_api_db(skip):
             print(api_order, ledger_order)
         i += 1
     print(f"Checked {i} balances")
+
+
+def test_mainnet_healthz(skip):
+    if skip:
+        pytest.skip("Skipping healthz test.")
+        return
+
+    response = requests.get(f"{LOCAL_API_URL}/healthz", timeout=10)
+    print(response.json())
+    assert response.status_code == 200
+    assert response.json()["result"]["status"] == "Healthy"
+    retry = 0
+    while True:
+        try:
+            response = requests.get(f"{LOCAL_API_URL}/healthz?check_type=heavy", timeout=120)
+            break
+        except requests.exceptions.ReadTimeout as e:
+            retry += 1
+            if retry > 5:
+                raise Exception("Too many retries") from e
+            print("Timeout, retrying in 5 seconds")
+            time.sleep(5)
+    print(response.json())
+    assert response.status_code == 200
+    assert response.json()["result"]["status"] == "Healthy"

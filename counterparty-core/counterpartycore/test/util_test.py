@@ -32,7 +32,6 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, "..")))
 
 from counterpartycore import server  # noqa: E402
 from counterpartycore.lib import (  # noqa: E402
-    backend,
     blocks,
     check,
     composer,  # noqa
@@ -42,11 +41,12 @@ from counterpartycore.lib import (  # noqa: E402
     exceptions,
     gettxinfo,
     ledger,
+    messages,
     transaction,
     util,
 )
 from counterpartycore.lib.api.util import to_json  # noqa: E402
-from counterpartycore.lib.messages import fairminter, utxo  # noqa
+from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
     INTEGRATION_SCENARIOS,
@@ -119,6 +119,7 @@ def dump_database(db):
         "balances",
         "undolog",
         "undolog_block",
+        "config",
     ]
     for table in base_tables + blocks.TABLES:
         output = io.StringIO()
@@ -207,7 +208,7 @@ def insert_raw_transaction(raw_transaction, db):
     try:
         deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-            db, deserialized_tx, block_index
+            db, deserialized_tx, block_index, composing=True
         )
         utxos_info = gettxinfo.get_utxos_info(db, deserialized_tx)
         bindings = {
@@ -257,7 +258,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
 
     deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-        db, deserialized_tx, util.CURRENT_BLOCK_INDEX
+        db, deserialized_tx, util.CURRENT_BLOCK_INDEX, composing=True
     )
     utxos_info = gettxinfo.get_utxos_info(db, deserialized_tx)
     tx = {
@@ -556,7 +557,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
     return tx_hashes_addresses, tx_hashes_tx
 
 
-def search_raw_transactions(db, address, unconfirmed=False):
+def get_history(db, address, unconfirmed=False):
     cursor = db.cursor()
 
     try:
@@ -633,6 +634,8 @@ def run_scenario(scenario):
 
     db = database.get_connection(read_only=False)
     initialise_db(db)
+
+    ledger.AssetCache(db).init(db)
 
     raw_transactions = []
 
@@ -811,7 +814,15 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                 ]
             )
         )
-        or method == "get_tx_info_legacy"
+        or method
+        in [
+            "get_tx_info_legacy",
+            "select_utxo_destination",
+            "collect_sighash_flags",
+            "get_der_signature_sighash_flag",
+            "get_schnorr_signature_sighash_flag",
+            "check_signatures_sighash_flag",
+        ]
         or tx_name
         in [
             "script",
@@ -832,9 +843,13 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                 "versions.enhanced_send",
                 "versions.mpma",
                 "sweep",
+                "attach",
+                "detach",
             ]
             and method == "unpack"
         )
+        or (tx_name in ["detach"] and method == "validate")
+        or method == "get_rows"
     ):
         return tested_method(*inputs)
     else:
@@ -1029,7 +1044,7 @@ def reparse(testnet=True, checkpoint_count=5):
     """
 
     # mock the backend
-    backend.addrindexrs.get_oldest_tx = get_oldest_tx_mock
+    messages.dispenser.get_oldest_tx = get_oldest_tx_mock
 
     # create a new in-memory DB
     options = dict(COUNTERPARTYD_OPTIONS)

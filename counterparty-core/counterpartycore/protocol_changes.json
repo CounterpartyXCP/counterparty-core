@@ -618,6 +618,12 @@
             "fee_upper_threshold": 15,
             "base_fee": 1,
             "fee_sigmoid_k": 1
+          },
+          "101": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
           }
         }
       }
@@ -633,9 +639,43 @@
             "fee_upper_threshold": 15,
             "base_fee": 1,
             "fee_sigmoid_k": 1
+          },
+          "101": {
+            "fee_lower_threshold": 3,
+            "fee_upper_threshold": 15,
+            "base_fee": 1,
+            "fee_sigmoid_k": 1
           }
         }
       }
     }
+  },
+  "accept_only_one_valid_dispenser": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 6,
+    "minimum_version_revision": 0,
+    "block_index": 868300,
+    "testnet_block_index": 3195137
+  },
+  "spend_utxo_to_detach": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 6,
+    "minimum_version_revision": 2,
+    "block_index": 871900,
+    "testnet_block_index": 3195137
+  },
+  "partial_mint_to_reach_hard_cap": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 6,
+    "minimum_version_revision": 2,
+    "block_index": 871900,
+    "testnet_block_index": 3195137
+  },
+  "fix_get_issuances": {
+    "minimum_version_major": 10,
+    "minimum_version_minor": 6,
+    "minimum_version_revision": 2,
+    "block_index": 871900,
+    "testnet_block_index": 3195137
   }
 }

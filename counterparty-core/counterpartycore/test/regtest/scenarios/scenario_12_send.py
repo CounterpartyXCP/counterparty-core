@@ -1,5 +1,43 @@
 SCENARIO = [
     {
+        "title": "Send XCP skip validation",
+        "transaction": "send",
+        "source": "$ADDRESS_3",
+        "params": {
+            "asset": "XCP",
+            "quantity": int(10000 * 10e8),
+            "destination": "$ADDRESS_4",
+            "validate": False,
+        },
+        "set_variables": {
+            "SEND_SKIP_VALIDATION_HASH": "$TX_HASH",
+        },
+        "controls": [
+            {
+                "url": "blocks/$BLOCK_INDEX/events?event_name=ENHANCED_SEND,CREDIT,DEBIT",
+                "result": [
+                    {
+                        "event": "ENHANCED_SEND",
+                        "event_index": "$EVENT_INDEX_3",
+                        "params": {
+                            "asset": "XCP",
+                            "block_index": "$BLOCK_INDEX",
+                            "destination": "$ADDRESS_4",
+                            "memo": None,
+                            "quantity": 10000000000000,
+                            "source": "$ADDRESS_3",
+                            "status": "invalid: insufficient funds",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": "$TX_INDEX",
+                            "msg_index": 0,
+                        },
+                        "tx_hash": "$TX_HASH",
+                    },
+                ],
+            }
+        ],
+    },
+    {
         "title": "Send XCP",
         "transaction": "send",
         "source": "$ADDRESS_3",
@@ -28,6 +66,7 @@ SCENARIO = [
                             "status": "valid",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
+                            "msg_index": 0,
                         },
                         "tx_hash": "$TX_HASH",
                     },

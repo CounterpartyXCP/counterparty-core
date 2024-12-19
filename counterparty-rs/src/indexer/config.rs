@@ -1,5 +1,7 @@
+use std::fmt::Display;
+
 use pyo3::{exceptions::PyValueError, types::PyDict, FromPyObject, PyAny, PyErr, PyResult};
-use tracing::Level;
+use tracing::{level_filters::LevelFilter, Level};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -21,9 +23,9 @@ impl<'source> FromPyObject<'source> for Mode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LogLevel(Level);
+pub struct LogLevel(LevelFilter);
 
-impl From<LogLevel> for Level {
+impl From<LogLevel> for LevelFilter {
     fn from(log_level: LogLevel) -> Self {
         log_level.0
     }
@@ -33,13 +35,14 @@ impl<'source> FromPyObject<'source> for LogLevel {
     fn extract(obj: &'source PyAny) -> PyResult<Self> {
         let level_str: String = obj.extract()?;
         match level_str.trim().to_lowercase().as_str() {
-            "trace" => Ok(LogLevel(Level::TRACE)),
-            "debug" => Ok(LogLevel(Level::DEBUG)),
-            "info" => Ok(LogLevel(Level::INFO)),
-            "warn" => Ok(LogLevel(Level::WARN)),
-            "error" => Ok(LogLevel(Level::ERROR)),
+            "trace" => Ok(LogLevel(LevelFilter::TRACE)),
+            "debug" => Ok(LogLevel(LevelFilter::DEBUG)),
+            "info" => Ok(LogLevel(LevelFilter::INFO)),
+            "warn" => Ok(LogLevel(LevelFilter::WARN)),
+            "error" => Ok(LogLevel(LevelFilter::ERROR)),
+            "off" => Ok(LogLevel(LevelFilter::OFF)),
             _ => Err(PyErr::new::<PyValueError, _>(
-                "'log_level' must be one of 'trace', 'debug', 'info', 'warn', or 'error'",
+                "'log_level' must be one of 'trace', 'debug', 'info', 'warn', 'error' or 'off'",
             )),
         }
     }
@@ -49,6 +52,7 @@ impl<'source> FromPyObject<'source> for LogLevel {
 pub enum Network {
     Mainnet,
     Testnet,
+    Regtest,
 }
 
 impl<'source> FromPyObject<'source> for Network {
@@ -57,6 +61,7 @@ impl<'source> FromPyObject<'source> for Network {
         match network_str.trim().to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
             "testnet" => Ok(Network::Testnet),
+            "regtest" => Ok(Network::Regtest),
             _ => Err(PyErr::new::<PyValueError, _>(
                 "'network' must be either 'mainnet' or 'testnet'",
             )),
@@ -64,12 +69,14 @@ impl<'source> FromPyObject<'source> for Network {
     }
 }
 
-impl ToString for Network {
-    fn to_string(&self) -> String {
-        match self {
-            Network::Mainnet => "mainnet".to_string(),
-            Network::Testnet => "testnet".to_string(),
-        }
+impl Display for Network {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Network::Mainnet => "mainnet",
+            Network::Testnet => "testnet",
+            Network::Regtest => "regtest",
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -99,6 +106,13 @@ impl Heights {
                 correct_segwit_txids: 1666625,
                 multisig_addresses: 0,
             },
+            Network::Regtest => Heights {
+                segwit: 0,
+                p2sh_addresses: 0,
+                p2sh_dispensers: 0,
+                correct_segwit_txids: 0,
+                multisig_addresses: 0,
+            },
         }
     }
 }
@@ -120,6 +134,7 @@ pub struct Config {
     pub network: Network,
     pub heights: Heights,
     pub json_format: bool,
+    pub only_write_in_reorg_window: bool,
 }
 
 impl Config {
@@ -147,6 +162,7 @@ impl Config {
         match self.network {
             Network::Mainnet => "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
             Network::Testnet => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+            Network::Regtest => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
         }
         .into()
     }
@@ -193,10 +209,15 @@ impl<'source> FromPyObject<'source> for Config {
 
         let log_level = match dict.get_item("log_level") {
             Ok(Some(item)) => item.extract()?,
-            _ => LogLevel(Level::INFO),
+            _ => LogLevel(LevelFilter::INFO),
         };
 
         let json_format = match dict.get_item("json_format") {
+            Ok(Some(item)) => item.extract()?,
+            _ => false,
+        };
+
+        let only_write_in_reorg_window = match dict.get_item("only_write_in_reorg_window") {
             Ok(Some(item)) => item.extract()?,
             _ => false,
         };
@@ -218,6 +239,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => match network {
                 Network::Mainnet => vec![0x00],
                 Network::Testnet => vec![0x6F],
+                Network::Regtest => vec![0x6F],
             },
         };
 
@@ -226,6 +248,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => match network {
                 Network::Mainnet => vec![0x05],
                 Network::Testnet => vec![0xC4],
+                Network::Regtest => vec![0xC4],
             },
         };
 
@@ -245,6 +268,7 @@ impl<'source> FromPyObject<'source> for Config {
             network,
             heights,
             json_format,
+            only_write_in_reorg_window,
         })
     }
 }

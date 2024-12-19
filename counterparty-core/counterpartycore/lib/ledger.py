@@ -36,6 +36,20 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
 
     with get_cursor(db) as cursor:
         cursor.execute(query, list(record.values()))
+        if table_name in ["issuances", "destructions"] and not util.PARSING_MEMPOOL:
+            cursor.execute("SELECT last_insert_rowid() AS rowid")
+            inserted_rowid = cursor.fetchone()["rowid"]
+            new_record = cursor.execute(
+                f"SELECT * FROM {table_name} WHERE rowid = ?",  # noqa: S608
+                (inserted_rowid,),
+            ).fetchone()
+            if AssetCache in AssetCache._instances:
+                if table_name == "issuances":
+                    AssetCache(db).add_issuance(new_record)
+                elif table_name == "destructions":
+                    AssetCache(db).add_destroyed(new_record)
+            else:
+                AssetCache(db)  # initialization will add just created record to cache
 
     add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
 
@@ -267,6 +281,8 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         balance_address = None
         utxo = address
+        if not util.PARSING_MEMPOOL and balance == 0:
+            UTXOBalancesCache(db).remove_balance(utxo)
 
     if not no_balance:  # don't create balance if quantity is 0 and there is no balance
         bindings = {
@@ -349,6 +365,8 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     if util.enabled("utxo_support") and util.is_utxo_format(address):
         balance_address = None
         utxo = address
+        if not util.PARSING_MEMPOOL and balance > 0:
+            UTXOBalancesCache(db).add_balance(utxo)
 
     bindings = {
         "quantity": balance,
@@ -446,6 +464,31 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
     return balances[0]["quantity"]
 
 
+class UTXOBalancesCache(metaclass=util.SingletonMeta):
+    def __init__(self, db):
+        logger.debug("Initialising utxo balances cache...")
+        sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
+        cursor = db.cursor()
+        cursor.execute(sql)
+        utxo_balances = cursor.fetchall()
+        self.utxos_with_balance = {}
+        for utxo_balance in utxo_balances:
+            self.utxos_with_balance[utxo_balance["utxo"]] = True
+
+    def has_balance(self, utxo):
+        return utxo in self.utxos_with_balance
+
+    def add_balance(self, utxo):
+        self.utxos_with_balance[utxo] = True
+
+    def remove_balance(self, utxo):
+        self.utxos_with_balance.pop(utxo, None)
+
+
+def utxo_has_balance(db, utxo):
+    return UTXOBalancesCache(db).has_balance(utxo)
+
+
 def get_address_balances(db, address: str):
     """
     Returns the balances of an address
@@ -458,7 +501,7 @@ def get_address_balances(db, address: str):
         field_name = "utxo"
 
     query = f"""
-        SELECT {field_name}, asset, quantity, MAX(rowid)
+        SELECT {field_name}, asset, quantity, utxo_address, MAX(rowid)
         FROM balances
         WHERE {field_name} = ?
         GROUP BY {field_name}, asset
@@ -821,80 +864,15 @@ def get_asset_issuances_quantity(db, asset):
     return issuances[0]["issuances_count"]
 
 
-def get_asset_info(db, asset: str):
-    """
-    Returns the asset information
-    :param str asset: The asset to return (e.g. UNNEGOTIABLE)
-    """
-    asset_name = resolve_subasset_longname(db, asset)
-
-    # Defaults.
-    asset_info = {
-        "asset": asset_name,
-        "asset_longname": None,
-        "owner": None,
-        "divisible": True,
-        "locked": False,
-        "supply": 0,
-        "description": "",
-        "issuer": None,
-    }
-
-    if asset_name == config.BTC:
-        asset_info["supply"] = backend.bitcoind.get_btc_supply(normalize=False)
-        return asset_info
-
-    if asset_name == config.XCP:
-        asset_info["supply"] = xcp_supply(db)
-        asset_info["holder_count"] = get_asset_holder_count(db, asset)
-        return asset_info
-
-    asset_info["supply"] = asset_supply(db, asset_name)
-    asset_info["holder_count"] = get_asset_holder_count(db, asset)
-
-    cursor = db.cursor()
-    query = """
-        SELECT *, MIN(block_index) AS first_issuance_block_index,
-                  MAX(rowid) AS rowid,
-                  block_index AS last_issuance_block_index
-        FROM issuances
-        WHERE (status = ? AND asset = ?)
-        GROUP BY asset
-        ORDER BY rowid DESC
-    """
-    bindings = ("valid", asset)
-    cursor.execute(query, bindings)
-    issuance = cursor.fetchone()
-
-    if not issuance:
-        return None
-
-    asset_info = asset_info | {
-        "asset_longname": issuance["asset_longname"],
-        "owner": issuance["issuer"],
-        "divisible": bool(issuance["divisible"]),
-        "locked": bool(issuance["locked"]),
-        "description": issuance["description"],
-        "issuer": issuance["issuer"],
-        "first_issuance_block_index": issuance["first_issuance_block_index"],
-        "last_issuance_block_index": issuance["last_issuance_block_index"],
-    }
-
-    return asset_info
-
-
-def get_assets_last_issuance(db, asset_list):
-    cursor = db.cursor()
+def get_assets_last_issuance(state_db, asset_list):
+    cursor = state_db.cursor()
     fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
     query = f"""
-        SELECT {", ".join(fields)}, MAX(rowid) AS rowid
-        FROM issuances
+        SELECT {", ".join(fields)} FROM assets_info
         WHERE asset IN ({",".join(["?"] * len(asset_list))})
-        AND status = ?
-        GROUP BY asset
     """  # nosec B608  # noqa: S608
-    cursor.execute(query, asset_list + ["valid"])
-    issuances = cursor.fetchall()
+    cursor.execute(query, asset_list)
+    assets_info = cursor.fetchall()
 
     result = {
         "BTC": {
@@ -912,16 +890,22 @@ def get_assets_last_issuance(db, asset_list):
             "issuer": None,
         },
     }
-    for issuance in issuances:
-        del issuance["rowid"]
-        asset = issuance["asset"]
-        del issuance["asset"]
-        result[asset] = issuance
+    for asset_info in assets_info:
+        asset = asset_info["asset"]
+        del asset_info["asset"]
+        result[asset] = asset_info
     return result
 
 
 def get_issuances(
-    db, asset=None, status=None, locked=None, block_index=None, first=False, last=False
+    db,
+    asset=None,
+    status=None,
+    locked=None,
+    block_index=None,
+    first=False,
+    last=False,
+    current_block_index=None,
 ):
     cursor = db.cursor()
     cursor = db.cursor()
@@ -941,10 +925,14 @@ def get_issuances(
         bindings.append(block_index)
     # no sql injection here
     query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    if util.enabled("fix_get_issuances", current_block_index):
+        order_fields = "rowid, tx_index"
+    else:
+        order_fields = "tx_index"
     if first:
-        query += f""" ORDER BY tx_index ASC"""  # noqa: F541
+        query += f""" ORDER BY {order_fields} ASC"""  # noqa: F541
     elif last:
-        query += f""" ORDER BY tx_index DESC"""  # noqa: F541
+        query += f""" ORDER BY {order_fields} DESC"""  # noqa: F541
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -958,6 +946,113 @@ def get_assets_by_longname(db, asset_longname):
     bindings = (asset_longname,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
+
+
+def get_last_issuance_no_cache(db, asset):
+    last_issuance = get_asset(db, asset)
+    del last_issuance["supply"]
+    return last_issuance
+
+
+def asset_destroyed_total_no_cache(db, asset):
+    """Return asset total destroyed."""
+    cursor = db.cursor()
+    query = """
+        SELECT SUM(quantity) AS total
+        FROM destructions
+        WHERE (status = ? AND asset = ?)
+    """
+    bindings = ("valid", asset)
+    cursor.execute(query, bindings)
+    destroyed_total = list(cursor)[0]["total"] or 0
+    cursor.close()
+    return destroyed_total
+
+
+class AssetCache(metaclass=util.SingletonMeta):
+    def __init__(self, db) -> None:
+        self.assets = {}
+        self.assets_total_issued = {}
+        self.assets_total_destroyed = {}
+        self.init(db)
+
+    def init(self, db):
+        start = time.time()
+        logger.debug("Initialising asset cache...")
+        # asset info
+        sql = """
+            SELECT *, MAX(rowid) AS rowid FROM issuances
+            WHERE status = 'valid'
+            GROUP BY asset
+        """
+        cursor = db.cursor()
+        all_assets = cursor.execute(sql)
+        self.assets = {}
+        for asset in all_assets:
+            del asset["rowid"]
+            if asset["asset_longname"] is not None:
+                self.assets[asset["asset_longname"]] = asset
+            self.assets[asset["asset"]] = asset
+        duration = time.time() - start
+        # asset total issued
+        sql = """
+            SELECT SUM(quantity) AS total, asset
+            FROM issuances
+            WHERE status = 'valid'
+            GROUP BY asset
+        """
+        cursor.execute(sql)
+        all_counts = cursor.fetchall()
+        self.assets_total_issued = {}
+        for count in all_counts:
+            self.assets_total_issued[count["asset"]] = count["total"]
+        # asset total destroyed
+        sql = """
+            SELECT SUM(quantity) AS total, asset
+            FROM destructions
+            WHERE status = 'valid'
+            GROUP BY asset
+        """
+        cursor.execute(sql)
+        all_counts = cursor.fetchall()
+        self.assets_total_destroyed = {}
+        for count in all_counts:
+            self.assets_total_destroyed[count["asset"]] = count["total"]
+
+        logger.debug(f"Asset cache initialised in {duration:.2f} seconds")
+
+    def add_issuance(self, issuance):
+        if "rowid" in issuance:
+            del issuance["rowid"]
+        if issuance["asset_longname"] is not None:
+            self.assets[issuance["asset_longname"]] = issuance
+        self.assets[issuance["asset"]] = issuance
+        if issuance["quantity"] is not None:
+            if issuance["asset"] in self.assets_total_issued:
+                self.assets_total_issued[issuance["asset"]] += issuance["quantity"]
+            else:
+                self.assets_total_issued[issuance["asset"]] = issuance["quantity"]
+
+    def add_destroyed(self, destroyed):
+        if "rowid" in destroyed:
+            del destroyed["rowid"]
+        if destroyed["quantity"] is not None:
+            if destroyed["asset"] in self.assets_total_destroyed:
+                self.assets_total_destroyed[destroyed["asset"]] += destroyed["quantity"]
+            else:
+                self.assets_total_destroyed[destroyed["asset"]] = destroyed["quantity"]
+
+
+def asset_destroyed_total(db, asset):
+    return AssetCache(db).assets_total_destroyed.get(asset, 0)
+
+
+def get_last_issuance(db, asset):
+    return AssetCache(db).assets.get(asset)
+
+
+def asset_issued_total(db, asset):
+    return AssetCache(db).assets_total_issued.get(asset, 0)
 
 
 def get_asset(db, asset):
@@ -984,6 +1079,21 @@ def get_asset(db, asset):
     asset["supply"] = asset_supply(db, issuance["asset"])
     asset["locked"] = locked
     return asset
+
+
+def asset_issued_total_no_cache(db, asset):
+    """Return asset total issued."""
+    cursor = db.cursor()
+    query = """
+        SELECT SUM(quantity) AS total
+        FROM issuances
+        WHERE (status = ? AND asset = ?)
+    """
+    bindings = ("valid", asset)
+    cursor.execute(query, bindings)
+    issued_total = list(cursor)[0]["total"] or 0
+    cursor.close()
+    return issued_total
 
 
 #####################
@@ -1142,6 +1252,20 @@ def get_last_block(db):
     cursor.execute(query, (config.MEMPOOL_BLOCK_INDEX,))
     block = cursor.fetchone()
     return block
+
+
+def get_block_hash(db, block_index):
+    query = """
+        SELECT block_hash FROM blocks
+        WHERE block_index = ?
+    """
+    bindings = (block_index,)
+    cursor = db.cursor()
+    cursor.execute(query, bindings)
+    block = cursor.fetchone()
+    if block is None:
+        return None
+    return block["block_hash"]
 
 
 def get_blocks_time(db, block_indexes):
@@ -1955,11 +2079,11 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
     if not sums:
-        return None, None
-    return sums["quantity"] + sums["commission"], sums["paid_quantity"]
+        return 0, 0
+    return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
 
 
-def get_soft_caped_fairminters(db, block_index):
+def get_fairminters_by_soft_cap_deadline(db, block_index):
     cursor = db.cursor()
     query = """
         SELECT * FROM (
@@ -2044,7 +2168,7 @@ def _get_holders(
     return holders
 
 
-def holders(db, asset, exclude_empty_holders=False):
+def holders(db, asset, exclude_empty_holders=False, block_index=None):
     """Return holders of the asset."""
     holders = []
     cursor = db.cursor()
@@ -2070,7 +2194,9 @@ def holders(db, asset, exclude_empty_holders=False):
         SELECT *, rowid
         FROM balances
         WHERE asset = ? AND utxo IS NOT NULL
+        ORDER BY utxo
     """
+
     bindings = (asset,)
     cursor.execute(query, bindings)
     holders += _get_holders(
@@ -2360,36 +2486,6 @@ def destructions(db):
 
     cursor.close()
     return destructions
-
-
-def asset_issued_total(db, asset):
-    """Return asset total issued."""
-    cursor = db.cursor()
-    query = """
-        SELECT SUM(quantity) AS total
-        FROM issuances
-        WHERE (status = ? AND asset = ?)
-    """
-    bindings = ("valid", asset)
-    cursor.execute(query, bindings)
-    issued_total = list(cursor)[0]["total"] or 0
-    cursor.close()
-    return issued_total
-
-
-def asset_destroyed_total(db, asset):
-    """Return asset total destroyed."""
-    cursor = db.cursor()
-    query = """
-        SELECT SUM(quantity) AS total
-        FROM destructions
-        WHERE (status = ? AND asset = ?)
-    """
-    bindings = ("valid", asset)
-    cursor.execute(query, bindings)
-    destroyed_total = list(cursor)[0]["total"] or 0
-    cursor.close()
-    return destroyed_total
 
 
 def asset_supply(db, asset):

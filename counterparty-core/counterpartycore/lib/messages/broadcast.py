@@ -60,6 +60,7 @@ def initialise(db):
             "status_source_idx",
             "status_source_index_idx",
             "timestamp_idx",
+            "broadcasts_status_source_idx",
         ],
     )
 
@@ -82,7 +83,6 @@ def initialise(db):
         "broadcasts",
         [
             ["block_index"],
-            ["status", "source"],
             ["status", "source", "tx_index"],
             ["timestamp"],
         ],
@@ -133,14 +133,22 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     return problems
 
 
-def compose(db, source: str, timestamp: int, value: float, fee_fraction: float, text: str):
+def compose(
+    db,
+    source: str,
+    timestamp: int,
+    value: float,
+    fee_fraction: float,
+    text: str,
+    skip_validation: bool = False,
+):
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 
     problems = validate(
         db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX
     )
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     data = message_type.pack(ID)

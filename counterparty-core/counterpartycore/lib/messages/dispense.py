@@ -25,33 +25,55 @@ def get_must_give(db, dispenser, btc_amount, block_index=None):
     return int(floor(btc_amount / dispenser["satoshirate"]))
 
 
-def validate(db, _source, destination, quantity):
+def validate_compose(db, source, destination, quantity):
     problems = []
+
     if not util.enabled("enable_dispense_tx"):
         problems.append("dispense tx is not enabled")
+        return problems
+
+    if source == destination:
+        raise exceptions.ComposeError("source and destination must be different")
+
     dispensers = ledger.get_dispensers(db, address=destination)
     if len(dispensers) == 0:
         problems.append("address doesn't have any open dispenser")
+        return problems
+
     for dispenser in dispensers:
+        dispenser_problems = []
         if dispenser["status"] != dispenser_module.STATUS_OPEN:
-            problems.append("dispenser is not open")
+            dispenser_problems.append(f"dispenser for {dispenser['asset']} is not open")
         if dispenser["give_remaining"] == 0:
-            problems.append("dispenser is empty")
+            dispenser_problems.append(f"dispenser for {dispenser['asset']} is empty")
         else:
             try:
                 must_give = get_must_give(db, dispenser, quantity) * dispenser["give_quantity"]
                 logger.debug("must_give: %s", must_give)
                 if must_give > dispenser["give_remaining"]:
-                    problems.append("dispenser doesn't have enough asset to give")
+                    dispenser_problems.append(
+                        f"dispenser for {dispenser['asset']} doesn't have enough asset to give"
+                    )
+                elif must_give == 0:
+                    dispenser_problems.append(
+                        f"not enough BTC to trigger dispenser for {dispenser['asset']}"
+                    )
             except exceptions.NoPriceError as e:
-                problems.append(str(e))
+                dispenser_problems.append(str(e))
+        # no error if at least one dispenser is valid
+        if len(dispenser_problems) == 0 and util.enabled("accept_only_one_valid_dispenser"):
+            return []
+        problems += dispenser_problems
     return problems
 
 
-def compose(db, source, destination, quantity):
-    problems = validate(db, source, destination, quantity)
-    if problems:
+def compose(db, source, destination, quantity, skip_validation: bool = False):
+    problems = validate_compose(db, source, destination, quantity)
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
+
+    # not in validate() to not risk a protocol change
+
     # create data
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser_module.DISPENSE_ID)
     data += b"\x00"
@@ -179,16 +201,9 @@ def parse(db, tx):
                     "asset": dispenser["asset"],
                     "dispense_quantity": actually_given,
                     "dispenser_tx_hash": dispenser["tx_hash"],
+                    "btc_amount": next_out["btc_amount"],
                 }
-                ledger.insert_record(
-                    db,
-                    "dispenses",
-                    bindings,
-                    "DISPENSE",
-                    {
-                        "btc_amount": next_out["btc_amount"],
-                    },
-                )
+                ledger.insert_record(db, "dispenses", bindings, "DISPENSE")
                 dispense_index += 1
 
                 logger.info(

@@ -1,5 +1,23 @@
-Creating connection to `:memory:`...
 Initializing database...
+Fixing issuances `asset_longname` field
+SQLITE_LOG: statement aborts at 12: [SELECT value FROM config WHERE name = ?] database schema has changed (17) SQLITE_SCHEMA
+Fixing issuances `asset_longname` field
+SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_issuances] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_fairminters] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_issuances
+            BEFORE UPDATE ON issuances BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;] database s (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_fairminters
+            BEFORE UPDATE ON fairminters BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;] databa (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 27: [INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)] database schema has changed (17) SQLITE_SCHEMA
+Cleaning `transaction_count` table
+Initialising asset cache...
+Asset cache initialised in 0.00 seconds
+Initialising asset cache...
+Asset cache initialised in 0.00 seconds
 TX Construct - Transaction constructed.
 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc burned 62000000 BTC for 93000000000 XCP (6dc5b0a33d4d4297e0f5cc2d23ae307951d32aab2d86b7fa147b385219f3a597) [valid]
 TX Construct - Transaction constructed.
@@ -14,7 +32,6 @@ TX Construct - Transaction constructed.
 Issuance of 0 LOCKED by mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc [344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc] (valid)
 TX Construct - Transaction constructed.
 Initialising orders cache...
-Creating connection to `:memory:`...
 Order opened for 100000000 XCP at mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc (4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8) [open]
 TX Construct - Transaction constructed.
 Send DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns (6e91ae23de2035e3e28c3322712212333592a1f666bcff9dd91aec45d5ea2753) [valid]
@@ -136,9 +153,9 @@ TX Construct - Transaction constructed.
 TX Construct - Transaction constructed.
 20 A160361285792733729 minted for 200 XCP by mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns
 TX Construct - Transaction constructed.
-Attach XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (9d2243c84df0132061884dfce73f3b7c5262a1cde0d029de472a079f3a1c4883) [valid]
+Attach XCP from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0 (f75e8d65a22120cb2c16de7f11f6f0f3e19b5d5d49f5dae93fa9663dee8cda30) [valid]
 TX Construct - Transaction constructed.
-Attach DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1 (ff23dc6911d401e9868b8ac747d31febc2078f004eff7b56a8895c107ed8a73e) [valid]
+Attach DIVISIBLE from mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc to utxo: b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0 (6d82e72e296882c73768a230de12c85e871712d7f9a51448ecb2b4dde1abf881) [valid]
 TX Construct - Transaction constructed.
 Issuance of 1000 TESTDISP by munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b [01e52e3770a932827a4b4e5db193eef916fcf69bda1a7944298210a74f1633a1] (valid)
 TX Construct - Transaction constructed.
@@ -147,21 +164,4 @@ Order match cancelled XCP / BTC (74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef3
 Bet 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef canceled [expired]
 Bet Expiration 41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef
 Checking for conservation of assets.
-XCP has been conserved (6037.818479 XCP both issued and held)
-A160361285792733729 has been conserved (0.0000005 A160361285792733729 both issued and held)
-A95428956661682277 has been conserved (1.0 A95428956661682277 both issued and held)
-CALLABLE has been conserved (0.00001 CALLABLE both issued and held)
-DIVIDEND has been conserved (0.000001 DIVIDEND both issued and held)
-DIVISIBLE has been conserved (1000.0 DIVISIBLE both issued and held)
-FREEFAIRMIN has been conserved (0.0000001 FREEFAIRMIN both issued and held)
-LOCKED has been conserved (0.00001 LOCKED both issued and held)
-LOCKEDPREV has been conserved (0.00001 LOCKEDPREV both issued and held)
-MAXI has been conserved (92233720368.54775807 MAXI both issued and held)
-NODIVISIBLE has been conserved (1000 NODIVISIBLE both issued and held)
-PAIDFAIRMIN has been conserved (0.0 PAIDFAIRMIN both issued and held)
-PARENT has been conserved (1.0 PARENT both issued and held)
-PAYTOSCRIPT has been conserved (1000 PAYTOSCRIPT both issued and held)
-QAIDFAIRMIN has been conserved (0.0000002 QAIDFAIRMIN both issued and held)
-RAIDFAIRMIN has been conserved (0.0000002 RAIDFAIRMIN both issued and held)
-TESTDISP has been conserved (1000 TESTDISP both issued and held)
 All assets have been conserved.

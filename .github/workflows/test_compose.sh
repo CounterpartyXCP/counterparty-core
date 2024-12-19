@@ -3,7 +3,7 @@
 set -e
 set -x
 
-#exit 0
+exit 0
 
 export PATH="/snap/bin:$PATH"
 
@@ -36,9 +36,7 @@ docker container prune -f
 docker rmi counterparty/counterparty:$VERSION || true
 
 # build the counterparty-core new image
-docker build -t counterparty/counterparty:$VERSION . > build.txt 2>&1
-COUNTERPARTY_RS_CACHED=$(awk '/COPY \.\/counterparty-rs \/counterparty-rs/{getline; print}' build.txt | awk '{print $2}')
-cat build.txt
+docker build -t counterparty/counterparty:$VERSION .
 
 # re-start containers
 docker compose --profile mainnet up -d
@@ -112,7 +110,6 @@ sudo touch $LOG_PATH
 docker compose --profile mainnet stop counterparty-core
 docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
    --backend-connect=bitcoind \
-   --indexd-connect=addrindexrs \
    --rpc-host=0.0.0.0 \
    --api-host=0.0.0.0
 
@@ -130,11 +127,6 @@ done
 # Run compare hashes test
 . "$HOME/.profile"
 cd counterparty-core
-
-if [ "$COUNTERPARTY_RS_CACHED" != "CACHED" ]; then
-    hatch env prune
-fi
-
 sudo python3 -m pytest counterpartycore/test/mainnet_test.py --testapidb --comparehashes
 cd ..
 

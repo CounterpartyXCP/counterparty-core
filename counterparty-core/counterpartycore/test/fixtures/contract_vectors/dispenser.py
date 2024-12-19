@@ -28,7 +28,7 @@ DISPENSER_VECTOR = {
                 "in": (ADDR[0], "PARENT", 100, 1000000000, 100, 0, None, DP["burn_start"], None),
                 "out": (
                     None,
-                    ["address doesn't has enough balance of PARENT (100000000 < 1000000000)"],
+                    ["address doesn't have enough balance of PARENT (100000000 < 1000000000)"],
                 ),
             },
             {
@@ -51,7 +51,7 @@ DISPENSER_VECTOR = {
             },
             {
                 "in": (ADDR[0], "PARENT", 0, 0, 0, 10, None, DP["burn_start"], None),
-                "out": (None, ["address doesnt has an open dispenser for asset PARENT"]),
+                "out": (None, ["address doesn't have an open dispenser for asset PARENT"]),
             },
             {
                 "in": (
@@ -88,7 +88,7 @@ DISPENSER_VECTOR = {
                 "out": (
                     None,
                     [
-                        "address doesn't has enough balance of XCP (91674999880 < 9223372036854775808)",
+                        "address doesn't have enough balance of XCP (91674999900 < 9223372036854775808)",
                         "integer overflow",
                     ],
                 ),
@@ -299,11 +299,21 @@ DISPENSER_VECTOR = {
     "dispense": {
         "compose": [
             {
-                "in": (ADDR[0], ADDR[5], 10),
+                "in": (ADDR[0], ADDR[5], 100),
                 "out": (
                     ADDR[0],
-                    [(ADDR[5], 10)],
+                    [(ADDR[5], 100)],
                     b"\r\x00",
+                ),
+            },
+            {
+                "in": (ADDR[0], ADDR[5], 10),
+                "error": (
+                    exceptions.ComposeError,
+                    [
+                        "not enough BTC to trigger dispenser for XCP",
+                        "not enough BTC to trigger dispenser for TESTDISP",
+                    ],
                 ),
             },
             {
@@ -311,8 +321,8 @@ DISPENSER_VECTOR = {
                 "error": (
                     exceptions.ComposeError,
                     [
-                        "dispenser doesn't have enough asset to give",
-                        "dispenser doesn't have enough asset to give",
+                        "dispenser for XCP doesn't have enough asset to give",
+                        "dispenser for TESTDISP doesn't have enough asset to give",
                     ],
                 ),
             },

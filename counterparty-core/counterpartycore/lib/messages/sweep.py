@@ -111,7 +111,9 @@ def validate(db, source, destination, flags, memo, block_index):
     return problems, total_fee
 
 
-def compose(db, source: str, destination: str, flags: int, memo: str):
+def compose(
+    db, source: str, destination: str, flags: int, memo: str, skip_validation: bool = False
+):
     if memo is None:
         memo = b""
     elif flags & FLAG_BINARY_MEMO:
@@ -122,7 +124,7 @@ def compose(db, source: str, destination: str, flags: int, memo: str):
 
     block_index = util.CURRENT_BLOCK_INDEX
     problems, total_fee = validate(db, source, destination, flags, memo, block_index)
-    if problems:
+    if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     short_address_bytes = address.pack(destination)
@@ -258,7 +260,11 @@ def parse(db, tx, message):
 
             for next_asset_issued in assets_issued:
                 issuances = ledger.get_issuances(
-                    db, asset=next_asset_issued["asset"], status="valid", first=True
+                    db,
+                    asset=next_asset_issued["asset"],
+                    status="valid",
+                    first=True,
+                    current_block_index=tx["block_index"],
                 )
                 if len(issuances) > 0:
                     last_issuance = issuances[-1]
@@ -283,14 +289,9 @@ def parse(db, tx, message):
                             "status": status,
                             "asset_longname": last_issuance["asset_longname"],
                             "reset": False,
+                            "asset_events": "transfer",
                         }
-                        ledger.insert_record(
-                            db,
-                            "issuances",
-                            bindings,
-                            "ASSET_TRANSFER",
-                            {"asset_events": "transfer"},
-                        )
+                        ledger.insert_record(db, "issuances", bindings, "ASSET_TRANSFER")
                         sweep_pos += 1
 
         bindings = {

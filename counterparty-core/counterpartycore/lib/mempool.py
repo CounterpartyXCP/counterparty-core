@@ -1,7 +1,9 @@
+import json
 import logging
 import time
 
-from counterpartycore.lib import backend, blocks, config, deserialize, exceptions, ledger, util
+from counterpartycore.lib import blocks, config, deserialize, exceptions, ledger, util
+from counterpartycore.lib.api.api_watcher import EVENTS_ADDRESS_FIELDS
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -9,10 +11,11 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     util.PARSING_MEMPOOL = True
 
-    logger.debug(f"Parsing {len(raw_tx_list)} raw transactions from mempool...")
+    logger.trace(f"Parsing {len(raw_tx_list)} raw transaction(s) from the mempool...")
     now = time.time()
     transaction_events = []
     cursor = db.cursor()
+    not_supported_txs = []
     try:
         with db:
             # insert fake block
@@ -44,6 +47,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             for raw_tx in raw_tx_list:
                 decoded_tx = deserialize.deserialize_tx(raw_tx, use_txid=True)
                 existing_tx = ledger.get_transaction(db, decoded_tx["tx_hash"])
+                not_supported_txs.append(decoded_tx["tx_hash"])
                 if existing_tx:
                     logger.trace(f"Transaction {decoded_tx['tx_hash']} already in the database")
                     continue
@@ -76,20 +80,37 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             # save the events in memory
             transaction_events = cursor.fetchall()
             # we raise an exception to rollback the transaction
-            raise exceptions.MempoolError("Mempool transaction parsed successfully")
+            raise exceptions.MempoolError("Mempool transaction parsed successfully.")
     except exceptions.MempoolError:
         # save events in the mempool table
         for event in transaction_events:
+            if event["tx_hash"] in not_supported_txs:
+                not_supported_txs.remove(event["tx_hash"])
+
             if timestamps:
                 event["timestamp"] = timestamps.get(event["tx_hash"], now)
             else:
                 event["timestamp"] = now
+
+            # collect addresses
+            addresses = []
+            event_bindings = json.loads(event["bindings"])
+            if event["event"] in EVENTS_ADDRESS_FIELDS:
+                for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
+                    if field in event_bindings and event_bindings[field] is not None:
+                        addresses.append(event_bindings[field])
+            addresses = list(set(addresses))
+            event["addresses"] = " ".join(addresses)
+
             cursor.execute(
-                """INSERT INTO mempool VALUES(:tx_hash, :command, :category, :bindings, :timestamp, :event)""",
+                """INSERT INTO mempool VALUES(
+                    :tx_hash, :command, :category, :bindings, :timestamp, :event, :addresses
+                )""",
                 event,
             )
-    logger.trace("Mempool transaction parsed successfully")
+    logger.trace("Mempool transaction parsed successfully.")
     util.PARSING_MEMPOOL = False
+    return not_supported_txs
 
 
 def clean_transaction_events(db, tx_hash):
@@ -107,27 +128,3 @@ def clean_mempool(db):
         tx = ledger.get_transaction(db, event["tx_hash"])
         if tx:
             clean_transaction_events(db, event["tx_hash"])
-
-
-def parse_raw_mempool(db):
-    logger.debug("Parsing raw mempool...")
-    raw_mempool = backend.bitcoind.getrawmempool(verbose=True)
-    raw_tx_list = []
-    timestamps = {}
-    cursor = db.cursor()
-    for txid, tx_info in raw_mempool.items():
-        existing_tx_in_mempool = cursor.execute(
-            "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (txid,)
-        ).fetchone()
-        if existing_tx_in_mempool:
-            continue
-        try:
-            raw_tx = backend.bitcoind.getrawtransaction(txid)
-            raw_tx_list.append(raw_tx)
-            timestamps[txid] = tx_info["time"]
-        except exceptions.BitcoindRPCError as e:
-            if "No such mempool or blockchain transaction" in str(e):
-                pass
-            else:
-                raise e
-    parse_mempool_transactions(db, raw_tx_list, timestamps)

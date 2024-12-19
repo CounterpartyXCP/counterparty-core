@@ -2,12 +2,14 @@
 
 import argparse
 import logging
+import os
 from urllib.parse import quote_plus as urlencode
 
 from termcolor import cprint
 
 from counterpartycore import server
-from counterpartycore.lib import config, sentry, setup
+from counterpartycore.lib import bootstrap, config, sentry, setup
+from counterpartycore.lib.api import dbbuilder
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -133,7 +135,7 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--check-asset-conservation",),
+        ("--skip-asset-conservation-check",),
         {
             "action": "store_true",
             "default": False,
@@ -147,14 +149,9 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--indexd-connect",),
-        {"default": "localhost", "help": "the hostname or IP of the indexd server"},
-    ],
-    [("--indexd-port",), {"type": int, "help": "the indexd server port to connect to"}],
-    [
         ("--rpc-host",),
         {
-            "default": "localhost",
+            "default": "127.0.0.1",
             "help": "the IP of the interface to bind to for providing JSON-RPC API access (0.0.0.0 for all interfaces)",
         },
     ],
@@ -191,7 +188,7 @@ CONFIG_ARGS = [
     [
         ("--api-host",),
         {
-            "default": "localhost",
+            "default": "127.0.0.1",
             "help": "the IP of the interface to bind to for providing  API access (0.0.0.0 for all interfaces)",
         },
     ],
@@ -237,7 +234,8 @@ CONFIG_ARGS = [
         ("--no-confirm",),
         {"action": "store_true", "default": False, "help": "don't ask for confirmation"},
     ],
-    [("--database-file",), {"default": None, "help": "the path to the SQLite3 database file"}],
+    [("--data-dir",), {"default": None, "help": "the path to the data directory"}],
+    [("--cache-dir",), {"default": None, "help": "the path to the cache directory"}],
     [
         ("--log-file",),
         {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},
@@ -254,6 +252,25 @@ CONFIG_ARGS = [
     [
         ("--no-log-files",),
         {"action": "store_true", "default": False, "help": "Don't write log files"},
+    ],
+    [
+        ("--max-log-file-size",),
+        {"type": int, "default": 40 * 1024 * 1024, "help": "maximum size of log files in bytes"},
+    ],
+    [
+        ("--max-log-file-rotations",),
+        {"type": int, "default": 20, "help": "maximum number of log file rotations"},
+    ],
+    [
+        ("--log-exclude-filters",),
+        {"nargs": "*", "help": "excludes messages whose topic starts with the provided values"},
+    ],
+    [
+        ("--log-include-filters",),
+        {
+            "nargs": "*",
+            "help": "includes only messages whose topic starts with the provided values",
+        },
     ],
     [
         ("--utxo-locks-max-addresses",),
@@ -298,6 +315,7 @@ CONFIG_ARGS = [
         ("--db-connection-pool-size",),
         {
             "type": int,
+            "default": 20,
             "help": "size of the database connection pool",
         },
     ],
@@ -307,6 +325,45 @@ CONFIG_ARGS = [
             "action": "store_true",
             "default": False,
             "help": "show logs in JSON format",
+        },
+    ],
+    [
+        ("--wsgi-server",),
+        {
+            "default": "waitress",
+            "help": "WSGI server to use (waitress, gunicorn or werkzeug)",
+            "choices": ["waitress", "gunicorn", "werkzeug"],
+        },
+    ],
+    [
+        ("--waitress-threads",),
+        {
+            "type": int,
+            "default": 10,
+            "help": "number of threads for the Waitress WSGI server (if enabled)",
+        },
+    ],
+    [
+        ("--gunicorn-workers",),
+        {
+            "type": int,
+            "default": 2 * os.cpu_count() + 1,
+            "help": "number of worker processes for gunicorn (if enabled)",
+        },
+    ],
+    [
+        ("--gunicorn-threads-per-worker",),
+        {
+            "type": int,
+            "default": 2,
+            "help": "number of threads per worker for the Gunicorn WSGI server (if enabled)",
+        },
+    ],
+    [("--bootstrap-url",), {"type": str, "help": "the URL of the bootstrap snapshot to use"}],
+    [
+        ("--electrs-url",),
+        {
+            "help": "the URL of the Electrs server",
         },
     ],
 ]
@@ -321,14 +378,13 @@ def welcome_message(action, server_configfile):
     cprint(f"Network: {config.NETWORK_NAME}", "light_grey")
     cprint(f"Configuration File: {server_configfile}", "light_grey")
     cprint(f"Counterparty Database: {config.DATABASE}", "light_grey")
-    cprint(f"Counterparty API Database: {config.API_DATABASE}", "light_grey")
+    cprint(f"Counterparty State Database: {config.STATE_DATABASE}", "light_grey")
     cprint(f"Rust Fetcher Database: {config.FETCHER_DB}", "light_grey")
 
     if config.VERBOSE:
         pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
         cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
         cprint(f"Bitcoin Core: {cleaned_backend_url}", "light_grey")
-        cprint(f"AddrIndexRs: {config.INDEXD_URL}", "light_grey")
 
         api_url = "http://"
         if config.API_USER and config.API_PASSWORD:
@@ -387,7 +443,7 @@ def main():
     parser_server.add_argument("--config-file", help="the path to the configuration file")
     parser_server.add_argument(
         "--catch-up",
-        choices=["normal", "bootstrap"],
+        choices=["normal", "bootstrap", "bootstrap-always"],
         default="normal",
         help="Catch up mode (default: normal)",
     )
@@ -415,9 +471,6 @@ def main():
     parser_bootstrap = subparsers.add_parser(
         "bootstrap", help="bootstrap database with hosted snapshot"
     )
-    parser_bootstrap.add_argument(
-        "--bootstrap-url", help="the URL of the bootstrap snapshot to use"
-    )
     setup.add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
 
     parser_checkdb = subparsers.add_parser("check-db", help="do an integrity check on the database")
@@ -428,12 +481,21 @@ def main():
     )
     setup.add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
 
+    parser_show_config = subparsers.add_parser(
+        "build-state-db", help="Build the API database from the ledger database"
+    )
+    setup.add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
+
     args = parser.parse_args()
 
     # Help message
     if args.help:
         parser.print_help()
         exit(0)
+
+    if args.action is None:
+        parser.print_help()
+        exit(1)
 
     # Configuration and logging
     server.initialise_log_and_config(args)
@@ -442,7 +504,7 @@ def main():
 
     # Bootstrapping
     if args.action == "bootstrap":
-        server.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
+        bootstrap.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
 
     # PARSING
     elif args.action == "reparse":
@@ -462,5 +524,9 @@ def main():
 
     elif args.action == "check-db":
         server.check_database()
+
+    elif args.action == "build-state-db":
+        dbbuilder.build_state_db()
+
     else:
         parser.print_help()
