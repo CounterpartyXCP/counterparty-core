@@ -32,14 +32,23 @@ def pubkey_from_tx(tx, pubkeyhash):
                     pass
         elif "is_coinbase" not in vin or not vin["is_coinbase"]:
             asm = vin["scriptsig_asm"].split(" ")
-            if len(asm) >= 2:
-                # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+            if len(asm) == 4:  # p2pkh
+                # catch unhexlify errs for when asm[2] isn't a pubkey (eg; for P2SH)
                 try:
-                    pubkey = asm[1]
+                    pubkey = asm[3]
                     if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
                         return pubkey
                 except binascii.Error:
                     pass
+    for vout in tx["vout"]:
+        asm = vout["scriptpubkey_asm"].split(" ")
+        if len(asm) == 3:  # p2pk
+            try:
+                pubkey = asm[1]
+                if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                    return pubkey
+            except binascii.Error:
+                pass
     return None
 
 
@@ -55,9 +64,8 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
                 return pubkey
 
     # Search blockchain.
-    raw_transactions = backend.electrs.get_history(pubkeyhash)
-    for tx_id in raw_transactions:
-        tx = raw_transactions[tx_id]
+    transactions = backend.electrs.get_history(pubkeyhash)
+    for tx in transactions:
         pubkey = pubkey_from_tx(tx, pubkeyhash)
         if pubkey:
             return pubkey
