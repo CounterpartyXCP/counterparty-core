@@ -1035,7 +1035,7 @@ def reparse(testnet=True, checkpoint_count=5):
     """
 
     # mock the backend
-    messages.dispensers.get_oldest_tx = get_oldest_tx_mock
+    messages.dispenser.get_oldest_tx = get_oldest_tx_mock
 
     # create a new in-memory DB
     options = dict(COUNTERPARTYD_OPTIONS)
