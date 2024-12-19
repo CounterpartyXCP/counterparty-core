@@ -111,7 +111,7 @@ COMPOSE_COMMONS_ARGS = {
     "inputs_set": (
         str,
         None,
-        "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created",
+        "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>`.",
     ),
     "return_psbt": (
         bool,

@@ -5,11 +5,11 @@ from counterpartycore.lib import config, exceptions
 
 def electr_query(url):
     if config.ELECTRS_URL is None:
-        raise exceptions.ElectrError("Electrs server not configured")
+        raise exceptions.ElectrsError("Electrs server not configured")
     try:
         return requests.get(f"{config.ELECTRS_URL}/{url}", timeout=10).json()
     except requests.exceptions.RequestException as e:
-        raise exceptions.ElectrError(f"Electrs error: {e}") from e
+        raise exceptions.ElectrsError(f"Electrs error: {e}") from e
 
 
 def get_utxos(address, unconfirmed: bool = False, unspent_tx_hash: str = None):
@@ -26,6 +26,7 @@ def get_utxos(address, unconfirmed: bool = False, unspent_tx_hash: str = None):
             continue
         if unspent_tx_hash and utxo["txid"] != unspent_tx_hash:
             continue
+        utxo["amount"] = utxo["value"] / 10**8
         result.append(utxo)
     return result
 
@@ -35,7 +36,7 @@ def get_history(address: str, unconfirmed: bool = False):
     Returns all transactions involving a given address
     :param address: The address to search for (e.g. $ADDRESS_3)
     """
-    tx_list = electr_query(f"address/{address}/history")
+    tx_list = electr_query(f"address/{address}/txs")
     result = []
     for tx in tx_list:
         if tx["status"]["confirmed"] or unconfirmed:
