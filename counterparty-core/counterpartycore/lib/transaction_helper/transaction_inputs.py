@@ -280,16 +280,11 @@ def construct_coin_selection(
         else:
             raise exceptions.ComposeError(f"invalid inputs_set: {inputs_set}")
     else:
-        if unspent_tx_hash is not None:
-            unspent = backend.addrindexrs.get_unspent_txouts(
-                source,
-                unconfirmed=allow_unconfirmed_inputs,
-                unspent_tx_hash=unspent_tx_hash,
-            )
-        else:
-            unspent = backend.addrindexrs.get_unspent_txouts(
-                source, unconfirmed=allow_unconfirmed_inputs
-            )
+        unspent = backend.electrs.get_utxos(
+            source,
+            unconfirmed=allow_unconfirmed_inputs,
+            unspent_tx_hash=unspent_tx_hash,
+        )
         logger.trace(f"TX Construct - Unspent UTXOs: {[print_coin(coin) for coin in unspent]}")
         if len(unspent) == 0 and force_utxo is None:
             raise exceptions.BalanceError(
@@ -430,7 +425,6 @@ def construct_coin_selection(
         UTXOLocks().lock_utxos(source, inputs)
 
     # ensure inputs have scriptPubKey
-    #   this is not provided by indexd
     inputs = script.ensure_script_pub_key_for_inputs(inputs)
 
     return inputs, change_quantity, btc_in, final_fee

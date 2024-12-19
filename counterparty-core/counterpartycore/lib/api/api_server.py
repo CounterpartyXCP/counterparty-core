@@ -358,13 +358,18 @@ def handle_route(**kwargs):
         exceptions.UnpackError,
         CBitcoinAddressError,
         script.AddressError,
+        exceptions.ElectrsError,
     ) as e:
+        import traceback
+
+        print(traceback.format_exc())
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        # import traceback
-        # print(traceback.format_exc())
+        import traceback
+
+        print(traceback.format_exc())
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )

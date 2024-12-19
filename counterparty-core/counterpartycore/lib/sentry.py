@@ -20,7 +20,6 @@ def before_send(event, _hint):
     event["tags"] = event.get("tags", [])
 
     event["tags"].append(["core_version", data["version"]])
-    event["tags"].append(["addrindexrs_version", data["addrindexrs_version"]])
     event["tags"].append(["docker", data["dockerized"]])
     event["tags"].append(["network", data["network"]])
     event["tags"].append(["force_enabled", data["force_enabled"]])

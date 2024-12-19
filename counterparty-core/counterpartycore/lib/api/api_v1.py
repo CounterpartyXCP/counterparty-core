@@ -53,7 +53,6 @@ from counterpartycore.lib.messages import (
 )
 from counterpartycore.lib.messages.versions import enhanced_send  # noqa: E402
 from counterpartycore.lib.telemetry.util import (  # noqa: E402
-    get_addrindexrs_version,
     get_uptime,
     is_docker,
     is_force_enabled,
@@ -132,7 +131,7 @@ def check_backend_state():
     # check backend index
     blocks_behind = backend.bitcoind.get_blocks_behind()
     if blocks_behind > 5:
-        raise BackendError(f"Indexd is running {blocks_behind} blocks behind.")
+        raise BackendError(f"Bitcoind is running {blocks_behind} blocks behind.")
 
     logger.debug("API Status Poller - Backend state check passed.")
 
@@ -820,22 +819,20 @@ class APIServer(threading.Thread):
                     last_message = None
 
             try:
-                indexd_blocks_behind = backend.bitcoind.get_blocks_behind()
+                bitcoind_blocks_behind = backend.bitcoind.get_blocks_behind()
             except:  # noqa: E722
-                indexd_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
-            indexd_caught_up = indexd_blocks_behind <= 1
+                bitcoind_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
+            bitcoind_caught_up = bitcoind_blocks_behind <= 1
 
-            server_ready = caught_up and indexd_caught_up
-
-            addrindexrs_version = get_addrindexrs_version().split(".")
+            server_ready = caught_up and bitcoind_caught_up
 
             return {
                 "server_ready": server_ready,
                 "db_caught_up": caught_up,
                 "bitcoin_block_count": latest_block_index,
                 "last_block": last_block,
-                "indexd_caught_up": indexd_caught_up,
-                "indexd_blocks_behind": indexd_blocks_behind,
+                "bitcoind_caught_up": bitcoind_caught_up,
+                "bitcoind_blocks_behind": bitcoind_blocks_behind,
                 "last_message_index": (last_message["message_index"] if last_message else -1),
                 "api_limit_rows": config.API_LIMIT_ROWS,
                 "running_testnet": config.TESTNET,
@@ -844,9 +841,6 @@ class APIServer(threading.Thread):
                 "version_major": config.VERSION_MAJOR,
                 "version_minor": config.VERSION_MINOR,
                 "version_revision": config.VERSION_REVISION,
-                "addrindexrs_version_major": int(addrindexrs_version[0]),
-                "addrindexrs_version_minor": int(addrindexrs_version[1]),
-                "addrindexrs_version_revision": int(addrindexrs_version[2]),
                 "uptime": int(get_uptime()),
                 "dockerized": is_docker(),
                 "force_enabled": is_force_enabled(),
@@ -925,17 +919,13 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-            return backend.addrindexrs.search_raw_transactions(
+            return backend.electrs.get_history(
                 address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes
             )
 
         @dispatcher.add_method
-        def get_oldest_tx(address):
-            return backend.addrindexrs.get_oldest_tx(address, block_index=util.CURRENT_BLOCK_INDEX)
-
-        @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
-            results = backend.addrindexrs.get_unspent_txouts(
+            results = backend.electrs.get_utxos(
                 address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash
             )
             if order_by is None:
@@ -953,9 +943,9 @@ class APIServer(threading.Thread):
             return backend.bitcoind.getrawtransaction(tx_hash, verbose=verbose)
 
         @dispatcher.add_method
-        def getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
-            return backend.addrindexrs.getrawtransaction_batch(
-                txhash_list, verbose=verbose, skip_missing=skip_missing
+        def getrawtransaction_batch(txhash_list, verbose=False):
+            return backend.bitcoind.getrawtransaction_batch(
+                txhash_list, verbose=verbose, return_dict=True
             )
 
         @dispatcher.add_method

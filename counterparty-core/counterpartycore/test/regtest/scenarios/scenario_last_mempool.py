@@ -11,6 +11,7 @@ SCENARIO = [
             "get_quantity": 1000,
             "expiration": 21,
             "fee_required": 0,
+            "exclude_utxos_with_balances": True,
         },
     },
     # order match for dredd test
@@ -25,6 +26,7 @@ SCENARIO = [
             "get_quantity": 1000,
             "expiration": 21,
             "fee_required": 0,
+            "exclude_utxos_with_balances": True,
         },
     },
     # fairmint for dredd test
@@ -35,6 +37,7 @@ SCENARIO = [
         "params": {
             "asset": "OPENFAIR",
             "max_mint_per_tx": 10,
+            "exclude_utxos_with_balances": True,
         },
     },
     {
@@ -46,6 +49,7 @@ SCENARIO = [
             "quantity": 15000,
             "destination": "$ADDRESS_7",
             "exact_fee": 0,
+            "exclude_utxos_with_balances": True,
         },
     },
     {
@@ -107,6 +111,7 @@ SCENARIO = [
             "asset": "XCP",
             "quantity": 10000,
             "destination": "$ADDRESS_3",
+            "exclude_utxos_with_balances": True,
         },
         "set_variables": {
             "SEND_MEMPOOL_1_HASH": "$TX_HASH",

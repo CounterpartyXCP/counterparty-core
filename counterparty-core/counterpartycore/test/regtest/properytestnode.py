@@ -34,8 +34,6 @@ class PropertyTestNode:
             regtest_node_thread.stop()
 
     def send_transaction(self, source, transaction_name, params):
-        if "inputs_set" not in params and ":" not in source:
-            params["inputs_set"] = self.node.get_inputs_set(source)
         tx_hash, _block_hash, _block_time, _data = self.node.send_transaction(
             source,
             transaction_name,

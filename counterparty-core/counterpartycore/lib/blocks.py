@@ -1272,7 +1272,14 @@ def parse_new_block(db, decoded_block, tx_index=None):
     if tx_index is None:
         tx_index = get_next_tx_index(db)
 
-    if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+    if util.CURRENT_BLOCK_INDEX == config.BLOCK_FIRST:
+        previous_block = {
+            "ledger_hash": None,
+            "txlist_hash": None,
+            "messages_hash": None,
+            "block_index": config.BLOCK_FIRST - 1,
+        }
+    else:
         # get previous block
         previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
 
@@ -1294,19 +1301,20 @@ def parse_new_block(db, decoded_block, tx_index=None):
             logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
             # rollback to the previous block
             rollback(db, block_index=previous_block_index + 1)
+            previous_block = ledger.get_block(db, previous_block_index)
             util.CURRENT_BLOCK_INDEX = previous_block_index + 1
             tx_index = get_next_tx_index(db)
-    else:
-        previous_block = {
-            "ledger_hash": None,
-            "txlist_hash": None,
-            "messages_hash": None,
-        }
 
     if "height" not in decoded_block:
         decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
     else:
         decoded_block["block_index"] = decoded_block["height"]
+
+    # Sanity checks
+    if decoded_block["block_index"] != config.BLOCK_FIRST:
+        assert previous_block["ledger_hash"] is not None
+        assert previous_block["txlist_hash"] is not None
+    assert previous_block["block_index"] == decoded_block["block_index"] - 1
 
     with db:  # ensure all the block or nothing
         logger.info(f"Block {decoded_block['block_index']}", extra={"bold": True})
