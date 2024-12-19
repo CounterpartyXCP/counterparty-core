@@ -922,7 +922,11 @@ def check_outputs(
             try:
                 if isinstance(outputs, (TxOutput, TxInput)):
                     assert outputs.to_bytes() == test_outputs.to_bytes()
-                elif isinstance(outputs, list) and isinstance(outputs[0], (TxOutput, TxInput)):
+                elif (
+                    isinstance(outputs, list)
+                    and len(outputs) > 0
+                    and isinstance(outputs[0], (TxOutput, TxInput))
+                ):
                     for i, output in enumerate(outputs):
                         assert output.to_bytes() == test_outputs[i].to_bytes()
                 else:

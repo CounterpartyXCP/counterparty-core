@@ -675,8 +675,6 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
     )
 
-    monkeypatch.setattr("counterpartycore.lib.gas.get_transaction_fee", get_transaction_fee)
-
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.get_utxo_value", mocked_get_utxo_value
     )
