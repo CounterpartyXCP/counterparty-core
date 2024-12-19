@@ -280,7 +280,7 @@ def construct_coin_selection(
         else:
             raise exceptions.ComposeError(f"invalid inputs_set: {inputs_set}")
     else:
-        unspent = backend.electr.get_utxos(
+        unspent = backend.electrs.get_utxos(
             source,
             unconfirmed=allow_unconfirmed_inputs,
             unspent_tx_hash=unspent_tx_hash,

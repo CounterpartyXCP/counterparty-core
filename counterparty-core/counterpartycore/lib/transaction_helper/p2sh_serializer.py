@@ -325,7 +325,7 @@ def select_any_coin_from_source(
     """Get the first (biggest) input from the source address"""
 
     # Array of UTXOs, as retrieved by listunspent function from bitcoind
-    unspent = backend.electr.get_utxos(source, unconfirmed=allow_unconfirmed_inputs)
+    unspent = backend.electrs.get_utxos(source, unconfirmed=allow_unconfirmed_inputs)
 
     unspent = UTXOLocks().filter_unspents(source, unspent, exclude_utxos)
 

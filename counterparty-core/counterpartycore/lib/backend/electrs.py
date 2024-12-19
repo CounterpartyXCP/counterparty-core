@@ -4,12 +4,12 @@ from counterpartycore.lib import config, exceptions
 
 
 def electr_query(url):
-    if config.ELECTR_URL is None:
-        raise exceptions.ElectrError("Electr server not configured")
+    if config.ELECTRS_URL is None:
+        raise exceptions.ElectrError("Electrs server not configured")
     try:
-        return requests.get(f"{config.ELECTR_URL}/{url}", timeout=10).json()
+        return requests.get(f"{config.ELECTRS_URL}/{url}", timeout=10).json()
     except requests.exceptions.RequestException as e:
-        raise exceptions.ElectrError(f"Electr error: {e}") from e
+        raise exceptions.ElectrError(f"Electrs error: {e}") from e
 
 
 def get_utxos(address, unconfirmed: bool = False, unspent_tx_hash: str = None):

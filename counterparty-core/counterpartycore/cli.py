@@ -361,9 +361,9 @@ CONFIG_ARGS = [
     ],
     [("--bootstrap-url",), {"type": str, "help": "the URL of the bootstrap snapshot to use"}],
     [
-        ("--electr-url",),
+        ("--electrs-url",),
         {
-            "help": "the URL of the Electrum server",
+            "help": "the URL of the Electrs server",
         },
     ],
 ]

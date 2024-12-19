@@ -358,7 +358,7 @@ def handle_route(**kwargs):
         exceptions.UnpackError,
         CBitcoinAddressError,
         script.AddressError,
-        exceptions.ElectrError,
+        exceptions.ElectrsError,
     ) as e:
         import traceback
 

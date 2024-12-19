@@ -176,7 +176,7 @@ def initialise_config(
     gunicorn_threads_per_worker=None,
     database_file=None,  # for tests
     action=None,
-    electr_url=None,
+    electrs_url=None,
 ):
     # log config already initialized
 
@@ -585,15 +585,15 @@ def initialise_config(
     config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
     config.GUNICORN_WORKERS = gunicorn_workers
 
-    if electr_url:
-        config.ELECTR_URL = electr_url
+    if electrs_url:
+        config.ELECTRS_URL = electrs_url
     else:
         if config.NETWORK_NAME == "testnet":
-            config.ELECTR_URL = config.DEFAULT_ELECTR_URL_TESTNET
+            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET
         elif config.NETWORK_NAME == "mainnet":
-            config.ELECTR_URL = config.DEFAULT_ELECTR_URL_MAINNET
+            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_MAINNET
         else:
-            config.ELECTR_URL = None
+            config.ELECTRS_URL = None
 
 
 def initialise_log_and_config(args, api=False):
@@ -640,7 +640,7 @@ def initialise_log_and_config(args, api=False):
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
         "action": args.action,
-        "electr_url": args.electr_url,
+        "electrs_url": args.electrs_url,
     }
     # for tests
     if "database_file" in args:

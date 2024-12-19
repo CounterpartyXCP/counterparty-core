@@ -143,5 +143,5 @@ class RSFetchError(Exception):
     pass
 
 
-class ElectrError(Exception):
+class ElectrsError(Exception):
     pass

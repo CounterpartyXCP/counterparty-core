@@ -919,13 +919,13 @@ class APIServer(threading.Thread):
 
         @dispatcher.add_method
         def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-            return backend.electr.get_history(
+            return backend.electrs.get_history(
                 address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes
             )
 
         @dispatcher.add_method
         def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
-            results = backend.electr.get_utxos(
+            results = backend.electrs.get_utxos(
                 address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash
             )
             if order_by is None:

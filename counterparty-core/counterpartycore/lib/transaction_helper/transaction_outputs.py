@@ -55,7 +55,7 @@ def pubkeyhash_to_pubkey(pubkeyhash, provided_pubkeys=None):
                 return pubkey
 
     # Search blockchain.
-    raw_transactions = backend.electr.get_history(pubkeyhash)
+    raw_transactions = backend.electrs.get_history(pubkeyhash)
     for tx_id in raw_transactions:
         tx = raw_transactions[tx_id]
         pubkey = pubkey_from_tx(tx, pubkeyhash)

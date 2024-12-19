@@ -19,7 +19,7 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 @pytest.mark.usefixtures("server_db")
 def test_search_raw_transactions_output():
-    txs = backend.electr.get_history(ADDR[0], unconfirmed=True)
+    txs = backend.electrs.get_history(ADDR[0], unconfirmed=True)
     tx = txs[0]
 
     tx = backend.bitcoind.getrawtransaction(
@@ -80,8 +80,8 @@ def test_search_raw_transactions_output():
 
 @pytest.mark.usefixtures("api_server")
 def test_search_raw_transactions_unconfirmed(server_db):
-    assert len(backend.electr.get_history(ADDR[0], unconfirmed=True)) == 27
-    assert len(backend.electr.get_history(ADDR[0], unconfirmed=False)) == 27
+    assert len(backend.electrs.get_history(ADDR[0], unconfirmed=True)) == 27
+    assert len(backend.electrs.get_history(ADDR[0], unconfirmed=False)) == 27
 
     # create send
     v = int(100 * 1e8)
@@ -92,8 +92,8 @@ def test_search_raw_transactions_unconfirmed(server_db):
     # insert send, this automatically also creates a block
     tx1 = util_test.insert_raw_transaction(send1hex, server_db)  # noqa: F841
 
-    assert len(backend.electr.get_history(ADDR[0], unconfirmed=True)) == 28
-    assert len(backend.electr.get_history(ADDR[0], unconfirmed=False)) == 28
+    assert len(backend.electrs.get_history(ADDR[0], unconfirmed=True)) == 28
+    assert len(backend.electrs.get_history(ADDR[0], unconfirmed=False)) == 28
 
     # create send
     v = int(100 * 1e8)
@@ -104,5 +104,5 @@ def test_search_raw_transactions_unconfirmed(server_db):
     # insert send, this automatically also creates a block
     tx2 = util_test.insert_unconfirmed_raw_transaction(send2hex, server_db)  # noqa: F841
 
-    assert len(backend.electr.get_history(ADDR[0], unconfirmed=True)) == 29
-    assert len(backend.electr.get_history(ADDR[0], unconfirmed=False)) == 28
+    assert len(backend.electrs.get_history(ADDR[0], unconfirmed=True)) == 29
+    assert len(backend.electrs.get_history(ADDR[0], unconfirmed=False)) == 28

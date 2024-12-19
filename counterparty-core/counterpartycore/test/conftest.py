@@ -325,7 +325,7 @@ def api_server_v2(request, cp_server):
         "log_exclude_filters": None,
         "log_include_filters": None,
         "cache_dir": os.path.dirname(request.module.FIXTURE_DB),
-        "electr_url": None,
+        "electrs_url": None,
     }
     server_config = (
         default_config
@@ -631,7 +631,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         return encoding
 
     monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
-    monkeypatch.setattr("counterpartycore.lib.backend.electr.get_utxos", get_utxos)
+    monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
@@ -651,7 +651,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         mocked_getrawtransaction_batch,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.electr.get_history",
+        "counterpartycore.lib.backend.electrs.get_history",
         mocked_get_history,
     )
     monkeypatch.setattr(

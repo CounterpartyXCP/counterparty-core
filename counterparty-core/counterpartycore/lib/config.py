@@ -13,8 +13,8 @@ VERSION_MINOR = int(version[1])
 VERSION_REVISION = int(version[2])
 VERSION_PRE_RELEASE = "-".join(VERSION_STRING.split("-")[1:])
 
-DEFAULT_ELECTR_URL_MAINNET = "https://api.counterparty.io:3000"
-DEFAULT_ELECTR_URL_TESTNET = "https://api.counterparty.io:13000"
+DEFAULT_ELECTRS_URL_MAINNET = "https://api.counterparty.io:3000"
+DEFAULT_ELECTRS_URL_TESTNET = "https://api.counterparty.io:13000"
 
 # When updating to a new verion, we are making a rollback if major version changes.
 # If minor version changes and if needed, we are making a reparse from a given block.
