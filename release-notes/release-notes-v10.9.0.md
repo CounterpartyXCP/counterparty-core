@@ -11,6 +11,7 @@
 
 - Fix endpoint to get info from raw transaction when block index is not provided
 - Catch errors correctly when composing MPMA send
+- Fix consensus hashes calculation after a Blockchain reorg
 
 ## Codebase
 
