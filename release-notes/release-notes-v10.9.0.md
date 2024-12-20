@@ -11,6 +11,8 @@
 
 - Fix endpoint to get info from raw transaction when block index is not provided
 - Catch errors correctly when composing MPMA send
+- Fix query to fill `issuances.asset_events` field
+- Fix `assets_info.supply` field
 
 ## Codebase
 
@@ -26,6 +28,7 @@
 - Add `get_asset` and `give_asset` parameters for get orders by asset endpoint
 - Add `forward_asset` and `backward_asset` parameters for get order matches by asset endpoint
 - Add `forward_price` and `backward_price` in order matches results
+- Add parameter `exclude_with_oracle` for get dispensers routes
 
 ## CLI
 
