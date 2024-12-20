@@ -772,26 +772,6 @@ def initialise(db):
         ],
     )
 
-    # Consolidated
-    send.initialise(db)
-    destroy.initialise(db)
-    order.initialise(db)
-    btcpay.initialise(db)
-    issuance.initialise(db)
-    broadcast.initialise(db)
-    bet.initialise(db)
-    dividend.initialise(db)
-    burn.initialise(db)
-    cancel.initialise(db)
-    rps.initialise(db)
-    rpsresolve.initialise(db)
-    sweep.initialise(db)
-    dispenser.initialise(db)
-    fairminter.initialise(db)
-    fairmint.initialise(db)
-
-    gas.initialise(db)
-
     # Messages
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS messages(
@@ -858,6 +838,25 @@ def initialise(db):
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
     if "addresses" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN addresses TEXT""")
+
+    # Consolidated
+    send.initialise(db)
+    destroy.initialise(db)
+    order.initialise(db)
+    btcpay.initialise(db)
+    issuance.initialise(db)
+    broadcast.initialise(db)
+    bet.initialise(db)
+    dividend.initialise(db)
+    burn.initialise(db)
+    cancel.initialise(db)
+    rps.initialise(db)
+    rpsresolve.initialise(db)
+    sweep.initialise(db)
+    dispenser.initialise(db)
+    fairminter.initialise(db)
+    fairmint.initialise(db)
+    gas.initialise(db)
 
     create_views(db)
 
