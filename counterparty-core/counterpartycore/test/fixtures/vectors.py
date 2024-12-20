@@ -18,6 +18,7 @@ from counterpartycore.lib.messages import issuance
 from counterpartycore.lib.util import RPCError
 
 from .contract_vectors.attach import ATTACH_VECTOR
+from .contract_vectors.composer import COMPOSER_VECTOR
 from .contract_vectors.detach import DETACH_VECTOR
 from .contract_vectors.dispenser import DISPENSER_VECTOR
 from .contract_vectors.fairmint import FAIRMINT_VECTOR
@@ -40,7 +41,7 @@ from .params import (
     DEFAULT_PARAMS as DP,
 )
 
-# UNITTEST_VECTOR = DETACH_VECTOR
+# UNITTEST_VECTOR = COMPOSER_VECTOR
 
 UNITTEST_VECTOR = (
     FAIRMINTER_VECTOR
@@ -51,6 +52,7 @@ UNITTEST_VECTOR = (
     | DISPENSER_VECTOR
     | GAS_VECTOR
     | TRANSACTION_VECTOR
+    | COMPOSER_VECTOR
     | GETTXINFO_VECTOR
     | MOVE_VECTOR
     | ATTACH_VECTOR
