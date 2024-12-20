@@ -12,6 +12,7 @@
 - Fix endpoint to get info from raw transaction when block index is not provided
 - Catch errors correctly when composing MPMA send
 - Fix query to fill `issuances.asset_events` field
+- Fix `assets_info.supply` field
 
 ## Codebase
 
