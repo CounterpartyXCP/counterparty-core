@@ -53,8 +53,8 @@ def apply(db):
     """)
 
     db.execute("""
-        UPDATE assets_info SET 
-        supply = (SELECT supplies.supply FROM supplies WHERE assets_info.asset = supplies.asset)
+        UPDATE assets_info SET
+        supply = COALESCE((SELECT supplies.supply FROM supplies WHERE assets_info.asset = supplies.asset), supply)
     """)
 
     db.execute("DROP TABLE issuances_quantity")
