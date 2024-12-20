@@ -27,6 +27,7 @@
 - Add `get_asset` and `give_asset` parameters for get orders by asset endpoint
 - Add `forward_asset` and `backward_asset` parameters for get order matches by asset endpoint
 - Add `forward_price` and `backward_price` in order matches results
+- Add parameter `exclude_with_oracle` for get dispensers routes
 
 ## CLI
 
