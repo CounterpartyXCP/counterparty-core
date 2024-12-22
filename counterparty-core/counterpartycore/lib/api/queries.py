@@ -1181,15 +1181,7 @@ def prepare_sends_where(send_type: SendType, other_conditions=None):
             where = [other_conditions] if other_conditions else []
             break
         if type_send in typing.get_args(SendType):
-            where_send = {}
-            if type_send == "send":
-                where_send = {"source__notlike": "%:%", "destination__notlike": "%:%"}
-            elif type_send == "move":
-                where_send = {"source__like": "%:%", "destination__like": "%:%"}
-            elif type_send == "attach":
-                where_send = {"source__notlike": "%:%", "destination__like": "%:%"}
-            elif type_send == "detach":
-                where_send = {"source__like": "%:%", "destination__notlike": "%:%"}
+            where_send = {"send_type": type_send}
             if other_conditions:
                 where_send.update(other_conditions)
             if where_send:

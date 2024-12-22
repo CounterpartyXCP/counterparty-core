@@ -61,6 +61,7 @@ def move_balances(db, tx, source, destination):
             "asset": balance["asset"],
             "quantity": balance["quantity"],
             "msg_index": msg_index,
+            "send_type": "move",
         }
 
         ledger.insert_record(db, "sends", bindings, "UTXO_MOVE")

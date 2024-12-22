@@ -71,6 +71,7 @@ def detach_assets(db, tx, source, destination=None):
             "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
             "block_index": tx["block_index"],
             "status": status,
+            "send_type": "detach",
         }
         ledger.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
         # stop here to avoid further processing
@@ -125,6 +126,7 @@ def detach_assets(db, tx, source, destination=None):
             "asset": balance["asset"],
             "quantity": balance["quantity"],
             "fee_paid": 0,
+            "send_type": "detach",
         }
         ledger.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
 

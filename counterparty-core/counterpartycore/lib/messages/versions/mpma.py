@@ -246,6 +246,7 @@ def parse(db, tx, message):
                 "status": status,
                 "memo": memo_bytes,
                 "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
+                "send_type": "send",
             }
 
             ledger.insert_record(db, "sends", bindings, "MPMA_SEND")

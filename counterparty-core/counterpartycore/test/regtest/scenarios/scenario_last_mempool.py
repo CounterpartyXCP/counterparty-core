@@ -134,6 +134,7 @@ SCENARIO = [
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
                             "msg_index": 0,
+                            "send_type": "send",
                         },
                         "tx_hash": "$TX_HASH",
                     },

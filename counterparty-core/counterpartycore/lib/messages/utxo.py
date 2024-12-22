@@ -169,12 +169,14 @@ def parse(db, tx, message):
             problems.append("source does not match the UTXO source")
         action = "detach from utxo"
         event = "DETACH_FROM_UTXO"
+        send_type = "detach"
     # attach if source is an address
     else:
         if source != tx["source"]:
             problems.append("source does not match the source address")
         action = "attach to utxo"
         event = "ATTACH_TO_UTXO"
+        send_type = "attach"
 
     status = "valid"
     if problems:
@@ -243,6 +245,7 @@ def parse(db, tx, message):
             "asset": asset,
             "quantity": quantity,
             "fee_paid": fee,
+            "send_type": send_type,
         }
         # update counter
         if action == "attach to utxo":
