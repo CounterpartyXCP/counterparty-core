@@ -188,6 +188,7 @@ def parse(db, tx, message):
             "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
             "block_index": tx["block_index"],
             "status": status,
+            "send_type": "attach",
         }
         ledger.insert_record(db, "sends", bindings, "ATTACH_TO_UTXO")
         # return here to avoid further processing
@@ -223,6 +224,7 @@ def parse(db, tx, message):
         "asset": asset,
         "quantity": quantity,
         "fee_paid": fee,
+        "send_type": "attach",
     }
     ledger.insert_record(db, "sends", bindings, "ATTACH_TO_UTXO")
 

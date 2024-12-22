@@ -1,4 +1,6 @@
 Initializing database...
+Adding `send_type` column to sends table
+Added `send_type` column to sends table in 0.00 seconds
 Fixing issuances `asset_events` field
 Fixing issuances `asset_longname` field
 SQLITE_LOG: statement aborts at 12: [SELECT value FROM config WHERE name = ?] database schema has changed (17) SQLITE_SCHEMA

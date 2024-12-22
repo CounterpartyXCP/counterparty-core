@@ -1,9 +1,12 @@
-#! /usr/bin/python3
+import logging
+import time
 
 from counterpartycore.lib import config, database, exceptions, util
 from counterpartycore.lib.messages.versions import enhanced_send, mpma, send1
 
 ID = send1.ID
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def initialise(db):
@@ -93,15 +96,77 @@ def initialise(db):
     if "fee_paid" not in columns:
         cursor.execute("""ALTER TABLE sends ADD COLUMN fee_paid INTEGER DEFAULT 0""")
 
+    if "send_type" not in columns:
+        logger.info("Adding `send_type` column to sends table")
+        start_time = time.time()
+        database.unlock_update(db, "sends")
+        cursor.execute("""ALTER TABLE sends ADD COLUMN send_type TEXT""")
+        utxo_support_start = util.get_change_block_index("utxo_support")
+        cursor.execute(
+            """
+            UPDATE sends SET send_type = ? WHERE block_index < ?
+        """,
+            (
+                "send",
+                utxo_support_start,
+            ),
+        )
+        cursor.execute(
+            """
+            UPDATE sends SET send_type = ? WHERE block_index >= ?
+            AND source NOT LIKE '%:%' AND destination NOT LIKE '%:%'
+        """,
+            (
+                "send",
+                utxo_support_start,
+            ),
+        )
+        cursor.execute(
+            """
+            UPDATE sends SET send_type = ? WHERE block_index >= ?
+            AND source NOT LIKE '%:%' AND destination LIKE '%:%'
+        """,
+            (
+                "attach",
+                utxo_support_start,
+            ),
+        )
+        cursor.execute(
+            """
+            UPDATE sends SET send_type = ? WHERE block_index >= ?
+            AND source LIKE '%:%' AND destination NOT LIKE '%:%'
+        """,
+            (
+                "detach",
+                utxo_support_start,
+            ),
+        )
+        cursor.execute(
+            """
+            UPDATE sends SET send_type = ? WHERE block_index >= ?
+            AND source LIKE '%:%' AND destination LIKE '%:%'
+        """,
+            (
+                "move",
+                utxo_support_start,
+            ),
+        )
+        database.lock_update(db, "sends")
+        logger.info(
+            f"Added `send_type` column to sends table in {time.time() - start_time:.2f} seconds"
+        )
+
     database.create_indexes(
         cursor,
         "sends",
         [
-            ["block_index"],
+            ["block_index", "send_type"],
             ["source"],
             ["destination"],
-            ["asset"],
+            ["asset", "send_type"],
             ["memo"],
+            ["status"],
+            ["send_type"],
         ],
     )
 
