@@ -395,10 +395,8 @@ def decoderawtransaction(rawtx: str):
     return rpc("decoderawtransaction", [rawtx])
 
 
-def pubkey_from_inputs_set(inputs_set, pubkeyhash):
-    utxos = inputs_set.split(",")
-    utxos = [utxo.split(":")[0] for utxo in utxos]
-    for tx_hash in utxos:
+def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
+    for tx_hash in tx_hashes:
         tx = getrawtransaction(tx_hash, True)
         for vin in tx["vin"]:
             if "txinwitness" in vin:
@@ -413,12 +411,27 @@ def pubkey_from_inputs_set(inputs_set, pubkeyhash):
             elif "coinbase" not in vin:
                 scriptsig = vin["scriptSig"]
                 asm = scriptsig["asm"].split(" ")
-                if len(asm) >= 2:
+                if len(asm) == 4:  # p2pkh
                     # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
                     try:
-                        pubkey = asm[1]
+                        pubkey = asm[3]
                         if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
                             return pubkey
                     except binascii.Error:
                         pass
+        for vout in tx["vout"]:
+            asm = vout["scriptPubKey"]["asm"].split(" ")
+            if len(asm) == 3:  # p2pk
+                try:
+                    pubkey = asm[1]
+                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                        return pubkey
+                except binascii.Error:
+                    pass
     return None
+
+
+def pubkey_from_inputs_set(inputs_set, pubkeyhash):
+    tx_hashes = inputs_set.split(",")
+    tx_hashes = [utxo.split(":")[0] for utxo in tx_hashes]
+    return search_pubkey_in_transactions(pubkeyhash, tx_hashes)
