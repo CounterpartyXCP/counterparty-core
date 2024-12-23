@@ -30,6 +30,7 @@
 - Add `forward_price` and `backward_price` in order matches results
 - Add parameter `exclude_with_oracle` for get dispensers routes
 - Add `send_type` field in `sends` table
+- Use `satoshirate_normalized` and `give_quantity_normalized` to calculate `price_normalized`
 
 ## CLI
 

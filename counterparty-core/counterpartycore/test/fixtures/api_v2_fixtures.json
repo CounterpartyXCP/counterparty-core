@@ -8254,7 +8254,7 @@
                 "escrow_quantity_normalized": "100",
                 "satoshirate_normalized": "0.00000100",
                 "satoshi_price_normalized": "0.00000100",
-                "price_normalized": "1.0000000000000000"
+                "price_normalized": "0.0000000100000000"
             },
             {
                 "tx_index": 108,
