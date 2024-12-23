@@ -125,6 +125,27 @@ def rpc(method, params):
     return rpc_call(payload)
 
 
+# no retry for requests from the API
+def safe_rpc(method, params):
+    try:
+        payload = {
+            "method": method,
+            "params": params,
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+        response = requests.post(
+            config.BACKEND_URL,
+            data=json.dumps(payload),
+            headers={"content-type": "application/json"},
+            verify=(not config.BACKEND_SSL_NO_VERIFY),
+            timeout=config.REQUESTS_TIMEOUT,
+        ).json()
+        return response["result"]
+    except (requests.exceptions.RequestException, json.decoder.JSONDecodeError, KeyError) as e:
+        raise exceptions.BitcoindRPCError(f"Error calling {method}: {str(e)}") from e
+
+
 def getblockcount():
     return rpc("getblockcount", [])
 

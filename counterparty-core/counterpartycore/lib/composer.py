@@ -130,32 +130,6 @@ def prepare_outputs(source, destinations, data, pubkeys, encoding, arc4_key=None
     return outputs
 
 
-def prepare_unspent_list(inputs_set: str):
-    unspent_list = []
-    utxos_list = inputs_set.split(",")
-    if len(utxos_list) > MAX_INPUTS_SET:
-        raise exceptions.ComposeError(
-            f"too many UTXOs in inputs_set (max. {MAX_INPUTS_SET}): {len(utxos_list)}"
-        )
-    for utxo in utxos_list:
-        if not util.is_utxo_format(utxo):
-            raise exceptions.ComposeError(f"invalid UTXO: {utxo}")
-        txid, vout = utxo.split(":")
-        vout = int(vout)
-        try:
-            value = backend.bitcoind.get_utxo_value(txid, vout)
-        except Exception as e:
-            raise exceptions.ComposeError(f"invalid UTXO: {utxo}") from e
-        unspent_list.append(
-            {
-                "txid": txid,
-                "vout": vout,
-                "value": value,
-            }
-        )
-    return sorted(unspent_list, key=lambda x: x["value"], reverse=True)
-
-
 def select_utxos(unspent_list, target_amount):
     total_amount = 0
     selected_utxos = []
@@ -218,11 +192,121 @@ def get_estimated_fee(source, outputs, pubkeys, unspent_list, satoshis_per_vbyte
     return get_needed_fee(tx, satoshis_per_vbyte)
 
 
-def compose_transaction(
-    db, name, params, pubkeys, inputs_set, encoding="auto", exact_fee=None, satoshis_per_vbyte=None
-):
-    source, destinations, data = transaction.compose_data(db, name, params)
-    unspent_list = prepare_unspent_list(inputs_set)
+"""
+encoding
+validate
+verbose
+
+exact_fee
+sat_per_vbyte
+confirmation_target
+max_fee
+
+allow_unconfirmed_inputs
+exclude_utxos
+inputs_set
+disable_utxo_lock
+use_utxos_with_balances
+exclude_utxos_with_balances
+
+mutlisig_pubkey
+
+more_outputs
+
+regular_dust_size (removed)
+multisig_dust_size (removed)
+extended_tx_info (removed)
+old_style_api (removed)
+p2sh_pretx_txid (removed)
+segwit (removed)
+return_psbt (replaced by `verbose`)
+return_only_data (replaced by `verbose`)
+pubkeys (replaced by `mutlisig_pubkey`)
+dust_return_pubkey (replaced by `mutlisig_pubkey`)
+unspent_tx_hash (replaced by `inputs_set`)
+fee_per_kb (replaced by `sat_per_vbyte`)
+fee_provided (replaced by 'max_fee')
+"""
+
+
+def list_unspent(source, allow_unconfirmed_inputs):
+    min_conf = 0 if allow_unconfirmed_inputs else 1
+
+    unspent_list = []
+    # try with Bitcoin Core
+    try:
+        unspent_list = backend.bitcoind.safe_rpc("listunspent", [min_conf, 9999999, [source]])
+    except exceptions.BitcoindRPCError:
+        pass
+
+    # then try with Electrs
+    if len(unspent_list) == 0 and config.ELECTRS_URL is None:
+        raise exceptions.ComposeError(
+            "No UTXOs found with Bitcoin Core and Electr is not configured"
+        )
+    elif len(unspent_list) == 0:
+        unspent_list = backend.electrs.get_utxos(
+            source,
+            unconfirmed=allow_unconfirmed_inputs,
+        )
+
+    return unspent_list
+
+
+def prepare_inputs_set(inputs_set):
+    unspent_list = []
+    utxos_list = inputs_set.split(",")
+    if len(utxos_list) > MAX_INPUTS_SET:
+        raise exceptions.ComposeError(
+            f"too many UTXOs in inputs_set (max. {MAX_INPUTS_SET}): {len(utxos_list)}"
+        )
+    for utxo in utxos_list:
+        if not util.is_utxo_format(utxo):
+            raise exceptions.ComposeError(f"invalid UTXO: {utxo}")
+        txid, vout = utxo.split(":")
+        vout = int(vout)
+        try:
+            value = backend.bitcoind.get_utxo_value(txid, vout)
+        except Exception as e:
+            raise exceptions.ComposeError(f"invalid UTXO: {utxo}") from e
+        unspent_list.append(
+            {
+                "txid": txid,
+                "vout": vout,
+                "value": value,
+            }
+        )
+
+    return unspent_list
+
+
+def prepare_unspent_list(source, transaction_options):
+    inputs_set = transaction_options.get("inputs_set")
+    if inputs_set is None:
+        allow_unconfirmed_inputs = transaction_options.get("allow_unconfirmed_inputs", False)
+        unspent_list = list_unspent(source, allow_unconfirmed_inputs)
+    else:
+        unspent_list = prepare_inputs_set(inputs_set)
+
+    if len(unspent_list) == 0:
+        raise exceptions.ComposeError(f"No UTXOs found for {source}")
+
+    return sorted(unspent_list, key=lambda x: x["value"], reverse=True)
+
+
+def compose_transaction(db, name, params, **construct_kwargs):
+    encoding = construct_kwargs.get("encoding", "auto")
+    skip_validation = construct_kwargs.get("validate", True)
+
+    source, destinations, data = transaction.compose_data(
+        db, name, params, skip_validation=skip_validation
+    )
+
+    unspent_list = prepare_unspent_list(construct_kwargs)
+
+    exact_fee = construct_kwargs.get("exact_fee")
+    sat_per_vbyte = construct_kwargs.get("sat_per_vbyte")
+    pubkeys = construct_kwargs.get("pubkeys")
 
     # prepare non obfuscted outputs
     clear_outputs = prepare_outputs(source, destinations, data, pubkeys, encoding)
@@ -231,9 +315,7 @@ def compose_transaction(
         desired_fee = exact_fee
     else:
         # use non obfuscated outputs to calculate estimated fee...
-        desired_fee = get_estimated_fee(
-            source, clear_outputs, pubkeys, unspent_list, satoshis_per_vbyte
-        )
+        desired_fee = get_estimated_fee(source, clear_outputs, pubkeys, unspent_list, sat_per_vbyte)
 
     # prepare transaction with desired fee and no-obfuscated outputs
     inputs, change_outputs, btc_in = prepare_transaction(
@@ -247,11 +329,17 @@ def compose_transaction(
     btc_out = sum(output.nValue for output in outputs)
     btc_change = sum(change_output.nValue for change_output in change_outputs)
 
-    return {
-        "btc_in": btc_in,
-        "btc_out": btc_out,
-        "btc_change": btc_change,
-        "btc_fee": btc_in - btc_out - btc_change,
-        "unsigned_tx_hex": tx.serialize().hex(),
-        "data": config.PREFIX + data if data else None,
-    }
+    verbose = construct_kwargs.get("validate", False)
+    if verbose:
+        unsigned_tx_hex = tx.serialize().hex()
+        return {
+            "btc_in": btc_in,
+            "btc_out": btc_out,
+            "btc_change": btc_change,
+            "btc_fee": btc_in - btc_out - btc_change,
+            "unsigned_tx_hex": unsigned_tx_hex,
+            "psbt": backend.bitcoind.convert_to_psbt(unsigned_tx_hex),
+            "data": config.PREFIX + data if data else None,
+        }
+    else:
+        return tx.serialize().hex()
