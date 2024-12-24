@@ -347,6 +347,7 @@ class RegtestNode:
             list_unspent = json.loads(
                 self.bitcoin_cli_2("listunspent", 0, 9999999, json.dumps([address])).strip()
             )
+        # print(list_unspent)
         sorted(list_unspent, key=lambda x: -x["amount"])
         inputs = []
         for utxo in list_unspent[0:99]:

@@ -6,6 +6,7 @@ from collections import OrderedDict
 from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.utils import is_address_bech32
 
 from counterpartycore.lib import (
     arc4,
@@ -13,7 +14,6 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    script,
     transaction,
     util,
 )
@@ -24,10 +24,8 @@ MAX_INPUTS_SET = 100
 
 
 def get_script(address):
-    if script.is_multisig(address):
-        raise exceptions.TransactionError("Multisig address not supported for non-data outputs")
     try:
-        if script.is_bech32(address):
+        if is_address_bech32(address):
             return P2wpkhAddress(address).to_script_pub_key()
         return P2pkhAddress(address).to_script_pub_key()
     except Exception as e:
@@ -155,7 +153,7 @@ def prepare_more_outputs(more_outputs):
     for output in output_list:
         if len(output) != 2:
             raise exceptions.ComposeError(f"Invalid output format: {output}")
-        address, value = output
+        address_or_script, value = output
 
         try:
             value = int(value)
@@ -164,10 +162,10 @@ def prepare_more_outputs(more_outputs):
 
         try:
             # if hex string we assume it is a script
-            if all(c in string.hexdigits for c in address):
-                script = Script.from_raw(address, has_segwit=True)
+            if all(c in string.hexdigits for c in address_or_script):
+                script = Script.from_raw(address_or_script, has_segwit=True)
             else:
-                script = get_script(address)
+                script = get_script(address_or_script)
         except Exception as e:
             raise exceptions.ComposeError(f"Invalid script or address for output: {output}") from e
 
@@ -221,26 +219,82 @@ class UTXOLocks(metaclass=util.SingletonMeta):
             self.lock(f"{input.txid}:{input.txout_index}")
 
 
+def complete_unspent_list(unspent_list):
+    txhash_set = set()
+    for utxo in unspent_list:
+        if "script_pub_key" not in utxo or "value" not in utxo:
+            txhash_set.add(utxo["txid"])
+
+    if len(txhash_set) == 0:
+        return unspent_list
+
+    completed_unspent_list = []
+    txhash_list_chunks = util.chunkify(list(txhash_set), config.MAX_RPC_BATCH_SIZE)
+    txs = {}
+    for txhash_list in txhash_list_chunks:
+        txs = txs | backend.bitcoind.getrawtransaction_batch(
+            txhash_list, verbose=True, return_dict=True
+        )
+    for utxo in unspent_list:
+        if "script_pub_key" not in utxo or "value" not in utxo:
+            txid = utxo["txid"]
+            if txid not in txs:
+                raise exceptions.ComposeError(f"Transaction {txid} not found")
+            for vout in txs[txid]["vout"]:
+                if vout["n"] == utxo["vout"]:
+                    utxo["script_pub_key"] = vout["scriptPubKey"]["hex"]
+                    utxo["value"] = int(vout["value"] * config.UNIT)
+                    utxo["amount"] = vout["value"]
+        completed_unspent_list.append(utxo)
+
+    return completed_unspent_list
+
+
 def list_unspent(source, allow_unconfirmed_inputs):
     min_conf = 0 if allow_unconfirmed_inputs else 1
 
-    unspent_list = []
     # try with Bitcoin Core
+    bitcoind_unspent_list = []
     try:
-        unspent_list = backend.bitcoind.safe_rpc("listunspent", [min_conf, 9999999, [source]])
+        bitcoind_unspent_list = backend.bitcoind.safe_rpc(
+            "listunspent", [min_conf, 9999999, [source]]
+        )
     except exceptions.BitcoindRPCError:
         pass
 
+    if len(bitcoind_unspent_list) > 0:
+        unspent_list = []
+        for unspent in bitcoind_unspent_list:
+            unspent_list.append(
+                {
+                    "txid": unspent["txid"],
+                    "vout": unspent["vout"],
+                    "value": int(unspent["amount"] * config.UNIT),
+                    "amount": unspent["amount"],
+                    "script_pub_key": unspent["scriptPubKey"],
+                }
+            )
+        return unspent_list
+
     # then try with Electrs
-    if len(unspent_list) == 0 and config.ELECTRS_URL is None:
+    if config.ELECTRS_URL is None:
         raise exceptions.ComposeError(
             "No UTXOs found with Bitcoin Core and Electr is not configured, use the `inputs_set` parameter to provide UTXOs"
         )
-    elif len(unspent_list) == 0:
-        unspent_list = backend.electrs.get_utxos(
-            source,
-            unconfirmed=allow_unconfirmed_inputs,
-        )
+    electr_unspent_list = backend.electrs.get_utxos(
+        source,
+        unconfirmed=allow_unconfirmed_inputs,
+    )
+    if len(electr_unspent_list) > 0:
+        unspent_list = []
+        for unspent in electr_unspent_list:
+            unspent_list.append(
+                {
+                    "txid": unspent["txid"],
+                    "vout": unspent["vout"],
+                }
+            )
+        return unspent_list
 
     return unspent_list
 
@@ -257,32 +311,38 @@ def prepare_inputs_set(inputs_set):
 
         if len(utxo_parts) == 2:
             txid, vout = utxo.split(":")
-            value = None
+            value, script_pub_key = None, None
         elif len(utxo_parts) == 3:
             txid, vout, value = utxo.split(":")
-            try:
-                value = int(value)
-            except ValueError as e:
-                raise exceptions.ComposeError(f"invalid value for UTXO: {utxo}") from e
+            script_pub_key = None
+        elif len(utxo_parts) == 4:
+            txid, vout, value, script_pub_key = utxo.split(":")
         else:
             raise exceptions.ComposeError(f"invalid UTXO format: {utxo}")
 
         if not util.is_utxo_format(f"{txid}:{vout}"):
             raise exceptions.ComposeError(f"invalid UTXO format: {utxo}")
 
-        if value is None:
-            try:
-                value = backend.bitcoind.get_utxo_value(txid, vout)
-            except Exception as e:
-                raise exceptions.ComposeError(f"value not found for UTXO: {utxo}") from e
+        unspent = {
+            "txid": txid,
+            "vout": int(vout),
+        }
 
-        unspent_list.append(
-            {
-                "txid": txid,
-                "vout": vout,
-                "value": value,
-            }
-        )
+        if value is not None:
+            try:
+                unspent["value"] = int(value)
+            except ValueError as e:
+                raise exceptions.ComposeError(f"invalid value for UTXO: {utxo}") from e
+
+        if script_pub_key is not None:
+            try:
+                Script.from_raw(script_pub_key, has_segwit=True)
+            except Exception as e:
+                raise exceptions.ComposeError(f"invalid script_pub_key for UTXO: {utxo}") from e
+            unspent["script_pub_key"] = script_pub_key
+
+        unspent_list.append(unspent)
+
     return unspent_list
 
 
@@ -385,6 +445,9 @@ def prepare_unspent_list(db, source, construct_params):
             f"No UTXOs found for {source}, provide UTXOs with the `inputs_set` parameter"
         )
 
+    # complete unspent list with missing data (value or script_pub_key)
+    unspent_list = complete_unspent_list(unspent_list)
+
     return unspent_list
 
 
@@ -404,7 +467,10 @@ def select_utxos(unspent_list, target_amount):
 def utxos_to_txins(utxos: list):
     inputs = []
     for utxo in utxos:
-        inputs.append(TxInput(utxo["txid"], utxo["vout"]))
+        input = TxInput(
+            utxo["txid"], utxo["vout"], Script.from_raw(utxo["script_pub_key"], has_segwit=True)
+        )
+        inputs.append(input)
     return inputs
 
 
@@ -511,7 +577,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 +mutlisig_pubkey
 
 +change_address
--more_outputs
++more_outputs
 
 regular_dust_size (removed)
 multisig_dust_size (removed)
