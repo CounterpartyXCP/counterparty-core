@@ -15,6 +15,8 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
+    opcodes,
+    script,
     transaction,
     util,
 )
@@ -29,6 +31,35 @@ def get_script(address):
         return P2pkhAddress(address).to_script_pub_key()
     except Exception as e:
         raise exceptions.ComposeError(f"Invalid address: {address}") from e
+
+
+def get_output_type(script_pub_key):
+    asm = script.script_to_asm(script_pub_key)
+    if asm[0] == opcodes.OP_RETURN:
+        return "OP_RETURN"
+    if len(asm) == 2 and asm[1] == opcodes.OP_CHECKSIG:
+        return "P2PK"
+    if (
+        len(asm) == 5
+        and asm[0] == opcodes.OP_DUP
+        and asm[3] == opcodes.OP_EQUALVERIFY
+        and asm[4] == opcodes.OP_CHECKSIG
+    ):
+        return "P2PKH"
+    if len(asm) >= 4 and asm[-1] == opcodes.OP_CHECKMULTISIG and asm[-2] == len(asm) - 3:
+        return "P2MS"
+    if len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:
+        return "P2SH"
+    if len(asm) == 2 and asm[0] == b"":
+        if len(asm[1]) == 32:
+            return "P2WSH"
+        return "P2WPKH"
+    if len(asm) == 2 and asm[0] == b"\x01":
+        return "P2TR"
+
+
+def is_segwit_output(script_pub_key):
+    return get_output_type(script_pub_key) in ("P2WPKH", "P2WSH", "P2TR")
 
 
 ################
@@ -193,7 +224,8 @@ def prepare_more_outputs(more_outputs):
         try:
             # if hex string we assume it is a script
             if all(c in string.hexdigits for c in address_or_script):
-                script = Script.from_raw(address_or_script, has_segwit=True)
+                has_segwit = is_segwit_output(address_or_script)
+                script = Script.from_raw(address_or_script, has_segwit=has_segwit)
             else:
                 script = get_script(address_or_script)
         except Exception as e:
@@ -250,21 +282,23 @@ class UTXOLocks(metaclass=util.SingletonMeta):
 
 
 def complete_unspent_list(unspent_list):
+    # gather tx hashes with missing data
     txhash_set = set()
     for utxo in unspent_list:
         if "script_pub_key" not in utxo or "value" not in utxo:
             txhash_set.add(utxo["txid"])
 
-    if len(txhash_set) == 0:
-        return unspent_list
+    # get missing data from Bitcoin Core
+    if len(txhash_set) > 0:
+        txhash_list_chunks = util.chunkify(list(txhash_set), config.MAX_RPC_BATCH_SIZE)
+        txs = {}
+        for txhash_list in txhash_list_chunks:
+            txs = txs | backend.bitcoind.getrawtransaction_batch(
+                txhash_list, verbose=True, return_dict=True
+            )
 
+    # complete unspent list with missing data
     completed_unspent_list = []
-    txhash_list_chunks = util.chunkify(list(txhash_set), config.MAX_RPC_BATCH_SIZE)
-    txs = {}
-    for txhash_list in txhash_list_chunks:
-        txs = txs | backend.bitcoind.getrawtransaction_batch(
-            txhash_list, verbose=True, return_dict=True
-        )
     for utxo in unspent_list:
         if "script_pub_key" not in utxo or "value" not in utxo:
             txid = utxo["txid"]
@@ -275,6 +309,7 @@ def complete_unspent_list(unspent_list):
                     utxo["script_pub_key"] = vout["scriptPubKey"]["hex"]
                     utxo["value"] = int(vout["value"] * config.UNIT)
                     utxo["amount"] = vout["value"]
+        utxo["is_segwit"] = is_segwit_output(utxo["script_pub_key"])
         completed_unspent_list.append(utxo)
 
     return completed_unspent_list
@@ -366,7 +401,7 @@ def prepare_inputs_set(inputs_set):
 
         if script_pub_key is not None:
             try:
-                Script.from_raw(script_pub_key, has_segwit=True)
+                script.script_to_asm(script_pub_key)
             except Exception as e:
                 raise exceptions.ComposeError(f"invalid script_pub_key for UTXO: {utxo}") from e
             unspent["script_pub_key"] = script_pub_key
@@ -497,9 +532,7 @@ def select_utxos(unspent_list, target_amount):
 def utxos_to_txins(utxos: list):
     inputs = []
     for utxo in utxos:
-        input = TxInput(
-            utxo["txid"], utxo["vout"], Script.from_raw(utxo["script_pub_key"], has_segwit=True)
-        )
+        input = TxInput(utxo["txid"], utxo["vout"])
         inputs.append(input)
     return inputs
 
@@ -571,7 +604,12 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
             break
 
         # else calculate needed fee
-        tx = Transaction(inputs, outputs + [TxOutput(change_amount, get_script(change_address))])
+        has_segwit = any(utxo["is_segwit"] for utxo in selected_utxos)
+        tx = Transaction(
+            inputs,
+            outputs + [TxOutput(change_amount, get_script(change_address))],
+            has_segwit=has_segwit,
+        )
         needed_fee = get_needed_fee(tx, sat_per_vbyte)
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
