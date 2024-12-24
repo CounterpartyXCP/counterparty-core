@@ -1,4 +1,5 @@
 import binascii
+import string
 import time
 from collections import OrderedDict
 
@@ -152,6 +153,33 @@ def prepare_outputs(source, destinations, data, unspent_list, construct_params):
     outputs = perpare_non_data_outputs(destinations)
     if data:
         outputs += prepare_data_outputs(source, data, unspent_list, construct_params)
+    return outputs
+
+
+def prepare_more_outputs(more_outputs):
+    output_list = [output.split(":") for output in more_outputs.split(",")]
+    outputs = []
+    for output in output_list:
+        if len(output) != 2:
+            raise exceptions.ComposeError(f"Invalid output format: {output}")
+        address, value = output
+
+        try:
+            value = int(value)
+        except ValueError as e:
+            raise exceptions.ComposeError(f"Invalid value for output: {output}") from e
+
+        try:
+            # if hex string we assume it is a script
+            if all(c in string.hexdigits for c in address):
+                script = Script.from_raw(address, has_segwit=True)
+            else:
+                script = get_script(address)
+        except Exception as e:
+            raise exceptions.ComposeError(f"Invalid script or address for output: {output}") from e
+
+        outputs.append(TxOutput(value, script))
+
     return outputs
 
 
@@ -399,9 +427,16 @@ def prepare_fee_parameters(construct_params):
     return exact_fee, sat_per_vbyte, max_fee
 
 
-def prepare_inputs_and_change(source, outputs, unspent_list, construct_params):
+def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_params):
     # prepare fee parameters
     exact_fee, sat_per_vbyte, max_fee = prepare_fee_parameters(construct_params)
+
+    change_address = construct_params.get("change_address")
+    if change_address is None:
+        if util.is_utxo_format(source):
+            change_address = utxo_to_address(db, source)
+        else:
+            change_address = source
 
     change_outputs = []
     # try with one input and increase until the change is enough for the fee
@@ -429,11 +464,11 @@ def prepare_inputs_and_change(source, outputs, unspent_list, construct_params):
         if exact_fee is not None:
             change_amount = change_amount - exact_fee
             if change_amount > config.REGULAR_DUST_SIZE:
-                change_outputs.append(TxOutput(change_amount, get_script(source)))
+                change_outputs.append(TxOutput(change_amount, get_script(change_address)))
             break
 
         # else calculate needed fee
-        tx = Transaction(inputs, outputs + [TxOutput(change_amount, get_script(source))])
+        tx = Transaction(inputs, outputs + [TxOutput(change_amount, get_script(change_address))])
         needed_fee = get_needed_fee(tx, sat_per_vbyte)
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
@@ -441,7 +476,7 @@ def prepare_inputs_and_change(source, outputs, unspent_list, construct_params):
         if change_amount > needed_fee:
             change_amount = change_amount - needed_fee
             if change_amount > config.REGULAR_DUST_SIZE:
-                change_outputs.append(TxOutput(change_amount, get_script(source)))
+                change_outputs.append(TxOutput(change_amount, get_script(change_address)))
             break
         # else try with more inputs
         input_count += 1
@@ -468,6 +503,7 @@ def prepare_inputs_and_change(source, outputs, unspent_list, construct_params):
 
 +mutlisig_pubkey
 
++change_address
 -more_outputs
 
 regular_dust_size (removed)
@@ -503,6 +539,11 @@ def compose_transaction(db, name, params, construct_params):
     inputs, btc_in, change_outputs = prepare_inputs_and_change(
         source, outputs, unspent_list, construct_params
     )
+
+    # Add more outputs if needed
+    more_outputs = construct_params.get("more_outputs")
+    if more_outputs:
+        prepare_more_outputs(more_outputs)
 
     if not construct_params.get("disable_utxo_lock", False):
         UTXOLocks().lock_inputs(inputs)
