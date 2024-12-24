@@ -1,4 +1,6 @@
 import binascii
+import time
+from collections import OrderedDict
 
 from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
@@ -158,6 +160,33 @@ def prepare_outputs(source, destinations, data, unspent_list, construct_params):
 ################
 
 
+class UTXOLocks(metaclass=util.SingletonMeta):
+    def __init__(self):
+        self.locks = OrderedDict()
+        self.max_age = config.UTXO_LOCKS_MAX_AGE
+        self.max_size = config.UTXO_LOCKS_MAX_ADDRESSES
+
+    def lock(self, utxo):
+        self.locks[utxo] = time.time()
+        if len(self.locks) > self.max_size:
+            self.locks.popitem(last=False)
+
+    def locked(self, utxo):
+        if utxo not in self.locks:
+            return False
+        if time.time() - self.locks[utxo] > self.max_age:
+            del self.locks[utxo]
+            return False
+        return True
+
+    def filter_unspent_list(self, unspent_list):
+        return [utxo for utxo in unspent_list if not self.locked(f"{utxo['txid']}:{utxo['vout']}")]
+
+    def lock_inputs(self, inputs):
+        for input in inputs:
+            self.lock(f"{input.txid}:{input.txout_index}")
+
+
 def list_unspent(source, allow_unconfirmed_inputs):
     min_conf = 0 if allow_unconfirmed_inputs else 1
 
@@ -303,6 +332,10 @@ def prepare_unspent_list(db, source, construct_params):
             if f"{utxo['txid']}:{utxo['vout']}" not in exclude_utxos_list
         ]
 
+    # excluded locked utxos
+    if not construct_params.get("disable_utxo_lock", False):
+        unspent_list = UTXOLocks().filter_unspent_list(unspent_list)
+
     # exclude utxos with balances if needed
     filter_utxos_with_balances(db, unspent_list, construct_params)
 
@@ -431,11 +464,11 @@ def prepare_inputs_and_change(source, outputs, unspent_list, construct_params):
 +exclude_utxos
 +use_utxos_with_balances
 +exclude_utxos_with_balances
-disable_utxo_lock
++disable_utxo_lock
 
 +mutlisig_pubkey
 
-more_outputs
+-more_outputs
 
 regular_dust_size (removed)
 multisig_dust_size (removed)
@@ -470,6 +503,9 @@ def compose_transaction(db, name, params, construct_params):
     inputs, btc_in, change_outputs = prepare_inputs_and_change(
         source, outputs, unspent_list, construct_params
     )
+
+    if not construct_params.get("disable_utxo_lock", False):
+        UTXOLocks().lock_inputs(inputs)
 
     # construct transaction
     tx = Transaction(inputs, outputs + change_outputs)
