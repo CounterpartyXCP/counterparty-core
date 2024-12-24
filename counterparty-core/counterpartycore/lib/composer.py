@@ -67,10 +67,22 @@ def is_segwit_output(script_pub_key):
 ################
 
 
-def perpare_non_data_outputs(destinations):
+def regular_dust_size(construct_params):
+    if "regular_dust_size" in construct_params:
+        return construct_params["regular_dust_size"]
+    return config.DEFAULT_REGULAR_DUST_SIZE
+
+
+def multisig_dust_size(construct_params):
+    if "multisig_dust_size" in construct_params:
+        return construct_params["multisig_dust_size"]
+    return config.DEFAULT_MULTISIG_DUST_SIZE
+
+
+def perpare_non_data_outputs(destinations, construct_params):
     outputs = []
     for address, value in destinations:
-        output_value = value or config.DEFAULT_REGULAR_DUST_SIZE
+        output_value = value or regular_dust_size(construct_params)
         outputs.append(TxOutput(output_value, get_script(address)))
     return outputs
 
@@ -111,6 +123,13 @@ def is_valid_pubkey(pubkey):
 def search_pubkey(source, unspent_list, construct_params):
     # if pubkeys are provided, check it and return
     multisig_pubkey = construct_params.get("multisig_pubkey")
+    if multisig_pubkey is None:
+        multisig_pubkey = construct_params.get("dust_return_pubkey")  # legacy
+    if multisig_pubkey is None:
+        multisig_pubkey = construct_params.get("pubkeys")  # legacy
+        if multisig_pubkey is not None:
+            multisig_pubkey = multisig_pubkey.split(",")[0]
+
     if multisig_pubkey is not None:
         if not is_valid_pubkey(multisig_pubkey):
             raise exceptions.ComposeError(f"Invalid multisig pubkey: {multisig_pubkey}")
@@ -194,7 +213,7 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
         output_script = Script(
             [1, pubkey_pair[0], pubkey_pair[1], multisig_pubkey, 3, "OP_CHECKMULTISIG"]
         )
-        outputs.append(TxOutput(config.DEFAULT_MULTISIG_DUST_SIZE, output_script))
+        outputs.append(TxOutput(multisig_dust_size(construct_params), output_script))
     return outputs
 
 
@@ -238,7 +257,7 @@ def prepare_more_outputs(more_outputs):
 
 def prepare_outputs(source, destinations, data, unspent_list, construct_params):
     # prepare non-data outputs
-    outputs = perpare_non_data_outputs(destinations)
+    outputs = perpare_non_data_outputs(destinations, construct_params)
     # prepare data outputs
     if data:
         outputs += prepare_data_outputs(source, data, unspent_list, construct_params)
@@ -315,10 +334,8 @@ def complete_unspent_list(unspent_list):
     return completed_unspent_list
 
 
-def list_unspent(source, allow_unconfirmed_inputs):
+def bitcoind_list_unspent(source, allow_unconfirmed_inputs):
     min_conf = 0 if allow_unconfirmed_inputs else 1
-
-    # try with Bitcoin Core
     bitcoind_unspent_list = []
     try:
         bitcoind_unspent_list = backend.bitcoind.safe_rpc(
@@ -341,11 +358,10 @@ def list_unspent(source, allow_unconfirmed_inputs):
             )
         return unspent_list
 
-    # then try with Electrs
-    if config.ELECTRS_URL is None:
-        raise exceptions.ComposeError(
-            "No UTXOs found with Bitcoin Core and Electr is not configured, use the `inputs_set` parameter to provide UTXOs"
-        )
+    return []
+
+
+def electrs_list_unspent(source, allow_unconfirmed_inputs):
     electr_unspent_list = backend.electrs.get_utxos(
         source,
         unconfirmed=allow_unconfirmed_inputs,
@@ -357,11 +373,27 @@ def list_unspent(source, allow_unconfirmed_inputs):
                 {
                     "txid": unspent["txid"],
                     "vout": unspent["vout"],
+                    "value": unspent["value"],
+                    "amount": unspent["value"] / config.UNIT,
                 }
             )
         return unspent_list
 
-    return unspent_list
+    return []
+
+
+def list_unspent(source, allow_unconfirmed_inputs):
+    # first try with Bitcoin Core
+    unspent_list = bitcoind_list_unspent(source, allow_unconfirmed_inputs)
+    if len(unspent_list) > 0:
+        return unspent_list
+
+    # then try with Electrs
+    if config.ELECTRS_URL is None:
+        raise exceptions.ComposeError(
+            "No UTXOs found with Bitcoin Core and Electr is not configured, use the `inputs_set` parameter to provide UTXOs"
+        )
+    return electrs_list_unspent(source, allow_unconfirmed_inputs)
 
 
 def prepare_inputs_set(inputs_set):
@@ -491,6 +523,11 @@ def prepare_unspent_list(db, source, construct_params):
             if f"{utxo['txid']}:{utxo['vout']}" not in exclude_utxos_list
         ]
 
+    # include only tx_hash if explicitly requested
+    unspent_tx_hash = construct_params.get("unspent_tx_hash")  # legacy
+    if unspent_tx_hash is not None:
+        unspent_list = [utxo for utxo in unspent_list if utxo["txid"] == unspent_tx_hash]
+
     # excluded locked utxos
     if not construct_params.get("disable_utxo_lock", False):
         unspent_list = UTXOLocks().filter_unspent_list(unspent_list)
@@ -550,8 +587,16 @@ def get_needed_fee(tx, satoshis_per_vbyte):
 def prepare_fee_parameters(construct_params):
     exact_fee = construct_params.get("exact_fee")
     sat_per_vbyte = construct_params.get("sat_per_vbyte")
+    if sat_per_vbyte is None:
+        fee_per_kb = construct_params.get("fee_per_kb")  # legacy
+        if fee_per_kb is not None:
+            sat_per_vbyte = fee_per_kb // 1024
+
     confirmation_target = construct_params.get("confirmation_target")
     max_fee = construct_params.get("max_fee")
+    if max_fee is None:
+        max_fee = construct_params.get("fee_provided")  # legacy
+
     if exact_fee is not None:
         sat_per_vbyte, confirmation_target, max_fee = None, None, None
     elif sat_per_vbyte is None:
@@ -599,7 +644,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         # if change is enough for exact_fee, add change output and break
         if exact_fee is not None:
             change_amount = change_amount - exact_fee
-            if change_amount > config.REGULAR_DUST_SIZE:
+            if change_amount > regular_dust_size(construct_params):
                 change_outputs.append(TxOutput(change_amount, get_script(change_address)))
             break
 
@@ -616,7 +661,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         # if change is enough for needed fee, add change output and break
         if change_amount > needed_fee:
             change_amount = change_amount - needed_fee
-            if change_amount > config.REGULAR_DUST_SIZE:
+            if change_amount > regular_dust_size(construct_params):
                 change_outputs.append(TxOutput(change_amount, get_script(change_address)))
             break
         # else try with more inputs
@@ -626,15 +671,13 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 
 
 """
+# UNCHANGED
+
 +encoding
 +validate
 +verbose
-
 +exact_fee
-+sat_per_vbyte
 +confirmation_target
-+max_fee
-
 +inputs_set
 +allow_unconfirmed_inputs
 +exclude_utxos
@@ -642,24 +685,32 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 +exclude_utxos_with_balances
 +disable_utxo_lock
 
-+mutlisig_pubkey
+# NEW
 
++sat_per_vbyte
++max_fee
++mutlisig_pubkey
 +change_address
 +more_outputs
 
-regular_dust_size (removed)
-multisig_dust_size (removed)
-extended_tx_info (removed)
-old_style_api (removed)
+# DEPRECATED BUT STILL SUPPORTED
+
++regular_dust_size (removed)
++multisig_dust_size (removed)
++fee_per_kb (replaced by `sat_per_vbyte`)
++fee_provided (replaced by 'max_fee')
++pubkeys (replaced by `mutlisig_pubkey`)
++dust_return_pubkey (replaced by `mutlisig_pubkey`)
++return_psbt (replaced by `verbose`)
++return_only_data (replaced by `verbose`)
++unspent_tx_hash (replaced by `inputs_set`)
++extended_tx_info (implemented in api_v1.py)
++old_style_api (implemented in api_v1.py)
+
+# REMOVED
+
 p2sh_pretx_txid (removed)
 segwit (removed)
-return_psbt (replaced by `verbose`)
-return_only_data (replaced by `verbose`)
-pubkeys (replaced by `mutlisig_pubkey`)
-dust_return_pubkey (replaced by `mutlisig_pubkey`)
-unspent_tx_hash (replaced by `inputs_set`)
-fee_per_kb (replaced by `sat_per_vbyte`)
-fee_provided (replaced by 'max_fee')
 """
 
 
@@ -669,6 +720,11 @@ def compose_transaction(db, name, params, construct_params):
     source, destinations, data = transaction.compose_data(
         db, name, params, skip_validation=skip_validation
     )
+
+    if construct_params.get("return_only_data", False):
+        return {
+            "data": config.PREFIX + data if data else None,
+        }
 
     # prepare unspent list
     unspent_list = prepare_unspent_list(db, source, construct_params)
@@ -686,13 +742,19 @@ def compose_transaction(db, name, params, construct_params):
 
     # construct transaction
     tx = Transaction(inputs, outputs + change_outputs)
-    btc_out = sum(output.nValue for output in outputs)
-    btc_change = sum(change_output.nValue for change_output in change_outputs)
-    verbose = construct_params.get("validate", False)
+    unsigned_tx_hex = tx.serialize().hex()
+    result = {
+        "unsigned_tx_hex": unsigned_tx_hex,
+    }
+
+    verbose = construct_params.get("verbose")
+    if verbose is None:
+        verbose = construct_params.get("return_psbt")  # legacy
 
     if verbose:
-        unsigned_tx_hex = tx.serialize().hex()
-        return {
+        btc_out = sum(output.nValue for output in outputs)
+        btc_change = sum(change_output.nValue for change_output in change_outputs)
+        result = result | {
             "btc_in": btc_in,
             "btc_out": btc_out,
             "btc_change": btc_change,
@@ -701,5 +763,5 @@ def compose_transaction(db, name, params, construct_params):
             "psbt": backend.bitcoind.convert_to_psbt(unsigned_tx_hex),
             "data": config.PREFIX + data if data else None,
         }
-    else:
-        return tx.serialize().hex()
+
+    return result
