@@ -149,13 +149,6 @@ def prepare_data_outputs(source, data, unspent_list, construct_params):
     raise exceptions.TransactionError(f"Not supported encoding: {encoding}")
 
 
-def prepare_outputs(source, destinations, data, unspent_list, construct_params):
-    outputs = perpare_non_data_outputs(destinations)
-    if data:
-        outputs += prepare_data_outputs(source, data, unspent_list, construct_params)
-    return outputs
-
-
 def prepare_more_outputs(more_outputs):
     output_list = [output.split(":") for output in more_outputs.split(",")]
     outputs = []
@@ -180,6 +173,19 @@ def prepare_more_outputs(more_outputs):
 
         outputs.append(TxOutput(value, script))
 
+    return outputs
+
+
+def prepare_outputs(source, destinations, data, unspent_list, construct_params):
+    # prepare non-data outputs
+    outputs = perpare_non_data_outputs(destinations)
+    # prepare data outputs
+    if data:
+        outputs += prepare_data_outputs(source, data, unspent_list, construct_params)
+    # Add more outputs if needed
+    more_outputs = construct_params.get("more_outputs")
+    if more_outputs:
+        outputs += prepare_more_outputs(more_outputs)
     return outputs
 
 
@@ -438,6 +444,8 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         else:
             change_address = source
 
+    outputs_total = sum(output["value"] for output in outputs)
+
     change_outputs = []
     # try with one input and increase until the change is enough for the fee
     input_count = 1
@@ -448,7 +456,6 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         selected_utxos = unspent_list[:input_count]
         inputs = utxos_to_txins(selected_utxos)
         btc_in = sum(utxo["value"] for utxo in selected_utxos)
-        outputs_total = sum(output["value"] for output in outputs)
         change_amount = btc_in - outputs_total
 
         # if change is negative, try with more inputs
@@ -539,11 +546,6 @@ def compose_transaction(db, name, params, construct_params):
     inputs, btc_in, change_outputs = prepare_inputs_and_change(
         source, outputs, unspent_list, construct_params
     )
-
-    # Add more outputs if needed
-    more_outputs = construct_params.get("more_outputs")
-    if more_outputs:
-        prepare_more_outputs(more_outputs)
 
     if not construct_params.get("disable_utxo_lock", False):
         UTXOLocks().lock_inputs(inputs)
