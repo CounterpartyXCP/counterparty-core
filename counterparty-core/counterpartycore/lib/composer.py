@@ -1,4 +1,5 @@
 import binascii
+import hashlib
 import string
 import time
 from collections import OrderedDict
@@ -17,8 +18,6 @@ from counterpartycore.lib import (
     transaction,
     util,
 )
-from counterpartycore.lib.transaction_helper.common_serializer import make_fully_valid
-from counterpartycore.lib.transaction_helper.transaction_outputs import chunks
 
 MAX_INPUTS_SET = 100
 
@@ -107,11 +106,42 @@ def search_pubkey(source, unspent_list, construct_params):
     )
 
 
+def make_valid_pubkey(pubkey_start):
+    """Take a too short data pubkey and make it look like a real pubkey.
+
+    Take an obfuscated chunk of data that is two bytes too short to be a pubkey and
+    add a sign byte to its beginning and a nonce byte to its end. Choose these
+    bytes so that the resulting sequence of bytes is a fully valid pubkey (i.e. on
+    the ECDSA curve). Find the correct bytes by guessing randomly until the check
+    passes. (In parsing, these two bytes are ignored.)
+    """
+    assert type(pubkey_start) == bytes  # noqa: E721
+    assert len(pubkey_start) == 31  # One sign byte and one nonce byte required (for 33 bytes).
+
+    random_bytes = hashlib.sha256(
+        pubkey_start
+    ).digest()  # Deterministically generated, for unit tests.
+    sign = (random_bytes[0] & 0b1) + 2  # 0x02 or 0x03
+    nonce = initial_nonce = random_bytes[1]
+
+    pubkey = b""
+    while not is_valid_pubkey(binascii.hexlify(pubkey).decode("utf-8")):
+        # Increment nonce.
+        nonce += 1
+        assert nonce != initial_nonce
+
+        # Construct a possibly fully valid public key.
+        pubkey = bytes([sign]) + pubkey_start + bytes([nonce % 256])
+
+    assert len(pubkey) == 33
+    return pubkey
+
+
 def data_to_pubkey_pairs(data, arc4_key):
     # Two pubkeys, minus length byte, minus prefix, minus two nonces,
     # minus two sign bytes.
     chunk_size = (33 * 2) - 1 - len(config.PREFIX) - 2 - 2
-    data_array = list(chunks(data, chunk_size))
+    data_array = util.chunkify(data, chunk_size)
     pubkey_pairs = []
     for data_chunk in data_array:
         # Get data (fake) public key.
@@ -119,8 +149,8 @@ def data_to_pubkey_pairs(data, arc4_key):
         assert pad_length >= 0
         output_data = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")  # noqa: PLW2901
         output_data = encrypt_data(output_data, arc4_key)
-        data_pubkey_1 = make_fully_valid(output_data[:31])
-        data_pubkey_2 = make_fully_valid(output_data[31:])
+        data_pubkey_1 = make_valid_pubkey(output_data[:31])
+        data_pubkey_2 = make_valid_pubkey(output_data[31:])
         pubkey_pairs.append((b_to_h(data_pubkey_1), b_to_h(data_pubkey_2)))
     return pubkey_pairs
 
