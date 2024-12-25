@@ -13,6 +13,7 @@
 - Catch errors correctly when composing MPMA send
 - Fix query to fill `issuances.asset_events` field
 - Fix `assets_info.supply` field
+- Fix `verbose=True` when `give_asset` or `get_asset` contain an `asset_longname`
 
 ## Codebase
 

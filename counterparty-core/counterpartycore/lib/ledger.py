@@ -865,14 +865,27 @@ def get_asset_issuances_quantity(db, asset):
 
 
 def get_assets_last_issuance(state_db, asset_list):
+    assets_info = []
     cursor = state_db.cursor()
     fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
-    query = f"""
-        SELECT {", ".join(fields)} FROM assets_info
-        WHERE asset IN ({",".join(["?"] * len(asset_list))})
-    """  # nosec B608  # noqa: S608
-    cursor.execute(query, asset_list)
-    assets_info = cursor.fetchall()
+
+    asset_name_list = [asset for asset in asset_list if asset and "." not in asset]
+    if len(asset_name_list) > 0:
+        query = f"""
+            SELECT {", ".join(fields)} FROM assets_info
+            WHERE asset IN ({",".join(["?"] * len(asset_name_list))})
+        """  # nosec B608  # noqa: S608
+        cursor.execute(query, asset_name_list)
+        assets_info += cursor.fetchall()
+
+    asset_longname_list = [asset for asset in asset_list if asset and "." in asset]
+    if len(asset_longname_list) > 0:
+        query = f"""
+            SELECT {", ".join(fields)} FROM assets_info
+            WHERE asset_longname IN ({",".join(["?"] * len(asset_longname_list))})
+        """  # nosec B608  # noqa: S608
+        cursor.execute(query, asset_longname_list)
+        assets_info += cursor.fetchall()
 
     result = {
         "BTC": {
@@ -891,9 +904,14 @@ def get_assets_last_issuance(state_db, asset_list):
         },
     }
     for asset_info in assets_info:
-        asset = asset_info["asset"]
-        del asset_info["asset"]
-        result[asset] = asset_info
+        if asset_info["asset_longname"] in asset_list:
+            result[asset_info["asset_longname"]] = asset_info
+            result[asset_info["asset"]] = asset_info
+        else:
+            asset = asset_info["asset"]
+            del asset_info["asset"]
+            result[asset] = asset_info
+
     return result
 
 

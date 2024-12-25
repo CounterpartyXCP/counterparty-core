@@ -6534,6 +6534,7 @@
                         "fee_required": 900000,
                         "status": "open",
                         "give_asset_info": {
+                            "asset": "XCP",
                             "asset_longname": null,
                             "description": "The Counterparty protocol native currency",
                             "issuer": null,
