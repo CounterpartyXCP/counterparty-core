@@ -8,8 +8,8 @@ from collections import OrderedDict
 
 from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
+from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
-from bitcoinutils.utils import is_address_bech32
 
 from counterpartycore.lib import (
     arc4,
@@ -27,10 +27,12 @@ MAX_INPUTS_SET = 100
 
 def get_script(address):
     try:
-        if is_address_bech32(address):
-            return P2wpkhAddress(address).to_script_pub_key()
+        return P2wpkhAddress(address).to_script_pub_key()
+    except ValueError:
+        pass
+    try:
         return P2pkhAddress(address).to_script_pub_key()
-    except Exception as e:
+    except ValueError as e:
         raise exceptions.ComposeError(f"Invalid address: {address}") from e
 
 
@@ -479,7 +481,7 @@ def ensure_utxo_is_first(utxo, unspent_list):
     return new_unspent_list
 
 
-def filter_utxos_with_balances(db, unspent_list, construct_params):
+def filter_utxos_with_balances(db, source, unspent_list, construct_params):
     use_utxos_with_balances = construct_params.get("use_utxos_with_balances", False)
     if use_utxos_with_balances:
         return unspent_list
@@ -488,6 +490,9 @@ def filter_utxos_with_balances(db, unspent_list, construct_params):
     new_unspent_list = []
     for utxo in unspent_list:
         str_input = f"{utxo['txid']}:{utxo['vout']}"
+        if str_input == source:
+            new_unspent_list.append(utxo)
+            continue
         utxo_balances = ledger.get_utxo_balances(db, str_input)
         with_balances = len(utxo_balances) > 0 and any(
             [balance["quantity"] > 0 for balance in utxo_balances]
@@ -534,10 +539,7 @@ def prepare_unspent_list(db, source, construct_params):
         unspent_list = UTXOLocks().filter_unspent_list(unspent_list)
 
     # exclude utxos with balances if needed
-    filter_utxos_with_balances(db, unspent_list, construct_params)
-
-    # sort unspent list by value
-    unspent_list = sorted(unspent_list, key=lambda x: x["value"], reverse=True)
+    filter_utxos_with_balances(db, source, unspent_list, construct_params)
 
     # if source is an utxo, ensure it is first in the unspent list
     if util.is_utxo_format(source):
@@ -550,6 +552,9 @@ def prepare_unspent_list(db, source, construct_params):
 
     # complete unspent list with missing data (value or script_pub_key)
     unspent_list = complete_unspent_list(unspent_list)
+
+    # sort unspent list by value
+    unspent_list = sorted(unspent_list, key=lambda x: x["value"], reverse=True)
 
     return unspent_list
 
@@ -619,7 +624,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         else:
             change_address = source
 
-    outputs_total = sum(output["value"] for output in outputs)
+    outputs_total = sum(output.amount for output in outputs)
 
     change_outputs = []
     # try with one input and increase until the change is enough for the fee
@@ -749,6 +754,8 @@ def compose_data(db, name, params, accept_missing_params=False, skip_validation=
 
 
 def compose_transaction(db, name, params, construct_params):
+    setup(config.NETWORK_NAME)
+
     # prepare data
     skip_validation = construct_params.get("validate", True)
     source, destinations, data = compose_data(db, name, params, skip_validation=skip_validation)
@@ -766,7 +773,7 @@ def compose_transaction(db, name, params, construct_params):
 
     # prepare inputs and change
     inputs, btc_in, change_outputs = prepare_inputs_and_change(
-        source, outputs, unspent_list, construct_params
+        db, source, outputs, unspent_list, construct_params
     )
 
     if not construct_params.get("disable_utxo_lock", False):
@@ -774,7 +781,7 @@ def compose_transaction(db, name, params, construct_params):
 
     # construct transaction
     tx = Transaction(inputs, outputs + change_outputs)
-    unsigned_tx_hex = tx.serialize().hex()
+    unsigned_tx_hex = tx.serialize()
     result = {
         "rawtransaction": unsigned_tx_hex,
     }
@@ -784,8 +791,8 @@ def compose_transaction(db, name, params, construct_params):
         verbose = construct_params.get("return_psbt")  # legacy
 
     if verbose:
-        btc_out = sum(output.nValue for output in outputs)
-        btc_change = sum(change_output.nValue for change_output in change_outputs)
+        btc_out = sum(output.amount for output in outputs)
+        btc_change = sum(change_output.amount for change_output in change_outputs)
         result = result | {
             "btc_in": btc_in,
             "btc_out": btc_out,

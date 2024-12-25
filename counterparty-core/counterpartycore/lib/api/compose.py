@@ -3,6 +3,7 @@ import decimal
 
 from counterpartycore.lib import (
     backend,
+    composer,
     config,
     deserialize,
     exceptions,
@@ -10,7 +11,6 @@ from counterpartycore.lib import (
     gettxinfo,
     message_type,
     messages,
-    transaction,
     util,
 )
 from counterpartycore.lib.messages.utxo import ID as UTXO_ID
@@ -148,6 +148,11 @@ COMPOSE_COMMONS_ARGS = {
         True,
         "Validate the transaction",
     ),
+    "verbose": (
+        bool,
+        False,
+        "Verbose mode",
+    ),
 }
 
 
@@ -166,36 +171,12 @@ def split_compose_params(**kwargs):
 
 
 def compose(db, name, params, **construct_args):
-    if name not in COMPOSABLE_TRANSACTIONS:
-        raise exceptions.TransactionError("Transaction type not composable.")
-    return_only_data = construct_args.pop("return_only_data", False)
-    return_psbt = construct_args.pop("return_psbt", False)
-    for v1_args in ["extended_tx_info", "old_style_api"]:
-        construct_args.pop(v1_args)
-    transaction_info = transaction.compose_transaction(
+    return composer.compose_transaction(
         db,
-        name=name,
-        params=params,
-        **construct_args,
+        name,
+        params,
+        construct_args,
     )
-    if return_only_data:
-        return {"data": transaction_info["data"]}
-    result = {
-        "params": params,
-        "name": name.split(".")[-1],
-        "data": transaction_info["data"],
-        "btc_in": transaction_info["btc_in"],
-        "btc_out": transaction_info["btc_out"],
-        "btc_change": transaction_info["btc_change"],
-        "btc_fee": transaction_info["btc_fee"],
-    }
-    if return_psbt:
-        result["psbt"] = backend.bitcoind.convert_to_psbt(transaction_info["unsigned_tx_hex"])
-    else:
-        result["rawtransaction"] = transaction_info["unsigned_tx_hex"]
-    if transaction_info.get("unsigned_pretx_hex"):
-        result["unsigned_pretx_hex"] = transaction_info["unsigned_pretx_hex"]
-    return result
 
 
 def compose_bet(

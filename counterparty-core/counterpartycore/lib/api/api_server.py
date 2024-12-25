@@ -201,7 +201,7 @@ def prepare_args(route, **kwargs):
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
-        if arg_name in ["verbose"]:
+        if arg_name in ["verbose"] and "compose" not in route["function"].__name__:
             continue
         if arg_name in function_args:
             continue

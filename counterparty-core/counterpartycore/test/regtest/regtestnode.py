@@ -214,6 +214,7 @@ class RegtestNode:
         if "exact_fee" not in params:
             params["exact_fee"] = 10000  # fixed fee
         # print("Inputs set:", params["inputs_set"])
+        params["verbose"] = True
 
         result = self.compose(source, tx_name, params)
 
