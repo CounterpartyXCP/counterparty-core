@@ -904,7 +904,7 @@ def get_assets_last_issuance(state_db, asset_list):
         },
     }
     for asset_info in assets_info:
-        if asset_info["asset_longname"] in asset_list:
+        if asset_info["asset_longname"] and asset_info["asset_longname"] in asset_list:
             result[asset_info["asset_longname"]] = asset_info
             result[asset_info["asset"]] = asset_info
         else:
