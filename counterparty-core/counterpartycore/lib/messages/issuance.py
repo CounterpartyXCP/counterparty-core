@@ -131,12 +131,29 @@ def initialise(db):
             UPDATE issuances SET 
                 asset_events = (
                     SELECT
-                        json_extract(bindings, '$.asset_events')
+                        json_extract(messages.bindings, '$.asset_events')
                     FROM messages
                     WHERE messages.tx_hash = issuances.tx_hash
+                    AND messages.event IN ('ASSET_ISSUANCE', 'RESET_ISSUANCE', 'ASSET_TRANSFER')
                 );
         """)
         database.lock_update(db, "issuances")
+        database.set_config_value(db, "FIX_ASSET_EVENTS_FIELD_1", True)
+    elif database.get_config_value(db, "FIX_ASSET_EVENTS_FIELD_1") is None:
+        logger.debug("Fixing issuances `asset_events` field")
+        database.unlock_update(db, "issuances")
+        cursor.execute("""
+            UPDATE issuances SET 
+                asset_events = (
+                    SELECT
+                        json_extract(messages.bindings, '$.asset_events')
+                    FROM messages
+                    WHERE messages.tx_hash = issuances.tx_hash
+                    AND messages.event IN ('ASSET_ISSUANCE', 'RESET_ISSUANCE', 'ASSET_TRANSFER')
+                );
+        """)
+        database.lock_update(db, "issuances")
+        database.set_config_value(db, "FIX_ASSET_EVENTS_FIELD_1", True)
 
     # remove FOREIGN KEY with transactions
     if database.has_fk_on(cursor, "issuances", "transactions.tx_index"):

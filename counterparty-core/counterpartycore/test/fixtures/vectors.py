@@ -6257,6 +6257,7 @@ UNITTEST_VECTOR = (
                             "memo_hex": None,
                             "msg_index": 0,
                             "fee_paid": 0,
+                            "send_type": "send",
                         }
                     ],
                 },
@@ -6289,6 +6290,7 @@ UNITTEST_VECTOR = (
                             "memo_hex": "68656c6c6f",
                             "msg_index": 0,
                             "fee_paid": 0,
+                            "send_type": "send",
                         }
                     ],
                 },
@@ -6321,6 +6323,7 @@ UNITTEST_VECTOR = (
                             "memo_hex": "68656c6c6f",
                             "msg_index": 0,
                             "fee_paid": 0,
+                            "send_type": "send",
                         }
                     ],
                 },
@@ -6353,6 +6356,7 @@ UNITTEST_VECTOR = (
                             "memo_hex": "68656c6c6f",
                             "msg_index": 0,
                             "fee_paid": 0,
+                            "send_type": "send",
                         }
                     ],
                 },
@@ -6385,6 +6389,7 @@ UNITTEST_VECTOR = (
                             "memo_hex": "68656c6c6f",
                             "msg_index": 0,
                             "fee_paid": 0,
+                            "send_type": "send",
                         }
                     ],
                 },
@@ -6417,6 +6422,7 @@ UNITTEST_VECTOR = (
                             "memo_hex": "68656c6c6f",
                             "msg_index": 0,
                             "fee_paid": 0,
+                            "send_type": "send",
                         }
                     ],
                 },
@@ -6466,6 +6472,7 @@ UNITTEST_VECTOR = (
                             "memo_hex": "fade0001",
                             "msg_index": 0,
                             "fee_paid": 0,
+                            "send_type": "send",
                         }
                     ],
                 },

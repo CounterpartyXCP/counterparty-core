@@ -1,8 +1,11 @@
 Initializing database...
+Adding `send_type` column to sends table
+Added `send_type` column to sends table in 0.00 seconds
+Fixing issuances `asset_events` field
 Fixing issuances `asset_longname` field
 SQLITE_LOG: statement aborts at 12: [SELECT value FROM config WHERE name = ?] database schema has changed (17) SQLITE_SCHEMA
 Fixing issuances `asset_longname` field
-SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_issuances] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 14: [DROP TRIGGER IF EXISTS block_update_issuances] database schema has changed (17) SQLITE_SCHEMA
 SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_fairminters] database schema has changed (17) SQLITE_SCHEMA
 SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_issuances
             BEFORE UPDATE ON issuances BEGIN
@@ -14,6 +17,10 @@ SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_f
             END;] databa (17) SQLITE_SCHEMA
 SQLITE_LOG: statement aborts at 27: [INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)] database schema has changed (17) SQLITE_SCHEMA
 Cleaning `transaction_count` table
+SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_transaction_count
+            BEFORE UPDATE ON transaction_count BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+             (17) SQLITE_SCHEMA
 Initialising asset cache...
 Asset cache initialised in 0.00 seconds
 Initialising asset cache...

@@ -423,9 +423,15 @@ def inject_normalized_quantity(item, field_name, asset_info):
         return item
 
     if item[field_name] is not None:
-        if field_name in ["give_price", "get_price", "forward_price", "backward_price", "price"]:
+        if field_name in ["give_price", "get_price", "forward_price", "backward_price"]:
             # use 16 decimal places for prices
             item[field_name + "_normalized"] = normalize_price(item[field_name])
+        elif field_name == "price":
+            if "satoshirate" in item:
+                price = D(item["satoshirate_normalized"]) / D(item["give_quantity_normalized"])
+                item[field_name + "_normalized"] = normalize_price(price)
+            else:
+                item[field_name + "_normalized"] = normalize_price(item[field_name])
         else:
             item[field_name + "_normalized"] = (
                 divide(item[field_name], 10**8)
