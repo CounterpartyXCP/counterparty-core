@@ -1,6 +1,8 @@
 import binascii
 import hashlib
+import inspect
 import string
+import sys
 import time
 from collections import OrderedDict
 
@@ -17,7 +19,6 @@ from counterpartycore.lib import (
     ledger,
     opcodes,
     script,
-    transaction,
     util,
 )
 
@@ -675,7 +676,6 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 
 +encoding
 +validate
-+verbose
 +exact_fee
 +confirmation_target
 +inputs_set
@@ -687,6 +687,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 
 # NEW
 
++verbose
 +sat_per_vbyte
 +max_fee
 +mutlisig_pubkey
@@ -714,12 +715,43 @@ segwit (removed)
 """
 
 
+def get_default_args(func):
+    signature = inspect.signature(func)
+    return {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+
+
+def compose_data(db, name, params, accept_missing_params=False, skip_validation=False):
+    try:
+        compose_method = sys.modules[f"counterpartycore.lib.messages.{name}"].compose
+    except KeyError as e:
+        raise exceptions.ComposeError(f"message {name} not found") from e
+    compose_params = inspect.getfullargspec(compose_method)[0]
+    missing_params = [p for p in compose_params if p not in params and p != "db"]
+    if accept_missing_params:  # for API v1 backward compatibility
+        for param in missing_params:
+            params[param] = None
+    else:
+        if len(missing_params) > 0:
+            default_values = get_default_args(compose_method)
+            for param in missing_params:
+                if param in default_values:
+                    params[param] = default_values[param]
+                else:
+                    raise exceptions.ComposeError(
+                        f"missing parameters: {', '.join(missing_params)}"
+                    )
+    params["skip_validation"] = skip_validation
+    return compose_method(db, **params)
+
+
 def compose_transaction(db, name, params, construct_params):
     # prepare data
     skip_validation = construct_params.get("validate", True)
-    source, destinations, data = transaction.compose_data(
-        db, name, params, skip_validation=skip_validation
-    )
+    source, destinations, data = compose_data(db, name, params, skip_validation=skip_validation)
 
     if construct_params.get("return_only_data", False):
         return {
@@ -744,7 +776,7 @@ def compose_transaction(db, name, params, construct_params):
     tx = Transaction(inputs, outputs + change_outputs)
     unsigned_tx_hex = tx.serialize().hex()
     result = {
-        "unsigned_tx_hex": unsigned_tx_hex,
+        "rawtransaction": unsigned_tx_hex,
     }
 
     verbose = construct_params.get("verbose")
@@ -759,7 +791,7 @@ def compose_transaction(db, name, params, construct_params):
             "btc_out": btc_out,
             "btc_change": btc_change,
             "btc_fee": btc_in - btc_out - btc_change,
-            "unsigned_tx_hex": unsigned_tx_hex,
+            "rawtransaction": unsigned_tx_hex,
             "psbt": backend.bitcoind.convert_to_psbt(unsigned_tx_hex),
             "data": config.PREFIX + data if data else None,
         }
