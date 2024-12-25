@@ -11,6 +11,7 @@
 
 - Fix endpoint to get info from raw transaction when block index is not provided
 - Catch errors correctly when composing MPMA send
+- Fix consensus hashes calculation after a Blockchain reorg
 - Fix query to fill `issuances.asset_events` field
 - Fix `assets_info.supply` field
 - Fix `verbose=True` when `give_asset` or `get_asset` contain an `asset_longname`
