@@ -206,6 +206,8 @@ def select_rows(
                 bindings += value
             elif key.endswith("__notnull"):
                 where_field.append(f"{key[:-9]} IS NOT NULL")
+            elif key.endswith("__null"):
+                where_field.append(f"{key[:-6]} IS NULL")
             else:
                 if key in ADDRESS_FIELDS and len(value.split(",")) > 1:
                     where_field.append(f"{key} IN ({','.join(['?'] * len(value.split(',')))})")
@@ -1179,15 +1181,7 @@ def prepare_sends_where(send_type: SendType, other_conditions=None):
             where = [other_conditions] if other_conditions else []
             break
         if type_send in typing.get_args(SendType):
-            where_send = {}
-            if type_send == "send":
-                where_send = {"source__notlike": "%:%", "destination__notlike": "%:%"}
-            elif type_send == "move":
-                where_send = {"source__like": "%:%", "destination__like": "%:%"}
-            elif type_send == "attach":
-                where_send = {"source__notlike": "%:%", "destination__like": "%:%"}
-            elif type_send == "detach":
-                where_send = {"source__like": "%:%", "destination__notlike": "%:%"}
+            where_send = {"send_type": type_send}
             if other_conditions:
                 where_send.update(other_conditions)
             if where_send:
@@ -2196,7 +2190,7 @@ def get_receive_by_address_and_asset(
     )
 
 
-def prepare_dispenser_where(status, other_conditions=None):
+def prepare_dispenser_where(status, other_conditions=None, exclude_with_oracle=False):
     where = []
     statuses = status.split(",")
     for s in statuses:
@@ -2205,12 +2199,16 @@ def prepare_dispenser_where(status, other_conditions=None):
 
         if s == "all":
             where = other_conditions or {}
+            if exclude_with_oracle:
+                where["oracle_address__null"] = True
             break
 
         if s in DispenserStatusNumber:
             where_status = {"status": DispenserStatusNumber[s]}
             if other_conditions:
                 where_status.update(other_conditions)
+            if exclude_with_oracle:
+                where_status["oracle_address__null"] = True
 
             where.append(where_status)
 
@@ -2223,6 +2221,7 @@ SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
 def get_dispensers(
     state_db,
     status: DispenserStatus = "all",
+    exclude_with_oracle: bool = False,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2231,6 +2230,7 @@ def get_dispensers(
     """
     Returns all dispensers
     :param str status: The status of the dispensers to return
+    :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2240,7 +2240,7 @@ def get_dispensers(
     return select_rows(
         state_db,
         "dispensers",
-        where=prepare_dispenser_where(status),
+        where=prepare_dispenser_where(status, exclude_with_oracle=exclude_with_oracle),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2253,6 +2253,7 @@ def get_dispensers_by_address(
     state_db,
     address: str,
     status: DispenserStatus = "all",
+    exclude_with_oracle: bool = False,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2262,6 +2263,7 @@ def get_dispensers_by_address(
     Returns the dispensers of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str status: The status of the dispensers to return
+    :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2270,7 +2272,9 @@ def get_dispensers_by_address(
     return select_rows(
         state_db,
         "dispensers",
-        where=prepare_dispenser_where(status, {"source": address}),
+        where=prepare_dispenser_where(
+            status, {"source": address}, exclude_with_oracle=exclude_with_oracle
+        ),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2283,6 +2287,7 @@ def get_dispensers_by_asset(
     state_db,
     asset: str,
     status: DispenserStatus = "all",
+    exclude_with_oracle: bool = False,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2292,6 +2297,7 @@ def get_dispensers_by_asset(
     Returns the dispensers of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param str status: The status of the dispensers to return
+    :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2300,7 +2306,9 @@ def get_dispensers_by_asset(
     return select_rows(
         state_db,
         "dispensers",
-        where=prepare_dispenser_where(status, {"asset": asset.upper()}),
+        where=prepare_dispenser_where(
+            status, {"asset": asset.upper()}, exclude_with_oracle=exclude_with_oracle
+        ),
         last_cursor=cursor,
         limit=limit,
         offset=offset,

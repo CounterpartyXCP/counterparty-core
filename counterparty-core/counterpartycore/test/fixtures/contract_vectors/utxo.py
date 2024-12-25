@@ -138,6 +138,7 @@ UTXO_VECTOR = {
                             "asset": "XCP",
                             "quantity": 100,
                             "fee_paid": 0,
+                            "send_type": "attach",
                         },
                     },
                     {
@@ -146,7 +147,7 @@ UTXO_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1","fee_paid":0,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1","fee_paid":0,"msg_index":0,"quantity":100,"send_type":"attach","source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "ATTACH_TO_UTXO",
                         },
                     },
@@ -182,6 +183,7 @@ UTXO_VECTOR = {
                             "asset": "XCP",
                             "quantity": 100,
                             "fee_paid": 0,
+                            "send_type": "detach",
                         },
                     },
                     {
@@ -190,7 +192,7 @@ UTXO_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","fee_paid":0,"msg_index":0,"quantity":100,"source":"57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","fee_paid":0,"msg_index":0,"quantity":100,"send_type":"detach","source":"57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "DETACH_FROM_UTXO",
                         },
                     },
