@@ -153,6 +153,11 @@ COMPOSE_COMMONS_ARGS = {
         False,
         "Verbose mode",
     ),
+    "use_all_inputs_set": (
+        bool,
+        False,
+        "Use all inputs set",
+    ),
 }
 
 

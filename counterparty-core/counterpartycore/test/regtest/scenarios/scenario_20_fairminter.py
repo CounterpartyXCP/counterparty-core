@@ -548,6 +548,7 @@ SCENARIO = [
         "source": "$ADDRESS_8",
         "params": {
             "asset": "A95428959531084712",
+            "exact_fee": 0,
         },
         "controls": [
             {

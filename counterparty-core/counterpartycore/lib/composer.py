@@ -1,6 +1,7 @@
 import binascii
 import hashlib
 import inspect
+import logging
 import string
 import sys
 import time
@@ -23,6 +24,8 @@ from counterpartycore.lib import (
 )
 
 MAX_INPUTS_SET = 100
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def get_script(address):
@@ -196,8 +199,9 @@ def data_to_pubkey_pairs(data, arc4_key):
     chunk_size = (33 * 2) - 1 - len(config.PREFIX) - 2 - 2
     data_array = util.chunkify(data, chunk_size)
     pubkey_pairs = []
-    for data_chunk in data_array:
+    for data_part in data_array:
         # Get data (fake) public key.
+        data_chunk = config.PREFIX + data_part
         pad_length = (33 * 2) - 1 - 2 - 2 - len(data_chunk)
         assert pad_length >= 0
         output_data = bytes([len(data_chunk)]) + data_chunk + (pad_length * b"\x00")  # noqa: PLW2901
@@ -447,11 +451,22 @@ def prepare_inputs_set(inputs_set):
 
 
 def utxo_to_address(db, utxo):
+    # first try with the database
     sql = "SELECT utxo_address FROM balances WHERE utxo = ? LIMIT 1"
     balance = db.execute(sql, (utxo,)).fetchone()
     if balance:
         return balance["utxo_address"]
-    raise exceptions.ComposeError(f"the address corresponding to {utxo} not found in the database")
+    # then try with Bitcoin Core
+    txid, vout = utxo.split(":")
+    try:
+        tx = backend.bitcoind.getrawtransaction(txid, verbose=True)
+        vout = int(vout)
+        address = tx["vout"][vout]["scriptPubKey"]["address"]
+        return address
+    except Exception as e:
+        raise exceptions.ComposeError(
+            f"the address corresponding to {utxo} not found in the database"
+        ) from e
 
 
 def ensure_utxo_is_first(utxo, unspent_list):
@@ -502,6 +517,7 @@ def filter_utxos_with_balances(db, source, unspent_list, construct_params):
         if with_balances:
             raise exceptions.ComposeError(f"UTXO {str_input} has balances")
         new_unspent_list.append(utxo)
+    return new_unspent_list
 
 
 def prepare_unspent_list(db, source, construct_params):
@@ -539,11 +555,7 @@ def prepare_unspent_list(db, source, construct_params):
         unspent_list = UTXOLocks().filter_unspent_list(unspent_list)
 
     # exclude utxos with balances if needed
-    filter_utxos_with_balances(db, source, unspent_list, construct_params)
-
-    # if source is an utxo, ensure it is first in the unspent list
-    if util.is_utxo_format(source):
-        unspent_list = ensure_utxo_is_first(source, unspent_list)
+    unspent_list = filter_utxos_with_balances(db, source, unspent_list, construct_params)
 
     if len(unspent_list) == 0:
         raise exceptions.ComposeError(
@@ -555,6 +567,10 @@ def prepare_unspent_list(db, source, construct_params):
 
     # sort unspent list by value
     unspent_list = sorted(unspent_list, key=lambda x: x["value"], reverse=True)
+
+    # if source is an utxo, ensure it is first in the unspent list
+    if util.is_utxo_format(source):
+        unspent_list = ensure_utxo_is_first(source, unspent_list)
 
     return unspent_list
 
@@ -568,7 +584,9 @@ def select_utxos(unspent_list, target_amount):
         if total_amount >= target_amount:
             break
     if total_amount < target_amount:
-        raise exceptions.ComposeError(f"Insufficient funds for the target amount: {target_amount}")
+        raise exceptions.ComposeError(
+            f"Insufficient funds for the target amount: {total_amount} < {target_amount}"
+        )
     return selected_utxos
 
 
@@ -627,11 +645,15 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
     outputs_total = sum(output.amount for output in outputs)
 
     change_outputs = []
+    btc_in = 0
     # try with one input and increase until the change is enough for the fee
-    input_count = 1
+    use_all_inputs_set = construct_params.get("use_all_inputs_set", False)
+    input_count = len(unspent_list) if use_all_inputs_set else 1
     while True:
         if input_count > len(unspent_list):
-            raise exceptions.ComposeError("Insufficient funds for the target amount")
+            raise exceptions.ComposeError(
+                f"Insufficient funds for the target amount: {btc_in} < {outputs_total}"
+            )
 
         selected_utxos = unspent_list[:input_count]
         inputs = utxos_to_txins(selected_utxos)
@@ -649,7 +671,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 
         # if change is enough for exact_fee, add change output and break
         if exact_fee is not None:
-            change_amount = change_amount - exact_fee
+            change_amount = int(change_amount - exact_fee)
             if change_amount > regular_dust_size(construct_params):
                 change_outputs.append(TxOutput(change_amount, get_script(change_address)))
             break
@@ -698,6 +720,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 +mutlisig_pubkey
 +change_address
 +more_outputs
++use_all_inputs_set
 
 # DEPRECATED BUT STILL SUPPORTED
 
@@ -757,7 +780,7 @@ def compose_transaction(db, name, params, construct_params):
     setup(config.NETWORK_NAME)
 
     # prepare data
-    skip_validation = construct_params.get("validate", True)
+    skip_validation = not construct_params.get("validate", True)
     source, destinations, data = compose_data(db, name, params, skip_validation=skip_validation)
 
     if construct_params.get("return_only_data", False):
