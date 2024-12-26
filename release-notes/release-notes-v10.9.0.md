@@ -23,6 +23,7 @@
 - Add cache for unsupported transactions when parsing raw 
 - Refactor and optimize bootstrap process, using `zstd` instead of `gzip`
 - Remove Addrindexrs dependency: mock `get_oldest_tx()`, use Electrs to get utxos and address history for transaction composition
+- Be able to trigger automatic State DB refresh on version change
 
 ## API
 
@@ -38,6 +39,7 @@
 
 - Add `--cache-dir` flag
 - Add `severity` field to JSON logs for compatibility
+- Add `--refresh-state-db` and `--rebuild-state-db` flags for `start` command
 
 # Credits
 
