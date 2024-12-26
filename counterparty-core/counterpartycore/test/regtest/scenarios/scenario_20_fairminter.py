@@ -461,6 +461,7 @@ SCENARIO = [
             "asset": "SUBASSETC",
             "asset_parent": "PARENTA",
             "max_mint_per_tx": 100,
+            "exact_fee": 0,
         },
         "set_variables": {
             "FREEFAIRMINT_SUBASSETC_TX_HASH": "$TX_HASH",

@@ -629,6 +629,7 @@ def compose_attach(
 ):
     """
     Composes a transaction to attach assets from an address to UTXO.
+    Warning: after attaching assets to a UTXO, remember to use the `exclude_utxos` parameter to exclude it from subsequent transactions. This is done automatically by the Composer but only once the attach is confirmed.
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
     :param asset: The asset or subasset to attach (e.g. XCP)
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)

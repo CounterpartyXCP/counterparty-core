@@ -646,13 +646,14 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 
     change_outputs = []
     btc_in = 0
+    needed_fee = 0
     # try with one input and increase until the change is enough for the fee
     use_all_inputs_set = construct_params.get("use_all_inputs_set", False)
     input_count = len(unspent_list) if use_all_inputs_set else 1
     while True:
         if input_count > len(unspent_list):
             raise exceptions.ComposeError(
-                f"Insufficient funds for the target amount: {btc_in} < {outputs_total}"
+                f"Insufficient funds for the target amount: {btc_in} < {outputs_total + needed_fee}"
             )
 
         selected_utxos = unspent_list[:input_count]

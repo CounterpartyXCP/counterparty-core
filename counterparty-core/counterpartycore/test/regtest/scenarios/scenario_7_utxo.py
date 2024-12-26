@@ -273,7 +273,7 @@ SCENARIO = [
                             "source": "",
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
-                            "utxos_info": "$UTXO_ATTACH_1_TX_HASH:0 $TX_HASH:0 2 ",
+                            "utxos_info": "$UTXO_ATTACH_1_TX_HASH:0 $TX_HASH:0 1 ",
                             "transaction_type": "utxomove",
                         },
                         "tx_hash": "$TX_HASH",
