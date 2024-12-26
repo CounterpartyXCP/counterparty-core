@@ -366,6 +366,22 @@ CONFIG_ARGS = [
             "help": "the URL of the Electrs server",
         },
     ],
+    [
+        ("--refresh-state-db",),
+        {
+            "help": "On startup, rebuild non rollbackable tables in the state database",
+            "action": "store_true",
+            "default": False,
+        },
+    ],
+    [
+        ("--rebuild-state-db",),
+        {
+            "help": "On startup, rebuild all tables in the state database",
+            "action": "store_true",
+            "default": False,
+        },
+    ],
 ]
 
 

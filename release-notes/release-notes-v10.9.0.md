@@ -38,6 +38,7 @@
 
 - Add `--cache-dir` flag
 - Add `severity` field to JSON logs for compatibility
+- Add `--refresh-state-db` and `--rebuild-state-db` flags for `start` command
 
 # Credits
 

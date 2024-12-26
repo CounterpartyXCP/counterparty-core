@@ -741,6 +741,13 @@ def start_all(args):
         blocks.check_database_version(db)
         database.optimize(db)
 
+        if args.rebuild_state_db:
+            dbbuilder.build_state_db()
+        elif args.refresh_state_db:
+            state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+            dbbuilder.refresh_state_db(state_db)
+            state_db.close()
+
         # Check software version
         check.software_version()
 
