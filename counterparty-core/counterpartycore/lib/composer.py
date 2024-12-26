@@ -661,7 +661,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         change_amount = btc_in - outputs_total
 
         # if change is negative, try with more inputs
-        if change_amount <= 0:
+        if change_amount < 0:
             input_count += 1
             continue
         # if change is not enough for exact_fee, try with more inputs
