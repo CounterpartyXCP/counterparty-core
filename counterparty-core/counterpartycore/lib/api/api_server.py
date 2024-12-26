@@ -480,6 +480,11 @@ def check_database_version(state_db):
         # rollback or reparse the database
         if e.required_action in ["rollback", "reparse"]:
             dbbuilder.rollback_state_db(state_db, block_index=e.from_block_index)
+        else:
+            for version in config.STATE_DB_NEED_REFRESH_ON_VERSION_UPDATE:
+                if config.VERSION_STRING.startswith(version):
+                    dbbuilder.refresh_state_db(state_db)
+                    break
         # update the database version
         database.update_version(state_db)
 
