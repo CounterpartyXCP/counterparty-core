@@ -27,16 +27,16 @@ def test_api_v2(request):
     asset = "NODIVISIBLE"
     asset1 = asset
     asset2 = "XCP"
-    tx_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
-    order_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
-    bet_hash = "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1"
-    dispenser_hash = "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec"
-    block_hash = "54aeaf47d5387964e2d51617bf3af50520a0449410e0d096cf8c2aa9dad5550b"
+    tx_hash = "b37d91f0a3451e89035a780c7f0e84ed135d4dd4cd39227cda35ac6da0d3f10e"
+    order_hash = "6d55dc8fe1555cb48b66c764e1d7dcc76bd1792673d09bf4168051dcb6d76efb"
+    bet_hash = "8a1916be67d8429e52405ef4016f2d70e5ee19a3bc808bc179f6965bcd6ea610"
+    dispenser_hash = "4c0f6bf88e269d5ec199b70afbaa69743d244ccc9bc86e40f53e7960f5789807"
+    block_hash = "8b3bef249cb3b0fa23a4936c1249b6bd41daeadc848c8d2e409ea1cbc10adfe7"
     dividend_hash = "42ae2fd7f3a18f84334bc37aa88283e79d6bff0b234dbf97e788695957d75518"
-    issuance_hash = "0abfce2662c05852fd8b181a60900678643cedad47b23a853b8c4eda82cb2cbf"
-    broadcast_hash = "7c437705c315212315c85c0b8ba09d358679c91be20b54f30929c5a6052426af"
-    minter_hash = "83b96c0f72fea31403567852f2bdb4840ffdf18bda2e82df4f27aad633830e29"
-    mint_hash = "ba6c7582f5c1e39bed32074c16f54ab338c79d0eefd3c8a7ba1f949e2febcd18"
+    issuance_hash = "cfdead7d6e10e46efac32f1956f2147d633f2c672ad43f6bb6c49a00d6916832"
+    broadcast_hash = "8650f4bac622845318dfd24d5737ac9290e3d8f1799d5806ba6456a9bb8dea25"
+    minter_hash = "1d7b6345d81e23a345a5befb51def7cfb3c83875f0be4e824e1ec96f01d498db"
+    mint_hash = "74420251573a1e6034f6194022abcfc1f3390ef34fed7cdcd7e82aa22cce8efe"
     event = "CREDIT"
     event_index = 10
     tx_index = 2
@@ -154,7 +154,7 @@ def test_new_get_balances_by_address():
             "asset": "DIVISIBLE",
             "asset_longname": None,
             "quantity": 1,
-            "utxo": "b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0",
+            "utxo": "2af07370ebad31d56c841b4662d11e1e75f8a2b8f16d171ab071a28c00d883ab:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         },
         {
@@ -170,7 +170,7 @@ def test_new_get_balances_by_address():
             "asset": "XCP",
             "asset_longname": None,
             "quantity": 100,
-            "utxo": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0",
+            "utxo": "6657beb41d0ab2cedd399331dd1cae65c0bc19ee07c1695859b5725ad7344969:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         },
         {
@@ -325,7 +325,7 @@ def test_new_get_balances_by_asset():
         },
         {
             "address": None,
-            "utxo": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0",
+            "utxo": "6657beb41d0ab2cedd399331dd1cae65c0bc19ee07c1695859b5725ad7344969:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
             "asset_longname": None,
@@ -411,8 +411,8 @@ def test_new_get_asset_orders():
     assert len(result) == 6
     assert result[0] == {
         "tx_index": 493,
-        "tx_hash": "1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
-        "block_index": 310513,
+        "tx_hash": "594789e471862d08d5bcd8f58ee70cb235589103da8beceb628a2e18f6398760",
+        "block_index": 310492,
         "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         "give_asset": "BTC",
         "give_quantity": 800000,
@@ -424,8 +424,8 @@ def test_new_get_asset_orders():
         "expire_index": 312492,
         "fee_required": 0,
         "fee_required_remaining": 0,
-        "fee_provided": 1000000,
-        "fee_provided_remaining": 992800,
+        "fee_provided": 597,
+        "fee_provided_remaining": 597,
         "status": "open",
         "get_price": 0.008,
         "give_price": 125.0,
@@ -434,12 +434,12 @@ def test_new_get_asset_orders():
 
 @pytest.mark.usefixtures("api_server_v2")
 def test_new_get_order_info():
-    tx_hash = "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a"
+    tx_hash = "ce4828b474d96ed877b1d02d13357041cd4a1f26e3a7f3da23a2ec17fc818490"
     url = f"{API_ROOT}/v2/orders/{tx_hash}"
     result = requests.get(url).json()["result"]  # noqa: S113
     assert result == {
         "tx_index": 11,
-        "tx_hash": "1899b2e6ec36ba4bc9d035e6640b0a62b08c3a147c77c89183a77d9ed9081b3a",
+        "tx_hash": "ce4828b474d96ed877b1d02d13357041cd4a1f26e3a7f3da23a2ec17fc818490",
         "block_index": 310010,
         "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "give_asset": "XCP",

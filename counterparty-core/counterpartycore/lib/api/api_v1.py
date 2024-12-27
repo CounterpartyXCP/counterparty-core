@@ -20,6 +20,7 @@ import flask
 import jsonrpc
 from counterpartycore.lib import (
     backend,
+    composer,
     config,
     deserialize,
     exceptions,
@@ -27,8 +28,6 @@ from counterpartycore.lib import (
     ledger,
     message_type,
     script,
-    transaction,
-    transaction_helper,
     util,
 )
 from counterpartycore.lib.api import compose as api_compose
@@ -573,27 +572,24 @@ class APIServer(threading.Thread):
                     common_args.pop(v2_arg, None)
                 if "fee" in transaction_args and "exact_fee" not in common_args:
                     common_args["exact_fee"] = transaction_args.pop("fee")
+                common_args["accept_missing_params"] = True
                 try:
                     with LedgerDBConnectionPool().connection() as db:
-                        transaction_info = transaction.compose_transaction(
+                        transaction_info = composer.compose_transaction(
                             db,
-                            name=tx,
-                            params=transaction_args,
-                            accept_missing_params=True,
-                            **common_args,
+                            tx,
+                            transaction_args,
+                            common_args,
                         )
                         if extended_tx_info:
-                            transaction_info["tx_hex"] = transaction_info["unsigned_tx_hex"]
-                            transaction_info["pretx_hex"] = transaction_info["unsigned_pretx_hex"]
-                            del transaction_info["unsigned_tx_hex"]
-                            del transaction_info["unsigned_pretx_hex"]
+                            transaction_info["tx_hex"] = transaction_info["rawtransaction"]
+                            del transaction_info["rawtransaction"]
                             return transaction_info
                         tx_hexes = list(
                             filter(
                                 None,
                                 [
-                                    transaction_info["unsigned_tx_hex"],
-                                    transaction_info["unsigned_pretx_hex"],
+                                    transaction_info["rawtransaction"],
                                 ],
                             )
                         )  # filter out None
@@ -987,9 +983,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
-            return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
-                pubkeyhash, provided_pubkeys=provided_pubkeys
-            )
+            return backend.electrs.search_pubkey(pubkeyhash)
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
@@ -1204,8 +1198,8 @@ class APIServer(threading.Thread):
                 # Compose the transaction.
                 try:
                     with LedgerDBConnectionPool().connection() as db:
-                        query_data, data = transaction.compose_transaction(
-                            db, name=query_type, params=transaction_args, **common_args
+                        query_data, data = composer.compose_transaction(
+                            db, query_type, transaction_args, common_args
                         )
                 except (
                     script.AddressError,

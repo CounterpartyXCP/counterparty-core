@@ -7,7 +7,7 @@ import sys
 import time
 from collections import OrderedDict
 
-from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress, PublicKey
+from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
@@ -28,13 +28,24 @@ MAX_INPUTS_SET = 100
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def get_script(address):
+def get_script(address, unspent_list, construct_params):
+    if script.is_multisig(address):
+        signatures_required, addresses, signatures_possible = script.extract_array(address)
+        pubkeys = [search_pubkey(address, unspent_list, construct_params) for address in addresses]
+        multisig_script = Script(
+            [signatures_required] + pubkeys + [signatures_possible] + ["OP_CHECKMULTISIG"]
+        )
+        return multisig_script
     try:
         return P2wpkhAddress(address).to_script_pub_key()
     except ValueError:
         pass
     try:
         return P2pkhAddress(address).to_script_pub_key()
+    except ValueError:
+        pass
+    try:
+        return P2shAddress(address).to_script_pub_key()
     except ValueError as e:
         raise exceptions.ComposeError(f"Invalid address: {address}") from e
 
@@ -85,11 +96,11 @@ def multisig_dust_size(construct_params):
     return config.DEFAULT_MULTISIG_DUST_SIZE
 
 
-def perpare_non_data_outputs(destinations, construct_params):
+def perpare_non_data_outputs(destinations, unspent_list, construct_params):
     outputs = []
     for address, value in destinations:
         output_value = value or regular_dust_size(construct_params)
-        outputs.append(TxOutput(output_value, get_script(address)))
+        outputs.append(TxOutput(output_value, get_script(address, unspent_list, construct_params)))
     return outputs
 
 
@@ -234,7 +245,7 @@ def prepare_data_outputs(source, data, unspent_list, construct_params):
     raise exceptions.TransactionError(f"Not supported encoding: {encoding}")
 
 
-def prepare_more_outputs(more_outputs):
+def prepare_more_outputs(more_outputs, unspent_list, construct_params):
     output_list = [output.split(":") for output in more_outputs.split(",")]
     outputs = []
     for output in output_list:
@@ -253,7 +264,7 @@ def prepare_more_outputs(more_outputs):
                 has_segwit = is_segwit_output(address_or_script)
                 script = Script.from_raw(address_or_script, has_segwit=has_segwit)
             else:
-                script = get_script(address_or_script)
+                script = get_script(address_or_script, unspent_list, construct_params)
         except Exception as e:
             raise exceptions.ComposeError(f"Invalid script or address for output: {output}") from e
 
@@ -264,14 +275,15 @@ def prepare_more_outputs(more_outputs):
 
 def prepare_outputs(source, destinations, data, unspent_list, construct_params):
     # prepare non-data outputs
-    outputs = perpare_non_data_outputs(destinations, construct_params)
+    outputs = perpare_non_data_outputs(destinations, unspent_list, construct_params)
+    print("NON DATA", outputs)
     # prepare data outputs
     if data:
         outputs += prepare_data_outputs(source, data, unspent_list, construct_params)
     # Add more outputs if needed
     more_outputs = construct_params.get("more_outputs")
     if more_outputs:
-        outputs += prepare_more_outputs(more_outputs)
+        outputs += prepare_more_outputs(more_outputs, unspent_list, construct_params)
     return outputs
 
 
@@ -332,9 +344,11 @@ def complete_unspent_list(unspent_list):
                 raise exceptions.ComposeError(f"Transaction {txid} not found")
             for vout in txs[txid]["vout"]:
                 if vout["n"] == utxo["vout"]:
-                    utxo["script_pub_key"] = vout["scriptPubKey"]["hex"]
-                    utxo["value"] = int(vout["value"] * config.UNIT)
-                    utxo["amount"] = vout["value"]
+                    if "script_pub_key" not in utxo:
+                        utxo["script_pub_key"] = vout["scriptPubKey"]["hex"]
+                    if "value" not in utxo:
+                        utxo["value"] = int(vout["value"] * config.UNIT)
+                        utxo["amount"] = vout["value"]
         utxo["is_segwit"] = is_segwit_output(utxo["script_pub_key"])
         completed_unspent_list.append(utxo)
 
@@ -674,16 +688,23 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         if exact_fee is not None:
             change_amount = int(change_amount - exact_fee)
             if change_amount > regular_dust_size(construct_params):
-                change_outputs.append(TxOutput(change_amount, get_script(change_address)))
+                change_outputs.append(
+                    TxOutput(
+                        change_amount, get_script(change_address, unspent_list, construct_params)
+                    )
+                )
             break
 
         # else calculate needed fee
         has_segwit = any(utxo["is_segwit"] for utxo in selected_utxos)
+
         tx = Transaction(
             inputs,
-            outputs + [TxOutput(change_amount, get_script(change_address))],
+            outputs
+            + [TxOutput(change_amount, get_script(change_address, unspent_list, construct_params))],
             has_segwit=has_segwit,
         )
+        print("Tx: ", tx)
         needed_fee = get_needed_fee(tx, sat_per_vbyte)
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
@@ -691,7 +712,11 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         if change_amount > needed_fee:
             change_amount = change_amount - needed_fee
             if change_amount > regular_dust_size(construct_params):
-                change_outputs.append(TxOutput(change_amount, get_script(change_address)))
+                change_outputs.append(
+                    TxOutput(
+                        change_amount, get_script(change_address, unspent_list, construct_params)
+                    )
+                )
             break
         # else try with more inputs
         input_count += 1
@@ -777,12 +802,8 @@ def compose_data(db, name, params, accept_missing_params=False, skip_validation=
     return compose_method(db, **params)
 
 
-def compose_transaction(db, name, params, construct_params):
-    setup(config.NETWORK_NAME)
-
-    # prepare data
-    skip_validation = not construct_params.get("validate", True)
-    source, destinations, data = compose_data(db, name, params, skip_validation=skip_validation)
+def construct(db, tx_info, construct_params):
+    source, destinations, data = tx_info
 
     if construct_params.get("return_only_data", False):
         return {
@@ -828,3 +849,14 @@ def compose_transaction(db, name, params, construct_params):
         }
 
     return result
+
+
+def compose_transaction(db, name, params, construct_params):
+    setup(config.NETWORK_NAME)
+
+    # prepare data
+    skip_validation = not construct_params.get("validate", True)
+    tx_info = compose_data(db, name, params, skip_validation=skip_validation)
+
+    # construct transaction
+    return construct(db, tx_info, construct_params)

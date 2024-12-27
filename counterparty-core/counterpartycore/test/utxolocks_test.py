@@ -5,9 +5,7 @@ from io import BytesIO
 
 import bitcoin
 
-from counterpartycore.lib import exceptions, transaction
-from counterpartycore.lib.messages import send
-from counterpartycore.lib.transaction_helper import transaction_inputs
+from counterpartycore.lib import composer, exceptions
 from counterpartycore.test import (
     conftest,  # noqa: F401
 )
@@ -21,15 +19,22 @@ FIXTURE_OPTIONS = {"utxo_locks_max_addresses": 2000}
 
 
 def construct_tx(db, source, destination, disable_utxo_locks=False, inputs_set=None):
-    tx_info = send.compose(db, source, destination, "XCP", 1)
-    return transaction.construct(
-        db, tx_info, disable_utxo_locks=disable_utxo_locks, inputs_set=inputs_set
+    return composer.compose_transaction(
+        "send",
+        {
+            "source": source,
+            "destination": destination,
+            "asset": "XCP",
+            "quantity": 1,
+        },
+        {
+            "disable_utxo_locks": disable_utxo_locks,
+            "inputs_set": inputs_set,
+        },
     )
 
 
 def test_utxolocks(server_db):
-    transaction_inputs.UTXOLocks().init(utxo_locks_max_addresses=10)  # reset UTXO_LOCKS
-
     """it shouldn't use the same UTXO"""
     tx1hex = construct_tx(
         server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns"
@@ -51,8 +56,6 @@ def test_utxolocks(server_db):
 
 
 def test_utxolocks_custom_input(server_db):
-    transaction_inputs.UTXOLocks().init(utxo_locks_max_addresses=10)  # reset UTXO_LOCKS
-
     """it should not use the same UTXO"""
     inputs_set = [
         {
@@ -86,8 +89,6 @@ def test_utxolocks_custom_input(server_db):
 
 
 def test_disable_utxolocks(server_db):
-    transaction_inputs.UTXOLocks().init(utxo_locks_max_addresses=10)  # reset UTXO_LOCKS
-
     """with `disable_utxo_locks=True` it should use the same UTXO"""
     tx1hex = construct_tx(
         server_db,

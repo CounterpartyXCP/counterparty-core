@@ -42,7 +42,6 @@ from counterpartycore.lib import (  # noqa: E402
     gettxinfo,
     ledger,
     messages,
-    transaction,
     util,
 )
 from counterpartycore.lib.api.util import to_json  # noqa: E402
@@ -203,6 +202,7 @@ def insert_raw_transaction(raw_transaction, db):
     block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
     tx_hash = dummy_tx_hash(raw_transaction)
+    print("tx_hash", tx_hash)
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
@@ -507,6 +507,9 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
                 "hex": binascii.hexlify(vout.scriptPubKey).decode("ascii"),
                 "asm": " ".join(asm),
             },
+            "scriptPubKey": {
+                "hex": binascii.hexlify(vout.scriptPubKey).decode("ascii"),
+            },
         }
 
         result["vout"].append(rvout)
@@ -645,10 +648,12 @@ def run_scenario(scenario):
             with MockProtocolChangesContext(**(mock_protocol_changes or {})):
                 module = sys.modules[f"counterpartycore.lib.messages.{tx[0]}"]
                 compose = module.compose
-                unsigned_tx_hex = transaction.construct(
-                    db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2]
-                )
-                unsigned_tx_hex = unsigned_tx_hex["unsigned_tx_hex"]
+                construct_params = {
+                    "regular_dust_size": 5430,
+                } | tx[2]
+                print("tx", tx[0], tx[1])
+                unsigned_tx_hex = composer.construct(db, compose(db, *tx[1]), construct_params)
+                unsigned_tx_hex = unsigned_tx_hex["rawtransaction"]
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
                 insert_raw_transaction(unsigned_tx_hex, db)
         else:
@@ -913,7 +918,7 @@ def check_outputs(
                 if tx_name == "order" and inputs[1] == "BTC":
                     print("give btc")
                     tx_params["fee_provided"] = DP["fee_provided"]
-                unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
+                unsigned_tx_hex = composer.construct(server_db, test_outputs, tx_params)
                 print(tx_name)
                 print(unsigned_tx_hex)
                 print("--------------------------")

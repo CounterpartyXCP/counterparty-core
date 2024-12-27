@@ -28,7 +28,6 @@ from .contract_vectors.gettxinfo import GETTXINFO_VECTOR
 from .contract_vectors.ledger import LEDGER_VECTOR
 from .contract_vectors.move import MOVE_VECTOR
 from .contract_vectors.send import SEND_VECTOR
-from .contract_vectors.transaction import TRANSACTION_VECTOR
 from .contract_vectors.utxo import UTXO_VECTOR
 from .params import (
     ADDR,
@@ -51,7 +50,6 @@ UNITTEST_VECTOR = (
     | SEND_VECTOR
     | DISPENSER_VECTOR
     | GAS_VECTOR
-    | TRANSACTION_VECTOR
     | COMPOSER_VECTOR
     | GETTXINFO_VECTOR
     | MOVE_VECTOR

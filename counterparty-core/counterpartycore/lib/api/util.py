@@ -13,11 +13,10 @@ import requests
 import werkzeug
 from counterpartycore.lib import (
     backend,
+    composer,
     config,
     exceptions,
     ledger,
-    transaction,
-    transaction_helper,
     util,
 )
 from counterpartycore.lib.api import compose
@@ -47,7 +46,7 @@ def healthz_light(db):
 
 
 def healthz_heavy(db):
-    transaction.compose_transaction(
+    composer.compose_transaction(
         db,
         name="send",
         params={
@@ -135,15 +134,8 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
     """
     Get pubkey for an address.
     :param address: Address to get pubkey for. (e.g. $ADDRESS_1)
-    :param provided_pubkeys: Comma separated list of provided pubkeys.
     """
-    if provided_pubkeys:
-        provided_pubkeys_list = provided_pubkeys.split(",")
-    else:
-        provided_pubkeys_list = None
-    return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
-        address, provided_pubkeys=provided_pubkeys_list
-    )
+    return backend.electrs.search_pubkey(address)
 
 
 def get_transaction(tx_hash: str, format: str = "json"):

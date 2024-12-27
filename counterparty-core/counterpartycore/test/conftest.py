@@ -422,7 +422,7 @@ class MockUTXOSet(object):
         self.rawtransactions_db = rawtransactions_db
         # logger.warning('MockUTXOSet %d' % len(utxos))
 
-    def get_utxos(self, address, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None):
+    def get_utxos(self, address, unconfirmed=False):
         # filter by address
         txouts = [output for output in self.txouts if output["address"] == address]
 
@@ -430,15 +430,10 @@ class MockUTXOSet(object):
         unspent_txouts = filter(
             lambda txout: (txout["txid"], txout["vout"]) not in self.spent_utxos, txouts
         )
+        # print("unspent_txouts", list(unspent_txouts))
 
         if unconfirmed == False:  # noqa: E712
             unspent_txouts = filter(lambda txout: txout["confirmations"] > 0, unspent_txouts)
-
-        if multisig_inputs:
-            raise NotImplementedError(f"{multisig_inputs}")
-
-        if unspent_tx_hash:
-            unspent_txouts = filter(lambda txout: txout["txid"] == unspent_tx_hash, unspent_txouts)
 
         return list(unspent_txouts)
 
@@ -455,6 +450,7 @@ class MockUTXOSet(object):
                     "value": round(txout["amount"] * config.UNIT),
                     "confirmations": int(txout["confirmations"]),
                     "script_pub_key": txout["script_pub_key"],
+                    "scriptPubKey": {"hex": txout["script_pub_key"]},
                     "txhex": txout["txhex"],
                     "txid": txout["txid"],
                     "vout": txout["vout"],
@@ -484,6 +480,7 @@ class MockUTXOSet(object):
 
         txouts = []
         for idx, txout in enumerate(tx.txs_out):
+            script_pub_key = binascii.hexlify(txout.script).decode("ascii")
             txouts.append(
                 {
                     "address": script.scriptpubkey_to_address(
@@ -492,7 +489,8 @@ class MockUTXOSet(object):
                     "confirmations": int(confirmations),
                     "amount": txout.coin_value / 1e8,
                     "value": txout.coin_value,
-                    "script_pub_key": binascii.hexlify(txout.script).decode("ascii"),
+                    "script_pub_key": script_pub_key,
+                    "scriptPubKey": {"hex": script_pub_key},
                     "txhex": raw_transaction,
                     "txid": tx_id,
                     "vout": idx,
@@ -567,24 +565,28 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def init_api_access_log(app):
         pass
 
-    def pubkeyhash_to_pubkey(address, provided_pubkeys=None):
+    def pubkeyhash_to_pubkey(address, unspent_list, construct_params):
+        multisig_pubkey = construct_params.get("multisig_pubkey")
+        if multisig_pubkey:
+            return multisig_pubkey
+        if "_" in address:
+            return multisig_pubkeyhashes_to_pubkeys(address)
         return DEFAULT_PARAMS["pubkey"][address]
 
     def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
         # TODO: Should be updated?!
         array = address.split("_")
-        signatures_required = int(array[0])
+        _signatures_required = int(array[0])
         pubkeyhashes = array[1:-1]
         pubkeys = [DEFAULT_PARAMS["pubkey"][pubkeyhash] for pubkeyhash in pubkeyhashes]
-        address = "_".join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
-        return address
+        return pubkeys[0]
 
     def mocked_getrawtransaction(tx_hash, verbose=False, block_index=None):
         return util_test.getrawtransaction(
             rawtransactions_db, tx_hash, verbose=verbose, block_index=block_index
         )
 
-    def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
+    def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, **kwargs):
         return util_test.getrawtransaction_batch(rawtransactions_db, txhash_list, verbose=verbose)
 
     def mocked_get_history(address, unconfirmed=False):
@@ -620,11 +622,10 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def satoshis_per_vbyte():
         return 3
 
-    def determine_encoding(
-        data, desired_encoding="auto", op_return_max_size=config.OP_RETURN_MAX_SIZE
-    ):
+    def determine_encoding(data, construct_params):
+        desired_encoding = construct_params.get("encoding", "auto")
         if desired_encoding == "auto":
-            if len(data) + len(config.PREFIX) <= op_return_max_size:
+            if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
                 encoding = "opreturn"
             else:
                 encoding = "multisig"
@@ -636,7 +637,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
         return encoding
 
-    monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
+    monkeypatch.setattr("counterpartycore.lib.arc4.init_arc4", init_arc4)
     monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
@@ -660,14 +661,12 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.backend.electrs.get_history",
         mocked_get_history,
     )
+
     monkeypatch.setattr(
-        "counterpartycore.lib.transaction_helper.transaction_outputs.pubkeyhash_to_pubkey",
+        "counterpartycore.lib.composer.search_pubkey",
         pubkeyhash_to_pubkey,
     )
-    monkeypatch.setattr(
-        "counterpartycore.lib.transaction_helper.transaction_outputs.multisig_pubkeyhashes_to_pubkeys",
-        multisig_pubkeyhashes_to_pubkeys,
-    )
+
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
     monkeypatch.setattr("counterpartycore.lib.messages.rps.expire", rps_expire)
 
@@ -678,7 +677,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.get_utxo_value", mocked_get_utxo_value
     )
-    monkeypatch.setattr("counterpartycore.lib.transaction.determine_encoding", determine_encoding)
+    monkeypatch.setattr("counterpartycore.lib.composer.determine_encoding", determine_encoding)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.satoshis_per_vbyte", satoshis_per_vbyte
     )
