@@ -5,7 +5,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "10.8.0"  # for hatch
+__version__ = "10.9.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-")[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -30,6 +30,8 @@ NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = [
 ]
 NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN = [(8, 871780)]
 NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET = [(8, 3522632)]
+
+STATE_DB_NEED_REFRESH_ON_VERSION_UPDATE = ["10.9.0"]
 
 # Counterparty protocol
 TXTYPE_FORMAT = ">I"
