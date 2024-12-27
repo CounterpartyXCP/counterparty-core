@@ -32,6 +32,7 @@ from scenarios import (
     scenario_20_fairminter,
     scenario_21_fairminter,
     scenario_22_chaining,
+    scenario_23_detach,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -59,13 +60,14 @@ SCENARIOS += scenario_19_mpma.SCENARIO
 SCENARIOS += scenario_20_fairminter.SCENARIO
 SCENARIOS += scenario_21_fairminter.SCENARIO
 SCENARIOS += scenario_22_chaining.SCENARIO
+SCENARIOS += scenario_23_detach.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_22_chaining.SCENARIO
+# SCENARIOS = scenario_23_detach.SCENARIO
 
 
 def compare_strings(string1, string2):
