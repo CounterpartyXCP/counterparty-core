@@ -276,7 +276,6 @@ def prepare_more_outputs(more_outputs, unspent_list, construct_params):
 def prepare_outputs(source, destinations, data, unspent_list, construct_params):
     # prepare non-data outputs
     outputs = perpare_non_data_outputs(destinations, unspent_list, construct_params)
-    print("NON DATA", outputs)
     # prepare data outputs
     if data:
         outputs += prepare_data_outputs(source, data, unspent_list, construct_params)
@@ -704,7 +703,6 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
             + [TxOutput(change_amount, get_script(change_address, unspent_list, construct_params))],
             has_segwit=has_segwit,
         )
-        print("Tx: ", tx)
         needed_fee = get_needed_fee(tx, sat_per_vbyte)
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)

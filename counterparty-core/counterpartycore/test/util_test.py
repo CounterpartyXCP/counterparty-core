@@ -202,7 +202,7 @@ def insert_raw_transaction(raw_transaction, db):
     block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
     tx_hash = dummy_tx_hash(raw_transaction)
-    print("tx_hash", tx_hash)
+    # print("tx_hash", tx_hash)
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:

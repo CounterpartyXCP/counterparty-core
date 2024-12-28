@@ -6,8 +6,8 @@
                 "block_hash": "b8b21ab596ed7ad84e449d098c04d86cbb6623c5e88af7772166882efbd91218",
                 "block_time": 310703000,
                 "ledger_hash": "566e053457339509799abdfbc4627713336608b6298f8343a2991e644c69e7b4",
-                "txlist_hash": "9ff1d8899b968e4651101319e355d715f687c74206abdcd45388ee3664163366",
-                "messages_hash": "12133ba1ae79d02cc41297cbe32e70378859134f7d1c2f426b384451d85b6bee",
+                "txlist_hash": "b19bf10d71b032590b5c8a9dfaa8c1e98e0055ed662673af25112fb6e021183b",
+                "messages_hash": "9131ae89c524d4093d5f0c614e294d12de18ce4246587aef6fad828c0e3c0d5f",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -17,8 +17,8 @@
                 "block_hash": "69cb443673c221a8e157d61707d52cf980c87faf5c3b31a5850ff43be70883c8",
                 "block_time": 310702000,
                 "ledger_hash": "dc85a29fb89f0169065b12086233ae2885f1b28312c1c5d34f88f8fc80f8bf1e",
-                "txlist_hash": "4883cb6c14edff6a6ce57a3f177ea89c3861ee65e33ebd743cd5d43178b7c6b3",
-                "messages_hash": "f9f58720d11da51378ebd22965aec901a569b851512ab993f635900bc559724c",
+                "txlist_hash": "331035453761b0758df08b365bf4ccceace08528c536a0c784c68c0984f588cd",
+                "messages_hash": "c78e4c269514ec8be70de13a372e613ea4fd78ba75d5caae0e3217474624e331",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -28,8 +28,8 @@
                 "block_hash": "9e2377aa8ebc26294dce0ed34dc1a071c67505a0cea36e0bec20d9ab0997f6e1",
                 "block_time": 310701000,
                 "ledger_hash": "f9f7b47cfa0a22b1d9ff4d60876cea49de63f16754956bad2e8c9c3484f63a42",
-                "txlist_hash": "2ce27c5cdbdd25895736b7eff4b704097ee3a57961647d334650e356b951b044",
-                "messages_hash": "d3c091cbfedfd82082efa1e945dd1be4b112118de87c9e07f5f774fbfe9ebe0a",
+                "txlist_hash": "7aab952037bbfc2568dd436dde5c3841b2cef2a3c81ab4d88bab74a569360bb7",
+                "messages_hash": "0b541f88f422ca4b33c78163b565abc8f9378e71fb3f1ffb054c52bd988afc15",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -39,8 +39,8 @@
                 "block_hash": "4f928d25664bb6ac693dd70e408dedc257abcd4cfb1f7ab6fabd8970cb663fa5",
                 "block_time": 310700000,
                 "ledger_hash": "e5998622d4cac2b5b375f7b21254d93acf8debd8be6b5f5ac2ec927088c93e2d",
-                "txlist_hash": "68271962c1855eb2205a451b3c24a215170c413330509ddd71fa201903c6168c",
-                "messages_hash": "b85ae225cdf559b7765888541364da0d93e5c5f4d65a9dd34768db9e5ad768ca",
+                "txlist_hash": "2e6a0be7b7cd5603a9299905ba8040b468147fa9c4cedfc12d3d403a462ac770",
+                "messages_hash": "d89008c96fadca3886e2b981e4734b9a5e82a3f172570548abd53daff7da3f10",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -50,8 +50,8 @@
                 "block_hash": "3f34102183af409ce39d0ebd3be002cc38e973a0b3492fc9c1e0dd5813941d1d",
                 "block_time": 310699000,
                 "ledger_hash": "8e087496482c1f944dfed42815a4c03d00d9f11d0aab22226467e28eb7213c17",
-                "txlist_hash": "44e5941f463356b6dafb9080b3b21e9f4663784dbcb770d76d26391364f32100",
-                "messages_hash": "8372d09bad3b1d8ba4d21d4e9dc32b35705655408817fd49f4b0542b4fa406e9",
+                "txlist_hash": "797f8c277649ef867be9a3ae477efd2229fdafb076a6074421385d66e7a2ead1",
+                "messages_hash": "b97bc2153efbc84a45d4e76d7cdd8d7fc8da0bc491feb754dfdf985a1b566f66",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -61,8 +61,8 @@
                 "block_hash": "ab4521982489ec4c2011e8f374ab83f249eeee42f51009b1b5647b998d854c53",
                 "block_time": 310698000,
                 "ledger_hash": "f99b6110c7b33c7a9727f64649f86ee62f0a55fd6a0b5d69aa9ced3ec8724329",
-                "txlist_hash": "2004f3331a59b3b8f6c727f8019a4d406e9676aa3b1a52536d6f60df6184f43a",
-                "messages_hash": "fa5d48d0ff0a7dd2b28e7db2196674e463ae5cc5fa23aae12a6c8917bd9e612a",
+                "txlist_hash": "190a42e0110b4a35fce8ce7c5ed29b1f193a10376178ce735f762fa589cb76e3",
+                "messages_hash": "57de97aa0e3bb10129e94f618c28d6539149246af73ae514e9f9cc0eb2334de1",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -72,8 +72,8 @@
                 "block_hash": "4fcf90ea3f5b4f6c003475c22f583053b5f7b6e0ffe12341b0993ede4fa8f304",
                 "block_time": 310697000,
                 "ledger_hash": "8d96475d4591008a8bf3714dd035643e739193ba5fab2d3607548f43e7dd5cef",
-                "txlist_hash": "b33eb2da6da3f242d9e93808f748799b722587d67881677c6c87c077c6821208",
-                "messages_hash": "e8639363c3efd5bd476a142b0e78132bfcf277ac3a687ee10426e7be3000dd3f",
+                "txlist_hash": "86562fcdb17ca6e10ddfecbbc57773830def1d0bc5b173918ec086510e0ca97f",
+                "messages_hash": "cc612231d742a45ee480a23423350b8fbce70d9fe54343cab17a0afe39f00cfd",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -83,8 +83,8 @@
                 "block_hash": "7ac8080d89c8a8245703603c294c5df90a342bb4a325462e65827fd709ab0fa7",
                 "block_time": 310696000,
                 "ledger_hash": "69a66770495d317d9c6160c43207c4e8cbfc368170ef6a45da475860ea101d15",
-                "txlist_hash": "94b4c397933014a71380b5f39a8d861a51884f6c47dc7175fba75e2260ae273c",
-                "messages_hash": "71c56349859ff79b43285852fbe11ec46ab2d060408473f6273c5ef64c854d9d",
+                "txlist_hash": "435064160c427ce12245d68f66647730cf48a48f531c252d187a0e9579c1f225",
+                "messages_hash": "ec1f3c685bb811324b8e0eadce53c1ec284d1b7ee64ce02e7d608d0f47d9d3bb",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -94,8 +94,8 @@
                 "block_hash": "a1803237d72105847b97a31294e91e7374ff47bdbc4e374744a8754a41423538",
                 "block_time": 310695000,
                 "ledger_hash": "1409d99c117220923674c940f99693ee3b8c28947c9864d0a06feb0e5d8cee70",
-                "txlist_hash": "73927a525e92baa9d77840aca6f7e043bc457ab11d74afade81afe2249843e0a",
-                "messages_hash": "4af03bdbb45e210a8c4ff65516c217ed280c9fa53808948394503f09348926f8",
+                "txlist_hash": "62bbb31c064c17f746fe55064bea16c5264aaa01d7b81c92fae92403951e893a",
+                "messages_hash": "a441546a7d38e0227b00bda338d6c1b96d7e84705b8e9a748d0573439135400b",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -105,8 +105,8 @@
                 "block_hash": "586e9f2ece2b1d03767d82fe988632d69a7827333860c58460abc7a5b9b396a0",
                 "block_time": 310694000,
                 "ledger_hash": "f37bc0f77006d2c4e2ddd4e8c146b27d0d103f008ce935975144442d25d1432f",
-                "txlist_hash": "87a50763ff829e07d00f9d4763e1822698c0c4374abc16f5231b66f62ecd83c8",
-                "messages_hash": "134b848c3c711fb7841f3cb28c4f816a916bdb9d2266fb75555d933eaa311787",
+                "txlist_hash": "9930da32e34f76186ebfbf53627ca566603b78c437fbd1828041ace26b246701",
+                "messages_hash": "09f8c45c81ba34e4fba3ed9326174d4d4a737af6238521cc972c17e501094dc7",
                 "previous_block_hash": null,
                 "difficulty": null,
                 "transaction_count": 0
@@ -121,8 +121,8 @@
             "block_hash": "b8b21ab596ed7ad84e449d098c04d86cbb6623c5e88af7772166882efbd91218",
             "block_time": 310703000,
             "ledger_hash": "566e053457339509799abdfbc4627713336608b6298f8343a2991e644c69e7b4",
-            "txlist_hash": "9ff1d8899b968e4651101319e355d715f687c74206abdcd45388ee3664163366",
-            "messages_hash": "12133ba1ae79d02cc41297cbe32e70378859134f7d1c2f426b384451d85b6bee",
+            "txlist_hash": "b19bf10d71b032590b5c8a9dfaa8c1e98e0055ed662673af25112fb6e021183b",
+            "messages_hash": "9131ae89c524d4093d5f0c614e294d12de18ce4246587aef6fad828c0e3c0d5f",
             "previous_block_hash": null,
             "difficulty": null,
             "transaction_count": 0
@@ -526,7 +526,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1345,
+                        "event_index": 1348,
                         "event": "OPEN_DISPENSER",
                         "params": {
                             "asset": "TESTDISP",
@@ -601,7 +601,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1337,
+                        "event_index": 1340,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "154062662379",
@@ -615,7 +615,7 @@
                         "block_time": 310509000
                     },
                     {
-                        "event_index": 1338,
+                        "event_index": 1341,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "TESTDISP",
@@ -684,7 +684,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1331,
+                        "event_index": 1334,
                         "event": "ATTACH_TO_UTXO",
                         "params": {
                             "asset": "DIVISIBLE",
@@ -739,7 +739,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1323,
+                        "event_index": 1326,
                         "event": "ATTACH_TO_UTXO",
                         "params": {
                             "asset": "XCP",
@@ -790,11 +790,11 @@
                 "fee": 381,
                 "data": "5b413136303336313238353739323733333732397c3230",
                 "supported": true,
-                "utxos_info": " 6533a15f2756b7b71147e7e47ed5fb4d846f465966ff8c1e10360514fbff7680:1 2 0",
+                "utxos_info": " 95fe98fc2cbb5893de8b867698b50bff643edb06ce71f6b621d28ac44a2ea508:1 2 0",
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1304,
+                        "event_index": 1307,
                         "event": "NEW_FAIRMINT",
                         "params": {
                             "asset": "A160361285792733729",
@@ -824,7 +824,7 @@
                         "block_time": 310506000
                     },
                     {
-                        "event_index": 1314,
+                        "event_index": 1317,
                         "event": "FAIRMINTER_UPDATE",
                         "params": {
                             "status": "closed",
@@ -835,7 +835,7 @@
                         "block_time": 310506000
                     },
                     {
-                        "event_index": 1315,
+                        "event_index": 1318,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "A160361285792733729",
@@ -890,11 +890,11 @@
                 "fee": 381,
                 "data": "5b413136303336313238353739323733333732397c3130",
                 "supported": true,
-                "utxos_info": " be10ab7bc651eca04d542da0e47e81645cf8b717c35999f00a543430b2228b73:1 2 0",
+                "utxos_info": " 17509d81fa1211daa3e189436dd213354a0a0eb4e15777100b5ccb4c025c5266:1 2 0",
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1295,
+                        "event_index": 1298,
                         "event": "NEW_FAIRMINT",
                         "params": {
                             "asset": "A160361285792733729",
@@ -924,7 +924,7 @@
                         "block_time": 310505000
                     },
                     {
-                        "event_index": 1296,
+                        "event_index": 1299,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "A160361285792733729",
@@ -979,11 +979,11 @@
                 "fee": 939,
                 "data": "5a413136303336313238353739323733333732397c7c31307c317c307c35307c32307c307c307c32307c3331303532307c33303030303030307c307c317c317c317c736f6674636170206465736372697074696f6e",
                 "supported": true,
-                "utxos_info": " fc4cb2ff6509df0f424bf62d5bff20eacf3dbe702a94493fb8cede9ec9dd3875:0 3 ",
+                "utxos_info": " cf97f4794a974301cb8fa599152b4e74e821deacc12dc10d6554fe5a3bfca105:0 3 ",
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1284,
+                        "event_index": 1287,
                         "event": "NEW_FAIRMINTER",
                         "params": {
                             "asset": "A160361285792733729",
@@ -1023,7 +1023,7 @@
                         "block_time": 310504000
                     },
                     {
-                        "event_index": 1285,
+                        "event_index": 1288,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "160361285792733729",
@@ -1037,7 +1037,7 @@
                         "block_time": 310504000
                     },
                     {
-                        "event_index": 1286,
+                        "event_index": 1289,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "A160361285792733729",
@@ -1094,7 +1094,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1275,
+                        "event_index": 1278,
                         "event": "NEW_FAIRMINTER",
                         "params": {
                             "asset": "QAIDFAIRMIN",
@@ -1134,7 +1134,7 @@
                         "block_time": 310503000
                     },
                     {
-                        "event_index": 1276,
+                        "event_index": 1279,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "2260369790942965",
@@ -1148,7 +1148,7 @@
                         "block_time": 310503000
                     },
                     {
-                        "event_index": 1277,
+                        "event_index": 1280,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "QAIDFAIRMIN",
@@ -1205,7 +1205,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1266,
+                        "event_index": 1269,
                         "event": "NEW_FAIRMINTER",
                         "params": {
                             "asset": "RAIDFAIRMIN",
@@ -1245,7 +1245,7 @@
                         "block_time": 310502000
                     },
                     {
-                        "event_index": 1267,
+                        "event_index": 1270,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "2401536886596341",
@@ -1259,7 +1259,7 @@
                         "block_time": 310502000
                     },
                     {
-                        "event_index": 1268,
+                        "event_index": 1271,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "RAIDFAIRMIN",
@@ -1316,7 +1316,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1260,
+                        "event_index": 1263,
                         "event": "NEW_FAIRMINT",
                         "params": {
                             "asset": "FREEFAIRMIN",
@@ -1346,7 +1346,7 @@
                         "block_time": 310501000
                     },
                     {
-                        "event_index": 1261,
+                        "event_index": 1264,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "FREEFAIRMIN",
@@ -1505,7 +1505,7 @@
             "transaction_type": null,
             "events": [
                 {
-                    "event_index": 1260,
+                    "event_index": 1263,
                     "event": "NEW_FAIRMINT",
                     "params": {
                         "asset": "FREEFAIRMIN",
@@ -1535,7 +1535,7 @@
                     "block_time": 310501000
                 },
                 {
-                    "event_index": 1261,
+                    "event_index": 1264,
                     "event": "ASSET_ISSUANCE",
                     "params": {
                         "asset": "FREEFAIRMIN",
@@ -1700,7 +1700,7 @@
     "http://localhost:10009/v2/transactions/74420251573a1e6034f6194022abcfc1f3390ef34fed7cdcd7e82aa22cce8efe/events?verbose=true": {
         "result": [
             {
-                "event_index": 1262,
+                "event_index": 1265,
                 "event": "TRANSACTION_PARSED",
                 "params": {
                     "supported": true,
@@ -1712,7 +1712,7 @@
                 "block_time": 310501000
             },
             {
-                "event_index": 1261,
+                "event_index": 1264,
                 "event": "ASSET_ISSUANCE",
                 "params": {
                     "asset": "FREEFAIRMIN",
@@ -1746,7 +1746,7 @@
                 "block_time": 310501000
             },
             {
-                "event_index": 1260,
+                "event_index": 1263,
                 "event": "NEW_FAIRMINT",
                 "params": {
                     "asset": "FREEFAIRMIN",
@@ -1776,7 +1776,7 @@
                 "block_time": 310501000
             },
             {
-                "event_index": 1259,
+                "event_index": 1262,
                 "event": "CREDIT",
                 "params": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -1852,7 +1852,7 @@
     "http://localhost:10009/v2/transactions/74420251573a1e6034f6194022abcfc1f3390ef34fed7cdcd7e82aa22cce8efe/events/CREDIT?verbose=true": {
         "result": [
             {
-                "event_index": 1259,
+                "event_index": 1262,
                 "event": "CREDIT",
                 "params": {
                     "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -2052,7 +2052,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1331,
+                        "event_index": 1334,
                         "event": "ATTACH_TO_UTXO",
                         "params": {
                             "asset": "DIVISIBLE",
@@ -2107,7 +2107,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1323,
+                        "event_index": 1326,
                         "event": "ATTACH_TO_UTXO",
                         "params": {
                             "asset": "XCP",
@@ -2158,11 +2158,11 @@
                 "fee": 381,
                 "data": "5b413136303336313238353739323733333732397c3230",
                 "supported": true,
-                "utxos_info": " 6533a15f2756b7b71147e7e47ed5fb4d846f465966ff8c1e10360514fbff7680:1 2 0",
+                "utxos_info": " 95fe98fc2cbb5893de8b867698b50bff643edb06ce71f6b621d28ac44a2ea508:1 2 0",
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1304,
+                        "event_index": 1307,
                         "event": "NEW_FAIRMINT",
                         "params": {
                             "asset": "A160361285792733729",
@@ -2192,7 +2192,7 @@
                         "block_time": 310506000
                     },
                     {
-                        "event_index": 1314,
+                        "event_index": 1317,
                         "event": "FAIRMINTER_UPDATE",
                         "params": {
                             "status": "closed",
@@ -2203,7 +2203,7 @@
                         "block_time": 310506000
                     },
                     {
-                        "event_index": 1315,
+                        "event_index": 1318,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "A160361285792733729",
@@ -2258,11 +2258,11 @@
                 "fee": 381,
                 "data": "5b413136303336313238353739323733333732397c3130",
                 "supported": true,
-                "utxos_info": " be10ab7bc651eca04d542da0e47e81645cf8b717c35999f00a543430b2228b73:1 2 0",
+                "utxos_info": " 17509d81fa1211daa3e189436dd213354a0a0eb4e15777100b5ccb4c025c5266:1 2 0",
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1295,
+                        "event_index": 1298,
                         "event": "NEW_FAIRMINT",
                         "params": {
                             "asset": "A160361285792733729",
@@ -2292,7 +2292,7 @@
                         "block_time": 310505000
                     },
                     {
-                        "event_index": 1296,
+                        "event_index": 1299,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "A160361285792733729",
@@ -2347,11 +2347,11 @@
                 "fee": 939,
                 "data": "5a413136303336313238353739323733333732397c7c31307c317c307c35307c32307c307c307c32307c3331303532307c33303030303030307c307c317c317c317c736f6674636170206465736372697074696f6e",
                 "supported": true,
-                "utxos_info": " fc4cb2ff6509df0f424bf62d5bff20eacf3dbe702a94493fb8cede9ec9dd3875:0 3 ",
+                "utxos_info": " cf97f4794a974301cb8fa599152b4e74e821deacc12dc10d6554fe5a3bfca105:0 3 ",
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1284,
+                        "event_index": 1287,
                         "event": "NEW_FAIRMINTER",
                         "params": {
                             "asset": "A160361285792733729",
@@ -2391,7 +2391,7 @@
                         "block_time": 310504000
                     },
                     {
-                        "event_index": 1285,
+                        "event_index": 1288,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "160361285792733729",
@@ -2405,7 +2405,7 @@
                         "block_time": 310504000
                     },
                     {
-                        "event_index": 1286,
+                        "event_index": 1289,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "A160361285792733729",
@@ -2462,7 +2462,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1275,
+                        "event_index": 1278,
                         "event": "NEW_FAIRMINTER",
                         "params": {
                             "asset": "QAIDFAIRMIN",
@@ -2502,7 +2502,7 @@
                         "block_time": 310503000
                     },
                     {
-                        "event_index": 1276,
+                        "event_index": 1279,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "2260369790942965",
@@ -2516,7 +2516,7 @@
                         "block_time": 310503000
                     },
                     {
-                        "event_index": 1277,
+                        "event_index": 1280,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "QAIDFAIRMIN",
@@ -2564,7 +2564,21 @@
     "http://localhost:10009/v2/addresses/events?verbose=true&limit=6&addresses=mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc,mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns": {
         "result": [
             {
-                "event_index": 1331,
+                "event_index": 1359,
+                "event": "ORDER_MATCH_EXPIRATION",
+                "params": {
+                    "block_index": 310513,
+                    "order_match_id": "50cc782f437b5ad64d54e31b76f91e37dc80bb91356c4e13f4ea3beb15d40d88_594789e471862d08d5bcd8f58ee70cb235589103da8beceb628a2e18f6398760",
+                    "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                    "block_time": 310513000
+                },
+                "tx_hash": null,
+                "block_index": 310513,
+                "block_time": 310513000
+            },
+            {
+                "event_index": 1334,
                 "event": "ATTACH_TO_UTXO",
                 "params": {
                     "asset": "DIVISIBLE",
@@ -2594,7 +2608,7 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1329,
+                "event_index": 1332,
                 "event": "DEBIT",
                 "params": {
                     "action": "attach to utxo",
@@ -2621,7 +2635,7 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1327,
+                "event_index": 1330,
                 "event": "NEW_TRANSACTION",
                 "params": {
                     "block_hash": "40cfaee344032c167d7317bb94d2e514f8dca023302303a908dd994e15d902cf",
@@ -2641,40 +2655,10 @@
                 "tx_hash": null,
                 "block_index": 310508,
                 "block_time": 310508000
-            },
-            {
-                "event_index": 1323,
-                "event": "ATTACH_TO_UTXO",
-                "params": {
-                    "asset": "XCP",
-                    "block_index": 310507,
-                    "destination": "6657beb41d0ab2cedd399331dd1cae65c0bc19ee07c1695859b5725ad7344969:0",
-                    "fee_paid": 0,
-                    "msg_index": 0,
-                    "quantity": 100,
-                    "send_type": "attach",
-                    "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    "status": "valid",
-                    "tx_hash": "0307207e7dcebf98b2fba4639f2247f2f7e52e558737770809b2888bbb4f8e56",
-                    "tx_index": 508,
-                    "block_time": 310507000,
-                    "asset_info": {
-                        "asset_longname": null,
-                        "description": "The Counterparty protocol native currency",
-                        "issuer": null,
-                        "divisible": true,
-                        "locked": true
-                    },
-                    "quantity_normalized": "0.00000100",
-                    "fee_paid_normalized": "0.00000000"
-                },
-                "tx_hash": "0307207e7dcebf98b2fba4639f2247f2f7e52e558737770809b2888bbb4f8e56",
-                "block_index": 310507,
-                "block_time": 310507000
             }
         ],
-        "next_cursor": 1323,
-        "result_count": 173
+        "next_cursor": 1330,
+        "result_count": 177
     },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/balances?verbose=true": {
         "result": [
@@ -5146,7 +5130,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1331,
+                        "event_index": 1334,
                         "event": "ATTACH_TO_UTXO",
                         "params": {
                             "asset": "DIVISIBLE",
@@ -5201,7 +5185,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1323,
+                        "event_index": 1326,
                         "event": "ATTACH_TO_UTXO",
                         "params": {
                             "asset": "XCP",
@@ -5256,7 +5240,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1275,
+                        "event_index": 1278,
                         "event": "NEW_FAIRMINTER",
                         "params": {
                             "asset": "QAIDFAIRMIN",
@@ -5296,7 +5280,7 @@
                         "block_time": 310503000
                     },
                     {
-                        "event_index": 1276,
+                        "event_index": 1279,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "2260369790942965",
@@ -5310,7 +5294,7 @@
                         "block_time": 310503000
                     },
                     {
-                        "event_index": 1277,
+                        "event_index": 1280,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "QAIDFAIRMIN",
@@ -5367,7 +5351,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1266,
+                        "event_index": 1269,
                         "event": "NEW_FAIRMINTER",
                         "params": {
                             "asset": "RAIDFAIRMIN",
@@ -5407,7 +5391,7 @@
                         "block_time": 310502000
                     },
                     {
-                        "event_index": 1267,
+                        "event_index": 1270,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "2401536886596341",
@@ -5421,7 +5405,7 @@
                         "block_time": 310502000
                     },
                     {
-                        "event_index": 1268,
+                        "event_index": 1271,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "RAIDFAIRMIN",
@@ -5478,7 +5462,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1260,
+                        "event_index": 1263,
                         "event": "NEW_FAIRMINT",
                         "params": {
                             "asset": "FREEFAIRMIN",
@@ -5508,7 +5492,7 @@
                         "block_time": 310501000
                     },
                     {
-                        "event_index": 1261,
+                        "event_index": 1264,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "FREEFAIRMIN",
@@ -5567,7 +5551,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1251,
+                        "event_index": 1254,
                         "event": "NEW_FAIRMINTER",
                         "params": {
                             "asset": "PAIDFAIRMIN",
@@ -5607,7 +5591,7 @@
                         "block_time": 310500000
                     },
                     {
-                        "event_index": 1252,
+                        "event_index": 1255,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "2119202695289589",
@@ -5621,7 +5605,7 @@
                         "block_time": 310500000
                     },
                     {
-                        "event_index": 1253,
+                        "event_index": 1256,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "PAIDFAIRMIN",
@@ -5678,7 +5662,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1243,
+                        "event_index": 1246,
                         "event": "NEW_FAIRMINTER",
                         "params": {
                             "asset": "FREEFAIRMIN",
@@ -5718,7 +5702,7 @@
                         "block_time": 310499000
                     },
                     {
-                        "event_index": 1244,
+                        "event_index": 1247,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "799006024850293",
@@ -5732,7 +5716,7 @@
                         "block_time": 310499000
                     },
                     {
-                        "event_index": 1245,
+                        "event_index": 1248,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "FREEFAIRMIN",
@@ -5789,7 +5773,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1236,
+                        "event_index": 1239,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "95428956661682277",
@@ -5803,7 +5787,7 @@
                         "block_time": 310498000
                     },
                     {
-                        "event_index": 1237,
+                        "event_index": 1240,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "A95428956661682277",
@@ -5871,7 +5855,7 @@
                 "transaction_type": null,
                 "events": [
                     {
-                        "event_index": 1228,
+                        "event_index": 1231,
                         "event": "ASSET_CREATION",
                         "params": {
                             "asset_id": "178522493",
@@ -5885,7 +5869,7 @@
                         "block_time": 310497000
                     },
                     {
-                        "event_index": 1229,
+                        "event_index": 1232,
                         "event": "ASSET_ISSUANCE",
                         "params": {
                             "asset": "PARENT",
@@ -6059,7 +6043,7 @@
             {
                 "tx_index": 492,
                 "tx_hash": "50cc782f437b5ad64d54e31b76f91e37dc80bb91356c4e13f4ea3beb15d40d88",
-                "block_index": 310491,
+                "block_index": 310513,
                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "give_asset": "XCP",
                 "give_quantity": 100000000,
@@ -6076,7 +6060,7 @@
                 "status": "open",
                 "give_price": 0.008,
                 "get_price": 125.0,
-                "block_time": 310491000,
+                "block_time": 310513000,
                 "give_asset_info": {
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
@@ -7064,7 +7048,7 @@
             {
                 "tx_index": 493,
                 "tx_hash": "594789e471862d08d5bcd8f58ee70cb235589103da8beceb628a2e18f6398760",
-                "block_index": 310492,
+                "block_index": 310513,
                 "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                 "give_asset": "BTC",
                 "give_quantity": 800000,
@@ -7076,12 +7060,12 @@
                 "expire_index": 312492,
                 "fee_required": 0,
                 "fee_required_remaining": 0,
-                "fee_provided": 597,
-                "fee_provided_remaining": 597,
+                "fee_provided": 1000000,
+                "fee_provided_remaining": 992800,
                 "status": "open",
                 "give_price": 125.0,
                 "get_price": 0.008,
-                "block_time": 310492000,
+                "block_time": 310513000,
                 "give_asset_info": {
                     "divisible": true,
                     "asset_longname": null,
@@ -7100,17 +7084,17 @@
                 "get_quantity_normalized": "1.00000000",
                 "get_remaining_normalized": "1.00000000",
                 "give_remaining_normalized": "0.00800000",
-                "fee_provided_normalized": "0.00000597",
+                "fee_provided_normalized": "0.01000000",
                 "fee_required_normalized": "0.00000000",
                 "fee_required_remaining_normalized": "0.00000000",
-                "fee_provided_remaining_normalized": "0.00000597",
+                "fee_provided_remaining_normalized": "0.00992800",
                 "give_price_normalized": "125.0000000000000000",
                 "get_price_normalized": "0.0080000000000000"
             },
             {
                 "tx_index": 492,
                 "tx_hash": "50cc782f437b5ad64d54e31b76f91e37dc80bb91356c4e13f4ea3beb15d40d88",
-                "block_index": 310491,
+                "block_index": 310513,
                 "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                 "give_asset": "XCP",
                 "give_quantity": 100000000,
@@ -7127,7 +7111,7 @@
                 "status": "open",
                 "give_price": 0.008,
                 "get_price": 125.0,
-                "block_time": 310491000,
+                "block_time": 310513000,
                 "give_asset_info": {
                     "asset_longname": null,
                     "description": "The Counterparty protocol native currency",
@@ -7410,9 +7394,53 @@
         "result_count": 0
     },
     "http://localhost:10009/v2/order_matches?verbose=true": {
-        "result": [],
+        "result": [
+            {
+                "id": "50cc782f437b5ad64d54e31b76f91e37dc80bb91356c4e13f4ea3beb15d40d88_594789e471862d08d5bcd8f58ee70cb235589103da8beceb628a2e18f6398760",
+                "tx0_index": 492,
+                "tx0_hash": "50cc782f437b5ad64d54e31b76f91e37dc80bb91356c4e13f4ea3beb15d40d88",
+                "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                "tx1_index": 493,
+                "tx1_hash": "594789e471862d08d5bcd8f58ee70cb235589103da8beceb628a2e18f6398760",
+                "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                "forward_asset": "XCP",
+                "forward_quantity": 100000000,
+                "backward_asset": "BTC",
+                "backward_quantity": 800000,
+                "tx0_block_index": 310491,
+                "tx1_block_index": 310492,
+                "block_index": 310513,
+                "tx0_expiration": 2000,
+                "tx1_expiration": 2000,
+                "match_expire_index": 310512,
+                "fee_paid": 7200,
+                "status": "expired",
+                "backward_price": 125.0,
+                "forward_price": 0.008,
+                "block_time": 310513000,
+                "forward_asset_info": {
+                    "asset_longname": null,
+                    "description": "The Counterparty protocol native currency",
+                    "issuer": null,
+                    "divisible": true,
+                    "locked": true
+                },
+                "backward_asset_info": {
+                    "divisible": true,
+                    "asset_longname": null,
+                    "description": "The Bitcoin cryptocurrency",
+                    "locked": false,
+                    "issuer": null
+                },
+                "forward_quantity_normalized": "1.00000000",
+                "backward_quantity_normalized": "0.00800000",
+                "fee_paid_normalized": "0.00007200",
+                "forward_price_normalized": "0.0080000000000000",
+                "backward_price_normalized": "125.0000000000000000"
+            }
+        ],
         "next_cursor": null,
-        "result_count": 0
+        "result_count": 1
     },
     "http://localhost:10009/v2/bets?verbose=true": {
         "result": [
@@ -7745,14 +7773,14 @@
     "http://localhost:10009/v2/events?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1736,
+                "event_index": 1743,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310703,
                     "ledger_hash": "566e053457339509799abdfbc4627713336608b6298f8343a2991e644c69e7b4",
-                    "messages_hash": "12133ba1ae79d02cc41297cbe32e70378859134f7d1c2f426b384451d85b6bee",
+                    "messages_hash": "9131ae89c524d4093d5f0c614e294d12de18ce4246587aef6fad828c0e3c0d5f",
                     "transaction_count": 0,
-                    "txlist_hash": "9ff1d8899b968e4651101319e355d715f687c74206abdcd45388ee3664163366",
+                    "txlist_hash": "b19bf10d71b032590b5c8a9dfaa8c1e98e0055ed662673af25112fb6e021183b",
                     "block_time": 310703000
                 },
                 "tx_hash": null,
@@ -7760,7 +7788,7 @@
                 "block_time": 310703000
             },
             {
-                "event_index": 1735,
+                "event_index": 1742,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "b8b21ab596ed7ad84e449d098c04d86cbb6623c5e88af7772166882efbd91218",
@@ -7776,14 +7804,14 @@
                 "block_time": 310703000
             },
             {
-                "event_index": 1734,
+                "event_index": 1741,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310702,
                     "ledger_hash": "dc85a29fb89f0169065b12086233ae2885f1b28312c1c5d34f88f8fc80f8bf1e",
-                    "messages_hash": "f9f58720d11da51378ebd22965aec901a569b851512ab993f635900bc559724c",
+                    "messages_hash": "c78e4c269514ec8be70de13a372e613ea4fd78ba75d5caae0e3217474624e331",
                     "transaction_count": 0,
-                    "txlist_hash": "4883cb6c14edff6a6ce57a3f177ea89c3861ee65e33ebd743cd5d43178b7c6b3",
+                    "txlist_hash": "331035453761b0758df08b365bf4ccceace08528c536a0c784c68c0984f588cd",
                     "block_time": 310702000
                 },
                 "tx_hash": null,
@@ -7791,7 +7819,7 @@
                 "block_time": 310702000
             },
             {
-                "event_index": 1733,
+                "event_index": 1740,
                 "event": "NEW_BLOCK",
                 "params": {
                     "block_hash": "69cb443673c221a8e157d61707d52cf980c87faf5c3b31a5850ff43be70883c8",
@@ -7807,14 +7835,14 @@
                 "block_time": 310702000
             },
             {
-                "event_index": 1732,
+                "event_index": 1739,
                 "event": "BLOCK_PARSED",
                 "params": {
                     "block_index": 310701,
                     "ledger_hash": "f9f7b47cfa0a22b1d9ff4d60876cea49de63f16754956bad2e8c9c3484f63a42",
-                    "messages_hash": "d3c091cbfedfd82082efa1e945dd1be4b112118de87c9e07f5f774fbfe9ebe0a",
+                    "messages_hash": "0b541f88f422ca4b33c78163b565abc8f9378e71fb3f1ffb054c52bd988afc15",
                     "transaction_count": 0,
-                    "txlist_hash": "2ce27c5cdbdd25895736b7eff4b704097ee3a57961647d334650e356b951b044",
+                    "txlist_hash": "7aab952037bbfc2568dd436dde5c3841b2cef2a3c81ab4d88bab74a569360bb7",
                     "block_time": 310701000
                 },
                 "tx_hash": null,
@@ -7822,8 +7850,8 @@
                 "block_time": 310701000
             }
         ],
-        "next_cursor": 1731,
-        "result_count": 1737
+        "next_cursor": 1738,
+        "result_count": 1744
     },
     "http://localhost:10009/v2/events/10?limit=5&verbose=true": {
         "result": {
@@ -7865,25 +7893,25 @@
                 "count": 9
             },
             {
-                "event": "OPEN_ORDER",
-                "count": 6
+                "event": "ORDER_UPDATE",
+                "count": 4
             },
             {
-                "event": "OPEN_DISPENSER",
-                "count": 2
+                "event": "ORDER_MATCH_UPDATE",
+                "count": 1
             },
             {
-                "event": "OPEN_BET",
-                "count": 5
+                "event": "ORDER_MATCH_EXPIRATION",
+                "count": 1
             }
         ],
-        "next_cursor": 21,
-        "result_count": 26
+        "next_cursor": 25,
+        "result_count": 30
     },
     "http://localhost:10009/v2/events/CREDIT?limit=5&verbose=true": {
         "result": [
             {
-                "event_index": 1504,
+                "event_index": 1511,
                 "event": "CREDIT",
                 "params": {
                     "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
@@ -7910,7 +7938,7 @@
                 "block_time": 310588000
             },
             {
-                "event_index": 1339,
+                "event_index": 1342,
                 "event": "CREDIT",
                 "params": {
                     "address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
@@ -7937,7 +7965,7 @@
                 "block_time": 310509000
             },
             {
-                "event_index": 1330,
+                "event_index": 1333,
                 "event": "CREDIT",
                 "params": {
                     "address": null,
@@ -7964,7 +7992,7 @@
                 "block_time": 310508000
             },
             {
-                "event_index": 1322,
+                "event_index": 1325,
                 "event": "CREDIT",
                 "params": {
                     "address": null,
@@ -7991,7 +8019,7 @@
                 "block_time": 310507000
             },
             {
-                "event_index": 1313,
+                "event_index": 1316,
                 "event": "CREDIT",
                 "params": {
                     "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -8018,7 +8046,7 @@
                 "block_time": 310506000
             }
         ],
-        "next_cursor": 1312,
+        "next_cursor": 1315,
         "result_count": 53
     },
     "http://localhost:10009/v2/events/CREDIT/count?limit=5&verbose=true": {

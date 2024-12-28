@@ -209,7 +209,7 @@ UNITTEST_FIXTURE = [
     [
         "order",
         (ADDR[1], "BTC", round(DP["quantity"] / 125), "XCP", DP["quantity"], 2000, 0),
-        {"encoding": "multisig", "fee_provided": DP["fee_provided"]},
+        {"encoding": "multisig", "exact_fee": DP["fee_provided"]},
     ],
     ["burn", (ADDR[2], DP["burn_quantity"]), {"encoding": "multisig"}],
     [
