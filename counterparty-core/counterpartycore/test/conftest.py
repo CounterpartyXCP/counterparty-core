@@ -330,6 +330,7 @@ def api_server_v2(request, cp_server):
     server_config = (
         default_config
         | util_test.COUNTERPARTYD_OPTIONS
+        | getattr(request.module, "FIXTURE_OPTIONS", {})
         | {
             "data_dir": os.path.dirname(request.module.FIXTURE_DB),
             "database_file": request.module.FIXTURE_DB,
@@ -422,7 +423,7 @@ class MockUTXOSet(object):
         self.rawtransactions_db = rawtransactions_db
         # logger.warning('MockUTXOSet %d' % len(utxos))
 
-    def get_utxos(self, address, unconfirmed=False):
+    def get_utxos(self, address, unconfirmed=False, unspent_tx_hash=None):
         # filter by address
         txouts = [output for output in self.txouts if output["address"] == address]
 
@@ -435,7 +436,8 @@ class MockUTXOSet(object):
         if unconfirmed == False:  # noqa: E712
             unspent_txouts = filter(lambda txout: txout["confirmations"] > 0, unspent_txouts)
 
-        return list(unspent_txouts)
+        result = list(unspent_txouts)
+        return result
 
     def update_utxo_set(self, txins, txouts):
         # spent the UTXOs
@@ -551,7 +553,12 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     util_test.rawtransactions_db = rawtransactions_db
 
     def get_utxos(*args, **kwargs):
-        return mock_utxos.get_utxos(*args, **kwargs)
+        try:
+            result = mock_utxos.get_utxos(*args, **kwargs)
+        except Exception as e:
+            print(e)
+            raise e
+        return result
 
     def isodt(epoch_time):
         return datetime.utcfromtimestamp(epoch_time).isoformat()

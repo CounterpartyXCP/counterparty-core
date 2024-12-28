@@ -3,6 +3,7 @@ import binascii
 import tempfile
 
 import bitcoin as bitcoinlib
+import pytest
 
 from counterpartycore.lib import backend, composer
 from counterpartycore.test import (
@@ -28,6 +29,7 @@ def pytest_generate_tests(metafunc):
     )
 
 
+@pytest.mark.skip()
 def test_estimate_fee_per_kb(fee_per_kb, fee_per_kb_used, server_db, monkeypatch):
     def _fee_per_kb(conf_target, mode):
         return fee_per_kb

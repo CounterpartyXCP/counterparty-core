@@ -19,7 +19,9 @@ FIXTURE_OPTIONS = {"utxo_locks_max_addresses": 2000}
 
 
 def construct_tx(db, source, destination, disable_utxo_locks=False, inputs_set=None):
+    composer.UTXOLocks().set_limits(60, 2000)
     return composer.compose_transaction(
+        db,
         "send",
         {
             "source": source,
@@ -36,6 +38,8 @@ def construct_tx(db, source, destination, disable_utxo_locks=False, inputs_set=N
 
 def test_utxolocks(server_db):
     """it shouldn't use the same UTXO"""
+    composer.UTXOLocks().init()
+
     tx1hex = construct_tx(
         server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns"
     )
@@ -43,10 +47,10 @@ def test_utxolocks(server_db):
         server_db, "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns"
     )
 
-    tx1f = BytesIO(binascii.unhexlify(tx1hex["unsigned_tx_hex"]))
+    tx1f = BytesIO(binascii.unhexlify(tx1hex["rawtransaction"]))
     tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
 
-    tx2f = BytesIO(binascii.unhexlify(tx2hex["unsigned_tx_hex"]))
+    tx2f = BytesIO(binascii.unhexlify(tx2hex["rawtransaction"]))
     tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
 
     assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) != (
@@ -56,6 +60,8 @@ def test_utxolocks(server_db):
 
 
 def test_utxolocks_custom_input(server_db):
+    composer.UTXOLocks().init()
+
     """it should not use the same UTXO"""
     inputs_set = [
         {
@@ -68,6 +74,7 @@ def test_utxolocks_custom_input(server_db):
             "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         }
     ]
+    inputs_set = "b9fc3aa355b77ecb63282fc96e63912a253e98bf9cf441fbfbecc3fb277c4985:0:11121663:76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac"
 
     construct_tx(
         server_db,
@@ -82,13 +89,16 @@ def test_utxolocks_custom_input(server_db):
             "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
             inputs_set=inputs_set,
         )
-    except exceptions.BalanceError:
+    except exceptions.ComposeError as e:
+        print(e)
         return
 
     raise Exception("Should have raised a BalanceError")
 
 
 def test_disable_utxolocks(server_db):
+    composer.UTXOLocks().init()
+
     """with `disable_utxo_locks=True` it should use the same UTXO"""
     tx1hex = construct_tx(
         server_db,
@@ -103,10 +113,10 @@ def test_disable_utxolocks(server_db):
         disable_utxo_locks=True,
     )
 
-    tx1f = BytesIO(binascii.unhexlify(tx1hex["unsigned_tx_hex"]))
+    tx1f = BytesIO(binascii.unhexlify(tx1hex["rawtransaction"]))
     tx1 = bitcoin.core.CTransaction.stream_deserialize(tx1f)
 
-    tx2f = BytesIO(binascii.unhexlify(tx2hex["unsigned_tx_hex"]))
+    tx2f = BytesIO(binascii.unhexlify(tx2hex["rawtransaction"]))
     tx2 = bitcoin.core.CTransaction.stream_deserialize(tx2f)
 
     assert (tx1.vin[0].prevout.hash, tx1.vin[0].prevout.n) == (

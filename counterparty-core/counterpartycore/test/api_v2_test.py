@@ -412,7 +412,7 @@ def test_new_get_asset_orders():
     assert result[0] == {
         "tx_index": 493,
         "tx_hash": "594789e471862d08d5bcd8f58ee70cb235589103da8beceb628a2e18f6398760",
-        "block_index": 310492,
+        "block_index": 310513,
         "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         "give_asset": "BTC",
         "give_quantity": 800000,
@@ -424,8 +424,8 @@ def test_new_get_asset_orders():
         "expire_index": 312492,
         "fee_required": 0,
         "fee_required_remaining": 0,
-        "fee_provided": 597,
-        "fee_provided_remaining": 597,
+        "fee_provided": 1000000,
+        "fee_provided_remaining": 992800,
         "status": "open",
         "get_price": 0.008,
         "give_price": 125.0,
@@ -452,8 +452,8 @@ def test_new_get_order_info():
         "expire_index": 312010,
         "fee_required": 900000,
         "fee_required_remaining": 900000,
-        "fee_provided": 6800,
-        "fee_provided_remaining": 6800,
+        "fee_provided": 597,
+        "fee_provided_remaining": 597,
         "status": "open",
         "get_price": 100.0,
         "give_price": 0.01,
@@ -462,16 +462,16 @@ def test_new_get_order_info():
 
 @pytest.mark.usefixtures("api_server_v2")
 def test_new_get_order_matches():
-    tx_hash = "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498"
+    tx_hash = "50cc782f437b5ad64d54e31b76f91e37dc80bb91356c4e13f4ea3beb15d40d88"
     url = f"{API_ROOT}/v2/orders/{tx_hash}/matches"
     result = requests.get(url).json()["result"]  # noqa: S113
     assert result[0] == {
-        "id": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498_1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
+        "id": "50cc782f437b5ad64d54e31b76f91e37dc80bb91356c4e13f4ea3beb15d40d88_594789e471862d08d5bcd8f58ee70cb235589103da8beceb628a2e18f6398760",
         "tx0_index": 492,
-        "tx0_hash": "74db175c4669a3d3a59e3fcddce9e97fcd7d12c35b58ef31845a1b20a1739498",
+        "tx0_hash": "50cc782f437b5ad64d54e31b76f91e37dc80bb91356c4e13f4ea3beb15d40d88",
         "tx0_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "tx1_index": 493,
-        "tx1_hash": "1b294dd8592e76899b1c106782e4c96e63114abd8e3fa09ab6d2d52496b5bf81",
+        "tx1_hash": "594789e471862d08d5bcd8f58ee70cb235589103da8beceb628a2e18f6398760",
         "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         "forward_asset": "XCP",
         "forward_price": 0.008,
@@ -503,7 +503,7 @@ def test_asset_dispensers():
     assert result.json()["result"] == [
         {
             "tx_index": 108,
-            "tx_hash": "9834219d2825b4d85ca7ee0d75a5372d9d42ce75eb9144951fca1af5a25915ec",
+            "tx_hash": "4c0f6bf88e269d5ec199b70afbaa69743d244ccc9bc86e40f53e7960f5789807",
             "block_index": 310107,
             "source": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
             "asset": "XCP",
@@ -533,7 +533,7 @@ def test_asset_dispensers():
     assert result.json()["result"] == [
         {
             "tx_index": 511,
-            "tx_hash": "af67f6762d4b00b4bf5fb93a9d556e007a147aa80fbf6a84410df05a0182da9e",
+            "tx_hash": "f2296c084abb7b7f91775c759551cb7b2315f75ccc4a298edb7d6e26e2ddfb08",
             "block_index": 310510,
             "source": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b",
             "asset": "TESTDISP",

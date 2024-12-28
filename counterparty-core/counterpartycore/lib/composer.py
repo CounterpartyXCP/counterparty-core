@@ -293,9 +293,16 @@ def prepare_outputs(source, destinations, data, unspent_list, construct_params):
 
 class UTXOLocks(metaclass=util.SingletonMeta):
     def __init__(self):
+        self.init()
+
+    def init(self):
         self.locks = OrderedDict()
-        self.max_age = config.UTXO_LOCKS_MAX_AGE
-        self.max_size = config.UTXO_LOCKS_MAX_ADDRESSES
+        self.locks = OrderedDict()
+        self.set_limits(config.UTXO_LOCKS_MAX_AGE, config.UTXO_LOCKS_MAX_ADDRESSES)
+
+    def set_limits(self, max_age, max_size):
+        self.max_age = max_age
+        self.max_size = max_size
 
     def lock(self, utxo):
         self.locks[utxo] = time.time()
@@ -564,7 +571,7 @@ def prepare_unspent_list(db, source, construct_params):
         unspent_list = [utxo for utxo in unspent_list if utxo["txid"] == unspent_tx_hash]
 
     # excluded locked utxos
-    if not construct_params.get("disable_utxo_lock", False):
+    if not construct_params.get("disable_utxo_locks", False):
         unspent_list = UTXOLocks().filter_unspent_list(unspent_list)
 
     # exclude utxos with balances if needed
@@ -734,7 +741,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 +exclude_utxos
 +use_utxos_with_balances
 +exclude_utxos_with_balances
-+disable_utxo_lock
++disable_utxo_locks
 
 # NEW
 
@@ -819,7 +826,7 @@ def construct(db, tx_info, construct_params):
         db, source, outputs, unspent_list, construct_params
     )
 
-    if not construct_params.get("disable_utxo_lock", False):
+    if not construct_params.get("disable_utxo_locks", False):
         UTXOLocks().lock_inputs(inputs)
 
     # construct transaction
