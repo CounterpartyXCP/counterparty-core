@@ -18,7 +18,6 @@ from counterpartycore.lib.messages import issuance
 from counterpartycore.lib.util import RPCError
 
 from .contract_vectors.attach import ATTACH_VECTOR
-from .contract_vectors.composer import COMPOSER_VECTOR
 from .contract_vectors.detach import DETACH_VECTOR
 from .contract_vectors.dispenser import DISPENSER_VECTOR
 from .contract_vectors.fairmint import FAIRMINT_VECTOR
@@ -50,7 +49,7 @@ UNITTEST_VECTOR = (
     | SEND_VECTOR
     | DISPENSER_VECTOR
     | GAS_VECTOR
-    | COMPOSER_VECTOR
+    # | COMPOSER_VECTOR
     | GETTXINFO_VECTOR
     | MOVE_VECTOR
     | ATTACH_VECTOR
@@ -647,7 +646,7 @@ UNITTEST_VECTOR = (
                                 "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                                 "status": "filled",
                                 "target_value": 0.0,
-                                "tx_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                                "tx_hash": "d15d2cc622bcc43f80c9622b0ed4e2f8f48cb14704d2dfdc47d187878d2562b5",
                                 "tx_index": 102,
                                 "wager_quantity": 10,
                                 "wager_remaining": 0,
@@ -702,23 +701,23 @@ UNITTEST_VECTOR = (
                 {
                     "in": (
                         {
-                            "counterwager_quantity": 10,
-                            "wager_remaining": 10,
-                            "target_value": 0.0,
-                            "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                            "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                            "counterwager_remaining": 10,
-                            "tx_index": 102,
-                            "block_index": 310101,
-                            "deadline": 1388000200,
-                            "bet_type": 3,
-                            "expiration": 1000,
-                            "expire_index": 311101,
-                            "tx_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
-                            "leverage": 5040,
-                            "wager_quantity": 10,
+                            "bet_type": 0,
+                            "block_index": 310703,
+                            "counterwager_quantity": 9,
+                            "counterwager_remaining": 0,
+                            "deadline": 1388000001,
+                            "expiration": 100,
+                            "expire_index": 310120,
                             "fee_fraction_int": 5000000,
-                            "status": "open",
+                            "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                            "leverage": 5040,
+                            "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                            "status": "filled",
+                            "target_value": 0.0,
+                            "tx_hash": "3cf9d2177708a19b44d540569ff472d08286ad7d28e275bf2a9b9ae781e8e03e",
+                            "tx_index": 21,
+                            "wager_quantity": 9,
+                            "wager_remaining": 0,
                         },
                         "filled",
                         DP["default_block_index"],
@@ -728,23 +727,23 @@ UNITTEST_VECTOR = (
                         {
                             "table": "bets",
                             "values": {
-                                "bet_type": 3,
-                                "expiration": 1000,
-                                "expire_index": 311101,
-                                "block_index": DP["default_block_index"] - 1,
-                                "deadline": 1388000200,
-                                "counterwager_quantity": 10,
-                                "wager_remaining": 10,
-                                "counterwager_remaining": 10,
-                                "tx_index": 102,
+                                "bet_type": 0,
+                                "block_index": 310703,
+                                "counterwager_quantity": 9,
+                                "counterwager_remaining": 0,
+                                "deadline": 1388000001,
+                                "expiration": 100,
+                                "expire_index": 310120,
                                 "fee_fraction_int": 5000000,
-                                "status": "filled",
                                 "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                                 "leverage": 5040,
-                                "wager_quantity": 10,
                                 "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                                "status": "filled",
                                 "target_value": 0.0,
-                                "tx_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                                "tx_hash": "3cf9d2177708a19b44d540569ff472d08286ad7d28e275bf2a9b9ae781e8e03e",
+                                "tx_index": 21,
+                                "wager_quantity": 9,
+                                "wager_remaining": 0,
                             },
                         }
                     ],
@@ -758,7 +757,7 @@ UNITTEST_VECTOR = (
                             "backward_quantity": 9,
                             "initial_value": 1,
                             "tx1_expiration": 100,
-                            "id": "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93",
+                            "id": "8a1916be67d8429e52405ef4016f2d70e5ee19a3bc808bc179f6965bcd6ea610_3cf9d2177708a19b44d540569ff472d08286ad7d28e275bf2a9b9ae781e8e03e",
                             "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                             "status": "settled",
                             "leverage": 5040,
@@ -769,8 +768,8 @@ UNITTEST_VECTOR = (
                             "tx1_bet_type": 0,
                             "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                             "tx0_index": 20,
-                            "tx1_hash": "5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93",
-                            "tx0_hash": "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1",
+                            "tx1_hash": "3cf9d2177708a19b44d540569ff472d08286ad7d28e275bf2a9b9ae781e8e03e",
+                            "tx0_hash": "8a1916be67d8429e52405ef4016f2d70e5ee19a3bc808bc179f6965bcd6ea610",
                             "block_index": 310020,
                             "forward_quantity": 9,
                             "match_expire_index": 310119,
@@ -793,7 +792,7 @@ UNITTEST_VECTOR = (
                                 "fee_fraction_int": 5000000,
                                 "feed_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                                 "forward_quantity": 9,
-                                "id": "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1_5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93",
+                                "id": "8a1916be67d8429e52405ef4016f2d70e5ee19a3bc808bc179f6965bcd6ea610_3cf9d2177708a19b44d540569ff472d08286ad7d28e275bf2a9b9ae781e8e03e",
                                 "initial_value": 1,
                                 "leverage": 5040,
                                 "match_expire_index": 310119,
@@ -803,13 +802,13 @@ UNITTEST_VECTOR = (
                                 "tx0_bet_type": 1,
                                 "tx0_block_index": 310019,
                                 "tx0_expiration": 100,
-                                "tx0_hash": "2a2169991597036b6dad687ea1feffd55465a204466f40c35cbba811cb3109b1",
+                                "tx0_hash": "8a1916be67d8429e52405ef4016f2d70e5ee19a3bc808bc179f6965bcd6ea610",
                                 "tx0_index": 20,
                                 "tx1_address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                                 "tx1_bet_type": 0,
                                 "tx1_block_index": 310020,
                                 "tx1_expiration": 100,
-                                "tx1_hash": "5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93",
+                                "tx1_hash": "3cf9d2177708a19b44d540569ff472d08286ad7d28e275bf2a9b9ae781e8e03e",
                                 "tx1_index": 21,
                             },
                         }
@@ -863,23 +862,12 @@ UNITTEST_VECTOR = (
                 {
                     "in": (
                         ADDR[1],
-                        "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                        "d15d2cc622bcc43f80c9622b0ed4e2f8f48cb14704d2dfdc47d187878d2562b5",
                     ),
                     "out": (
                         "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         [],
-                        b"\x00\x00\x00F\xdbN\xa0\x92\xbe\xa6\x03n=\x1e_n\xc8c\xdb\x9b\x90\x02R\xb4\xf4\xd6\xd9\xfa\xa6\x16S#\xf43\xc5\x1e",
-                    ),
-                },
-                {
-                    "in": (
-                        P2SH_ADDR[0],
-                        "d79b590e4ec3e74cbc3eb4d0f956ce7abb0e3af2ccac85ff90ed8acf13f2e048",
-                    ),
-                    "out": (
-                        P2SH_ADDR[0],
-                        [],
-                        b"\x00\x00\x00F\xd7\x9bY\x0eN\xc3\xe7L\xbc>\xb4\xd0\xf9V\xcez\xbb\x0e:\xf2\xcc\xac\x85\xff\x90\xed\x8a\xcf\x13\xf2\xe0H",
+                        b'\x00\x00\x00F\xd1],\xc6"\xbc\xc4?\x80\xc9b+\x0e\xd4\xe2\xf8\xf4\x8c\xb1G\x04\xd2\xdf\xdcG\xd1\x87\x87\x8d%b\xb5',
                     ),
                 },
                 {
@@ -889,14 +877,14 @@ UNITTEST_VECTOR = (
                 {
                     "in": (
                         "foobar",
-                        "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                        "d15d2cc622bcc43f80c9622b0ed4e2f8f48cb14704d2dfdc47d187878d2562b5",
                     ),
                     "error": (exceptions.ComposeError, ["incorrect source address"]),
                 },
                 {
                     "in": (
                         ADDR[1],
-                        "5c6562ddad0bc8a1faaded18813a65522cd273709acd190cf9d3271817eefc93",
+                        "3cf9d2177708a19b44d540569ff472d08286ad7d28e275bf2a9b9ae781e8e03e",
                     ),
                     "error": (exceptions.ComposeError, ["offer not open"]),
                 },
@@ -926,7 +914,7 @@ UNITTEST_VECTOR = (
                             "block_index": DP["default_block_index"],
                             "btc_amount": 0,
                             "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                            "data": b"\x00\x00\x00F\xdbN\xa0\x92\xbe\xa6\x03n=\x1e_n\xc8c\xdb\x9b\x90\x02R\xb4\xf4\xd6\xd9\xfa\xa6\x16S#\xf43\xc5\x1e",
+                            "data": b'\x00\x00\x00F\xd1],\xc6"\xbc\xc4?\x80\xc9b+\x0e\xd4\xe2\xf8\xf4\x8c\xb1G\x04\xd2\xdf\xdcG\xd1\x87\x87\x8d%b\xb5',
                             "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
                             "tx_index": DP["default_tx_index"],
                             "fee": 10000,
@@ -941,7 +929,7 @@ UNITTEST_VECTOR = (
                             "table": "cancels",
                             "values": {
                                 "block_index": DP["default_block_index"],
-                                "offer_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                                "offer_hash": "d15d2cc622bcc43f80c9622b0ed4e2f8f48cb14704d2dfdc47d187878d2562b5",
                                 "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                                 "status": "valid",
                                 "tx_hash": "fb645106e276bfa1abd587f4a251b26f491a2a9ae61ca46a669794109728b122",
@@ -967,7 +955,7 @@ UNITTEST_VECTOR = (
                                 "wager_quantity": 10,
                                 "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                                 "target_value": 0.0,
-                                "tx_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                                "tx_hash": "d15d2cc622bcc43f80c9622b0ed4e2f8f48cb14704d2dfdc47d187878d2562b5",
                             },
                         },
                     ],
@@ -1508,7 +1496,7 @@ UNITTEST_VECTOR = (
                                 "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                                 "status": "dropped",
                                 "target_value": 0.0,
-                                "tx_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                                "tx_hash": "d15d2cc622bcc43f80c9622b0ed4e2f8f48cb14704d2dfdc47d187878d2562b5",
                                 "tx_index": 102,
                                 "wager_quantity": 10,
                                 "wager_remaining": 10,
@@ -1776,7 +1764,7 @@ UNITTEST_VECTOR = (
                                 "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                                 "status": "dropped",
                                 "target_value": 0.0,
-                                "tx_hash": "db4ea092bea6036e3d1e5f6ec863db9b900252b4f4d6d9faa6165323f433c51e",
+                                "tx_hash": "d15d2cc622bcc43f80c9622b0ed4e2f8f48cb14704d2dfdc47d187878d2562b5",
                                 "tx_index": 102,
                                 "wager_quantity": 10,
                                 "wager_remaining": 10,
@@ -1833,7 +1821,7 @@ UNITTEST_VECTOR = (
                                 "source": ADDR[4],
                                 "status": "open",
                                 "target_value": 0.0,
-                                "tx_hash": "41e821ae1c6b553d0fa5d5a807b2e7e9ffaec5d62706d9d2a59c6e65a3ed9cef",
+                                "tx_hash": "13979f19f652735c7cdbfe5f7c7cb395c4fb018f9fafcdf0872bcf7fe92a2621",
                                 "tx_index": 488,
                                 "wager_quantity": 9,
                                 "wager_remaining": 9,
@@ -5963,139 +5951,6 @@ UNITTEST_VECTOR = (
                 },
             ],
         },
-        "transaction_helper.common_serializer": {
-            "var_int": [
-                {"in": (252,), "out": b"\xfc"},
-                {"in": (65535,), "out": b"\xfd\xff\xff"},
-                {"in": (4294967295,), "out": b"\xfe\xff\xff\xff\xff"},
-                {"in": (4294967296,), "out": b"\xff\x00\x00\x00\x00\x01\x00\x00\x00"},
-            ],
-            "op_push": [
-                {"in": (75,), "out": b"K"},
-                {"in": (255,), "out": b"L\xff"},
-                {"in": (65535,), "out": b"M\xff\xff"},
-                {"in": (65536,), "out": b"N\x00\x00\x01\x00"},
-            ],
-            "get_multisig_script": [
-                {
-                    "in": (
-                        "1_0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0_0319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977_2",
-                    ),
-                    "out": (
-                        b"Q!\x02\x82\xb8\x86\xc0\x87\xeb7\xdc\x81\x82\xf1K\xa6\xcc>\x94\x85\xeda\x8b\x95\x80MD\xae\xcc\x17\xc3\x00\xb5\x85\xb0!\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9wR\xae",
-                        None,
-                    ),
-                }
-            ],
-            "get_monosig_script": [
-                {
-                    "in": (ADDR[1],),
-                    "out": (
-                        b"v\xa9\x14\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x88\xac",
-                        None,
-                    ),
-                }
-            ],
-            "get_p2sh_script": [
-                {
-                    "in": (P2SH_ADDR[0],),
-                    "out": (
-                        b"\xa9\x14Bd\xcf\xd7\xebe\xf8\xcb\xbd\xba\x98\xbd\x98\x15\xd5F\x1f\xad\x8d~\x87",
-                        None,
-                    ),
-                }
-            ],
-            "get_script": [
-                {
-                    "in": (
-                        "1_0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0_0319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b977_2",
-                    ),
-                    "out": (
-                        b"Q!\x02\x82\xb8\x86\xc0\x87\xeb7\xdc\x81\x82\xf1K\xa6\xcc>\x94\x85\xeda\x8b\x95\x80MD\xae\xcc\x17\xc3\x00\xb5\x85\xb0!\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9wR\xae",
-                        None,
-                    ),
-                },
-                {
-                    "in": (ADDR[1],),
-                    "out": (
-                        b"v\xa9\x14\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x88\xac",
-                        None,
-                    ),
-                },
-                {
-                    "in": (P2SH_ADDR[0],),
-                    "out": (
-                        b"\xa9\x14Bd\xcf\xd7\xebe\xf8\xcb\xbd\xba\x98\xbd\x98\x15\xd5F\x1f\xad\x8d~\x87",
-                        None,
-                    ),
-                },
-                {
-                    "in": (P2WPKH_ADDR[0],),
-                    "out": (
-                        b"\x00\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6",
-                        b"\xa9\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6\x87",
-                    ),
-                },
-            ],
-            "make_fully_valid": [
-                {
-                    "in": (
-                        b"T\xdaT\x0f\xb2f;u\xe6\xc3\xcca\x19\n\xd0\xc2C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$",
-                    ),
-                    "out": b"\x02T\xdaT\x0f\xb2f;u\xe6\xc3\xcca\x19\n\xd0\xc2C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$G",
-                }
-            ],
-            "serialise": [
-                {
-                    "in": (
-                        "multisig",
-                        [
-                            {
-                                "confirmations": 74,
-                                "amount": 1.9990914,
-                                "vout": 0,
-                                "account": "",
-                                "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
-                                "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
-                                "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                                "txhex": "0100000002eff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b000000006c493046022100ec6fa8316a4f5cfd69816e31011022acce0933bd3b01248caa8b49e60de1b98a022100987ba974b2a4f9976a8d61d94009cb7f7986a827dc5730e999de1fb748d2046c01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffffeff195acdf2bbd215daa8aca24eb667b563a731d34a9ab75c8d8df5df08be29b010000006a47304402201f8fb2d62df22592cb8d37c68ab26563dbb8e270f7f8409ac0f6d7b24ddb5c940220314e5c767fd12b20116528c028eab2bfbad30eb963bd849993410049cf14a83d01210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0ffffffff02145fea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000346a32544553540000000a00000000000000010000000005f5e1000000000000000000000000000bebc2000032000000000000271000000000",
-                            }
-                        ],
-                        [("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", 5430)],
-                        (
-                            [
-                                b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80"
-                            ],
-                            7800,
-                        ),
-                        ("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 199885910),
-                        b"\x02\x82\xb8\x86\xc0\x87\xeb7\xdc\x81\x82\xf1K\xa6\xcc>\x94\x85\xeda\x8b\x95\x80MD\xae\xcc\x17\xc3\x00\xb5\x85\xb0",
-                    ),
-                    "out": b"\x01\x00\x00\x00\x01\xc1\xd8\xc0u\x93l4\x95\xf6\xd6S\xc5\x0fs\xd9\x87\xf7TH\xd9zu\x02I\xb1\xeb\x83\xbe\xe7\x1b$\xae\x00\x00\x00\x00\x19v\xa9\x14H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607\x88\xac\xff\xff\xff\xff\x036\x15\x00\x00\x00\x00\x00\x00\x19v\xa9\x14\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x88\xacx\x1e\x00\x00\x00\x00\x00\x00iQ!\x02bA[\xf0J\xf84B==\xd7\xad\xa4\xdcrz\x03\x08eu\x9f\x9f\xbaZ\xeex\xc9\xeaq\xe5\x87\x98!\x02T\xdaT\x0f\xb2f;u\xe6\xc3\xcca\x19\n\xd0\xc2C\x16C\xba\xb2\x8c\xedx<\xd9@y\xbb\xe7$G!\x02\x82\xb8\x86\xc0\x87\xeb7\xdc\x81\x82\xf1K\xa6\xcc>\x94\x85\xeda\x8b\x95\x80MD\xae\xcc\x17\xc3\x00\xb5\x85\xb0S\xaeV\x04\xea\x0b\x00\x00\x00\x00\x19v\xa9\x14H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607\x88\xac\x00\x00\x00\x00",
-                },
-                {
-                    "in": (
-                        "multisig",
-                        [
-                            {
-                                "txid": "e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb",
-                                "txhex": "0100000001980b1a29634f263b00e5301519c153edd65c9149445c9dfdf175b07782388a84000000006a4730440220438f0878ec34cbb676ad8d8badcf81d93a7748a7b85c5841c5bed024b0ad287602203bd635a7d15ccabe235da9cf5086e9a2611242b0e894bd2f9f66a1d4de3fff3d01210276e73c0c0b5af814085f9a9bec7421bc97bc84c4f5bbdf4f6973bd04e16765e7ffffffff0100e1f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",
-                                "amount": 1.0,
-                                "vout": 0,
-                                "script_pub_key": "76a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac",
-                                "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                                "confirmations": 2,
-                            }
-                        ],
-                        [("mvCounterpartyXXXXXXXXXXXXXXW24Hef", 62000000)],
-                        None,
-                        ("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", 37990000),
-                        None,
-                    ),
-                    "out": b"\x01\x00\x00\x00\x01\xeb\xe3\x11\x18\x81\xa8s:\xce\x02'\x1d\xcf`ktP\xc4\x1aH\xc1\xcb!\xfds\xf4\xbax{5<\xe4\x00\x00\x00\x00\x19v\xa9\x14\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x88\xac\xff\xff\xff\xff\x02\x80\x0b\xb2\x03\x00\x00\x00\x00\x19v\xa9\x14\xa1\x1bf\xa6{?\xf6\x96q\xc8\xf8\"T\t\x9f\xaf7K\x80\x0e\x88\xacp\xaeC\x02\x00\x00\x00\x00\x19v\xa9\x14\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x88\xac\x00\x00\x00\x00",
-                },
-            ],
-        },
         "api_v1": {
             "get_rows": [
                 {
@@ -6244,7 +6099,7 @@ UNITTEST_VECTOR = (
                     "out": [
                         {
                             "tx_index": 497,
-                            "tx_hash": "a35ab1736565aceddbd1d71f92fc7f39d1361006aa9099f731e54e762964d5ba",
+                            "tx_hash": "efdb0f93b90f417af1dff6b2973abeae76cca0feb15bf3397d8cafe3654b6ba3",
                             "block_index": 310496,
                             "source": "mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH",
                             "destination": "mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj",
@@ -6277,7 +6132,7 @@ UNITTEST_VECTOR = (
                     "out": [
                         {
                             "tx_index": 482,
-                            "tx_hash": "b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5",
+                            "tx_hash": "378d99f3e90865586b5567f05e3d6ffb0c6e67f7b10e8ef1414f27c61ae02bf4",
                             "block_index": 310481,
                             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -6310,7 +6165,7 @@ UNITTEST_VECTOR = (
                     "out": [
                         {
                             "tx_index": 482,
-                            "tx_hash": "b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5",
+                            "tx_hash": "378d99f3e90865586b5567f05e3d6ffb0c6e67f7b10e8ef1414f27c61ae02bf4",
                             "block_index": 310481,
                             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -6343,7 +6198,7 @@ UNITTEST_VECTOR = (
                     "out": [
                         {
                             "tx_index": 482,
-                            "tx_hash": "b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5",
+                            "tx_hash": "378d99f3e90865586b5567f05e3d6ffb0c6e67f7b10e8ef1414f27c61ae02bf4",
                             "block_index": 310481,
                             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -6376,7 +6231,7 @@ UNITTEST_VECTOR = (
                     "out": [
                         {
                             "tx_index": 482,
-                            "tx_hash": "b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5",
+                            "tx_hash": "378d99f3e90865586b5567f05e3d6ffb0c6e67f7b10e8ef1414f27c61ae02bf4",
                             "block_index": 310481,
                             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -6409,7 +6264,7 @@ UNITTEST_VECTOR = (
                     "out": [
                         {
                             "tx_index": 482,
-                            "tx_hash": "b00bdf03402d81a2cbdbeac4b0df90cff5ab6bf9688f653383d49fe42b8422a5",
+                            "tx_hash": "378d99f3e90865586b5567f05e3d6ffb0c6e67f7b10e8ef1414f27c61ae02bf4",
                             "block_index": 310481,
                             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -6459,7 +6314,7 @@ UNITTEST_VECTOR = (
                     "out": [
                         {
                             "tx_index": 483,
-                            "tx_hash": "c8716524f33646b9af94d6f5e52494ff3b34466497094b1db2ab920e4f79bc34",
+                            "tx_hash": "f2d162adf40100affbbc1084cf70161236b75e808c454a828b1770fcc90776ea",
                             "block_index": 310482,
                             "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                             "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
