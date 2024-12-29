@@ -16,7 +16,9 @@ from counterpartycore.lib import (
     arc4,
     backend,
     config,
+    deserialize,
     exceptions,
+    gettxinfo,
     ledger,
     opcodes,
     script,
@@ -729,51 +731,6 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
     return inputs, btc_in, change_outputs
 
 
-"""
-# UNCHANGED
-
-+encoding
-+validate
-+exact_fee
-+confirmation_target
-+inputs_set
-+allow_unconfirmed_inputs
-+exclude_utxos
-+use_utxos_with_balances
-+exclude_utxos_with_balances
-+disable_utxo_locks
-
-# NEW
-
-+verbose
-+sat_per_vbyte
-+max_fee
-+mutlisig_pubkey
-+change_address
-+more_outputs
-+use_all_inputs_set
-
-# DEPRECATED BUT STILL SUPPORTED
-
-+regular_dust_size (removed)
-+multisig_dust_size (removed)
-+fee_per_kb (replaced by `sat_per_vbyte`)
-+fee_provided (replaced by 'max_fee')
-+pubkeys (replaced by `mutlisig_pubkey`)
-+dust_return_pubkey (replaced by `mutlisig_pubkey`)
-+return_psbt (replaced by `verbose`)
-+return_only_data (replaced by `verbose`)
-+unspent_tx_hash (replaced by `inputs_set`)
-+extended_tx_info (implemented in api_v1.py)
-+old_style_api (implemented in api_v1.py)
-
-# REMOVED
-
-p2sh_pretx_txid (removed)
-segwit (removed)
-"""
-
-
 def get_default_args(func):
     signature = inspect.signature(func)
     return {
@@ -809,11 +766,6 @@ def compose_data(db, name, params, accept_missing_params=False, skip_validation=
 
 def construct(db, tx_info, construct_params):
     source, destinations, data = tx_info
-
-    if construct_params.get("return_only_data", False):
-        return {
-            "data": config.PREFIX + data if data else None,
-        }
 
     # prepare unspent list
     unspent_list = prepare_unspent_list(db, source, construct_params)
@@ -856,6 +808,103 @@ def construct(db, tx_info, construct_params):
     return result
 
 
+def check_transaction_sanity(db, tx_info, tx_hex, construct_params):
+    source, destinations, data = tx_info
+    tx = Transaction.from_raw(tx_hex)
+
+    # check if source address matches the first input address
+    first_utxo = f"{tx.inputs[0].txid}:{tx.inputs[0].txout_index}"
+    if util.is_utxo_format(source):
+        source_is_ok = first_utxo == source
+    else:
+        first_input_address, _ = backend.bitcoind.get_utxo_address_and_value(first_utxo)
+        source_is_ok = first_input_address == source
+    if not source_is_ok:
+        raise exceptions.ComposeError(
+            "Sanity check error: source address does not match the first input address"
+        )
+
+    # check if destination addresses and values match the outputs
+    for i, destination in enumerate(destinations):
+        address, value = destination
+        out = tx.outputs[i]
+        script_pubkey = out.script_pubkey.to_hex()
+        out_address = script.script_to_address2(script_pubkey)
+        if address != out_address:
+            raise exceptions.ComposeError(
+                "Sanity check error: destination address does not match the output address"
+            )
+        if value is not None:
+            if value != out.amount:
+                raise exceptions.ComposeError(
+                    "Sanity check error: destination value does not match the output value"
+                )
+        elif out.amount not in [
+            regular_dust_size(construct_params),
+            multisig_dust_size(construct_params),
+        ]:
+            raise exceptions.ComposeError(
+                "Sanity check error: destination value does not match the output value"
+            )
+
+    # check if data matches the output data
+    if data:
+        _, _, _, _, tx_data, _ = gettxinfo.get_tx_info_new(
+            db,
+            deserialize.deserialize_tx(tx_hex, use_txid=True),
+            util.CURRENT_BLOCK_INDEX,
+            composing=True,
+        )
+        if tx_data != data:
+            raise exceptions.ComposeError("Sanity check error: data does not match the output data")
+
+
+"""
+# UNCHANGED
+
++encoding
++validate
++exact_fee
++confirmation_target
++inputs_set
++allow_unconfirmed_inputs
++exclude_utxos
++use_utxos_with_balances
++exclude_utxos_with_balances
++disable_utxo_locks
++return_only_data
+
+# NEW
+
++verbose
++sat_per_vbyte
++max_fee
++mutlisig_pubkey
++change_address
++more_outputs
++use_all_inputs_set
+
+# DEPRECATED BUT STILL SUPPORTED
+
++regular_dust_size
++multisig_dust_size
++fee_per_kb (replaced by `sat_per_vbyte`)
++fee_provided (replaced by 'max_fee')
++pubkeys (replaced by `mutlisig_pubkey`)
++dust_return_pubkey (replaced by `mutlisig_pubkey`)
++return_psbt (replaced by `verbose`)
+
++unspent_tx_hash (replaced by `inputs_set`)
++extended_tx_info (implemented in api_v1.py)
++old_style_api (implemented in api_v1.py)
+
+# REMOVED
+
+p2sh_pretx_txid (removed)
+segwit (removed)
+"""
+
+
 def compose_transaction(db, name, params, construct_params):
     setup(config.NETWORK_NAME)
 
@@ -863,5 +912,16 @@ def compose_transaction(db, name, params, construct_params):
     skip_validation = not construct_params.get("validate", True)
     tx_info = compose_data(db, name, params, skip_validation=skip_validation)
 
+    if construct_params.get("return_only_data", False):
+        data = tx_info[2]
+        return {
+            "data": config.PREFIX + data if data else None,
+        }
+
     # construct transaction
-    return construct(db, tx_info, construct_params)
+    result = construct(db, tx_info, construct_params)
+
+    # sanity check
+    check_transaction_sanity(db, tx_info, result["rawtransaction"], construct_params)
+
+    return result

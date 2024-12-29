@@ -362,6 +362,16 @@ def script_to_address(scriptpubkey):
         raise exceptions.DecodeError("scriptpubkey decoding error")  # noqa: B904
 
 
+def script_to_address2(scriptpubkey):
+    if isinstance(scriptpubkey, str):
+        scriptpubkey = binascii.unhexlify(scriptpubkey)
+    try:
+        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
+        return utils.script_to_address2(script, config.NETWORK_NAME)
+    except BaseException as e:  # noqa: F841
+        raise exceptions.DecodeError("scriptpubkey decoding error")  # noqa: B904
+
+
 def get_checksig(asm):
     try:
         op_dup, op_hash160, pubkeyhash, op_equalverify, op_checksig = asm
