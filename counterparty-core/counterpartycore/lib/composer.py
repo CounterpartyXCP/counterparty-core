@@ -859,50 +859,88 @@ def check_transaction_sanity(db, tx_info, tx_hex, construct_params):
             raise exceptions.ComposeError("Sanity check error: data does not match the output data")
 
 
-"""
-# UNCHANGED
-
-+encoding
-+validate
-+exact_fee
-+confirmation_target
-+inputs_set
-+allow_unconfirmed_inputs
-+exclude_utxos
-+use_utxos_with_balances
-+exclude_utxos_with_balances
-+disable_utxo_locks
-+return_only_data
-
-# NEW
-
-+verbose
-+sat_per_vbyte
-+max_fee
-+mutlisig_pubkey
-+change_address
-+more_outputs
-+use_all_inputs_set
-
-# DEPRECATED BUT STILL SUPPORTED
-
-+regular_dust_size
-+multisig_dust_size
-+fee_per_kb (replaced by `sat_per_vbyte`)
-+fee_provided (replaced by 'max_fee')
-+pubkeys (replaced by `mutlisig_pubkey`)
-+dust_return_pubkey (replaced by `mutlisig_pubkey`)
-+return_psbt (replaced by `verbose`)
-
-+unspent_tx_hash (replaced by `inputs_set`)
-+extended_tx_info (implemented in api_v1.py)
-+old_style_api (implemented in api_v1.py)
-
-# REMOVED
-
-p2sh_pretx_txid (removed)
-segwit (removed)
-"""
+CONSTRUCT_PARAMS = {
+    # general parameters
+    "encoding": (str, "auto", "The encoding method to use"),
+    "validate": (bool, True, "Validate the transaction"),
+    # fee parameters
+    "sat_per_vbyte": (int, None, "The fee per vbyte in satoshis"),
+    "confirmation_target": (
+        int,
+        config.ESTIMATE_FEE_CONF_TARGET,
+        "The number of blocks to target for confirmation",
+    ),
+    "exact_fee": (int, None, "The exact fee to use in satoshis"),
+    "max_fee": (int, None, "The maximum fee to use in satoshis"),
+    # inputs parameters
+    "inputs_set": (
+        str,
+        None,
+        "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>:<script_pub_key>`.",
+    ),
+    "allow_unconfirmed_inputs": (
+        bool,
+        False,
+        "Set to true to allow this transaction to utilize unconfirmed UTXOs as inputs",
+    ),
+    "exclude_utxos": (
+        str,
+        None,
+        "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
+    ),
+    "use_utxos_with_balances": (bool, False, "Use UTXO with balances"),
+    "exclude_utxos_with_balances": (
+        bool,
+        False,
+        "Exclude silently UTXO with balances instead of raising an exception",
+    ),
+    "disable_utxo_locks": (
+        bool,
+        False,
+        "By default, UTXOs utilized when creating a transaction are 'locked' for a few seconds, to prevent a case where rapidly generating create_ calls reuse UTXOs due to their spent status not being updated in bitcoind yet. Specify true for this parameter to disable this behavior, and not temporarily lock UTXOs",
+    ),
+    "use_all_inputs_set": (bool, False, "Use all UTXOs provide with `inputs_set` parameter"),
+    # outputs parameters
+    "mutlisig_pubkey": (
+        str,
+        None,
+        "The public key to use for multisig encoding, by default it is searched for the source address",
+    ),
+    "change_address": (str, None, "The address to send the change to"),
+    "more_outputs": (
+        str,
+        None,
+        "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+    ),
+    # result parameters
+    "verbose": (
+        bool,
+        False,
+        "Include additional information in the result including data and psbt",
+    ),
+    "return_only_data": (bool, False, "Return only the data part of the transaction"),
+    # deprecated parameters
+    "fee_per_kb": (int, None, "Deprecated, use `sat_per_vbyte` instead"),
+    "fee_provided": (int, None, "Deprecated, use `max_fee` instead"),
+    "unspent_tx_hash": (str, None, "Deprecated, use `inputs_set` instead"),
+    "pubkeys": (str, None, "Deprecated, use `mutlisig_pubkey` instead"),
+    "dust_return_pubkey": (str, None, "Deprecated, use `mutlisig_pubkey` instead"),
+    "return_psbt": (bool, False, "Deprecated, use `verbose` instead"),
+    "regular_dust_size": (
+        int,
+        config.DEFAULT_REGULAR_DUST_SIZE,
+        "Deprecated, automatically calculated",
+    ),
+    "multisig_dust_size": (
+        int,
+        config.DEFAULT_MULTISIG_DUST_SIZE,
+        "Deprecated, automatically calculated",
+    ),
+    "extended_tx_info": (bool, False, "(API v1 only) Deprecated, use API v2 instead"),
+    "old_style_api": (bool, False, "(API v1 only) Deprecated, use API v2 instead"),
+    "p2sh_pretx_txid": (str, None, "Ignored, P2SH disabled"),
+    "segwit": (bool, False, "Ignored, Segwit automatically detected"),
+}
 
 
 def compose_transaction(db, name, params, construct_params):

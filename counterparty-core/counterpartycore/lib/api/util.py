@@ -209,8 +209,8 @@ def prepare_route_args(function):
     function_args = inspect.signature(function).parameters
     args_description = get_args_description(function)
     for arg_name, arg in function_args.items():
-        if arg_name == "construct_args":
-            for carg_name, carg_info in compose.COMPOSE_COMMONS_ARGS.items():
+        if arg_name == "construct_params":
+            for carg_name, carg_info in composer.CONSTRUCT_PARAMS.items():
                 args.append(
                     {
                         "name": carg_name,

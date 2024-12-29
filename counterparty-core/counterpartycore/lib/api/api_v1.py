@@ -30,7 +30,6 @@ from counterpartycore.lib import (
     script,
     util,
 )
-from counterpartycore.lib.api import compose as api_compose
 from counterpartycore.lib.api import util as api_util
 from counterpartycore.lib.api.api_watcher import STATE_DB_TABLES
 from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
@@ -103,6 +102,28 @@ API_TABLES = [
     "transactions",
 ]
 
+COMPOSABLE_TRANSACTIONS = [
+    "bet",
+    "broadcast",
+    "btcpay",
+    "burn",
+    "cancel",
+    "destroy",
+    "dispenser",
+    "dispense",
+    "dividend",
+    "issuance",
+    "versions.mpma",
+    "order",
+    "send",
+    "sweep",
+    "utxo",
+    "fairminter",
+    "fairmint",
+    "attach",
+    "detach",
+    "move",
+]
 
 JSON_RPC_ERROR_API_COMPOSE = -32001  # code to use for error composing transaction result
 
@@ -446,6 +467,20 @@ def conditional_decorator(decorator, condition):
     return gen_decorator
 
 
+def split_compose_params(**kwargs):
+    transaction_args = {}
+    common_args = {}
+    private_key_wif = None
+    for key, value in kwargs.items():
+        if key in composer.CONSTRUCT_PARAMS:
+            common_args[key] = value
+        elif key == "privkey":
+            private_key_wif = value
+        else:
+            transaction_args[key] = value
+    return transaction_args, common_args, private_key_wif
+
+
 class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
 
@@ -558,9 +593,7 @@ class APIServer(threading.Thread):
         # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
             def create_method(**kwargs):
-                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
-                    **kwargs
-                )
+                transaction_args, common_args, private_key_wif = split_compose_params(**kwargs)
                 extended_tx_info = old_style_api = False
                 if "extended_tx_info" in common_args:
                     extended_tx_info = common_args["extended_tx_info"]
@@ -618,7 +651,7 @@ class APIServer(threading.Thread):
 
             return create_method
 
-        for tx in api_compose.COMPOSABLE_TRANSACTIONS:
+        for tx in COMPOSABLE_TRANSACTIONS:
             create_method = generate_create_method(tx)
             create_method.__name__ = f"create_{tx}"
             dispatcher.add_method(create_method)
@@ -1175,7 +1208,7 @@ class APIServer(threading.Thread):
                 error = "No query_type provided."
                 return flask.Response(error, 400, mimetype="application/json")
             # Check if message type or table name are valid.
-            if (compose and query_type not in api_compose.COMPOSABLE_TRANSACTIONS) or (
+            if (compose and query_type not in COMPOSABLE_TRANSACTIONS) or (
                 not compose and query_type not in API_TABLES
             ):
                 error = f'No such query type in supported queries: "{query_type}".'
@@ -1186,9 +1219,7 @@ class APIServer(threading.Thread):
             query_data = {}
 
             if compose:
-                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
-                    **extra_args
-                )
+                transaction_args, common_args, private_key_wif = split_compose_params(**extra_args)
 
                 # Must have some additional transaction arguments.
                 if not len(transaction_args):
