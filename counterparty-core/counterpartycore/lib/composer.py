@@ -866,7 +866,6 @@ def prepare_construct_params(construct_params):
     for field in [
         "fee_per_kb",
         "fee_provided",
-        "pubkeys",
         "dust_return_pubkey",
         "return_psbt",
         "regular_dust_size",

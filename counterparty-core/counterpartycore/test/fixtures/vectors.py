@@ -6881,22 +6881,22 @@ UNITTEST_VECTOR = (
                     ),
                     "out": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210262415bf04af834423d3dd7ada4dc727a030865759f9fba5aee78c9ea71e58798210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4f56ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                 },
-                # {
-                #    "comment": "send 2",
-                #    "in": (
-                #        "create_send",
-                #        {
-                #            "source": P2SH_ADDR[0],
-                #            "destination": ADDR[1],
-                #            "asset": "XCP",
-                #            "quantity": DP["small"],
-                #            "encoding": "multisig",
-                #            "dust_return_pubkey": False,
-                #            "regular_dust_size": DP["regular_dust_size"],
-                #        },
-                #    ),
-                #    "out": "",
-                # },
+                {
+                    "comment": "send 2",
+                    "in": (
+                        "create_send",
+                        {
+                            "source": P2SH_ADDR[0],
+                            "destination": ADDR[1],
+                            "asset": "XCP",
+                            "quantity": DP["small"],
+                            "encoding": "multisig",
+                            "dust_return_pubkey": False,
+                            "regular_dust_size": DP["regular_dust_size"],
+                        },
+                    ),
+                    "out": "02000000015001af2c4c3bc2c43b6233261394910d10fb157a082d9b3038c65f2d01e4ff200000000000ffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace8030000000000006951210397b51de78b0f3a171f5ed27fff56d17dcba739c8b00035c8bbb9c380fdc4ed1321036932bcbeac2a4d8846b7feb4bf93b2b88efd02f2d8dc1fc0067bcc972257e391210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae2dc5f5050000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000",
+                },
                 {
                     "comment": "issuance 1",
                     "in": (
