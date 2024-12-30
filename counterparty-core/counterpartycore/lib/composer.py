@@ -326,7 +326,9 @@ def complete_unspent_list(unspent_list):
         if "script_pub_key" not in utxo or "value" not in utxo:
             txid = utxo["txid"]
             if txid not in txs:
-                raise exceptions.ComposeError(f"Transaction {txid} not found")
+                raise exceptions.ComposeError(
+                    f"invalid UTXO: {txid}:{utxo["vout"]} (transaction not found)"
+                )
             for vout in txs[txid]["vout"]:
                 if vout["n"] == utxo["vout"]:
                     if "script_pub_key" not in utxo:
@@ -359,10 +361,10 @@ def prepare_inputs_set(inputs_set):
         elif len(utxo_parts) == 4:
             txid, vout, value, script_pub_key = utxo.split(":")
         else:
-            raise exceptions.ComposeError(f"invalid UTXO format: {utxo}")
+            raise exceptions.ComposeError(f"invalid UTXO: {utxo} (invalid format)")
 
         if not util.is_utxo_format(f"{txid}:{vout}"):
-            raise exceptions.ComposeError(f"invalid UTXO format: {utxo}")
+            raise exceptions.ComposeError(f"invalid UTXO: {utxo} (invalid format)")
 
         unspent = {
             "txid": txid,
@@ -373,13 +375,15 @@ def prepare_inputs_set(inputs_set):
             try:
                 unspent["value"] = int(value)
             except ValueError as e:
-                raise exceptions.ComposeError(f"invalid value for UTXO: {utxo}") from e
+                raise exceptions.ComposeError(f"invalid UTXO: {utxo} (invalid value)") from e
 
         if script_pub_key is not None:
             try:
                 script.script_to_asm(script_pub_key)
             except Exception as e:
-                raise exceptions.ComposeError(f"invalid script_pub_key for UTXO: {utxo}") from e
+                raise exceptions.ComposeError(
+                    f"invalid UTXO: {utxo} (invalid script_pub_key)"
+                ) from e
             unspent["script_pub_key"] = script_pub_key
 
         unspent_list.append(unspent)
@@ -402,7 +406,7 @@ def utxo_to_address(db, utxo):
         return address
     except Exception as e:
         raise exceptions.ComposeError(
-            f"the address corresponding to {utxo} not found in the database"
+            f"invalid UTXO: {utxo} (not found in the database or Bitcoin Core)"
         ) from e
 
 
@@ -421,7 +425,7 @@ def ensure_utxo_is_first(utxo, unspent_list):
         try:
             value = backend.bitcoind.get_utxo_value(txid, vout)
         except Exception as e:
-            raise exceptions.ComposeError(f"value not found for UTXO: {utxo}") from e
+            raise exceptions.ComposeError(f"invalid UTXO: {utxo} (value not found)") from e
         new_unspent_list.insert(
             0,
             {
@@ -452,7 +456,7 @@ def filter_utxos_with_balances(db, source, unspent_list, construct_params):
         if exclude_utxos_with_balances and with_balances:
             continue
         if with_balances:
-            raise exceptions.ComposeError(f"UTXO {str_input} has balances")
+            raise exceptions.ComposeError(f"invalid UTXO: {str_input} (has balances)")
         new_unspent_list.append(utxo)
     return new_unspent_list
 
