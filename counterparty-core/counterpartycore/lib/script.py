@@ -559,3 +559,46 @@ def ensure_script_pub_key_for_inputs(coins):
                         coin["script_pub_key"] = vout["scriptPubKey"]["hex"]
 
     return coins
+
+
+def get_output_type(script_pub_key):
+    asm = script_to_asm(script_pub_key)
+    if asm[0] == opcodes.OP_RETURN:
+        return "OP_RETURN"
+    if len(asm) == 2 and asm[1] == opcodes.OP_CHECKSIG:
+        return "P2PK"
+    if (
+        len(asm) == 5
+        and asm[0] == opcodes.OP_DUP
+        and asm[3] == opcodes.OP_EQUALVERIFY
+        and asm[4] == opcodes.OP_CHECKSIG
+    ):
+        return "P2PKH"
+    if len(asm) >= 4 and asm[-1] == opcodes.OP_CHECKMULTISIG and asm[-2] == len(asm) - 3:
+        return "P2MS"
+    if len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:
+        return "P2SH"
+    if len(asm) == 2 and asm[0] == b"":
+        if len(asm[1]) == 32:
+            return "P2WSH"
+        return "P2WPKH"
+    if len(asm) == 2 and asm[0] == b"\x01":
+        return "P2TR"
+
+
+def is_segwit_output(script_pub_key):
+    return get_output_type(script_pub_key) in ("P2WPKH", "P2WSH", "P2TR")
+
+
+def is_address_script(address, script_pub_key):
+    if is_multisig(address):
+        asm = script_to_asm(script_pub_key)
+        pubkeys = [binascii.hexlify(pubkey).decode("utf-8") for pubkey in asm[1:-2]]
+        addresses = [
+            PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+            for pubkey in pubkeys
+        ]
+        script_address = f"{asm[0]}_{'_'.join(addresses)}_{asm[-2]}"
+    else:
+        script_address = script_to_address2(script_pub_key)
+    return address == script_address

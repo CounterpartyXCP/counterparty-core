@@ -12450,7 +12450,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -12465,6 +12465,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -12500,13 +12507,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -12703,7 +12703,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -12718,6 +12718,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -12753,13 +12760,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -12938,7 +12938,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -12953,6 +12953,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -12988,13 +12995,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -13180,7 +13180,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -13195,6 +13195,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -13230,13 +13237,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -13415,7 +13415,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -13430,6 +13430,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -13465,13 +13472,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -13662,7 +13662,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -13677,6 +13677,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -13712,13 +13719,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -13935,7 +13935,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -13950,6 +13950,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -13985,13 +13992,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -14182,7 +14182,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -14197,6 +14197,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -14232,13 +14239,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -14458,7 +14458,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -14473,6 +14473,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -14508,13 +14515,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -14733,7 +14733,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -14748,6 +14748,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -14783,13 +14790,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -14998,7 +14998,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -15013,6 +15013,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -15048,13 +15055,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -15266,7 +15266,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -15281,6 +15281,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -15316,13 +15323,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -15513,7 +15513,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -15528,6 +15528,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -15563,13 +15570,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -15754,7 +15754,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -15769,6 +15769,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -15804,13 +15811,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -16101,7 +16101,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -16116,6 +16116,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -16151,13 +16158,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -16343,7 +16343,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -16358,6 +16358,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -16393,13 +16400,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -16591,7 +16591,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -16606,6 +16606,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -16641,13 +16648,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -16827,7 +16827,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -16842,6 +16842,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -16877,13 +16884,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -17062,7 +17062,7 @@
                         "name": "mutlisig_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "The public key to use for multisig encoding, by default it is searched for the source address",
+                        "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
                         "required": false
                     },
                     {
@@ -17077,6 +17077,13 @@
                         "type": "str",
                         "default": null,
                         "description": "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+                        "required": false
+                    },
+                    {
+                        "name": "pubkeys",
+                        "type": "str",
+                        "default": null,
+                        "description": "Pubkeys needed in case one or more destinations are multisig addresses",
                         "required": false
                     },
                     {
@@ -17112,13 +17119,6 @@
                         "type": "str",
                         "default": null,
                         "description": "Deprecated, use `inputs_set` instead",
-                        "required": false
-                    },
-                    {
-                        "name": "pubkeys",
-                        "type": "str",
-                        "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
                         "required": false
                     },
                     {

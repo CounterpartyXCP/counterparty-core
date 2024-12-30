@@ -20,7 +20,6 @@ from counterpartycore.lib import (
     exceptions,
     gettxinfo,
     ledger,
-    opcodes,
     script,
     util,
 )
@@ -30,7 +29,12 @@ MAX_INPUTS_SET = 100
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def get_script(address, unspent_list, construct_params):
+################
+#   Outputs    #
+################
+
+
+def address_to_script_pub_key(address, unspent_list, construct_params):
     if script.is_multisig(address):
         signatures_required, addresses, signatures_possible = script.extract_array(address)
         pubkeys = [search_pubkey(address, unspent_list, construct_params) for address in addresses]
@@ -52,38 +56,20 @@ def get_script(address, unspent_list, construct_params):
         raise exceptions.ComposeError(f"Invalid address: {address}") from e
 
 
-def get_output_type(script_pub_key):
-    asm = script.script_to_asm(script_pub_key)
-    if asm[0] == opcodes.OP_RETURN:
-        return "OP_RETURN"
-    if len(asm) == 2 and asm[1] == opcodes.OP_CHECKSIG:
-        return "P2PK"
-    if (
-        len(asm) == 5
-        and asm[0] == opcodes.OP_DUP
-        and asm[3] == opcodes.OP_EQUALVERIFY
-        and asm[4] == opcodes.OP_CHECKSIG
-    ):
-        return "P2PKH"
-    if len(asm) >= 4 and asm[-1] == opcodes.OP_CHECKMULTISIG and asm[-2] == len(asm) - 3:
-        return "P2MS"
-    if len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:
-        return "P2SH"
-    if len(asm) == 2 and asm[0] == b"":
-        if len(asm[1]) == 32:
-            return "P2WSH"
-        return "P2WPKH"
-    if len(asm) == 2 and asm[0] == b"\x01":
-        return "P2TR"
+def create_tx_output(value, address_or_script, unspent_list, construct_params):
+    try:
+        # if hex string we assume it is a script
+        if all(c in string.hexdigits for c in address_or_script):
+            has_segwit = script.is_segwit_output(address_or_script)
+            script = Script.from_raw(address_or_script, has_segwit=has_segwit)
+        else:
+            script = address_to_script_pub_key(address_or_script, unspent_list, construct_params)
+    except Exception as e:
+        raise exceptions.ComposeError(
+            f"Invalid script or address for output: {address_or_script}"
+        ) from e
 
-
-def is_segwit_output(script_pub_key):
-    return get_output_type(script_pub_key) in ("P2WPKH", "P2WSH", "P2TR")
-
-
-################
-#   Outputs    #
-################
+    return TxOutput(value, script)
 
 
 def regular_dust_size(construct_params):
@@ -102,7 +88,7 @@ def perpare_non_data_outputs(destinations, unspent_list, construct_params):
     outputs = []
     for address, value in destinations:
         output_value = value or regular_dust_size(construct_params)
-        outputs.append(TxOutput(output_value, get_script(address, unspent_list, construct_params)))
+        outputs.append(create_tx_output(output_value, address, unspent_list, construct_params))
     return outputs
 
 
@@ -140,15 +126,14 @@ def is_valid_pubkey(pubkey):
 
 
 def search_pubkey(source, unspent_list, construct_params):
-    # if pubkeys are provided, check it and return
-    multisig_pubkey = construct_params.get("multisig_pubkey")
+    if construct_params is not None:
+        pubkeys = construct_params.get("pubkeys", "").split(",")
+        if len(pubkeys) > 0:
+            for pubkey in pubkeys:
+                if PublicKey.from_hex(pubkey).get_address(compressed=True).to_string() == source:
+                    return pubkey
 
-    if multisig_pubkey is not None:
-        if not is_valid_pubkey(multisig_pubkey):
-            raise exceptions.ComposeError(f"Invalid multisig pubkey: {multisig_pubkey}")
-        return multisig_pubkey
-
-    # else search with Bitcoin Core
+    # search with Bitcoin Core
     tx_hashes = [utxo["txid"] for utxo in unspent_list]
     multisig_pubkey = backend.bitcoind.search_pubkey_in_transactions(source, tx_hashes)
     if multisig_pubkey is not None:
@@ -220,7 +205,13 @@ def data_to_pubkey_pairs(data, arc4_key):
 
 
 def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params):
-    multisig_pubkey = search_pubkey(source, unspent_list, construct_params)
+    # determine multisig pubkey
+    multisig_pubkey = construct_params.get("multisig_pubkey")
+    if multisig_pubkey is None:
+        multisig_pubkey = search_pubkey(source, unspent_list, construct_params)
+    if not is_valid_pubkey(multisig_pubkey):
+        raise exceptions.ComposeError(f"Invalid multisig pubkey: {multisig_pubkey}")
+
     pubkey_pairs = data_to_pubkey_pairs(data, arc4_key)
     outputs = []
     for pubkey_pair in pubkey_pairs:
@@ -254,17 +245,9 @@ def prepare_more_outputs(more_outputs, unspent_list, construct_params):
         except ValueError as e:
             raise exceptions.ComposeError(f"Invalid value for output: {output}") from e
 
-        try:
-            # if hex string we assume it is a script
-            if all(c in string.hexdigits for c in address_or_script):
-                has_segwit = is_segwit_output(address_or_script)
-                script = Script.from_raw(address_or_script, has_segwit=has_segwit)
-            else:
-                script = get_script(address_or_script, unspent_list, construct_params)
-        except Exception as e:
-            raise exceptions.ComposeError(f"Invalid script or address for output: {output}") from e
+        tx_output = create_tx_output(value, address_or_script, unspent_list, construct_params)
 
-        outputs.append(TxOutput(value, script))
+        outputs.append(tx_output)
 
     return outputs
 
@@ -351,72 +334,10 @@ def complete_unspent_list(unspent_list):
                     if "value" not in utxo:
                         utxo["value"] = int(vout["value"] * config.UNIT)
                         utxo["amount"] = vout["value"]
-        utxo["is_segwit"] = is_segwit_output(utxo["script_pub_key"])
+        utxo["is_segwit"] = script.is_segwit_output(utxo["script_pub_key"])
         completed_unspent_list.append(utxo)
 
     return completed_unspent_list
-
-
-def bitcoind_list_unspent(source, allow_unconfirmed_inputs):
-    min_conf = 0 if allow_unconfirmed_inputs else 1
-    bitcoind_unspent_list = []
-    try:
-        bitcoind_unspent_list = backend.bitcoind.safe_rpc(
-            "listunspent", [min_conf, 9999999, [source]]
-        )
-    except exceptions.BitcoindRPCError:
-        pass
-
-    if len(bitcoind_unspent_list) > 0:
-        unspent_list = []
-        for unspent in bitcoind_unspent_list:
-            unspent_list.append(
-                {
-                    "txid": unspent["txid"],
-                    "vout": unspent["vout"],
-                    "value": int(unspent["amount"] * config.UNIT),
-                    "amount": unspent["amount"],
-                    "script_pub_key": unspent["scriptPubKey"],
-                }
-            )
-        return unspent_list
-
-    return []
-
-
-def electrs_list_unspent(source, allow_unconfirmed_inputs):
-    electr_unspent_list = backend.electrs.get_utxos(
-        source,
-        unconfirmed=allow_unconfirmed_inputs,
-    )
-    if len(electr_unspent_list) > 0:
-        unspent_list = []
-        for unspent in electr_unspent_list:
-            unspent_list.append(
-                {
-                    "txid": unspent["txid"],
-                    "vout": unspent["vout"],
-                    "value": unspent["value"],
-                    "amount": unspent["value"] / config.UNIT,
-                }
-            )
-        return unspent_list
-
-    return []
-
-
-def list_unspent(source, allow_unconfirmed_inputs):
-    # first try with Bitcoin Core
-    unspent_list = bitcoind_list_unspent(source, allow_unconfirmed_inputs)
-    if len(unspent_list) > 0:
-        return unspent_list
-
-    # then try with Electrs
-    if config.ELECTRS_URL is None:
-        raise exceptions.ComposeError(
-            "No UTXOs found with Bitcoin Core and Electr is not configured, use the `inputs_set` parameter to provide UTXOs"
-        )
-    return electrs_list_unspent(source, allow_unconfirmed_inputs)
 
 
 def prepare_inputs_set(inputs_set):
@@ -546,7 +467,7 @@ def prepare_unspent_list(db, source, construct_params):
             source_address = utxo_to_address(db, source)
         else:
             source_address = source
-        unspent_list = list_unspent(source_address, allow_unconfirmed_inputs)
+        unspent_list = backend.list_unspent(source_address, allow_unconfirmed_inputs)
     else:
         # prepare unspent list provided by the user
         unspent_list = prepare_inputs_set(inputs_set)
@@ -670,7 +591,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         selected_utxos = unspent_list[:input_count]
         inputs = utxos_to_txins(selected_utxos)
         btc_in = sum(utxo["value"] for utxo in selected_utxos)
-        change_amount = btc_in - outputs_total
+        change_amount = int(btc_in - outputs_total)
 
         # if change is negative, try with more inputs
         if change_amount < 0:
@@ -686,9 +607,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
             change_amount = int(change_amount - exact_fee)
             if change_amount > regular_dust_size(construct_params):
                 change_outputs.append(
-                    TxOutput(
-                        change_amount, get_script(change_address, unspent_list, construct_params)
-                    )
+                    create_tx_output(change_amount, change_address, unspent_list, construct_params)
                 )
             break
 
@@ -698,7 +617,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         tx = Transaction(
             inputs,
             outputs
-            + [TxOutput(change_amount, get_script(change_address, unspent_list, construct_params))],
+            + [create_tx_output(change_amount, change_address, unspent_list, construct_params)],
             has_segwit=has_segwit,
         )
         needed_fee = get_needed_fee(tx, sat_per_vbyte)
@@ -706,13 +625,10 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
             needed_fee = min(needed_fee, max_fee)
         # if change is enough for needed fee, add change output and break
         if change_amount > needed_fee:
-            print(change_amount, needed_fee)
             change_amount = int(change_amount - needed_fee)
             if change_amount > regular_dust_size(construct_params):
                 change_outputs.append(
-                    TxOutput(
-                        change_amount, get_script(change_address, unspent_list, construct_params)
-                    )
+                    create_tx_output(change_amount, change_address, unspent_list, construct_params)
                 )
             break
         # else try with more inputs
@@ -767,7 +683,6 @@ def construct(db, tx_info, construct_params):
     selected_utxos, btc_in, change_outputs = prepare_inputs_and_change(
         db, source, outputs, unspent_list, construct_params
     )
-    print("COMPLETE UNPENT LIST2 selected_utxos", selected_utxos)
     inputs = utxos_to_txins(selected_utxos)
 
     if not construct_params.get("disable_utxo_locks", False):
@@ -779,6 +694,7 @@ def construct(db, tx_info, construct_params):
     lock_scripts = [utxo["script_pub_key"] for utxo in selected_utxos]
     tx = Transaction(inputs, outputs + change_outputs)
     unsigned_tx_hex = tx.serialize()
+
     return {
         "rawtransaction": unsigned_tx_hex,
         "btc_in": btc_in,
@@ -788,20 +704,6 @@ def construct(db, tx_info, construct_params):
         "data": config.PREFIX + data if data else None,
         "lock_scripts": lock_scripts,
     }
-
-
-def is_address_script(address, script_pub_key):
-    if script.is_multisig(address):
-        asm = script.script_to_asm(script_pub_key)
-        pubkeys = [binascii.hexlify(pubkey).decode("utf-8") for pubkey in asm[1:-2]]
-        addresses = [
-            PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
-            for pubkey in pubkeys
-        ]
-        script_address = f"{asm[0]}_{'_'.join(addresses)}_{asm[-2]}"
-    else:
-        script_address = script.script_to_address2(script_pub_key)
-    return address == script_address
 
 
 def check_transaction_sanity(tx_info, composed_tx, construct_params):
@@ -817,7 +719,7 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
     if util.is_utxo_format(source):
         source_is_ok = first_utxo == source
     else:
-        source_is_ok = is_address_script(source, composed_tx["lock_scripts"][0])
+        source_is_ok = script.is_address_script(source, composed_tx["lock_scripts"][0])
 
     if not source_is_ok:
         raise exceptions.ComposeError(
@@ -829,7 +731,7 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
         address, value = destination
         out = decoded_tx["vout"][i]
 
-        if not is_address_script(address, out["script_pub_key"]):
+        if not script.is_address_script(address, out["script_pub_key"]):
             raise exceptions.ComposeError(
                 "Sanity check error: destination address does not match the output address"
             )
@@ -901,13 +803,18 @@ CONSTRUCT_PARAMS = {
     "mutlisig_pubkey": (
         str,
         None,
-        "The public key to use for multisig encoding, by default it is searched for the source address",
+        "The reedem public key to use for multisig encoding, by default it is searched for the source address",
     ),
     "change_address": (str, None, "The address to send the change to"),
     "more_outputs": (
         str,
         None,
         "Additional outputs to include in the transaction in the format `<value>:<address>` or `<value>:<script>`",
+    ),
+    "pubkeys": (
+        str,
+        None,
+        "Pubkeys needed in case one or more destinations are multisig addresses",
     ),
     # result parameters
     "verbose": (
@@ -920,7 +827,6 @@ CONSTRUCT_PARAMS = {
     "fee_per_kb": (int, None, "Deprecated, use `sat_per_vbyte` instead"),
     "fee_provided": (int, None, "Deprecated, use `max_fee` instead"),
     "unspent_tx_hash": (str, None, "Deprecated, use `inputs_set` instead"),
-    "pubkeys": (str, None, "Deprecated, use `mutlisig_pubkey` instead"),
     "dust_return_pubkey": (str, None, "Deprecated, use `mutlisig_pubkey` instead"),
     "return_psbt": (bool, False, "Deprecated, use `verbose` instead"),
     "regular_dust_size": (
@@ -946,7 +852,6 @@ def prepare_construct_params(construct_params):
     for deprecated_param, new_param, copyer in [
         ("fee_per_kb", "sat_per_vbyte", lambda x: x // 1024),
         ("fee_provided", "max_fee", lambda x: x),
-        ("pubkeys", "mutlisig_pubkey", lambda x: x.split(",")[0]),
         ("dust_return_pubkey", "mutlisig_pubkey", lambda x: x),
         ("return_psbt", "verbose", lambda x: x),
     ]:

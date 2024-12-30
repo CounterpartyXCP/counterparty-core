@@ -102,3 +102,24 @@ def search_pubkey(pubkeyhash):
         if pubkey:
             return pubkey
     return None
+
+
+def list_unspent(source, allow_unconfirmed_inputs):
+    electr_unspent_list = get_utxos(
+        source,
+        unconfirmed=allow_unconfirmed_inputs,
+    )
+    if len(electr_unspent_list) > 0:
+        unspent_list = []
+        for unspent in electr_unspent_list:
+            unspent_list.append(
+                {
+                    "txid": unspent["txid"],
+                    "vout": unspent["vout"],
+                    "value": unspent["value"],
+                    "amount": unspent["value"] / config.UNIT,
+                }
+            )
+        return unspent_list
+
+    return []
