@@ -585,6 +585,7 @@ def prepare_unspent_list(db, source, construct_params):
         )
 
     # complete unspent list with missing data (value or script_pub_key)
+    # so we can sort it by value
     unspent_list = complete_unspent_list(unspent_list)
 
     # sort unspent list by value
@@ -593,6 +594,8 @@ def prepare_unspent_list(db, source, construct_params):
     # if source is an utxo, ensure it is first in the unspent list
     if util.is_utxo_format(source):
         unspent_list = ensure_utxo_is_first(source, unspent_list)
+        # complete unspent list again with missing data
+        unspent_list = complete_unspent_list(unspent_list)
 
     return unspent_list
 
@@ -717,6 +720,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
             needed_fee = min(needed_fee, max_fee)
         # if change is enough for needed fee, add change output and break
         if change_amount > needed_fee:
+            print(change_amount, needed_fee)
             change_amount = change_amount - needed_fee
             if change_amount > regular_dust_size(construct_params):
                 change_outputs.append(
@@ -728,7 +732,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         # else try with more inputs
         input_count += 1
 
-    return inputs, btc_in, change_outputs
+    return selected_utxos, btc_in, change_outputs
 
 
 def get_default_args(func):
@@ -774,51 +778,61 @@ def construct(db, tx_info, construct_params):
     outputs = prepare_outputs(source, destinations, data, unspent_list, construct_params)
 
     # prepare inputs and change
-    inputs, btc_in, change_outputs = prepare_inputs_and_change(
+    selected_utxos, btc_in, change_outputs = prepare_inputs_and_change(
         db, source, outputs, unspent_list, construct_params
     )
+    print("COMPLETE UNPENT LIST2 selected_utxos", selected_utxos)
+    inputs = utxos_to_txins(selected_utxos)
 
     if not construct_params.get("disable_utxo_locks", False):
         UTXOLocks().lock_inputs(inputs)
 
     # construct transaction
+    btc_out = sum(output.amount for output in outputs)
+    btc_change = sum(change_output.amount for change_output in change_outputs)
+    lock_scripts = [utxo["script_pub_key"] for utxo in selected_utxos]
     tx = Transaction(inputs, outputs + change_outputs)
     unsigned_tx_hex = tx.serialize()
-    result = {
+    return {
         "rawtransaction": unsigned_tx_hex,
+        "btc_in": btc_in,
+        "btc_out": btc_out,
+        "btc_change": btc_change,
+        "btc_fee": btc_in - btc_out - btc_change,
+        "data": config.PREFIX + data if data else None,
+        "lock_scripts": lock_scripts,
     }
 
-    verbose = construct_params.get("verbose")
-    if verbose is None:
-        verbose = construct_params.get("return_psbt")  # legacy
 
-    if verbose:
-        btc_out = sum(output.amount for output in outputs)
-        btc_change = sum(change_output.amount for change_output in change_outputs)
-        result = result | {
-            "btc_in": btc_in,
-            "btc_out": btc_out,
-            "btc_change": btc_change,
-            "btc_fee": btc_in - btc_out - btc_change,
-            "rawtransaction": unsigned_tx_hex,
-            "psbt": backend.bitcoind.convert_to_psbt(unsigned_tx_hex),
-            "data": config.PREFIX + data if data else None,
-        }
-
-    return result
+def is_address_script(address, script_pub_key):
+    if script.is_multisig(address):
+        asm = script.script_to_asm(script_pub_key)
+        pubkeys = [binascii.hexlify(pubkey).decode("utf-8") for pubkey in asm[1:-2]]
+        addresses = [
+            PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+            for pubkey in pubkeys
+        ]
+        script_address = f"{asm[0]}_{'_'.join(addresses)}_{asm[-2]}"
+    else:
+        script_address = script.script_to_address2(script_pub_key)
+    return address == script_address
 
 
-def check_transaction_sanity(db, tx_info, tx_hex, construct_params):
+def check_transaction_sanity(tx_info, composed_tx, construct_params):
+    tx_hex = composed_tx["rawtransaction"]
     source, destinations, data = tx_info
-    tx = Transaction.from_raw(tx_hex)
+    decoded_tx = deserialize.deserialize_tx(tx_hex, use_txid=True)
 
     # check if source address matches the first input address
-    first_utxo = f"{tx.inputs[0].txid}:{tx.inputs[0].txout_index}"
+    first_utxo_txid = decoded_tx["vin"][0]["hash"]
+    first_utxo_txid = util.inverse_hash(binascii.hexlify(first_utxo_txid).decode("utf-8"))
+    first_utxo = f"{first_utxo_txid}:{decoded_tx['vin'][0]['n']}"
+
     if util.is_utxo_format(source):
         source_is_ok = first_utxo == source
     else:
-        first_input_address, _ = backend.bitcoind.get_utxo_address_and_value(first_utxo)
-        source_is_ok = first_input_address == source
+        source_is_ok = is_address_script(source, composed_tx["lock_scripts"][0])
+
     if not source_is_ok:
         raise exceptions.ComposeError(
             "Sanity check error: source address does not match the first input address"
@@ -827,34 +841,31 @@ def check_transaction_sanity(db, tx_info, tx_hex, construct_params):
     # check if destination addresses and values match the outputs
     for i, destination in enumerate(destinations):
         address, value = destination
-        out = tx.outputs[i]
-        script_pubkey = out.script_pubkey.to_hex()
-        out_address = script.script_to_address2(script_pubkey)
-        if address != out_address:
+        out = decoded_tx["vout"][i]
+
+        if not is_address_script(address, out["script_pub_key"]):
             raise exceptions.ComposeError(
                 "Sanity check error: destination address does not match the output address"
             )
+
+        value_is_ok = True
         if value is not None:
-            if value != out.amount:
-                raise exceptions.ComposeError(
-                    "Sanity check error: destination value does not match the output value"
-                )
-        elif out.amount not in [
+            if value != out["value"]:
+                value_is_ok = False
+        elif out["value"] not in [
             regular_dust_size(construct_params),
             multisig_dust_size(construct_params),
         ]:
+            value_is_ok = False
+
+        if not value_is_ok:
             raise exceptions.ComposeError(
                 "Sanity check error: destination value does not match the output value"
             )
 
     # check if data matches the output data
     if data:
-        _, _, _, _, tx_data, _ = gettxinfo.get_tx_info_new(
-            db,
-            deserialize.deserialize_tx(tx_hex, use_txid=True),
-            util.CURRENT_BLOCK_INDEX,
-            composing=True,
-        )
+        _, _, _, tx_data, _ = gettxinfo.parse_transaction_vouts(decoded_tx)
         if tx_data != data:
             raise exceptions.ComposeError("Sanity check error: data does not match the output data")
 
@@ -960,6 +971,21 @@ def compose_transaction(db, name, params, construct_params):
     result = construct(db, tx_info, construct_params)
 
     # sanity check
-    check_transaction_sanity(db, tx_info, result["rawtransaction"], construct_params)
+    try:
+        check_transaction_sanity(tx_info, result, construct_params)
+    except Exception as e:
+        raise exceptions.ComposeError(str(e)) from e
 
-    return result
+    # return result
+    verbose = construct_params.get("verbose")
+    if verbose is None:
+        verbose = construct_params.get("return_psbt")  # legacy
+    if verbose:
+        result = result | {
+            "psbt": backend.bitcoind.convert_to_psbt(result["rawtransaction"]),
+        }
+        return result
+    else:
+        return {
+            "rawtransaction": result["rawtransaction"],
+        }

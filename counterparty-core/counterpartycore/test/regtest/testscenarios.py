@@ -67,7 +67,7 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_23_detach.SCENARIO
+# SCENARIOS = scenario_22_chaining.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -393,6 +393,9 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
 
         while not regtest_node_thread.ready():
             time.sleep(1)
+
+        # regtest_node_thread.node.test_transaction_chaining()
+        # raise KeyboardInterrupt
 
         context = {}
 
