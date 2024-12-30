@@ -59,7 +59,6 @@ def validate_compose(db, source, destination, quantity):
                     )
             except exceptions.NoPriceError as e:
                 dispenser_problems.append(str(e))
-        logger.warning("dispenser_problems: %s", dispenser_problems)
         # no error if at least one dispenser is valid
         if len(dispenser_problems) == 0 and util.enabled("accept_only_one_valid_dispenser"):
             return []

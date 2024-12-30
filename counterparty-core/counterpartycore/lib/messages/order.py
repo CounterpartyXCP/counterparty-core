@@ -957,7 +957,6 @@ def match(db, tx, block_index=None):
                 "fee_paid": fee,
                 "status": status,
             }
-            print("INSERTING ORDER MATCH")
             ledger.insert_record(db, "order_matches", bindings, "ORDER_MATCH")
 
             logger.info(

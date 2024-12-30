@@ -99,6 +99,8 @@ def determine_encoding(data, construct_params):
             encoding = "opreturn"
         else:
             encoding = "multisig"
+    else:
+        encoding = desired_encoding
     if encoding not in ("multisig", "opreturn"):
         raise exceptions.TransactionError(f"Not supported encoding: {encoding}")
     return encoding
@@ -132,23 +134,19 @@ def search_pubkey(source, unspent_list, construct_params):
             for pubkey in pubkeys:
                 if PublicKey.from_hex(pubkey).get_address(compressed=True).to_string() == source:
                     return pubkey
-
     # search with Bitcoin Core
     tx_hashes = [utxo["txid"] for utxo in unspent_list]
     multisig_pubkey = backend.bitcoind.search_pubkey_in_transactions(source, tx_hashes)
     if multisig_pubkey is not None:
         return multisig_pubkey
-
     # else search with Electrs
     if config.ELECTRS_URL is None:
         raise exceptions.ComposeError(
             "No multisig pubkey found with Bitcoin Core and Electrs is not configured, use the `multisig_pubkey` parameter to provide it"
         )
-
     multisig_pubkey = backend.electrs.search_pubkey(source)
     if multisig_pubkey is not None:
         return multisig_pubkey
-
     raise exceptions.ComposeError(
         f"No multisig pubkey found for {source}, use the `multisig_pubkey` parameter to provide it"
     )
@@ -163,7 +161,7 @@ def make_valid_pubkey(pubkey_start):
     the ECDSA curve). Find the correct bytes by guessing randomly until the check
     passes. (In parsing, these two bytes are ignored.)
     """
-    assert type(pubkey_start) == bytes  # noqa: E721
+    assert isinstance(pubkey_start, bytes)  # noqa: E721
     assert len(pubkey_start) == 31  # One sign byte and one nonce byte required (for 33 bytes).
 
     random_bytes = hashlib.sha256(
@@ -211,7 +209,7 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
         multisig_pubkey = search_pubkey(source, unspent_list, construct_params)
     if not is_valid_pubkey(multisig_pubkey):
         raise exceptions.ComposeError(f"Invalid multisig pubkey: {multisig_pubkey}")
-
+    # generate pubkey pairs from data
     pubkey_pairs = data_to_pubkey_pairs(data, arc4_key)
     outputs = []
     for pubkey_pair in pubkey_pairs:
@@ -239,16 +237,14 @@ def prepare_more_outputs(more_outputs, unspent_list, construct_params):
         if len(output) != 2:
             raise exceptions.ComposeError(f"Invalid output format: {output}")
         address_or_script, value = output
-
+        # check value
         try:
             value = int(value)
         except ValueError as e:
             raise exceptions.ComposeError(f"Invalid value for output: {output}") from e
-
+        # create output
         tx_output = create_tx_output(value, address_or_script, unspent_list, construct_params)
-
         outputs.append(tx_output)
-
     return outputs
 
 
@@ -300,8 +296,8 @@ class UTXOLocks(metaclass=util.SingletonMeta):
         return [utxo for utxo in unspent_list if not self.locked(f"{utxo['txid']}:{utxo['vout']}")]
 
     def lock_inputs(self, inputs):
-        for input in inputs:
-            self.lock(f"{input.txid}:{input.txout_index}")
+        for tx_input in inputs:
+            self.lock(f"{tx_input.txid}:{tx_input.txout_index}")
 
 
 def complete_unspent_list(unspent_list):
@@ -533,8 +529,8 @@ def select_utxos(unspent_list, target_amount):
 def utxos_to_txins(utxos: list):
     inputs = []
     for utxo in utxos:
-        input = TxInput(utxo["txid"], utxo["vout"])
-        inputs.append(input)
+        tx_input = TxInput(utxo["txid"], utxo["vout"])
+        inputs.append(tx_input)
     return inputs
 
 
