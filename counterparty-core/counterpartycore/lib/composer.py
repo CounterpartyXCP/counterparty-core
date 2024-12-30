@@ -142,12 +142,6 @@ def is_valid_pubkey(pubkey):
 def search_pubkey(source, unspent_list, construct_params):
     # if pubkeys are provided, check it and return
     multisig_pubkey = construct_params.get("multisig_pubkey")
-    if multisig_pubkey is None:
-        multisig_pubkey = construct_params.get("dust_return_pubkey")  # legacy
-    if multisig_pubkey is None:
-        multisig_pubkey = construct_params.get("pubkeys")  # legacy
-        if multisig_pubkey is not None:
-            multisig_pubkey = multisig_pubkey.split(",")[0]
 
     if multisig_pubkey is not None:
         if not is_valid_pubkey(multisig_pubkey):
@@ -636,16 +630,8 @@ def get_needed_fee(tx, satoshis_per_vbyte):
 def prepare_fee_parameters(construct_params):
     exact_fee = construct_params.get("exact_fee")
     sat_per_vbyte = construct_params.get("sat_per_vbyte")
-    if sat_per_vbyte is None:
-        fee_per_kb = construct_params.get("fee_per_kb")  # legacy
-        if fee_per_kb is not None:
-            sat_per_vbyte = fee_per_kb // 1024
-
     confirmation_target = construct_params.get("confirmation_target")
     max_fee = construct_params.get("max_fee")
-    if max_fee is None:
-        max_fee = construct_params.get("fee_provided")  # legacy
-
     if exact_fee is not None:
         sat_per_vbyte, confirmation_target, max_fee = None, None, None
     elif sat_per_vbyte is None:
@@ -721,7 +707,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         # if change is enough for needed fee, add change output and break
         if change_amount > needed_fee:
             print(change_amount, needed_fee)
-            change_amount = change_amount - needed_fee
+            change_amount = int(change_amount - needed_fee)
             if change_amount > regular_dust_size(construct_params):
                 change_outputs.append(
                     TxOutput(
@@ -947,15 +933,55 @@ CONSTRUCT_PARAMS = {
         config.DEFAULT_MULTISIG_DUST_SIZE,
         "Deprecated, automatically calculated",
     ),
-    "extended_tx_info": (bool, False, "(API v1 only) Deprecated, use API v2 instead"),
-    "old_style_api": (bool, False, "(API v1 only) Deprecated, use API v2 instead"),
+    "extended_tx_info": (bool, False, "Deprecated (API v1 only), use API v2 instead"),
+    "old_style_api": (bool, False, "Deprecated (API v1 only), use API v2 instead"),
     "p2sh_pretx_txid": (str, None, "Ignored, P2SH disabled"),
     "segwit": (bool, False, "Ignored, Segwit automatically detected"),
 }
 
 
-def compose_transaction(db, name, params, construct_params):
+def prepare_construct_params(construct_params):
+    cleaned_construct_params = construct_params.copy()
+    # copy deprecated parameters to new ones
+    for deprecated_param, new_param, copyer in [
+        ("fee_per_kb", "sat_per_vbyte", lambda x: x // 1024),
+        ("fee_provided", "max_fee", lambda x: x),
+        ("pubkeys", "mutlisig_pubkey", lambda x: x.split(",")[0]),
+        ("dust_return_pubkey", "mutlisig_pubkey", lambda x: x),
+        ("return_psbt", "verbose", lambda x: x),
+    ]:
+        if deprecated_param in construct_params:
+            if (
+                construct_params.get(new_param) is None or not construct_params.get(new_param)
+            ) and construct_params.get(deprecated_param) is not None:
+                cleaned_construct_params[new_param] = copyer(construct_params[deprecated_param])
+            cleaned_construct_params.pop(deprecated_param)
+    # add warnings for deprecated parameters
+    warnings = []
+    for field in [
+        "fee_per_kb",
+        "fee_provided",
+        "pubkeys",
+        "dust_return_pubkey",
+        "return_psbt",
+        "regular_dust_size",
+        "multisig_dust_size",
+        "extended_tx_info",
+        "old_style_api",
+        "p2sh_pretx_txid",
+        "segwit",
+        "unspent_tx_hash",
+    ]:
+        if field in construct_params:
+            warnings.append(f"The `{field}` parameter is {CONSTRUCT_PARAMS[field][2].lower()}")
+
+    return cleaned_construct_params, warnings
+
+
+def compose_transaction(db, name, params, construct_parameters):
     setup(config.NETWORK_NAME)
+
+    construct_params, warnings = prepare_construct_params(construct_parameters)
 
     # prepare data
     skip_validation = not construct_params.get("validate", True)
@@ -977,15 +1003,16 @@ def compose_transaction(db, name, params, construct_params):
         raise exceptions.ComposeError(str(e)) from e
 
     # return result
-    verbose = construct_params.get("verbose")
-    if verbose is None:
-        verbose = construct_params.get("return_psbt")  # legacy
-    if verbose:
+    if construct_params.get("verbose", False):
         result = result | {
             "psbt": backend.bitcoind.convert_to_psbt(result["rawtransaction"]),
         }
-        return result
     else:
-        return {
+        result = {
             "rawtransaction": result["rawtransaction"],
         }
+
+    if len(warnings) > 0:
+        result["warnings"] = warnings
+
+    return result

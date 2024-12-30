@@ -12541,14 +12541,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -12794,14 +12794,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -13029,14 +13029,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -13271,14 +13271,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -13506,14 +13506,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -13753,14 +13753,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -14026,14 +14026,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -14273,14 +14273,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -14549,14 +14549,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -14824,14 +14824,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -15089,14 +15089,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -15357,14 +15357,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -15604,14 +15604,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -15845,14 +15845,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -16192,14 +16192,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -16434,14 +16434,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -16682,14 +16682,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -16918,14 +16918,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
@@ -17153,14 +17153,14 @@
                         "name": "extended_tx_info",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
                         "name": "old_style_api",
                         "type": "bool",
                         "default": false,
-                        "description": "(API v1 only) Deprecated, use API v2 instead",
+                        "description": "Deprecated (API v1 only), use API v2 instead",
                         "required": false
                     },
                     {
