@@ -129,7 +129,11 @@ def is_valid_pubkey(pubkey):
 
 def search_pubkey(source, unspent_list, construct_params):
     if construct_params is not None:
-        pubkeys = construct_params.get("pubkeys", "").split(",")
+        pubkeys = construct_params.get("pubkeys")
+        if pubkeys is not None:
+            pubkeys = pubkeys.split(",")
+        else:
+            pubkeys = []
         if len(pubkeys) > 0:
             for pubkey in pubkeys:
                 if PublicKey.from_hex(pubkey).get_address(compressed=True).to_string() == source:
