@@ -444,6 +444,7 @@ def filter_utxos_with_balances(db, source, unspent_list, construct_params):
 
     exclude_utxos_with_balances = construct_params.get("exclude_utxos_with_balances", False)
     new_unspent_list = []
+    with_balance_utxos = []
     for utxo in unspent_list:
         str_input = f"{utxo['txid']}:{utxo['vout']}"
         if str_input == source:
@@ -456,8 +457,13 @@ def filter_utxos_with_balances(db, source, unspent_list, construct_params):
         if exclude_utxos_with_balances and with_balances:
             continue
         if with_balances:
-            raise exceptions.ComposeError(f"invalid UTXO: {str_input} (has balances)")
+            with_balance_utxos.append(str_input)
+            continue
         new_unspent_list.append(utxo)
+    if len(with_balance_utxos) > 0:
+        raise exceptions.ComposeError(
+            f"invalid UTXOs: {', '.join(with_balance_utxos)} (use `use_utxos_with_balances=True` to include them or `exclude_utxos_with_balances=True` to exclude them silently)"
+        )
     return new_unspent_list
 
 
