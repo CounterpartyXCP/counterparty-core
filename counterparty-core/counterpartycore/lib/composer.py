@@ -37,7 +37,11 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def address_to_script_pub_key(address, unspent_list, construct_params):
     if script.is_multisig(address):
         signatures_required, addresses, signatures_possible = script.extract_array(address)
-        pubkeys = [search_pubkey(address, unspent_list, construct_params) for address in addresses]
+        pubkeys = [search_pubkey(addr, unspent_list, construct_params) for addr in addresses]
+        if None in pubkeys:
+            raise exceptions.ComposeError(
+                f"Pubkeys not found for {address}, please provide them with the `pubkeys` parameter"
+            )
         multisig_script = Script(
             [signatures_required] + pubkeys + [signatures_possible] + ["OP_CHECKMULTISIG"]
         )
@@ -135,6 +139,7 @@ def is_valid_pubkey(pubkey):
 
 
 def search_pubkey(source, unspent_list, construct_params):
+    # search in provided pubkeys
     if construct_params is not None:
         pubkeys = construct_params.get("pubkeys")
         if pubkeys is not None:
@@ -145,22 +150,9 @@ def search_pubkey(source, unspent_list, construct_params):
             for pubkey in pubkeys:
                 if PublicKey.from_hex(pubkey).get_address(compressed=True).to_string() == source:
                     return pubkey
-    # search with Bitcoin Core
+    # then search with Bitcoin Core or Electrs
     tx_hashes = [utxo["txid"] for utxo in unspent_list]
-    multisig_pubkey = backend.bitcoind.search_pubkey_in_transactions(source, tx_hashes)
-    if multisig_pubkey is not None:
-        return multisig_pubkey
-    # else search with Electrs
-    if config.ELECTRS_URL is None:
-        raise exceptions.ComposeError(
-            "No multisig pubkey found with Bitcoin Core and Electrs is not configured, use the `multisig_pubkey` parameter to provide it"
-        )
-    multisig_pubkey = backend.electrs.search_pubkey(source)
-    if multisig_pubkey is not None:
-        return multisig_pubkey
-    raise exceptions.ComposeError(
-        f"No multisig pubkey found for {source}, use the `multisig_pubkey` parameter to provide it"
-    )
+    return backend.search_pubkey(source, tx_hashes)
 
 
 def make_valid_pubkey(pubkey_start):
@@ -218,7 +210,11 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
     multisig_pubkey = construct_params.get("multisig_pubkey")
     if multisig_pubkey is None:
         multisig_pubkey = search_pubkey(source, unspent_list, construct_params)
-    if not is_valid_pubkey(multisig_pubkey):
+    if multisig_pubkey is None:
+        raise exceptions.ComposeError(
+            f"Pubkey not found for {source}, please provide it with the `multisig_pubkey` parameter"
+        )
+    elif not is_valid_pubkey(multisig_pubkey):
         raise exceptions.ComposeError(f"Invalid multisig pubkey: {multisig_pubkey}")
     # generate pubkey pairs from data
     pubkey_pairs = data_to_pubkey_pairs(data, arc4_key)

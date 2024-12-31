@@ -431,12 +431,6 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
     return None
 
 
-def pubkey_from_inputs_set(inputs_set, pubkeyhash):
-    tx_hashes = inputs_set.split(",")
-    tx_hashes = [utxo.split(":")[0] for utxo in tx_hashes]
-    return search_pubkey_in_transactions(pubkeyhash, tx_hashes)
-
-
 def list_unspent(source, allow_unconfirmed_inputs):
     min_conf = 0 if allow_unconfirmed_inputs else 1
     bitcoind_unspent_list = []
