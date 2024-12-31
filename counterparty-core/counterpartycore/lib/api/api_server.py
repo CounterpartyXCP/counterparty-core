@@ -276,7 +276,8 @@ def execute_api_function(rule, route, function_args):
             result = route["function"](**function_args)
         # don't cache API v1 and mempool queries
         if (
-            is_cachable(rule)
+            result is not None
+            and is_cachable(rule)
             and route["function"].__name__ != "redirect_to_api_v1"
             and not request.path.startswith("/v2/mempool/")
         ):
