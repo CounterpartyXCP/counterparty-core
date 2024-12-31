@@ -904,6 +904,8 @@ def compose_transaction(db, name, params, construct_parameters):
     if construct_params.get("verbose", False):
         result = result | {
             "psbt": backend.bitcoind.convert_to_psbt(result["rawtransaction"]),
+            "params": params,
+            "name": name.split(".")[-1],
         }
     else:
         result = {
