@@ -118,6 +118,7 @@ def rpc_call(payload, retry=0):
 
 
 def is_api_request():
+    print("is_api_request", current_process().name)
     if current_process().name != "API":
         return False
     thread_name = current_thread().name
@@ -456,7 +457,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
     min_conf = 0 if allow_unconfirmed_inputs else 1
     bitcoind_unspent_list = []
     try:
-        bitcoind_unspent_list = rpc("listunspent", [min_conf, 9999999, [source]]) or []
+        bitcoind_unspent_list = safe_rpc("listunspent", [min_conf, 9999999, [source]]) or []
     except exceptions.BitcoindRPCError:
         pass
 

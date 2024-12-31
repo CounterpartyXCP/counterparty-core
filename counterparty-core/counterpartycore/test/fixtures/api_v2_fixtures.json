@@ -12526,14 +12526,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -12779,14 +12779,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -13014,14 +13014,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -13256,14 +13256,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -13491,14 +13491,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -13738,14 +13738,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -14011,14 +14011,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -14258,14 +14258,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -14534,14 +14534,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -14809,14 +14809,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -15074,14 +15074,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -15342,14 +15342,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -15589,14 +15589,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -15830,14 +15830,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -16177,14 +16177,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -16419,14 +16419,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -16667,14 +16667,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -16903,14 +16903,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
@@ -17138,14 +17138,14 @@
                     {
                         "name": "regular_dust_size",
                         "type": "int",
-                        "default": 546,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
                     {
                         "name": "multisig_dust_size",
                         "type": "int",
-                        "default": 1000,
+                        "default": null,
                         "description": "Deprecated, automatically calculated",
                         "required": false
                     },
