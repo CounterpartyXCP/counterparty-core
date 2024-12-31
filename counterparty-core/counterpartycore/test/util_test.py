@@ -838,7 +838,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "message_type",
             "address",
         ]
-        or (tx_name == "composer" and method != "compose_transaction")
+        or (tx_name == "composer" and method not in ["compose_transaction", "prepare_unspent_list"])
         or (
             tx_name
             in [

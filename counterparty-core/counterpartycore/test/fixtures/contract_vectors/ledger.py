@@ -59,11 +59,11 @@ LEDGER_VECTOR = {
                     "block_index": 310703,
                     "command": "parse",
                     "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"566e053457339509799abdfbc4627713336608b6298f8343a2991e644c69e7b4","messages_hash":"9131ae89c524d4093d5f0c614e294d12de18ce4246587aef6fad828c0e3c0d5f","transaction_count":0,"txlist_hash":"b19bf10d71b032590b5c8a9dfaa8c1e98e0055ed662673af25112fb6e021183b"}',
+                    "bindings": '{"block_index":310703,"ledger_hash":"435eb1ceec68f0d5dd7beab6e4d110c0ba993cf60bbc0369fd3385b2027dfff7","messages_hash":"db86760cfa68a3e3544cfd0315f1553ed6c0a38bc5de62aee1a3cc9d27fde950","transaction_count":0,"txlist_hash":"0b3a0cb961faf745672ff92ec2fc84299dd7847a2f4fca293082bb116a4b3796"}',
                     "timestamp": 0,
                     "event": "BLOCK_PARSED",
                     "tx_hash": None,
-                    "event_hash": "e7c5e796e0d64553d128a0689f13fdc4fbb10f55207a08211feaa8e9847b286b",
+                    "event_hash": "b8f86f88d43c029228dc0e261e6edcfcf665d28c84261a806acfeca46dcac46c",
                 },
             }
         ],
@@ -327,7 +327,7 @@ LEDGER_VECTOR = {
                         "escrow": None,
                     },
                     {
-                        "address": "6657beb41d0ab2cedd399331dd1cae65c0bc19ee07c1695859b5725ad7344969:0",
+                        "address": "0a84952a231b0044500b309ce0ccc0424f89279442aa625012c444115b69db25:0",
                         "address_quantity": 100,
                         "escrow": None,
                     },
@@ -392,7 +392,7 @@ LEDGER_VECTOR = {
                         "escrow": None,
                     },
                     {
-                        "address": "2af07370ebad31d56c841b4662d11e1e75f8a2b8f16d171ab071a28c00d883ab:0",
+                        "address": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600:0",
                         "address_quantity": 1,
                         "escrow": None,
                     },

@@ -11,28 +11,45 @@ from ..params import (
     P2WPKH_ADDR,
 )
 
-PROVIDED_PUBKEYS = [DEFAULT_PARAMS["pubkey"][ADDR[0]], DEFAULT_PARAMS["pubkey"][ADDR[1]]]
+PROVIDED_PUBKEYS = ",".join([DEFAULT_PARAMS["pubkey"][ADDR[0]], DEFAULT_PARAMS["pubkey"][ADDR[1]]])
+
 ARC4_KEY = "0000000000000000000000000000000000000000000000000000000000000000"
 UTXO_1 = "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1"
 UTXO_2 = "4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1"
 UTXO_3 = "1fc2e5a57f584b2f2edd05676e75c33d03eed1d3098cc0550ea33474e3ec9db1:1"
 
+MULTISIG_PAIRS = [
+    (
+        "02e34ccc12f76f0562d24e7b0b3b01be4d90750dcf94eda3f22947221e07c1300e",
+        "02ecc4a8544f08f3d5aa6d5af2a442904638c351f441d44ebe97243de761813949",
+    ),
+    (
+        "02e34ccc12f76f0562d263720b3842b23aa86813c7d1848efb2944611270f92d2a",
+        "03f2cced3d6201f3d6e9612dcab95c980351ee58f4429742c9af3923ef24e814be",
+    ),
+    (
+        "02fe4ccc12f76f0562d26a72087b4ec502b5761b82b8a987fb2a076d6548e43335",
+        "02fa89cc75076d9fb9c5417aa5cb30fc22198b34982dbb629ec04b4f8b05a071ab",
+    ),
+]
+OPRETURN_DATA = b"\x8a]\xda\x15\xfbo\x05b\xc2cr\x0b8B\xb2:\xa8h\x13\xc7\xd1"
+
 COMPOSER_VECTOR = {
     "composer": {
-        "get_script": [
+        "address_to_script_pub_key": [
             {
                 "comment": "P2PKH address",
-                "in": (ADDR[0],),
+                "in": (ADDR[0], [], {}),
                 "out": P2pkhAddress(ADDR[0]).to_script_pub_key(),
             },
             {
                 "comment": "P2WPKH address",
-                "in": (P2WPKH_ADDR[0],),
+                "in": (P2WPKH_ADDR[0], [], {}),
                 "out": P2wpkhAddress(P2WPKH_ADDR[0]).to_script_pub_key(),
             },
             {
                 "comment": "multisig address",
-                "in": (MULTISIGADDR[0], PROVIDED_PUBKEYS),
+                "in": (MULTISIGADDR[0], [], {"pubkeys": PROVIDED_PUBKEYS}),
                 "out": Script(
                     [
                         1,
@@ -46,11 +63,13 @@ COMPOSER_VECTOR = {
         ],
         "perpare_non_data_outputs": [
             {
-                "in": ([(ADDR[0], 0)],),
+                "comment": "P2PKH address",
+                "in": ([(ADDR[0], 0)], [], {}),
                 "out": [TxOutput(546, P2pkhAddress(ADDR[0]).to_script_pub_key())],
             },
             {
-                "in": ([(MULTISIGADDR[0], 0)], PROVIDED_PUBKEYS),
+                "comment": "Multisig address",
+                "in": ([(MULTISIGADDR[0], 0)], [], {"pubkeys": PROVIDED_PUBKEYS}),
                 "out": [
                     TxOutput(
                         1000,
@@ -67,25 +86,25 @@ COMPOSER_VECTOR = {
                 ],
             },
             {
-                "in": ([(ADDR[0], 2024)],),
+                "in": ([(ADDR[0], 2024)], [], {}),
                 "out": [TxOutput(2024, P2pkhAddress(ADDR[0]).to_script_pub_key())],
             },
         ],
         "determine_encoding": [
             {
-                "in": (b"Hello, World!",),
+                "in": (b"Hello, World!", {}),
                 "out": "opreturn",
             },
             {
-                "in": (b"Hello, World!" * 100,),
+                "in": (b"Hello, World!" * 100, {}),
                 "out": "multisig",
             },
             {
-                "in": (b"Hello, World!", "p2sh"),
+                "in": (b"Hello, World!", {"encoding": "p2sh"}),
                 "error": (exceptions.TransactionError, "Not supported encoding: p2sh"),
             },
             {
-                "in": (b"Hello, World!", "toto"),
+                "in": (b"Hello, World!", {"encoding": "toto"}),
                 "error": (exceptions.TransactionError, "Not supported encoding: toto"),
             },
         ],
@@ -104,112 +123,31 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 "OP_RETURN",
-                                b_to_h(
-                                    b"\x8a]\xda\x15\xfbo\x05b\xc2cr\x0b8B\xb2:\xa8h\x13\xc7\xd1"
-                                ),
+                                b_to_h(OPRETURN_DATA),
                             ]
                         ),
                     )
                 ],
             },
-            {
-                "in": (b"Hello, World!",),
-                "out": [TxOutput(0, Script(["OP_RETURN", b_to_h(b"TESTXXXXHello, World!")]))],
-            },
         ],
         "data_to_pubkey_pairs": [
             {
-                "in": (b"Hello, World!" * 10,),
-                "out": [
-                    (
-                        "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
-                        "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
-                    ),
-                    (
-                        "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
-                        "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
-                    ),
-                    (
-                        "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
-                        "03000000000000000000000000000000000000000000000000000000000000000c",
-                    ),
-                ],
-            },
-            {
                 "in": (b"Hello, World!" * 10, ARC4_KEY),
-                "out": [
-                    (
-                        "03eb50ec2dcf58711add696c0b334fda08ab76108fd09b84e5294f6c7a42fa3333",
-                        "02f184ec22681ff3dde4091fc9a75fd0024ee446f4499a2a9ec04b4f8b05a071da",
-                    ),
-                    (
-                        "02eb7de52dcc1b7d6de57472037626f701ab755383a7a399fb210a05574bfa300d",
-                        "02b2889b1a7501fb988d2416c9a41cdc7576f958fc0cf3079ec04b4f8b05a071a2",
-                    ),
-                    (
-                        "03c674e52e8f170a55f86a7a461f0bfe01a8365ff49fbe87f3642b4d3227965f81",
-                        "029ea8cc75076d9fb9c5417aa5cb30fc22198b34982dbb629ec04b4f8b05a07134",
-                    ),
-                ],
+                "out": MULTISIG_PAIRS,
             },
         ],
         "prepare_multisig_output": [
             {
-                "comment": "No encryption",
-                "in": (b"Hello, World!" * 10, ADDR[0], PROVIDED_PUBKEYS),
-                "out": [
-                    TxOutput(
-                        config.DEFAULT_MULTISIG_DUST_SIZE,
-                        Script(
-                            [
-                                1,
-                                "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
-                                "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
-                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
-                                3,
-                                "OP_CHECKMULTISIG",
-                            ]
-                        ),
-                    ),
-                    TxOutput(
-                        config.DEFAULT_MULTISIG_DUST_SIZE,
-                        Script(
-                            [
-                                1,
-                                "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
-                                "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
-                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
-                                3,
-                                "OP_CHECKMULTISIG",
-                            ]
-                        ),
-                    ),
-                    TxOutput(
-                        config.DEFAULT_MULTISIG_DUST_SIZE,
-                        Script(
-                            [
-                                1,
-                                "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
-                                "03000000000000000000000000000000000000000000000000000000000000000c",
-                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
-                                3,
-                                "OP_CHECKMULTISIG",
-                            ]
-                        ),
-                    ),
-                ],
-            },
-            {
                 "comment": "Encrypted",
-                "in": (b"Hello, World!" * 10, ADDR[0], PROVIDED_PUBKEYS, ARC4_KEY),
+                "in": (ADDR[0], b"Hello, World!" * 10, ARC4_KEY, [], {"pubkeys": PROVIDED_PUBKEYS}),
                 "out": [
                     TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
                         Script(
                             [
                                 1,
-                                "03eb50ec2dcf58711add696c0b334fda08ab76108fd09b84e5294f6c7a42fa3333",
-                                "02f184ec22681ff3dde4091fc9a75fd0024ee446f4499a2a9ec04b4f8b05a071da",
+                                MULTISIG_PAIRS[0][0],
+                                MULTISIG_PAIRS[0][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -221,8 +159,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "02eb7de52dcc1b7d6de57472037626f701ab755383a7a399fb210a05574bfa300d",
-                                "02b2889b1a7501fb988d2416c9a41cdc7576f958fc0cf3079ec04b4f8b05a071a2",
+                                MULTISIG_PAIRS[1][0],
+                                MULTISIG_PAIRS[1][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -234,8 +172,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "03c674e52e8f170a55f86a7a461f0bfe01a8365ff49fbe87f3642b4d3227965f81",
-                                "029ea8cc75076d9fb9c5417aa5cb30fc22198b34982dbb629ec04b4f8b05a07134",
+                                MULTISIG_PAIRS[2][0],
+                                MULTISIG_PAIRS[2][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -247,23 +185,33 @@ COMPOSER_VECTOR = {
         ],
         "prepare_data_outputs": [
             {
-                "in": ("opreturn", b"Hello, World!", ADDR[0], None),
-                "out": [TxOutput(0, Script(["OP_RETURN", b_to_h(b"TESTXXXXHello, World!")]))],
+                "in": (ADDR[0], b"Hello, World!", [{"txid": ARC4_KEY}], {}),
+                "out": [TxOutput(0, Script(["OP_RETURN", b_to_h(OPRETURN_DATA)]))],
             },
             {
-                "in": ("opreturn", b"Hello, World!" * 10, ADDR[0], PROVIDED_PUBKEYS),
+                "in": (
+                    ADDR[0],
+                    b"Hello, World!" * 10,
+                    [{"txid": ARC4_KEY}],
+                    {"pubkeys": PROVIDED_PUBKEYS, "encoding": "opreturn"},
+                ),
                 "error": (exceptions.TransactionError, "One `OP_RETURN` output per transaction"),
             },
             {
-                "in": ("multisig", b"Hello, World!" * 10, ADDR[0], PROVIDED_PUBKEYS),
+                "in": (
+                    ADDR[0],
+                    b"Hello, World!" * 10,
+                    [{"txid": ARC4_KEY}],
+                    {"pubkeys": PROVIDED_PUBKEYS, "encoding": "multisig"},
+                ),
                 "out": [
                     TxOutput(
                         config.DEFAULT_MULTISIG_DUST_SIZE,
                         Script(
                             [
                                 1,
-                                "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
-                                "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
+                                MULTISIG_PAIRS[0][0],
+                                MULTISIG_PAIRS[0][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -275,8 +223,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
-                                "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
+                                MULTISIG_PAIRS[1][0],
+                                MULTISIG_PAIRS[1][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -288,8 +236,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
-                                "03000000000000000000000000000000000000000000000000000000000000000c",
+                                MULTISIG_PAIRS[2][0],
+                                MULTISIG_PAIRS[2][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -299,20 +247,25 @@ COMPOSER_VECTOR = {
                 ],
             },
             {
-                "in": ("p2sh", b"Hello, World!" * 10, ADDR[0], PROVIDED_PUBKEYS),
+                "in": (
+                    ADDR[0],
+                    b"Hello, World!" * 10,
+                    [],
+                    {"pubkeys": PROVIDED_PUBKEYS, "encoding": "p2sh"},
+                ),
                 "error": (exceptions.TransactionError, "Not supported encoding: p2sh"),
             },
         ],
         "prepare_outputs": [
             {
-                "in": (ADDR[0], [(ADDR[0], 9999)], b"Hello, World!", None, "opreturn"),
+                "in": (ADDR[0], [(ADDR[0], 9999)], b"Hello, World!", [{"txid": ARC4_KEY}], {}),
                 "out": [
                     TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
-                    TxOutput(0, Script(["OP_RETURN", b_to_h(b"TESTXXXXHello, World!")])),
+                    TxOutput(0, Script(["OP_RETURN", b_to_h(OPRETURN_DATA)])),
                 ],
             },
             {
-                "in": (ADDR[0], [(ADDR[0], 9999)], b"Hello, World!", None, "opreturn", ARC4_KEY),
+                "in": (ADDR[0], [(ADDR[0], 9999)], b"Hello, World!", [{"txid": ARC4_KEY}], {}),
                 "out": [
                     TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
                     TxOutput(
@@ -320,9 +273,7 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 "OP_RETURN",
-                                b_to_h(
-                                    b"\x8a]\xda\x15\xfbo\x05b\xc2cr\x0b8B\xb2:\xa8h\x13\xc7\xd1"
-                                ),
+                                b_to_h(OPRETURN_DATA),
                             ]
                         ),
                     ),
@@ -333,8 +284,8 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [(ADDR[0], 9999)],
                     b"Hello, World!" * 10,
-                    PROVIDED_PUBKEYS,
-                    "multisig",
+                    [{"txid": ARC4_KEY}],
+                    {"pubkeys": PROVIDED_PUBKEYS, "encoding": "multisig"},
                 ),
                 "out": [
                     TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
@@ -343,8 +294,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
-                                "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
+                                MULTISIG_PAIRS[0][0],
+                                MULTISIG_PAIRS[0][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -356,8 +307,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
-                                "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
+                                MULTISIG_PAIRS[1][0],
+                                MULTISIG_PAIRS[1][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -369,8 +320,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
-                                "03000000000000000000000000000000000000000000000000000000000000000c",
+                                MULTISIG_PAIRS[2][0],
+                                MULTISIG_PAIRS[2][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -384,9 +335,8 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [(ADDR[0], 9999)],
                     b"Hello, World!" * 10,
-                    PROVIDED_PUBKEYS,
-                    "multisig",
-                    ARC4_KEY,
+                    [{"txid": ARC4_KEY}],
+                    {"pubkeys": PROVIDED_PUBKEYS, "encoding": "multisig"},
                 ),
                 "out": [
                     TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
@@ -395,8 +345,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "03eb50ec2dcf58711add696c0b334fda08ab76108fd09b84e5294f6c7a42fa3333",
-                                "02f184ec22681ff3dde4091fc9a75fd0024ee446f4499a2a9ec04b4f8b05a071da",
+                                MULTISIG_PAIRS[0][0],
+                                MULTISIG_PAIRS[0][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -408,8 +358,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "02eb7de52dcc1b7d6de57472037626f701ab755383a7a399fb210a05574bfa300d",
-                                "02b2889b1a7501fb988d2416c9a41cdc7576f958fc0cf3079ec04b4f8b05a071a2",
+                                MULTISIG_PAIRS[1][0],
+                                MULTISIG_PAIRS[1][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -421,8 +371,8 @@ COMPOSER_VECTOR = {
                         Script(
                             [
                                 1,
-                                "03c674e52e8f170a55f86a7a461f0bfe01a8365ff49fbe87f3642b4d3227965f81",
-                                "029ea8cc75076d9fb9c5417aa5cb30fc22198b34982dbb629ec04b4f8b05a07134",
+                                MULTISIG_PAIRS[2][0],
+                                MULTISIG_PAIRS[2][1],
                                 DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                 3,
                                 "OP_CHECKMULTISIG",
@@ -434,119 +384,21 @@ COMPOSER_VECTOR = {
         ],
         "prepare_unspent_list": [
             {
-                "in": (f"{UTXO_1},{UTXO_2},{UTXO_3}",),
+                "in": (
+                    ADDR[0],
+                    {},
+                ),
                 "out": [
-                    {"txid": UTXO_1.split(":")[0], "vout": int(UTXO_1.split(":")[1]), "value": 999},
-                    {"txid": UTXO_2.split(":")[0], "vout": int(UTXO_2.split(":")[1]), "value": 999},
-                    {"txid": UTXO_3.split(":")[0], "vout": int(UTXO_3.split(":")[1]), "value": 999},
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 0,
+                        "value": 199909140,
+                        "amount": 1.9990914,
+                        "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                        "is_segwit": False,
+                    }
                 ],
             }
-        ],
-        "select_utxos": [
-            {
-                "in": (
-                    [
-                        {
-                            "txid": UTXO_1.split(":")[0],
-                            "vout": int(UTXO_1.split(":")[1]),
-                            "value": 999,
-                        },
-                        {
-                            "txid": UTXO_2.split(":")[0],
-                            "vout": int(UTXO_2.split(":")[1]),
-                            "value": 999,
-                        },
-                        {
-                            "txid": UTXO_3.split(":")[0],
-                            "vout": int(UTXO_3.split(":")[1]),
-                            "value": 999,
-                        },
-                    ],
-                    500,
-                ),
-                "out": [
-                    {"txid": UTXO_1.split(":")[0], "vout": int(UTXO_1.split(":")[1]), "value": 999},
-                ],
-            },
-            {
-                "in": (
-                    [
-                        {
-                            "txid": UTXO_1.split(":")[0],
-                            "vout": int(UTXO_1.split(":")[1]),
-                            "value": 999,
-                        },
-                        {
-                            "txid": UTXO_2.split(":")[0],
-                            "vout": int(UTXO_2.split(":")[1]),
-                            "value": 999,
-                        },
-                        {
-                            "txid": UTXO_3.split(":")[0],
-                            "vout": int(UTXO_3.split(":")[1]),
-                            "value": 999,
-                        },
-                    ],
-                    1000,
-                ),
-                "out": [
-                    {"txid": UTXO_1.split(":")[0], "vout": int(UTXO_1.split(":")[1]), "value": 999},
-                    {"txid": UTXO_2.split(":")[0], "vout": int(UTXO_2.split(":")[1]), "value": 999},
-                ],
-            },
-            {
-                "in": (
-                    [
-                        {
-                            "txid": UTXO_1.split(":")[0],
-                            "vout": int(UTXO_1.split(":")[1]),
-                            "value": 999,
-                        },
-                        {
-                            "txid": UTXO_2.split(":")[0],
-                            "vout": int(UTXO_2.split(":")[1]),
-                            "value": 999,
-                        },
-                        {
-                            "txid": UTXO_3.split(":")[0],
-                            "vout": int(UTXO_3.split(":")[1]),
-                            "value": 999,
-                        },
-                    ],
-                    2000,
-                ),
-                "out": [
-                    {"txid": UTXO_1.split(":")[0], "vout": int(UTXO_1.split(":")[1]), "value": 999},
-                    {"txid": UTXO_2.split(":")[0], "vout": int(UTXO_2.split(":")[1]), "value": 999},
-                    {"txid": UTXO_3.split(":")[0], "vout": int(UTXO_3.split(":")[1]), "value": 999},
-                ],
-            },
-            {
-                "in": (
-                    [
-                        {
-                            "txid": UTXO_1.split(":")[0],
-                            "vout": int(UTXO_1.split(":")[1]),
-                            "value": 999,
-                        },
-                        {
-                            "txid": UTXO_2.split(":")[0],
-                            "vout": int(UTXO_2.split(":")[1]),
-                            "value": 999,
-                        },
-                        {
-                            "txid": UTXO_3.split(":")[0],
-                            "vout": int(UTXO_3.split(":")[1]),
-                            "value": 999,
-                        },
-                    ],
-                    3000,
-                ),
-                "error": (
-                    exceptions.ComposeError,
-                    "Insufficient funds for the target amount: 3000",
-                ),
-            },
         ],
         "utxos_to_txins": [
             {
@@ -592,8 +444,8 @@ COMPOSER_VECTOR = {
                                 Script(
                                     [
                                         1,
-                                        "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
-                                        "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
+                                        MULTISIG_PAIRS[0][0],
+                                        MULTISIG_PAIRS[0][1],
                                         DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                         3,
                                         "OP_CHECKMULTISIG",
@@ -605,8 +457,8 @@ COMPOSER_VECTOR = {
                                 Script(
                                     [
                                         1,
-                                        "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
-                                        "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
+                                        MULTISIG_PAIRS[1][0],
+                                        MULTISIG_PAIRS[1][1],
                                         DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                         3,
                                         "OP_CHECKMULTISIG",
@@ -618,8 +470,8 @@ COMPOSER_VECTOR = {
                                 Script(
                                     [
                                         1,
-                                        "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
-                                        "03000000000000000000000000000000000000000000000000000000000000000c",
+                                        MULTISIG_PAIRS[2][0],
+                                        MULTISIG_PAIRS[2][1],
                                         DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                         3,
                                         "OP_CHECKMULTISIG",
@@ -628,6 +480,7 @@ COMPOSER_VECTOR = {
                             ),
                         ],
                     ),
+                    3,
                 ),
                 "out": 1527,
             },
@@ -646,8 +499,8 @@ COMPOSER_VECTOR = {
                                 Script(
                                     [
                                         1,
-                                        "023548656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c9b",
-                                        "036f2c20576f726c642148656c6c6f2c20576f726c642148000000000000000094",
+                                        MULTISIG_PAIRS[0][0],
+                                        MULTISIG_PAIRS[0][1],
                                         DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                         3,
                                         "OP_CHECKMULTISIG",
@@ -659,8 +512,8 @@ COMPOSER_VECTOR = {
                                 Script(
                                     [
                                         1,
-                                        "0235656c6c6f2c20576f726c642148656c6c6f2c20576f726c642148656c6c6f3c",
-                                        "032c20576f726c642148656c6c6f2c20576f726c64214865000000000000000009",
+                                        MULTISIG_PAIRS[1][0],
+                                        MULTISIG_PAIRS[1][1],
                                         DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                         3,
                                         "OP_CHECKMULTISIG",
@@ -672,8 +525,8 @@ COMPOSER_VECTOR = {
                                 Script(
                                     [
                                         1,
-                                        "02186c6c6f2c20576f726c642148656c6c6f2c20576f726c642100000000000047",
-                                        "03000000000000000000000000000000000000000000000000000000000000000c",
+                                        MULTISIG_PAIRS[2][0],
+                                        MULTISIG_PAIRS[2][1],
                                         DEFAULT_PARAMS["pubkey"][ADDR[0]],
                                         3,
                                         "OP_CHECKMULTISIG",

@@ -84,10 +84,16 @@ def multisig_dust_size(construct_params):
     return config.DEFAULT_MULTISIG_DUST_SIZE
 
 
+def dust_size(address, construct_params):
+    if script.is_multisig(address):
+        return multisig_dust_size(construct_params)
+    return regular_dust_size(construct_params)
+
+
 def perpare_non_data_outputs(destinations, unspent_list, construct_params):
     outputs = []
     for address, value in destinations:
-        output_value = value or regular_dust_size(construct_params)
+        output_value = value or dust_size(address, construct_params)
         outputs.append(create_tx_output(output_value, address, unspent_list, construct_params))
     return outputs
 
@@ -116,6 +122,7 @@ def prepare_opreturn_output(data, arc4_key):
         raise exceptions.TransactionError("One `OP_RETURN` output per transaction")
     opreturn_data = config.PREFIX + data
     opreturn_data = encrypt_data(opreturn_data, arc4_key)
+    print(f"opreturn_data: {opreturn_data}")
     return [TxOutput(0, Script(["OP_RETURN", b_to_h(opreturn_data)]))]
 
 
@@ -452,7 +459,7 @@ def filter_utxos_with_balances(db, source, unspent_list, construct_params):
             continue
         utxo_balances = ledger.get_utxo_balances(db, str_input)
         with_balances = len(utxo_balances) > 0 and any(
-            [balance["quantity"] > 0 for balance in utxo_balances]
+            balance["quantity"] > 0 for balance in utxo_balances
         )
         if exclude_utxos_with_balances and with_balances:
             continue
@@ -523,21 +530,6 @@ def prepare_unspent_list(db, source, construct_params):
         unspent_list = complete_unspent_list(unspent_list)
 
     return unspent_list
-
-
-def select_utxos(unspent_list, target_amount):
-    total_amount = 0
-    selected_utxos = []
-    for utxo in unspent_list:
-        total_amount += utxo["value"]
-        selected_utxos.append(utxo)
-        if total_amount >= target_amount:
-            break
-    if total_amount < target_amount:
-        raise exceptions.ComposeError(
-            f"Insufficient funds for the target amount: {total_amount} < {target_amount}"
-        )
-    return selected_utxos
 
 
 def utxos_to_txins(utxos: list):
@@ -615,7 +607,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         # if change is enough for exact_fee, add change output and break
         if exact_fee is not None:
             change_amount = int(change_amount - exact_fee)
-            if change_amount > regular_dust_size(construct_params):
+            if change_amount > dust_size(change_address, construct_params):
                 change_outputs.append(
                     create_tx_output(change_amount, change_address, unspent_list, construct_params)
                 )
@@ -636,7 +628,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         # if change is enough for needed fee, add change output and break
         if change_amount > needed_fee:
             change_amount = int(change_amount - needed_fee)
-            if change_amount > regular_dust_size(construct_params):
+            if change_amount > dust_size(change_address, construct_params):
                 change_outputs.append(
                     create_tx_output(change_amount, change_address, unspent_list, construct_params)
                 )
