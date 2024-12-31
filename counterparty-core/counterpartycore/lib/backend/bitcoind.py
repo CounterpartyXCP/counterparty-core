@@ -116,6 +116,9 @@ def rpc_call(payload, retry=0):
 
 
 def rpc(method, params):
+    # if current_process().name != "MainProcess" and current_thread().name not in ["MainThread", "Watcher"]:
+    #    return safe_rpc(method, params)
+
     payload = {
         "method": method,
         "params": params,
@@ -127,6 +130,7 @@ def rpc(method, params):
 
 # no retry for requests from the API
 def safe_rpc(method, params):
+    start_time = time.time()
     try:
         payload = {
             "method": method,
@@ -144,6 +148,9 @@ def safe_rpc(method, params):
         return response["result"]
     except (requests.exceptions.RequestException, json.decoder.JSONDecodeError, KeyError) as e:
         raise exceptions.BitcoindRPCError(f"Error calling {method}: {str(e)}") from e
+    finally:
+        elapsed = time.time() - start_time
+        logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
 
 
 def getblockcount():
@@ -432,10 +439,12 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
 
 
 def list_unspent(source, allow_unconfirmed_inputs):
+    # print(current_process().name, current_thread().name)
+
     min_conf = 0 if allow_unconfirmed_inputs else 1
     bitcoind_unspent_list = []
     try:
-        bitcoind_unspent_list = safe_rpc("listunspent", [min_conf, 9999999, [source]])
+        bitcoind_unspent_list = safe_rpc("listunspent", [min_conf, 9999999, [source]]) or []
     except exceptions.BitcoindRPCError:
         pass
 

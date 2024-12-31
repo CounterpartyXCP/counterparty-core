@@ -77,13 +77,13 @@ def create_tx_output(value, address_or_script, unspent_list, construct_params):
 
 
 def regular_dust_size(construct_params):
-    if "regular_dust_size" in construct_params:
+    if construct_params.get("regular_dust_size") is not None:
         return construct_params["regular_dust_size"]
     return config.DEFAULT_REGULAR_DUST_SIZE
 
 
 def multisig_dust_size(construct_params):
-    if "multisig_dust_size" in construct_params:
+    if construct_params.get("multisig_dust_size") is not None:
         return construct_params["multisig_dust_size"]
     return config.DEFAULT_MULTISIG_DUST_SIZE
 
@@ -481,6 +481,10 @@ def prepare_unspent_list(db, source, construct_params):
         else:
             source_address = source
         unspent_list = backend.list_unspent(source_address, allow_unconfirmed_inputs)
+        # exclude silentely utxos with balances
+        unspent_list = filter_utxos_with_balances(
+            db, source, unspent_list, construct_params | {"exclude_utxos_with_balances": True}
+        )
     else:
         # prepare unspent list provided by the user
         unspent_list = prepare_inputs_set(inputs_set)
@@ -827,16 +831,8 @@ CONSTRUCT_PARAMS = {
     "unspent_tx_hash": (str, None, "Deprecated, use `inputs_set` instead"),
     "dust_return_pubkey": (str, None, "Deprecated, use `mutlisig_pubkey` instead"),
     "return_psbt": (bool, False, "Deprecated, use `verbose` instead"),
-    "regular_dust_size": (
-        int,
-        config.DEFAULT_REGULAR_DUST_SIZE,
-        "Deprecated, automatically calculated",
-    ),
-    "multisig_dust_size": (
-        int,
-        config.DEFAULT_MULTISIG_DUST_SIZE,
-        "Deprecated, automatically calculated",
-    ),
+    "regular_dust_size": (int, None, "Deprecated, automatically calculated"),
+    "multisig_dust_size": (int, None, "Deprecated, automatically calculated"),
     "extended_tx_info": (bool, False, "Deprecated (API v1 only), use API v2 instead"),
     "old_style_api": (bool, False, "Deprecated (API v1 only), use API v2 instead"),
     "p2sh_pretx_txid": (str, None, "Ignored, P2SH disabled"),
@@ -874,7 +870,7 @@ def prepare_construct_params(construct_params):
         "segwit",
         "unspent_tx_hash",
     ]:
-        if field in construct_params:
+        if field in construct_params and construct_params[field] not in [None, False]:
             warnings.append(f"The `{field}` parameter is {CONSTRUCT_PARAMS[field][2].lower()}")
 
     return cleaned_construct_params, warnings
