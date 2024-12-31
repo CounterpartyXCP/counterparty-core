@@ -126,7 +126,6 @@ def prepare_opreturn_output(data, arc4_key):
         raise exceptions.TransactionError("One `OP_RETURN` output per transaction")
     opreturn_data = config.PREFIX + data
     opreturn_data = encrypt_data(opreturn_data, arc4_key)
-    print(f"opreturn_data: {opreturn_data}")
     return [TxOutput(0, Script(["OP_RETURN", b_to_h(opreturn_data)]))]
 
 

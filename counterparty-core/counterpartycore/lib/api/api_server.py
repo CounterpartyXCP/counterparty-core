@@ -595,6 +595,7 @@ class APIServer(object):
         if self.process is not None:
             raise Exception("API Server is already running")
         self.process = Process(
+            name="API",
             target=run_api_server,
             args=(vars(args), self.server_ready_value, self.stop_event, os.getpid()),
         )

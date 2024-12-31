@@ -4,6 +4,8 @@ import json
 import logging
 import time
 from collections import OrderedDict
+from multiprocessing import current_process
+from threading import current_thread
 
 import requests
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
@@ -115,9 +117,20 @@ def rpc_call(payload, retry=0):
     return result
 
 
+def is_api_request():
+    if current_process().name != "API":
+        return False
+    thread_name = current_thread().name
+    # waitress, werkzeug or Gunicorn thead
+    for name in ["waitress", "process_request_thread", "ThreadPoolExecutor"]:
+        if name in thread_name:
+            return True
+    return False
+
+
 def rpc(method, params):
-    # if current_process().name != "MainProcess" and current_thread().name not in ["MainThread", "Watcher"]:
-    #    return safe_rpc(method, params)
+    if is_api_request():
+        return safe_rpc(method, params)
 
     payload = {
         "method": method,
@@ -130,6 +143,7 @@ def rpc(method, params):
 
 # no retry for requests from the API
 def safe_rpc(method, params):
+    print("safe_rpc")
     start_time = time.time()
     try:
         payload = {
@@ -439,12 +453,10 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
 
 
 def list_unspent(source, allow_unconfirmed_inputs):
-    # print(current_process().name, current_thread().name)
-
     min_conf = 0 if allow_unconfirmed_inputs else 1
     bitcoind_unspent_list = []
     try:
-        bitcoind_unspent_list = safe_rpc("listunspent", [min_conf, 9999999, [source]]) or []
+        bitcoind_unspent_list = rpc("listunspent", [min_conf, 9999999, [source]]) or []
     except exceptions.BitcoindRPCError:
         pass
 
