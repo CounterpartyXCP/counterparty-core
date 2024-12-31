@@ -572,10 +572,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def init_api_access_log(app):
         pass
 
-    def pubkeyhash_to_pubkey(address, unspent_list, construct_params):
-        multisig_pubkey = construct_params.get("multisig_pubkey")
-        if multisig_pubkey:
-            return multisig_pubkey
+    def search_pubkey(address, _tx_hashes):
         if "_" in address:
             return multisig_pubkeyhashes_to_pubkeys(address)
         return DEFAULT_PARAMS["pubkey"][address]
@@ -670,8 +667,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     )
 
     monkeypatch.setattr(
-        "counterpartycore.lib.composer.search_pubkey",
-        pubkeyhash_to_pubkey,
+        "counterpartycore.lib.backend.search_pubkey",
+        search_pubkey,
     )
 
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)

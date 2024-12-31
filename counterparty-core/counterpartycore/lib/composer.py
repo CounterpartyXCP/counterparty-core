@@ -65,15 +65,18 @@ def create_tx_output(value, address_or_script, unspent_list, construct_params):
         # if hex string we assume it is a script
         if all(c in string.hexdigits for c in address_or_script):
             has_segwit = script.is_segwit_output(address_or_script)
-            script = Script.from_raw(address_or_script, has_segwit=has_segwit)
+            # check if it is a valid script
+            output_script = Script.from_raw(address_or_script, has_segwit=has_segwit)
         else:
-            script = address_to_script_pub_key(address_or_script, unspent_list, construct_params)
+            output_script = address_to_script_pub_key(
+                address_or_script, unspent_list, construct_params
+            )
     except Exception as e:
         raise exceptions.ComposeError(
-            f"Invalid script or address for output: {address_or_script}"
+            f"Invalid script or address for output: {address_or_script} (error: {e})"
         ) from e
 
-    return TxOutput(value, script)
+    return TxOutput(value, output_script)
 
 
 def regular_dust_size(construct_params):
@@ -112,7 +115,7 @@ def determine_encoding(data, construct_params):
     else:
         encoding = desired_encoding
     if encoding not in ("multisig", "opreturn"):
-        raise exceptions.TransactionError(f"Not supported encoding: {encoding}")
+        raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
     return encoding
 
 
@@ -123,7 +126,7 @@ def encrypt_data(data, arc4_key):
 
 def prepare_opreturn_output(data, arc4_key):
     if len(data) + len(config.PREFIX) > config.OP_RETURN_MAX_SIZE:
-        raise exceptions.TransactionError("One `OP_RETURN` output per transaction")
+        raise exceptions.ComposeError("One `OP_RETURN` output per transaction")
     opreturn_data = config.PREFIX + data
     opreturn_data = encrypt_data(opreturn_data, arc4_key)
     return [TxOutput(0, Script(["OP_RETURN", b_to_h(opreturn_data)]))]
@@ -233,7 +236,7 @@ def prepare_data_outputs(source, data, unspent_list, construct_params):
         return prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params)
     if encoding == "opreturn":
         return prepare_opreturn_output(data, arc4_key)
-    raise exceptions.TransactionError(f"Not supported encoding: {encoding}")
+    raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
 
 
 def prepare_more_outputs(more_outputs, unspent_list, construct_params):
@@ -241,13 +244,13 @@ def prepare_more_outputs(more_outputs, unspent_list, construct_params):
     outputs = []
     for output in output_list:
         if len(output) != 2:
-            raise exceptions.ComposeError(f"Invalid output format: {output}")
-        address_or_script, value = output
+            raise exceptions.ComposeError(f"Invalid output format: {':'.join(output)}")
+        value, address_or_script = output
         # check value
         try:
             value = int(value)
         except ValueError as e:
-            raise exceptions.ComposeError(f"Invalid value for output: {output}") from e
+            raise exceptions.ComposeError(f"Invalid value for output: {':'.join(output)}") from e
         # create output
         tx_output = create_tx_output(value, address_or_script, unspent_list, construct_params)
         outputs.append(tx_output)

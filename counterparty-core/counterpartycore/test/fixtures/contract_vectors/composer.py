@@ -1,3 +1,5 @@
+import binascii
+
 from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
@@ -61,6 +63,85 @@ COMPOSER_VECTOR = {
                 ),
             },
         ],
+        "create_tx_output": [
+            {
+                "comment": "from address",
+                "in": (666, ADDR[0], [], {}),
+                "out": TxOutput(666, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+            },
+            {
+                "comment": "from script",
+                "in": (666, P2pkhAddress(ADDR[0]).to_script_pub_key().to_hex(), [], {}),
+                "out": TxOutput(666, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+            },
+            {
+                "comment": "from script",
+                "in": (666, "00aaff", [], {}),
+                "out": TxOutput(666, Script.from_raw("00aaff")),
+            },
+            {
+                "comment": "from invalid script",
+                "in": (666, "00aafff", [], {}),
+                "error": (
+                    exceptions.ComposeError,
+                    "Invalid script or address for output: 00aafff (error: invalid script)",
+                ),
+            },
+            {
+                "comment": "from invalid address",
+                "in": (666, "toto", [], {}),
+                "error": (
+                    exceptions.ComposeError,
+                    "Invalid script or address for output: toto (error: Invalid address: toto)",
+                ),
+            },
+        ],
+        "regular_dust_size": [
+            {
+                "in": ({},),
+                "out": 546,
+            },
+            {
+                "in": ({"regular_dust_size": 666},),
+                "out": 666,
+            },
+            {
+                "in": ({"regular_dust_size": None},),
+                "out": 546,
+            },
+        ],
+        "multisig_dust_size": [
+            {
+                "in": ({},),
+                "out": 1000,
+            },
+            {
+                "in": ({"multisig_dust_size": 666},),
+                "out": 666,
+            },
+            {
+                "in": ({"multisig_dust_size": None},),
+                "out": 1000,
+            },
+        ],
+        "dust_size": [
+            {
+                "in": (ADDR[0], {}),
+                "out": 546,
+            },
+            {
+                "in": (ADDR[0], {"regular_dust_size": 666}),
+                "out": 666,
+            },
+            {
+                "in": (MULTISIGADDR[0], {}),
+                "out": 1000,
+            },
+            {
+                "in": (MULTISIGADDR[0], {"multisig_dust_size": 666}),
+                "out": 666,
+            },
+        ],
         "perpare_non_data_outputs": [
             {
                 "comment": "P2PKH address",
@@ -101,11 +182,11 @@ COMPOSER_VECTOR = {
             },
             {
                 "in": (b"Hello, World!", {"encoding": "p2sh"}),
-                "error": (exceptions.TransactionError, "Not supported encoding: p2sh"),
+                "error": (exceptions.ComposeError, "Not supported encoding: p2sh"),
             },
             {
                 "in": (b"Hello, World!", {"encoding": "toto"}),
-                "error": (exceptions.TransactionError, "Not supported encoding: toto"),
+                "error": (exceptions.ComposeError, "Not supported encoding: toto"),
             },
         ],
         "encrypt_data": [
@@ -128,6 +209,36 @@ COMPOSER_VECTOR = {
                         ),
                     )
                 ],
+            },
+        ],
+        "is_valid_pubkey": [
+            {
+                "in": (DEFAULT_PARAMS["pubkey"][ADDR[0]],),
+                "out": True,
+            },
+            {
+                "in": (DEFAULT_PARAMS["pubkey"][ADDR[0]][::-1],),
+                "out": False,
+            },
+        ],
+        "search_pubkey": [
+            {
+                "in": (ADDR[0], [], {}),
+                "out": DEFAULT_PARAMS["pubkey"][ADDR[0]],
+            },
+            {
+                "in": (ADDR[0], [], {"pubkeys": PROVIDED_PUBKEYS}),
+                "out": DEFAULT_PARAMS["pubkey"][ADDR[0]],
+            },
+        ],
+        "make_valid_pubkey": [
+            {
+                "in": (binascii.unhexlify("aa" * 31),),
+                "out": b"\x02\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa|",
+            },
+            {
+                "in": (binascii.unhexlify("bb" * 31),),
+                "out": b"\x03\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xbb\xc4",
             },
         ],
         "data_to_pubkey_pairs": [
@@ -195,7 +306,7 @@ COMPOSER_VECTOR = {
                     [{"txid": ARC4_KEY}],
                     {"pubkeys": PROVIDED_PUBKEYS, "encoding": "opreturn"},
                 ),
-                "error": (exceptions.TransactionError, "One `OP_RETURN` output per transaction"),
+                "error": (exceptions.ComposeError, "One `OP_RETURN` output per transaction"),
             },
             {
                 "in": (
@@ -253,7 +364,63 @@ COMPOSER_VECTOR = {
                     [],
                     {"pubkeys": PROVIDED_PUBKEYS, "encoding": "p2sh"},
                 ),
-                "error": (exceptions.TransactionError, "Not supported encoding: p2sh"),
+                "error": (exceptions.ComposeError, "Not supported encoding: p2sh"),
+            },
+        ],
+        "prepare_more_outputs": [
+            {
+                "in": (f"546:{ADDR[0]}", [], {}),
+                "out": [TxOutput(546, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+            },
+            {
+                "comment": "Multisig address",
+                "in": (f"546:{MULTISIGADDR[0]}", [], {"pubkeys": PROVIDED_PUBKEYS}),
+                "out": [
+                    TxOutput(
+                        546,
+                        Script(
+                            [
+                                1,
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                                DEFAULT_PARAMS["pubkey"][ADDR[1]],
+                                2,
+                                "OP_CHECKMULTISIG",
+                            ]
+                        ),
+                    )
+                ],
+            },
+            {
+                "in": (f"2024:{ADDR[0]}", [], {}),
+                "out": [TxOutput(2024, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+            },
+            {
+                "in": ("666:00aaff", [], {}),
+                "out": [TxOutput(666, Script.from_raw("00aaff"))],
+            },
+            {
+                "in": (
+                    f"546:{ADDR[0]},546:{MULTISIGADDR[0]},2024:{ADDR[0]},666:00aaff",
+                    [],
+                    {"pubkeys": PROVIDED_PUBKEYS},
+                ),
+                "out": [
+                    TxOutput(546, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+                    TxOutput(
+                        546,
+                        Script(
+                            [
+                                1,
+                                DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                                DEFAULT_PARAMS["pubkey"][ADDR[1]],
+                                2,
+                                "OP_CHECKMULTISIG",
+                            ]
+                        ),
+                    ),
+                    TxOutput(2024, P2pkhAddress(ADDR[0]).to_script_pub_key()),
+                    TxOutput(666, Script.from_raw("00aaff")),
+                ],
             },
         ],
         "prepare_outputs": [
@@ -336,7 +503,11 @@ COMPOSER_VECTOR = {
                     [(ADDR[0], 9999)],
                     b"Hello, World!" * 10,
                     [{"txid": ARC4_KEY}],
-                    {"pubkeys": PROVIDED_PUBKEYS, "encoding": "multisig"},
+                    {
+                        "pubkeys": PROVIDED_PUBKEYS,
+                        "encoding": "multisig",
+                        "more_outputs": f"546:{ADDR[0]}",
+                    },
                 ),
                 "out": [
                     TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
@@ -379,6 +550,7 @@ COMPOSER_VECTOR = {
                             ]
                         ),
                     ),
+                    TxOutput(546, P2pkhAddress(ADDR[0]).to_script_pub_key()),
                 ],
             },
         ],

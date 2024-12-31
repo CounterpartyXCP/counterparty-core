@@ -144,7 +144,6 @@ def rpc(method, params):
 
 # no retry for requests from the API
 def safe_rpc(method, params):
-    print("safe_rpc")
     start_time = time.time()
     try:
         payload = {
