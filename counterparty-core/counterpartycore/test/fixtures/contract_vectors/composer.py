@@ -669,6 +669,126 @@ COMPOSER_VECTOR = {
                 ),
             },
         ],
+        "ensure_utxo_is_first": [
+            {
+                "in": (
+                    "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0",
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 1,
+                        },
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                        },
+                    ],
+                ),
+                "out": [
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 0,
+                    },
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 1,
+                    },
+                ],
+            },
+            {
+                "in": (
+                    "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0",
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 1,
+                        },
+                    ],
+                ),
+                "out": [
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 0,
+                        "value": 999,
+                    },
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 1,
+                    },
+                ],
+            },
+        ],
+        "filter_utxos_with_balances": [
+            {
+                "in": (
+                    ADDR[0],
+                    [
+                        {
+                            "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                            "vout": 0,
+                        }
+                    ],
+                    {},
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    "invalid UTXOs: d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600:0 (use `use_utxos_with_balances=True` to include them or `exclude_utxos_with_balances=True` to exclude them silently)",
+                ),
+            },
+            {
+                "in": (
+                    ADDR[0],
+                    [
+                        {
+                            "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                            "vout": 0,
+                        }
+                    ],
+                    {"exclude_utxos_with_balances": True},
+                ),
+                "out": [],
+            },
+            {
+                "in": (
+                    ADDR[0],
+                    [
+                        {
+                            "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                            "vout": 0,
+                        },
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 1,
+                        },
+                    ],
+                    {"exclude_utxos_with_balances": True},
+                ),
+                "out": [
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 1,
+                    }
+                ],
+            },
+            {
+                "in": (
+                    ADDR[0],
+                    [
+                        {
+                            "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                            "vout": 0,
+                        }
+                    ],
+                    {"use_utxos_with_balances": True},
+                ),
+                "out": [
+                    {
+                        "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                        "vout": 0,
+                    }
+                ],
+            },
+        ],
         "prepare_unspent_list": [
             {
                 "in": (
@@ -685,7 +805,49 @@ COMPOSER_VECTOR = {
                         "is_segwit": False,
                     }
                 ],
-            }
+            },
+            {
+                "in": (
+                    ADDR[0],
+                    {
+                        "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0"
+                    },
+                ),
+                "out": [
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 0,
+                        "value": 199909140,
+                        "amount": 1.9990914,
+                        "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                        "is_segwit": False,
+                    }
+                ],
+            },
+            {
+                "in": (
+                    ADDR[0],
+                    {
+                        "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0"
+                    },
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    f"No UTXOs found for {ADDR[0]}, provide UTXOs with the `inputs_set` parameter",
+                ),
+            },
+            {
+                "in": (
+                    ADDR[0],
+                    {
+                        "unspent_tx_hash": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2"
+                    },
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    f"No UTXOs found for {ADDR[0]}, provide UTXOs with the `inputs_set` parameter",
+                ),
+            },
         ],
         "utxos_to_txins": [
             {
@@ -827,5 +989,368 @@ COMPOSER_VECTOR = {
                 "out": 3054,
             },
         ],
-    }
+        "prepare_fee_parameters": [
+            {"in": ({"exact_fee": 1000},), "out": (1000, None, None)},
+            {"in": ({"exact_fee": 666, "max_fee": 1000},), "out": (666, None, None)},
+            {"in": ({"max_fee": 1000},), "out": (None, 3, 1000)},
+            {"in": ({"max_fee": 1000, "sat_per_vbyte": 8},), "out": (None, 8, 1000)},
+            {"in": ({"max_fee": 1000, "confirmation_target": 8},), "out": (None, 16, 1000)},
+        ],
+        "prepare_inputs_and_change": [
+            {
+                "comment": "using exact_fee",
+                "in": (
+                    ADDR[0],
+                    [TxOutput(666, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    {"exact_fee": 1000},
+                ),
+                "out": (
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    199909140,
+                    [TxOutput(199909140 - 666 - 1000, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                ),
+            },
+            {
+                "comment": "using exact_fee and change_address",
+                "in": (
+                    ADDR[0],
+                    [TxOutput(666, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    {"exact_fee": 1000, "change_address": ADDR[1]},
+                ),
+                "out": (
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    199909140,
+                    [TxOutput(199909140 - 666 - 1000, P2pkhAddress(ADDR[1]).to_script_pub_key())],
+                ),
+            },
+            {
+                "comment": "using exact_fee, change_address and use_all_inputs_set",
+                "in": (
+                    ADDR[0],
+                    [TxOutput(666, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        },
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 1,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        },
+                    ],
+                    {"exact_fee": 1000, "change_address": ADDR[1], "use_all_inputs_set": True},
+                ),
+                "out": (
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        },
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 1,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        },
+                    ],
+                    199909140 * 2,
+                    [
+                        TxOutput(
+                            199909140 * 2 - 666 - 1000, P2pkhAddress(ADDR[1]).to_script_pub_key()
+                        )
+                    ],
+                ),
+            },
+            {
+                "comment": "using default construct_params",
+                "in": (
+                    ADDR[0],
+                    [TxOutput(666, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    {},
+                ),
+                "out": (
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    199909140,
+                    [TxOutput(199909140 - 666 - 357, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                ),
+            },
+            {
+                "comment": "using max_fee",
+                "in": (
+                    ADDR[0],
+                    [TxOutput(666, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    {"max_fee": 200},
+                ),
+                "out": (
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    199909140,
+                    [TxOutput(199909140 - 666 - 200, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                ),
+            },
+            {
+                "comment": "using high fee so no change",
+                "in": (
+                    ADDR[0],
+                    [TxOutput(666, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    {"exact_fee": 199909140 - 666 - 10},
+                ),
+                "out": (
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    199909140,
+                    [],
+                ),
+            },
+            {
+                "comment": "not enough funds",
+                "in": (
+                    ADDR[0],
+                    [TxOutput(199909140, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                            "value": 199909140,
+                            "amount": 1.9990914,
+                            "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                            "is_segwit": False,
+                        }
+                    ],
+                    {"exact_fee": 1000},
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    f"Insufficient funds for the target amount: 199909140 < {199909140 + 1000}",
+                ),
+            },
+        ],
+        "construct": [
+            {
+                "in": ((ADDR[0], [(ADDR[1], 666)], b"Hello, World!"), {}),
+                "out": {
+                    "btc_change": 199908021,
+                    "btc_fee": 453,
+                    "btc_in": 199909140,
+                    "btc_out": 666,
+                    "data": b"TESTXXXXHello, World!",
+                    "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bfb55aea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                },
+            },
+            {
+                "in": ((ADDR[0], [(ADDR[1], 666)], b"Hello, World!"), {"exact_fee": 1000}),
+                "out": {
+                    "btc_change": 199909140 - 666 - 1000,
+                    "btc_fee": 1000,
+                    "btc_in": 199909140,
+                    "btc_out": 666,
+                    "data": b"TESTXXXXHello, World!",
+                    "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                },
+            },
+        ],
+        "check_transaction_sanity": [
+            {
+                "in": (
+                    (ADDR[0], [(ADDR[1], 666)], b"Hello, World!"),
+                    {
+                        "btc_change": 199909140 - 666 - 1000,
+                        "btc_fee": 1000,
+                        "btc_in": 199909140,
+                        "btc_out": 666,
+                        "data": b"TESTXXXXHello, World!",
+                        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    },
+                    {"exact_fee": 1000},
+                ),
+                "out": None,
+            },
+            {
+                "in": (
+                    (ADDR[1], [(ADDR[1], 666)], b"Hello, World!"),
+                    {
+                        "btc_change": 199909140 - 666 - 1000,
+                        "btc_fee": 1000,
+                        "btc_in": 199909140,
+                        "btc_out": 666,
+                        "data": b"TESTXXXXHello, World!",
+                        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    },
+                    {"exact_fee": 1000},
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    "Sanity check error: source address does not match the first input address",
+                ),
+            },
+            {
+                "in": (
+                    (ADDR[0], [(ADDR[0], 666)], b"Hello, World!"),
+                    {
+                        "btc_change": 199909140 - 666 - 1000,
+                        "btc_fee": 1000,
+                        "btc_in": 199909140,
+                        "btc_out": 666,
+                        "data": b"TESTXXXXHello, World!",
+                        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    },
+                    {"exact_fee": 1000},
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    "Sanity check error: destination address does not match the output address",
+                ),
+            },
+            {
+                "in": (
+                    (ADDR[0], [(ADDR[1], 665)], b"Hello, World!"),
+                    {
+                        "btc_change": 199909140 - 666 - 1000,
+                        "btc_fee": 1000,
+                        "btc_in": 199909140,
+                        "btc_out": 666,
+                        "data": b"TESTXXXXHello, World!",
+                        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    },
+                    {"exact_fee": 1000},
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    "Sanity check error: destination value does not match the output value",
+                ),
+            },
+            {
+                "in": (
+                    (ADDR[0], [(ADDR[1], 666)], b"Hello, World!!!"),
+                    {
+                        "btc_change": 199909140 - 666 - 1000,
+                        "btc_fee": 1000,
+                        "btc_in": 199909140,
+                        "btc_out": 666,
+                        "data": b"TESTXXXXHello, World!",
+                        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    },
+                    {"exact_fee": 1000},
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    "Sanity check error: data does not match the output data",
+                ),
+            },
+        ],
+    },
 }

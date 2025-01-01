@@ -845,7 +845,15 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         ]
         or (
             tx_name == "composer"
-            and method not in ["compose_transaction", "prepare_unspent_list", "utxo_to_address"]
+            and method
+            not in [
+                "compose_transaction",
+                "prepare_unspent_list",
+                "utxo_to_address",
+                "filter_utxos_with_balances",
+                "prepare_inputs_and_change",
+                "construct",
+            ]
         )
         or (
             tx_name
@@ -942,6 +950,18 @@ def check_outputs(
                 ):
                     for i, output in enumerate(outputs):
                         assert output.to_bytes() == test_outputs[i].to_bytes()
+                #  for prepare_inputs_and_change()
+                elif (
+                    isinstance(outputs, tuple)
+                    and len(outputs) == 3
+                    and isinstance(outputs[2], list)
+                    and len(outputs[2]) > 0
+                    and isinstance(outputs[2][0], TxOutput)
+                ):
+                    assert outputs[0] == test_outputs[0]
+                    assert outputs[1] == test_outputs[1]
+                    for i, output in enumerate(outputs[2]):
+                        assert output.to_bytes() == test_outputs[2][i].to_bytes()
                 else:
                     assert outputs == test_outputs
             except AssertionError:

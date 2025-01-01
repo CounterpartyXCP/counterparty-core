@@ -623,7 +623,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def mocked_get_utxo_value(txid, vout):
         return 999
 
-    def satoshis_per_vbyte():
+    def satoshis_per_vbyte(confirmation_target=None):
+        if confirmation_target is not None:
+            return confirmation_target * 2
         return 3
 
     def determine_encoding(data, construct_params):
