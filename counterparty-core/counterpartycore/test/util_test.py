@@ -509,6 +509,7 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
             },
             "scriptPubKey": {
                 "hex": binascii.hexlify(vout.scriptPubKey).decode("ascii"),
+                "address": addresses[0] if addresses else None,
             },
         }
 
@@ -520,7 +521,11 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
 def getrawtransaction_batch(db, txhash_list, verbose=False):
     result = {}
     for txhash in txhash_list:
-        result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
+        try:
+            result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
+        except Exception as e:  # noqa: F841, S110
+            # skip missing transactions
+            pass
 
     return result
 
@@ -838,7 +843,10 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "message_type",
             "address",
         ]
-        or (tx_name == "composer" and method not in ["compose_transaction", "prepare_unspent_list"])
+        or (
+            tx_name == "composer"
+            and method not in ["compose_transaction", "prepare_unspent_list", "utxo_to_address"]
+        )
         or (
             tx_name
             in [

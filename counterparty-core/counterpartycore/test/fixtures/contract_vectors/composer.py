@@ -554,6 +554,121 @@ COMPOSER_VECTOR = {
                 ],
             },
         ],
+        "complete_unspent_list": [
+            {
+                "in": (
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                            "vout": 0,
+                        }
+                    ],
+                ),
+                "out": [
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 0,
+                        "value": 199909140,
+                        "amount": 1.9990914,
+                        "script_pub_key": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                        "is_segwit": False,
+                    }
+                ],
+            },
+            {
+                "in": (
+                    [
+                        {
+                            "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2",
+                            "vout": 0,
+                        }
+                    ],
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    "invalid UTXO: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2:0 (transaction not found)",
+                ),
+            },
+        ],
+        "prepare_inputs_set": [
+            {
+                "in": ("aabb",),
+                "error": (exceptions.ComposeError, "invalid UTXO: aabb (invalid format)"),
+            },
+            {
+                "in": ("aa:bb:cc:dd:ee",),
+                "error": (exceptions.ComposeError, "invalid UTXO: aa:bb:cc:dd:ee (invalid format)"),
+            },
+            {
+                "in": ("aa:3:cc:dd",),
+                "error": (exceptions.ComposeError, "invalid UTXO: aa:3:cc:dd (invalid format)"),
+            },
+            {
+                "in": ("ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:aa",),
+                "error": (
+                    exceptions.ComposeError,
+                    "invalid UTXO: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:aa (invalid value)",
+                ),
+            },
+            {
+                "in": (
+                    "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aagh",
+                ),
+                "error": (
+                    exceptions.ComposeError,
+                    "invalid UTXO: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aagh (invalid script_pub_key)",
+                ),
+            },
+            {
+                "in": (
+                    "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00",
+                ),
+                "out": [
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 0,
+                        "value": 100,
+                        "script_pub_key": "aa00",
+                    }
+                ],
+            },
+            {
+                "in": (
+                    "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00,ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2:0:200:aa00",
+                ),
+                "out": [
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                        "vout": 0,
+                        "value": 100,
+                        "script_pub_key": "aa00",
+                    },
+                    {
+                        "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2",
+                        "vout": 0,
+                        "value": 200,
+                        "script_pub_key": "aa00",
+                    },
+                ],
+            },
+        ],
+        "utxo_to_address": [
+            {
+                "in": ("d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600:0",),
+                "out": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            },
+            {
+                "in": ("ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0",),
+                "out": ADDR[0],
+            },
+            {
+                "in": ("ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2:0",),
+                "error": (
+                    exceptions.ComposeError,
+                    "invalid UTXO: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2:0 (not found in the database or Bitcoin Core)",
+                ),
+            },
+        ],
         "prepare_unspent_list": [
             {
                 "in": (
