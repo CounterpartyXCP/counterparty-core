@@ -853,6 +853,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                 "filter_utxos_with_balances",
                 "prepare_inputs_and_change",
                 "construct",
+                "compose_transaction",
             ]
         )
         or (

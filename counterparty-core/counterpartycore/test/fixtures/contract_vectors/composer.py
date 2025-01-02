@@ -6,12 +6,7 @@ from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 
 from counterpartycore.lib import config, exceptions
 
-from ..params import (
-    ADDR,
-    DEFAULT_PARAMS,
-    MULTISIGADDR,
-    P2WPKH_ADDR,
-)
+from ..params import ADDR, DEFAULT_PARAMS, DP, MULTISIGADDR, P2WPKH_ADDR
 
 PROVIDED_PUBKEYS = ",".join([DEFAULT_PARAMS["pubkey"][ADDR[0]], DEFAULT_PARAMS["pubkey"][ADDR[1]]])
 
@@ -1350,6 +1345,139 @@ COMPOSER_VECTOR = {
                     exceptions.ComposeError,
                     "Sanity check error: data does not match the output data",
                 ),
+            },
+        ],
+        "prepare_construct_params": [
+            {
+                "in": (
+                    {
+                        "fee_per_kb": 1024,
+                        "fee_provided": 666,
+                        "dust_return_pubkey": DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                        "return_psbt": True,
+                        "regular_dust_size": 357,
+                        "multisig_dust_size": 1200,
+                        "extended_tx_info": True,
+                        "old_style_api": True,
+                        "p2sh_pretx_txid": "aabbb",
+                        "segwit": True,
+                        "unspent_tx_hash": "aabbcc",
+                    },
+                ),
+                "out": (
+                    {
+                        "sat_per_vbyte": 1,
+                        "max_fee": 666,
+                        "mutlisig_pubkey": DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                        "verbose": True,
+                        "regular_dust_size": 357,
+                        "multisig_dust_size": 1200,
+                        "extended_tx_info": True,
+                        "old_style_api": True,
+                        "p2sh_pretx_txid": "aabbb",
+                        "segwit": True,
+                        "unspent_tx_hash": "aabbcc",
+                    },
+                    [
+                        "The `fee_per_kb` parameter is deprecated, use `sat_per_vbyte` instead",
+                        "The `fee_provided` parameter is deprecated, use `max_fee` instead",
+                        "The `dust_return_pubkey` parameter is deprecated, use `mutlisig_pubkey` instead",
+                        "The `return_psbt` parameter is deprecated, use `verbose` instead",
+                        "The `regular_dust_size` parameter is deprecated, automatically calculated",
+                        "The `multisig_dust_size` parameter is deprecated, automatically calculated",
+                        "The `extended_tx_info` parameter is deprecated (api v1 only), use api v2 instead",
+                        "The `old_style_api` parameter is deprecated (api v1 only), use api v2 instead",
+                        "The `p2sh_pretx_txid` parameter is ignored, p2sh disabled",
+                        "The `segwit` parameter is ignored, segwit automatically detected",
+                        "The `unspent_tx_hash` parameter is deprecated, use `inputs_set` instead",
+                    ],
+                ),
+            }
+        ],
+        "compose_transaction": [
+            {
+                "in": (
+                    "send",
+                    {
+                        "source": ADDR[0],
+                        "destination": ADDR[1],
+                        "asset": "XCP",
+                        "quantity": 10,
+                    },
+                    {},
+                ),
+                "out": {
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000000000001e6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aee7a3310185bea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+                },
+            },
+            {
+                "in": (
+                    "burn",
+                    {
+                        "source": ADDR[1],
+                        "quantity": DP["burn_quantity"],
+                    },
+                    {"encoding": "multisig"},
+                ),
+                "out": {
+                    "rawtransaction": "0200000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce40000000000ffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac1bd44302000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000"
+                },
+            },
+            {
+                "in": (
+                    "issuance",
+                    {
+                        "source": ADDR[0],
+                        "transfer_destination": None,
+                        "asset": "BSSET",
+                        "quantity": 1000,
+                        "divisible": True,
+                        "description": "",
+                    },
+                    {"encoding": "multisig"},
+                ),
+                "out": {
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02e8030000000000006951210358415bf04af834423d3dd7adb2dc727a03086e897d9fba5aee7a331919e487d6210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed758ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+                },
+            },
+            {
+                "in": (
+                    "order",
+                    {
+                        "source": ADDR[0],
+                        "give_asset": "BTC",
+                        "give_quantity": DP["small"],
+                        "get_asset": "XCP",
+                        "get_quantity": DP["small"] * 2,
+                        "expiration": DP["expiration"],
+                        "fee_required": 0,
+                    },
+                    {"encoding": "multisig", "fee_provided": DP["fee_provided"]},
+                ),
+                "out": {
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02e8030000000000006951210348415bf04af834423d3dd7adaedc727a030865759e9fba5aee78c9ea71e5870f210354da540fb2673b75e6c3c994f80ad0c8431643bab28ced783cd94079bbe72445210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed758ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "warnings": [
+                        "The `fee_provided` parameter is deprecated, use `max_fee` instead"
+                    ],
+                },
+            },
+            {
+                "mock_protocol_changes": {"enhanced_sends": True},
+                "in": (
+                    "send",
+                    {
+                        "memo": "0102030405",
+                        "memo_is_hex": True,
+                        "source": ADDR[0],
+                        "destination": ADDR[1],
+                        "asset": "XCP",
+                        "quantity": DP["small"],
+                    },
+                    {},
+                ),
+                "out": {
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000386a362a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa42b8b188e8525dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+                },
             },
         ],
     },
