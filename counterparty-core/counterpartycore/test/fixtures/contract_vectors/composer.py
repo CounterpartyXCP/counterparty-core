@@ -581,28 +581,31 @@ COMPOSER_VECTOR = {
                 ),
                 "error": (
                     exceptions.ComposeError,
-                    "invalid UTXO: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2:0 (transaction not found)",
+                    "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2:0 (transaction not found)",
                 ),
             },
         ],
         "prepare_inputs_set": [
             {
                 "in": ("aabb",),
-                "error": (exceptions.ComposeError, "invalid UTXO: aabb (invalid format)"),
+                "error": (exceptions.ComposeError, "invalid UTXOs: aabb (invalid format)"),
             },
             {
                 "in": ("aa:bb:cc:dd:ee",),
-                "error": (exceptions.ComposeError, "invalid UTXO: aa:bb:cc:dd:ee (invalid format)"),
+                "error": (
+                    exceptions.ComposeError,
+                    "invalid UTXOs: aa:bb:cc:dd:ee (invalid format)",
+                ),
             },
             {
                 "in": ("aa:3:cc:dd",),
-                "error": (exceptions.ComposeError, "invalid UTXO: aa:3:cc:dd (invalid format)"),
+                "error": (exceptions.ComposeError, "invalid UTXOs: aa:3:cc:dd (invalid format)"),
             },
             {
                 "in": ("ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:aa",),
                 "error": (
                     exceptions.ComposeError,
-                    "invalid UTXO: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:aa (invalid value)",
+                    "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:aa (invalid value)",
                 ),
             },
             {
@@ -611,7 +614,7 @@ COMPOSER_VECTOR = {
                 ),
                 "error": (
                     exceptions.ComposeError,
-                    "invalid UTXO: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aagh (invalid script_pub_key)",
+                    "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aagh (invalid script_pub_key)",
                 ),
             },
             {
@@ -660,7 +663,7 @@ COMPOSER_VECTOR = {
                 "in": ("ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2:0",),
                 "error": (
                     exceptions.ComposeError,
-                    "invalid UTXO: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2:0 (not found in the database or Bitcoin Core)",
+                    "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2:0 (not found in the database or Bitcoin Core)",
                 ),
             },
         ],

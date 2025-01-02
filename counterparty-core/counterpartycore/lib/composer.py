@@ -332,7 +332,7 @@ def complete_unspent_list(unspent_list):
             txid = utxo["txid"]
             if txid not in txs:
                 raise exceptions.ComposeError(
-                    f"invalid UTXO: {txid}:{utxo['vout']} (transaction not found)"
+                    f"invalid UTXOs: {txid}:{utxo['vout']} (transaction not found)"
                 )
             for vout in txs[txid]["vout"]:
                 if vout["n"] == utxo["vout"]:

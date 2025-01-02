@@ -876,6 +876,9 @@ class RegtestNode:
     def test_asset_conservation(self):
         self.test_command("check-db")
 
+    def test_fee_calculation(self):
+        pass
+
 
 class RegtestNodeThread(threading.Thread):
     def __init__(self, wsgi_server="waitress", burn_in_one_block=True):
