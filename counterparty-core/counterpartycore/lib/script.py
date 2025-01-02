@@ -584,6 +584,7 @@ def get_output_type(script_pub_key):
         return "P2WPKH"
     if len(asm) == 2 and asm[0] == b"\x01":
         return "P2TR"
+    return "UNKNOWN"
 
 
 def is_segwit_output(script_pub_key):

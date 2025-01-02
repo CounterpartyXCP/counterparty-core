@@ -118,7 +118,6 @@ def rpc_call(payload, retry=0):
 
 
 def is_api_request():
-    print("is_api_request", current_process().name)
     if current_process().name != "API":
         return False
     thread_name = current_thread().name

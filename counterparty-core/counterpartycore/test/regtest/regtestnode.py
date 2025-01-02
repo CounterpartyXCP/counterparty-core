@@ -877,7 +877,96 @@ class RegtestNode:
         self.test_command("check-db")
 
     def test_fee_calculation(self):
-        pass
+        unsigned_tx = self.compose(
+            self.addresses[0],
+            "send",
+            {
+                "destination": self.addresses[1],
+                "quantity": 10,
+                "asset": "XCP",
+                "sat_per_vbyte": 1,
+                "verbose": True,
+            },
+        )["result"]
+        print("Unsigned transaction 1: ", unsigned_tx)
+
+        signed_tx = json.loads(
+            self.bitcoin_wallet(
+                "signrawtransactionwithwallet", unsigned_tx["rawtransaction"]
+            ).strip()
+        )["hex"]
+        transaction2 = Transaction.from_raw(signed_tx)
+
+        print("Fees: ", unsigned_tx["btc_fee"])
+        print("VSize After signing: ", transaction2.get_vsize())
+        assert unsigned_tx["btc_fee"] == transaction2.get_vsize()
+
+        unsigned_tx = self.compose(
+            self.addresses[0],
+            "send",
+            {
+                "destination": self.addresses[1],
+                "quantity": 10,
+                "asset": "XCP",
+                "sat_per_vbyte": 2,
+                "verbose": True,
+                "encoding": "multisig",
+            },
+        )["result"]
+        print("Unsigned transaction 2: ", unsigned_tx)
+
+        signed_tx = json.loads(
+            self.bitcoin_wallet(
+                "signrawtransactionwithwallet", unsigned_tx["rawtransaction"]
+            ).strip()
+        )["hex"]
+        transaction3 = Transaction.from_raw(signed_tx)
+
+        print("Fees: ", unsigned_tx["btc_fee"])
+        print("VSize After signing: ", transaction3.get_vsize())
+        assert unsigned_tx["btc_fee"] == transaction3.get_vsize() * 2
+
+        legacy_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "legacy").strip()
+        self.send_transaction(
+            self.addresses[0],
+            "send",
+            {
+                "destination": legacy_address,
+                "quantity": 10,
+                "asset": "XCP",
+            },
+        )
+        self.bitcoin_wallet("sendtoaddress", legacy_address, 0.1)
+        self.mine_blocks(1)
+
+        unsigned_tx = self.compose(
+            legacy_address,
+            "send",
+            {
+                "destination": self.addresses[1],
+                "quantity": 5,
+                "asset": "XCP",
+                "sat_per_vbyte": 3,
+                "verbose": True,
+            },
+        )["result"]
+        print("Unsigned transaction 3: ", unsigned_tx)
+
+        signed_tx = json.loads(
+            self.bitcoin_wallet(
+                "signrawtransactionwithwallet", unsigned_tx["rawtransaction"]
+            ).strip()
+        )["hex"]
+        print("signed_tx: ", signed_tx)
+        transaction4 = Transaction.from_raw(signed_tx)
+
+        print("Fees: ", unsigned_tx["btc_fee"])
+        print("VSize After signing: ", transaction4.get_vsize())
+        assert (
+            transaction4.get_vsize() * 3 - 3
+            <= unsigned_tx["btc_fee"]
+            <= transaction4.get_vsize() * 3 + 3
+        )
 
 
 class RegtestNodeThread(threading.Thread):

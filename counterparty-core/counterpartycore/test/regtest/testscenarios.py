@@ -394,9 +394,6 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
         while not regtest_node_thread.ready():
             time.sleep(1)
 
-        # regtest_node_thread.node.test_transaction_chaining()
-        # raise KeyboardInterrupt
-
         context = {}
 
         check_api_v1(regtest_node_thread.node)
@@ -434,6 +431,8 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")
             regtest_node_thread.node.test_transaction_chaining()
+            print("Testing fee calculation...")
+            regtest_node_thread.node.test_fee_calculation()
             print("Tesing asset conservation checking...")
             regtest_node_thread.node.test_asset_conservation()
             print("Tesing reparse...")

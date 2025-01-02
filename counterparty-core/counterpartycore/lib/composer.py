@@ -10,7 +10,7 @@ from collections import OrderedDict
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 
 from counterpartycore.lib import (
     arc4,
@@ -546,9 +546,66 @@ def utxos_to_txins(utxos: list):
 #   Composition   #
 ##################
 
+DUMMY_DER_SIG = "3045" + "00" * 70
+DUMMY_REEDEM_SCRIPT = DUMMY_DER_SIG
+DUMMY_PUBKEY = "03" + 32 * "00"
+DUMMY_SCHNORR_SIG = "00" * 65
+OP_0 = "00"
+OP_PUSHBYTES_72 = "48"
+OP_PUSHBYTES_33 = "21"
 
-def get_needed_fee(tx, satoshis_per_vbyte):
-    virtual_size = tx.get_vsize()
+
+# dummies script_sig from https://learnmeabitcoin.com/technical/script/
+def get_dummy_script_sig(script_pub_key):
+    output_type = script.get_output_type(script_pub_key)
+    script_sig = None
+    if output_type == "P2PK":
+        script_sig = OP_PUSHBYTES_72 + DUMMY_DER_SIG
+    elif output_type == "P2PKH":
+        script_sig = OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_33 + DUMMY_PUBKEY
+    elif output_type == "P2MS":
+        asm = script.script_to_asm(script_pub_key)
+        required_signatures = asm[0]
+        script_sig = OP_0 + (required_signatures * DUMMY_DER_SIG)
+    elif output_type == "P2SH":
+        script_sig = OP_0 + OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_72 + DUMMY_REEDEM_SCRIPT
+    if script_sig is not None:
+        return Script.from_raw(script_sig)
+    return None
+
+
+def get_dummy_witness(script_pub_key):
+    output_type = script.get_output_type(script_pub_key)
+    witness = None
+    if output_type == "P2WPKH":
+        witness = [DUMMY_DER_SIG, DUMMY_PUBKEY]
+    elif output_type == "P2WSH":
+        witness = [
+            OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_33 + DUMMY_PUBKEY,  # P2PKH unlock script
+            script_pub_key,
+        ]
+    elif output_type == "P2TR":
+        witness = [DUMMY_SCHNORR_SIG]
+    if witness is not None:
+        return TxWitnessInput(witness)
+    return None
+
+
+def generate_dummy_signed_tx(tx, selected_utxos):
+    dummy_signed_tx = Transaction.copy(tx)
+    for i, utxo in enumerate(selected_utxos):
+        dummy_script_sig = get_dummy_script_sig(utxo["script_pub_key"])
+        if dummy_script_sig is not None:
+            dummy_signed_tx.inputs[i].script_sig = dummy_script_sig
+        dummy_witness = get_dummy_witness(utxo["script_pub_key"])
+        if dummy_witness is not None:
+            dummy_signed_tx.witnesses.append(dummy_witness)
+    return dummy_signed_tx
+
+
+def get_needed_fee(tx, satoshis_per_vbyte, selected_utxos):
+    dummy_signed_tx = generate_dummy_signed_tx(tx, selected_utxos)
+    virtual_size = dummy_signed_tx.get_vsize()
     return satoshis_per_vbyte * virtual_size
 
 
@@ -625,7 +682,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
             + [create_tx_output(change_amount, change_address, unspent_list, construct_params)],
             has_segwit=has_segwit,
         )
-        needed_fee = get_needed_fee(tx, sat_per_vbyte)
+        needed_fee = get_needed_fee(tx, sat_per_vbyte, selected_utxos)
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
         # if change is enough for needed fee, add change output and break
