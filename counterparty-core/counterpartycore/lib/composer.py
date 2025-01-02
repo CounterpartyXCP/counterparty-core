@@ -366,10 +366,10 @@ def prepare_inputs_set(inputs_set):
         elif len(utxo_parts) == 4:
             txid, vout, value, script_pub_key = utxo.split(":")
         else:
-            raise exceptions.ComposeError(f"invalid UTXO: {utxo} (invalid format)")
+            raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid format)")
 
         if not util.is_utxo_format(f"{txid}:{vout}"):
-            raise exceptions.ComposeError(f"invalid UTXO: {utxo} (invalid format)")
+            raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid format)")
 
         unspent = {
             "txid": txid,
@@ -380,14 +380,14 @@ def prepare_inputs_set(inputs_set):
             try:
                 unspent["value"] = int(value)
             except ValueError as e:
-                raise exceptions.ComposeError(f"invalid UTXO: {utxo} (invalid value)") from e
+                raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid value)") from e
 
         if script_pub_key is not None:
             try:
                 script.script_to_asm(script_pub_key)
             except Exception as e:
                 raise exceptions.ComposeError(
-                    f"invalid UTXO: {utxo} (invalid script_pub_key)"
+                    f"invalid UTXOs: {utxo} (invalid script_pub_key)"
                 ) from e
             unspent["script_pub_key"] = script_pub_key
 
@@ -411,7 +411,7 @@ def utxo_to_address(db, utxo):
         return address
     except Exception as e:
         raise exceptions.ComposeError(
-            f"invalid UTXO: {utxo} (not found in the database or Bitcoin Core)"
+            f"invalid UTXOs: {utxo} (not found in the database or Bitcoin Core)"
         ) from e
 
 
@@ -430,7 +430,7 @@ def ensure_utxo_is_first(utxo, unspent_list):
         try:
             value = backend.bitcoind.get_utxo_value(txid, vout)
         except Exception as e:
-            raise exceptions.ComposeError(f"invalid UTXO: {utxo} (value not found)") from e
+            raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (value not found)") from e
         new_unspent_list.insert(
             0,
             {
