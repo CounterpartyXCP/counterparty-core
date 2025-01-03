@@ -15,7 +15,7 @@ The following parameters are deprecated in the new composer and will no longer b
 
 - `fee_per_kb`: Use `sat_per_vbyte` instead
 - `fee_provided`: Ue `max_fee` instead
-- `unspent_tx_hash`: Use `inputs_set` instea
+- `unspent_tx_hash`: Use `inputs_set` instead
 - `dust_return_pubkey`: Use `mutlisig_pubkey` instead
 - `return_psbt`: Use `verbose` instead
 - `regular_dust_size`: Automatically calculated
