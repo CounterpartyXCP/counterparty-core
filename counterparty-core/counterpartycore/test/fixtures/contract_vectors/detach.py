@@ -6,8 +6,8 @@ from ..params import (
 )
 
 UTXO_1 = "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1"
-UTXO_2 = "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0"
-UTXO_3 = "b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0"
+UTXO_2 = "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0"
+UTXO_3 = "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0"
 
 DETACH_VECTOR = {
     "detach": {
@@ -75,7 +75,7 @@ DETACH_VECTOR = {
                         "destination": ADDR[0],
                         "block_time": 310501000,
                         "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
-                        "utxos_info": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:2 2 ",
+                        "utxos_info": "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:2 2 ",
                     },
                 ),
                 "records": [
@@ -86,7 +86,7 @@ DETACH_VECTOR = {
                             "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
                             "block_index": DP["default_block_index"],
                             "status": "valid",
-                            "source": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0",
+                            "source": "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0",
                             "destination": ADDR[1],
                             "asset": "XCP",
                             "quantity": 100,
@@ -110,7 +110,7 @@ DETACH_VECTOR = {
                         "destination": ADDR[0],
                         "block_time": 310501000,
                         "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
-                        "utxos_info": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0,b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:2 2 ",
+                        "utxos_info": "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0,ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:2 2 ",
                     },
                 ),
                 "records": [
@@ -121,7 +121,7 @@ DETACH_VECTOR = {
                             "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
                             "block_index": DP["default_block_index"],
                             "status": "valid",
-                            "source": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0",
+                            "source": "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0",
                             "destination": ADDR[0],
                             "asset": "XCP",
                             "quantity": 100,
@@ -136,7 +136,7 @@ DETACH_VECTOR = {
                             "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
                             "block_index": DP["default_block_index"],
                             "status": "valid",
-                            "source": "b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0",
+                            "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
                             "destination": ADDR[0],
                             "asset": "DIVISIBLE",
                             "quantity": 1,
@@ -160,7 +160,7 @@ DETACH_VECTOR = {
                         "destination": ADDR[0],
                         "block_time": 310501000,
                         "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
-                        "utxos_info": "nobalance:0,57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0,b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:2 2 ",
+                        "utxos_info": "nobalance:0,52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0,ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:2 2 ",
                     },
                 ),
                 "records": [
@@ -171,7 +171,7 @@ DETACH_VECTOR = {
                             "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
                             "block_index": DP["default_block_index"],
                             "status": "valid",
-                            "source": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0",
+                            "source": "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0",
                             "destination": ADDR[1],
                             "asset": "XCP",
                             "quantity": 100,
@@ -186,7 +186,7 @@ DETACH_VECTOR = {
                             "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
                             "block_index": DP["default_block_index"],
                             "status": "valid",
-                            "source": "b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0",
+                            "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
                             "destination": ADDR[1],
                             "asset": "DIVISIBLE",
                             "quantity": 1,
@@ -210,7 +210,7 @@ DETACH_VECTOR = {
                         "destination": ADDR[0],
                         "block_time": 310501000,
                         "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
-                        "utxos_info": "nobalance:0,57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0,b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:2 2 ",
+                        "utxos_info": "nobalance:0,52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0,ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:2 2 ",
                     },
                 ),
                 "records": [
@@ -221,7 +221,7 @@ DETACH_VECTOR = {
                             "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
                             "block_index": DP["default_block_index"],
                             "status": "valid",
-                            "source": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0",
+                            "source": "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0",
                             "destination": ADDR[0],
                             "asset": "XCP",
                             "quantity": 100,
@@ -236,7 +236,7 @@ DETACH_VECTOR = {
                             "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
                             "block_index": DP["default_block_index"],
                             "status": "valid",
-                            "source": "b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0",
+                            "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
                             "destination": ADDR[0],
                             "asset": "DIVISIBLE",
                             "quantity": 1,

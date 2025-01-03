@@ -54,7 +54,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     )
     assert (
         send1hex
-        == "0100000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a9322f30ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a932c346ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
     # insert send, this automatically also creates a block
@@ -90,7 +90,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx1["tx_hash"]
-    assert utxos[0]["amount"] == 1.99897135
+    assert utxos[0]["amount"] == 1.99902915
     assert utxos[0]["confirmations"] == 1
 
     # balances before send
@@ -113,7 +113,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     )
     assert (
         send2hex
-        == "0100000001cd2d431037d1d0cfe05daeb1d08b975f27488e383f7f169e09d2f405fb618f39020000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a9324a01ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "0200000001658a975573c1dd997f2b1ef62a37dc1ff97f66873cb33c406806ff8198cb01c80200000000ffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a932722eea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
     # insert send, this automatically also creates a block
@@ -132,7 +132,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx2["tx_hash"]
-    assert utxos[0]["amount"] == 1.9988513
+    assert utxos[0]["amount"] == 1.9989669
     assert utxos[0]["confirmations"] == 1
 
     # balances before send
@@ -155,7 +155,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     )
     assert (
         send3hex
-        == "01000000019aea7b78c8fffa50c51bbadb87824a202b3e6b53727e543e9c6846845205b5ce020000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788acffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a93265d2e90b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "020000000173a9ef78bf5f6df7e395e20e51fb5ad66e817425370b08770d1cd05f7401a65b0200000000ffffffff0336150000000000001976a9141e9d9c2c34d4dda3cd71603d9ce1e447c3cc5c0588ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a9322116ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
     # insert send, as unconfirmed! won't create a block!
@@ -176,7 +176,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx3["tx_hash"]
-    assert utxos[0]["amount"] == 1.99873125
+    assert utxos[0]["amount"] == 1.99890465
     assert utxos[0]["confirmations"] == 0
 
     # atm there's no way to confirm this unconfirmed TX
@@ -187,7 +187,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx3["tx_hash"]
-    assert utxos[0]["amount"] == 1.99873125
+    assert utxos[0]["amount"] == 1.99890465
     assert utxos[0]["confirmations"] == 1
 
     # we can eventually make this mocking better to be able to do that,

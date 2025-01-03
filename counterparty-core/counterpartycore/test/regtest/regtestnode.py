@@ -17,13 +17,6 @@ from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from counterpartycore.lib import arc4, config, database
-from counterpartycore.lib.backend.bitcoind import pubkey_from_inputs_set
-
-config.BACKEND_URL = "http://rpc:rpc@localhost:18443"
-config.BACKEND_SSL_NO_VERIFY = True
-config.REQUESTS_TIMEOUT = 20
-config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
-config.NETWORK_NAME = "regtest"
 
 setup("regtest")
 
@@ -198,22 +191,13 @@ class RegtestNode:
         retry=0,
     ):
         self.wait_for_counterparty_server()
-        if "inputs_source" in params:
-            inputs_source = params.pop("inputs_source")
-            params["inputs_set"] = self.get_inputs_set(inputs_source)
-        if "inputs_set" not in params and ":" not in source:
-            params["inputs_set"] = self.get_inputs_set(source)
-
-        if "inputs_set" in params and "pubkeys" not in params:
-            pubkey = pubkey_from_inputs_set(params["inputs_set"], source)
-            if pubkey:
-                params["pubkeys"] = pubkey
 
         if return_only_data:
             params["return_only_data"] = True
         if "exact_fee" not in params:
             params["exact_fee"] = 10000  # fixed fee
         # print("Inputs set:", params["inputs_set"])
+        params["verbose"] = True
 
         result = self.compose(source, tx_name, params)
 
@@ -347,6 +331,7 @@ class RegtestNode:
             list_unspent = json.loads(
                 self.bitcoin_cli_2("listunspent", 0, 9999999, json.dumps([address])).strip()
             )
+        # print(list_unspent)
         sorted(list_unspent, key=lambda x: -x["amount"])
         inputs = []
         for utxo in list_unspent[0:99]:
@@ -890,6 +875,108 @@ class RegtestNode:
 
     def test_asset_conservation(self):
         self.test_command("check-db")
+
+    def test_fee_calculation(self):
+        unsigned_tx = self.compose(
+            self.addresses[0],
+            "send",
+            {
+                "destination": self.addresses[1],
+                "quantity": 10,
+                "asset": "XCP",
+                "sat_per_vbyte": 1,
+                "verbose": True,
+                "validate": False,
+            },
+        )["result"]
+        print("Unsigned transaction 1: ", unsigned_tx)
+
+        signed_tx = json.loads(
+            self.bitcoin_wallet(
+                "signrawtransactionwithwallet", unsigned_tx["rawtransaction"]
+            ).strip()
+        )["hex"]
+        transaction2 = Transaction.from_raw(signed_tx)
+
+        print("Fees: ", unsigned_tx["btc_fee"])
+        print("VSize After signing: ", transaction2.get_vsize())
+        assert unsigned_tx["btc_fee"] == transaction2.get_vsize()
+
+        unsigned_tx = self.compose(
+            self.addresses[0],
+            "send",
+            {
+                "destination": self.addresses[1],
+                "quantity": 10,
+                "asset": "XCP",
+                "sat_per_vbyte": 2,
+                "verbose": True,
+                "encoding": "multisig",
+                "validate": False,
+            },
+        )["result"]
+        print("Unsigned transaction 2: ", unsigned_tx)
+
+        signed_tx = json.loads(
+            self.bitcoin_wallet(
+                "signrawtransactionwithwallet", unsigned_tx["rawtransaction"]
+            ).strip()
+        )["hex"]
+        transaction3 = Transaction.from_raw(signed_tx)
+
+        print("Fees: ", unsigned_tx["btc_fee"])
+        print("VSize After signing: ", transaction3.get_vsize())
+        print("Estimate Size After signing: ", unsigned_tx["signed_tx_estimated_size"])
+        size = max(
+            unsigned_tx["signed_tx_estimated_size"]["vsize"],
+            unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"],
+        )
+        assert unsigned_tx["btc_fee"] == size * 2
+
+        legacy_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "legacy").strip()
+        self.send_transaction(
+            self.addresses[0],
+            "send",
+            {
+                "destination": legacy_address,
+                "quantity": 10,
+                "asset": "XCP",
+                "validate": False,
+            },
+        )
+        self.bitcoin_wallet("sendtoaddress", legacy_address, 0.1)
+        self.mine_blocks(1)
+
+        unsigned_tx = self.compose(
+            legacy_address,
+            "send",
+            {
+                "destination": self.addresses[1],
+                "quantity": 5,
+                "asset": "XCP",
+                "sat_per_vbyte": 3,
+                "verbose": True,
+                "validate": False,
+            },
+        )["result"]
+        print("Unsigned transaction 3: ", unsigned_tx)
+
+        signed_tx = json.loads(
+            self.bitcoin_wallet(
+                "signrawtransactionwithwallet", unsigned_tx["rawtransaction"]
+            ).strip()
+        )["hex"]
+        print("signed_tx: ", signed_tx)
+        transaction4 = Transaction.from_raw(signed_tx)
+
+        print("Fees: ", unsigned_tx["btc_fee"])
+        print("VSize After signing: ", transaction4.get_vsize())
+        print("Estimate Size After signing: ", unsigned_tx["signed_tx_estimated_size"])
+        size = max(
+            unsigned_tx["signed_tx_estimated_size"]["vsize"],
+            unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"],
+        )
+        assert size * 3 - 3 <= unsigned_tx["btc_fee"] <= size * 3 + 3
 
 
 class RegtestNodeThread(threading.Thread):

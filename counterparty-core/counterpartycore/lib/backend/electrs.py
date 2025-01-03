@@ -1,6 +1,8 @@
+import binascii
+
 import requests
 
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import config, exceptions, script, util
 
 
 def electr_query(url):
@@ -58,3 +60,66 @@ def get_utxos_by_addresses(addresses: str, unconfirmed: bool = False, unspent_tx
             unspent["address"] = address
         unspents += address_unspents
     return unspents
+
+
+def pubkey_from_tx(tx, pubkeyhash):
+    for vin in tx["vin"]:
+        if "witness" in vin:
+            if len(vin["witness"]) >= 2:
+                # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
+                try:
+                    pubkey = vin["witness"][1]
+                    if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                        return pubkey
+                except binascii.Error:
+                    pass
+        elif "is_coinbase" not in vin or not vin["is_coinbase"]:
+            asm = vin["scriptsig_asm"].split(" ")
+            if len(asm) == 4:  # p2pkh
+                # catch unhexlify errs for when asm[2] isn't a pubkey (eg; for P2SH)
+                try:
+                    pubkey = asm[3]
+                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                        return pubkey
+                except binascii.Error:
+                    pass
+    for vout in tx["vout"]:
+        asm = vout["scriptpubkey_asm"].split(" ")
+        if len(asm) == 3:  # p2pk
+            try:
+                pubkey = asm[1]
+                if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                    return pubkey
+            except binascii.Error:
+                pass
+    return None
+
+
+def search_pubkey(pubkeyhash):
+    transactions = get_history(pubkeyhash)
+    for tx in transactions:
+        pubkey = pubkey_from_tx(tx, pubkeyhash)
+        if pubkey:
+            return pubkey
+    return None
+
+
+def list_unspent(source, allow_unconfirmed_inputs):
+    electr_unspent_list = get_utxos(
+        source,
+        unconfirmed=allow_unconfirmed_inputs,
+    )
+    if len(electr_unspent_list) > 0:
+        unspent_list = []
+        for unspent in electr_unspent_list:
+            unspent_list.append(
+                {
+                    "txid": unspent["txid"],
+                    "vout": unspent["vout"],
+                    "value": unspent["value"],
+                    "amount": unspent["value"] / config.UNIT,
+                }
+            )
+        return unspent_list
+
+    return []

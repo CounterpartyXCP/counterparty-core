@@ -95,12 +95,26 @@ ATTACH_VECTOR = {
                     ADDR[0],
                     "XCP",
                     100,
+                    None,
                     1,
                 ),
                 "out": (
                     ADDR[0],
                     [],
                     b"eXCP|100|1",
+                ),
+            },
+            {
+                "in": (
+                    ADDR[0],
+                    "XCP",
+                    100,
+                    666,
+                ),
+                "out": (
+                    ADDR[0],
+                    [(ADDR[0], 666)],
+                    b"eXCP|100|",
                 ),
             },
             {

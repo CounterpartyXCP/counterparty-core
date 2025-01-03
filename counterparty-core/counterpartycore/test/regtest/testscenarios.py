@@ -67,7 +67,7 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
-# SCENARIOS = scenario_23_detach.SCENARIO
+# SCENARIOS = scenario_22_chaining.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -441,6 +441,8 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             regtest_node_thread.node.test_empty_ledger_hash()
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
+            print("Testing fee calculation...")
+            regtest_node_thread.node.test_fee_calculation()
     except KeyboardInterrupt:
         print(regtest_node_thread.node.server_out.getvalue())
         pass

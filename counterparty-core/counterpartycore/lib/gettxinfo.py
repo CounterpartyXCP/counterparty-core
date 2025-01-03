@@ -3,11 +3,10 @@ import logging
 import struct
 from io import BytesIO
 
-from counterpartycore.lib import arc4, backend, config, ledger, message_type, script, util
+from counterpartycore.lib import arc4, backend, config, ledger, message_type, p2sh, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
-from counterpartycore.lib.transaction_helper import p2sh_serializer
 from counterpartycore.lib.util import inverse_hash
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -355,7 +354,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
         # Ignore transactions with invalid script.
         asm = script.script_to_asm(vin["script_sig"])
 
-        new_source, new_destination, new_data = p2sh_serializer.decode_p2sh_input(
+        new_source, new_destination, new_data = p2sh.decode_p2sh_input(
             asm, p2sh_is_segwit=prevout_is_segwit
         )
         # this could be a p2sh source address with no encoded data

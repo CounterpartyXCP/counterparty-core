@@ -4,6 +4,8 @@ import json
 import logging
 import time
 from collections import OrderedDict
+from multiprocessing import current_process
+from threading import current_thread
 
 import requests
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
@@ -115,7 +117,21 @@ def rpc_call(payload, retry=0):
     return result
 
 
+def is_api_request():
+    if current_process().name != "API":
+        return False
+    thread_name = current_thread().name
+    # waitress, werkzeug or Gunicorn thead
+    for name in ["waitress", "process_request_thread", "ThreadPoolExecutor"]:
+        if name in thread_name:
+            return True
+    return False
+
+
 def rpc(method, params):
+    if is_api_request():
+        return safe_rpc(method, params)
+
     payload = {
         "method": method,
         "params": params,
@@ -123,6 +139,31 @@ def rpc(method, params):
         "id": 0,
     }
     return rpc_call(payload)
+
+
+# no retry for requests from the API
+def safe_rpc(method, params):
+    start_time = time.time()
+    try:
+        payload = {
+            "method": method,
+            "params": params,
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+        response = requests.post(
+            config.BACKEND_URL,
+            data=json.dumps(payload),
+            headers={"content-type": "application/json"},
+            verify=(not config.BACKEND_SSL_NO_VERIFY),
+            timeout=config.REQUESTS_TIMEOUT,
+        ).json()
+        return response["result"]
+    except (requests.exceptions.RequestException, json.decoder.JSONDecodeError, KeyError) as e:
+        raise exceptions.BitcoindRPCError(f"Error calling {method}: {str(e)}") from e
+    finally:
+        elapsed = time.time() - start_time
+        logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
 
 
 def getblockcount():
@@ -238,6 +279,17 @@ def fee_per_kb(
     return int(max(feeperkb["feerate"] * config.UNIT, config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART))
 
 
+def satoshis_per_vbyte(
+    conf_target: int = config.ESTIMATE_FEE_CONF_TARGET, mode: str = config.ESTIMATE_FEE_MODE
+):
+    feeperkb = rpc("estimatesmartfee", [conf_target, mode])
+
+    if "errors" in feeperkb and feeperkb["errors"][0] == "Insufficient data or no feerate found":
+        return config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART
+
+    return (feeperkb["feerate"] * config.UNIT) / 1024
+
+
 def get_btc_supply(normalize=False):
     f"""returns the total supply of {config.BTC} (based on what Bitcoin Core says the current block height is)"""  # noqa: B021
     block_count = getblockcount()
@@ -333,6 +385,10 @@ def get_tx_out_amount(tx_hash, vout):
     return raw_tx["vout"][vout]["value"]
 
 
+def get_utxo_value(tx_hash, vout):
+    return get_tx_out_amount(tx_hash, vout)
+
+
 class BlockFetcher:
     def __init__(self, first_block) -> None:
         self.current_block = first_block
@@ -359,10 +415,8 @@ def decoderawtransaction(rawtx: str):
     return rpc("decoderawtransaction", [rawtx])
 
 
-def pubkey_from_inputs_set(inputs_set, pubkeyhash):
-    utxos = inputs_set.split(",")
-    utxos = [utxo.split(":")[0] for utxo in utxos]
-    for tx_hash in utxos:
+def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
+    for tx_hash in tx_hashes:
         tx = getrawtransaction(tx_hash, True)
         for vin in tx["vin"]:
             if "txinwitness" in vin:
@@ -377,12 +431,46 @@ def pubkey_from_inputs_set(inputs_set, pubkeyhash):
             elif "coinbase" not in vin:
                 scriptsig = vin["scriptSig"]
                 asm = scriptsig["asm"].split(" ")
-                if len(asm) >= 2:
+                if len(asm) == 4:  # p2pkh
                     # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
                     try:
-                        pubkey = asm[1]
+                        pubkey = asm[3]
                         if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
                             return pubkey
                     except binascii.Error:
                         pass
+        for vout in tx["vout"]:
+            asm = vout["scriptPubKey"]["asm"].split(" ")
+            if len(asm) == 3:  # p2pk
+                try:
+                    pubkey = asm[1]
+                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                        return pubkey
+                except binascii.Error:
+                    pass
     return None
+
+
+def list_unspent(source, allow_unconfirmed_inputs):
+    min_conf = 0 if allow_unconfirmed_inputs else 1
+    bitcoind_unspent_list = []
+    try:
+        bitcoind_unspent_list = safe_rpc("listunspent", [min_conf, 9999999, [source]]) or []
+    except exceptions.BitcoindRPCError:
+        pass
+
+    if len(bitcoind_unspent_list) > 0:
+        unspent_list = []
+        for unspent in bitcoind_unspent_list:
+            unspent_list.append(
+                {
+                    "txid": unspent["txid"],
+                    "vout": unspent["vout"],
+                    "value": int(unspent["amount"] * config.UNIT),
+                    "amount": unspent["amount"],
+                    "script_pub_key": unspent["scriptPubKey"],
+                }
+            )
+        return unspent_list
+
+    return []

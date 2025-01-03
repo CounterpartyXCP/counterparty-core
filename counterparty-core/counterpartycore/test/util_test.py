@@ -22,6 +22,8 @@ import apsw
 import bitcoin as bitcoinlib
 import pycoin
 import pytest
+from bitcoinutils.script import Script
+from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 CURR_DIR = os.path.dirname(
@@ -33,6 +35,7 @@ from counterpartycore import server  # noqa: E402
 from counterpartycore.lib import (  # noqa: E402
     blocks,
     check,
+    composer,  # noqa
     config,
     database,
     deserialize,
@@ -40,7 +43,6 @@ from counterpartycore.lib import (  # noqa: E402
     gettxinfo,
     ledger,
     messages,
-    transaction,
     util,
 )
 from counterpartycore.lib.api.util import to_json  # noqa: E402
@@ -201,6 +203,7 @@ def insert_raw_transaction(raw_transaction, db):
     block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
     tx_hash = dummy_tx_hash(raw_transaction)
+    # print("tx_hash", tx_hash)
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
@@ -505,6 +508,10 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
                 "hex": binascii.hexlify(vout.scriptPubKey).decode("ascii"),
                 "asm": " ".join(asm),
             },
+            "scriptPubKey": {
+                "hex": binascii.hexlify(vout.scriptPubKey).decode("ascii"),
+                "address": addresses[0] if addresses else None,
+            },
         }
 
         result["vout"].append(rvout)
@@ -515,7 +522,11 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
 def getrawtransaction_batch(db, txhash_list, verbose=False):
     result = {}
     for txhash in txhash_list:
-        result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
+        try:
+            result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
+        except Exception as e:  # noqa: F841, S110
+            # skip missing transactions
+            pass
 
     return result
 
@@ -643,10 +654,12 @@ def run_scenario(scenario):
             with MockProtocolChangesContext(**(mock_protocol_changes or {})):
                 module = sys.modules[f"counterpartycore.lib.messages.{tx[0]}"]
                 compose = module.compose
-                unsigned_tx_hex = transaction.construct(
-                    db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2]
-                )
-                unsigned_tx_hex = unsigned_tx_hex["unsigned_tx_hex"]
+                construct_params = {
+                    "regular_dust_size": 5430,
+                } | tx[2]
+                print("tx", tx[0], tx[1])
+                unsigned_tx_hex = composer.construct(db, compose(db, *tx[1]), construct_params)
+                unsigned_tx_hex = unsigned_tx_hex["rawtransaction"]
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
                 insert_raw_transaction(unsigned_tx_hex, db)
         else:
@@ -832,6 +845,19 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "address",
         ]
         or (
+            tx_name == "composer"
+            and method
+            not in [
+                "compose_transaction",
+                "prepare_unspent_list",
+                "utxo_to_address",
+                "filter_utxos_with_balances",
+                "prepare_inputs_and_change",
+                "construct",
+                "compose_transaction",
+            ]
+        )
+        or (
             tx_name
             in [
                 "fairminter",
@@ -910,14 +936,36 @@ def check_outputs(
                 if tx_name == "order" and inputs[1] == "BTC":
                     print("give btc")
                     tx_params["fee_provided"] = DP["fee_provided"]
-                unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
+                unsigned_tx_hex = composer.construct(server_db, test_outputs, tx_params)
                 print(tx_name)
                 print(unsigned_tx_hex)
                 print("--------------------------")
 
         if outputs is not None:
             try:
-                assert outputs == test_outputs
+                if isinstance(outputs, (TxOutput, TxInput, Script, TxWitnessInput)):
+                    assert outputs.to_bytes() == test_outputs.to_bytes()
+                elif (
+                    isinstance(outputs, list)
+                    and len(outputs) > 0
+                    and isinstance(outputs[0], (TxOutput, TxInput))
+                ):
+                    for i, output in enumerate(outputs):
+                        assert output.to_bytes() == test_outputs[i].to_bytes()
+                #  for prepare_inputs_and_change()
+                elif (
+                    isinstance(outputs, tuple)
+                    and len(outputs) == 3
+                    and isinstance(outputs[2], list)
+                    and len(outputs[2]) > 0
+                    and isinstance(outputs[2][0], TxOutput)
+                ):
+                    assert outputs[0] == test_outputs[0]
+                    assert outputs[1] == test_outputs[1]
+                    for i, output in enumerate(outputs[2]):
+                        assert output.to_bytes() == test_outputs[2][i].to_bytes()
+                else:
+                    assert outputs == test_outputs
             except AssertionError:
                 if pytest_config.getoption("verbose") >= 2:
                     msg = (

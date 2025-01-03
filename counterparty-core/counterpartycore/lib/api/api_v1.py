@@ -20,6 +20,7 @@ import flask
 import jsonrpc
 from counterpartycore.lib import (
     backend,
+    composer,
     config,
     deserialize,
     exceptions,
@@ -27,11 +28,8 @@ from counterpartycore.lib import (
     ledger,
     message_type,
     script,
-    transaction,
-    transaction_helper,
     util,
 )
-from counterpartycore.lib.api import compose as api_compose
 from counterpartycore.lib.api import util as api_util
 from counterpartycore.lib.api.api_watcher import STATE_DB_TABLES
 from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
@@ -104,6 +102,28 @@ API_TABLES = [
     "transactions",
 ]
 
+COMPOSABLE_TRANSACTIONS = [
+    "bet",
+    "broadcast",
+    "btcpay",
+    "burn",
+    "cancel",
+    "destroy",
+    "dispenser",
+    "dispense",
+    "dividend",
+    "issuance",
+    "versions.mpma",
+    "order",
+    "send",
+    "sweep",
+    "utxo",
+    "fairminter",
+    "fairmint",
+    "attach",
+    "detach",
+    "move",
+]
 
 JSON_RPC_ERROR_API_COMPOSE = -32001  # code to use for error composing transaction result
 
@@ -447,6 +467,20 @@ def conditional_decorator(decorator, condition):
     return gen_decorator
 
 
+def split_compose_params(**kwargs):
+    transaction_args = {}
+    common_args = {}
+    private_key_wif = None
+    for key, value in kwargs.items():
+        if key in composer.CONSTRUCT_PARAMS:
+            common_args[key] = value
+        elif key == "privkey":
+            private_key_wif = value
+        else:
+            transaction_args[key] = value
+    return transaction_args, common_args, private_key_wif
+
+
 class APIStatusPoller(threading.Thread):
     """Perform regular checks on the state of the backend and the database."""
 
@@ -559,9 +593,7 @@ class APIServer(threading.Thread):
         # Generate dynamically create_{transaction} methods
         def generate_create_method(tx):
             def create_method(**kwargs):
-                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
-                    **kwargs
-                )
+                transaction_args, common_args, private_key_wif = split_compose_params(**kwargs)
                 extended_tx_info = old_style_api = False
                 if "extended_tx_info" in common_args:
                     extended_tx_info = common_args["extended_tx_info"]
@@ -573,27 +605,24 @@ class APIServer(threading.Thread):
                     common_args.pop(v2_arg, None)
                 if "fee" in transaction_args and "exact_fee" not in common_args:
                     common_args["exact_fee"] = transaction_args.pop("fee")
+                common_args["accept_missing_params"] = True
                 try:
                     with LedgerDBConnectionPool().connection() as db:
-                        transaction_info = transaction.compose_transaction(
+                        transaction_info = composer.compose_transaction(
                             db,
-                            name=tx,
-                            params=transaction_args,
-                            accept_missing_params=True,
-                            **common_args,
+                            tx,
+                            transaction_args,
+                            common_args,
                         )
                         if extended_tx_info:
-                            transaction_info["tx_hex"] = transaction_info["unsigned_tx_hex"]
-                            transaction_info["pretx_hex"] = transaction_info["unsigned_pretx_hex"]
-                            del transaction_info["unsigned_tx_hex"]
-                            del transaction_info["unsigned_pretx_hex"]
+                            transaction_info["tx_hex"] = transaction_info["rawtransaction"]
+                            del transaction_info["rawtransaction"]
                             return transaction_info
                         tx_hexes = list(
                             filter(
                                 None,
                                 [
-                                    transaction_info["unsigned_tx_hex"],
-                                    transaction_info["unsigned_pretx_hex"],
+                                    transaction_info["rawtransaction"],
                                 ],
                             )
                         )  # filter out None
@@ -622,7 +651,7 @@ class APIServer(threading.Thread):
 
             return create_method
 
-        for tx in api_compose.COMPOSABLE_TRANSACTIONS:
+        for tx in COMPOSABLE_TRANSACTIONS:
             create_method = generate_create_method(tx)
             create_method.__name__ = f"create_{tx}"
             dispatcher.add_method(create_method)
@@ -987,9 +1016,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         # TODO: Rename this method.
         def search_pubkey(pubkeyhash, provided_pubkeys=None):
-            return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
-                pubkeyhash, provided_pubkeys=provided_pubkeys
-            )
+            return backend.electrs.search_pubkey(pubkeyhash)
 
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
@@ -1181,7 +1208,7 @@ class APIServer(threading.Thread):
                 error = "No query_type provided."
                 return flask.Response(error, 400, mimetype="application/json")
             # Check if message type or table name are valid.
-            if (compose and query_type not in api_compose.COMPOSABLE_TRANSACTIONS) or (
+            if (compose and query_type not in COMPOSABLE_TRANSACTIONS) or (
                 not compose and query_type not in API_TABLES
             ):
                 error = f'No such query type in supported queries: "{query_type}".'
@@ -1192,9 +1219,7 @@ class APIServer(threading.Thread):
             query_data = {}
 
             if compose:
-                transaction_args, common_args, private_key_wif = api_compose.split_compose_params(
-                    **extra_args
-                )
+                transaction_args, common_args, private_key_wif = split_compose_params(**extra_args)
 
                 # Must have some additional transaction arguments.
                 if not len(transaction_args):
@@ -1204,8 +1229,8 @@ class APIServer(threading.Thread):
                 # Compose the transaction.
                 try:
                     with LedgerDBConnectionPool().connection() as db:
-                        query_data, data = transaction.compose_transaction(
-                            db, name=query_type, params=transaction_args, **common_args
+                        query_data, data = composer.compose_transaction(
+                            db, query_type, transaction_args, common_args
                         )
                 except (
                     script.AddressError,

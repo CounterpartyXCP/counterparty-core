@@ -6,7 +6,7 @@ from counterpartycore.lib.messages.detach import detach_assets
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def compose(db, source, destination, skip_validation=False):
+def compose(db, source, destination, utxo_value=None, skip_validation=False):
     if not skip_validation:
         if not util.is_utxo_format(source):
             raise exceptions.ComposeError("Invalid source utxo format")
@@ -20,7 +20,14 @@ def compose(db, source, destination, skip_validation=False):
         except script.AddressError as e:
             raise exceptions.ComposeError("destination must be an address") from e
 
-    return (source, [(destination, config.DEFAULT_UTXO_VALUE)], None)
+    value = config.DEFAULT_UTXO_VALUE
+    if utxo_value is not None:
+        try:
+            value = int(utxo_value)
+        except ValueError as e:
+            raise exceptions.ComposeError(["utxo_value must be an integer"]) from e
+
+    return (source, [(destination, value)], None)
 
 
 def move_balances(db, tx, source, destination):

@@ -121,9 +121,14 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         (P2SH_ADDR[0], "PAYTOSCRIPT", 1000, None, False, None, None, "PSH issued asset"),
-        {"encoding": "multisig", "dust_return_pubkey": False},
+        {"encoding": "multisig", "multisig_pubkey": DP["pubkey"][ADDR[0]]},
     ],
-    ["send", (ADDR[0], P2SH_ADDR[0], "DIVISIBLE", DP["quantity"]), {"encoding": "multisig"}, None],
+    [
+        "send",
+        (ADDR[0], P2SH_ADDR[0], "DIVISIBLE", DP["quantity"]),
+        {"encoding": "multisig", "multisig_pubkey": DP["pubkey"][ADDR[0]]},
+        None,
+    ],
     [
         "broadcast",
         (P2SH_ADDR[0], 1388000002, 1, DP["fee_multiplier"], "Unit Test"),
@@ -204,7 +209,7 @@ UNITTEST_FIXTURE = [
     [
         "order",
         (ADDR[1], "BTC", round(DP["quantity"] / 125), "XCP", DP["quantity"], 2000, 0),
-        {"encoding": "multisig", "fee_provided": DP["fee_provided"]},
+        {"encoding": "multisig", "exact_fee": DP["fee_provided"]},
     ],
     ["burn", (ADDR[2], DP["burn_quantity"]), {"encoding": "multisig"}],
     [
@@ -361,7 +366,7 @@ def generate_standard_scenario(address1, address2, order_matches):
         [
             "order",
             (address1, "BTC", DP["small"], "XCP", DP["small"] * 2, DP["expiration"], 0),
-            {"encoding": "multisig", "fee_provided": DP["fee_provided"]},
+            {"encoding": "multisig", "exact_fee": DP["fee_provided"]},
         ],
         [
             "order",
@@ -537,42 +542,42 @@ standard_scenarios_params = {
         "address1": ADDR[0],
         "address2": ADDR[1],
         "order_matches": [
-            "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c"
+            "b0f0182d8ab4340522ceb7dc780683d9061f252ecc1123b14215e82ee6ff8675_4433dfcde6e34bbe07bf8ae00c26556f8e3e07b6d8a290fc1d7ba63f07a7bb15"
         ],
     },
     "multisig_1_of_2": {
         "address1": MULTISIGADDR[0],
         "address2": MULTISIGADDR[1],
         "order_matches": [
-            "332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367_f093b6c00e1bbe85106db6874b1ab4e3f4378d0bf0bcffbd8b51835285dfbf3f"
+            "28487fdcc772b84b9cc76af9915b32c1b19eed5c4529f4d74028363d5f8559a7_4a02368c1824188ebfae9835a032542482c567c4ba7117d418a9a4e9545ca84c"
         ],
     },
     "multisig_2_of_2": {
         "address1": MULTISIGADDR[3],
         "address2": MULTISIGADDR[4],
         "order_matches": [
-            "025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0_c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee"
+            "6b9b3150a0f03d42092b990c571afd0ef3cc1cf0cdd9708c0fb5accb0d88df20_4746a142a29cadb9682626866d9d1be5fef5688cdb407f7a273b41bac3838e5b"
         ],
     },
     "multisig_1_of_3": {
         "address1": MULTISIGADDR[5],
         "address2": MULTISIGADDR[6],
         "order_matches": [
-            "04d5809f0085bf2655c500a8c65d6d8b42dd373160fb431af05792b0f30b63a6_98ef3d31d1777ad18801e94eef03d4314911ac03d7a82483b40614ea5cf80e52"
+            "ea2e0cb7def5bbcc9ad128f40b74ca70412f27ebdaeccba0842fb94593b9e0f9_d4eb2333661535e10398042e04d8665e099f41f3801504dda09216e796e16f75"
         ],
     },
     "multisig_2_of_3": {
         "address1": MULTISIGADDR[7],
         "address2": MULTISIGADDR[8],
         "order_matches": [
-            "c953eb18873ce8aed42456df0ece8e4678e13282d9917916e7a4aec10e828375_89a44a3314b298a83d5d14c8646900a5122b8a1e8f6e0528e73ea82044d1726a"
+            "783ebadc94a1a6b12a5de85b74fa63b68383e6e6a94bb8067a6eddd1649a1ccf_f9052fcb3866c44956652b0bdabc4f1a532ae8ab6e39d2604003a9963594cfe1"
         ],
     },
     "multisig_3_of_3": {
         "address1": MULTISIGADDR[9],
         "address2": MULTISIGADDR[10],
         "order_matches": [
-            "1385519ca199f1b39bb89caac062fe3a342f18e393d301d7a56c150a8ab84093_a2e93083b871e68cb89e216f9a99c4c6aea1eb92cbdbafc5b4b0e160c19c517e"
+            "72c0575d98796a64f7f9a027add4db701610004aba35556827498d270f5607e0_b1415d3493376a14e9e2378a6243666b7c8e5bd8c26793fd21852458c9926c57"
         ],
     },
 }
