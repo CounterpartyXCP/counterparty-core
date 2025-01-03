@@ -587,6 +587,7 @@ def get_dummy_witness(script_pub_key):
     elif output_type == "P2TR":
         witness = [DUMMY_SCHNORR_SIG]
     if witness is not None:
+        print("WITNESS", witness)
         return TxWitnessInput(witness)
     return None
 
@@ -960,6 +961,19 @@ CONSTRUCT_PARAMS = {
     "p2sh_pretx_txid": (str, None, "Ignored, P2SH disabled"),
     "segwit": (bool, False, "Ignored, Segwit automatically detected"),
 }
+DEPRECATED_CONSTRUCT_PARAMS = [
+    "fee_per_kb",
+    "fee_provided",
+    "dust_return_pubkey",
+    "return_psbt",
+    "regular_dust_size",
+    "multisig_dust_size",
+    "extended_tx_info",
+    "old_style_api",
+    "p2sh_pretx_txid",
+    "segwit",
+    "unspent_tx_hash",
+]
 
 
 def prepare_construct_params(construct_params):
@@ -979,19 +993,7 @@ def prepare_construct_params(construct_params):
             cleaned_construct_params.pop(deprecated_param)
     # add warnings for deprecated parameters
     warnings = []
-    for field in [
-        "fee_per_kb",
-        "fee_provided",
-        "dust_return_pubkey",
-        "return_psbt",
-        "regular_dust_size",
-        "multisig_dust_size",
-        "extended_tx_info",
-        "old_style_api",
-        "p2sh_pretx_txid",
-        "segwit",
-        "unspent_tx_hash",
-    ]:
+    for field in DEPRECATED_CONSTRUCT_PARAMS:
         if field in construct_params and construct_params[field] not in [None, False]:
             warnings.append(f"The `{field}` parameter is {CONSTRUCT_PARAMS[field][2].lower()}")
 

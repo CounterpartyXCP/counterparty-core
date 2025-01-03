@@ -886,6 +886,7 @@ class RegtestNode:
                 "asset": "XCP",
                 "sat_per_vbyte": 1,
                 "verbose": True,
+                "validate": False,
             },
         )["result"]
         print("Unsigned transaction 1: ", unsigned_tx)
@@ -911,6 +912,7 @@ class RegtestNode:
                 "sat_per_vbyte": 2,
                 "verbose": True,
                 "encoding": "multisig",
+                "validate": False,
             },
         )["result"]
         print("Unsigned transaction 2: ", unsigned_tx)
@@ -939,6 +941,7 @@ class RegtestNode:
                 "destination": legacy_address,
                 "quantity": 10,
                 "asset": "XCP",
+                "validate": False,
             },
         )
         self.bitcoin_wallet("sendtoaddress", legacy_address, 0.1)
@@ -953,6 +956,7 @@ class RegtestNode:
                 "asset": "XCP",
                 "sat_per_vbyte": 3,
                 "verbose": True,
+                "validate": False,
             },
         )["result"]
         print("Unsigned transaction 3: ", unsigned_tx)
