@@ -10,7 +10,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
     # then try with Electrs
     if config.ELECTRS_URL is None:
         raise exceptions.ComposeError(
-            "No UTXOs found with Bitcoin Core and Electr is not configured, use the `inputs_set` parameter to provide UTXOs"
+            "No UTXOs found with Bitcoin Core and Electrs is not configured, use the `inputs_set` parameter to provide UTXOs"
         )
     return backend.electrs.list_unspent(source, allow_unconfirmed_inputs)
 
