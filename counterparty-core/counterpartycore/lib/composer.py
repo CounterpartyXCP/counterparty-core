@@ -603,10 +603,62 @@ def generate_dummy_signed_tx(tx, selected_utxos):
     return dummy_signed_tx
 
 
-def get_needed_fee(tx, satoshis_per_vbyte, selected_utxos):
-    dummy_signed_tx = generate_dummy_signed_tx(tx, selected_utxos)
-    virtual_size = dummy_signed_tx.get_vsize()
-    return satoshis_per_vbyte * virtual_size
+def get_output_sigops_count(script_pub_key, is_redeem_script=False, is_segwit=False):
+    output_type = script.get_output_type(script_pub_key)
+    multiplicator = 1 if is_segwit else 4
+    count = 0
+    if output_type in ["P2PK", "P2PKH"]:
+        count = 1
+    elif output_type == "P2MS":
+        if is_redeem_script:
+            asm = script.script_to_asm(script_pub_key)
+            pubkeys_count = int(asm[-2])
+            if pubkeys_count > 16:
+                count = 20
+            else:
+                count = pubkeys_count
+        else:
+            count = 20
+    elif output_type in ["P2WPKH", "P2WSH", "P2TR"] and is_redeem_script:
+        return 1
+    return count * multiplicator
+
+
+def get_input_sigops_count(script_sig, script_pub_key):
+    prevout_type = script.get_output_type(script_pub_key)
+    if prevout_type == "P2SH":
+        asm = script.script_to_asm(script_sig)
+        redeem_script = binascii.hexlify(asm[-1]).decode("utf-8")
+        return get_output_sigops_count(redeem_script, is_redeem_script=True)
+    if prevout_type == "P2WPKH":
+        return 1
+    if prevout_type == "P2WSH":
+        return get_output_sigops_count(script_pub_key, is_segwit=True)
+    return 0
+
+
+# source: https://bitcoin.stackexchange.com/questions/67760/how-are-sigops-calculated
+def get_tx_sigops_count(tx, selected_utxos):
+    sigops_count = 0
+    for i, utxo in enumerate(selected_utxos):
+        script_pub_key = utxo["script_pub_key"]
+        script_sig = tx.inputs[i].script_sig.to_hex()
+        sigops_count += get_input_sigops_count(script_sig, script_pub_key)
+    for output in tx.outputs:
+        sigops_count += get_output_sigops_count(output.script_pubkey.to_hex())
+    return sigops_count
+
+
+# source: https://mempool.space/docs/faq#what-is-adjusted-vsize
+def get_size_info(tx, selected_utxos, signed=False):
+    if signed:
+        signed_tx = tx
+    else:
+        signed_tx = generate_dummy_signed_tx(tx, selected_utxos)
+    sigops_count = get_tx_sigops_count(signed_tx, selected_utxos)
+    virtual_size = signed_tx.get_vsize()
+    adjusted_vsize = max(sigops_count * 5, virtual_size)
+    return adjusted_vsize, virtual_size, sigops_count
 
 
 def prepare_fee_parameters(construct_params):
@@ -640,6 +692,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
     change_outputs = []
     btc_in = 0
     needed_fee = 0
+    size_info = (0, 0, 0)
     # try with one input and increase until the change is enough for the fee
     use_all_inputs_set = construct_params.get("use_all_inputs_set", False)
     input_count = len(unspent_list) if use_all_inputs_set else 1
@@ -682,7 +735,10 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
             + [create_tx_output(change_amount, change_address, unspent_list, construct_params)],
             has_segwit=has_segwit,
         )
-        needed_fee = get_needed_fee(tx, sat_per_vbyte, selected_utxos)
+
+        size_info = get_size_info(tx, selected_utxos)
+        adjusted_vsize = size_info[0]
+        needed_fee = sat_per_vbyte * adjusted_vsize
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
         # if change is enough for needed fee, add change output and break
@@ -696,7 +752,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         # else try with more inputs
         input_count += 1
 
-    return selected_utxos, btc_in, change_outputs
+    return selected_utxos, btc_in, change_outputs, size_info
 
 
 def get_default_args(func):
@@ -742,7 +798,7 @@ def construct(db, tx_info, construct_params):
     outputs = prepare_outputs(source, destinations, data, unspent_list, construct_params)
 
     # prepare inputs and change
-    selected_utxos, btc_in, change_outputs = prepare_inputs_and_change(
+    selected_utxos, btc_in, change_outputs, size_info = prepare_inputs_and_change(
         db, source, outputs, unspent_list, construct_params
     )
     inputs = utxos_to_txins(selected_utxos)
@@ -756,6 +812,7 @@ def construct(db, tx_info, construct_params):
     lock_scripts = [utxo["script_pub_key"] for utxo in selected_utxos]
     tx = Transaction(inputs, outputs + change_outputs)
     unsigned_tx_hex = tx.serialize()
+    adjusted_vsize, virtual_size, sigops_count = size_info
 
     return {
         "rawtransaction": unsigned_tx_hex,
@@ -765,6 +822,11 @@ def construct(db, tx_info, construct_params):
         "btc_fee": btc_in - btc_out - btc_change,
         "data": config.PREFIX + data if data else None,
         "lock_scripts": lock_scripts,
+        "signed_tx_estimated_size": {
+            "vsize": virtual_size,
+            "adjusted_vsize": adjusted_vsize,
+            "sigops_count": sigops_count,
+        },
     }
 
 

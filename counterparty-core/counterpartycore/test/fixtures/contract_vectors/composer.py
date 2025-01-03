@@ -2,7 +2,7 @@ import binascii
 
 from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress
 from bitcoinutils.script import Script, b_to_h
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.transactions import TxInput, TxOutput
 
 from counterpartycore.lib import config, exceptions
 
@@ -874,118 +874,6 @@ COMPOSER_VECTOR = {
                     TxInput(UTXO_3.split(":")[0], int(UTXO_3.split(":")[1])),
                 ],
             }
-        ],
-        "get_needed_fee": [
-            {
-                "in": (
-                    Transaction(
-                        [
-                            TxInput(UTXO_1.split(":")[0], int(UTXO_1.split(":")[1])),
-                            TxInput(UTXO_2.split(":")[0], int(UTXO_2.split(":")[1])),
-                            TxInput(UTXO_3.split(":")[0], int(UTXO_3.split(":")[1])),
-                        ],
-                        [
-                            TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
-                            TxOutput(
-                                config.DEFAULT_MULTISIG_DUST_SIZE,
-                                Script(
-                                    [
-                                        1,
-                                        MULTISIG_PAIRS[0][0],
-                                        MULTISIG_PAIRS[0][1],
-                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
-                                        3,
-                                        "OP_CHECKMULTISIG",
-                                    ]
-                                ),
-                            ),
-                            TxOutput(
-                                config.DEFAULT_MULTISIG_DUST_SIZE,
-                                Script(
-                                    [
-                                        1,
-                                        MULTISIG_PAIRS[1][0],
-                                        MULTISIG_PAIRS[1][1],
-                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
-                                        3,
-                                        "OP_CHECKMULTISIG",
-                                    ]
-                                ),
-                            ),
-                            TxOutput(
-                                config.DEFAULT_MULTISIG_DUST_SIZE,
-                                Script(
-                                    [
-                                        1,
-                                        MULTISIG_PAIRS[2][0],
-                                        MULTISIG_PAIRS[2][1],
-                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
-                                        3,
-                                        "OP_CHECKMULTISIG",
-                                    ]
-                                ),
-                            ),
-                        ],
-                    ),
-                    3,
-                ),
-                "out": 1527,
-            },
-            {
-                "in": (
-                    Transaction(
-                        [
-                            TxInput(UTXO_1.split(":")[0], int(UTXO_1.split(":")[1])),
-                            TxInput(UTXO_2.split(":")[0], int(UTXO_2.split(":")[1])),
-                            TxInput(UTXO_3.split(":")[0], int(UTXO_3.split(":")[1])),
-                        ],
-                        [
-                            TxOutput(9999, P2pkhAddress(ADDR[0]).to_script_pub_key()),
-                            TxOutput(
-                                config.DEFAULT_MULTISIG_DUST_SIZE,
-                                Script(
-                                    [
-                                        1,
-                                        MULTISIG_PAIRS[0][0],
-                                        MULTISIG_PAIRS[0][1],
-                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
-                                        3,
-                                        "OP_CHECKMULTISIG",
-                                    ]
-                                ),
-                            ),
-                            TxOutput(
-                                config.DEFAULT_MULTISIG_DUST_SIZE,
-                                Script(
-                                    [
-                                        1,
-                                        MULTISIG_PAIRS[1][0],
-                                        MULTISIG_PAIRS[1][1],
-                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
-                                        3,
-                                        "OP_CHECKMULTISIG",
-                                    ]
-                                ),
-                            ),
-                            TxOutput(
-                                config.DEFAULT_MULTISIG_DUST_SIZE,
-                                Script(
-                                    [
-                                        1,
-                                        MULTISIG_PAIRS[2][0],
-                                        MULTISIG_PAIRS[2][1],
-                                        DEFAULT_PARAMS["pubkey"][ADDR[0]],
-                                        3,
-                                        "OP_CHECKMULTISIG",
-                                    ]
-                                ),
-                            ),
-                        ],
-                    ),
-                    6,
-                ),
-                "out": 3054,
-            },
         ],
         "prepare_fee_parameters": [
             {"in": ({"exact_fee": 1000},), "out": (1000, None, None)},
