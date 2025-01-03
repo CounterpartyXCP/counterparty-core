@@ -464,6 +464,7 @@ def compose_attach(
     address: str,
     asset: str,
     quantity: int,
+    utxo_value: int = None,
     destination_vout: str = None,
     **construct_params,
 ):
@@ -473,12 +474,14 @@ def compose_attach(
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
     :param asset: The asset or subasset to attach (e.g. XCP)
     :param quantity: The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)
+    :param utxo_value: The value of the UTXO to attach the assets to (in satoshis, hence integer)
     :param destination_vout: The vout of the destination output
     """
     params = {
         "source": address,
         "asset": asset,
         "quantity": quantity,
+        "utxo_value": utxo_value,
         "destination_vout": destination_vout,
     }
     return composer.compose_transaction(db, "attach", params, construct_params)
@@ -509,15 +512,17 @@ def get_attach_estimate_xcp_fee(db):
     return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
 
 
-def compose_movetoutxo(db, utxo: str, destination: str, **construct_params):
+def compose_movetoutxo(db, utxo: str, destination: str, utxo_value: int = None, **construct_params):
     """
     Composes a transaction like a send but for moving from one UTXO to another, with the destination is specified as an address.
     :param utxo: The utxo from which the assets are moved (e.g. $UTXO_WITH_BALANCE)
     :param destination: the address for which the destination utxo will be created (e.g. $ADDRESS_1)
+    :param utxo_value: The value of the UTXO to move the assets from (in satoshis, hence integer)
     """
     params = {
         "source": utxo,
         "destination": destination,
+        "utxo_value": utxo_value,
     }
     return composer.compose_transaction(db, "move", params, construct_params)
 

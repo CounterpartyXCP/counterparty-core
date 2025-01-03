@@ -643,6 +643,9 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
         return encoding
 
+    def convert_to_psbt(tx_hex):
+        return tx_hex
+
     monkeypatch.setattr("counterpartycore.lib.arc4.init_arc4", init_arc4)
     monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
@@ -663,6 +666,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.backend.bitcoind.getrawtransaction_batch",
         mocked_getrawtransaction_batch,
     )
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.convert_to_psbt", convert_to_psbt)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.electrs.get_history",
         mocked_get_history,

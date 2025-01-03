@@ -1380,6 +1380,148 @@ COMPOSER_VECTOR = {
                     "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000386a362a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa42b8b188e8115cea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
                 },
             },
+            {
+                "in": (
+                    "attach",
+                    {
+                        "source": ADDR[0],
+                        "asset": "XCP",
+                        "quantity": 10,
+                    },
+                    {"verbose": True},
+                ),
+                "out": {
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0310270000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a102a504df746f83442006594fdd8ed42060d35ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "btc_in": 199909140,
+                    "btc_out": 10000,
+                    "btc_change": 199898381,
+                    "btc_fee": 759,
+                    "data": b"TESTXXXXeXCP|10|",
+                    "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "signed_tx_estimated_size": {
+                        "vsize": 253,
+                        "adjusted_vsize": 253,
+                        "sigops_count": 8,
+                    },
+                    "psbt": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0310270000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a102a504df746f83442006594fdd8ed42060d35ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "params": {
+                        "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "asset": "XCP",
+                        "quantity": 10,
+                        "utxo_value": None,
+                        "destination_vout": None,
+                        "skip_validation": False,
+                    },
+                    "name": "attach",
+                },
+            },
+            {
+                "in": (
+                    "attach",
+                    {
+                        "source": ADDR[0],
+                        "asset": "XCP",
+                        "quantity": 10,
+                        "utxo_value": 666,
+                    },
+                    {"verbose": True},
+                ),
+                "out": {
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a102a504df746f83442006594fdd8ed42068359ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "btc_in": 199909140,
+                    "btc_out": 666,
+                    "btc_change": 199907715,
+                    "btc_fee": 759,
+                    "data": b"TESTXXXXeXCP|10|",
+                    "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "signed_tx_estimated_size": {
+                        "vsize": 253,
+                        "adjusted_vsize": 253,
+                        "sigops_count": 8,
+                    },
+                    "psbt": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a102a504df746f83442006594fdd8ed42068359ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "params": {
+                        "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                        "asset": "XCP",
+                        "quantity": 10,
+                        "utxo_value": 666,
+                        "destination_vout": None,
+                        "skip_validation": False,
+                    },
+                    "name": "attach",
+                },
+            },
+            {
+                "in": (
+                    "move",
+                    {
+                        "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
+                        "destination": ADDR[1],
+                    },
+                    {
+                        "verbose": True,
+                        "inputs_set": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0:999999999:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                    },
+                ),
+                "out": {
+                    "rawtransaction": "0200000001a0818e00bca3fc97d89cc33916e370a62e4ba2c780ee086ed7c3711adf6209ea0000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac49a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "btc_in": 999999999,
+                    "btc_out": 10000,
+                    "btc_change": 999989321,
+                    "btc_fee": 678,
+                    "data": None,
+                    "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "signed_tx_estimated_size": {
+                        "vsize": 226,
+                        "adjusted_vsize": 226,
+                        "sigops_count": 8,
+                    },
+                    "psbt": "0200000001a0818e00bca3fc97d89cc33916e370a62e4ba2c780ee086ed7c3711adf6209ea0000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac49a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "params": {
+                        "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
+                        "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                        "utxo_value": None,
+                        "skip_validation": False,
+                    },
+                    "name": "move",
+                },
+            },
+            {
+                "in": (
+                    "move",
+                    {
+                        "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
+                        "destination": ADDR[1],
+                        "utxo_value": 666,
+                    },
+                    {
+                        "verbose": True,
+                        "inputs_set": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0:999999999:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                    },
+                ),
+                "out": {
+                    "rawtransaction": "0200000001a0818e00bca3fc97d89cc33916e370a62e4ba2c780ee086ed7c3711adf6209ea0000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acbfc49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "btc_in": 999999999,
+                    "btc_out": 666,
+                    "btc_change": 999998655,
+                    "btc_fee": 678,
+                    "data": None,
+                    "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "signed_tx_estimated_size": {
+                        "vsize": 226,
+                        "adjusted_vsize": 226,
+                        "sigops_count": 8,
+                    },
+                    "psbt": "0200000001a0818e00bca3fc97d89cc33916e370a62e4ba2c780ee086ed7c3711adf6209ea0000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acbfc49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "params": {
+                        "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
+                        "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                        "utxo_value": 666,
+                        "skip_validation": False,
+                    },
+                    "name": "move",
+                },
+            },
         ],
     },
 }

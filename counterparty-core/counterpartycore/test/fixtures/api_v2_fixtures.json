@@ -16490,6 +16490,13 @@
                         "description": "The quantity of the asset to attach (in satoshis, hence integer) (e.g. 1000)"
                     },
                     {
+                        "name": "utxo_value",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The value of the UTXO to attach the assets to (in satoshis, hence integer)"
+                    },
+                    {
                         "name": "destination_vout",
                         "default": null,
                         "required": false,
@@ -16966,6 +16973,13 @@
                         "required": true,
                         "type": "str",
                         "description": "the address for which the destination utxo will be created (e.g. $ADDRESS_1)"
+                    },
+                    {
+                        "name": "utxo_value",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The value of the UTXO to move the assets from (in satoshis, hence integer)"
                     },
                     {
                         "name": "encoding",

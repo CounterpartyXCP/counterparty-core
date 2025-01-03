@@ -431,8 +431,6 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")
             regtest_node_thread.node.test_transaction_chaining()
-            print("Testing fee calculation...")
-            regtest_node_thread.node.test_fee_calculation()
             print("Tesing asset conservation checking...")
             regtest_node_thread.node.test_asset_conservation()
             print("Tesing reparse...")
@@ -443,6 +441,8 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             regtest_node_thread.node.test_empty_ledger_hash()
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
+            print("Testing fee calculation...")
+            regtest_node_thread.node.test_fee_calculation()
     except KeyboardInterrupt:
         print(regtest_node_thread.node.server_out.getvalue())
         pass

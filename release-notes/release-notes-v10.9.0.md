@@ -9,6 +9,7 @@
 
 - Replacement of `transaction.py` and `transaction_helper/*` with `composer.py`
 - No more dependency on Addrindexrs, prioritizing the use of Bitcoin Core to retrieve UTXOs or search for a public key, and then with Electr if it is configured.
+- Does not endlessly retry RPC calls to Bitcoin Core that return an error but immediately returns the error to the user
 - Use of the `bitcoin-utils` library to generate transactions
 - API backward compatible with the old composer
 - Addition of the following parameters:
@@ -24,6 +25,7 @@
 - With `verbose=true`, the composer also returns a `lock_scripts` field that contains the `script_pubkey` of the UTXOs used by the transaction.
 - Composed transactions use a version byte 2 instead of version 1
 - Error messages for UTXOs now contain the reason for the error in parentheses: `invalid UTXOs: <utxo(s)> (<reason>)`
+- Fix fee calculation for Segwit transaction. Use "Adjusted VSize" to calculate fee.
 
 
 ## Protocol Changes
@@ -56,6 +58,7 @@
 - Add parameter `exclude_with_oracle` for get dispensers routes
 - Add `send_type` field in `sends` table
 - Use `satoshirate_normalized` and `give_quantity_normalized` to calculate `price_normalized`
+- Add a parameter `utxo_value` to the `attach.compose()` and `move.compose()` functions
 
 ## CLI
 

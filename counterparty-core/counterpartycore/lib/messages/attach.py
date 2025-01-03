@@ -78,7 +78,9 @@ def validate(db, source, asset, quantity, destination_vout=None, block_index=Non
     return problems
 
 
-def compose(db, source, asset, quantity, destination_vout=None, skip_validation=False):
+def compose(
+    db, source, asset, quantity, utxo_value=None, destination_vout=None, skip_validation=False
+):
     problems = validate(db, source, asset, quantity, destination_vout)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -103,8 +105,14 @@ def compose(db, source, asset, quantity, destination_vout=None, skip_validation=
     # build a transaction with the destination UTXO
     destinations = []
     if destination_vout is None:
+        value = config.DEFAULT_UTXO_VALUE
+        if utxo_value is not None:
+            try:
+                value = int(utxo_value)
+            except ValueError as e:
+                raise exceptions.ComposeError(["utxo_value must be an integer"]) from e
         # else we use the source address as the destination
-        destinations.append((source, config.DEFAULT_UTXO_VALUE))
+        destinations.append((source, value))
 
     return (source, destinations, data)
 
