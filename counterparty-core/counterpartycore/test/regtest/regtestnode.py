@@ -924,7 +924,12 @@ class RegtestNode:
 
         print("Fees: ", unsigned_tx["btc_fee"])
         print("VSize After signing: ", transaction3.get_vsize())
-        assert unsigned_tx["btc_fee"] == transaction3.get_vsize() * 2
+        print("Estimate Size After signing: ", unsigned_tx["signed_tx_estimated_size"])
+        size = max(
+            unsigned_tx["signed_tx_estimated_size"]["vsize"],
+            unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"],
+        )
+        assert unsigned_tx["btc_fee"] == size * 2
 
         legacy_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "legacy").strip()
         self.send_transaction(
@@ -962,11 +967,12 @@ class RegtestNode:
 
         print("Fees: ", unsigned_tx["btc_fee"])
         print("VSize After signing: ", transaction4.get_vsize())
-        assert (
-            transaction4.get_vsize() * 3 - 3
-            <= unsigned_tx["btc_fee"]
-            <= transaction4.get_vsize() * 3 + 3
+        print("Estimate Size After signing: ", unsigned_tx["signed_tx_estimated_size"])
+        size = max(
+            unsigned_tx["signed_tx_estimated_size"]["vsize"],
+            unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"],
         )
+        assert size * 3 - 3 <= unsigned_tx["btc_fee"] <= size * 3 + 3
 
 
 class RegtestNodeThread(threading.Thread):

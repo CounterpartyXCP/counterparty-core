@@ -154,7 +154,7 @@ def test_new_get_balances_by_address():
             "asset": "DIVISIBLE",
             "asset_longname": None,
             "quantity": 1,
-            "utxo": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600:0",
+            "utxo": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         },
         {
@@ -170,7 +170,7 @@ def test_new_get_balances_by_address():
             "asset": "XCP",
             "asset_longname": None,
             "quantity": 100,
-            "utxo": "0a84952a231b0044500b309ce0ccc0424f89279442aa625012c444115b69db25:0",
+            "utxo": "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         },
         {
@@ -325,7 +325,7 @@ def test_new_get_balances_by_asset():
         },
         {
             "address": None,
-            "utxo": "0a84952a231b0044500b309ce0ccc0424f89279442aa625012c444115b69db25:0",
+            "utxo": "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0",
             "utxo_address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
             "asset_longname": None,
@@ -452,8 +452,8 @@ def test_new_get_order_info():
         "expire_index": 312010,
         "fee_required": 900000,
         "fee_required_remaining": 900000,
-        "fee_provided": 597,
-        "fee_provided_remaining": 597,
+        "fee_provided": 1260,
+        "fee_provided_remaining": 1260,
         "status": "open",
         "get_price": 100.0,
         "give_price": 0.01,

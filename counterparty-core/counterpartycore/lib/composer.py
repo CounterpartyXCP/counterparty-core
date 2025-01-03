@@ -752,7 +752,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         # else try with more inputs
         input_count += 1
 
-    return selected_utxos, btc_in, change_outputs, size_info
+    return selected_utxos, btc_in, change_outputs
 
 
 def get_default_args(func):
@@ -798,7 +798,7 @@ def construct(db, tx_info, construct_params):
     outputs = prepare_outputs(source, destinations, data, unspent_list, construct_params)
 
     # prepare inputs and change
-    selected_utxos, btc_in, change_outputs, size_info = prepare_inputs_and_change(
+    selected_utxos, btc_in, change_outputs = prepare_inputs_and_change(
         db, source, outputs, unspent_list, construct_params
     )
     inputs = utxos_to_txins(selected_utxos)
@@ -812,7 +812,7 @@ def construct(db, tx_info, construct_params):
     lock_scripts = [utxo["script_pub_key"] for utxo in selected_utxos]
     tx = Transaction(inputs, outputs + change_outputs)
     unsigned_tx_hex = tx.serialize()
-    adjusted_vsize, virtual_size, sigops_count = size_info
+    adjusted_vsize, virtual_size, sigops_count = get_size_info(tx, selected_utxos)
 
     return {
         "rawtransaction": unsigned_tx_hex,

@@ -652,7 +652,7 @@ COMPOSER_VECTOR = {
         ],
         "utxo_to_address": [
             {
-                "in": ("d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600:0",),
+                "in": ("ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",),
                 "out": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             },
             {
@@ -722,7 +722,7 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [
                         {
-                            "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                            "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
                             "vout": 0,
                         }
                     ],
@@ -730,7 +730,7 @@ COMPOSER_VECTOR = {
                 ),
                 "error": (
                     exceptions.ComposeError,
-                    "invalid UTXOs: d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600:0 (use `use_utxos_with_balances=True` to include them or `exclude_utxos_with_balances=True` to exclude them silently)",
+                    "invalid UTXOs: ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0 (use `use_utxos_with_balances=True` to include them or `exclude_utxos_with_balances=True` to exclude them silently)",
                 ),
             },
             {
@@ -738,7 +738,7 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [
                         {
-                            "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                            "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
                             "vout": 0,
                         }
                     ],
@@ -751,7 +751,7 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [
                         {
-                            "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                            "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
                             "vout": 0,
                         },
                         {
@@ -773,7 +773,7 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [
                         {
-                            "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                            "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
                             "vout": 0,
                         }
                     ],
@@ -781,7 +781,7 @@ COMPOSER_VECTOR = {
                 ),
                 "out": [
                     {
-                        "txid": "d4be9b18026da66d35949ca0a6944e8404e9e9787c05abc5f37bbf5afaabd600",
+                        "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
                         "vout": 0,
                     }
                 ],
@@ -1028,7 +1028,7 @@ COMPOSER_VECTOR = {
                         }
                     ],
                     199909140,
-                    [TxOutput(199909140 - 666 - 357, P2pkhAddress(ADDR[0]).to_script_pub_key())],
+                    [TxOutput(199909140 - 666 - 678, P2pkhAddress(ADDR[0]).to_script_pub_key())],
                 ),
             },
             {
@@ -1122,13 +1122,18 @@ COMPOSER_VECTOR = {
             {
                 "in": ((ADDR[0], [(ADDR[1], 666)], b"Hello, World!"), {}),
                 "out": {
-                    "btc_change": 199908021,
-                    "btc_fee": 453,
+                    "btc_change": 199907700,
+                    "btc_fee": 774,
                     "btc_in": 199909140,
                     "btc_out": 666,
                     "data": b"TESTXXXXHello, World!",
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
-                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bfb55aea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf7459ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "signed_tx_estimated_size": {
+                        "adjusted_vsize": 258,
+                        "sigops_count": 8,
+                        "vsize": 258,
+                    },
                 },
             },
             {
@@ -1141,6 +1146,11 @@ COMPOSER_VECTOR = {
                     "data": b"TESTXXXXHello, World!",
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                     "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "signed_tx_estimated_size": {
+                        "adjusted_vsize": 258,
+                        "sigops_count": 8,
+                        "vsize": 258,
+                    },
                 },
             },
         ],
@@ -1298,7 +1308,7 @@ COMPOSER_VECTOR = {
                     {},
                 ),
                 "out": {
-                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000000000001e6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aee7a3310185bea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000000000001e6a1c2a504df746f83442653dd7ada4dc727a030865749e9fba5aee7a3310d759ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
                 },
             },
             {
@@ -1311,7 +1321,7 @@ COMPOSER_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
-                    "rawtransaction": "0200000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce40000000000ffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac1bd44302000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000"
+                    "rawtransaction": "0200000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce40000000000ffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88acdad24302000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000"
                 },
             },
             {
@@ -1328,7 +1338,7 @@ COMPOSER_VECTOR = {
                     {"encoding": "multisig"},
                 ),
                 "out": {
-                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02e8030000000000006951210358415bf04af834423d3dd7adb2dc727a03086e897d9fba5aee7a331919e487d6210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed758ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02e8030000000000006951210358415bf04af834423d3dd7adb2dc727a03086e897d9fba5aee7a331919e487d6210254da540fb2663b75e6c3cc61190ad0c2431643bab28ced783cd94079bbe72447210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4056ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
                 },
             },
             {
@@ -1346,7 +1356,7 @@ COMPOSER_VECTOR = {
                     {"encoding": "multisig", "fee_provided": DP["fee_provided"]},
                 ),
                 "out": {
-                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02e8030000000000006951210348415bf04af834423d3dd7adaedc727a030865759e9fba5aee78c9ea71e5870f210354da540fb2673b75e6c3c994f80ad0c8431643bab28ced783cd94079bbe72445210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed758ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff02e8030000000000006951210348415bf04af834423d3dd7adaedc727a030865759e9fba5aee78c9ea71e5870f210354da540fb2673b75e6c3c994f80ad0c8431643bab28ced783cd94079bbe72445210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae4056ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                     "warnings": [
                         "The `fee_provided` parameter is deprecated, use `max_fee` instead"
                     ],
@@ -1367,7 +1377,7 @@ COMPOSER_VECTOR = {
                     {},
                 ),
                 "out": {
-                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000386a362a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa42b8b188e8525dea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+                    "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000386a362a504df746f83442653dd7afa4dc727a030865749e9fba5aec80c39a9e68edbc79e78ed45723c1072c38aededa458f95fa42b8b188e8115cea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
                 },
             },
         ],
