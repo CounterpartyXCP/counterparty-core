@@ -1,4 +1,5 @@
 from ..params import (
+    ADDR,
     DP,
 )
 
@@ -53,7 +54,9 @@ MOVE_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "status": "valid",
                             "source": UTXO_2,
+                            "source_address": ADDR[0],
                             "destination": UTXO_3,
+                            "destination_address": ADDR[0],
                             "asset": "XCP",
                             "quantity": 100,
                             "fee_paid": 0,
@@ -105,7 +108,9 @@ MOVE_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "status": "valid",
                             "source": UTXO_3,
+                            "source_address": ADDR[0],
                             "destination": UTXO_1,
+                            "destination_address": ADDR[0],
                             "asset": "DIVISIBLE",
                             "quantity": 1,
                             "fee_paid": 0,

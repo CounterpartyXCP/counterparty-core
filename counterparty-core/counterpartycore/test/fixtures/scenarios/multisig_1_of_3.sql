@@ -1520,14 +1520,14 @@ CREATE TABLE "sends"(
                               asset TEXT,
                               quantity INTEGER,
                               status TEXT,
-                              msg_index INTEGER DEFAULT 0, memo BLOB, fee_paid INTEGER DEFAULT 0, send_type TEXT,
+                              msg_index INTEGER DEFAULT 0, memo BLOB, fee_paid INTEGER DEFAULT 0, send_type TEXT, source_address TEXT, destination_address TEXT,
                               PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL);
-INSERT INTO sends VALUES(2,'8a6c8cf39cf51b8993783d69c86fefe891ad4e664aa338b071f385baac18d166',310001,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','XCP',50000000,'valid',0,NULL,0,'send');
-INSERT INTO sends VALUES(8,'b90742692d5fc29e135aba33fc5a5a0b762c45beb2468db4722df2984352d935',310007,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBB',4000000,'valid',0,NULL,0,'send');
-INSERT INTO sends VALUES(9,'395496521d524b4220d2094684c4a1a000452ed47c23d26abb447ed8e23f1905',310008,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',526,'valid',0,NULL,0,'send');
-INSERT INTO sends VALUES(24,'7300352646df906a09ee31075a6a26b7f81ca1a5804ead10cb2d6ad20b017667',310023,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',10000,'valid',0,NULL,0,'send');
+INSERT INTO sends VALUES(2,'8a6c8cf39cf51b8993783d69c86fefe891ad4e664aa338b071f385baac18d166',310001,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','XCP',50000000,'valid',0,NULL,0,'send',NULL,NULL);
+INSERT INTO sends VALUES(8,'b90742692d5fc29e135aba33fc5a5a0b762c45beb2468db4722df2984352d935',310007,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBB',4000000,'valid',0,NULL,0,'send',NULL,NULL);
+INSERT INTO sends VALUES(9,'395496521d524b4220d2094684c4a1a000452ed47c23d26abb447ed8e23f1905',310008,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',526,'valid',0,NULL,0,'send',NULL,NULL);
+INSERT INTO sends VALUES(24,'7300352646df906a09ee31075a6a26b7f81ca1a5804ead10cb2d6ad20b017667',310023,'1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_3','1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mqPCfvqTfYctXMUfmniXeG2nyaN8w6tPmj_3','BBBC',10000,'valid',0,NULL,0,'send',NULL,NULL);
 -- Triggers and indices on  sends
 CREATE TRIGGER block_update_sends
             BEFORE UPDATE ON sends BEGIN
