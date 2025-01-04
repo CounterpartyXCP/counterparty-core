@@ -1,4 +1,6 @@
 Initializing database...
+Updating `transaction_type` column in `transactions` table...
+Updated 0 transactions in 0.00 seconds
 Adding `send_type` column to `sends` table
 Added `send_type` column to `sends` table in 0.00 seconds
 Adding `source_address` and `destination_address` column to `sends` table
