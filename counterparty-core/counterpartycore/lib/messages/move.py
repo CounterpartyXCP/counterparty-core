@@ -38,7 +38,7 @@ def move_balances(db, tx, source, destination):
         if balance["quantity"] == 0:
             continue
         # debit asset from source
-        ledger.debit(
+        source_address = ledger.debit(
             db,
             source,
             balance["asset"],
@@ -48,7 +48,7 @@ def move_balances(db, tx, source, destination):
             event=tx["tx_hash"],
         )
         # credit asset to destination
-        ledger.credit(
+        destination_address = ledger.credit(
             db,
             destination,
             balance["asset"],
@@ -64,7 +64,9 @@ def move_balances(db, tx, source, destination):
             "block_index": tx["block_index"],
             "status": "valid",
             "source": source,
+            "source_address": source_address,
             "destination": destination,
+            "destination_address": destination_address,
             "asset": balance["asset"],
             "quantity": balance["quantity"],
             "msg_index": msg_index,

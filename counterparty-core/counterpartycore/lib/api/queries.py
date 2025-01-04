@@ -2110,7 +2110,15 @@ def get_sends_by_address(
     return select_rows(
         ledger_db,
         "sends",
-        where=prepare_sends_where(send_type, [{"source": address}, {"destination": address}]),
+        where=prepare_sends_where(
+            send_type,
+            [
+                {"source": address},
+                {"source_address": address},
+                {"destination": address},
+                {"destination_address": address},
+            ],
+        ),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2142,7 +2150,9 @@ def get_sends_by_address_and_asset(
             send_type,
             [
                 {"source": address, "asset": asset.upper()},
+                {"source_address": address, "asset": asset.upper()},
                 {"destination": address, "asset": asset.upper()},
+                {"destination_address": address, "asset": asset.upper()},
             ],
         ),
         last_cursor=cursor,

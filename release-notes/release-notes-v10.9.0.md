@@ -39,6 +39,7 @@
 - Fix `assets_info.supply` field
 - Fix `verbose=True` when `give_asset` or `get_asset` contain an `asset_longname`
 - Don't put null values in API cache
+- Fix Get Sends By Address endpoint, return also `detach` and `move`
 
 ## Codebase
 
@@ -59,6 +60,7 @@
 - Add `send_type` field in `sends` table
 - Use `satoshirate_normalized` and `give_quantity_normalized` to calculate `price_normalized`
 - Add a parameter `utxo_value` to the `attach.compose()` and `move.compose()` functions
+- Add `source_address` and `destination_address` in `sends` table
 
 ## CLI
 

@@ -97,7 +97,7 @@ def detach_assets(db, tx, source, destination=None):
         if detach_destination is None:
             detach_destination = balance["utxo_address"]
 
-        ledger.debit(
+        source_address = ledger.debit(
             db,
             source,
             balance["asset"],
@@ -122,6 +122,7 @@ def detach_assets(db, tx, source, destination=None):
             "block_index": tx["block_index"],
             "status": "valid",
             "source": source,
+            "source_address": source_address,
             "destination": detach_destination,
             "asset": balance["asset"],
             "quantity": balance["quantity"],
