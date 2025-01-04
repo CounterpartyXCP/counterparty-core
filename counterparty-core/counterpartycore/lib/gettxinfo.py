@@ -761,9 +761,7 @@ def get_utxos_info(db, decoded_tx):
 
 def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
     if util.enabled("utxo_support", block_index=block_index) and not util.PARSING_MEMPOOL:
-        transaction_type = message_type.get_transaction_type(
-            data, destination, utxos_info, block_index
-        )
+        transaction_type = message_type.get_transaction_type(data, destination, block_index)
         if utxos_info[0] != "":
             # always remove from cache inputs with balance
             ledger.UTXOBalancesCache(db).remove_balance(utxos_info[0])

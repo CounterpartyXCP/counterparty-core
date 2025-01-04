@@ -44,7 +44,7 @@ def unpack(packed_data, block_index=None):
     return (message_type_id, message_remainder)
 
 
-def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_index: int):
+def get_transaction_type(data: bytes, destination: str, block_index: int):
     TRANSACTION_TYPE_BY_ID = {
         messages.bet.ID: "bet",
         messages.broadcast.ID: "broadcast",
@@ -75,13 +75,9 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
     if not data:
         if destination == config.UNSPENDABLE and block_index <= config.BURN_END:
             return "burn"
-        if block_index >= util.get_change_block_index("utxo_support") and utxos_info[0] != "":
+        if block_index >= util.get_change_block_index("utxo_support"):
             return "utxomove"
-        if (
-            destination != config.UNSPENDABLE
-            and block_index >= util.get_change_block_index("dispensers")
-            and block_index < util.get_change_block_index("disable_vanilla_btc_dispense")
-        ):
+        if block_index >= util.get_change_block_index("dispensers"):
             return "dispense"
         return "unknown"
 

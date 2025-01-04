@@ -429,24 +429,22 @@ def parse_block(
     return None, None, None
 
 
-def update_transaction_type(db, fix_utxo_move=False):
+def update_transaction_type(db):
     start = time.time()
     logger.info("Updating `transaction_type` column in `transactions` table...")
 
     with db:
         cursor = db.cursor()
-        if not fix_utxo_move:
-            cursor.execute("ALTER TABLE transactions ADD COLUMN transaction_type TEXT")
-        sql = "SELECT tx_index, destination, block_index, data, utxos_info, supported FROM transactions"
-        if fix_utxo_move:
-            sql += " WHERE transaction_type = 'utxomove'"
-        cursor.execute(sql)
+        cursor.execute("ALTER TABLE transactions ADD COLUMN transaction_type TEXT")
+        cursor.execute(
+            "SELECT tx_index, destination, block_index, data, supported FROM transactions"
+        )
         counter = 0
         for tx in cursor.fetchall():
             transaction_type = "unknown"
             if tx["supported"]:
                 transaction_type = message_type.get_transaction_type(
-                    tx["data"], tx["destination"], tx["utxos_info"].split(" "), tx["block_index"]
+                    tx["data"], tx["destination"], tx["block_index"]
                 )
 
             cursor.execute(
@@ -586,11 +584,6 @@ def initialise(db):
 
     if "transaction_type" not in transactions_columns:
         update_transaction_type(db)
-
-    if database.get_config_value(db, "FIX_TRANSACTION_TYPE_1") is None:
-        with db:
-            update_transaction_type(db, fix_utxo_move=True)
-            database.set_config_value(db, "FIX_TRANSACTION_TYPE_1", True)
 
     database.create_indexes(
         cursor,
@@ -1062,9 +1055,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             "fee": fee,
             "data": data,
             "utxos_info": " ".join(utxos_info),
-            "transaction_type": message_type.get_transaction_type(
-                data, destination, utxos_info, block_index
-            ),
+            "transaction_type": message_type.get_transaction_type(data, destination, block_index),
         }
         ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
 
