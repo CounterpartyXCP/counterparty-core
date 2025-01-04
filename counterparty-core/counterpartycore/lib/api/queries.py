@@ -1178,13 +1178,21 @@ def prepare_sends_where(send_type: SendType, other_conditions=None):
     send_type_list = send_type.split(",")
     for type_send in send_type_list:
         if type_send == "all":
-            where = [other_conditions] if other_conditions else []
+            if isinstance(other_conditions, dict):
+                where = [other_conditions]
+            elif isinstance(other_conditions, list):
+                where = other_conditions
             break
         if type_send in typing.get_args(SendType):
             where_send = {"send_type": type_send}
             if other_conditions:
-                where_send.update(other_conditions)
-            if where_send:
+                if isinstance(other_conditions, dict):
+                    where_send.update(other_conditions)
+                    where.append(where_send)
+                elif isinstance(other_conditions, list):
+                    for other_condition in other_conditions:
+                        where.append(other_condition | where_send)
+            else:
                 where.append(where_send)
     return where
 
@@ -2101,7 +2109,15 @@ def get_sends_by_address(
     return select_rows(
         ledger_db,
         "sends",
-        where=prepare_sends_where(send_type, {"source": address}),
+        where=prepare_sends_where(
+            send_type,
+            [
+                {"source": address},
+                {"source_address": address},
+                {"destination": address},
+                {"destination_address": address},
+            ],
+        ),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2129,7 +2145,15 @@ def get_sends_by_address_and_asset(
     return select_rows(
         ledger_db,
         "sends",
-        where=prepare_sends_where(send_type, {"source": address, "asset": asset.upper()}),
+        where=prepare_sends_where(
+            send_type,
+            [
+                {"source": address, "asset": asset.upper()},
+                {"source_address": address, "asset": asset.upper()},
+                {"destination": address, "asset": asset.upper()},
+                {"destination_address": address, "asset": asset.upper()},
+            ],
+        ),
         last_cursor=cursor,
         limit=limit,
         offset=offset,

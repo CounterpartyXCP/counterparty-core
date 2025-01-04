@@ -97,63 +97,91 @@ def initialise(db):
         cursor.execute("""ALTER TABLE sends ADD COLUMN fee_paid INTEGER DEFAULT 0""")
 
     if "send_type" not in columns:
-        logger.info("Adding `send_type` column to sends table")
+        logger.info("Adding `send_type` column to `sends` table")
         start_time = time.time()
-        database.unlock_update(db, "sends")
-        cursor.execute("""ALTER TABLE sends ADD COLUMN send_type TEXT""")
-        utxo_support_start = util.get_change_block_index("utxo_support")
-        cursor.execute(
-            """
-            UPDATE sends SET send_type = ? WHERE block_index < ?
-        """,
-            (
-                "send",
-                utxo_support_start,
-            ),
-        )
-        cursor.execute(
-            """
-            UPDATE sends SET send_type = ? WHERE block_index >= ?
-            AND source NOT LIKE '%:%' AND destination NOT LIKE '%:%'
-        """,
-            (
-                "send",
-                utxo_support_start,
-            ),
-        )
-        cursor.execute(
-            """
-            UPDATE sends SET send_type = ? WHERE block_index >= ?
-            AND source NOT LIKE '%:%' AND destination LIKE '%:%'
-        """,
-            (
-                "attach",
-                utxo_support_start,
-            ),
-        )
-        cursor.execute(
-            """
-            UPDATE sends SET send_type = ? WHERE block_index >= ?
-            AND source LIKE '%:%' AND destination NOT LIKE '%:%'
-        """,
-            (
-                "detach",
-                utxo_support_start,
-            ),
-        )
-        cursor.execute(
-            """
-            UPDATE sends SET send_type = ? WHERE block_index >= ?
-            AND source LIKE '%:%' AND destination LIKE '%:%'
-        """,
-            (
-                "move",
-                utxo_support_start,
-            ),
-        )
-        database.lock_update(db, "sends")
+        with db:
+            database.unlock_update(db, "sends")
+            cursor.execute("""ALTER TABLE sends ADD COLUMN send_type TEXT""")
+            utxo_support_start = util.get_change_block_index("utxo_support")
+            cursor.execute(
+                """
+                UPDATE sends SET send_type = ? WHERE block_index < ?
+            """,
+                (
+                    "send",
+                    utxo_support_start,
+                ),
+            )
+            cursor.execute(
+                """
+                UPDATE sends SET send_type = ? WHERE block_index >= ?
+                AND source NOT LIKE '%:%' AND destination NOT LIKE '%:%'
+            """,
+                (
+                    "send",
+                    utxo_support_start,
+                ),
+            )
+            cursor.execute(
+                """
+                UPDATE sends SET send_type = ? WHERE block_index >= ?
+                AND source NOT LIKE '%:%' AND destination LIKE '%:%'
+            """,
+                (
+                    "attach",
+                    utxo_support_start,
+                ),
+            )
+            cursor.execute(
+                """
+                UPDATE sends SET send_type = ? WHERE block_index >= ?
+                AND source LIKE '%:%' AND destination NOT LIKE '%:%'
+            """,
+                (
+                    "detach",
+                    utxo_support_start,
+                ),
+            )
+            cursor.execute(
+                """
+                UPDATE sends SET send_type = ? WHERE block_index >= ?
+                AND source LIKE '%:%' AND destination LIKE '%:%'
+            """,
+                (
+                    "move",
+                    utxo_support_start,
+                ),
+            )
+            database.lock_update(db, "sends")
         logger.info(
-            f"Added `send_type` column to sends table in {time.time() - start_time:.2f} seconds"
+            f"Added `send_type` column to `sends` table in {time.time() - start_time:.2f} seconds"
+        )
+
+    if "source_address" not in columns:
+        logger.info("Adding `source_address` and `destination_address` column to `sends` table")
+        start_time = time.time()
+        with db:
+            database.unlock_update(db, "sends")
+            cursor.execute("""ALTER TABLE sends ADD COLUMN source_address TEXT""")
+            cursor.execute("""ALTER TABLE sends ADD COLUMN destination_address TEXT""")
+
+            cursor.execute("""
+                UPDATE sends SET source_address = (
+                    SELECT utxo_address FROM balances WHERE balances.utxo = sends.source LIMIT 1
+                )
+                WHERE sends.send_type in ('move', 'detach')
+            """)
+
+            cursor.execute("""
+                UPDATE sends SET destination_address = (
+                    SELECT utxo_address FROM balances WHERE balances.utxo = sends.destination LIMIT 1
+                )
+                WHERE sends.send_type in ('move', 'attach')
+            """)
+
+            database.lock_update(db, "sends")
+        logger.info(
+            f"Added `source_address` and `destination_address` column to `sends` table in {time.time() - start_time:.2f} seconds"
         )
 
     database.create_indexes(

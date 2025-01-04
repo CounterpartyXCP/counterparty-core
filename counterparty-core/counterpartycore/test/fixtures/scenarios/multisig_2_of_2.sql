@@ -1520,14 +1520,14 @@ CREATE TABLE "sends"(
                               asset TEXT,
                               quantity INTEGER,
                               status TEXT,
-                              msg_index INTEGER DEFAULT 0, memo BLOB, fee_paid INTEGER DEFAULT 0, send_type TEXT,
+                              msg_index INTEGER DEFAULT 0, memo BLOB, fee_paid INTEGER DEFAULT 0, send_type TEXT, source_address TEXT, destination_address TEXT,
                               PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL);
-INSERT INTO sends VALUES(2,'60f887a943d695e9e3bb987547e90fc33591adbae5ec460d7dcd7f08d4865d8e',310001,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','XCP',50000000,'valid',0,NULL,0,'send');
-INSERT INTO sends VALUES(8,'ca95510240884b4addda7b42661ffb2a0d1d55af1ee7d0b0b72f50a147e35511',310007,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBB',4000000,'valid',0,NULL,0,'send');
-INSERT INTO sends VALUES(9,'84e5d823ed6f6f4bde5bf8c7dfa67787b50437f71408d3d415999f358b5293ec',310008,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBC',526,'valid',0,NULL,0,'send');
-INSERT INTO sends VALUES(24,'fea7d2052f3b45a60ce9028af93d2a34106fe4f35eb6469cb5d6fbd79a2be49c',310023,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBC',10000,'valid',0,NULL,0,'send');
+INSERT INTO sends VALUES(2,'60f887a943d695e9e3bb987547e90fc33591adbae5ec460d7dcd7f08d4865d8e',310001,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','XCP',50000000,'valid',0,NULL,0,'send',NULL,NULL);
+INSERT INTO sends VALUES(8,'ca95510240884b4addda7b42661ffb2a0d1d55af1ee7d0b0b72f50a147e35511',310007,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBB',4000000,'valid',0,NULL,0,'send',NULL,NULL);
+INSERT INTO sends VALUES(9,'84e5d823ed6f6f4bde5bf8c7dfa67787b50437f71408d3d415999f358b5293ec',310008,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBC',526,'valid',0,NULL,0,'send',NULL,NULL);
+INSERT INTO sends VALUES(24,'fea7d2052f3b45a60ce9028af93d2a34106fe4f35eb6469cb5d6fbd79a2be49c',310023,'2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2','BBBC',10000,'valid',0,NULL,0,'send',NULL,NULL);
 -- Triggers and indices on  sends
 CREATE TRIGGER block_update_sends
             BEFORE UPDATE ON sends BEGIN

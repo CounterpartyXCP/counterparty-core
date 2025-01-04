@@ -352,6 +352,8 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
 
     BLOCK_LEDGER.append(f"{block_index}{address}{asset}{quantity}")
 
+    return utxo_address
+
 
 def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     balance_cursor = db.cursor()
@@ -431,6 +433,8 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     insert_record(db, "credits", bindings, "CREDIT")
 
     BLOCK_LEDGER.append(f"{block_index}{address}{asset}{quantity}")
+
+    return utxo_address
 
 
 def transfer(db, source, destination, asset, quantity, action, event):

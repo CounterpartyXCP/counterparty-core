@@ -212,7 +212,7 @@ def parse(db, tx, message):
     # debit asset from source and credit to recipient
     action = "attach to utxo"
     ledger.debit(db, source, asset, quantity, tx["tx_index"], action=action, event=tx["tx_hash"])
-    ledger.credit(
+    destination_address = ledger.credit(
         db,
         destination,
         asset,
@@ -229,6 +229,7 @@ def parse(db, tx, message):
         "status": "valid",
         "source": source,
         "destination": destination,
+        "destination_address": destination_address,
         "asset": asset,
         "quantity": quantity,
         "fee_paid": fee,
