@@ -302,7 +302,6 @@ def select_rows(
         query = f"{query} OFFSET ?"
         bindings.append(offset)
 
-    print(query, bindings)
     with start_sentry_span(op="db.sql.execute", description=query) as sql_span:
         sql_span.set_tag("db.system", "sqlite3")
         cursor.execute(query, bindings)
