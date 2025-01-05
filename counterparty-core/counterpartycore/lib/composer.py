@@ -587,7 +587,6 @@ def get_dummy_witness(script_pub_key):
     elif output_type == "P2TR":
         witness = [DUMMY_SCHNORR_SIG]
     if witness is not None:
-        print("WITNESS", witness)
         return TxWitnessInput(witness)
     return None
 

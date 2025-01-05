@@ -1,15 +1,20 @@
 import binascii
+import logging
 
 import requests
 
 from counterpartycore.lib import config, exceptions, script, util
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def electr_query(url):
     if config.ELECTRS_URL is None:
         raise exceptions.ElectrsError("Electrs server not configured")
     try:
-        return requests.get(f"{config.ELECTRS_URL}/{url}", timeout=10).json()
+        full_url = f"{config.ELECTRS_URL}/{url}"
+        logger.debug(f"Querying Electrs: {full_url}")
+        return requests.get(full_url, timeout=10).json()
     except requests.exceptions.RequestException as e:
         raise exceptions.ElectrsError(f"Electrs error: {e}") from e
 
