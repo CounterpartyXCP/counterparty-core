@@ -586,6 +586,8 @@ def initialise_config(
     config.GUNICORN_WORKERS = gunicorn_workers
 
     if electrs_url:
+        if not util.is_url(electrs_url):
+            raise ConfigurationError("Invalid Electrs URL")
         config.ELECTRS_URL = electrs_url
     else:
         if config.NETWORK_NAME == "testnet":

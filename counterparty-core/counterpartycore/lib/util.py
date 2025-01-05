@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 from operator import itemgetter
+from urllib.parse import urlparse
 
 import requests
 from counterparty_rs import utils as pycoin_rs_utils
@@ -708,3 +709,11 @@ def get_outputs_count_from_utxos_info(utxos_info):
 def get_op_return_output_from_utxos_info(utxos_info):
     _sources, _destination, _outputs_count, op_return_output = parse_utxos_info(utxos_info)
     return op_return_output
+
+
+def is_url(url):
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except ValueError:
+        return False
