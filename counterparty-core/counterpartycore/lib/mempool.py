@@ -2,7 +2,7 @@ import json
 import logging
 import time
 
-from counterpartycore.lib import blocks, config, deserialize, exceptions, ledger, util
+from counterpartycore.lib import backend, blocks, config, deserialize, exceptions, ledger, util
 from counterpartycore.lib.api.api_watcher import EVENTS_ADDRESS_FIELDS
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -119,7 +119,7 @@ def clean_transaction_events(db, tx_hash):
 
 
 def clean_mempool(db):
-    logger.debug("Cleaning mempool...")
+    logger.debug("Remove validated transactions from mempool...")
     cursor = db.cursor()
     cursor.execute("SELECT * FROM mempool")
     mempool_events = cursor.fetchall()
@@ -128,3 +128,11 @@ def clean_mempool(db):
         tx = ledger.get_transaction(db, event["tx_hash"])
         if tx:
             clean_transaction_events(db, event["tx_hash"])
+    # remove transactions removed from the mempool
+    logger.debug("Remove transactions removed from the mempool...")
+    cursor.execute("SELECT distinct tx_hash FROM mempool")
+    tx_hashes = cursor.fetchall()
+    raw_mempool = backend.bitcoind.getrawmempool(verbose=False)
+    for tx_hash in tx_hashes:
+        if tx_hash["tx_hash"] not in raw_mempool:
+            clean_transaction_events(db, tx_hash["tx_hash"])
