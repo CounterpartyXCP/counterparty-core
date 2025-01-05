@@ -363,7 +363,7 @@ CONFIG_ARGS = [
     [
         ("--electrs-url",),
         {
-            "help": "the complete URL of the Electrs API, for example: `https://mempool.space/api`",
+            "help": "the complete URL of the Electrs API, possibly including a specific port, for example: `https://mempool.space/api`",
         },
     ],
     [

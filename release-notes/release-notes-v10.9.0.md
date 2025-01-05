@@ -62,14 +62,14 @@
 - Use `satoshirate_normalized` and `give_quantity_normalized` to calculate `price_normalized`
 - Add a parameter `utxo_value` to the `attach.compose()` and `move.compose()` functions
 - Add `source_address` and `destination_address` in `sends` table
-- Use by default Blockstream API to get address UTXOs and history
+- Use by default Blockstream for Electrs API
 
 ## CLI
 
 - Add `--cache-dir` flag
 - Add `severity` field to JSON logs for compatibility
 - Add `--refresh-state-db` and `--rebuild-state-db` flags for `start` command
-- Check if `--electr-urls` is a valid url
+- Check if `--electrs-url` is a valid url
 
 # Credits
 
