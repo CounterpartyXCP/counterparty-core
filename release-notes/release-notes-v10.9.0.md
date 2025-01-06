@@ -42,6 +42,7 @@
 - Fix Get Sends By Address endpoint, return also `detach` and `move`
 - Fix `transactions.transaction_type` field when destination is `1CounterpartyXXXXXXXXXXXXXXXUWLpVr`
 - Catch `OverflowError` on API calls
+- Fix `dispensers` table in State DB: include dispensers with same `source` and `asset` but different `tx_hash`
 
 ## Codebase
 

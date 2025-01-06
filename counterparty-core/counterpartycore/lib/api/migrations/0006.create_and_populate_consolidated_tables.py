@@ -15,7 +15,7 @@ CONSOLIDATED_TABLES = {
     "fairminters": "tx_hash",
     "balances": "address, utxo, asset",
     "addresses": "address",
-    "dispensers": "source, asset",
+    "dispensers": "source, asset, tx_hash",
     "bet_matches": "id",
     "bets": "tx_hash",
     "order_matches": "id",
