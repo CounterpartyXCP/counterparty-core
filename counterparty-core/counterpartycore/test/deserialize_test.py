@@ -23,7 +23,7 @@ def deserialize_rust(tx_hex, use_txid=False):
             "log_file": "",
         }
     )
-    return deserializer.parse(tx_hex, 900000, False, use_txid)
+    return deserializer.parse_transaction(tx_hex, 900000, False, use_txid)
 
 
 def test_deserialize():

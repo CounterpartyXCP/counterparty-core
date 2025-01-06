@@ -96,26 +96,14 @@ impl Deserializer {
         Ok(Deserializer { config })
     }
 
-    pub fn parse(&self, tx_hex: &str, height: u32, parse_vouts: bool, use_txid: bool, py: Python<'_>) -> PyResult<PyObject> {
-        let tx = self::bitcoin_client::parse_transaction(tx_hex, &self.config, height, parse_vouts);
+    pub fn parse_transaction(&self, tx_hex: &str, height: u32, parse_vouts: bool, use_txid: bool, py: Python<'_>) -> PyResult<PyObject> {
+        let tx = self::bitcoin_client::parse_transaction(tx_hex, &self.config, height, parse_vouts, use_txid);
+        return Ok(tx.into_py(py))
+    }
 
-        if tx.segwit && use_txid {
-            let transaction = self::block::Transaction {
-                version: tx.version,
-                segwit: tx.segwit,
-                coinbase: tx.coinbase,
-                lock_time: tx.lock_time,
-                tx_id: tx.tx_id.clone(),
-                tx_hash: tx.tx_id,
-                vtxinwit: tx.vtxinwit,
-                vin: tx.vin,
-                vout: tx.vout,
-                parsed_vouts: tx.parsed_vouts,
-            };
-            return Ok(transaction.into_py(py))
-        } else {
-            return Ok(tx.into_py(py))
-        }
+    pub fn parse_block(&self, block_hex: &str, height: u32, parse_vouts: bool, use_txid: bool, py: Python<'_>) -> PyResult<PyObject> {
+        let block = self::bitcoin_client::parse_block(block_hex, &self.config, height, parse_vouts, use_txid);
+        return Ok(block?.into_py(py))
     }
 }
 

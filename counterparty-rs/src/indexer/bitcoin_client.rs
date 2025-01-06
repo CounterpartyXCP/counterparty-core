@@ -374,7 +374,13 @@ fn parse_vout(
     }
 }
 
-fn create_transaction(tx: &bitcoin::blockdata::transaction::Transaction, config: &Config, height: u32, parse_vouts: bool) -> Transaction {
+fn create_transaction(
+    tx: &bitcoin::blockdata::transaction::Transaction,
+    config: &Config,
+    height: u32,
+    parse_vouts: bool,
+    use_txid: bool
+) -> Transaction {
     let tx_bytes = serialize(tx);
     let mut vins = Vec::new();
     let mut segwit = false;
@@ -412,7 +418,7 @@ fn create_transaction(tx: &bitcoin::blockdata::transaction::Transaction, config:
     let mut data = Vec::new();
     let mut potential_dispensers = Vec::new();
     let mut err = None;
-    for (vi, vout) in tx.output.iter().enumerate() {
+    for vout in tx.output.iter() {
         vouts.push(Vout {
             value: vout.value.to_sat(),
             script_pub_key: vout.script_pubkey.to_bytes(),
@@ -474,13 +480,20 @@ fn create_transaction(tx: &bitcoin::blockdata::transaction::Transaction, config:
             })
         };
     }
+    let tx_id = tx.compute_txid().to_string();
+    let tx_hash;
+    if segwit && use_txid {
+        tx_hash = tx_id.clone();
+    } else {
+        tx_hash = Sha256dHash::hash(&tx_bytes).to_string();
+    }
     Transaction {
         version: tx.version.0,
         segwit,
         coinbase: tx.is_coinbase(),
         lock_time: tx.lock_time.to_consensus_u32(),
-        tx_id: tx.compute_txid().to_string(),
-        tx_hash: Sha256dHash::hash(&tx_bytes).to_string(),
+        tx_id: tx_id,
+        tx_hash: tx_hash,
         vtxinwit,
         vin: vins,
         vout: vouts,
@@ -488,13 +501,14 @@ fn create_transaction(tx: &bitcoin::blockdata::transaction::Transaction, config:
     }
 }
 
-pub fn parse_transaction(tx_hex: &str, config: &Config, height: u32, parse_vouts: bool) -> Transaction {
+
+pub fn parse_transaction(tx_hex: &str, config: &Config, height: u32, parse_vouts: bool, use_txid: bool) -> Transaction {
     let decoded_tx = hex::decode(tx_hex).expect("Failed to decode hex string");
 
     let transaction: bitcoin::blockdata::transaction::Transaction = 
         deserialize(&decoded_tx).expect("Failed to deserialize transaction");
-
-    return create_transaction(&transaction, config, height, parse_vouts);
+    
+    return create_transaction(&transaction, config, height, parse_vouts, use_txid);
 }
 
 
@@ -502,7 +516,7 @@ impl ToBlock for Block {
     fn to_block(&self, config: Config, height: u32) -> CrateBlock {
         let mut transactions = Vec::new();
         for tx in self.txdata.iter() {
-            transactions.push(create_transaction(tx, &config, height, true));
+            transactions.push(create_transaction(tx, &config, height, true, config.correct_segwit_txids_enabled(height)));
         }
         CrateBlock {
             height,
@@ -518,6 +532,30 @@ impl ToBlock for Block {
         }
     }
 }
+
+
+pub fn parse_block(hex: &str, config: &Config, height: u32, parse_vouts: bool, use_txid: bool) -> Result<CrateBlock, Error> {
+    let decoded_block = hex::decode(hex).map_err(|e| Error::ParseVout(format!("Failed to decode hex string: {}", e)))?;
+    let block: Block = deserialize(&decoded_block).map_err(|e| Error::ParseVout(format!("Failed to deserialize block: {}", e)))?;
+
+    let mut transactions = Vec::new();
+    for tx in block.txdata.iter() {
+        transactions.push(create_transaction(tx, config, height, parse_vouts, use_txid));
+    }
+    Ok(CrateBlock {
+        height,
+        version: block.header.version.to_consensus(),
+        hash_prev: block.header.prev_blockhash.to_string(),
+        hash_merkle_root: block.header.merkle_root.to_string(),
+        block_time: block.header.time,
+        bits: block.header.bits.to_consensus(),
+        nonce: block.header.nonce,
+        block_hash: block.block_hash().to_string(),
+        transaction_count: block.txdata.len(),
+        transactions,
+    })
+}
+
 
 impl BlockHasPrevBlockHash for Block {
     fn get_prev_block_hash(&self) -> &BlockHash {
