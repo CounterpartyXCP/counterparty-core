@@ -489,13 +489,11 @@ fn create_transaction(tx: &bitcoin::blockdata::transaction::Transaction, config:
 }
 
 pub fn parse_transaction(tx_hex: &str, config: &Config, height: u32, parse_vouts: bool) -> Transaction {
-    // Décodez le hex et gérez l'erreur potentielle
     let decoded_tx = hex::decode(tx_hex).expect("Failed to decode hex string");
-    
-    // Désérialisez la transaction et gérez l'erreur potentielle
+
     let transaction: bitcoin::blockdata::transaction::Transaction = 
         deserialize(&decoded_tx).expect("Failed to deserialize transaction");
-    
+
     return create_transaction(&transaction, config, height, parse_vouts);
 }
 

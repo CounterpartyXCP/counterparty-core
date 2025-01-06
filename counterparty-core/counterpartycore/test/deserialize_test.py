@@ -2,17 +2,36 @@ import binascii
 import time
 
 import bitcoin as bitcoinlib
+from counterparty_rs import indexer
 
-from counterpartycore.lib import deserialize, util
+from counterpartycore.lib import util
+from counterpartycore.lib.util import inverse_hash
 
 
 def deserialize_bitcoinlib(tx_hex):
     return bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
 
+def deserialize_rust(tx_hex, use_txid=False):
+    deserializer = indexer.Deserializer(
+        {
+            "rpc_address": "",
+            "rpc_user": "",
+            "rpc_password": "",
+            "network": "mainnet",
+            "db_dir": "",
+            "log_file": "",
+        }
+    )
+    return deserializer.parse(tx_hex, 900000, False, use_txid)
+
+
 def test_deserialize():
     hex = "0100000001db3acf37743ac015808f7911a88761530c801819b3b907340aa65dfb6d98ce24030000006a473044022002961f4800cb157f8c0913084db0ee148fa3e1130e0b5e40c3a46a6d4f83ceaf02202c3dd8e631bf24f4c0c5341b3e1382a27f8436d75f3e0a095915995b0bf7dc8e01210395c223fbf96e49e5b9e06a236ca7ef95b10bf18c074bd91a5942fc40360d0b68fdffffff040000000000000000536a4c5058325bd61325dc633fadf05bec9157c23106759cee40954d39d9dbffc17ec5851a2d1feb5d271da422e0e24c7ae8ad29d2eeabf7f9ca3de306bd2bc98e2a39e47731aa000caf400053000c1283000149c8000000000000001976a91462bef4110f98fdcb4aac3c1869dbed9bce8702ed88acc80000000000000017a9144317f779c0a2ccf8f6bc3d440bd9e536a5bff75287fa3e5100000000001976a914bf2646b8ba8b4a143220528bde9c306dac44a01c88ac00000000"
-    decoded_tx = deserialize.deserialize_tx(hex, use_txid=True)
+    decoded_tx = deserialize_rust(hex, use_txid=True)
+
+    parsed_vouts = decoded_tx.pop("parsed_vouts")
+    assert str(parsed_vouts) == "Not Parsed"
 
     assert decoded_tx == {
         "version": 1,
@@ -20,11 +39,10 @@ def test_deserialize():
         "coinbase": False,
         "vin": [
             {
-                "hash": b"\xdb:\xcf7t:\xc0\x15\x80\x8fy\x11\xa8\x87aS\x0c\x80\x18\x19\xb3\xb9\x074\n\xa6]\xfbm\x98\xce$",
+                "hash": "24ce986dfb5da60a3407b9b31918800c536187a811798f8015c03a7437cf3adb",
                 "n": 3,
                 "script_sig": b"G0D\x02 \x02\x96\x1fH\x00\xcb\x15\x7f\x8c\t\x13\x08M\xb0\xee\x14\x8f\xa3\xe1\x13\x0e\x0b^@\xc3\xa4jmO\x83\xce\xaf\x02 ,=\xd8\xe61\xbf$\xf4\xc0\xc54\x1b>\x13\x82\xa2\x7f\x846\xd7_>\n\tY\x15\x99[\x0b\xf7\xdc\x8e\x01!\x03\x95\xc2#\xfb\xf9nI\xe5\xb9\xe0j#l\xa7\xef\x95\xb1\x0b\xf1\x8c\x07K\xd9\x1aYB\xfc@6\r\x0bh",
                 "sequence": 4294967293,
-                "coinbase": False,
             }
         ],
         "vout": [
@@ -45,11 +63,10 @@ def test_deserialize():
                 "script_pub_key": b"v\xa9\x14\xbf&F\xb8\xba\x8bJ\x142 R\x8b\xde\x9c0m\xacD\xa0\x1c\x88\xac",
             },
         ],
-        "vtxinwit": [],
+        "vtxinwit": [[]],
         "lock_time": 0,
         "tx_hash": "54cc399879446c4eaa7774bb764b319a2680709f99704ce60344587f49ff97e8",
         "tx_id": "54cc399879446c4eaa7774bb764b319a2680709f99704ce60344587f49ff97e8",
-        "__data__": "0100000001db3acf37743ac015808f7911a88761530c801819b3b907340aa65dfb6d98ce24030000006a473044022002961f4800cb157f8c0913084db0ee148fa3e1130e0b5e40c3a46a6d4f83ceaf02202c3dd8e631bf24f4c0c5341b3e1382a27f8436d75f3e0a095915995b0bf7dc8e01210395c223fbf96e49e5b9e06a236ca7ef95b10bf18c074bd91a5942fc40360d0b68fdffffff040000000000000000536a4c5058325bd61325dc633fadf05bec9157c23106759cee40954d39d9dbffc17ec5851a2d1feb5d271da422e0e24c7ae8ad29d2eeabf7f9ca3de306bd2bc98e2a39e47731aa000caf400053000c1283000149c8000000000000001976a91462bef4110f98fdcb4aac3c1869dbed9bce8702ed88acc80000000000000017a9144317f779c0a2ccf8f6bc3d440bd9e536a5bff75287fa3e5100000000001976a914bf2646b8ba8b4a143220528bde9c306dac44a01c88ac00000000",
     }
 
     transactions_hex = [
@@ -60,32 +77,35 @@ def test_deserialize():
     ]
     for hex in transactions_hex:
         decoded_tx_bitcoinlib = deserialize_bitcoinlib(hex)
-        decoded_tx_parser = deserialize.deserialize_tx(hex, use_txid=False)
+        decoded_tx_rust = deserialize_rust(hex)
+        print(decoded_tx_rust)
 
         for i, vin in enumerate(decoded_tx_bitcoinlib.vin):
-            assert vin.prevout.hash == decoded_tx_parser["vin"][i]["hash"]
-            assert vin.prevout.n == decoded_tx_parser["vin"][i]["n"]
-            assert vin.scriptSig == decoded_tx_parser["vin"][i]["script_sig"]
-            assert vin.nSequence == decoded_tx_parser["vin"][i]["sequence"]
+            assert vin.prevout.hash == binascii.unhexlify(
+                inverse_hash(decoded_tx_rust["vin"][i]["hash"])
+            )
+            assert vin.prevout.n == decoded_tx_rust["vin"][i]["n"]
+            assert vin.scriptSig == decoded_tx_rust["vin"][i]["script_sig"]
+            assert vin.nSequence == decoded_tx_rust["vin"][i]["sequence"]
 
         for i, vout in enumerate(decoded_tx_bitcoinlib.vout):
-            assert vout.nValue == decoded_tx_parser["vout"][i]["value"]
-            assert vout.scriptPubKey == decoded_tx_parser["vout"][i]["script_pub_key"]
+            assert vout.nValue == decoded_tx_rust["vout"][i]["value"]
+            assert vout.scriptPubKey == decoded_tx_rust["vout"][i]["script_pub_key"]
 
-        assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx_parser["vtxinwit"]) > 0)
-        assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx_parser["coinbase"]
+        assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx_rust["vtxinwit"][0]) > 0)
+        assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx_rust["coinbase"]
 
-        assert util.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx_parser["tx_hash"]
+        assert util.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx_rust["tx_hash"]
 
     iterations = 25
 
     start_time = time.time()
     for i in range(iterations):  # noqa: B007
         for hex in transactions_hex:
-            deserialize.deserialize_tx(hex, use_txid=True)
+            deserialize_rust(hex, use_txid=True)
     end_time = time.time()
     print(
-        f"Time to deserialize {4 * iterations} transactions with block_parser: {end_time - start_time} seconds"
+        f"Time to deserialize {4 * iterations} transactions with Rust: {end_time - start_time} seconds"
     )
 
     start_time = time.time()
