@@ -403,6 +403,7 @@ dependencies = [
  "colored",
  "crossbeam-channel",
  "derive_more",
+ "hex",
  "par-map",
  "pyo3",
  "pyo3-build-config 0.20.3",

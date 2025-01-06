@@ -83,9 +83,29 @@ impl Indexer {
     }
 }
 
+
+#[pyclass]
+pub struct Deserializer {
+    pub config: Config,
+}
+
+#[pymethods]
+impl Deserializer {
+    #[new]
+    pub fn new(config: Config) -> PyResult<Self> {
+        Ok(Deserializer { config })
+    }
+
+    pub fn parse(&self, tx_hex: &str, height: u32, parse_vouts: bool, py: Python<'_>) -> PyResult<PyObject> {
+        let transaction = self::bitcoin_client::parse_transaction(tx_hex, &self.config, height, parse_vouts);
+        Ok(transaction.into_py(py))
+    }
+}
+
 pub fn register_indexer_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new_bound(parent_module.py(), "indexer")?;
     m.add_class::<Indexer>()?;
+    m.add_class::<Deserializer>()?;
     parent_module.add_submodule(&m)?;
     Ok(())
 }
