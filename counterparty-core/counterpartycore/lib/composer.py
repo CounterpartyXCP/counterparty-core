@@ -18,6 +18,7 @@ from counterpartycore.lib import (
     config,
     deserialize,
     exceptions,
+    gettxinfo,
     ledger,
     script,
     util,
@@ -119,7 +120,7 @@ def determine_encoding(data, construct_params):
 
 
 def encrypt_data(data, arc4_key):
-    key = arc4.init_arc4(binascii.unhexlify(arc4_key))
+    key = arc4.init_arc4(binascii.unhexlify(util.inverse_hash(arc4_key)))
     return key.encrypt(data)
 
 
@@ -128,7 +129,14 @@ def prepare_opreturn_output(data, arc4_key):
         raise exceptions.ComposeError("One `OP_RETURN` output per transaction")
     opreturn_data = config.PREFIX + data
     print(f"opreturn_data: {opreturn_data}", config.OP_RETURN_MAX_SIZE, len(data))
+    print("key: ", arc4_key)
     opreturn_data = encrypt_data(opreturn_data, arc4_key)
+    ddata = gettxinfo.arc4_decrypt(
+        opreturn_data,
+        {"vin": [{"hash": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1"}]},
+    )
+    print(f"opreturn_data encrypted: {opreturn_data}")
+    print(f"opreturn_data decrypted: {ddata}")
     return [TxOutput(0, Script(["OP_RETURN", b_to_h(opreturn_data)]))]
 
 
@@ -832,6 +840,7 @@ def construct(db, tx_info, construct_params):
 
 def check_transaction_sanity(tx_info, composed_tx, construct_params):
     tx_hex = composed_tx["rawtransaction"]
+    print("tx_hex: ", tx_hex)
     source, destinations, data = tx_info
     decoded_tx = deserialize.deserialize_tx(tx_hex, use_txid=True, parse_vouts=True)
 
@@ -877,6 +886,7 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
 
     # check if data matches the output data
     if data:
+        print(decoded_tx)
         if isinstance(decoded_tx["parsed_vouts"], Exception):
             raise exceptions.ComposeError(
                 f"Sanity check error: cannot parse the output data from the transaction ({decoded_tx['parsed_vouts']})"
