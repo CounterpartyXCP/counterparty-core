@@ -18,7 +18,6 @@ from counterpartycore.lib import (
     config,
     deserialize,
     exceptions,
-    gettxinfo,
     ledger,
     script,
     util,
@@ -128,6 +127,7 @@ def prepare_opreturn_output(data, arc4_key):
     if len(data) + len(config.PREFIX) > config.OP_RETURN_MAX_SIZE:
         raise exceptions.ComposeError("One `OP_RETURN` output per transaction")
     opreturn_data = config.PREFIX + data
+    print(f"opreturn_data: {opreturn_data}", config.OP_RETURN_MAX_SIZE, len(data))
     opreturn_data = encrypt_data(opreturn_data, arc4_key)
     return [TxOutput(0, Script(["OP_RETURN", b_to_h(opreturn_data)]))]
 
@@ -833,7 +833,7 @@ def construct(db, tx_info, construct_params):
 def check_transaction_sanity(tx_info, composed_tx, construct_params):
     tx_hex = composed_tx["rawtransaction"]
     source, destinations, data = tx_info
-    decoded_tx = deserialize.deserialize_tx(tx_hex, use_txid=True)
+    decoded_tx = deserialize.deserialize_tx(tx_hex, use_txid=True, parse_vouts=True)
 
     # check if source address matches the first input address
     first_utxo_txid = decoded_tx["vin"][0]["hash"]
@@ -877,7 +877,11 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
 
     # check if data matches the output data
     if data:
-        _, _, _, tx_data, _ = gettxinfo.parse_transaction_vouts(decoded_tx)
+        if isinstance(decoded_tx["parsed_vouts"], Exception):
+            raise exceptions.ComposeError(
+                f"Sanity check error: cannot parse the output data from the transaction ({decoded_tx['parsed_vouts']})"
+            )
+        _, _, _, tx_data, _ = decoded_tx["parsed_vouts"]
         if tx_data != data:
             raise exceptions.ComposeError("Sanity check error: data does not match the output data")
 

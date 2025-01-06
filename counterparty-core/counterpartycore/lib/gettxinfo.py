@@ -411,77 +411,6 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
     return source, destination, btc_amount, fee, data, outs
 
 
-def parse_transaction_vouts(decoded_tx):
-    # Get destinations and data outputs.
-    destinations, btc_amount, fee, data, potential_dispensers = [], 0, 0, b"", []
-
-    for vout in decoded_tx["vout"]:
-        potential_dispensers.append((None, None))
-        # Fee is the input values minus output values.
-        output_value = vout["value"]
-        fee -= output_value
-
-        script_pub_key = vout["script_pub_key"]
-
-        # Ignore transactions with invalid script.
-        asm = script.script_to_asm(script_pub_key)
-        if asm[0] == OP_RETURN:  # noqa: F405
-            new_destination, new_data = decode_opreturn(asm, decoded_tx)
-        elif asm[-1] == OP_CHECKSIG:  # noqa: F405
-            new_destination, new_data = decode_checksig(asm, decoded_tx)
-            potential_dispensers[-1] = (new_destination, output_value)
-        elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
-            try:
-                new_destination, new_data = decode_checkmultisig(asm, decoded_tx)
-                potential_dispensers[-1] = (new_destination, output_value)
-            except script.MultiSigAddressError:
-                raise DecodeError("invalid OP_CHECKMULTISIG")  # noqa: B904
-        elif (
-            util.enabled("p2sh_addresses")
-            and asm[0] == OP_HASH160  # noqa: F405
-            and asm[-1] == OP_EQUAL  # noqa: F405
-            and len(asm) == 3
-        ):
-            new_destination, new_data = decode_scripthash(asm)
-            if util.enabled("p2sh_dispensers_support"):
-                potential_dispensers[-1] = (new_destination, output_value)
-        elif util.enabled("segwit_support") and asm[0] == b"":
-            # Segwit Vout, second param is redeemScript
-            # redeemScript = asm[1]
-            new_destination = script.script_to_address(script_pub_key)
-            new_data = None
-            if util.enabled("correct_segwit_txids"):
-                potential_dispensers[-1] = (new_destination, output_value)
-        else:
-            raise DecodeError("unrecognised output type")
-        assert not (new_destination and new_data)
-        assert (
-            new_destination != None or new_data != None  # noqa: E711
-        )  # `decode_*()` should never return `None, None`.
-
-        if util.enabled("null_data_check"):
-            if new_data == []:
-                raise DecodeError("new destination is `None`")
-
-        # All destinations come before all data.
-        if (
-            not data
-            and not new_data
-            and destinations
-            != [
-                config.UNSPENDABLE,
-            ]
-        ):
-            destinations.append(new_destination)
-            btc_amount += output_value
-        else:
-            if new_destination:  # Change.
-                break
-            data += new_data  # Data.
-
-    return destinations, btc_amount, fee, data, potential_dispensers
-
-
 def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
@@ -492,16 +421,14 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         raise DecodeError("coinbase transaction")
 
     # Get destinations and data outputs.
-    if "parsed_vouts" in decoded_tx and str(decoded_tx["parsed_vouts"]) != "Not Parsed":
-        if isinstance(decoded_tx["parsed_vouts"], Exception):
-            raise DecodeError(str(decoded_tx["parsed_vouts"]))
-        elif decoded_tx["parsed_vouts"] == "DecodeError":
-            raise DecodeError("unrecognised output type")
-        destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
-    else:
-        destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(
-            decoded_tx
-        )
+    if "parsed_vouts" not in decoded_tx:
+        raise DecodeError("no parsed_vouts in decoded_tx")
+
+    if isinstance(decoded_tx["parsed_vouts"], Exception):
+        raise DecodeError(str(decoded_tx["parsed_vouts"]))
+    elif decoded_tx["parsed_vouts"] == "DecodeError":
+        raise DecodeError("unrecognised output type")
+    destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output

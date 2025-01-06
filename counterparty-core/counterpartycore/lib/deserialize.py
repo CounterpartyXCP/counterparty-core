@@ -12,6 +12,7 @@ def deserialize_tx(tx_hex, use_txid, parse_vouts=False, block_index=None):
             "network": config.NETWORK_NAME,
             "db_dir": "",
             "log_file": "",
+            "prefix": config.PREFIX,
         }
     )
     return deserializer.parse_transaction(
@@ -29,6 +30,7 @@ def deserialize_block(block_hex, use_txid, parse_vouts=False, block_index=None):
             "network": config.NETWORK_NAME,
             "db_dir": "",
             "log_file": "",
+            "prefix": config.PREFIX,
         }
     )
     return deserializer.parse_block(

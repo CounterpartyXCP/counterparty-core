@@ -207,7 +207,7 @@ def insert_raw_transaction(raw_transaction, db):
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
-        deserialized_tx = deserialize.deserialize_tx(raw_transaction, True, False, block_index)
+        deserialized_tx = deserialize.deserialize_tx(raw_transaction, True, True, block_index)
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
             db, deserialized_tx, block_index, composing=True
         )
@@ -258,7 +258,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index + 1
 
     deserialized_tx = deserialize.deserialize_tx(
-        raw_transaction, True, False, config.MEMPOOL_BLOCK_INDEX
+        raw_transaction, True, True, config.MEMPOOL_BLOCK_INDEX
     )
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
         db, deserialized_tx, util.CURRENT_BLOCK_INDEX, composing=True
