@@ -1304,8 +1304,12 @@ def parse_new_block(db, decoded_block, tx_index=None):
                     break
             current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
             raw_current_block = backend.bitcoind.getblock(current_block_hash)
-            decoded_block = deserialize.deserialize_block(raw_current_block, use_txid=True)
-
+            decoded_block = deserialize.deserialize_block(
+                raw_current_block,
+                use_txid=True,
+                parse_vouts=True,
+                block_index=previous_block_index + 1,
+            )
             logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
             # rollback to the previous block
             rollback(db, block_index=previous_block_index + 1)

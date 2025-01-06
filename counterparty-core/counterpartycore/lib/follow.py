@@ -123,7 +123,12 @@ class BlockchainWatcher:
 
     def receive_rawblock(self, body):
         # parse blocks as they come in
-        decoded_block = deserialize.deserialize_block(body.hex(), use_txid=True)
+        decoded_block = deserialize.deserialize_block(
+            body.hex(),
+            use_txid=True,
+            parse_vouts=True,
+            block_index=util.CURRENT_BLOCK_INDEX + 1,
+        )
         # check if already parsed by block.catch_up()
         existing_block = ledger.get_block_by_hash(self.db, decoded_block["block_hash"])
         if existing_block is None:

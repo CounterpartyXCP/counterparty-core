@@ -837,7 +837,7 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
 
     # check if source address matches the first input address
     first_utxo_txid = decoded_tx["vin"][0]["hash"]
-    first_utxo_txid = util.inverse_hash(binascii.hexlify(first_utxo_txid).decode("utf-8"))
+    # first_utxo_txid = util.inverse_hash(binascii.hexlify(first_utxo_txid).decode("utf-8"))
     first_utxo = f"{first_utxo_txid}:{decoded_tx['vin'][0]['n']}"
 
     if util.is_utxo_format(source):

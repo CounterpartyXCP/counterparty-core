@@ -350,21 +350,6 @@ def add_block_in_cache(block_index, block):
         add_transaction_in_cache(transaction["tx_hash"], transaction)
 
 
-def get_decoded_block(block_index):
-    if block_index in BLOCKS_CACHE:
-        # remove from cache when used
-        return BLOCKS_CACHE.pop(block_index)
-
-    block_hash = getblockhash(block_index)
-    raw_block = getblock(block_hash)
-    use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-    block = deserialize.deserialize_block(raw_block, use_txid=use_txid)
-
-    add_block_in_cache(block_index, block)
-
-    return block
-
-
 def get_decoded_transaction(tx_hash, block_index=None):
     if isinstance(tx_hash, bytes):
         tx_hash = ib2h(tx_hash)
@@ -387,16 +372,6 @@ def get_tx_out_amount(tx_hash, vout):
 
 def get_utxo_value(tx_hash, vout):
     return get_tx_out_amount(tx_hash, vout)
-
-
-class BlockFetcher:
-    def __init__(self, first_block) -> None:
-        self.current_block = first_block
-
-    def get_block(self):
-        block = get_decoded_block(self.current_block)
-        self.current_block += 1
-        return block
 
 
 def sendrawtransaction(signedhex: str):

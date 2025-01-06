@@ -2,9 +2,8 @@ import binascii
 import time
 
 import bitcoin as bitcoinlib
-from counterparty_rs import indexer
 
-from counterpartycore.lib import util
+from counterpartycore.lib import config, deserialize, util
 from counterpartycore.lib.util import inverse_hash
 
 
@@ -13,17 +12,8 @@ def deserialize_bitcoinlib(tx_hex):
 
 
 def deserialize_rust(tx_hex, use_txid=False):
-    deserializer = indexer.Deserializer(
-        {
-            "rpc_address": "",
-            "rpc_user": "",
-            "rpc_password": "",
-            "network": "mainnet",
-            "db_dir": "",
-            "log_file": "",
-        }
-    )
-    return deserializer.parse_transaction(tx_hex, 900000, False, use_txid)
+    config.NETWORK_NAME = "mainnet"
+    return deserialize.deserialize_tx(tx_hex, use_txid, parse_vouts=False, block_index=900000)
 
 
 def test_deserialize():

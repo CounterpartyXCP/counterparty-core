@@ -374,6 +374,7 @@ fn parse_vout(
     }
 }
 
+
 fn create_transaction(
     tx: &bitcoin::blockdata::transaction::Transaction,
     config: &Config,

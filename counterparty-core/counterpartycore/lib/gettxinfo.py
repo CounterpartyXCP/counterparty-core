@@ -492,7 +492,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         raise DecodeError("coinbase transaction")
 
     # Get destinations and data outputs.
-    if "parsed_vouts" in decoded_tx:
+    if "parsed_vouts" in decoded_tx and str(decoded_tx["parsed_vouts"]) != "Not Parsed":
         if isinstance(decoded_tx["parsed_vouts"], Exception):
             raise DecodeError(str(decoded_tx["parsed_vouts"]))
         elif decoded_tx["parsed_vouts"] == "DecodeError":
