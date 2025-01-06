@@ -14,31 +14,9 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def arc4_decrypt(cyphertext, decoded_tx):
     """Un-obfuscate. Initialise key once per attempt."""
-    if isinstance(decoded_tx["vin"][0]["hash"], str):
-        vin_hash = binascii.unhexlify(inverse_hash(decoded_tx["vin"][0]["hash"]))
-    else:
-        vin_hash = decoded_tx["vin"][0]["hash"]
-    key = arc4.init_arc4(vin_hash[::-1])
+    vin_hash = binascii.unhexlify(decoded_tx["vin"][0]["hash"])
+    key = arc4.init_arc4(vin_hash)
     return key.decrypt(cyphertext)
-
-
-def get_opreturn(asm):
-    if len(asm) == 2 and asm[0] == OP_RETURN:  # noqa: F405
-        pubkeyhash = asm[1]
-        if type(pubkeyhash) == bytes:  # noqa: E721
-            return pubkeyhash
-    raise DecodeError("invalid OP_RETURN")
-
-
-def decode_opreturn(asm, decoded_tx):
-    chunk = get_opreturn(asm)
-    chunk = arc4_decrypt(chunk, decoded_tx)
-    if chunk[: len(config.PREFIX)] == config.PREFIX:  # Data
-        destination, data = None, chunk[len(config.PREFIX) :]
-    else:
-        raise DecodeError("unrecognised OP_RETURN output")
-
-    return destination, data
 
 
 def decode_checksig(asm, decoded_tx):
@@ -59,7 +37,6 @@ def decode_scripthash(asm):
     destination = script.base58_check_encode(
         binascii.hexlify(asm[1]).decode("utf-8"), config.P2SH_ADDRESSVERSION
     )
-
     return destination, None
 
 
