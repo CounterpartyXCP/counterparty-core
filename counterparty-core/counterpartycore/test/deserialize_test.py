@@ -1,5 +1,6 @@
 import binascii
 import time
+from io import BytesIO
 
 import bitcoin as bitcoinlib
 
@@ -14,6 +15,23 @@ def deserialize_bitcoinlib(tx_hex):
 def deserialize_rust(tx_hex, use_txid=False):
     # config.NETWORK_NAME = "mainnet"
     return deserialize.deserialize_tx(tx_hex, use_txid, parse_vouts=True, block_index=900000)
+
+
+def create_block_hex(transactions_hex):
+    block = bitcoinlib.core.CBlock(
+        nVersion=2,
+        hashPrevBlock=b"\x00" * 32,
+        hashMerkleRoot=b"\x00" * 32,
+        nTime=0,
+        nBits=0,
+        nNonce=0,
+        vtx=[deserialize_bitcoinlib(tx_hex) for tx_hex in transactions_hex],
+    )
+    buf = BytesIO()
+    block.stream_serialize(buf)
+    block_hex = binascii.hexlify(buf.getvalue()).decode("utf-8")
+    # print("block hex", block_hex)
+    return block_hex
 
 
 def test_deserialize():
@@ -70,49 +88,35 @@ def test_deserialize():
         "02000000000101c2114be987f65bdfded1e62ce57385750cee74768f152cafa25bd6fcb9669544010000001600144067f0d09a8fe3abb902eeab6fae52a4f1103423ffffffff0310270000000000001600144067f0d09a8fe3abb902eeab6fae52a4f11034230000000000000000176a15adfe4279a2654803ba1c741fd01ccf19462960e56895860000000000001600144067f0d09a8fe3abb902eeab6fae52a4f110342302000000000000",
         "0100000001ed8974c165a823af6f70c0e5ee4cf150cc87f4b280d57f13cadf4fdeaf96e75b5b0000006a47304402203623ce2458bdafc18ae89706fb5571854bdb4f12cfff60ff143271ca2526175e02205af544023561704d61d898a53b933db80be4de5acbd1d8ccb9af56da1ff51cc40121021c72bc7a6d4479f9be9a37a667cadaeb9dc26f4551ebd7b38139633f0aa8cd02ffffffff020000000000000000306a2ef15b24417e42b75bf75e82be8d7c8a190dbc364a06616b070dc245b2aa1c91b3397ac366d659b296dbad153c75d5bd040000000000001976a914fd7b2029e9c5b3db9a6cf295d4e3e9be7e061c0a88ac00000000",
     ]
-    for hex in transactions_hex:
+    # create a block with the transactions
+    block_hex = create_block_hex(transactions_hex)
+    block_info = deserialize.deserialize_block(
+        block_hex, use_txid=False, parse_vouts=True, block_index=900000
+    )
+
+    for i, hex in enumerate(transactions_hex):
         decoded_tx_bitcoinlib = deserialize_bitcoinlib(hex)
         decoded_tx_rust = deserialize_rust(hex)
-        print(decoded_tx_rust)
+        decoded_from_block = block_info["transactions"][i]
 
-        for i, vin in enumerate(decoded_tx_bitcoinlib.vin):
-            assert vin.prevout.hash == binascii.unhexlify(
-                inverse_hash(decoded_tx_rust["vin"][i]["hash"])
-            )
-            assert vin.prevout.n == decoded_tx_rust["vin"][i]["n"]
-            assert vin.scriptSig == decoded_tx_rust["vin"][i]["script_sig"]
-            assert vin.nSequence == decoded_tx_rust["vin"][i]["sequence"]
+        # compare transactions decoded by bitcoinlib and rust deserialize_block and deserialize_tx
+        for decoded_tx in [decoded_tx_rust, decoded_from_block]:
+            for j, vin in enumerate(decoded_tx_bitcoinlib.vin):
+                assert vin.prevout.hash == binascii.unhexlify(
+                    inverse_hash(decoded_tx["vin"][j]["hash"])
+                )
+                assert vin.prevout.n == decoded_tx["vin"][j]["n"]
+                assert vin.scriptSig == decoded_tx["vin"][j]["script_sig"]
+                assert vin.nSequence == decoded_tx["vin"][j]["sequence"]
 
-        for i, vout in enumerate(decoded_tx_bitcoinlib.vout):
-            assert vout.nValue == decoded_tx_rust["vout"][i]["value"]
-            assert vout.scriptPubKey == decoded_tx_rust["vout"][i]["script_pub_key"]
+            for j, vout in enumerate(decoded_tx_bitcoinlib.vout):
+                assert vout.nValue == decoded_tx["vout"][j]["value"]
+                assert vout.scriptPubKey == decoded_tx["vout"][j]["script_pub_key"]
 
-        assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx_rust["vtxinwit"][0]) > 0)
-        assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx_rust["coinbase"]
+            assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx["vtxinwit"][0]) > 0)
+            assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx["coinbase"]
 
-        assert util.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx_rust["tx_hash"]
-        print("Parsed vout", decoded_tx_rust["parsed_vouts"])
-
-    block = bitcoinlib.core.CBlock(
-        nVersion=2,
-        hashPrevBlock=b"\x00" * 32,
-        hashMerkleRoot=b"\x00" * 32,
-        nTime=0,
-        nBits=0,
-        nNonce=0,
-        vtx=[deserialize_bitcoinlib(tx_hex) for tx_hex in transactions_hex],
-    )
-    from io import BytesIO
-
-    buf = BytesIO()
-    block.stream_serialize(buf)
-    block_hex = binascii.hexlify(buf.getvalue()).decode("utf-8")
-    print("block hex", block_hex)
-
-    block_info = deserialize.deserialize_block(
-        block_hex, use_txid=True, parse_vouts=True, block_index=900000
-    )
-    print("block_info", block_info)
+            assert util.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx["tx_hash"]
 
     iterations = 25
 
