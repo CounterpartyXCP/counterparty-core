@@ -566,7 +566,8 @@ def info(db, rawtransaction: str, block_index: int = None):
     except exceptions.BitcoindRPCError:
         source, destination, btc_amount, fee, data = None, None, None, None, None
 
-    del decoded_tx["__data__"]
+    if "__data__" in decoded_tx:
+        del decoded_tx["__data__"]
     result = {
         "source": source,
         "destination": destination if destination else None,
