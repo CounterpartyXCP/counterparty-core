@@ -100,8 +100,7 @@ impl Heights {
                 multisig_addresses: 333500,
             },
             Network::Testnet => Heights {
-                // segwit: 1440200,
-                segwit: 0,
+                segwit: 1440200,
                 p2sh_addresses: 0,
                 p2sh_dispensers: 2163328,
                 correct_segwit_txids: 1666625,

@@ -34,6 +34,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def address_to_script_pub_key(address, unspent_list, construct_params):
+    setup(config.NETWORK_NAME)
     if script.is_multisig(address):
         signatures_required, addresses, signatures_possible = script.extract_array(address)
         pubkeys = [search_pubkey(addr, unspent_list, construct_params) for addr in addresses]

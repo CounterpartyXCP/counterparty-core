@@ -23,8 +23,11 @@ import bitcoin as bitcoinlib
 import pycoin
 import pytest
 from bitcoinutils.script import Script
+from bitcoinutils.setup import setup
 from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
 from pycoin.coins.bitcoin import Tx  # noqa: F401
+
+setup("testnet")
 
 CURR_DIR = os.path.dirname(
     os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
@@ -207,7 +210,7 @@ def insert_raw_transaction(raw_transaction, db):
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
-        deserialized_tx = deserialize.deserialize_tx(raw_transaction, True, True, block_index)
+        deserialized_tx = deserialize.deserialize_tx(raw_transaction, True, True, 999999999)
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
             db, deserialized_tx, block_index, composing=True
         )

@@ -2,11 +2,14 @@ import binascii
 
 from bitcoinutils.keys import P2pkhAddress, P2wpkhAddress
 from bitcoinutils.script import Script, b_to_h
+from bitcoinutils.setup import setup
 from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
 
 from counterpartycore.lib import config, exceptions
 
 from ..params import ADDR, DEFAULT_PARAMS, DP, MULTISIGADDR
+
+setup("regtest")
 
 PROVIDED_PUBKEYS = ",".join([DEFAULT_PARAMS["pubkey"][ADDR[0]], DEFAULT_PARAMS["pubkey"][ADDR[1]]])
 
