@@ -119,21 +119,23 @@ def determine_encoding(data, construct_params):
 
 
 def encrypt_data(data, arc4_key):
+    print("--------encryption---------")
+    print("Py decrypt data", binascii.hexlify(data))
     print("Py key", arc4_key)
     # print("Py key", util.inverse_hash(arc4_key))
     # key = arc4.init_arc4(binascii.unhexlify(util.inverse_hash(arc4_key)))
     key = arc4.init_arc4(binascii.unhexlify(arc4_key))
-    return key.encrypt(data)
+    encrypted_data = key.encrypt(data)
+    print("PY encrypted data", binascii.hexlify(encrypted_data))
+    print("-----------------")
+    return encrypted_data
 
 
 def prepare_opreturn_output(data, arc4_key):
     if len(data) + len(config.PREFIX) > config.OP_RETURN_MAX_SIZE:
         raise exceptions.ComposeError("One `OP_RETURN` output per transaction")
     opreturn_data = config.PREFIX + data
-    print("PY decrypted data", binascii.hexlify(opreturn_data))
     opreturn_data = encrypt_data(opreturn_data, arc4_key)
-    print("PY encrypted data", binascii.hexlify(opreturn_data))
-    print("-----------------")
     return [TxOutput(0, Script(["OP_RETURN", b_to_h(opreturn_data)]))]
 
 
@@ -882,8 +884,6 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
 
     # check if data matches the output data
     if data:
-        print("Decode TX", decoded_tx)
-        print("OP_RETURN ASM", script.script_to_asm(decoded_tx["vout"][0]["script_pub_key"]))
         if isinstance(decoded_tx["parsed_vouts"], Exception):
             raise exceptions.ComposeError(
                 f"Sanity check error: cannot parse the output data from the transaction ({decoded_tx['parsed_vouts']})"

@@ -374,8 +374,8 @@ fn parse_vout(
         return Ok((ParseOutput::Destination(destination), potential_dispenser));
     } else {
         return Err(Error::ParseVout(format!(
-            "Unrecognized output type | tx: {}, vout: {}",
-            txid, vi
+            "Unrecognized output type | tx: {}, vout: {}, {}, {}",
+            txid, vi, config.p2sh_address_supported(height), config.segwit_supported(height)
         )));
     }
 }

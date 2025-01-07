@@ -652,7 +652,7 @@ COMPOSER_VECTOR = {
         ],
         "utxo_to_address": [
             {
-                "in": ("ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",),
+                "in": ("1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0",),
                 "out": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             },
             {
@@ -722,7 +722,7 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [
                         {
-                            "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
+                            "txid": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53",
                             "vout": 0,
                         }
                     ],
@@ -730,7 +730,7 @@ COMPOSER_VECTOR = {
                 ),
                 "error": (
                     exceptions.ComposeError,
-                    "invalid UTXOs: ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0 (use `use_utxos_with_balances=True` to include them or `exclude_utxos_with_balances=True` to exclude them silently)",
+                    "invalid UTXOs: 1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0 (use `use_utxos_with_balances=True` to include them or `exclude_utxos_with_balances=True` to exclude them silently)",
                 ),
             },
             {
@@ -738,7 +738,7 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [
                         {
-                            "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
+                            "txid": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53",
                             "vout": 0,
                         }
                     ],
@@ -751,7 +751,7 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [
                         {
-                            "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
+                            "txid": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53",
                             "vout": 0,
                         },
                         {
@@ -773,7 +773,7 @@ COMPOSER_VECTOR = {
                     ADDR[0],
                     [
                         {
-                            "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
+                            "txid": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53",
                             "vout": 0,
                         }
                     ],
@@ -781,7 +781,7 @@ COMPOSER_VECTOR = {
                 ),
                 "out": [
                     {
-                        "txid": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0",
+                        "txid": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53",
                         "vout": 0,
                     }
                 ],
@@ -1559,16 +1559,16 @@ COMPOSER_VECTOR = {
                 "in": (
                     "move",
                     {
-                        "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
+                        "source": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0",
                         "destination": ADDR[1],
                     },
                     {
                         "verbose": True,
-                        "inputs_set": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0:999999999:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                        "inputs_set": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0:999999999:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
                     },
                 ),
                 "out": {
-                    "rawtransaction": "0200000001a0818e00bca3fc97d89cc33916e370a62e4ba2c780ee086ed7c3711adf6209ea0000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac49a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "rawtransaction": "020000000153cfb4ae6c480c588190f1aa3793f710add668328f0e9cc56cf5b3c55c0b9d1e0000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac49a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                     "btc_in": 999999999,
                     "btc_out": 10000,
                     "btc_change": 999989321,
@@ -1580,9 +1580,9 @@ COMPOSER_VECTOR = {
                         "adjusted_vsize": 226,
                         "sigops_count": 8,
                     },
-                    "psbt": "0200000001a0818e00bca3fc97d89cc33916e370a62e4ba2c780ee086ed7c3711adf6209ea0000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac49a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "psbt": "020000000153cfb4ae6c480c588190f1aa3793f710add668328f0e9cc56cf5b3c55c0b9d1e0000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac49a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                     "params": {
-                        "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
+                        "source": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0",
                         "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "utxo_value": None,
                         "skip_validation": False,
@@ -1594,17 +1594,17 @@ COMPOSER_VECTOR = {
                 "in": (
                     "move",
                     {
-                        "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
+                        "source": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0",
                         "destination": ADDR[1],
                         "utxo_value": 666,
                     },
                     {
                         "verbose": True,
-                        "inputs_set": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0:999999999:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                        "inputs_set": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0:999999999:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
                     },
                 ),
                 "out": {
-                    "rawtransaction": "0200000001a0818e00bca3fc97d89cc33916e370a62e4ba2c780ee086ed7c3711adf6209ea0000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acbfc49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "rawtransaction": "020000000153cfb4ae6c480c588190f1aa3793f710add668328f0e9cc56cf5b3c55c0b9d1e0000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acbfc49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                     "btc_in": 999999999,
                     "btc_out": 666,
                     "btc_change": 999998655,
@@ -1616,9 +1616,9 @@ COMPOSER_VECTOR = {
                         "adjusted_vsize": 226,
                         "sigops_count": 8,
                     },
-                    "psbt": "0200000001a0818e00bca3fc97d89cc33916e370a62e4ba2c780ee086ed7c3711adf6209ea0000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acbfc49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                    "psbt": "020000000153cfb4ae6c480c588190f1aa3793f710add668328f0e9cc56cf5b3c55c0b9d1e0000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acbfc49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
                     "params": {
-                        "source": "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0",
+                        "source": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0",
                         "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
                         "utxo_value": 666,
                         "skip_validation": False,

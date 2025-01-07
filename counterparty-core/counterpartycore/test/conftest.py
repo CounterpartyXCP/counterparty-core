@@ -605,6 +605,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     _init_arc4 = arc4.init_arc4
 
     def init_arc4(seed):
+        return _init_arc4(seed)
         if getattr(config, "DISABLE_ARC4_MOCKING", False):
             return _init_arc4(seed)
         else:

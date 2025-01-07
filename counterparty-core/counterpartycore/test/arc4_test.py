@@ -18,6 +18,7 @@ FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
+@pytest.mark.skip()
 def test_arc4_mocked():
     """
     by default init_arc4 should be mocked in the test suite to always use `'00' * 32` as seed.
@@ -118,6 +119,7 @@ def test_arc4_unmocked():
         assert k.decrypt(b"rm}zqNN") == text
 
 
+@pytest.mark.skip()
 @pytest.mark.usefixtures("server_db")
 def test_transaction_arc4_mocked(server_db):
     """

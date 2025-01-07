@@ -207,7 +207,9 @@ def insert_raw_transaction(raw_transaction, db):
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
+        print("raw_transaction", raw_transaction)
         deserialized_tx = deserialize.deserialize_tx(raw_transaction, True, True, block_index)
+        print("deserialized_tx", deserialized_tx)
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
             db, deserialized_tx, block_index, composing=True
         )

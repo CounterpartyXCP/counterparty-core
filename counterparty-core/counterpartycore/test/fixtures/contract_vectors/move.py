@@ -4,8 +4,8 @@ from ..params import (
 )
 
 UTXO_1 = "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1"
-UTXO_2 = "52e45e01cbe79b442630303fac0372aaf6fbe102ff4dd07ca6be01ba8f3c41b4:0"
-UTXO_3 = "ea0962df1a71c3d76e08ee80c7a24b2ea670e31639c39cd897fca3bc008e81a0:0"
+UTXO_2 = "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0"
+UTXO_3 = "7b4bb2e22f2a6d03933266f4ad34a4f7bf3ef7d2d4aeeea81edc5de59493eb7c:0"
 
 MOVE_VECTOR = {
     "move": {
