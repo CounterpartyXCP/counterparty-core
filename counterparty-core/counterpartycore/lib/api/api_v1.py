@@ -980,12 +980,12 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_tx_info(tx_hex, block_index=None):
             # block_index mandatory for transactions before block 335000
-            use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
             with LedgerDBConnectionPool().connection() as db:
+                decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)
                 source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
                     gettxinfo.get_tx_info(
                         db,
-                        deserialize.deserialize_tx(tx_hex, use_txid=use_txid),
+                        decoded_tx,
                         block_index=block_index,
                         composing=True,
                     )

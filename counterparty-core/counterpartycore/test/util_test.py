@@ -23,8 +23,11 @@ import bitcoin as bitcoinlib
 import pycoin
 import pytest
 from bitcoinutils.script import Script
+from bitcoinutils.setup import setup
 from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
 from pycoin.coins.bitcoin import Tx  # noqa: F401
+
+setup("testnet")
 
 CURR_DIR = os.path.dirname(
     os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
@@ -207,7 +210,9 @@ def insert_raw_transaction(raw_transaction, db):
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
-        deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
+        deserialized_tx = deserialize.deserialize_tx(
+            raw_transaction, parse_vouts=True, block_index=999999999
+        )
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
             db, deserialized_tx, block_index, composing=True
         )
@@ -257,7 +262,9 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index[0]["tx_index"] if len(tx_index) else 0
     tx_index = tx_index + 1
 
-    deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
+    deserialized_tx = deserialize.deserialize_tx(
+        raw_transaction, parse_vouts=True, block_index=config.MEMPOOL_BLOCK_INDEX
+    )
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
         db, deserialized_tx, util.CURRENT_BLOCK_INDEX, composing=True
     )
@@ -367,7 +374,6 @@ def prefill_rawtransactions_db(db):
         wallet_unspent = json.load(listunspent_test_file)
         for output in wallet_unspent:
             txid = output["txid"]
-            tx = deserialize.deserialize_tx(output["txhex"], True)  # noqa: F841
             cursor.execute(
                 "INSERT INTO raw_transactions VALUES (?, ?, ?)",
                 (txid, output["txhex"], output["confirmations"]),
@@ -657,7 +663,7 @@ def run_scenario(scenario):
                 construct_params = {
                     "regular_dust_size": 5430,
                 } | tx[2]
-                print("tx", tx[0], tx[1])
+                # print("tx", tx[0], tx[1])
                 unsigned_tx_hex = composer.construct(db, compose(db, *tx[1]), construct_params)
                 unsigned_tx_hex = unsigned_tx_hex["rawtransaction"]
                 raw_transactions.append({tx[0]: unsigned_tx_hex})

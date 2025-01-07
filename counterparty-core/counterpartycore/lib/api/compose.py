@@ -547,7 +547,9 @@ def info(db, rawtransaction: str, block_index: int = None):
     """
     try:
         decoded_tx = deserialize.deserialize_tx(
-            rawtransaction, use_txid=util.enabled("correct_segwit_txids", block_index)
+            rawtransaction,
+            parse_vouts=True,
+            block_index=block_index,
         )
     except Exception as e:
         raise exceptions.ComposeError("Invalid rawtransaction") from e
@@ -563,7 +565,6 @@ def info(db, rawtransaction: str, block_index: int = None):
     except exceptions.BitcoindRPCError:
         source, destination, btc_amount, fee, data = None, None, None, None, None
 
-    del decoded_tx["__data__"]
     result = {
         "source": source,
         "destination": destination if destination else None,

@@ -123,7 +123,11 @@ class BlockchainWatcher:
 
     def receive_rawblock(self, body):
         # parse blocks as they come in
-        decoded_block = deserialize.deserialize_block(body.hex(), use_txid=True)
+        decoded_block = deserialize.deserialize_block(
+            body.hex(),
+            parse_vouts=True,
+            block_index=util.CURRENT_BLOCK_INDEX + 1,
+        )
         # check if already parsed by block.catch_up()
         existing_block = ledger.get_block_by_hash(self.db, decoded_block["block_hash"])
         if existing_block is None:
@@ -145,7 +149,7 @@ class BlockchainWatcher:
         tx_hash = self.hash_by_sequence.get(sequence)
         if tx_hash is None:
             # when tx never seen in the mempool is included in a block
-            decoded_tx = deserialize.deserialize_tx(body.hex(), use_txid=True)
+            decoded_tx = deserialize.deserialize_tx(body.hex())
             tx_hash = decoded_tx["tx_hash"]
         if sequence in self.hash_by_sequence:
             self.hash_by_sequence.pop(sequence)

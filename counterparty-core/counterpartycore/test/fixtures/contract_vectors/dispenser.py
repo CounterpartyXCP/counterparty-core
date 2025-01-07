@@ -224,7 +224,7 @@ DISPENSER_VECTOR = {
                         "table": "dispensers",
                         "values": {  # Some values here correspond to the original TX that opened the dispenser
                             "tx_index": 108,
-                            "tx_hash": "4c0f6bf88e269d5ec199b70afbaa69743d244ccc9bc86e40f53e7960f5789807",
+                            "tx_hash": "0d53631a5f5b18632791ee65aa9723b29b57eb5a6e12d034804b786d99102a03",
                             "block_index": DP["default_block_index"],
                             "source": ADDR[5],
                             "asset": config.XCP,
@@ -357,7 +357,7 @@ DISPENSER_VECTOR = {
                         "table": "dispensers",
                         "values": {  # Some values here correspond to the original TX that opened the dispenser
                             "tx_index": 108,
-                            "tx_hash": "4c0f6bf88e269d5ec199b70afbaa69743d244ccc9bc86e40f53e7960f5789807",
+                            "tx_hash": "0d53631a5f5b18632791ee65aa9723b29b57eb5a6e12d034804b786d99102a03",
                             "block_index": DP["default_block_index"],
                             "source": ADDR[5],
                             "asset": config.XCP,
@@ -405,7 +405,7 @@ DISPENSER_VECTOR = {
                         "table": "dispensers",
                         "values": {  # Some values here correspond to the original TX that opened the dispenser
                             "tx_index": 108,
-                            "tx_hash": "4c0f6bf88e269d5ec199b70afbaa69743d244ccc9bc86e40f53e7960f5789807",
+                            "tx_hash": "0d53631a5f5b18632791ee65aa9723b29b57eb5a6e12d034804b786d99102a03",
                             "block_index": DP["default_block_index"],
                             "source": ADDR[5],
                             "asset": config.XCP,

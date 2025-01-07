@@ -18,7 +18,6 @@ from counterpartycore.lib import (
     config,
     deserialize,
     exceptions,
-    gettxinfo,
     ledger,
     script,
     util,
@@ -35,6 +34,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def address_to_script_pub_key(address, unspent_list, construct_params):
+    setup(config.NETWORK_NAME)
     if script.is_multisig(address):
         signatures_required, addresses, signatures_possible = script.extract_array(address)
         pubkeys = [search_pubkey(addr, unspent_list, construct_params) for addr in addresses]
@@ -833,11 +833,10 @@ def construct(db, tx_info, construct_params):
 def check_transaction_sanity(tx_info, composed_tx, construct_params):
     tx_hex = composed_tx["rawtransaction"]
     source, destinations, data = tx_info
-    decoded_tx = deserialize.deserialize_tx(tx_hex, use_txid=True)
+    decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)
 
     # check if source address matches the first input address
     first_utxo_txid = decoded_tx["vin"][0]["hash"]
-    first_utxo_txid = util.inverse_hash(binascii.hexlify(first_utxo_txid).decode("utf-8"))
     first_utxo = f"{first_utxo_txid}:{decoded_tx['vin'][0]['n']}"
 
     if util.is_utxo_format(source):
@@ -877,7 +876,11 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
 
     # check if data matches the output data
     if data:
-        _, _, _, tx_data, _ = gettxinfo.parse_transaction_vouts(decoded_tx)
+        if isinstance(decoded_tx["parsed_vouts"], Exception):
+            raise exceptions.ComposeError(
+                f"Sanity check error: cannot parse the output data from the transaction ({decoded_tx['parsed_vouts']})"
+            )
+        _, _, _, tx_data, _ = decoded_tx["parsed_vouts"]
         if tx_data != data:
             raise exceptions.ComposeError("Sanity check error: data does not match the output data")
 

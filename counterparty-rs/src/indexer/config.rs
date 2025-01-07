@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use pyo3::{exceptions::PyValueError, types::PyDict, FromPyObject, PyAny, PyErr, PyResult};
-use tracing::{level_filters::LevelFilter, Level};
+use tracing::level_filters::LevelFilter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {

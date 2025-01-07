@@ -35,7 +35,8 @@ serde_json = "1.0.132"
 uuid = { version = "1.11.0", features = ["v4", "fast-rng"] }
 colored = "2.1.0"
 rust-crypto = "0.2.36"
-time = "0.3.36"
+time = "0.3.37"
+hex = "0.4"
 
 [build-dependencies]
 vergen = { version = "8.3.1", features = [

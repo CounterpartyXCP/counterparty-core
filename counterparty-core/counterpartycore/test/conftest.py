@@ -15,11 +15,10 @@ import bitcoin as bitcoinlib
 import pycoin
 import pytest
 import requests
-from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import arc4, config, database, exceptions, ledger, log, script, util
+from counterpartycore.lib import config, database, exceptions, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.lib.api import dbbuilder
@@ -596,15 +595,6 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def mocked_get_history(address, unconfirmed=False):
         return util_test.get_history(rawtransactions_db, address, unconfirmed)
 
-    # mock the arc4 with a fixed seed to keep data from changing based on inputs
-    _init_arc4 = arc4.init_arc4
-
-    def init_arc4(seed):
-        if getattr(config, "DISABLE_ARC4_MOCKING", False):
-            return _init_arc4(seed)
-        else:
-            return ARC4.new(binascii.unhexlify("00" * 32))
-
     def check_wal_file(dbfile):
         pass
 
@@ -646,7 +636,6 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def convert_to_psbt(tx_hex):
         return tx_hex
 
-    monkeypatch.setattr("counterpartycore.lib.arc4.init_arc4", init_arc4)
     monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)

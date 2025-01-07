@@ -350,21 +350,6 @@ def add_block_in_cache(block_index, block):
         add_transaction_in_cache(transaction["tx_hash"], transaction)
 
 
-def get_decoded_block(block_index):
-    if block_index in BLOCKS_CACHE:
-        # remove from cache when used
-        return BLOCKS_CACHE.pop(block_index)
-
-    block_hash = getblockhash(block_index)
-    raw_block = getblock(block_hash)
-    use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-    block = deserialize.deserialize_block(raw_block, use_txid=use_txid)
-
-    add_block_in_cache(block_index, block)
-
-    return block
-
-
 def get_decoded_transaction(tx_hash, block_index=None):
     if isinstance(tx_hash, bytes):
         tx_hash = ib2h(tx_hash)
@@ -372,8 +357,7 @@ def get_decoded_transaction(tx_hash, block_index=None):
         return TRANSACTIONS_CACHE[tx_hash]
 
     raw_tx = getrawtransaction(tx_hash)
-    use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-    tx = deserialize.deserialize_tx(raw_tx, use_txid=use_txid)
+    tx = deserialize.deserialize_tx(raw_tx, block_index=block_index)
 
     add_transaction_in_cache(tx_hash, tx)
 
@@ -389,16 +373,6 @@ def get_utxo_value(tx_hash, vout):
     return get_tx_out_amount(tx_hash, vout)
 
 
-class BlockFetcher:
-    def __init__(self, first_block) -> None:
-        self.current_block = first_block
-
-    def get_block(self):
-        block = get_decoded_block(self.current_block)
-        self.current_block += 1
-        return block
-
-
 def sendrawtransaction(signedhex: str):
     """
     Proxy to `sendrawtransaction` RPC call.
@@ -412,7 +386,7 @@ def decoderawtransaction(rawtx: str):
     Proxy to `decoderawtransaction` RPC call.
     :param rawtx: The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)
     """
-    return rpc("decoderawtransaction", [rawtx])
+    return deserialize.deserialize_tx(rawtx)
 
 
 def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
