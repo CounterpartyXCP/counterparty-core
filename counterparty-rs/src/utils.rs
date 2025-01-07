@@ -78,7 +78,6 @@ pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<Stri
     }
 }
 
-
 #[pyfunction]
 pub fn script_to_address2(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
     // Convert the script pubkey to a Script object

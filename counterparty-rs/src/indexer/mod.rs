@@ -83,7 +83,6 @@ impl Indexer {
     }
 }
 
-
 #[pyclass]
 pub struct Deserializer {
     pub config: Config,
@@ -96,14 +95,26 @@ impl Deserializer {
         Ok(Deserializer { config })
     }
 
-    pub fn parse_transaction(&self, tx_hex: &str, height: u32, parse_vouts: bool, py: Python<'_>) -> PyResult<PyObject> {
+    pub fn parse_transaction(
+        &self,
+        tx_hex: &str,
+        height: u32,
+        parse_vouts: bool,
+        py: Python<'_>,
+    ) -> PyResult<PyObject> {
         let tx = self::bitcoin_client::parse_transaction(tx_hex, &self.config, height, parse_vouts);
-        return Ok(tx.into_py(py))
+        return Ok(tx.into_py(py));
     }
 
-    pub fn parse_block(&self, block_hex: &str, height: u32, parse_vouts: bool, py: Python<'_>) -> PyResult<PyObject> {
+    pub fn parse_block(
+        &self,
+        block_hex: &str,
+        height: u32,
+        parse_vouts: bool,
+        py: Python<'_>,
+    ) -> PyResult<PyObject> {
         let block = self::bitcoin_client::parse_block(block_hex, &self.config, height, parse_vouts);
-        return Ok(block?.into_py(py))
+        return Ok(block?.into_py(py));
     }
 }
 

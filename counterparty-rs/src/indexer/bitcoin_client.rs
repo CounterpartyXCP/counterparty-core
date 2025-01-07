@@ -5,7 +5,8 @@ use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
 use crate::b58::b58_encode;
 use crate::utils::script_to_address;
 use bitcoin::{
-    consensus::serialize, consensus::deserialize,
+    consensus::deserialize,
+    consensus::serialize,
     hashes::{hex::prelude::*, ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
     opcodes::all::{
         OP_CHECKMULTISIG, OP_CHECKSIG, OP_EQUAL, OP_HASH160, OP_PUSHNUM_1, OP_PUSHNUM_2,
@@ -129,7 +130,7 @@ fn parse_vout(
             .instructions()
             .collect::<Vec<_>>()
             .as_slice()
-        {   
+        {
             let bytes = arc4_decrypt(&key, pb.as_bytes());
             if bytes.starts_with(&config.prefix) {
                 return Ok((
@@ -370,12 +371,11 @@ fn parse_vout(
         return Ok((ParseOutput::Destination(destination), potential_dispenser));
     } else {
         return Err(Error::ParseVout(format!(
-            "Unrecognized output type | tx: {}, vout: {}, {}, {}",
-            txid, vi, config.p2sh_address_supported(height), config.segwit_supported(height)
+            "Unrecognized output type | tx: {}, vout: {}",
+            txid, vi
         )));
     }
 }
-
 
 fn create_transaction(
     tx: &bitcoin::blockdata::transaction::Transaction,
@@ -503,16 +503,19 @@ fn create_transaction(
     }
 }
 
-
-pub fn parse_transaction(tx_hex: &str, config: &Config, height: u32, parse_vouts: bool) -> Transaction {
+pub fn parse_transaction(
+    tx_hex: &str,
+    config: &Config,
+    height: u32,
+    parse_vouts: bool,
+) -> Transaction {
     let decoded_tx = hex::decode(tx_hex).expect("Failed to decode hex string");
 
-    let transaction: bitcoin::blockdata::transaction::Transaction = 
+    let transaction: bitcoin::blockdata::transaction::Transaction =
         deserialize(&decoded_tx).expect("Failed to deserialize transaction");
-    
+
     return create_transaction(&transaction, config, height, parse_vouts);
 }
-
 
 impl ToBlock for Block {
     fn to_block(&self, config: Config, height: u32) -> CrateBlock {
@@ -535,10 +538,16 @@ impl ToBlock for Block {
     }
 }
 
-
-pub fn parse_block(hex: &str, config: &Config, height: u32, parse_vouts: bool) -> Result<CrateBlock, Error> {
-    let decoded_block = hex::decode(hex).map_err(|e| Error::ParseVout(format!("Failed to decode hex string: {}", e)))?;
-    let block: Block = deserialize(&decoded_block).map_err(|e| Error::ParseVout(format!("Failed to deserialize block: {}", e)))?;
+pub fn parse_block(
+    hex: &str,
+    config: &Config,
+    height: u32,
+    parse_vouts: bool,
+) -> Result<CrateBlock, Error> {
+    let decoded_block = hex::decode(hex)
+        .map_err(|e| Error::ParseVout(format!("Failed to decode hex string: {}", e)))?;
+    let block: Block = deserialize(&decoded_block)
+        .map_err(|e| Error::ParseVout(format!("Failed to deserialize block: {}", e)))?;
 
     let mut transactions = Vec::new();
     for tx in block.txdata.iter() {
@@ -557,7 +566,6 @@ pub fn parse_block(hex: &str, config: &Config, height: u32, parse_vouts: bool) -
         transactions,
     })
 }
-
 
 impl BlockHasPrevBlockHash for Block {
     fn get_prev_block_hash(&self) -> &BlockHash {
