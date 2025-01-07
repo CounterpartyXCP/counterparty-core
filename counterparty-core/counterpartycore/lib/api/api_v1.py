@@ -983,7 +983,6 @@ class APIServer(threading.Thread):
             use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
             with LedgerDBConnectionPool().connection() as db:
                 decoded_tx = deserialize.deserialize_tx(tx_hex, use_txid=use_txid, parse_vouts=True)
-                print("DEcoded tx", decoded_tx)
                 source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
                     gettxinfo.get_tx_info(
                         db,

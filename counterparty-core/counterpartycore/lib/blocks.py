@@ -1306,7 +1306,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
             raw_current_block = backend.bitcoind.getblock(current_block_hash)
             decoded_block = deserialize.deserialize_block(
                 raw_current_block,
-                use_txid=True,
+                use_txid=util.enabled("correct_segwit_txids"),
                 parse_vouts=True,
                 block_index=previous_block_index + 1,
             )

@@ -400,11 +400,11 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     # Get destinations and data outputs.
     if "parsed_vouts" not in decoded_tx:
         raise DecodeError("no parsed_vouts in decoded_tx")
-
     if isinstance(decoded_tx["parsed_vouts"], Exception):
         raise DecodeError(str(decoded_tx["parsed_vouts"]))
-    elif decoded_tx["parsed_vouts"] == "DecodeError":
+    if decoded_tx["parsed_vouts"] == "DecodeError":
         raise DecodeError("unrecognised output type")
+
     destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
 
     # source can be determined by parsing the p2sh_data transaction
