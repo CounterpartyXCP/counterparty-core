@@ -277,6 +277,8 @@ class ApiJsonEncoder(json.JSONEncoder):
             return o.hex()
         if callable(o):
             return o.__name__
+        if hasattr(o, "__class__"):
+            return str(o)
         return super().default(o)
 
 
