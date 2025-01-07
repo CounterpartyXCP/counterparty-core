@@ -5,7 +5,6 @@ use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
 use crate::b58::b58_encode;
 use crate::utils::script_to_address;
 use bitcoin::{
-    consensus::deserialize,
     consensus::serialize,
     hashes::{hex::prelude::*, ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
     opcodes::all::{
@@ -20,7 +19,6 @@ use bitcoincore_rpc::{Auth, Client, RpcApi};
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
-use hex;
 
 use super::{
     block::{
@@ -105,8 +103,6 @@ impl ParseOutput {
         matches!(self, ParseOutput::Destination(_))
     }
 }
-
-use std::str;
 
 fn parse_vout(
     config: &Config,
@@ -377,7 +373,7 @@ fn parse_vout(
     }
 }
 
-fn create_transaction(
+pub fn parse_transaction(
     tx: &bitcoin::blockdata::transaction::Transaction,
     config: &Config,
     height: u32,
@@ -503,25 +499,11 @@ fn create_transaction(
     }
 }
 
-pub fn parse_transaction(
-    tx_hex: &str,
-    config: &Config,
-    height: u32,
-    parse_vouts: bool,
-) -> Transaction {
-    let decoded_tx = hex::decode(tx_hex).expect("Failed to decode hex string");
-
-    let transaction: bitcoin::blockdata::transaction::Transaction =
-        deserialize(&decoded_tx).expect("Failed to deserialize transaction");
-
-    return create_transaction(&transaction, config, height, parse_vouts);
-}
-
 impl ToBlock for Block {
     fn to_block(&self, config: Config, height: u32) -> CrateBlock {
         let mut transactions = Vec::new();
         for tx in self.txdata.iter() {
-            transactions.push(create_transaction(tx, &config, height, true));
+            transactions.push(parse_transaction(tx, &config, height, true));
         }
         CrateBlock {
             height,
@@ -539,19 +521,14 @@ impl ToBlock for Block {
 }
 
 pub fn parse_block(
-    hex: &str,
+    block: Block,
     config: &Config,
     height: u32,
     parse_vouts: bool,
 ) -> Result<CrateBlock, Error> {
-    let decoded_block = hex::decode(hex)
-        .map_err(|e| Error::ParseVout(format!("Failed to decode hex string: {}", e)))?;
-    let block: Block = deserialize(&decoded_block)
-        .map_err(|e| Error::ParseVout(format!("Failed to deserialize block: {}", e)))?;
-
     let mut transactions = Vec::new();
     for tx in block.txdata.iter() {
-        transactions.push(create_transaction(tx, config, height, parse_vouts));
+        transactions.push(parse_transaction(tx, config, height, parse_vouts));
     }
     Ok(CrateBlock {
         height,
