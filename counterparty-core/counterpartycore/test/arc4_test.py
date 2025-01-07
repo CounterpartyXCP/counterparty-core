@@ -18,63 +18,6 @@ FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
-@pytest.mark.skip()
-def test_arc4_mocked():
-    """
-    by default init_arc4 should be mocked in the test suite to always use `'00' * 32` as seed.
-     so when we use `'01' * 32` as seed it should still return the same result as `'00' * 32` or as ``
-    """
-    text = bytes("testing", "utf-8")
-
-    # '00' * 32 encrypt
-    k = arc4.init_arc4("00" * 32)
-    assert k.encrypt(text) == b"\xaa}\xfa5\xcaY:"
-
-    # '00' * 32 decrypt
-    k = arc4.init_arc4("00" * 32)
-    assert k.decrypt(b"\xaa}\xfa5\xcaY:") == text
-
-    # b'\x00' * 32 encrypt
-    k = arc4.init_arc4(b"\x00" * 32)
-    assert k.encrypt(text) == b"\xaa}\xfa5\xcaY:"
-
-    # b'\x00' * 32 decrypt
-    k = arc4.init_arc4(b"\x00" * 32)
-    assert k.decrypt(b"\xaa}\xfa5\xcaY:") == text
-
-    # '' * 32 encrypt
-    k = arc4.init_arc4("" * 32)
-    assert k.encrypt(text) == b"\xaa}\xfa5\xcaY:"
-
-    # '' * 32 decrypt
-    k = arc4.init_arc4("" * 32)
-    assert k.decrypt(b"\xaa}\xfa5\xcaY:") == text
-
-    # b'' * 32 encrypt
-    k = arc4.init_arc4(b"" * 32)
-    assert k.encrypt(text) == b"\xaa}\xfa5\xcaY:"
-
-    # b'' * 32 decrypt
-    k = arc4.init_arc4(b"" * 32)
-    assert k.decrypt(b"\xaa}\xfa5\xcaY:") == text
-
-    # '01' * 32 encrypt
-    k = arc4.init_arc4("01" * 32)
-    assert k.encrypt(text) == b"\xaa}\xfa5\xcaY:"
-
-    # '01' * 32 decrypt
-    k = arc4.init_arc4("01" * 32)
-    assert k.decrypt(b"\xaa}\xfa5\xcaY:") == text
-
-    # b'\x01' * 32 encrypt
-    k = arc4.init_arc4(b"\x01" * 32)
-    assert k.encrypt(text) == b"\xaa}\xfa5\xcaY:"
-
-    # b'\x01' * 32 decrypt
-    k = arc4.init_arc4(b"\x01" * 32)
-    assert k.decrypt(b"\xaa}\xfa5\xcaY:") == text
-
-
 def test_arc4_unmocked():
     """
     by default init_arc4 should be mocked in the test suite to always use `'00' * 32` as seed
@@ -117,23 +60,6 @@ def test_arc4_unmocked():
         # b'\x01' * 32 decrypt
         k = arc4.init_arc4(b"\x01" * 32)
         assert k.decrypt(b"rm}zqNN") == text
-
-
-@pytest.mark.skip()
-@pytest.mark.usefixtures("server_db")
-def test_transaction_arc4_mocked(server_db):
-    """
-    by default init_arc4 should be mocked in the test suite to always use `'00' * 32` as seed.
-    """
-
-    v = int(100 * 1e8)
-    tx_info = send.compose(server_db, ADDR[0], ADDR[1], "XCP", v)
-    send1hex = composer.construct(server_db, tx_info, {"regular_dust_size": 5430})
-
-    assert (
-        send1hex["rawtransaction"]
-        == "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0336150000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000000000001e6a1c8a5dda15fb6f05628a061e67576e926dc71a7fa2f0cceb951120a932c346ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
-    )
 
 
 @pytest.mark.usefixtures("server_db")

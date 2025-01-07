@@ -131,10 +131,6 @@ fn parse_vout(
             .as_slice()
         {   
             let bytes = arc4_decrypt(&key, pb.as_bytes());
-            println!("RS encrypted data {}", hex::encode(pb.as_bytes()));
-            println!("RS key {}", hex::encode(key));
-            println!("RS decrypted data {}", hex::encode(bytes.clone()));
-            println!("--------------------");
             if bytes.starts_with(&config.prefix) {
                 return Ok((
                     ParseOutput::Data(bytes[config.prefix.len()..].to_vec()),

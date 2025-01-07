@@ -119,15 +119,8 @@ def determine_encoding(data, construct_params):
 
 
 def encrypt_data(data, arc4_key):
-    print("--------encryption---------")
-    print("Py decrypt data", binascii.hexlify(data))
-    print("Py key", arc4_key)
-    # print("Py key", util.inverse_hash(arc4_key))
-    # key = arc4.init_arc4(binascii.unhexlify(util.inverse_hash(arc4_key)))
     key = arc4.init_arc4(binascii.unhexlify(arc4_key))
     encrypted_data = key.encrypt(data)
-    print("PY encrypted data", binascii.hexlify(encrypted_data))
-    print("-----------------")
     return encrypted_data
 
 

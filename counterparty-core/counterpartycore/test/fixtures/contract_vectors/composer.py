@@ -6,7 +6,7 @@ from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
 
 from counterpartycore.lib import config, exceptions
 
-from ..params import ADDR, DEFAULT_PARAMS, DP, MULTISIGADDR, P2WPKH_ADDR
+from ..params import ADDR, DEFAULT_PARAMS, DP, MULTISIGADDR
 
 PROVIDED_PUBKEYS = ",".join([DEFAULT_PARAMS["pubkey"][ADDR[0]], DEFAULT_PARAMS["pubkey"][ADDR[1]]])
 
@@ -41,8 +41,10 @@ COMPOSER_VECTOR = {
             },
             {
                 "comment": "P2WPKH address",
-                "in": (P2WPKH_ADDR[0], [], {}),
-                "out": P2wpkhAddress(P2WPKH_ADDR[0]).to_script_pub_key(),
+                "in": ("bcrt1qs758ursh4q9z627kt3pp5yysm78ddny6txaqgw", [], {}),
+                "out": P2wpkhAddress(
+                    "bcrt1qs758ursh4q9z627kt3pp5yysm78ddny6txaqgw"
+                ).to_script_pub_key(),
             },
             {
                 "comment": "multisig address",

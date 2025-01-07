@@ -207,9 +207,7 @@ def insert_raw_transaction(raw_transaction, db):
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
-        print("raw_transaction", raw_transaction)
         deserialized_tx = deserialize.deserialize_tx(raw_transaction, True, True, block_index)
-        print("deserialized_tx", deserialized_tx)
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
             db, deserialized_tx, block_index, composing=True
         )
@@ -660,7 +658,7 @@ def run_scenario(scenario):
                 construct_params = {
                     "regular_dust_size": 5430,
                 } | tx[2]
-                print("tx", tx[0], tx[1])
+                # print("tx", tx[0], tx[1])
                 unsigned_tx_hex = composer.construct(db, compose(db, *tx[1]), construct_params)
                 unsigned_tx_hex = unsigned_tx_hex["rawtransaction"]
                 raw_transactions.append({tx[0]: unsigned_tx_hex})

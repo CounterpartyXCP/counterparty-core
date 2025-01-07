@@ -15,11 +15,10 @@ import bitcoin as bitcoinlib
 import pycoin
 import pytest
 import requests
-from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import arc4, config, database, exceptions, ledger, log, script, util
+from counterpartycore.lib import config, database, exceptions, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.lib.api import dbbuilder
@@ -224,7 +223,7 @@ def rawtransactions_db(request):
 def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
-    config.NETWORK_NAME = "testnet"
+    config.NETWORK_NAME = "regtest"
 
     db = database.get_connection(read_only=False)
     cursor = db.cursor()
@@ -249,7 +248,7 @@ def api_server(request, cp_server):
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
-    config.NETWORK_NAME = "testnet"
+    config.NETWORK_NAME = "regtest"
 
     print("api_server", config.DATABASE, config.STATE_DATABASE)
 
@@ -342,7 +341,7 @@ def api_server_v2(request, cp_server):
 
     config.STATE_DATABASE = config.STATE_DATABASE.replace(".testnet.db", ".db")
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
-    config.NETWORK_NAME = "testnet"
+    config.NETWORK_NAME = "regtest"
 
     if os.path.exists(config.STATE_DATABASE):
         os.unlink(config.STATE_DATABASE)
@@ -400,7 +399,7 @@ def cp_server(request):
     if hasattr(config, "PREFIX"):
         config.PREFIX = b"TESTXXXX"
 
-    config.NETWORK_NAME = "testnet"
+    config.NETWORK_NAME = "regtest"
 
     request.addfinalizer(lambda: util_test.remove_database_files(dbfile))
 
@@ -601,16 +600,6 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def mocked_get_history(address, unconfirmed=False):
         return util_test.get_history(rawtransactions_db, address, unconfirmed)
 
-    # mock the arc4 with a fixed seed to keep data from changing based on inputs
-    _init_arc4 = arc4.init_arc4
-
-    def init_arc4(seed):
-        return _init_arc4(seed)
-        if getattr(config, "DISABLE_ARC4_MOCKING", False):
-            return _init_arc4(seed)
-        else:
-            return ARC4.new(binascii.unhexlify("00" * 32))
-
     def check_wal_file(dbfile):
         pass
 
@@ -652,7 +641,6 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def convert_to_psbt(tx_hex):
         return tx_hex
 
-    monkeypatch.setattr("counterpartycore.lib.arc4.init_arc4", init_arc4)
     monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
