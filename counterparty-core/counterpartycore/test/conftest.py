@@ -223,7 +223,6 @@ def rawtransactions_db(request):
 def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
-    # config.NETWORK_NAME = "regtest"
 
     db = database.get_connection(read_only=False)
     cursor = db.cursor()
@@ -248,7 +247,6 @@ def api_server(request, cp_server):
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
-    # config.NETWORK_NAME = "regtest"
 
     print("api_server", config.DATABASE, config.STATE_DATABASE)
 
@@ -341,7 +339,6 @@ def api_server_v2(request, cp_server):
 
     config.STATE_DATABASE = config.STATE_DATABASE.replace(".testnet.db", ".db")
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
-    # config.NETWORK_NAME = "regtest"
 
     if os.path.exists(config.STATE_DATABASE):
         os.unlink(config.STATE_DATABASE)
@@ -398,8 +395,6 @@ def cp_server(request):
     # monkeypatch this here because init_mock_functions can run before cp_server
     if hasattr(config, "PREFIX"):
         config.PREFIX = b"TESTXXXX"
-
-    # config.NETWORK_NAME = "regtest"
 
     request.addfinalizer(lambda: util_test.remove_database_files(dbfile))
 
