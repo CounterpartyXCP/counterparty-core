@@ -18,6 +18,7 @@ use std::thread::JoinHandle;
 
 use bitcoin;
 use bitcoin::consensus::deserialize;
+use bitcoin::{blockdata::transaction::Transaction, Block};
 
 use pyo3::prelude::*;
 use types::pipeline::ChanOut;
@@ -105,13 +106,16 @@ impl Deserializer {
         parse_vouts: bool,
         py: Python<'_>,
     ) -> PyResult<PyObject> {
-        let decoded_tx = hex::decode(tx_hex).expect("Failed to decode hex string");
+        let decoded_tx = hex::decode(tx_hex).expect("Failed to decode hex transaction");
+        let transaction: Transaction =
+            deserialize(&decoded_tx).expect("Failed to deserialize transaction");
 
-        let transaction: bitcoin::blockdata::transaction::Transaction =
-        deserialize(&decoded_tx).expect("Failed to deserialize transaction");
-
-        let deserialized_transaction = self::bitcoin_client::parse_transaction(&transaction, &self.config, height, parse_vouts);
-
+        let deserialized_transaction = self::bitcoin_client::parse_transaction(
+            &transaction,
+            &self.config,
+            height,
+            parse_vouts,
+        );
         return Ok(deserialized_transaction.into_py(py));
     }
 
@@ -122,13 +126,11 @@ impl Deserializer {
         parse_vouts: bool,
         py: Python<'_>,
     ) -> PyResult<PyObject> {
-        let decoded_block = hex::decode(block_hex)
-            .map_err(|e| Error::ParseVout(format!("Failed to decode hex string: {}", e)))?;
+        let decoded_block = hex::decode(block_hex).expect("Failed to decode hex block");
+        let block: Block = deserialize(&decoded_block).expect("Failed to deserialize transaction");
 
-        let block: bitcoin::Block = deserialize(&decoded_block)
-            .map_err(|e| Error::ParseVout(format!("Failed to deserialize block: {}", e)))?;
-
-        let deserialized_block = self::bitcoin_client::parse_block(block, &self.config, height, parse_vouts);
+        let deserialized_block =
+            self::bitcoin_client::parse_block(block, &self.config, height, parse_vouts);
         return Ok(deserialized_block?.into_py(py));
     }
 }
