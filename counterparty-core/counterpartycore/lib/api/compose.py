@@ -548,7 +548,6 @@ def info(db, rawtransaction: str, block_index: int = None):
     try:
         decoded_tx = deserialize.deserialize_tx(
             rawtransaction,
-            use_txid=util.enabled("correct_segwit_txids", block_index),
             parse_vouts=True,
             block_index=block_index,
         )

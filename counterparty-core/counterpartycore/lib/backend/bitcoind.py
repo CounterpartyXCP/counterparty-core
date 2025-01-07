@@ -357,8 +357,7 @@ def get_decoded_transaction(tx_hash, block_index=None):
         return TRANSACTIONS_CACHE[tx_hash]
 
     raw_tx = getrawtransaction(tx_hash)
-    use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-    tx = deserialize.deserialize_tx(raw_tx, use_txid=use_txid, block_index=block_index)
+    tx = deserialize.deserialize_tx(raw_tx, block_index=block_index)
 
     add_transaction_in_cache(tx_hash, tx)
 
@@ -387,7 +386,7 @@ def decoderawtransaction(rawtx: str):
     Proxy to `decoderawtransaction` RPC call.
     :param rawtx: The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)
     """
-    return deserialize.deserialize_tx(rawtx, False)
+    return deserialize.deserialize_tx(rawtx)
 
 
 def search_pubkey_in_transactions(pubkeyhash, tx_hashes):

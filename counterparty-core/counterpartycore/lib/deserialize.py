@@ -3,7 +3,7 @@ from counterparty_rs import indexer
 from counterpartycore.lib import config, util
 
 
-def deserialize_tx(tx_hex, use_txid, parse_vouts=False, block_index=None):
+def deserialize_tx(tx_hex, parse_vouts=False, block_index=None):
     deserializer = indexer.Deserializer(
         {
             "rpc_address": "",
@@ -15,13 +15,11 @@ def deserialize_tx(tx_hex, use_txid, parse_vouts=False, block_index=None):
             "prefix": config.PREFIX,
         }
     )
-    return deserializer.parse_transaction(
-        tx_hex, block_index or util.CURRENT_BLOCK_INDEX, parse_vouts, use_txid
-    )
+    current_block_index = block_index or util.CURRENT_BLOCK_INDEX
+    return deserializer.parse_transaction(tx_hex, current_block_index, parse_vouts)
 
 
-def deserialize_block(block_hex, use_txid, parse_vouts=False, block_index=None):
-    # block_hex = ("00" * 8) + block_hex  # fake magic bytes and block size
+def deserialize_block(block_hex, parse_vouts=False, block_index=None):
     deserializer = indexer.Deserializer(
         {
             "rpc_address": "",
@@ -33,6 +31,5 @@ def deserialize_block(block_hex, use_txid, parse_vouts=False, block_index=None):
             "prefix": config.PREFIX,
         }
     )
-    return deserializer.parse_block(
-        block_hex, block_index or util.CURRENT_BLOCK_INDEX, parse_vouts, use_txid
-    )
+    current_block_index = block_index or util.CURRENT_BLOCK_INDEX
+    return deserializer.parse_block(block_hex, current_block_index, parse_vouts)

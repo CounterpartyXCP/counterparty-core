@@ -45,7 +45,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             # list_tx
             decoded_tx_count = 0
             for raw_tx in raw_tx_list:
-                decoded_tx = deserialize.deserialize_tx(raw_tx, use_txid=True, parse_vouts=True)
+                decoded_tx = deserialize.deserialize_tx(raw_tx, parse_vouts=True)
                 existing_tx = ledger.get_transaction(db, decoded_tx["tx_hash"])
                 not_supported_txs.append(decoded_tx["tx_hash"])
                 if existing_tx:

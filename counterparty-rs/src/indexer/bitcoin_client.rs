@@ -382,7 +382,6 @@ fn create_transaction(
     config: &Config,
     height: u32,
     parse_vouts: bool,
-    use_txid: bool
 ) -> Transaction {
     let tx_bytes = serialize(tx);
     let mut vins = Vec::new();
@@ -485,7 +484,7 @@ fn create_transaction(
     }
     let tx_id = tx.compute_txid().to_string();
     let tx_hash;
-    if segwit && use_txid {
+    if segwit && config.correct_segwit_txids_enabled(height) {
         tx_hash = tx_id.clone();
     } else {
         tx_hash = Sha256dHash::hash(&tx_bytes).to_string();
@@ -505,13 +504,13 @@ fn create_transaction(
 }
 
 
-pub fn parse_transaction(tx_hex: &str, config: &Config, height: u32, parse_vouts: bool, use_txid: bool) -> Transaction {
+pub fn parse_transaction(tx_hex: &str, config: &Config, height: u32, parse_vouts: bool) -> Transaction {
     let decoded_tx = hex::decode(tx_hex).expect("Failed to decode hex string");
 
     let transaction: bitcoin::blockdata::transaction::Transaction = 
         deserialize(&decoded_tx).expect("Failed to deserialize transaction");
     
-    return create_transaction(&transaction, config, height, parse_vouts, use_txid);
+    return create_transaction(&transaction, config, height, parse_vouts);
 }
 
 
@@ -519,7 +518,7 @@ impl ToBlock for Block {
     fn to_block(&self, config: Config, height: u32) -> CrateBlock {
         let mut transactions = Vec::new();
         for tx in self.txdata.iter() {
-            transactions.push(create_transaction(tx, &config, height, true, config.correct_segwit_txids_enabled(height)));
+            transactions.push(create_transaction(tx, &config, height, true));
         }
         CrateBlock {
             height,
@@ -537,13 +536,13 @@ impl ToBlock for Block {
 }
 
 
-pub fn parse_block(hex: &str, config: &Config, height: u32, parse_vouts: bool, use_txid: bool) -> Result<CrateBlock, Error> {
+pub fn parse_block(hex: &str, config: &Config, height: u32, parse_vouts: bool) -> Result<CrateBlock, Error> {
     let decoded_block = hex::decode(hex).map_err(|e| Error::ParseVout(format!("Failed to decode hex string: {}", e)))?;
     let block: Block = deserialize(&decoded_block).map_err(|e| Error::ParseVout(format!("Failed to deserialize block: {}", e)))?;
 
     let mut transactions = Vec::new();
     for tx in block.txdata.iter() {
-        transactions.push(create_transaction(tx, config, height, parse_vouts, use_txid));
+        transactions.push(create_transaction(tx, config, height, parse_vouts));
     }
     Ok(CrateBlock {
         height,

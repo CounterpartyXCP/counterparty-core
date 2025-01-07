@@ -12,9 +12,9 @@ def deserialize_bitcoinlib(tx_hex):
     return bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(tx_hex))
 
 
-def deserialize_rust(tx_hex, use_txid=False):
+def deserialize_rust(tx_hex):
     # config.NETWORK_NAME = "mainnet"
-    return deserialize.deserialize_tx(tx_hex, use_txid, parse_vouts=True, block_index=900000)
+    return deserialize.deserialize_tx(tx_hex, parse_vouts=True, block_index=900000)
 
 
 def create_block_hex(transactions_hex):
@@ -36,7 +36,7 @@ def create_block_hex(transactions_hex):
 
 def test_deserialize():
     hex = "0100000001db3acf37743ac015808f7911a88761530c801819b3b907340aa65dfb6d98ce24030000006a473044022002961f4800cb157f8c0913084db0ee148fa3e1130e0b5e40c3a46a6d4f83ceaf02202c3dd8e631bf24f4c0c5341b3e1382a27f8436d75f3e0a095915995b0bf7dc8e01210395c223fbf96e49e5b9e06a236ca7ef95b10bf18c074bd91a5942fc40360d0b68fdffffff040000000000000000536a4c5058325bd61325dc633fadf05bec9157c23106759cee40954d39d9dbffc17ec5851a2d1feb5d271da422e0e24c7ae8ad29d2eeabf7f9ca3de306bd2bc98e2a39e47731aa000caf400053000c1283000149c8000000000000001976a91462bef4110f98fdcb4aac3c1869dbed9bce8702ed88acc80000000000000017a9144317f779c0a2ccf8f6bc3d440bd9e536a5bff75287fa3e5100000000001976a914bf2646b8ba8b4a143220528bde9c306dac44a01c88ac00000000"
-    decoded_tx = deserialize_rust(hex, use_txid=True)
+    decoded_tx = deserialize_rust(hex)
 
     _parsed_vouts = decoded_tx.pop("parsed_vouts")
     # assert str(parsed_vouts) == "Not Parsed"
@@ -90,9 +90,7 @@ def test_deserialize():
     ]
     # create a block with the transactions
     block_hex = create_block_hex(transactions_hex)
-    block_info = deserialize.deserialize_block(
-        block_hex, use_txid=False, parse_vouts=True, block_index=900000
-    )
+    block_info = deserialize.deserialize_block(block_hex, parse_vouts=True, block_index=900000)
 
     for i, hex in enumerate(transactions_hex):
         decoded_tx_bitcoinlib = deserialize_bitcoinlib(hex)
@@ -123,7 +121,7 @@ def test_deserialize():
     start_time = time.time()
     for i in range(iterations):  # noqa: B007
         for hex in transactions_hex:
-            deserialize_rust(hex, use_txid=True)
+            deserialize_rust(hex)
     end_time = time.time()
     print(
         f"Time to deserialize {4 * iterations} transactions with Rust: {end_time - start_time} seconds"

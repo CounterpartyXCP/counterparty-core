@@ -125,7 +125,6 @@ class BlockchainWatcher:
         # parse blocks as they come in
         decoded_block = deserialize.deserialize_block(
             body.hex(),
-            use_txid=True,
             parse_vouts=True,
             block_index=util.CURRENT_BLOCK_INDEX + 1,
         )
@@ -150,7 +149,7 @@ class BlockchainWatcher:
         tx_hash = self.hash_by_sequence.get(sequence)
         if tx_hash is None:
             # when tx never seen in the mempool is included in a block
-            decoded_tx = deserialize.deserialize_tx(body.hex(), use_txid=True)
+            decoded_tx = deserialize.deserialize_tx(body.hex())
             tx_hash = decoded_tx["tx_hash"]
         if sequence in self.hash_by_sequence:
             self.hash_by_sequence.pop(sequence)

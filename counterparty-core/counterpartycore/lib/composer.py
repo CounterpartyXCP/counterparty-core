@@ -833,7 +833,7 @@ def construct(db, tx_info, construct_params):
 def check_transaction_sanity(tx_info, composed_tx, construct_params):
     tx_hex = composed_tx["rawtransaction"]
     source, destinations, data = tx_info
-    decoded_tx = deserialize.deserialize_tx(tx_hex, use_txid=True, parse_vouts=True)
+    decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)
 
     # check if source address matches the first input address
     first_utxo_txid = decoded_tx["vin"][0]["hash"]
