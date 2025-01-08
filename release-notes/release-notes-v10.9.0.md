@@ -53,6 +53,7 @@
 - Remove Addrindexrs dependency: mock `get_oldest_tx()`, use Electrs to get utxos and address history for transaction composition
 - Be able to trigger automatic State DB refresh on version change
 - Use only Rust to deserialize blocks and transactions
+- Add `testnet4` support
 
 ## API
 
@@ -73,6 +74,7 @@
 - Add `severity` field to JSON logs for compatibility
 - Add `--refresh-state-db` and `--rebuild-state-db` flags for `start` command
 - Check if `--electrs-url` is a valid url
+- Add `--testnet4` flag
 
 # Credits
 
