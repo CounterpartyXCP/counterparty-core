@@ -308,7 +308,10 @@ def pubkey_to_p2whash(pubkey):
 
 
 def pubkey_to_p2whash2(pubkey):
-    setup(config.NETWORK_NAME)
+    if config.NETWORK_NAME == "testnet4":
+        setup("testnet")
+    else:
+        setup(config.NETWORK_NAME)
     address = PublicKey.from_hex(pubkey).get_segwit_address().to_string()
     return address
 

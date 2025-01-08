@@ -872,8 +872,8 @@ CHECKPOINTS_REGTEST = {
 CONSENSUS_HASH_VERSION_TESTNET4 = 1
 CHECKPOINTS_TESTNET4 = {
     config.BLOCK_FIRST_TESTNET4: {
-        "ledger_hash": "",
-        "txlist_hash": "",
+        "ledger_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
+        "txlist_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
     },
 }
 

@@ -542,7 +542,6 @@ def initialise_log_and_config(args, api=False):
         "testnet": args.testnet,
         "testnet4": args.testnet4,
         "regtest": args.regtest,
-        "customnet": args.customnet,
         "api_limit_rows": args.api_limit_rows,
         "backend_connect": args.backend_connect,
         "backend_port": args.backend_port,

@@ -562,7 +562,7 @@ def enabled(change_name, block_index=None):
 
     if config.TESTNET:
         index_name = "testnet_block_index"
-    elif config.TESTNET:
+    elif config.TESTNET4:
         index_name = "testnet4_block_index"
     else:
         index_name = "block_index"

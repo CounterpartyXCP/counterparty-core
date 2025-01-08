@@ -28,7 +28,8 @@
         "minimum_version_minor": 47,
         "minimum_version_revision": 1,
         "block_index": 333500,
-        "testnet_block_index": 0
+        "testnet_block_index": 0,
+        "testnet4_block_index": 0
     },
     "better_single_source_destination": {
         "minimum_version_major": 9,
