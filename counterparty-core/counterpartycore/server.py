@@ -49,7 +49,7 @@ def initialise(*args, **kwargs):
         api_log_file=kwargs.pop("api_log_file", None),
         no_log_files=kwargs.pop("no_log_files", False),
         testnet=kwargs.get("testnet", False),
-        testcoin=kwargs.get("testcoin", False),
+        testnet4=kwargs.get("testnet4", False),
         regtest=kwargs.get("regtest", False),
         action=kwargs.get("action", None),
         json_logs=kwargs.get("json_logs", False),
@@ -67,7 +67,7 @@ def initialise_log_config(
     api_log_file=None,
     no_log_files=False,
     testnet=False,
-    testcoin=False,
+    testnet4=False,
     regtest=False,
     action=None,
     json_logs=False,
@@ -97,8 +97,8 @@ def initialise_log_config(
         network += ".testnet"
     if regtest:
         network += ".regtest"
-    if testcoin:
-        network += ".testcoin"
+    if testnet4:
+        network += ".testnet4"
 
     # Log
     if no_log_files:
@@ -134,7 +134,7 @@ def initialise_config(
     data_dir=None,
     cache_dir=None,
     testnet=False,
-    testcoin=False,
+    testnet4=False,
     regtest=False,
     api_limit_rows=1000,
     backend_connect=None,
@@ -201,11 +201,10 @@ def initialise_config(
     else:
         config.TESTNET = False
 
-    # testcoin
-    if testcoin:
-        config.TESTCOIN = testcoin
+    if testnet4:
+        config.TESTNET4 = testnet4
     else:
-        config.TESTCOIN = False
+        config.TESTNET4 = False
 
     # regtest
     if regtest:
@@ -213,13 +212,7 @@ def initialise_config(
     else:
         config.REGTEST = False
 
-    if customnet != None and len(customnet) > 0:  # noqa: E711
-        config.CUSTOMNET = True
-        config.REGTEST = True  # Custom nets are regtests with different parameters
-    else:
-        config.CUSTOMNET = False
-
-    if config.TESTNET:
+    if config.TESTNET or config.TESTNET4:
         bitcoinlib.SelectParams("testnet")
     elif config.REGTEST:
         bitcoinlib.SelectParams("regtest")
@@ -229,10 +222,10 @@ def initialise_config(
     config.NETWORK_NAME = "mainnet"
     if config.TESTNET:
         config.NETWORK_NAME = "testnet"
+    if config.TESTNET4:
+        config.NETWORK_NAME = "testnet4"
     if config.REGTEST:
         config.NETWORK_NAME = "regtest"
-    if config.TESTCOIN:
-        config.NETWORK_NAME = "testcoin"
     network = f".{config.NETWORK_NAME }" if config.NETWORK_NAME != "mainnet" else ""
 
     # Database
@@ -271,6 +264,8 @@ def initialise_config(
     else:
         if config.TESTNET:
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+        elif config.TESTNET4:
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET4
         elif config.REGTEST:
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_REGTEST
         else:
@@ -358,20 +353,13 @@ def initialise_config(
         config.RPC_PORT = rpc_port
     else:
         if config.TESTNET:
-            if config.TESTCOIN:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET + 1
-            else:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+            config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+        elif config.TESTNET4:
+            config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET4
         elif config.REGTEST:
-            if config.TESTCOIN:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST + 1
-            else:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
+            config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
         else:
-            if config.TESTCOIN:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT + 1
-            else:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT
+            config.RPC_PORT = config.DEFAULT_RPC_PORT
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535):
@@ -415,20 +403,13 @@ def initialise_config(
         config.API_PORT = api_port
     else:
         if config.TESTNET:
-            if config.TESTCOIN:
-                config.API_PORT = config.DEFAULT_API_PORT_TESTNET + 1
-            else:
-                config.API_PORT = config.DEFAULT_API_PORT_TESTNET
+            config.API_PORT = config.DEFAULT_API_PORT_TESTNET
+        elif config.TESTNET4:
+            config.API_PORT = config.DEFAULT_API_PORT_TESTNET4
         elif config.REGTEST:
-            if config.TESTCOIN:
-                config.API_PORT = config.DEFAULT_API_PORT_REGTEST + 1
-            else:
-                config.API_PORT = config.DEFAULT_API_PORT_REGTEST
+            config.API_PORT = config.DEFAULT_API_PORT_REGTEST
         else:
-            if config.TESTCOIN:
-                config.API_PORT = config.DEFAULT_API_PORT + 1
-            else:
-                config.API_PORT = config.DEFAULT_API_PORT
+            config.API_PORT = config.DEFAULT_API_PORT
     try:
         config.API_PORT = int(config.API_PORT)
         if not (int(config.API_PORT) > 1 and int(config.API_PORT) < 65535):
@@ -445,20 +426,13 @@ def initialise_config(
         config.ZMQ_PUBLISHER_PORT = zmq_publisher_port
     else:
         if config.TESTNET:
-            if config.TESTCOIN:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET + 1
-            else:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET
+        elif config.TESTNET4:
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET4
         elif config.REGTEST:
-            if config.TESTCOIN:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST + 1
-            else:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST
         else:
-            if config.TESTCOIN:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT + 1
-            else:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT
     try:
         config.ZMQ_PUBLISHER_PORT = int(config.ZMQ_PUBLISHER_PORT)
         if not (int(config.ZMQ_PUBLISHER_PORT) > 1 and int(config.ZMQ_PUBLISHER_PORT) < 65535):
@@ -491,82 +465,44 @@ def initialise_config(
         config.FORCE = False
 
     # Encoding
-    if config.TESTCOIN:
-        config.PREFIX = b"XX"  # 2 bytes (possibly accidentally created)
-    else:
-        config.PREFIX = b"CNTRPRTY"  # 8 bytes
+    config.PREFIX = b"CNTRPRTY"  # 8 bytes
 
     # (more) Testnet
     if config.TESTNET:
         config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
-        if config.TESTCOIN:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
-            config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
-            config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
-            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-        else:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
-            config.BURN_START = config.BURN_START_TESTNET
-            config.BURN_END = config.BURN_END_TESTNET
-            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-    elif config.CUSTOMNET:
-        custom_args = customnet.split("|")
-
-        if len(custom_args) == 3:
-            config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
-            config.ADDRESSVERSION = binascii.unhexlify(custom_args[1])
-            config.P2SH_ADDRESSVERSION = binascii.unhexlify(custom_args[2])
-            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
-            config.BURN_START = config.BURN_START_REGTEST
-            config.BURN_END = config.BURN_END_REGTEST
-            config.UNSPENDABLE = custom_args[0]
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-        else:
-            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"  # noqa: B016
+        config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
+        config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
+        config.BURN_START = config.BURN_START_TESTNET
+        config.BURN_END = config.BURN_END_TESTNET
+        config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+    elif config.TESTNET4:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET4
+        config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET4
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET4
+        config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET4
+        config.BURN_START = config.BURN_START_TESTNET4
+        config.BURN_END = config.BURN_END_TESTNET4
+        config.UNSPENDABLE = config.UNSPENDABLE_TESTNET4
     elif config.REGTEST:
         config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
-        if config.TESTCOIN:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
-            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST_TESTCOIN
-            config.BURN_START = config.BURN_START_REGTEST_TESTCOIN
-            config.BURN_END = config.BURN_END_REGTEST_TESTCOIN
-            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-        else:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
-            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
-            config.BURN_START = config.BURN_START_REGTEST
-            config.BURN_END = config.BURN_END_REGTEST
-            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
+        config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+        config.BURN_START = config.BURN_START_REGTEST
+        config.BURN_END = config.BURN_END_REGTEST
+        config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
-        if config.TESTCOIN:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
-            config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
-            config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
-            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-        else:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
-            config.BURN_START = config.BURN_START_MAINNET
-            config.BURN_END = config.BURN_END_MAINNET
-            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
+        config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
+        config.BURN_START = config.BURN_START_MAINNET
+        config.BURN_END = config.BURN_END_MAINNET
+        config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
 
     # Misc
+    config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     config.REQUESTS_TIMEOUT = requests_timeout
     config.CHECK_ASSET_CONSERVATION = not skip_asset_conservation_check
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
@@ -604,9 +540,8 @@ def initialise_log_and_config(args, api=False):
         "data_dir": args.data_dir,
         "cache_dir": args.cache_dir,
         "testnet": args.testnet,
-        "testcoin": args.testcoin,
+        "testnet4": args.testnet4,
         "regtest": args.regtest,
-        "customnet": args.customnet,
         "api_limit_rows": args.api_limit_rows,
         "backend_connect": args.backend_connect,
         "backend_port": args.backend_port,
@@ -655,7 +590,7 @@ def initialise_log_and_config(args, api=False):
         api_log_file=args.api_log_file,
         no_log_files=args.no_log_files,
         testnet=args.testnet,
-        testcoin=args.testcoin,
+        testnet4=args.testnet4,
         regtest=args.regtest,
         action=args.action,
         json_logs=args.json_logs,

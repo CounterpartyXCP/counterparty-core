@@ -43,6 +43,7 @@ class TestTelemetryCollectorBase:
         mock_ledger.last_message.return_value = {"block_index": 12345}
         mock_config.__version__ = "1.2.3"
         mock_config.TESTNET = False
+        mock_config.TESTNET4 = False
         mock_config.FORCE = False
 
         collector = TelemetryCollectorBase(mock_db)

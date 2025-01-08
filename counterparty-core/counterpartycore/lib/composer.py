@@ -33,8 +33,15 @@ logger = logging.getLogger(config.LOGGER_NAME)
 ################
 
 
+def setup_bitcoinutils():
+    if config.NETWORK_NAME == "testnet4":
+        setup("testnet")
+    else:
+        setup(config.NETWORK_NAME)
+
+
 def address_to_script_pub_key(address, unspent_list, construct_params):
-    setup(config.NETWORK_NAME)
+    setup_bitcoinutils()
     if script.is_multisig(address):
         signatures_required, addresses, signatures_possible = script.extract_array(address)
         pubkeys = [search_pubkey(addr, unspent_list, construct_params) for addr in addresses]
@@ -1003,7 +1010,7 @@ def prepare_construct_params(construct_params):
 
 
 def compose_transaction(db, name, params, construct_parameters):
-    setup(config.NETWORK_NAME)
+    setup_bitcoinutils()
 
     construct_params, warnings = prepare_construct_params(construct_parameters)
 

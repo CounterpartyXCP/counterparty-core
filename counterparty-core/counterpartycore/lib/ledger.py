@@ -760,7 +760,7 @@ def value_in(db, quantity, asset, divisible=None):
 
 def price(numerator, denominator):
     """Return price as Fraction or Decimal."""
-    if util.CURRENT_BLOCK_INDEX >= 294500 or config.TESTNET or config.REGTEST:  # Protocol change.
+    if util.after_block_or_test_network(util.CURRENT_BLOCK_INDEX, 294500):  # Protocol change.
         return fractions.Fraction(numerator, denominator)
     else:
         numerator = D(numerator)

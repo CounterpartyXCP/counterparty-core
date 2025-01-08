@@ -43,6 +43,8 @@ def rpc_call(payload, retry=0):
             if response is None:  # noqa: E711
                 if config.TESTNET:
                     network = "testnet"
+                elif config.TESTNET4:
+                    network = "testnet4"
                 elif config.REGTEST:
                     network = "regtest"
                 else:

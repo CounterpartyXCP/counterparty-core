@@ -39,7 +39,7 @@ def pack(address):
                 return short_address_bytes
             except Exception as e:  # noqa: F841
                 raise script.AddressError(  # noqa: B904
-                    f"The address {address} is not a valid bitcoin address ({'testnet' if config.TESTNET or config.REGTEST else 'mainnet'})"
+                    f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
                 )
     else:
         try:

@@ -66,11 +66,11 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--testcoin",),
+        ("--testnet4",),
         {
             "action": "store_true",
             "default": False,
-            "help": f"use the test {config.XCP_NAME} network on every blockchain",
+            "help": f"use {config.BTC_NAME} testnet4 addresses and block numbers",
         },
     ],
     [
@@ -79,13 +79,6 @@ CONFIG_ARGS = [
             "action": "store_true",
             "default": False,
             "help": f"use {config.BTC_NAME} regtest addresses and block numbers",
-        },
-    ],
-    [
-        ("--customnet",),
-        {
-            "default": "",
-            "help": "use a custom network (specify as UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION with version bytes in HH hex format)",
         },
     ],
     [
