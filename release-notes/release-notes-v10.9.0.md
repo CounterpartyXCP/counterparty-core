@@ -74,6 +74,7 @@
 - Add `severity` field to JSON logs for compatibility
 - Add `--refresh-state-db` and `--rebuild-state-db` flags for `start` command
 - Check if `--electrs-url` is a valid url
+- Remove `--testcoin` and `--customnet` flags
 - Add `--testnet4` flag
 
 # Credits
