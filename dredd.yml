@@ -17,7 +17,7 @@ only:
 - Blocks > Get Debits By Block > Get Debits By Block
 - Blocks > Get Expirations > Get Expirations
 - Blocks > Get Cancels > Get Cancels
-- Blocks > Get Destructions > Get Destructions
+- Blocks > Get Valid Destructions By Block > Get Valid Destructions By Block
 - Blocks > Get Issuances By Block > Get Issuances By Block
 - Blocks > Get Sends By Block > Get Sends By Block
 - Blocks > Get Dispenses By Block > Get Dispenses By Block
@@ -54,6 +54,7 @@ only:
 - Addresses > Get Receive By Address > Get Receive By Address
 - Addresses > Get Sends By Address And Asset > Get Sends By Address And Asset
 - Addresses > Get Receive By Address And Asset > Get Receive By Address And Asset
+- Addresses > Get Valid Destructions By Address > Get Valid Destructions By Address
 - Addresses > Get Dispensers By Address > Get Dispensers By Address
 - Addresses > Get Dispenser By Address And Asset > Get Dispenser By Address And Asset
 - Addresses > Get Dispenses By Source > Get Dispenses By Source
@@ -85,15 +86,18 @@ only:
 - Compose > Compose Destroy > Compose Destroy
 - Compose > Compose Dispenser > Compose Dispenser
 - Compose > Compose Dividend > Compose Dividend
+- Compose > Get Dividend Estimate Xcp Fee > Get Dividend Estimate Xcp Fee
 - Compose > Compose Issuance > Compose Issuance
 - Compose > Compose MPMA > Compose MPMA
 - Compose > Compose Order > Compose Order
 - Compose > Compose Send > Compose Send
 - Compose > Compose Sweep > Compose Sweep
+- Compose > Get Sweep Estimate Xcp Fee > Get Sweep Estimate Xcp Fee
 - Compose > Compose Dispense > Compose Dispense
 - Compose > Compose Fairminter > Compose Fairminter
 - Compose > Compose Fairmint > Compose Fairmint
 - Compose > Compose Attach > Compose Attach
+- Compose > Get Attach Estimate Xcp Fee > Get Attach Estimate Xcp Fee
 - Compose > Compose Detach > Compose Detach
 - Compose > Compose Movetoutxo > Compose Movetoutxo
 - Compose > Get Attach Estimate Xcp Fee > Get Attach Estimate Xcp Fee
@@ -105,6 +109,7 @@ only:
 - Assets > Get Order Matches By Asset > Get Order Matches By Asset
 - Assets > Get Credits By Asset > Get Credits By Asset
 - Assets > Get Debits By Asset > Get Debits By Asset
+- Assets > Get Valid Destructions By Asset > Get Valid Destructions By Asset
 - Assets > Get Dividends By Asset > Get Dividends By Asset
 - Assets > Get Issuances By Asset > Get Issuances By Asset
 - Assets > Get Sends By Asset > Get Sends By Asset
@@ -135,6 +140,7 @@ only:
 - Events > Get All Events Counts > Get All Events Counts
 - Events > Get Events By Name > Get Events By Name
 - Events > Get Event Count > Get Event Count
+- Destructions > Get All Valid Destructions > Get All Valid Destructions
 - Dispenses > Get Dispenses > Get Dispenses
 - Sends > Get Sends > Get Sends
 - Issuances > Get Issuances > Get Issuances

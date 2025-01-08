@@ -3971,6 +3971,8 @@ CREATE TRIGGER block_update_destructions
             BEFORE UPDATE ON destructions BEGIN
                 SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
             END;
+CREATE INDEX destructions_asset_idx ON destructions (asset)
+        ;
 CREATE INDEX destructions_source_idx ON destructions (source)
         ;
 CREATE INDEX destructions_status_idx ON destructions (status)

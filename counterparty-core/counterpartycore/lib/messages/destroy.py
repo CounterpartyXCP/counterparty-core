@@ -54,6 +54,7 @@ def initialise(db):
         [
             ["status"],
             ["source"],
+            ["asset"],
         ],
     )
 
