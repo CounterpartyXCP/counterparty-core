@@ -88,7 +88,7 @@ class RegtestNode:
                 if node == 1:
                     self.bitcoin_cli("getblockchaininfo")
                 else:
-                    self.bitcoin_cli_2("getblockchaininfo")
+                    self.bitcoin_cli_2("getblockchaininfo", _out=sys.stdout, _err=sys.stdout)
                 break
             except sh.ErrorReturnCode:
                 print("Waiting for bitcoind to start...")
@@ -377,6 +377,7 @@ class RegtestNode:
             "-rpcport=28443",
             "-minrelaytxfee=0",
             "-blockmintxfee=0",
+            "-bind=127.0.0.1:2223=onion",
             _bg=True,
             _out=sys.stdout,
         )
