@@ -67,6 +67,13 @@
 - Add a parameter `utxo_value` to the `attach.compose()` and `move.compose()` functions
 - Add `source_address` and `destination_address` in `sends` table
 - Use by default Blockstream for Electrs API
+- Add the following routes:
+    * `/v2/addresses/<address>/compose/dividend/estimatexcpfees`
+    * `/v2/addresses/<address>/compose/sweep/estimatexcpfees`
+    * `/v2/addresses/<address>/compose/attach/estimatexcpfees` (alias of `/v2/compose/attach/estimatexcpfees`)
+    * `/v2/destructions`
+    * `/v2/addresses/<address>/destructions`
+    * `/v2/assets/<asset>/destructions`
 
 ## CLI
 

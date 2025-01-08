@@ -185,6 +185,13 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     return dividend_total, outputs, problems, fee
 
 
+def get_estimate_xcp_fee(db, asset, block_index):
+    holders = ledger.holders(db, asset, True, block_index=block_index)
+    addresses = [holder["address"] for holder in holders]
+    holder_count = len(set(addresses))
+    return int(0.0002 * config.UNIT * holder_count)
+
+
 def compose(
     db,
     source: str,

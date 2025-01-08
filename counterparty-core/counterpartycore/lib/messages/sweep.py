@@ -69,6 +69,16 @@ def initialise(db):
     )
 
 
+def get_total_fee(db, source, block_index):
+    total_fee = ANTISPAM_FEE
+    antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
+    if antispamfee > 0:
+        balances_count = ledger.get_balances_count(db, source)[0]["cnt"]
+        issuances_count = ledger.get_issuances_count(db, source)
+        total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
+    return total_fee
+
+
 def validate(db, source, destination, flags, memo, block_index):
     problems = []
 
@@ -79,24 +89,12 @@ def validate(db, source, destination, flags, memo, block_index):
 
     result = ledger.get_balance(db, source, "XCP")
 
-    antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
-    total_fee = ANTISPAM_FEE
+    total_fee = get_total_fee(db, source, block_index)
 
-    if antispamfee > 0:
-        balances_count = ledger.get_balances_count(db, source)[0]["cnt"]
-        issuances_count = ledger.get_issuances_count(db, source)
-
-        total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
-
-        if result < total_fee:
-            problems.append(
-                f"insufficient XCP balance for sweep. Need {total_fee} XCP for antispam fee"
-            )
-    else:
-        if result < ANTISPAM_FEE:
-            problems.append(
-                f"insufficient XCP balance for sweep. Need {ANTISPAM_FEE_DECIMAL} XCP for antispam fee"
-            )
+    if result < total_fee:
+        problems.append(
+            f"insufficient XCP balance for sweep. Need {total_fee} XCP for antispam fee"
+        )
 
     cursor.close()
 

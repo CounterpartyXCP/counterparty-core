@@ -1335,7 +1335,24 @@ def get_cancels(
     )
 
 
-def get_destructions(
+def get_all_valid_destructions(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+    """
+    Returns the destructions of a block
+    :param str cursor: The last index of the destructions to return
+    :param int limit: The maximum number of destructions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "destructions",
+        where={"status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_valid_destructions_by_block(
     ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
 ):
     """
@@ -1348,7 +1365,47 @@ def get_destructions(
     return select_rows(
         ledger_db,
         "destructions",
-        where={"block_index": block_index},
+        where={"block_index": block_index, "status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_valid_destructions_by_address(
+    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the destructions of a block
+    :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str cursor: The last index of the destructions to return
+    :param int limit: The maximum number of destructions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "destructions",
+        where={"source": address, "status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_valid_destructions_by_asset(
+    ledger_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the destructions of a block
+    :param str asset: The asset to return (e.g. XCP)
+    :param str cursor: The last index of the destructions to return
+    :param int limit: The maximum number of destructions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "destructions",
+        where={"asset": asset.upper(), "status": "valid"},
         last_cursor=cursor,
         limit=limit,
         offset=offset,

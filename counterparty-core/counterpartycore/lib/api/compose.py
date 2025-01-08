@@ -13,7 +13,7 @@ from counterpartycore.lib import (
     messages,
     util,
 )
-from counterpartycore.lib.messages.utxo import ID as UTXO_ID
+from counterpartycore.lib.messages.attach import ID as UTXO_ID
 
 D = decimal.Decimal
 
@@ -180,6 +180,15 @@ def compose_dividend(
         "dividend_asset": dividend_asset,
     }
     return composer.compose_transaction(db, "dividend", params, construct_params)
+
+
+def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa
+    """
+    Returns the estimated fee for issuing a dividend.
+    :param address: The address that will be issuing the dividend (e.g. $ADDRESS_1)
+    :param asset: The asset or subasset that the dividends are being rewarded on (e.g. MYASSETA)
+    """
+    return messages.dividend.get_estimate_xcp_fee(db, asset, util.CURRENT_BLOCK_INDEX)
 
 
 def compose_issuance(
@@ -382,6 +391,14 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
     return composer.compose_transaction(db, "sweep", params, construct_params)
 
 
+def get_sweep_estimate_xcp_fee(db, address: str):
+    """
+    Returns the estimated fee for sweeping all assets and/or transfer ownerships to a destination address.
+    :param address: The address that will be sweeping (e.g. $ADDRESS_1)
+    """
+    return messages.sweep.get_total_fee(db, address, util.CURRENT_BLOCK_INDEX)
+
+
 def compose_fairminter(
     db,
     address: str,
@@ -487,6 +504,14 @@ def compose_attach(
     return composer.compose_transaction(db, "attach", params, construct_params)
 
 
+def get_attach_estimate_xcp_fee(db, address: str = None):  # noqa
+    """
+    Returns the estimated fee for attaching assets to a UTXO.
+    :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
+    """
+    return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
+
+
 def compose_detach(
     db,
     utxo: str,
@@ -503,13 +528,6 @@ def compose_detach(
         "destination": destination,
     }
     return composer.compose_transaction(db, "detach", params, construct_params)
-
-
-def get_attach_estimate_xcp_fee(db):
-    """
-    Returns the estimated fee for attaching assets to a UTXO.
-    """
-    return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
 
 
 def compose_movetoutxo(db, utxo: str, destination: str, utxo_value: int = None, **construct_params):
