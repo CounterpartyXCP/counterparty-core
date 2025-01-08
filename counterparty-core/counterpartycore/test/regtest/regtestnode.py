@@ -72,6 +72,8 @@ class RegtestNode:
             "-vv",
         )
         self.burn_in_one_block = burn_in_one_block
+        self.electrs_process = None
+        self.electrs_process_2 = None
 
     def api_call(self, url):
         result = sh.curl(f"http://localhost:24000/v2/{url}").strip()
@@ -377,10 +379,37 @@ class RegtestNode:
             "-rpcport=28443",
             "-minrelaytxfee=0",
             "-blockmintxfee=0",
+            "-bind=127.0.0.1:2223=onion",
             _bg=True,
             _out=sys.stdout,
         )
         self.wait_for_bitcoind(node=2)
+
+    def start_electrs(self, node=1):
+        daemon_dir = self.datadir if node == 1 else f"{self.datadir}/node2"
+        daemon_rpc_address = "127.0.0.1:18443" if node == 1 else "127.0.0.1:28443"
+        electr_port = 3002 if node == 1 else 3003
+        self.electrs = sh.electrs.bake(
+            "--cookie=rpc:rpc",
+            "--network=regtest",
+            f"--daemon-dir={daemon_dir}",
+            f"--daemon-rpc-addr={daemon_rpc_address}",
+            f"--db-dir={self.datadir}/electrsdb",
+            f"--http-addr=127.0.0.1:{electr_port}",
+        )
+        if node == 1:
+            self.electrs_process = self.electrs(_bg=True, _out=sys.stdout)
+        else:
+            self.electrs_process_2 = self.electrs(_bg=True, _out=sys.stdout)
+
+    def stop_electrs(self):
+        if self.electrs_process:
+            self.electrs_process.terminate()
+            self.electrs_process.wait()
+
+        if self.electrs_process_2:
+            self.electrs_process_2.terminate()
+            self.electrs_process_2.wait()
 
     def start(self):
         if os.path.exists(self.datadir):
@@ -466,6 +495,8 @@ class RegtestNode:
             pass
 
     def stop(self):
+        print("Stopping electrs...")
+        self.stop_electrs()
         print("Stopping bitcoin node 1...")
         self.stop_bitcoin_node()
         print("Stopping bitcoin node 2...")
@@ -578,7 +609,7 @@ class RegtestNode:
         print("Connect to the first node...")
         self.bitcoin_cli_2(
             "addnode",
-            "localhost:18444",
+            "localhost:18445",
             "add",
             _out=sys.stdout,
             _err=sys.stdout,
@@ -588,7 +619,7 @@ class RegtestNode:
         self.wait_for_node_to_sync()
 
         print("Disconnect from the first node...")
-        self.bitcoin_cli_2("disconnectnode", "localhost:18444")
+        self.bitcoin_cli_2("disconnectnode", "localhost:18445")
 
         initial_xcp_balance = self.get_xcp_balance(self.addresses[0])
         print("Initial XCP balance: ", initial_xcp_balance)
@@ -610,7 +641,7 @@ class RegtestNode:
         print("Re-connect to the first node...")
         self.bitcoin_cli_2(
             "addnode",
-            "localhost:18444",
+            "localhost:18445",
             "onetry",
             _out=sys.stdout,
             _err=sys.stdout,

@@ -9,7 +9,11 @@ Two remarks:
 
 1. the size of DER signatures can vary by a few bytes and it is impossible to predict it. The composer uses a fixed size of 70 bytes so there may be a discrepancy of a few satoshis with the fees requested with `sat_per_vbyte` (for example if a DER signature is 72 bytes with `sat_per_vbyte=2` there will be an error of 4 sats in the calculated fees).
 
-***Deprecated parameters***
+**Note about transaction chaining**
+
+if you make several transactions in the same block, you need to chain them using `inputs_set=<previous_tx_hash_in_the_chain>:<vout>`; otherwise, you can't guarantee the final order of the transactions.
+
+**Deprecated parameters**
 
 The following parameters are deprecated in the new composer and will no longer be supported in a future version:
 

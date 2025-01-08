@@ -925,7 +925,7 @@ CONSTRUCT_PARAMS = {
     "exclude_utxos_with_balances": (
         bool,
         False,
-        "Exclude silently UTXO with balances instead of raising an exception",
+        "Exclude silently UTXO with balances instead of raising an exception. Important: the `exclude_utxos_with_balances` will not exclude unconfirmed `attach` and `utxomove`. You need to explicitly exclude them with the `exclude_utxos` parameter",
     ),
     "disable_utxo_locks": (
         bool,
