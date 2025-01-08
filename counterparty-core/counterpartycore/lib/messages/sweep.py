@@ -93,7 +93,7 @@ def validate(db, source, destination, flags, memo, block_index):
 
     if result < total_fee:
         problems.append(
-            f"insufficient XCP balance for sweep. Need {total_fee} XCP for antispam fee"
+            f"insufficient XCP balance for sweep. Need {total_fee / config.UNIT} XCP for antispam fee"
         )
 
     cursor.close()

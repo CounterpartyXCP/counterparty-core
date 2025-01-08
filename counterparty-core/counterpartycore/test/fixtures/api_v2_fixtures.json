@@ -4163,6 +4163,11 @@
         "next_cursor": null,
         "result_count": 0
     },
+    "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/destructions?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
     "http://localhost:10009/v2/addresses/mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc/dispensers?verbose=true": {
         "result": [],
         "next_cursor": null,
@@ -6888,6 +6893,11 @@
         "next_cursor": null,
         "result_count": 2
     },
+    "http://localhost:10009/v2/assets/NODIVISIBLE/destructions?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
+    },
     "http://localhost:10009/v2/assets/NODIVISIBLE/dividends?verbose=true": {
         "result": [],
         "next_cursor": null,
@@ -8117,6 +8127,11 @@
             "event": "CREDIT",
             "count": 53
         }
+    },
+    "http://localhost:10009/v2/destructions?verbose=true": {
+        "result": [],
+        "next_cursor": null,
+        "result_count": 0
     },
     "http://localhost:10009/v2/dispenses?verbose=true": {
         "result": [],
@@ -9872,7 +9887,7 @@
                 ]
             },
             "/v2/blocks/<int:block_index>/destructions": {
-                "function": "get_destructions",
+                "function": "get_valid_destructions_by_block",
                 "description": "Returns the destructions of a block",
                 "args": [
                     {
@@ -11481,6 +11496,46 @@
                         "required": false,
                         "type": "int",
                         "description": "The maximum number of sends to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/addresses/<address>/destructions": {
+                "function": "get_valid_destructions_by_address",
+                "description": "Returns the destructions of a block",
+                "args": [
+                    {
+                        "name": "address",
+                        "required": true,
+                        "type": "str",
+                        "description": "The address to return (e.g. $ADDRESS_1)"
+                    },
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the destructions to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of destructions to return (e.g. 5)"
                     },
                     {
                         "name": "offset",
@@ -13778,6 +13833,31 @@
                     }
                 ]
             },
+            "/v2/addresses/<address>/compose/dividend/estimatexcpfees": {
+                "function": "get_dividend_estimate_xcp_fee",
+                "description": "Returns the estimated fee for issuing a dividend.",
+                "args": [
+                    {
+                        "name": "address",
+                        "required": true,
+                        "type": "str",
+                        "description": "The address that will be issuing the dividend (e.g. $ADDRESS_1)"
+                    },
+                    {
+                        "name": "asset",
+                        "required": true,
+                        "type": "str",
+                        "description": "The asset or subasset that the dividends are being rewarded on (e.g. MYASSETA)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    }
+                ]
+            },
             "/v2/addresses/<address>/compose/issuance": {
                 "function": "compose_issuance",
                 "description": "Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.",
@@ -14724,6 +14804,25 @@
                     }
                 ]
             },
+            "/v2/addresses/<address>/compose/sweep/estimatexcpfees": {
+                "function": "get_sweep_estimate_xcp_fee",
+                "description": "Returns the estimated fee for sweeping all assets and/or transfer ownerships to a destination address.",
+                "args": [
+                    {
+                        "name": "address",
+                        "required": true,
+                        "type": "str",
+                        "description": "The address that will be sweeping (e.g. $ADDRESS_1)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    }
+                ]
+            },
             "/v2/addresses/<address>/compose/dispense": {
                 "function": "compose_dispense",
                 "description": "Composes a transaction to send BTC to a dispenser.",
@@ -15501,6 +15600,26 @@
                     }
                 ]
             },
+            "/v2/addresses/<address>/compose/attach/estimatexcpfees": {
+                "function": "get_attach_estimate_xcp_fee",
+                "description": "Returns the estimated fee for attaching assets to a UTXO.",
+                "args": [
+                    {
+                        "name": "address",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The address from which the assets are attached (e.g. $ADDRESS_1)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    }
+                ]
+            },
             "/v2/utxos/<utxo>/compose/detach": {
                 "function": "compose_detach",
                 "description": "Composes a transaction to detach assets from UTXO to an address.",
@@ -15829,6 +15948,13 @@
                 "function": "get_attach_estimate_xcp_fee",
                 "description": "Returns the estimated fee for attaching assets to a UTXO.",
                 "args": [
+                    {
+                        "name": "address",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The address from which the assets are attached (e.g. $ADDRESS_1)"
+                    },
                     {
                         "name": "verbose",
                         "type": "bool",
@@ -16257,6 +16383,46 @@
                         "required": false,
                         "type": "int",
                         "description": "The maximum number of debits to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/assets/<asset>/destructions": {
+                "function": "get_valid_destructions_by_asset",
+                "description": "Returns the destructions of a block",
+                "args": [
+                    {
+                        "name": "asset",
+                        "required": true,
+                        "type": "str",
+                        "description": "The asset to return (e.g. XCP)"
+                    },
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the destructions to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of destructions to return (e.g. 5)"
                     },
                     {
                         "name": "offset",
@@ -17705,6 +17871,40 @@
                         "required": true,
                         "type": "str",
                         "description": "The name of the event to return (e.g. CREDIT)"
+                    },
+                    {
+                        "name": "verbose",
+                        "type": "bool",
+                        "default": "false",
+                        "description": "Include asset and dispenser info and normalized quantities in the response.",
+                        "required": false
+                    }
+                ]
+            },
+            "/v2/destructions": {
+                "function": "get_all_valid_destructions",
+                "description": "Returns the destructions of a block",
+                "args": [
+                    {
+                        "name": "cursor",
+                        "default": null,
+                        "required": false,
+                        "type": "str",
+                        "description": "The last index of the destructions to return"
+                    },
+                    {
+                        "name": "limit",
+                        "default": 100,
+                        "required": false,
+                        "type": "int",
+                        "description": "The maximum number of destructions to return (e.g. 5)"
+                    },
+                    {
+                        "name": "offset",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)"
                     },
                     {
                         "name": "verbose",
