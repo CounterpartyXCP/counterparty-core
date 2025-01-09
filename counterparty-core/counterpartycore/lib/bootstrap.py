@@ -1,7 +1,6 @@
 import glob
 import io
 import os
-import shutil
 import sys
 import tempfile
 import time
@@ -29,7 +28,13 @@ def download_zst(data_dir, zst_url):
 def decompress_zst(zst_filepath):
     print(f"Decompressing {zst_filepath}...")
     start_time = time.time()
-    filename = zst_filepath.replace(".latest.zst", "")
+    version = (
+        os.path.basename(zst_filepath)
+        .replace("counterparty.db.", "")
+        .replace("state.db.", "")
+        .replace(".zst", "")
+    )
+    filename = zst_filepath.replace(f".{version}.zst", "")
     filepath = os.path.join(os.path.dirname(zst_filepath), filename)
     with io.open(filepath, "wb") as output_file:
         with open(zst_filepath, "rb") as input_file:
@@ -65,7 +70,8 @@ def verify_signature(public_key_data, signature_path, snapshot_path):
         with open(signature_path, "rb") as s:
             verified = gpg.verify_file(s, snapshot_path, close_file=False)
     finally:
-        shutil.rmtree(temp_dir)
+        pass
+        # shutil.rmtree(temp_dir)
 
     return verified
 
