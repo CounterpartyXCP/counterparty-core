@@ -65,7 +65,7 @@
 - Add `send_type` field in `sends` table
 - Use `satoshirate_normalized` and `give_quantity_normalized` to calculate `price_normalized`
 - Add a parameter `utxo_value` to the `attach.compose()` and `move.compose()` functions
-- Add `source_address` and `destination_address` in `sends` table
+
 - Use by default Blockstream for Electrs API
 - Add the following routes:
     * `/v2/addresses/<address>/compose/dividend/estimatexcpfees`
@@ -74,6 +74,9 @@
     * `/v2/destructions`
     * `/v2/addresses/<address>/destructions`
     * `/v2/assets/<asset>/destructions`
+- In `sends` endpoints:
+    * `source` and `destination` always refer to a valid address
+    * add `source_utxo` and `destination_utxo` fields
 
 ## CLI
 

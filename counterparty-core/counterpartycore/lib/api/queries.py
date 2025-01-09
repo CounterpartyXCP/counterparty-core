@@ -153,6 +153,33 @@ SUPPORTED_SORT_FIELDS = {
 
 ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
 
+SELECT_ORDERS = "*, "
+SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
+SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
+
+SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
+
+SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
+
+SELECT_SENDS = ", ".join(
+    [
+        "tx_index",
+        "tx_hash",
+        "block_index",
+        "COALESCE(source_address, source) AS source",
+        "CASE WHEN source_address IS NOT NULL THEN source ELSE NULL END AS source_utxo",
+        "COALESCE(destination_address, destination) AS destination",
+        "CASE WHEN destination_address IS NOT NULL THEN destination ELSE NULL END AS destination_utxo",
+        "asset",
+        "quantity",
+        "status",
+        "msg_index",
+        "memo",
+        "fee_paid",
+        "send_type",
+    ]
+)
+
 
 class QueryResult:
     def __init__(self, result, next_cursor, table, result_count=None):
@@ -254,10 +281,7 @@ def select_rows(
         select = f"*, {cursor_field} AS {cursor_field}"
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
-    if (
-        table in ["transactions", "sends", "btcpays", "sweeps", "dispenses"]
-        and "COUNT(*)" not in select
-    ):
+    if table in ["transactions", "btcpays", "sweeps", "dispenses"] and "COUNT(*)" not in select:
         select += ", NULLIF(destination, '') AS destination"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
@@ -1210,6 +1234,7 @@ def get_sends(
     return select_rows(
         ledger_db,
         "sends",
+        select=SELECT_SENDS,
         where=prepare_sends_where(send_type),
         last_cursor=cursor,
         limit=limit,
@@ -1236,6 +1261,7 @@ def get_sends_by_block(
     return select_rows(
         ledger_db,
         "sends",
+        select=SELECT_SENDS,
         where=prepare_sends_where(send_type, {"block_index": block_index}),
         last_cursor=cursor,
         limit=limit,
@@ -1262,6 +1288,7 @@ def get_sends_by_transaction_hash(
     return select_rows(
         ledger_db,
         "sends",
+        select=SELECT_SENDS,
         where=prepare_sends_where(send_type, {"tx_hash": tx_hash}),
         last_cursor=cursor,
         limit=limit,
@@ -1288,6 +1315,7 @@ def get_sends_by_asset(
     return select_rows(
         ledger_db,
         "sends",
+        select=SELECT_SENDS,
         where=prepare_sends_where(send_type, {"asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
@@ -2166,6 +2194,7 @@ def get_sends_by_address(
     return select_rows(
         ledger_db,
         "sends",
+        select=SELECT_SENDS,
         where=prepare_sends_where(
             send_type,
             [
@@ -2202,6 +2231,7 @@ def get_sends_by_address_and_asset(
     return select_rows(
         ledger_db,
         "sends",
+        select=SELECT_SENDS,
         where=prepare_sends_where(
             send_type,
             [
@@ -2236,6 +2266,7 @@ def get_receive_by_address(
     return select_rows(
         ledger_db,
         "sends",
+        select=SELECT_SENDS,
         where=prepare_sends_where(send_type, {"destination": address}),
         last_cursor=cursor,
         limit=limit,
@@ -2264,6 +2295,7 @@ def get_receive_by_address_and_asset(
     return select_rows(
         ledger_db,
         "sends",
+        select=SELECT_SENDS,
         where=prepare_sends_where(send_type, {"destination": address, "asset": asset.upper()}),
         last_cursor=cursor,
         limit=limit,
@@ -2294,9 +2326,6 @@ def prepare_dispenser_where(status, other_conditions=None, exclude_with_oracle=F
             where.append(where_status)
 
     return where
-
-
-SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
 
 
 def get_dispensers(
@@ -2727,13 +2756,6 @@ def prepare_order_where(status, other_conditions=None):
 
 def prepare_order_matches_where(status, other_conditions=None):
     return prepare_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
-
-
-SELECT_ORDERS = "*, "
-SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
-SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
-
-SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
 
 
 def get_orders(
