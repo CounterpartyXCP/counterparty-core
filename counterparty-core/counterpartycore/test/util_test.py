@@ -22,7 +22,12 @@ import apsw
 import bitcoin as bitcoinlib
 import pycoin
 import pytest
+from bitcoinutils.script import Script
+from bitcoinutils.setup import setup
+from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
 from pycoin.coins.bitcoin import Tx  # noqa: F401
+
+setup("testnet")
 
 CURR_DIR = os.path.dirname(
     os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
@@ -31,20 +36,20 @@ sys.path.append(os.path.normpath(os.path.join(CURR_DIR, "..")))
 
 from counterpartycore import server  # noqa: E402
 from counterpartycore.lib import (  # noqa: E402
-    backend,
     blocks,
     check,
+    composer,  # noqa
     config,
     database,
     deserialize,
     exceptions,
     gettxinfo,
     ledger,
-    transaction,
+    messages,
     util,
 )
 from counterpartycore.lib.api.util import to_json  # noqa: E402
-from counterpartycore.lib.messages import fairminter, utxo  # noqa
+from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
     INTEGRATION_SCENARIOS,
@@ -61,7 +66,6 @@ locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
 
 # TODO: This should grab the correct backend port and password, when used for, e.g., saverawtransactions.
 COUNTERPARTYD_OPTIONS = {
-    "testcoin": False,
     "rpc_port": 9999,
     "rpc_password": "pass",
     "api_password": None,
@@ -201,10 +205,13 @@ def insert_raw_transaction(raw_transaction, db):
     block_index, block_hash, block_time = create_next_block(db, parse_block=False)
 
     tx_hash = dummy_tx_hash(raw_transaction)
+    # print("tx_hash", tx_hash)
     tx = None
     tx_index = block_index - config.BURN_START + 1
     try:
-        deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
+        deserialized_tx = deserialize.deserialize_tx(
+            raw_transaction, parse_vouts=True, block_index=999999999
+        )
         source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
             db, deserialized_tx, block_index, composing=True
         )
@@ -254,7 +261,9 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
     tx_index = tx_index[0]["tx_index"] if len(tx_index) else 0
     tx_index = tx_index + 1
 
-    deserialized_tx = deserialize.deserialize_tx(raw_transaction, True)
+    deserialized_tx = deserialize.deserialize_tx(
+        raw_transaction, parse_vouts=True, block_index=config.MEMPOOL_BLOCK_INDEX
+    )
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
         db, deserialized_tx, util.CURRENT_BLOCK_INDEX, composing=True
     )
@@ -364,7 +373,6 @@ def prefill_rawtransactions_db(db):
         wallet_unspent = json.load(listunspent_test_file)
         for output in wallet_unspent:
             txid = output["txid"]
-            tx = deserialize.deserialize_tx(output["txhex"], True)  # noqa: F841
             cursor.execute(
                 "INSERT INTO raw_transactions VALUES (?, ?, ?)",
                 (txid, output["txhex"], output["confirmations"]),
@@ -505,6 +513,10 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
                 "hex": binascii.hexlify(vout.scriptPubKey).decode("ascii"),
                 "asm": " ".join(asm),
             },
+            "scriptPubKey": {
+                "hex": binascii.hexlify(vout.scriptPubKey).decode("ascii"),
+                "address": addresses[0] if addresses else None,
+            },
         }
 
         result["vout"].append(rvout)
@@ -515,7 +527,11 @@ def mock_bitcoind_verbose_tx_output(tx, txid, confirmations):
 def getrawtransaction_batch(db, txhash_list, verbose=False):
     result = {}
     for txhash in txhash_list:
-        result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
+        try:
+            result[txhash] = getrawtransaction(db, txhash, verbose=verbose)
+        except Exception as e:  # noqa: F841, S110
+            # skip missing transactions
+            pass
 
     return result
 
@@ -555,7 +571,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
     return tx_hashes_addresses, tx_hashes_tx
 
 
-def search_raw_transactions(db, address, unconfirmed=False):
+def get_history(db, address, unconfirmed=False):
     cursor = db.cursor()
 
     try:
@@ -643,10 +659,12 @@ def run_scenario(scenario):
             with MockProtocolChangesContext(**(mock_protocol_changes or {})):
                 module = sys.modules[f"counterpartycore.lib.messages.{tx[0]}"]
                 compose = module.compose
-                unsigned_tx_hex = transaction.construct(
-                    db=db, tx_info=compose(db, *tx[1]), regular_dust_size=5430, **tx[2]
-                )
-                unsigned_tx_hex = unsigned_tx_hex["unsigned_tx_hex"]
+                construct_params = {
+                    "regular_dust_size": 5430,
+                } | tx[2]
+                # print("tx", tx[0], tx[1])
+                unsigned_tx_hex = composer.construct(db, compose(db, *tx[1]), construct_params)
+                unsigned_tx_hex = unsigned_tx_hex["rawtransaction"]
                 raw_transactions.append({tx[0]: unsigned_tx_hex})
                 insert_raw_transaction(unsigned_tx_hex, db)
         else:
@@ -832,6 +850,19 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "address",
         ]
         or (
+            tx_name == "composer"
+            and method
+            not in [
+                "compose_transaction",
+                "prepare_unspent_list",
+                "utxo_to_address",
+                "filter_utxos_with_balances",
+                "prepare_inputs_and_change",
+                "construct",
+                "compose_transaction",
+            ]
+        )
+        or (
             tx_name
             in [
                 "fairminter",
@@ -910,14 +941,36 @@ def check_outputs(
                 if tx_name == "order" and inputs[1] == "BTC":
                     print("give btc")
                     tx_params["fee_provided"] = DP["fee_provided"]
-                unsigned_tx_hex = transaction.construct(server_db, test_outputs, **tx_params)
+                unsigned_tx_hex = composer.construct(server_db, test_outputs, tx_params)
                 print(tx_name)
                 print(unsigned_tx_hex)
                 print("--------------------------")
 
         if outputs is not None:
             try:
-                assert outputs == test_outputs
+                if isinstance(outputs, (TxOutput, TxInput, Script, TxWitnessInput)):
+                    assert outputs.to_bytes() == test_outputs.to_bytes()
+                elif (
+                    isinstance(outputs, list)
+                    and len(outputs) > 0
+                    and isinstance(outputs[0], (TxOutput, TxInput))
+                ):
+                    for i, output in enumerate(outputs):
+                        assert output.to_bytes() == test_outputs[i].to_bytes()
+                #  for prepare_inputs_and_change()
+                elif (
+                    isinstance(outputs, tuple)
+                    and len(outputs) == 3
+                    and isinstance(outputs[2], list)
+                    and len(outputs[2]) > 0
+                    and isinstance(outputs[2][0], TxOutput)
+                ):
+                    assert outputs[0] == test_outputs[0]
+                    assert outputs[1] == test_outputs[1]
+                    for i, output in enumerate(outputs[2]):
+                        assert output.to_bytes() == test_outputs[2][i].to_bytes()
+                else:
+                    assert outputs == test_outputs
             except AssertionError:
                 if pytest_config.getoption("verbose") >= 2:
                     msg = (
@@ -1035,7 +1088,7 @@ def reparse(testnet=True, checkpoint_count=5):
     """
 
     # mock the backend
-    backend.addrindexrs.get_oldest_tx = get_oldest_tx_mock
+    messages.dispenser.get_oldest_tx = get_oldest_tx_mock
 
     # create a new in-memory DB
     options = dict(COUNTERPARTYD_OPTIONS)

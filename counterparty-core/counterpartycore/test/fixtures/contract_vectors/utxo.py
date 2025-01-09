@@ -6,7 +6,7 @@ from ..params import (
 )
 
 UTXO_1 = "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1"
-UTXO_2 = "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0"
+UTXO_2 = "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0"
 UTXO_3 = "74501a157028760383ae4a8f79f6bce9ef64e60e883ac3285bc239a907c2b42c:0"
 
 UTXO_VECTOR = {
@@ -138,6 +138,7 @@ UTXO_VECTOR = {
                             "asset": "XCP",
                             "quantity": 100,
                             "fee_paid": 0,
+                            "send_type": "attach",
                         },
                     },
                     {
@@ -146,7 +147,7 @@ UTXO_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1","fee_paid":0,"msg_index":0,"quantity":100,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1","fee_paid":0,"msg_index":0,"quantity":100,"send_type":"attach","source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "ATTACH_TO_UTXO",
                         },
                     },
@@ -157,7 +158,7 @@ UTXO_VECTOR = {
                     {
                         "fee": 10000,
                         "tx_hash": "72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f",
-                        "data": b"d57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0|mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns|XCP|100",
+                        "data": b"d1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0|mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns|XCP|100",
                         "source": ADDR[0],
                         "block_index": DP["default_block_index"],
                         "btc_amount": 5430,
@@ -166,7 +167,7 @@ UTXO_VECTOR = {
                         "destination": ADDR[0],
                         "block_time": 310501000,
                         "block_hash": "46ac6d09237c7961199068fdd13f1508d755483e07c57a4c8f7ff18eb33a05c93ca6a86fa2e2af82fb77a5c337146bb37e279797a3d11970aec4693c46ea5a58",
-                        "utxos_info": "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
+                        "utxos_info": "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0 4f0433ba841038e2e16328445930dd7bca35309b14b0da4451c8f94c631368b8:1",
                     },
                 ),
                 "records": [
@@ -182,6 +183,7 @@ UTXO_VECTOR = {
                             "asset": "XCP",
                             "quantity": 100,
                             "fee_paid": 0,
+                            "send_type": "detach",
                         },
                     },
                     {
@@ -190,7 +192,7 @@ UTXO_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "command": "insert",
                             "category": "sends",
-                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","fee_paid":0,"msg_index":0,"quantity":100,"source":"57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
+                            "bindings": '{"asset":"XCP","block_index":310704,"destination":"mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns","fee_paid":0,"msg_index":0,"quantity":100,"send_type":"detach","source":"1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0","status":"valid","tx_hash":"72a62abedd38d5f667150929c24dc1d7465dd81ab1502974814d20c1f65d871f","tx_index":705}',
                             "event": "DETACH_FROM_UTXO",
                         },
                     },

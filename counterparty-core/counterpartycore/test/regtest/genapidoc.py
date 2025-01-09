@@ -124,6 +124,8 @@ EVENT_LIST = [
 
 DREDD_CONFIG = {
     "loglevel": "error",
+    "language": "python",
+    "hookfiles": "./counterparty-core/counterpartycore/test/regtest/dreddhooks.py",
     "path": [],
     "blueprint": "apiary.apib",
     "endpoint": "http://127.0.0.1:24000",
@@ -146,6 +148,21 @@ def get_example_output(path, args):
     print(f"GET {url}")
     if "v2/" in path:
         args["verbose"] = "true"
+
+    if "/compose" in path:
+        source = None
+        if "/addresses/" in path:
+            source = path.split("/addresses/")[1].split("/")[0]
+        elif "/utxos/" in path:
+            utxo = path.split("/utxos/")[1].split("/")[0]
+            source = requests.get(f"{API_ROOT}/v2/utxos/{utxo}/balances?limit=1").json()["result"][  # noqa S113
+                0
+            ]["utxo_address"]
+        if source is not None:
+            print(f"source: {source}")
+            args["exclude_utxos_with_balances"] = True
+            args["validate"] = False
+
     response = requests.get(url, params=args)  # noqa S113
     return response.json()
 
@@ -154,6 +171,8 @@ def include_in_dredd(group, path):
     if "/bet" in path:
         return False
     if "_old" in path:
+        return False
+    if "/v2/bitcoin/addresses/" in path:
         return False
     return True
 

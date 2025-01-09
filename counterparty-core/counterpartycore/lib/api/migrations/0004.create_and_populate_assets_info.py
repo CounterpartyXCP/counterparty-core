@@ -116,6 +116,43 @@ def apply(db):
         },
     )
 
+    start_time_supply = time.time()
+    logger.debug("Updating the `supply` field...")
+
+    db.execute("""
+        CREATE TEMP TABLE issuances_quantity AS
+        SELECT asset, SUM(quantity) AS quantity FROM issuances WHERE status = 'valid' GROUP BY asset
+    """)
+    db.execute("""
+        CREATE TEMP TABLE destructions_quantity AS
+        SELECT asset, SUM(quantity) AS quantity FROM destructions WHERE status = 'valid' GROUP BY asset
+    """)
+
+    db.execute("""
+        CREATE TEMP TABLE supplies AS
+        SELECT 
+            issuances_quantity.asset, 
+            issuances_quantity.quantity - COALESCE(destructions_quantity.quantity, 0) AS supply 
+        FROM issuances_quantity
+        LEFT JOIN destructions_quantity ON issuances_quantity.asset = destructions_quantity.asset
+        WHERE issuances_quantity.asset = destructions_quantity.asset
+    """)
+
+    db.execute("""
+        CREATE INDEX temp.supplies_asset_idx ON supplies(asset)
+    """)
+
+    db.execute("""
+        UPDATE assets_info SET
+        supply = COALESCE((SELECT supplies.supply FROM supplies WHERE assets_info.asset = supplies.asset), supply)
+    """)
+
+    db.execute("DROP TABLE issuances_quantity")
+    db.execute("DROP TABLE destructions_quantity")
+    db.execute("DROP TABLE supplies")
+
+    logger.debug(f"Updated the `supply` field in {time.time() - start_time_supply:.2f} seconds")
+
     db.execute("CREATE UNIQUE INDEX assets_info_asset_idx ON assets_info (asset)")
     db.execute("CREATE UNIQUE INDEX assets_info_asset_id_idx ON assets_info (asset_id)")
     db.execute("CREATE INDEX assets_info_asset_longname_idx ON assets_info (asset_longname)")

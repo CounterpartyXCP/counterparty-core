@@ -8,7 +8,7 @@ from urllib.parse import quote_plus as urlencode
 from termcolor import cprint
 
 from counterpartycore import server
-from counterpartycore.lib import config, sentry, setup
+from counterpartycore.lib import bootstrap, config, sentry, setup
 from counterpartycore.lib.api import dbbuilder
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -66,11 +66,11 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--testcoin",),
+        ("--testnet4",),
         {
             "action": "store_true",
             "default": False,
-            "help": f"use the test {config.XCP_NAME} network on every blockchain",
+            "help": f"use {config.BTC_NAME} testnet4 addresses and block numbers",
         },
     ],
     [
@@ -79,13 +79,6 @@ CONFIG_ARGS = [
             "action": "store_true",
             "default": False,
             "help": f"use {config.BTC_NAME} regtest addresses and block numbers",
-        },
-    ],
-    [
-        ("--customnet",),
-        {
-            "default": "",
-            "help": "use a custom network (specify as UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION with version bytes in HH hex format)",
         },
     ],
     [
@@ -148,11 +141,6 @@ CONFIG_ARGS = [
             "help": "pubkey to receive dust when multisig encoding is used for P2SH source (default: none)"
         },
     ],
-    [
-        ("--indexd-connect",),
-        {"default": "localhost", "help": "the hostname or IP of the indexd server"},
-    ],
-    [("--indexd-port",), {"type": int, "help": "the indexd server port to connect to"}],
     [
         ("--rpc-host",),
         {
@@ -240,6 +228,7 @@ CONFIG_ARGS = [
         {"action": "store_true", "default": False, "help": "don't ask for confirmation"},
     ],
     [("--data-dir",), {"default": None, "help": "the path to the data directory"}],
+    [("--cache-dir",), {"default": None, "help": "the path to the cache directory"}],
     [
         ("--log-file",),
         {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},
@@ -364,6 +353,28 @@ CONFIG_ARGS = [
         },
     ],
     [("--bootstrap-url",), {"type": str, "help": "the URL of the bootstrap snapshot to use"}],
+    [
+        ("--electrs-url",),
+        {
+            "help": "the complete URL of the Electrs API, possibly including a specific port, for example: `https://mempool.space/api`",
+        },
+    ],
+    [
+        ("--refresh-state-db",),
+        {
+            "help": "On startup, rebuild non rollbackable tables in the state database",
+            "action": "store_true",
+            "default": False,
+        },
+    ],
+    [
+        ("--rebuild-state-db",),
+        {
+            "help": "On startup, rebuild all tables in the state database",
+            "action": "store_true",
+            "default": False,
+        },
+    ],
 ]
 
 
@@ -383,7 +394,6 @@ def welcome_message(action, server_configfile):
         pass_str = f":{urlencode(config.BACKEND_PASSWORD)}@"
         cleaned_backend_url = config.BACKEND_URL.replace(pass_str, ":*****@")
         cprint(f"Bitcoin Core: {cleaned_backend_url}", "light_grey")
-        cprint(f"AddrIndexRs: {config.INDEXD_URL}", "light_grey")
 
         api_url = "http://"
         if config.API_USER and config.API_PASSWORD:
@@ -503,7 +513,7 @@ def main():
 
     # Bootstrapping
     if args.action == "bootstrap":
-        server.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
+        bootstrap.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
 
     # PARSING
     elif args.action == "reparse":

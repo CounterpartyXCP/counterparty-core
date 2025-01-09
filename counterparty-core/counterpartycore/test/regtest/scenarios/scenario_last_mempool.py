@@ -11,6 +11,7 @@ SCENARIO = [
             "get_quantity": 1000,
             "expiration": 21,
             "fee_required": 0,
+            "exclude_utxos_with_balances": True,
         },
     },
     # order match for dredd test
@@ -25,6 +26,7 @@ SCENARIO = [
             "get_quantity": 1000,
             "expiration": 21,
             "fee_required": 0,
+            "exclude_utxos_with_balances": True,
         },
     },
     # fairmint for dredd test
@@ -35,6 +37,7 @@ SCENARIO = [
         "params": {
             "asset": "OPENFAIR",
             "max_mint_per_tx": 10,
+            "exclude_utxos_with_balances": True,
         },
     },
     {
@@ -46,6 +49,7 @@ SCENARIO = [
             "quantity": 15000,
             "destination": "$ADDRESS_7",
             "exact_fee": 0,
+            "exclude_utxos_with_balances": True,
         },
     },
     {
@@ -59,7 +63,7 @@ SCENARIO = [
             "inputs_set": "$ATOMICSWAP_2_TX_HASH:1",
             "exact_fee": 1,
         },
-        "expected_error": "invalid UTXOs: $ATOMICSWAP_2_TX_HASH:1",
+        "expected_error": "invalid UTXOs: $ATOMICSWAP_2_TX_HASH:1 (use `use_utxos_with_balances=True` to include them or `exclude_utxos_with_balances=True` to exclude them silently)",
     },
     {
         "title": "Dispense in mempool",
@@ -107,6 +111,7 @@ SCENARIO = [
             "asset": "XCP",
             "quantity": 10000,
             "destination": "$ADDRESS_3",
+            "exclude_utxos_with_balances": True,
         },
         "set_variables": {
             "SEND_MEMPOOL_1_HASH": "$TX_HASH",
@@ -129,6 +134,7 @@ SCENARIO = [
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
                             "msg_index": 0,
+                            "send_type": "send",
                         },
                         "tx_hash": "$TX_HASH",
                     },

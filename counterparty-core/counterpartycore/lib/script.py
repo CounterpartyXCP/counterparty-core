@@ -10,6 +10,8 @@ import hashlib
 import bitcoin as bitcoinlib
 from bitcoin.bech32 import CBech32Data
 from bitcoin.core.key import CPubKey
+from bitcoinutils.keys import PublicKey
+from bitcoinutils.setup import setup
 from counterparty_rs import b58, utils
 
 # TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
@@ -305,6 +307,15 @@ def pubkey_to_p2whash(pubkey):
     return str(pubkey)
 
 
+def pubkey_to_p2whash2(pubkey):
+    if config.NETWORK_NAME == "testnet4":
+        setup("testnet")
+    else:
+        setup(config.NETWORK_NAME)
+    address = PublicKey.from_hex(pubkey).get_segwit_address().to_string()
+    return address
+
+
 def bech32_to_scripthash(address):
     bech32 = CBech32Data(address)
     return bytes(bech32)
@@ -350,6 +361,16 @@ def script_to_address(scriptpubkey):
     try:
         script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
         return utils.script_to_address(script, config.NETWORK_NAME)
+    except BaseException as e:  # noqa: F841
+        raise exceptions.DecodeError("scriptpubkey decoding error")  # noqa: B904
+
+
+def script_to_address2(scriptpubkey):
+    if isinstance(scriptpubkey, str):
+        scriptpubkey = binascii.unhexlify(scriptpubkey)
+    try:
+        script = bytes(scriptpubkey, "utf-8") if type(scriptpubkey) == str else bytes(scriptpubkey)  # noqa: E721
+        return utils.script_to_address2(script, config.NETWORK_NAME)
     except BaseException as e:  # noqa: F841
         raise exceptions.DecodeError("scriptpubkey decoding error")  # noqa: B904
 
@@ -449,6 +470,8 @@ def private_key_to_public_key(private_key_wif):
     """Convert private key to public key."""
     if config.TESTNET:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET]
+    elif config.TESTNET4:
+        allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_TESTNET4]
     elif config.REGTEST:
         allowable_wif_prefixes = [config.PRIVATEKEY_VERSION_REGTEST]
     else:
@@ -524,15 +547,64 @@ def ensure_script_pub_key_for_inputs(coins):
             txhash_set.add(coin["txid"])
 
     if len(txhash_set) > 0:
-        txs = backend.addrindexrs.getrawtransaction_batch(
-            list(txhash_set), verbose=True, skip_missing=False
-        )
+        txhash_list_chunks = util.chunkify(list(txhash_set), config.MAX_RPC_BATCH_SIZE)
+        txs = {}
+        for txhash_list in txhash_list_chunks:
+            txs = txs | backend.bitcoind.getrawtransaction_batch(
+                txhash_list, verbose=True, return_dict=True
+            )
         for coin in coins:
             if "script_pub_key" not in coin:
                 # get the scriptPubKey
                 txid = coin["txid"]
+                if txid not in txs:
+                    raise exceptions.ComposeError(f"Transaction {txid} not found")
                 for vout in txs[txid]["vout"]:
                     if vout["n"] == coin["vout"]:
                         coin["script_pub_key"] = vout["scriptPubKey"]["hex"]
 
     return coins
+
+
+def get_output_type(script_pub_key):
+    asm = script_to_asm(script_pub_key)
+    if asm[0] == opcodes.OP_RETURN:
+        return "OP_RETURN"
+    if len(asm) == 2 and asm[1] == opcodes.OP_CHECKSIG:
+        return "P2PK"
+    if (
+        len(asm) == 5
+        and asm[0] == opcodes.OP_DUP
+        and asm[3] == opcodes.OP_EQUALVERIFY
+        and asm[4] == opcodes.OP_CHECKSIG
+    ):
+        return "P2PKH"
+    if len(asm) >= 4 and asm[-1] == opcodes.OP_CHECKMULTISIG and asm[-2] == len(asm) - 3:
+        return "P2MS"
+    if len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:
+        return "P2SH"
+    if len(asm) == 2 and asm[0] == b"":
+        if len(asm[1]) == 32:
+            return "P2WSH"
+        return "P2WPKH"
+    if len(asm) == 2 and asm[0] == b"\x01":
+        return "P2TR"
+    return "UNKNOWN"
+
+
+def is_segwit_output(script_pub_key):
+    return get_output_type(script_pub_key) in ("P2WPKH", "P2WSH", "P2TR")
+
+
+def is_address_script(address, script_pub_key):
+    if is_multisig(address):
+        asm = script_to_asm(script_pub_key)
+        pubkeys = [binascii.hexlify(pubkey).decode("utf-8") for pubkey in asm[1:-2]]
+        addresses = [
+            PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+            for pubkey in pubkeys
+        ]
+        script_address = f"{asm[0]}_{'_'.join(addresses)}_{asm[-2]}"
+    else:
+        script_address = script_to_address2(script_pub_key)
+    return address == script_address

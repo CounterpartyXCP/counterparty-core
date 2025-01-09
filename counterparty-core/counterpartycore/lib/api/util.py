@@ -13,11 +13,10 @@ import requests
 import werkzeug
 from counterpartycore.lib import (
     backend,
+    composer,
     config,
     exceptions,
     ledger,
-    transaction,
-    transaction_helper,
     util,
 )
 from counterpartycore.lib.api import compose
@@ -47,7 +46,7 @@ def healthz_light(db):
 
 
 def healthz_heavy(db):
-    transaction.compose_transaction(
+    composer.compose_transaction(
         db,
         name="send",
         params={
@@ -135,15 +134,8 @@ def pubkeyhash_to_pubkey(address: str, provided_pubkeys: str = None):
     """
     Get pubkey for an address.
     :param address: Address to get pubkey for. (e.g. $ADDRESS_1)
-    :param provided_pubkeys: Comma separated list of provided pubkeys.
     """
-    if provided_pubkeys:
-        provided_pubkeys_list = provided_pubkeys.split(",")
-    else:
-        provided_pubkeys_list = None
-    return transaction_helper.transaction_outputs.pubkeyhash_to_pubkey(
-        address, provided_pubkeys=provided_pubkeys_list
-    )
+    return backend.electrs.search_pubkey(address)
 
 
 def get_transaction(tx_hash: str, format: str = "json"):
@@ -153,17 +145,6 @@ def get_transaction(tx_hash: str, format: str = "json"):
     :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
     return backend.bitcoind.getrawtransaction(tx_hash, verbose=format == "json")
-
-
-def get_oldest_transaction_by_address(address: str, block_index: int = None):
-    """
-    Get the oldest transaction for an address.
-    :param address: The address to search for. (e.g. $ADDRESS_9)
-    :param block_index: The block index to search from.
-    """
-    return backend.addrindexrs.get_oldest_tx(
-        address, block_index=block_index or util.CURRENT_BLOCK_INDEX
-    )
 
 
 def get_backend_height():
@@ -228,8 +209,10 @@ def prepare_route_args(function):
     function_args = inspect.signature(function).parameters
     args_description = get_args_description(function)
     for arg_name, arg in function_args.items():
-        if arg_name == "construct_args":
-            for carg_name, carg_info in compose.COMPOSE_COMMONS_ARGS.items():
+        if arg_name == "construct_params":
+            for carg_name, carg_info in composer.CONSTRUCT_PARAMS.items():
+                if carg_name in composer.DEPRECATED_CONSTRUCT_PARAMS:
+                    continue
                 args.append(
                     {
                         "name": carg_name,
@@ -294,6 +277,8 @@ class ApiJsonEncoder(json.JSONEncoder):
             return o.hex()
         if callable(o):
             return o.__name__
+        if hasattr(o, "__class__"):
+            return str(o)
         return super().default(o)
 
 
@@ -434,9 +419,15 @@ def inject_normalized_quantity(item, field_name, asset_info):
         return item
 
     if item[field_name] is not None:
-        if field_name in ["give_price", "get_price", "price"]:
+        if field_name in ["give_price", "get_price", "forward_price", "backward_price"]:
             # use 16 decimal places for prices
             item[field_name + "_normalized"] = normalize_price(item[field_name])
+        elif field_name == "price":
+            if "satoshirate" in item:
+                price = D(item["satoshirate_normalized"]) / D(item["give_quantity_normalized"])
+                item[field_name + "_normalized"] = normalize_price(price)
+            else:
+                item[field_name + "_normalized"] = normalize_price(item[field_name])
         else:
             item[field_name + "_normalized"] = (
                 divide(item[field_name], 10**8)
@@ -483,6 +474,8 @@ def inject_normalized_quantities(result_list):
         "paid_quantity": {"asset_field": "asset_info", "divisible": None},
         "give_price": {"asset_field": "give_asset_info", "divisible": None},
         "get_price": {"asset_field": "get_asset_info", "divisible": None},
+        "forward_price": {"asset_field": "forward_asset_info", "divisible": None},
+        "backward_price": {"asset_field": "backward_asset_info", "divisible": None},
     }
 
     enriched_result_list = []

@@ -1,10 +1,11 @@
 from ..params import (
+    ADDR,
     DP,
 )
 
 UTXO_1 = "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1"
-UTXO_2 = "57be7a922f829587d929c39a595044a9b848c1a961d65b1b412ccb382e861d3e:0"
-UTXO_3 = "b55b034f8a10faa953f2f156c9b00a277ba7840c6d065e9a7767a6fe22636ce2:0"
+UTXO_2 = "1e9d0b5cc5b3f56cc59c0e8f3268d6ad10f79337aaf19081580c486caeb4cf53:0"
+UTXO_3 = "7b4bb2e22f2a6d03933266f4ad34a4f7bf3ef7d2d4aeeea81edc5de59493eb7c:0"
 
 MOVE_VECTOR = {
     "move": {
@@ -53,7 +54,9 @@ MOVE_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "status": "valid",
                             "source": UTXO_2,
+                            "source_address": ADDR[0],
                             "destination": UTXO_3,
+                            "destination_address": ADDR[0],
                             "asset": "XCP",
                             "quantity": 100,
                             "fee_paid": 0,
@@ -105,7 +108,9 @@ MOVE_VECTOR = {
                             "block_index": DP["default_block_index"],
                             "status": "valid",
                             "source": UTXO_3,
+                            "source_address": ADDR[0],
                             "destination": UTXO_1,
+                            "destination_address": ADDR[0],
                             "asset": "DIVISIBLE",
                             "quantity": 1,
                             "fee_paid": 0,

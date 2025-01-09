@@ -394,7 +394,7 @@ checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
 
 [[package]]
 name = "counterparty-rs"
-version = "10.8.0"
+version = "10.9.0-rc.1"
 dependencies = [
  "bip32",
  "bitcoin",
@@ -403,6 +403,7 @@ dependencies = [
  "colored",
  "crossbeam-channel",
  "derive_more",
+ "hex",
  "par-map",
  "pyo3",
  "pyo3-build-config 0.20.3",
@@ -416,7 +417,7 @@ dependencies = [
  "serde_json",
  "sha256",
  "thiserror",
- "time 0.3.36",
+ "time 0.3.37",
  "tracing",
  "tracing-subscriber",
  "uuid",
@@ -1613,9 +1614,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.36"
+version = "0.3.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
+checksum = "35e7868883861bd0e56d9ac6efcaaca0d6d5d82a2a7ec8209ff492c07cf37b21"
 dependencies = [
  "deranged",
  "itoa",
@@ -1636,9 +1637,9 @@ checksum = "ef927ca75afb808a4d64dd374f00a2adf8d0fcff8e7b184af886c3c87ec4a3f3"
 
 [[package]]
 name = "time-macros"
-version = "0.2.18"
+version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f252a68540fde3a3877aeea552b832b40ab9a69e318efd078774a01ddee1ccf"
+checksum = "2834e6017e3e5e4b9834939793b282bc03b37a3336245fa820e35e233e2a85de"
 dependencies = [
  "num-conv",
  "time-core",
@@ -1797,7 +1798,7 @@ dependencies = [
  "regex",
  "rustc_version",
  "rustversion",
- "time 0.3.36",
+ "time 0.3.37",
 ]
 
 [[package]]

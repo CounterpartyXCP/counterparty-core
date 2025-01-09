@@ -8,14 +8,12 @@ import logging
 import os
 import random
 import re
-import shutil
 import sys
-import tempfile
 import threading
 import time
 from operator import itemgetter
+from urllib.parse import urlparse
 
-import gnupg
 import requests
 from counterparty_rs import utils as pycoin_rs_utils
 
@@ -535,24 +533,6 @@ def clean_url_for_log(url):
     return url
 
 
-def verify_signature(public_key_data, signature_path, snapshot_path):
-    temp_dir = tempfile.mkdtemp()
-    verified = False
-
-    try:
-        gpg = gnupg.GPG(gnupghome=temp_dir)
-
-        gpg.import_keys(public_key_data)
-
-        with open(signature_path, "rb") as s:
-            verified = gpg.verify_file(s, snapshot_path, close_file=False)
-
-    finally:
-        shutil.rmtree(temp_dir)
-
-    return verified
-
-
 # ORACLES
 def satoshirate_to_fiat(satoshirate):
     return round(satoshirate / 100.0, 2)
@@ -582,6 +562,8 @@ def enabled(change_name, block_index=None):
 
     if config.TESTNET:
         index_name = "testnet_block_index"
+    elif config.TESTNET4:
+        index_name = "testnet4_block_index"
     else:
         index_name = "block_index"
 
@@ -624,6 +606,8 @@ def get_value_by_block_index(change_name, block_index=None):
 
     if config.TESTNET:
         index_name = "testnet"
+    elif config.TESTNET4:
+        index_name = "testnet4"
     else:
         index_name = "mainnet"
 
@@ -632,6 +616,14 @@ def get_value_by_block_index(change_name, block_index=None):
             max_block_index = key
 
     return PROTOCOL_CHANGES[change_name][index_name][max_block_index]["value"]
+
+
+def is_test_network():
+    return config.TESTNET or config.TESTNET4 or config.REGTEST
+
+
+def after_block_or_test_network(tx_block_index, target_block_index):
+    return tx_block_index >= target_block_index or is_test_network()
 
 
 class SingletonMeta(type):
@@ -729,3 +721,11 @@ def get_outputs_count_from_utxos_info(utxos_info):
 def get_op_return_output_from_utxos_info(utxos_info):
     _sources, _destination, _outputs_count, op_return_output = parse_utxos_info(utxos_info)
     return op_return_output
+
+
+def is_url(url):
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except ValueError:
+        return False

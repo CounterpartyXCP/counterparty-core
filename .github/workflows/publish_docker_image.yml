@@ -4,8 +4,7 @@ on:
   release:
     types: [published]
   push:
-    branches:
-      - develop
+    branches: "**"
 
 env:
   DOCKER_REPO: counterparty/counterparty
@@ -27,6 +26,8 @@ jobs:
           export VERSION=v$(cat counterparty-core/counterpartycore/lib/config.py | grep '__version__ =' | awk -F '"' '{print $2}')
         elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref }} == 'refs/heads/develop' ]]; then
           export VERSION=develop
+        else
+          export VERSION=${{ github.sha }}
         fi
         docker build -t $DOCKER_REPO:$VERSION .
         docker tag $DOCKER_REPO:$VERSION $DOCKER_REPO:latest

@@ -101,4 +101,11 @@ P2SH_ADDR = [
     "2N6P6d3iypnnud4YJDfHZ6kc513N8ezWmPx",  # 2of3 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH
 ]
 
+DEFAULT_PARAMS["pubkey"]["2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy"] = (
+    "0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0"
+)
+DEFAULT_PARAMS["pubkey"]["2N6P6d3iypnnud4YJDfHZ6kc513N8ezWmPx"] = (
+    "0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0"
+)
+
 P2WPKH_ADDR = ["tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"]

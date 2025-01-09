@@ -206,6 +206,8 @@ def select_rows(
                 bindings += value
             elif key.endswith("__notnull"):
                 where_field.append(f"{key[:-9]} IS NOT NULL")
+            elif key.endswith("__null"):
+                where_field.append(f"{key[:-6]} IS NULL")
             else:
                 if key in ADDRESS_FIELDS and len(value.split(",")) > 1:
                     where_field.append(f"{key} IN ({','.join(['?'] * len(value.split(',')))})")
@@ -1176,21 +1178,21 @@ def prepare_sends_where(send_type: SendType, other_conditions=None):
     send_type_list = send_type.split(",")
     for type_send in send_type_list:
         if type_send == "all":
-            where = [other_conditions] if other_conditions else []
+            if isinstance(other_conditions, dict):
+                where = [other_conditions]
+            elif isinstance(other_conditions, list):
+                where = other_conditions
             break
         if type_send in typing.get_args(SendType):
-            where_send = {}
-            if type_send == "send":
-                where_send = {"source__notlike": "%:%", "destination__notlike": "%:%"}
-            elif type_send == "move":
-                where_send = {"source__like": "%:%", "destination__like": "%:%"}
-            elif type_send == "attach":
-                where_send = {"source__notlike": "%:%", "destination__like": "%:%"}
-            elif type_send == "detach":
-                where_send = {"source__like": "%:%", "destination__notlike": "%:%"}
+            where_send = {"send_type": type_send}
             if other_conditions:
-                where_send.update(other_conditions)
-            if where_send:
+                if isinstance(other_conditions, dict):
+                    where_send.update(other_conditions)
+                    where.append(where_send)
+                elif isinstance(other_conditions, list):
+                    for other_condition in other_conditions:
+                        where.append(other_condition | where_send)
+            else:
                 where.append(where_send)
     return where
 
@@ -1333,7 +1335,24 @@ def get_cancels(
     )
 
 
-def get_destructions(
+def get_all_valid_destructions(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+    """
+    Returns the destructions of a block
+    :param str cursor: The last index of the destructions to return
+    :param int limit: The maximum number of destructions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "destructions",
+        where={"status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_valid_destructions_by_block(
     ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
 ):
     """
@@ -1346,7 +1365,47 @@ def get_destructions(
     return select_rows(
         ledger_db,
         "destructions",
-        where={"block_index": block_index},
+        where={"block_index": block_index, "status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_valid_destructions_by_address(
+    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the destructions of a block
+    :param str address: The address to return (e.g. $ADDRESS_1)
+    :param str cursor: The last index of the destructions to return
+    :param int limit: The maximum number of destructions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "destructions",
+        where={"source": address, "status": "valid"},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_valid_destructions_by_asset(
+    ledger_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the destructions of a block
+    :param str asset: The asset to return (e.g. XCP)
+    :param str cursor: The last index of the destructions to return
+    :param int limit: The maximum number of destructions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "destructions",
+        where={"asset": asset.upper(), "status": "valid"},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2107,7 +2166,15 @@ def get_sends_by_address(
     return select_rows(
         ledger_db,
         "sends",
-        where=prepare_sends_where(send_type, {"source": address}),
+        where=prepare_sends_where(
+            send_type,
+            [
+                {"source": address},
+                {"source_address": address},
+                {"destination": address},
+                {"destination_address": address},
+            ],
+        ),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2135,7 +2202,15 @@ def get_sends_by_address_and_asset(
     return select_rows(
         ledger_db,
         "sends",
-        where=prepare_sends_where(send_type, {"source": address, "asset": asset.upper()}),
+        where=prepare_sends_where(
+            send_type,
+            [
+                {"source": address, "asset": asset.upper()},
+                {"source_address": address, "asset": asset.upper()},
+                {"destination": address, "asset": asset.upper()},
+                {"destination_address": address, "asset": asset.upper()},
+            ],
+        ),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2196,7 +2271,7 @@ def get_receive_by_address_and_asset(
     )
 
 
-def prepare_dispenser_where(status, other_conditions=None):
+def prepare_dispenser_where(status, other_conditions=None, exclude_with_oracle=False):
     where = []
     statuses = status.split(",")
     for s in statuses:
@@ -2205,12 +2280,16 @@ def prepare_dispenser_where(status, other_conditions=None):
 
         if s == "all":
             where = other_conditions or {}
+            if exclude_with_oracle:
+                where["oracle_address__null"] = True
             break
 
         if s in DispenserStatusNumber:
             where_status = {"status": DispenserStatusNumber[s]}
             if other_conditions:
                 where_status.update(other_conditions)
+            if exclude_with_oracle:
+                where_status["oracle_address__null"] = True
 
             where.append(where_status)
 
@@ -2223,6 +2302,7 @@ SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
 def get_dispensers(
     state_db,
     status: DispenserStatus = "all",
+    exclude_with_oracle: bool = False,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2231,6 +2311,7 @@ def get_dispensers(
     """
     Returns all dispensers
     :param str status: The status of the dispensers to return
+    :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2240,7 +2321,7 @@ def get_dispensers(
     return select_rows(
         state_db,
         "dispensers",
-        where=prepare_dispenser_where(status),
+        where=prepare_dispenser_where(status, exclude_with_oracle=exclude_with_oracle),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2253,6 +2334,7 @@ def get_dispensers_by_address(
     state_db,
     address: str,
     status: DispenserStatus = "all",
+    exclude_with_oracle: bool = False,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2262,6 +2344,7 @@ def get_dispensers_by_address(
     Returns the dispensers of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str status: The status of the dispensers to return
+    :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2270,7 +2353,9 @@ def get_dispensers_by_address(
     return select_rows(
         state_db,
         "dispensers",
-        where=prepare_dispenser_where(status, {"source": address}),
+        where=prepare_dispenser_where(
+            status, {"source": address}, exclude_with_oracle=exclude_with_oracle
+        ),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2283,6 +2368,7 @@ def get_dispensers_by_asset(
     state_db,
     asset: str,
     status: DispenserStatus = "all",
+    exclude_with_oracle: bool = False,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2292,6 +2378,7 @@ def get_dispensers_by_asset(
     Returns the dispensers of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param str status: The status of the dispensers to return
+    :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
     :param str cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -2300,7 +2387,9 @@ def get_dispensers_by_asset(
     return select_rows(
         state_db,
         "dispensers",
-        where=prepare_dispenser_where(status, {"asset": asset.upper()}),
+        where=prepare_dispenser_where(
+            status, {"asset": asset.upper()}, exclude_with_oracle=exclude_with_oracle
+        ),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2644,6 +2733,8 @@ SELECT_ORDERS = "*, "
 SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
 SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
 
+SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
+
 
 def get_orders(
     state_db,
@@ -2687,6 +2778,8 @@ def get_orders_by_asset(
     state_db,
     asset: str,
     status: OrderStatus = "all",
+    get_asset: str = None,
+    give_asset: str = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2696,14 +2789,25 @@ def get_orders_by_asset(
     Returns the orders of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param str status: The status of the orders to return
+    :param str get_asset: The get asset to return
+    :param str give_asset: The give asset to return
     :param str cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
     """
-    where = prepare_order_where(status, {"give_asset": asset.upper()}) + prepare_order_where(
-        status, {"get_asset": asset.upper()}
-    )
+    if get_asset:
+        where = prepare_order_where(
+            status, {"get_asset": get_asset.upper(), "give_asset": asset.upper()}
+        )
+    elif give_asset:
+        where = prepare_order_where(
+            status, {"give_asset": give_asset.upper(), "get_asset": asset.upper()}
+        )
+    else:
+        where = prepare_order_where(status, {"give_asset": asset.upper()}) + prepare_order_where(
+            status, {"get_asset": asset.upper()}
+        )
 
     return select_rows(
         state_db,
@@ -2857,6 +2961,7 @@ def get_all_order_matches(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDER_MATCHES,
     )
 
 
@@ -2889,6 +2994,7 @@ def get_order_matches_by_order(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDER_MATCHES,
     )
 
 
@@ -2896,6 +3002,8 @@ def get_order_matches_by_asset(
     state_db,
     asset: str,
     status: OrderMatchesStatus = "all",
+    forward_asset: str = None,
+    backward_asset: str = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2905,14 +3013,25 @@ def get_order_matches_by_asset(
     Returns the orders of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param str status: The status of the order matches to return
+    :param str forward_asset: The forward asset to return
+    :param str backward_asset: The backward asset to return
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
-    where = prepare_order_matches_where(
-        status, {"forward_asset": asset.upper()}
-    ) + prepare_order_matches_where(status, {"backward_asset": asset.upper()})
+    if forward_asset:
+        where = prepare_order_matches_where(
+            status, {"forward_asset": forward_asset.upper(), "backward_asset": asset.upper()}
+        )
+    elif backward_asset:
+        where = prepare_order_matches_where(
+            status, {"forward_asset": asset.upper(), "backward_asset": backward_asset.upper()}
+        )
+    else:
+        where = prepare_order_matches_where(
+            status, {"forward_asset": asset.upper()}
+        ) + prepare_order_matches_where(status, {"backward_asset": asset.upper()})
 
     return select_rows(
         state_db,
@@ -2922,6 +3041,7 @@ def get_order_matches_by_asset(
         limit=limit,
         offset=offset,
         sort=sort,
+        select=SELECT_ORDER_MATCHES,
     )
 
 

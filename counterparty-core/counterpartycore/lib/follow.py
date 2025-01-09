@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import os
 import struct
+import threading
 import time
 
 import zmq
@@ -28,6 +30,8 @@ MEMPOOL_BLOCK_MAX_SIZE = 100
 ZMQ_TIMEOUT = 3000
 
 NOTIFICATION_TYPES = ["pubrawtx", "pubhashtx", "pubsequence", "pubrawblock"]
+
+RAW_MEMPOOL = []
 
 
 def get_zmq_notifications_addresses():
@@ -87,10 +91,13 @@ class BlockchainWatcher:
         self.hash_by_sequence = {}
         self.last_block_check_time = 0
         self.last_software_version_check_time = 0
+        self.last_mempool_parsing_time = 0
         # catch up and clean mempool before starting
+        self.mempool_parser = None
         if not config.NO_MEMPOOL:
-            mempool.parse_raw_mempool(self.db)
             mempool.clean_mempool(self.db)
+            self.mempool_parser = RawMempoolParser(self.db)
+            self.mempool_parser.start()
 
     def connect_to_zmq(self):
         self.zmq_context = zmq.asyncio.Context()
@@ -116,7 +123,11 @@ class BlockchainWatcher:
 
     def receive_rawblock(self, body):
         # parse blocks as they come in
-        decoded_block = deserialize.deserialize_block(body.hex(), use_txid=True)
+        decoded_block = deserialize.deserialize_block(
+            body.hex(),
+            parse_vouts=True,
+            block_index=util.CURRENT_BLOCK_INDEX + 1,
+        )
         # check if already parsed by block.catch_up()
         existing_block = ledger.get_block_by_hash(self.db, decoded_block["block_hash"])
         if existing_block is None:
@@ -138,7 +149,7 @@ class BlockchainWatcher:
         tx_hash = self.hash_by_sequence.get(sequence)
         if tx_hash is None:
             # when tx never seen in the mempool is included in a block
-            decoded_tx = deserialize.deserialize_tx(body.hex(), use_txid=True)
+            decoded_tx = deserialize.deserialize_tx(body.hex())
             tx_hash = decoded_tx["tx_hash"]
         if sequence in self.hash_by_sequence:
             self.hash_by_sequence.pop(sequence)
@@ -149,6 +160,18 @@ class BlockchainWatcher:
         # we can remove it from the cache
         else:
             self.raw_tx_cache.pop(tx_hash)
+
+    def need_to_parse_mempool_block(self):
+        mempool_block_max_size = 100 if config.NETWORK_NAME == "mainnet" else 1
+        mempool_block_timeout = 60 if config.NETWORK_NAME == "mainnet" else 5
+        if len(self.mempool_block) == 0:
+            return False
+        if len(self.mempool_block) >= mempool_block_max_size:
+            return True
+        time_since_last_mempool_parsing = time.time() - self.last_mempool_parsing_time
+        if time_since_last_mempool_parsing > mempool_block_timeout:
+            return True
+        return False
 
     def receive_sequence(self, body):
         item_hash = body[:32].hex()
@@ -169,10 +192,12 @@ class BlockchainWatcher:
                 # logger.trace("Adding transaction to mempool block: %s", item_hash)
                 # logger.trace("Mempool block size: %s", len(self.mempool_block))
                 self.mempool_block.append(raw_tx)
-                mempool_block_max_size = 100 if config.NETWORK_NAME == "mainnet" else 1
-                if len(self.mempool_block) == mempool_block_max_size:
+                # parse mempool block if needed
+                if self.need_to_parse_mempool_block():
                     # parse mempool block
-                    mempool.parse_mempool_transactions(self.db, self.mempool_block)
+                    not_supported = mempool.parse_mempool_transactions(self.db, self.mempool_block)
+                    NotSupportedTransactionsCache().add(not_supported)
+                    self.last_mempool_parsing_time = time.time()
                     # reset mempool block
                     self.mempool_block = []
                     self.mempool_block_hashes = []
@@ -213,8 +238,9 @@ class BlockchainWatcher:
             self.receive_message(topic, body, seq)
         except Exception as e:
             logger.error("Error processing message: %s", e)
-            # import traceback
-            # print(traceback.format_exc())  # for debugging
+            import traceback
+
+            print(traceback.format_exc())  # for debugging
             capture_exception(e)
             raise e
 
@@ -233,9 +259,20 @@ class BlockchainWatcher:
 
         while True:
             try:
-                # sequence topic
                 if not config.NO_MEMPOOL:
-                    await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
+                    if len(RAW_MEMPOOL) > 0:
+                        mempool_block = RAW_MEMPOOL.pop(0)
+                        logger.trace(
+                            f"Processing {len(mempool_block)} transaction(s) from the raw mempool..."
+                        )
+                        not_supported_tx_hashes = mempool.parse_mempool_transactions(
+                            self.db, mempool_block, timestamps=self.mempool_parser.timestamps
+                        )
+                        NotSupportedTransactionsCache().add(not_supported_tx_hashes)
+                    else:
+                        # sequence topic
+                        await self.receive_multipart(self.zmq_sub_socket_sequence, "sequence")
+
                 # check rawblock topic
                 check_block_delay = 10 if config.NETWORK_NAME == "mainnet" else 0.5
 
@@ -276,4 +313,98 @@ class BlockchainWatcher:
         self.loop.close()
         # Clean up ZMQ context
         self.zmq_context.destroy()
+        # Stop mempool parser
+        if self.mempool_parser:
+            self.mempool_parser.stop()
         logger.debug("Blockchain watcher stopped.")
+
+
+def get_raw_mempool(db):
+    logger.debug("Getting raw mempool...")
+    raw_mempool = backend.bitcoind.getrawmempool(verbose=True)
+
+    timestamps = {}
+    cursor = db.cursor()
+    txhash_list = []
+    for txid, tx_info in raw_mempool.items():
+        if NotSupportedTransactionsCache().is_not_supported(txid):
+            continue
+        existing_tx_in_mempool = cursor.execute(
+            "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (txid,)
+        ).fetchone()
+        if existing_tx_in_mempool:
+            continue
+        txhash_list.append(txid)
+        timestamps[txid] = tx_info["time"]
+
+    chunks = util.chunkify(txhash_list, config.MAX_RPC_BATCH_SIZE)
+
+    logger.debug(f"Found {len(txhash_list)} transaction(s) in the raw mempool...")
+    return chunks, timestamps
+
+
+class RawMempoolParser(threading.Thread):
+    def __init__(self, db):
+        threading.Thread.__init__(self, name="RawMempoolParser")
+        self.daemon = True
+        self.tx_hashes_chunks, self.timestamps = get_raw_mempool(db)
+        self.stop_event = threading.Event()
+
+    def run(self):
+        logger.debug("Starting RawMempoolParser...")
+        start = time.time()
+        counter = 0
+        while len(self.tx_hashes_chunks) > 0 and not self.stop_event.is_set():
+            txhash_list = self.tx_hashes_chunks.pop(0)
+            logger.trace(
+                f"Getting {len(txhash_list)} raw transactions by batch from the raw mempool..."
+            )
+            raw_transactions = backend.bitcoind.getrawtransaction_batch(txhash_list)
+            RAW_MEMPOOL.append(raw_transactions)
+            counter += len(txhash_list)
+        elapsed = time.time() - start
+        logger.debug(
+            f"RawMempoolParser stopped. {counter} transactions processed in {elapsed:.2f} seconds."
+        )
+
+    def stop(self):
+        if self.is_alive():
+            logger.debug("Stopping RawMempoolParser...")
+            self.stop_event.set()
+            self.join()
+
+
+class NotSupportedTransactionsCache(metaclass=util.SingletonMeta):
+    def __init__(self):
+        self.not_suppported_txs = []
+        self.cache_path = os.path.join(
+            config.CACHE_DIR, f"not_supported_tx_cache.{config.NETWORK_NAME}.txt"
+        )
+        self.restore()
+
+    def restore(self):
+        if os.path.exists(self.cache_path):
+            with open(self.cache_path, "r") as f:
+                self.not_suppported_txs = [line.strip() for line in f]
+            logger.debug(
+                f"Restored {len(self.not_suppported_txs)} not supported transactions from cache"
+            )
+
+    def backup(self):
+        with open(self.cache_path, "w") as f:
+            f.write("\n".join(self.not_suppported_txs[-200000:]))  # limit to 200k txs
+        logger.trace(
+            f"Backed up {len(self.not_suppported_txs)} not supported transactions to cache"
+        )
+
+    def clear(self):
+        self.not_suppported_txs = []
+        if os.path.exists(self.cache_path):
+            os.remove(self.cache_path)
+
+    def add(self, more_not_supported_txs):
+        self.not_suppported_txs += more_not_supported_txs
+        self.backup()
+
+    def is_not_supported(self, tx_hash):
+        return tx_hash in self.not_suppported_txs

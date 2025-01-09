@@ -15,11 +15,10 @@ import bitcoin as bitcoinlib
 import pycoin
 import pytest
 import requests
-from Crypto.Cipher import ARC4
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import arc4, config, database, exceptions, ledger, log, script, util
+from counterpartycore.lib import config, database, exceptions, ledger, log, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.lib.api import dbbuilder
@@ -223,6 +222,8 @@ def rawtransactions_db(request):
 @pytest.fixture(scope="function")
 def server_db(request, cp_server, api_server):
     """Enable database access for unit test vectors."""
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
+
     db = database.get_connection(read_only=False)
     cursor = db.cursor()
     cursor.execute("""BEGIN""")
@@ -245,6 +246,7 @@ def api_server(request, cp_server):
 
     config.RPC_PORT = TEST_RPC_PORT = TEST_RPC_PORT + 1
     server.configure_rpc(config.RPC_PASSWORD)
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
     print("api_server", config.DATABASE, config.STATE_DATABASE)
 
@@ -270,15 +272,13 @@ def api_server(request, cp_server):
 def api_server_v2(request, cp_server):
     default_config = {
         "testnet": False,
-        "testcoin": False,
+        "testnet4": False,
         "regtest": False,
         "api_limit_rows": 1000,
         "backend_connect": None,
         "backend_port": None,
         "backend_user": None,
         "backend_password": None,
-        "indexd_connect": None,
-        "indexd_port": None,
         "backend_ssl": False,
         "backend_ssl_no_verify": False,
         "backend_poll_interval": None,
@@ -323,10 +323,13 @@ def api_server_v2(request, cp_server):
         "max_log_file_rotations": 20,
         "log_exclude_filters": None,
         "log_include_filters": None,
+        "cache_dir": os.path.dirname(request.module.FIXTURE_DB),
+        "electrs_url": None,
     }
     server_config = (
         default_config
         | util_test.COUNTERPARTYD_OPTIONS
+        | getattr(request.module, "FIXTURE_OPTIONS", {})
         | {
             "data_dir": os.path.dirname(request.module.FIXTURE_DB),
             "database_file": request.module.FIXTURE_DB,
@@ -335,6 +338,7 @@ def api_server_v2(request, cp_server):
     )
 
     config.STATE_DATABASE = config.STATE_DATABASE.replace(".testnet.db", ".db")
+    config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
     if os.path.exists(config.STATE_DATABASE):
         os.unlink(config.STATE_DATABASE)
@@ -418,9 +422,7 @@ class MockUTXOSet(object):
         self.rawtransactions_db = rawtransactions_db
         # logger.warning('MockUTXOSet %d' % len(utxos))
 
-    def get_unspent_txouts(
-        self, address, unconfirmed=False, multisig_inputs=False, unspent_tx_hash=None
-    ):
+    def get_utxos(self, address, unconfirmed=False, unspent_tx_hash=None):
         # filter by address
         txouts = [output for output in self.txouts if output["address"] == address]
 
@@ -428,17 +430,13 @@ class MockUTXOSet(object):
         unspent_txouts = filter(
             lambda txout: (txout["txid"], txout["vout"]) not in self.spent_utxos, txouts
         )
+        # print("unspent_txouts", list(unspent_txouts))
 
         if unconfirmed == False:  # noqa: E712
             unspent_txouts = filter(lambda txout: txout["confirmations"] > 0, unspent_txouts)
 
-        if multisig_inputs:
-            raise NotImplementedError(f"{multisig_inputs}")
-
-        if unspent_tx_hash:
-            unspent_txouts = filter(lambda txout: txout["txid"] == unspent_tx_hash, unspent_txouts)
-
-        return list(unspent_txouts)
+        result = list(unspent_txouts)
+        return result
 
     def update_utxo_set(self, txins, txouts):
         # spent the UTXOs
@@ -453,6 +451,7 @@ class MockUTXOSet(object):
                     "value": round(txout["amount"] * config.UNIT),
                     "confirmations": int(txout["confirmations"]),
                     "script_pub_key": txout["script_pub_key"],
+                    "scriptPubKey": {"hex": txout["script_pub_key"]},
                     "txhex": txout["txhex"],
                     "txid": txout["txid"],
                     "vout": txout["vout"],
@@ -482,6 +481,7 @@ class MockUTXOSet(object):
 
         txouts = []
         for idx, txout in enumerate(tx.txs_out):
+            script_pub_key = binascii.hexlify(txout.script).decode("ascii")
             txouts.append(
                 {
                     "address": script.scriptpubkey_to_address(
@@ -490,7 +490,8 @@ class MockUTXOSet(object):
                     "confirmations": int(confirmations),
                     "amount": txout.coin_value / 1e8,
                     "value": txout.coin_value,
-                    "script_pub_key": binascii.hexlify(txout.script).decode("ascii"),
+                    "script_pub_key": script_pub_key,
+                    "scriptPubKey": {"hex": script_pub_key},
                     "txhex": raw_transaction,
                     "txid": tx_id,
                     "vout": idx,
@@ -550,8 +551,13 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
     util_test.rawtransactions_db = rawtransactions_db
 
-    def get_unspent_txouts(*args, **kwargs):
-        return mock_utxos.get_unspent_txouts(*args, **kwargs)
+    def get_utxos(*args, **kwargs):
+        try:
+            result = mock_utxos.get_utxos(*args, **kwargs)
+        except Exception as e:
+            print(e)
+            raise e
+        return result
 
     def isodt(epoch_time):
         return datetime.utcfromtimestamp(epoch_time).isoformat()
@@ -565,37 +571,29 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def init_api_access_log(app):
         pass
 
-    def pubkeyhash_to_pubkey(address, provided_pubkeys=None):
+    def search_pubkey(address, _tx_hashes):
+        if "_" in address:
+            return multisig_pubkeyhashes_to_pubkeys(address)
         return DEFAULT_PARAMS["pubkey"][address]
 
     def multisig_pubkeyhashes_to_pubkeys(address, provided_pubkeys=None):
         # TODO: Should be updated?!
         array = address.split("_")
-        signatures_required = int(array[0])
+        _signatures_required = int(array[0])
         pubkeyhashes = array[1:-1]
         pubkeys = [DEFAULT_PARAMS["pubkey"][pubkeyhash] for pubkeyhash in pubkeyhashes]
-        address = "_".join([str(signatures_required)] + sorted(pubkeys) + [str(len(pubkeys))])
-        return address
+        return pubkeys[0]
 
     def mocked_getrawtransaction(tx_hash, verbose=False, block_index=None):
         return util_test.getrawtransaction(
             rawtransactions_db, tx_hash, verbose=verbose, block_index=block_index
         )
 
-    def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False):
+    def mocked_getrawtransaction_batch(txhash_list, verbose=False, skip_missing=False, **kwargs):
         return util_test.getrawtransaction_batch(rawtransactions_db, txhash_list, verbose=verbose)
 
-    def mocked_search_raw_transactions(address, unconfirmed=False):
-        return util_test.search_raw_transactions(rawtransactions_db, address, unconfirmed)
-
-    # mock the arc4 with a fixed seed to keep data from changing based on inputs
-    _init_arc4 = arc4.init_arc4
-
-    def init_arc4(seed):
-        if getattr(config, "DISABLE_ARC4_MOCKING", False):
-            return _init_arc4(seed)
-        else:
-            return ARC4.new(binascii.unhexlify("00" * 32))
+    def mocked_get_history(address, unconfirmed=False):
+        return util_test.get_history(rawtransactions_db, address, unconfirmed)
 
     def check_wal_file(dbfile):
         pass
@@ -612,11 +610,18 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def get_transaction_fee(db, transaction_type, block_index):
         return 10
 
-    def determine_encoding(
-        data, desired_encoding="auto", op_return_max_size=config.OP_RETURN_MAX_SIZE
-    ):
+    def mocked_get_utxo_value(txid, vout):
+        return 999
+
+    def satoshis_per_vbyte(confirmation_target=None):
+        if confirmation_target is not None:
+            return confirmation_target * 2
+        return 3
+
+    def determine_encoding(data, construct_params):
+        desired_encoding = construct_params.get("encoding", "auto")
         if desired_encoding == "auto":
-            if len(data) + len(config.PREFIX) <= op_return_max_size:
+            if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
                 encoding = "opreturn"
             else:
                 encoding = "multisig"
@@ -628,10 +633,10 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
         return encoding
 
-    monkeypatch.setattr("counterpartycore.lib.transaction.arc4.init_arc4", init_arc4)
-    monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.get_unspent_txouts", get_unspent_txouts
-    )
+    def convert_to_psbt(tx_hex):
+        return tx_hex
+
+    monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
@@ -647,21 +652,20 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         get_utxo_address_and_value,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.getrawtransaction_batch",
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction_batch",
         mocked_getrawtransaction_batch,
     )
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.convert_to_psbt", convert_to_psbt)
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.addrindexrs.search_raw_transactions",
-        mocked_search_raw_transactions,
+        "counterpartycore.lib.backend.electrs.get_history",
+        mocked_get_history,
     )
+
     monkeypatch.setattr(
-        "counterpartycore.lib.transaction_helper.transaction_outputs.pubkeyhash_to_pubkey",
-        pubkeyhash_to_pubkey,
+        "counterpartycore.lib.backend.search_pubkey",
+        search_pubkey,
     )
-    monkeypatch.setattr(
-        "counterpartycore.lib.transaction_helper.transaction_outputs.multisig_pubkeyhashes_to_pubkeys",
-        multisig_pubkeyhashes_to_pubkeys,
-    )
+
     monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
     monkeypatch.setattr("counterpartycore.lib.messages.rps.expire", rps_expire)
 
@@ -669,8 +673,13 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
     )
 
-    # monkeypatch.setattr("counterpartycore.lib.gas.get_transaction_fee", get_transaction_fee)
-    monkeypatch.setattr("counterpartycore.lib.transaction.determine_encoding", determine_encoding)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_utxo_value", mocked_get_utxo_value
+    )
+    # monkeypatch.setattr("counterpartycore.lib.composer.determine_encoding", determine_encoding)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.satoshis_per_vbyte", satoshis_per_vbyte
+    )
 
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.asset_issued_total", ledger.asset_issued_total_no_cache

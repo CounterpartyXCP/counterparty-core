@@ -110,7 +110,6 @@ sudo touch $LOG_PATH
 docker compose --profile mainnet stop counterparty-core
 docker compose --profile mainnet run counterparty-core reparse $REPARSE_FROM \
    --backend-connect=bitcoind \
-   --indexd-connect=addrindexrs \
    --rpc-host=0.0.0.0 \
    --api-host=0.0.0.0
 

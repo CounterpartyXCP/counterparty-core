@@ -80,10 +80,10 @@ def api_root():
     network = "mainnet"
     if config.TESTNET:
         network = "testnet"
+    elif config.TESTNET4:
+        network = "testnet4"
     elif config.REGTEST:
         network = "regtest"
-    elif config.TESTCOIN:
-        network = "testcoin"
 
     with StateDBConnectionPool().connection() as state_db:
         counterparty_height = api_watcher.get_last_block_parsed(state_db)
@@ -201,7 +201,7 @@ def prepare_args(route, **kwargs):
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
-        if arg_name in ["verbose"]:
+        if arg_name in ["verbose"] and "compose" not in route["function"].__name__:
             continue
         if arg_name in function_args:
             continue
@@ -276,7 +276,8 @@ def execute_api_function(rule, route, function_args):
             result = route["function"](**function_args)
         # don't cache API v1 and mempool queries
         if (
-            is_cachable(rule)
+            result is not None
+            and is_cachable(rule)
             and route["function"].__name__ != "redirect_to_api_v1"
             and not request.path.startswith("/v2/mempool/")
         ):
@@ -358,13 +359,18 @@ def handle_route(**kwargs):
         exceptions.UnpackError,
         CBitcoinAddressError,
         script.AddressError,
+        exceptions.ElectrsError,
+        OverflowError,
     ) as e:
+        # import traceback
+        # print(traceback.format_exc())
         return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        # import traceback
-        # print(traceback.format_exc())
+        import traceback
+
+        print(traceback.format_exc())
         return return_result(
             503, error="Unknown error", start_time=start_time, query_args=query_args
         )
@@ -475,6 +481,11 @@ def check_database_version(state_db):
         # rollback or reparse the database
         if e.required_action in ["rollback", "reparse"]:
             dbbuilder.rollback_state_db(state_db, block_index=e.from_block_index)
+        else:
+            for version in config.STATE_DB_NEED_REFRESH_ON_VERSION_UPDATE:
+                if config.VERSION_STRING.startswith(version):
+                    dbbuilder.refresh_state_db(state_db)
+                    break
         # update the database version
         database.update_version(state_db)
 
@@ -585,6 +596,7 @@ class APIServer(object):
         if self.process is not None:
             raise Exception("API Server is already running")
         self.process = Process(
+            name="API",
             target=run_api_server,
             args=(vars(args), self.server_ready_value, self.stop_event, os.getpid()),
         )

@@ -18,7 +18,7 @@ def dict_factory(cursor, row):
 
 def apply(db):
     start_time = time.time()
-    logger.debug("Populating `address_events` table...")
+    logger.debug("Populating the `address_events` table...")
 
     if hasattr(db, "row_factory"):
         db.row_factory = dict_factory

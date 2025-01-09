@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.8.0 (2024-12-12)
+# Release Notes - Counterparty Core v10.8.0 (2024-12-15)
 
 This release includes some significant architectural changes to the codebase to improve node stability and performance. Most notably, the data storage requirements of the Counterparty database have been reduced from ~50 GB to ~25 GB. Numerous bugs have been fixed, and all node hosts are recommended to upgrade ASAP.
 

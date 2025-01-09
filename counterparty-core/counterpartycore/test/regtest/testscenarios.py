@@ -32,6 +32,7 @@ from scenarios import (
     scenario_20_fairminter,
     scenario_21_fairminter,
     scenario_22_chaining,
+    scenario_23_detach,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -59,6 +60,7 @@ SCENARIOS += scenario_19_mpma.SCENARIO
 SCENARIOS += scenario_20_fairminter.SCENARIO
 SCENARIOS += scenario_21_fairminter.SCENARIO
 SCENARIOS += scenario_22_chaining.SCENARIO
+SCENARIOS += scenario_23_detach.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
@@ -376,6 +378,7 @@ def check_api_v1(node):
             "destination": node.addresses[1],
             "asset": "XCP",
             "quantity": 1,
+            "inputs_set": node.get_inputs_set(node.addresses[0]),
         },
     )
     # check that the hex transaction is generated
@@ -419,7 +422,11 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 _cwd=CURR_DIR,
             )
             print("Running Dredd...")
-            sh.dredd("--language", "python", _cwd=BASE_DIR, _out=sys.stdout, _err_to_out=True)
+            sh.dredd(
+                _cwd=BASE_DIR,
+                _out=sys.stdout,
+                _err_to_out=True,
+            )
             print("Testing invalid detach...")
             regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")
@@ -434,6 +441,10 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             regtest_node_thread.node.test_empty_ledger_hash()
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
+            print("Testing Electrs...")
+            regtest_node_thread.node.test_electrs()
+            print("Testing fee calculation...")
+            regtest_node_thread.node.test_fee_calculation()
     except KeyboardInterrupt:
         print(regtest_node_thread.node.server_out.getvalue())
         pass

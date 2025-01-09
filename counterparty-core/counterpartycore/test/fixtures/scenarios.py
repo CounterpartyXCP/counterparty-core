@@ -121,9 +121,14 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         (P2SH_ADDR[0], "PAYTOSCRIPT", 1000, None, False, None, None, "PSH issued asset"),
-        {"encoding": "multisig", "dust_return_pubkey": False},
+        {"encoding": "multisig", "multisig_pubkey": DP["pubkey"][ADDR[0]]},
     ],
-    ["send", (ADDR[0], P2SH_ADDR[0], "DIVISIBLE", DP["quantity"]), {"encoding": "multisig"}, None],
+    [
+        "send",
+        (ADDR[0], P2SH_ADDR[0], "DIVISIBLE", DP["quantity"]),
+        {"encoding": "multisig", "multisig_pubkey": DP["pubkey"][ADDR[0]]},
+        None,
+    ],
     [
         "broadcast",
         (P2SH_ADDR[0], 1388000002, 1, DP["fee_multiplier"], "Unit Test"),
@@ -204,7 +209,7 @@ UNITTEST_FIXTURE = [
     [
         "order",
         (ADDR[1], "BTC", round(DP["quantity"] / 125), "XCP", DP["quantity"], 2000, 0),
-        {"encoding": "multisig", "fee_provided": DP["fee_provided"]},
+        {"encoding": "multisig", "exact_fee": DP["fee_provided"]},
     ],
     ["burn", (ADDR[2], DP["burn_quantity"]), {"encoding": "multisig"}],
     [
@@ -361,7 +366,7 @@ def generate_standard_scenario(address1, address2, order_matches):
         [
             "order",
             (address1, "BTC", DP["small"], "XCP", DP["small"] * 2, DP["expiration"], 0),
-            {"encoding": "multisig", "fee_provided": DP["fee_provided"]},
+            {"encoding": "multisig", "exact_fee": DP["fee_provided"]},
         ],
         [
             "order",
@@ -537,42 +542,42 @@ standard_scenarios_params = {
         "address1": ADDR[0],
         "address2": ADDR[1],
         "order_matches": [
-            "6bdb2ef465e9fc04060f58ced26c159dc983a616cb121c5e7954e66833444c59_36d00f8c35a9c6ecc7dd0a64610b1c39a71110d1a95face6a2486a6a7a1ff83c"
+            "af8c1bec82dec4f7ddb77eafb129e3f8e47e95e283ce7224d4c28e6ee69aabab_ef249bd74fcfea725635e02e49e9c792f4b4109c1f3378c5a18a2395ef2d7504"
         ],
     },
     "multisig_1_of_2": {
         "address1": MULTISIGADDR[0],
         "address2": MULTISIGADDR[1],
         "order_matches": [
-            "332b030da57b9565324df01414778b1eafbee6c52343fea80774ee1725484367_f093b6c00e1bbe85106db6874b1ab4e3f4378d0bf0bcffbd8b51835285dfbf3f"
+            "5f2272489b2c35bb58a1e014004bb730bc9bcd8e6386587c75a97536570e897b_a5c22744b12848286d77e68c8ecc073e779d78c056948e3f190a031cf491ade5"
         ],
     },
     "multisig_2_of_2": {
         "address1": MULTISIGADDR[3],
         "address2": MULTISIGADDR[4],
         "order_matches": [
-            "025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0_c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee"
+            "8e5917ea002c66ff984539a110f9a309361b591e6b19d19b7d3f51862b06cb24_1a4653caf52308d72ed7d0328fe3016722e282b62bfccefb8e9bf76f6dbb6aea"
         ],
     },
     "multisig_1_of_3": {
         "address1": MULTISIGADDR[5],
         "address2": MULTISIGADDR[6],
         "order_matches": [
-            "04d5809f0085bf2655c500a8c65d6d8b42dd373160fb431af05792b0f30b63a6_98ef3d31d1777ad18801e94eef03d4314911ac03d7a82483b40614ea5cf80e52"
+            "9f5de4ea5b89249f8588efd7f086d25be1ba35bc71f6a98a67a854c1ad90ab70_f392f7180c4e71a8de800832be946a2d9e86cedf73937031f8d92815ed06ab42"
         ],
     },
     "multisig_2_of_3": {
         "address1": MULTISIGADDR[7],
         "address2": MULTISIGADDR[8],
         "order_matches": [
-            "c953eb18873ce8aed42456df0ece8e4678e13282d9917916e7a4aec10e828375_89a44a3314b298a83d5d14c8646900a5122b8a1e8f6e0528e73ea82044d1726a"
+            "0882dc106624f7c8b29f7ab0d44a9e13a154967e45a03d132dd6e057b3de0d42_6540319330edbb4531739bd1b335ce95e7c8b2788e7e8ac32a07321ec4cd51e5"
         ],
     },
     "multisig_3_of_3": {
         "address1": MULTISIGADDR[9],
         "address2": MULTISIGADDR[10],
         "order_matches": [
-            "1385519ca199f1b39bb89caac062fe3a342f18e393d301d7a56c150a8ab84093_a2e93083b871e68cb89e216f9a99c4c6aea1eb92cbdbafc5b4b0e160c19c517e"
+            "adef5785d2d981123ac83691a8c5bef53b9f87901f9fa01939da3733bb0ade8a_d0dd774649ef223b690cc4592e691e70e3058aa748a83511cbed124169063994"
         ],
     },
 }

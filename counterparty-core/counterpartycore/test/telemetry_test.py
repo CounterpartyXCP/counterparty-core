@@ -42,8 +42,8 @@ class TestTelemetryCollectorBase:
         mock_db = MagicMock()
         mock_ledger.last_message.return_value = {"block_index": 12345}
         mock_config.__version__ = "1.2.3"
-        mock_config.ADDRINDEXRS_VERSION = "4.5.6"
         mock_config.TESTNET = False
+        mock_config.TESTNET4 = False
         mock_config.FORCE = False
 
         collector = TelemetryCollectorBase(mock_db)
@@ -58,7 +58,6 @@ class TestTelemetryCollectorBase:
         )
 
         assert data["version"] == "1.2.3"
-        assert data["addrindexrs_version"] == "4.5.6"
         assert data["uptime"] > 0
         assert data["network"] == "MAINNET"
         assert isinstance(data["dockerized"], bool)  # noqa: E712

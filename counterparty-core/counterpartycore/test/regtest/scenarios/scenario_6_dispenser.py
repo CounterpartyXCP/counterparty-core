@@ -371,4 +371,14 @@ SCENARIO = [
             },
         ],
     },
+    {
+        "title": "Dispense with not enough BTC to trigger dispenser",
+        "transaction": "dispense",
+        "source": "$ADDRESS_7",
+        "params": {
+            "dispenser": "$ADDRESS_6",
+            "quantity": 1,
+        },
+        "expected_error": ["not enough BTC to trigger dispenser for XCP"],
+    },
 ]

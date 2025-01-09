@@ -373,118 +373,137 @@ fn parse_vout(
     }
 }
 
+pub fn parse_transaction(
+    tx: &bitcoin::blockdata::transaction::Transaction,
+    config: &Config,
+    height: u32,
+    parse_vouts: bool,
+) -> Transaction {
+    let tx_bytes = serialize(tx);
+    let mut vins = Vec::new();
+    let mut segwit = false;
+    let mut vtxinwit: Vec<Vec<String>> = Vec::new();
+    let mut key = Vec::new();
+    for vin in tx.input.iter() {
+        if key.is_empty() {
+            key = vin.previous_output.txid.to_byte_array().to_vec();
+            key.reverse();
+        }
+        let hash = vin.previous_output.txid.to_string();
+        if !vin.witness.is_empty() {
+            vtxinwit.push(
+                vin.witness
+                    .iter()
+                    .map(|w| w.as_hex().to_string())
+                    .collect::<Vec<_>>(),
+            );
+            segwit = true;
+        } else {
+            vtxinwit.push(Vec::new());
+        }
+        vins.push(Vin {
+            hash,
+            n: vin.previous_output.vout,
+            sequence: vin.sequence.0,
+            script_sig: vin.script_sig.to_bytes(),
+        })
+    }
+
+    let mut vouts = Vec::new();
+    let mut destinations = Vec::new();
+    let mut fee = 0;
+    let mut btc_amount = 0;
+    let mut data = Vec::new();
+    let mut potential_dispensers = Vec::new();
+    let mut err = None;
+    for vout in tx.output.iter() {
+        vouts.push(Vout {
+            value: vout.value.to_sat(),
+            script_pub_key: vout.script_pubkey.to_bytes(),
+        });
+    }
+    let mut parsed_vouts: Result<ParsedVouts, String> = Err("Not Parsed".to_string());
+    if parse_vouts {
+        for (vi, vout) in tx.output.iter().enumerate() {
+            if !config.multisig_addresses_enabled(height) {
+                continue;
+            }
+            let output_value = vout.value.to_sat() as i64;
+            fee -= output_value;
+            let result = parse_vout(
+                &config,
+                key.clone(),
+                height,
+                tx.compute_txid().to_string(),
+                vi,
+                vout,
+            );
+            match result {
+                Err(e) => {
+                    err = Some(e);
+                    break;
+                }
+                Ok((parse_output, potential_dispenser)) => {
+                    potential_dispensers.push(potential_dispenser);
+                    if data.is_empty()
+                        && parse_output.is_destination()
+                        && destinations != vec![config.unspendable()]
+                    {
+                        if let ParseOutput::Destination(destination) = parse_output {
+                            destinations.push(destination);
+                        }
+                        btc_amount += output_value;
+                    } else if parse_output.is_destination() {
+                        break;
+                    } else if let ParseOutput::Data(mut new_data) = parse_output {
+                        data.append(&mut new_data)
+                    }
+                }
+            }
+        }
+        if !config.multisig_addresses_enabled(height) {
+            err = Some(Error::ParseVout(
+                "Multisig addresses are not enabled".to_string(),
+            ));
+        }
+        parsed_vouts = if let Some(e) = err {
+            Err(e.to_string())
+        } else {
+            Ok(ParsedVouts {
+                destinations,
+                btc_amount,
+                fee,
+                data,
+                potential_dispensers,
+            })
+        };
+    }
+    let tx_id = tx.compute_txid().to_string();
+    let tx_hash;
+    if segwit && config.correct_segwit_txids_enabled(height) {
+        tx_hash = tx_id.clone();
+    } else {
+        tx_hash = Sha256dHash::hash(&tx_bytes).to_string();
+    }
+    Transaction {
+        version: tx.version.0,
+        segwit,
+        coinbase: tx.is_coinbase(),
+        lock_time: tx.lock_time.to_consensus_u32(),
+        tx_id: tx_id,
+        tx_hash: tx_hash,
+        vtxinwit,
+        vin: vins,
+        vout: vouts,
+        parsed_vouts,
+    }
+}
+
 impl ToBlock for Block {
     fn to_block(&self, config: Config, height: u32) -> CrateBlock {
         let mut transactions = Vec::new();
         for tx in self.txdata.iter() {
-            let tx_bytes = serialize(tx);
-            let mut vins = Vec::new();
-            let mut segwit = false;
-            let mut vtxinwit: Vec<Vec<String>> = Vec::new();
-            let mut key = Vec::new();
-            for vin in tx.input.iter() {
-                if key.is_empty() {
-                    key = vin.previous_output.txid.to_byte_array().to_vec();
-                    key.reverse();
-                }
-                let hash = vin.previous_output.txid.to_string();
-                if !vin.witness.is_empty() {
-                    vtxinwit.push(
-                        vin.witness
-                            .iter()
-                            .map(|w| w.as_hex().to_string())
-                            .collect::<Vec<_>>(),
-                    );
-                    segwit = true;
-                } else {
-                    vtxinwit.push(Vec::new());
-                }
-                vins.push(Vin {
-                    hash,
-                    n: vin.previous_output.vout,
-                    sequence: vin.sequence.0,
-                    script_sig: vin.script_sig.to_bytes(),
-                })
-            }
-
-            let mut vouts = Vec::new();
-            let mut destinations = Vec::new();
-            let mut fee = 0;
-            let mut btc_amount = 0;
-            let mut data = Vec::new();
-            let mut potential_dispensers = Vec::new();
-            let mut err = None;
-            for (vi, vout) in tx.output.iter().enumerate() {
-                vouts.push(Vout {
-                    value: vout.value.to_sat(),
-                    script_pub_key: vout.script_pubkey.to_bytes(),
-                });
-            }
-            for (vi, vout) in tx.output.iter().enumerate() {
-                if !config.multisig_addresses_enabled(height) {
-                    continue;
-                }
-                let output_value = vout.value.to_sat() as i64;
-                fee -= output_value;
-                let result = parse_vout(
-                    &config,
-                    key.clone(),
-                    height,
-                    tx.compute_txid().to_string(),
-                    vi,
-                    vout,
-                );
-                match result {
-                    Err(e) => {
-                        err = Some(e);
-                        break;
-                    }
-                    Ok((parse_output, potential_dispenser)) => {
-                        potential_dispensers.push(potential_dispenser);
-                        if data.is_empty()
-                            && parse_output.is_destination()
-                            && destinations != vec![config.unspendable()]
-                        {
-                            if let ParseOutput::Destination(destination) = parse_output {
-                                destinations.push(destination);
-                            }
-                            btc_amount += output_value;
-                        } else if parse_output.is_destination() {
-                            break;
-                        } else if let ParseOutput::Data(mut new_data) = parse_output {
-                            data.append(&mut new_data)
-                        }
-                    }
-                }
-            }
-            if !config.multisig_addresses_enabled(height) {
-                err = Some(Error::ParseVout(
-                    "Multisig addresses are not enabled".to_string(),
-                ));
-            }
-            let parsed_vouts = if let Some(e) = err {
-                Err(e.to_string())
-            } else {
-                Ok(ParsedVouts {
-                    destinations,
-                    btc_amount,
-                    fee,
-                    data,
-                    potential_dispensers,
-                })
-            };
-            transactions.push(Transaction {
-                version: tx.version.0,
-                segwit,
-                coinbase: tx.is_coinbase(),
-                lock_time: tx.lock_time.to_consensus_u32(),
-                tx_id: tx.compute_txid().to_string(),
-                tx_hash: Sha256dHash::hash(&tx_bytes).to_string(),
-                vtxinwit,
-                vin: vins,
-                vout: vouts,
-                parsed_vouts,
-            })
+            transactions.push(parse_transaction(tx, &config, height, true));
         }
         CrateBlock {
             height,
@@ -499,6 +518,30 @@ impl ToBlock for Block {
             transactions,
         }
     }
+}
+
+pub fn parse_block(
+    block: Block,
+    config: &Config,
+    height: u32,
+    parse_vouts: bool,
+) -> Result<CrateBlock, Error> {
+    let mut transactions = Vec::new();
+    for tx in block.txdata.iter() {
+        transactions.push(parse_transaction(tx, config, height, parse_vouts));
+    }
+    Ok(CrateBlock {
+        height,
+        version: block.header.version.to_consensus(),
+        hash_prev: block.header.prev_blockhash.to_string(),
+        hash_merkle_root: block.header.merkle_root.to_string(),
+        block_time: block.header.time,
+        bits: block.header.bits.to_consensus(),
+        nonce: block.header.nonce,
+        block_hash: block.block_hash().to_string(),
+        transaction_count: block.txdata.len(),
+        transactions,
+    })
 }
 
 impl BlockHasPrevBlockHash for Block {

@@ -129,3 +129,14 @@ def rollback_state_db(state_db, block_index):
             reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
 
     logger.info(f"State DB rolled back in {time.time() - start_time:.2f} seconds")
+
+
+def refresh_state_db(state_db):
+    logger.info("Rebuilding non rollbackable tables in State DB...")
+    start_time = time.time()
+
+    with state_db:
+        with log.Spinner("Re-applying migrations..."):
+            reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
+
+    logger.info(f"State DB refreshed in {time.time() - start_time:.2f} seconds")

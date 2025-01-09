@@ -1,13 +1,16 @@
+import binascii
 import functools
 import json
 import logging
 import time
 from collections import OrderedDict
+from multiprocessing import current_process
+from threading import current_thread
 
 import requests
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
-from counterpartycore.lib import config, deserialize, exceptions, util
+from counterpartycore.lib import config, deserialize, exceptions, script, util
 from counterpartycore.lib.util import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -40,6 +43,8 @@ def rpc_call(payload, retry=0):
             if response is None:  # noqa: E711
                 if config.TESTNET:
                     network = "testnet"
+                elif config.TESTNET4:
+                    network = "testnet4"
                 elif config.REGTEST:
                     network = "regtest"
                 else:
@@ -101,19 +106,34 @@ def rpc_call(payload, retry=0):
     else:
         raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
-    if isinstance(payload, dict):
-        method = payload["method"]
-    elif isinstance(payload, list):
-        method = payload[0]["method"]
-    else:
-        method = "unknown"
-    elapsed = time.time() - start_time
-    logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
+    if hasattr(logger, "trace"):
+        if isinstance(payload, dict):
+            method = payload["method"]
+        elif isinstance(payload, list):
+            method = payload[0]["method"]
+        else:
+            method = "unknown"
+        elapsed = time.time() - start_time
+        logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
 
     return result
 
 
+def is_api_request():
+    if current_process().name != "API":
+        return False
+    thread_name = current_thread().name
+    # waitress, werkzeug or Gunicorn thead
+    for name in ["waitress", "process_request_thread", "ThreadPoolExecutor"]:
+        if name in thread_name:
+            return True
+    return False
+
+
 def rpc(method, params):
+    if is_api_request():
+        return safe_rpc(method, params)
+
     payload = {
         "method": method,
         "params": params,
@@ -121,6 +141,31 @@ def rpc(method, params):
         "id": 0,
     }
     return rpc_call(payload)
+
+
+# no retry for requests from the API
+def safe_rpc(method, params):
+    start_time = time.time()
+    try:
+        payload = {
+            "method": method,
+            "params": params,
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+        response = requests.post(
+            config.BACKEND_URL,
+            data=json.dumps(payload),
+            headers={"content-type": "application/json"},
+            verify=(not config.BACKEND_SSL_NO_VERIFY),
+            timeout=config.REQUESTS_TIMEOUT,
+        ).json()
+        return response["result"]
+    except (requests.exceptions.RequestException, json.decoder.JSONDecodeError, KeyError) as e:
+        raise exceptions.BitcoindRPCError(f"Error calling {method}: {str(e)}") from e
+    finally:
+        elapsed = time.time() - start_time
+        logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
 
 
 def getblockcount():
@@ -147,6 +192,37 @@ def convert_to_psbt(rawtx):
 @functools.lru_cache(maxsize=10000)
 def getrawtransaction(tx_hash, verbose=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
+
+
+def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False):
+    if len(tx_hashes) == 0:
+        return {}
+    if len(tx_hashes) > config.MAX_RPC_BATCH_SIZE:
+        raise exceptions.BitcoindRPCError("Too many transactions requested")
+
+    payload = [
+        {
+            "method": "getrawtransaction",
+            "params": [tx_hash, 1 if verbose else 0],
+            "jsonrpc": "2.0",
+            "id": i,
+        }
+        for i, tx_hash in enumerate(tx_hashes)
+    ]
+    results = rpc_call(payload)
+
+    if return_dict:
+        raw_transactions = {}
+        for result in results:
+            if "result" in result and result["result"] is not None:
+                raw_transactions[tx_hashes[result["id"]]] = result["result"]
+    else:
+        raw_transactions = []
+        for result in results:
+            if "result" in result and result["result"] is not None:
+                raw_transactions.append(result["result"])
+
+    return raw_transactions
 
 
 def createrawtransaction(inputs, outputs):
@@ -203,6 +279,17 @@ def fee_per_kb(
         return None
 
     return int(max(feeperkb["feerate"] * config.UNIT, config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART))
+
+
+def satoshis_per_vbyte(
+    conf_target: int = config.ESTIMATE_FEE_CONF_TARGET, mode: str = config.ESTIMATE_FEE_MODE
+):
+    feeperkb = rpc("estimatesmartfee", [conf_target, mode])
+
+    if "errors" in feeperkb and feeperkb["errors"][0] == "Insufficient data or no feerate found":
+        return config.DEFAULT_FEE_PER_KB_ESTIMATE_SMART
+
+    return (feeperkb["feerate"] * config.UNIT) / 1024
 
 
 def get_btc_supply(normalize=False):
@@ -265,21 +352,6 @@ def add_block_in_cache(block_index, block):
         add_transaction_in_cache(transaction["tx_hash"], transaction)
 
 
-def get_decoded_block(block_index):
-    if block_index in BLOCKS_CACHE:
-        # remove from cache when used
-        return BLOCKS_CACHE.pop(block_index)
-
-    block_hash = getblockhash(block_index)
-    raw_block = getblock(block_hash)
-    use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-    block = deserialize.deserialize_block(raw_block, use_txid=use_txid)
-
-    add_block_in_cache(block_index, block)
-
-    return block
-
-
 def get_decoded_transaction(tx_hash, block_index=None):
     if isinstance(tx_hash, bytes):
         tx_hash = ib2h(tx_hash)
@@ -287,8 +359,7 @@ def get_decoded_transaction(tx_hash, block_index=None):
         return TRANSACTIONS_CACHE[tx_hash]
 
     raw_tx = getrawtransaction(tx_hash)
-    use_txid = util.enabled("correct_segwit_txids", block_index=block_index)
-    tx = deserialize.deserialize_tx(raw_tx, use_txid=use_txid)
+    tx = deserialize.deserialize_tx(raw_tx, block_index=block_index)
 
     add_transaction_in_cache(tx_hash, tx)
 
@@ -300,14 +371,8 @@ def get_tx_out_amount(tx_hash, vout):
     return raw_tx["vout"][vout]["value"]
 
 
-class BlockFetcher:
-    def __init__(self, first_block) -> None:
-        self.current_block = first_block
-
-    def get_block(self):
-        block = get_decoded_block(self.current_block)
-        self.current_block += 1
-        return block
+def get_utxo_value(tx_hash, vout):
+    return get_tx_out_amount(tx_hash, vout)
 
 
 def sendrawtransaction(signedhex: str):
@@ -323,4 +388,65 @@ def decoderawtransaction(rawtx: str):
     Proxy to `decoderawtransaction` RPC call.
     :param rawtx: The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)
     """
-    return rpc("decoderawtransaction", [rawtx])
+    return deserialize.deserialize_tx(rawtx)
+
+
+def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
+    for tx_hash in tx_hashes:
+        tx = getrawtransaction(tx_hash, True)
+        for vin in tx["vin"]:
+            if "txinwitness" in vin:
+                if len(vin["txinwitness"]) >= 2:
+                    # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
+                    try:
+                        pubkey = vin["txinwitness"][1]
+                        if pubkeyhash == script.pubkey_to_p2whash2(pubkey):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+            elif "coinbase" not in vin:
+                scriptsig = vin["scriptSig"]
+                asm = scriptsig["asm"].split(" ")
+                if len(asm) == 4:  # p2pkh
+                    # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
+                    try:
+                        pubkey = asm[3]
+                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                            return pubkey
+                    except binascii.Error:
+                        pass
+        for vout in tx["vout"]:
+            asm = vout["scriptPubKey"]["asm"].split(" ")
+            if len(asm) == 3:  # p2pk
+                try:
+                    pubkey = asm[1]
+                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                        return pubkey
+                except binascii.Error:
+                    pass
+    return None
+
+
+def list_unspent(source, allow_unconfirmed_inputs):
+    min_conf = 0 if allow_unconfirmed_inputs else 1
+    bitcoind_unspent_list = []
+    try:
+        bitcoind_unspent_list = safe_rpc("listunspent", [min_conf, 9999999, [source]]) or []
+    except exceptions.BitcoindRPCError:
+        pass
+
+    if len(bitcoind_unspent_list) > 0:
+        unspent_list = []
+        for unspent in bitcoind_unspent_list:
+            unspent_list.append(
+                {
+                    "txid": unspent["txid"],
+                    "vout": unspent["vout"],
+                    "value": int(unspent["amount"] * config.UNIT),
+                    "amount": unspent["amount"],
+                    "script_pub_key": unspent["scriptPubKey"],
+                }
+            )
+        return unspent_list
+
+    return []

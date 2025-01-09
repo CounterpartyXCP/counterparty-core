@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use pyo3::{exceptions::PyValueError, types::PyDict, FromPyObject, PyAny, PyErr, PyResult};
-use tracing::{level_filters::LevelFilter, Level};
+use tracing::level_filters::LevelFilter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -52,6 +52,7 @@ impl<'source> FromPyObject<'source> for LogLevel {
 pub enum Network {
     Mainnet,
     Testnet,
+    Testnet4,
     Regtest,
 }
 
@@ -61,9 +62,10 @@ impl<'source> FromPyObject<'source> for Network {
         match network_str.trim().to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
             "testnet" => Ok(Network::Testnet),
+            "testnet4" => Ok(Network::Testnet4),
             "regtest" => Ok(Network::Regtest),
             _ => Err(PyErr::new::<PyValueError, _>(
-                "'network' must be either 'mainnet' or 'testnet'",
+                "'network' must be either 'mainnet', 'testnet' or 'testnet4'",
             )),
         }
     }
@@ -74,6 +76,7 @@ impl Display for Network {
         let s = match self {
             Network::Mainnet => "mainnet",
             Network::Testnet => "testnet",
+            Network::Testnet4 => "testnet4",
             Network::Regtest => "regtest",
         };
         write!(f, "{}", s)
@@ -104,6 +107,13 @@ impl Heights {
                 p2sh_addresses: 0,
                 p2sh_dispensers: 2163328,
                 correct_segwit_txids: 1666625,
+                multisig_addresses: 0,
+            },
+            Network::Testnet4 => Heights {
+                segwit: 0,
+                p2sh_addresses: 0,
+                p2sh_dispensers: 0,
+                correct_segwit_txids: 0,
                 multisig_addresses: 0,
             },
             Network::Regtest => Heights {
@@ -162,6 +172,7 @@ impl Config {
         match self.network {
             Network::Mainnet => "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
             Network::Testnet => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+            Network::Testnet4 => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
             Network::Regtest => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
         }
         .into()
@@ -239,6 +250,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => match network {
                 Network::Mainnet => vec![0x00],
                 Network::Testnet => vec![0x6F],
+                Network::Testnet4 => vec![0x6F],
                 Network::Regtest => vec![0x6F],
             },
         };
@@ -248,6 +260,7 @@ impl<'source> FromPyObject<'source> for Config {
             _ => match network {
                 Network::Mainnet => vec![0x05],
                 Network::Testnet => vec![0xC4],
+                Network::Testnet4 => vec![0xC4],
                 Network::Regtest => vec![0xC4],
             },
         };

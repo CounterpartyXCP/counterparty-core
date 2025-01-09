@@ -8,7 +8,7 @@ import threading
 import gunicorn.app.base
 import waitress
 import waitress.server
-from counterpartycore.lib import backend, config, database, ledger, log, util
+from counterpartycore.lib import config, database, ledger, log, util
 from counterpartycore.lib.api import api_watcher
 from counterpartycore.lib.api.util import BackendHeight
 from gunicorn import util as gunicorn_util
@@ -33,8 +33,6 @@ def refresh_current_state(ledger_db, state_db):
     else:
         util.CURRENT_BLOCK_TIME = 0
         util.CURRENT_BLOCK_INDEX = 0
-
-    backend.addrindexrs.clear_raw_transactions_cache()
 
     if util.CURRENT_BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
         logger.debug(

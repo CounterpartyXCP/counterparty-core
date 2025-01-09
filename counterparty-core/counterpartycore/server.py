@@ -6,12 +6,8 @@ import decimal
 import logging
 import multiprocessing
 import os
-import sys
-import tarfile
-import tempfile
 import threading
 import time
-import urllib
 from urllib.parse import quote_plus as urlencode
 
 import appdirs
@@ -21,6 +17,7 @@ from termcolor import colored, cprint
 from counterpartycore.lib import (
     backend,
     blocks,
+    bootstrap,
     check,
     config,
     database,
@@ -32,7 +29,6 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1, dbbuilder
-from counterpartycore.lib.public_keys import PUBLIC_KEYS
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -53,7 +49,7 @@ def initialise(*args, **kwargs):
         api_log_file=kwargs.pop("api_log_file", None),
         no_log_files=kwargs.pop("no_log_files", False),
         testnet=kwargs.get("testnet", False),
-        testcoin=kwargs.get("testcoin", False),
+        testnet4=kwargs.get("testnet4", False),
         regtest=kwargs.get("regtest", False),
         action=kwargs.get("action", None),
         json_logs=kwargs.get("json_logs", False),
@@ -71,7 +67,7 @@ def initialise_log_config(
     api_log_file=None,
     no_log_files=False,
     testnet=False,
-    testcoin=False,
+    testnet4=False,
     regtest=False,
     action=None,
     json_logs=False,
@@ -101,8 +97,8 @@ def initialise_log_config(
         network += ".testnet"
     if regtest:
         network += ".regtest"
-    if testcoin:
-        network += ".testcoin"
+    if testnet4:
+        network += ".testnet4"
 
     # Log
     if no_log_files:
@@ -136,16 +132,15 @@ def initialise_log_config(
 
 def initialise_config(
     data_dir=None,
+    cache_dir=None,
     testnet=False,
-    testcoin=False,
+    testnet4=False,
     regtest=False,
     api_limit_rows=1000,
     backend_connect=None,
     backend_port=None,
     backend_user=None,
     backend_password=None,
-    indexd_connect=None,
-    indexd_port=None,
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
@@ -181,6 +176,7 @@ def initialise_config(
     gunicorn_threads_per_worker=None,
     database_file=None,  # for tests
     action=None,
+    electrs_url=None,
 ):
     # log config already initialized
 
@@ -193,17 +189,22 @@ def initialise_config(
         os.makedirs(data_dir, mode=0o755)
     config.DATA_DIR = data_dir
 
+    if not cache_dir:
+        cache_dir = appdirs.user_cache_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME)
+    if not os.path.isdir(cache_dir):
+        os.makedirs(cache_dir, mode=0o755)
+    config.CACHE_DIR = cache_dir
+
     # testnet
     if testnet:
         config.TESTNET = testnet
     else:
         config.TESTNET = False
 
-    # testcoin
-    if testcoin:
-        config.TESTCOIN = testcoin
+    if testnet4:
+        config.TESTNET4 = testnet4
     else:
-        config.TESTCOIN = False
+        config.TESTNET4 = False
 
     # regtest
     if regtest:
@@ -211,13 +212,7 @@ def initialise_config(
     else:
         config.REGTEST = False
 
-    if customnet != None and len(customnet) > 0:  # noqa: E711
-        config.CUSTOMNET = True
-        config.REGTEST = True  # Custom nets are regtests with different parameters
-    else:
-        config.CUSTOMNET = False
-
-    if config.TESTNET:
+    if config.TESTNET or config.TESTNET4:
         bitcoinlib.SelectParams("testnet")
     elif config.REGTEST:
         bitcoinlib.SelectParams("regtest")
@@ -227,10 +222,10 @@ def initialise_config(
     config.NETWORK_NAME = "mainnet"
     if config.TESTNET:
         config.NETWORK_NAME = "testnet"
+    if config.TESTNET4:
+        config.NETWORK_NAME = "testnet4"
     if config.REGTEST:
         config.NETWORK_NAME = "regtest"
-    if config.TESTCOIN:
-        config.NETWORK_NAME = "testcoin"
     network = f".{config.NETWORK_NAME }" if config.NETWORK_NAME != "mainnet" else ""
 
     # Database
@@ -241,10 +236,7 @@ def initialise_config(
         config.DATABASE = os.path.join(data_dir, filename)
 
     config.FETCHER_DB_OLD = os.path.join(os.path.dirname(config.DATABASE), f"fetcherdb{network}")
-    config.FETCHER_DB = os.path.join(
-        appdirs.user_cache_dir(appauthor=config.XCP_NAME, appname=config.APP_NAME),
-        f"fetcherdb{network}",
-    )
+    config.FETCHER_DB = os.path.join(config.CACHE_DIR, f"fetcherdb{network}")
 
     config.STATE_DATABASE = os.path.join(os.path.dirname(config.DATABASE), f"state{network}.db")
 
@@ -260,9 +252,6 @@ def initialise_config(
     ##############
     # THINGS WE CONNECT TO
 
-    # Backend name
-    config.BACKEND_NAME = "addrindexrs"
-
     # Backend RPC host (Bitcoin Core)
     if backend_connect:
         config.BACKEND_CONNECT = backend_connect
@@ -275,6 +264,8 @@ def initialise_config(
     else:
         if config.TESTNET:
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+        elif config.TESTNET4:
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET4
         elif config.REGTEST:
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_REGTEST
         else:
@@ -345,35 +336,6 @@ def initialise_config(
     else:
         config.BACKEND_URL = "http://" + config.BACKEND_URL
 
-    # Indexd RPC host
-    if indexd_connect:
-        config.INDEXD_CONNECT = indexd_connect
-    else:
-        config.INDEXD_CONNECT = "localhost"
-
-    # Indexd RPC port
-    if indexd_port:
-        config.INDEXD_PORT = indexd_port
-    else:
-        if config.TESTNET:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_TESTNET
-        elif config.REGTEST:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT_REGTEST
-        else:
-            config.INDEXD_PORT = config.DEFAULT_INDEXD_PORT
-
-    try:
-        config.INDEXD_PORT = int(config.INDEXD_PORT)
-        if not (int(config.INDEXD_PORT) > 1 and int(config.INDEXD_PORT) < 65535):
-            raise ConfigurationError("invalid Indexd API port number")
-    except:  # noqa: E722
-        raise ConfigurationError(  # noqa: B904
-            "Please specific a valid port number indexd-port configuration parameter"
-        )
-
-    # Construct Indexd URL.
-    config.INDEXD_URL = "http://" + config.INDEXD_CONNECT + ":" + str(config.INDEXD_PORT)
-
     ##############
     # THINGS WE SERVE
 
@@ -391,20 +353,13 @@ def initialise_config(
         config.RPC_PORT = rpc_port
     else:
         if config.TESTNET:
-            if config.TESTCOIN:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET + 1
-            else:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+            config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+        elif config.TESTNET4:
+            config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET4
         elif config.REGTEST:
-            if config.TESTCOIN:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST + 1
-            else:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
+            config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
         else:
-            if config.TESTCOIN:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT + 1
-            else:
-                config.RPC_PORT = config.DEFAULT_RPC_PORT
+            config.RPC_PORT = config.DEFAULT_RPC_PORT
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535):
@@ -448,20 +403,13 @@ def initialise_config(
         config.API_PORT = api_port
     else:
         if config.TESTNET:
-            if config.TESTCOIN:
-                config.API_PORT = config.DEFAULT_API_PORT_TESTNET + 1
-            else:
-                config.API_PORT = config.DEFAULT_API_PORT_TESTNET
+            config.API_PORT = config.DEFAULT_API_PORT_TESTNET
+        elif config.TESTNET4:
+            config.API_PORT = config.DEFAULT_API_PORT_TESTNET4
         elif config.REGTEST:
-            if config.TESTCOIN:
-                config.API_PORT = config.DEFAULT_API_PORT_REGTEST + 1
-            else:
-                config.API_PORT = config.DEFAULT_API_PORT_REGTEST
+            config.API_PORT = config.DEFAULT_API_PORT_REGTEST
         else:
-            if config.TESTCOIN:
-                config.API_PORT = config.DEFAULT_API_PORT + 1
-            else:
-                config.API_PORT = config.DEFAULT_API_PORT
+            config.API_PORT = config.DEFAULT_API_PORT
     try:
         config.API_PORT = int(config.API_PORT)
         if not (int(config.API_PORT) > 1 and int(config.API_PORT) < 65535):
@@ -478,20 +426,13 @@ def initialise_config(
         config.ZMQ_PUBLISHER_PORT = zmq_publisher_port
     else:
         if config.TESTNET:
-            if config.TESTCOIN:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET + 1
-            else:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET
+        elif config.TESTNET4:
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET4
         elif config.REGTEST:
-            if config.TESTCOIN:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST + 1
-            else:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST
         else:
-            if config.TESTCOIN:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT + 1
-            else:
-                config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT
     try:
         config.ZMQ_PUBLISHER_PORT = int(config.ZMQ_PUBLISHER_PORT)
         if not (int(config.ZMQ_PUBLISHER_PORT) > 1 and int(config.ZMQ_PUBLISHER_PORT) < 65535):
@@ -524,82 +465,44 @@ def initialise_config(
         config.FORCE = False
 
     # Encoding
-    if config.TESTCOIN:
-        config.PREFIX = b"XX"  # 2 bytes (possibly accidentally created)
-    else:
-        config.PREFIX = b"CNTRPRTY"  # 8 bytes
+    config.PREFIX = b"CNTRPRTY"  # 8 bytes
 
     # (more) Testnet
     if config.TESTNET:
         config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
-        if config.TESTCOIN:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET_TESTCOIN
-            config.BURN_START = config.BURN_START_TESTNET_TESTCOIN
-            config.BURN_END = config.BURN_END_TESTNET_TESTCOIN
-            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-        else:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
-            config.BURN_START = config.BURN_START_TESTNET
-            config.BURN_END = config.BURN_END_TESTNET
-            config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-    elif config.CUSTOMNET:
-        custom_args = customnet.split("|")
-
-        if len(custom_args) == 3:
-            config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
-            config.ADDRESSVERSION = binascii.unhexlify(custom_args[1])
-            config.P2SH_ADDRESSVERSION = binascii.unhexlify(custom_args[2])
-            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
-            config.BURN_START = config.BURN_START_REGTEST
-            config.BURN_END = config.BURN_END_REGTEST
-            config.UNSPENDABLE = custom_args[0]
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-        else:
-            raise "Custom net parameter needs to be like UNSPENDABLE_ADDRESS|ADDRESSVERSION|P2SH_ADDRESSVERSION (version bytes in HH format)"  # noqa: B016
+        config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
+        config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
+        config.BURN_START = config.BURN_START_TESTNET
+        config.BURN_END = config.BURN_END_TESTNET
+        config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+    elif config.TESTNET4:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET4
+        config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET4
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET4
+        config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET4
+        config.BURN_START = config.BURN_START_TESTNET4
+        config.BURN_END = config.BURN_END_TESTNET4
+        config.UNSPENDABLE = config.UNSPENDABLE_TESTNET4
     elif config.REGTEST:
         config.MAGIC_BYTES = config.MAGIC_BYTES_REGTEST
-        if config.TESTCOIN:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
-            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST_TESTCOIN
-            config.BURN_START = config.BURN_START_REGTEST_TESTCOIN
-            config.BURN_END = config.BURN_END_REGTEST_TESTCOIN
-            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-        else:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
-            config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
-            config.BURN_START = config.BURN_START_REGTEST
-            config.BURN_END = config.BURN_END_REGTEST
-            config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_REGTEST
+        config.BLOCK_FIRST = config.BLOCK_FIRST_REGTEST
+        config.BURN_START = config.BURN_START_REGTEST
+        config.BURN_END = config.BURN_END_REGTEST
+        config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
-        if config.TESTCOIN:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET_TESTCOIN
-            config.BURN_START = config.BURN_START_MAINNET_TESTCOIN
-            config.BURN_END = config.BURN_END_MAINNET_TESTCOIN
-            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
-        else:
-            config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
-            config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
-            config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
-            config.BURN_START = config.BURN_START_MAINNET
-            config.BURN_END = config.BURN_END_MAINNET
-            config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
-            config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
+        config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_MAINNET
+        config.BLOCK_FIRST = config.BLOCK_FIRST_MAINNET
+        config.BURN_START = config.BURN_START_MAINNET
+        config.BURN_END = config.BURN_END_MAINNET
+        config.UNSPENDABLE = config.UNSPENDABLE_MAINNET
 
     # Misc
+    config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     config.REQUESTS_TIMEOUT = requests_timeout
     config.CHECK_ASSET_CONSERVATION = not skip_asset_conservation_check
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
@@ -618,15 +521,27 @@ def initialise_config(
     config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
     config.GUNICORN_WORKERS = gunicorn_workers
 
+    if electrs_url:
+        if not util.is_url(electrs_url):
+            raise ConfigurationError("Invalid Electrs URL")
+        config.ELECTRS_URL = electrs_url
+    else:
+        if config.NETWORK_NAME == "testnet":
+            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET
+        elif config.NETWORK_NAME == "mainnet":
+            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_MAINNET
+        else:
+            config.ELECTRS_URL = None
+
 
 def initialise_log_and_config(args, api=False):
     # Configuration
     init_args = {
         "data_dir": args.data_dir,
+        "cache_dir": args.cache_dir,
         "testnet": args.testnet,
-        "testcoin": args.testcoin,
+        "testnet4": args.testnet4,
         "regtest": args.regtest,
-        "customnet": args.customnet,
         "api_limit_rows": args.api_limit_rows,
         "backend_connect": args.backend_connect,
         "backend_port": args.backend_port,
@@ -635,8 +550,6 @@ def initialise_log_and_config(args, api=False):
         "backend_ssl": args.backend_ssl,
         "backend_ssl_no_verify": args.backend_ssl_no_verify,
         "backend_poll_interval": args.backend_poll_interval,
-        "indexd_connect": args.indexd_connect,
-        "indexd_port": args.indexd_port,
         "rpc_host": args.rpc_host,
         "rpc_port": args.rpc_port,
         "rpc_user": args.rpc_user,
@@ -664,6 +577,7 @@ def initialise_log_and_config(args, api=False):
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
         "action": args.action,
+        "electrs_url": args.electrs_url,
     }
     # for tests
     if "database_file" in args:
@@ -676,7 +590,7 @@ def initialise_log_and_config(args, api=False):
         api_log_file=args.api_log_file,
         no_log_files=args.no_log_files,
         testnet=args.testnet,
-        testcoin=args.testcoin,
+        testnet4=args.testnet4,
         regtest=args.regtest,
         action=args.action,
         json_logs=args.json_logs,
@@ -756,13 +670,20 @@ def start_all(args):
         if (
             not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap"
         ) or args.catch_up == "bootstrap-always":
-            bootstrap(no_confirm=True, snapshot_url=args.bootstrap_url)
+            bootstrap.bootstrap(no_confirm=True, snapshot_url=args.bootstrap_url)
 
         # Initialise database
         db = database.initialise_db()
         blocks.initialise(db)
         blocks.check_database_version(db)
         database.optimize(db)
+
+        if args.rebuild_state_db:
+            dbbuilder.build_state_db()
+        elif args.refresh_state_db:
+            state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+            dbbuilder.refresh_state_db(state_db)
+            state_db.close()
 
         # Check software version
         check.software_version()
@@ -828,7 +749,6 @@ def start_all(args):
         # then close the database with write access
         if db:
             database.close(db)
-        backend.addrindexrs.stop()
         log.shutdown()
 
         # Now it's safe to check for WAL files
@@ -851,13 +771,11 @@ def start_all(args):
 
 
 def reparse(block_index):
-    backend.addrindexrs.init()
     ledger_db = database.initialise_db()
 
     last_block = ledger.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:
         print(colored("Block index is higher than current block index. No need to reparse.", "red"))
-        backend.addrindexrs.stop()
         ledger_db.close()
         return
 
@@ -866,7 +784,6 @@ def reparse(block_index):
         blocks.reparse(ledger_db, block_index=block_index)
         dbbuilder.rollback_state_db(state_db, block_index)
     finally:
-        backend.addrindexrs.stop()
         database.optimize(ledger_db)
         database.optimize(state_db)
         ledger_db.close()
@@ -888,6 +805,7 @@ def rollback(block_index=None):
     try:
         blocks.rollback(ledger_db, block_index=block_index)
         dbbuilder.rollback_state_db(state_db, block_index)
+        follow.NotSupportedTransactionsCache().clear()
     finally:
         database.optimize(ledger_db)
         database.optimize(state_db)
@@ -951,109 +869,3 @@ def configure_rpc(rpc_password=None):
     else:
         config.API_ROOT = "http://" + config.RPC_HOST + ":" + str(config.RPC_PORT)
     config.RPC = config.API_ROOT + config.RPC_WEBROOT
-
-
-def bootstrap(no_confirm=False, snapshot_url=None):
-    warning_message = """WARNING: `counterparty-server bootstrap` downloads a recent snapshot of a Counterparty database
-from a centralized server maintained by the Counterparty Core development team.
-Because this method does not involve verifying the history of Counterparty transactions yourself,
-the `bootstrap` command should not be used for mission-critical, commercial or public-facing nodes.
-        """
-    cprint(warning_message, "yellow")
-
-    if not no_confirm:
-        confirmation_message = colored("Continue? (y/N): ", "magenta")
-        if input(confirmation_message).lower() != "y":
-            exit()
-
-    # Set Constants.
-    if snapshot_url is None:
-        bootstrap_url = (
-            config.BOOTSTRAP_URL_TESTNET if config.TESTNET else config.BOOTSTRAP_URL_MAINNET
-        )
-        bootstrap_sig_url = (
-            config.BOOTSTRAP_URL_TESTNET_SIG if config.TESTNET else config.BOOTSTRAP_URL_MAINNET_SIG
-        )
-    else:
-        bootstrap_url = snapshot_url
-        bootstrap_sig_url = snapshot_url.replace(".tar.gz", ".sig")
-
-    tar_filename = os.path.basename(bootstrap_url)
-    sig_filename = os.path.basename(bootstrap_sig_url)
-    tarball_path = os.path.join(tempfile.gettempdir(), tar_filename)
-    sig_path = os.path.join(tempfile.gettempdir(), sig_filename)
-
-    ledger_database_path = os.path.join(config.DATA_DIR, config.APP_NAME)
-
-    if config.TESTNET:
-        ledger_database_path += ".testnet"
-    ledger_database_path += ".db"
-
-    old_api_database_path = ledger_database_path.replace(".db", ".api.db")
-    if config.TESTNET:
-        api_database_path = os.path.join(config.DATA_DIR, "state.testnet.db")
-    else:
-        api_database_path = os.path.join(config.DATA_DIR, "state.db")
-
-    # Prepare Directory.
-    if not os.path.exists(config.DATA_DIR):
-        os.makedirs(config.DATA_DIR, mode=0o755)
-
-    for database_path in [ledger_database_path, api_database_path, old_api_database_path]:
-        if os.path.exists(database_path):
-            os.remove(database_path)
-        # Delete SQLite Write-Ahead-Log
-        wal_path = database_path + "-wal"
-        shm_path = database_path + "-shm"
-        if os.path.exists(wal_path):
-            os.remove(wal_path)
-        if os.path.exists(shm_path):
-            os.remove(shm_path)
-
-    # Define Progress Bar.
-    spinner = log.Spinner(f"Downloading database from {bootstrap_url}...")
-
-    def bootstrap_progress(blocknum, blocksize, totalsize):
-        readsofar = blocknum * blocksize
-        if totalsize > 0:
-            percent = readsofar * 1e2 / totalsize
-            message = f"Downloading database: {percent:5.1f}% {readsofar} / {totalsize}"
-            spinner.set_messsage(message)
-
-    # Downloading
-    spinner.start()
-    urllib.request.urlretrieve(bootstrap_url, tarball_path, bootstrap_progress)  # nosec B310  # noqa: S310
-    urllib.request.urlretrieve(bootstrap_sig_url, sig_path)  # nosec B310  # noqa: S310
-    spinner.stop()
-
-    with log.Spinner("Verifying signature..."):
-        signature_verified = False
-        for key in PUBLIC_KEYS:
-            if util.verify_signature(key, sig_path, tarball_path):
-                signature_verified = True
-                break
-        if not signature_verified:
-            print("Snapshot was not signed by any trusted keys")
-            sys.exit(1)
-
-    # TODO: check checksum, filenames, etc.
-    with log.Spinner(f"Extracting database to {config.DATA_DIR}..."):
-        with tarfile.open(tarball_path, "r:gz") as tar_file:
-            tar_file.extractall(path=config.DATA_DIR)  # nosec B202  # noqa: S202
-
-    assert os.path.exists(ledger_database_path)
-    assert os.path.exists(api_database_path) or os.path.exists(old_api_database_path)
-    # user and group have "rw" access
-    os.chmod(ledger_database_path, 0o660)  # nosec B103
-    if os.path.exists(api_database_path):
-        os.chmod(api_database_path, 0o660)  # nosec B103
-    if os.path.exists(old_api_database_path):
-        os.chmod(old_api_database_path, 0o660)  # nosec B103
-
-    with log.Spinner("Cleaning up..."):
-        os.remove(tarball_path)
-
-    cprint(
-        f"Databases have been successfully bootstrapped to {ledger_database_path} and {api_database_path}.",
-        "green",
-    )

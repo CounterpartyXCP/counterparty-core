@@ -172,7 +172,7 @@ def parse_tx(db, tx):
                 return
 
             # Protocol change.
-            rps_enabled = tx["block_index"] >= 308500 or config.TESTNET or config.REGTEST
+            rps_enabled = util.after_block_or_test_network(tx["block_index"], 308500)
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
@@ -429,22 +429,24 @@ def parse_block(
     return None, None, None
 
 
-def update_transaction_type(db):
+def update_transaction_type(db, fix_utxo_move=False):
     start = time.time()
     logger.info("Updating `transaction_type` column in `transactions` table...")
 
     with db:
         cursor = db.cursor()
-        cursor.execute("ALTER TABLE transactions ADD COLUMN transaction_type TEXT")
-        cursor.execute(
-            "SELECT tx_index, destination, block_index, data, supported FROM transactions"
-        )
+        if not fix_utxo_move:
+            cursor.execute("ALTER TABLE transactions ADD COLUMN transaction_type TEXT")
+        sql = "SELECT tx_index, destination, block_index, data, utxos_info, supported FROM transactions"
+        if fix_utxo_move:
+            sql += " WHERE transaction_type = 'utxomove'"
+        cursor.execute(sql)
         counter = 0
         for tx in cursor.fetchall():
             transaction_type = "unknown"
             if tx["supported"]:
                 transaction_type = message_type.get_transaction_type(
-                    tx["data"], tx["destination"], tx["block_index"]
+                    tx["data"], tx["destination"], tx["utxos_info"].split(" "), tx["block_index"]
                 )
 
             cursor.execute(
@@ -584,6 +586,11 @@ def initialise(db):
 
     if "transaction_type" not in transactions_columns:
         update_transaction_type(db)
+
+    if database.get_config_value(db, "FIX_TRANSACTION_TYPE_1") is None:
+        with db:
+            update_transaction_type(db, fix_utxo_move=True)
+            database.set_config_value(db, "FIX_TRANSACTION_TYPE_1", True)
 
     database.create_indexes(
         cursor,
@@ -772,26 +779,6 @@ def initialise(db):
         ],
     )
 
-    # Consolidated
-    send.initialise(db)
-    destroy.initialise(db)
-    order.initialise(db)
-    btcpay.initialise(db)
-    issuance.initialise(db)
-    broadcast.initialise(db)
-    bet.initialise(db)
-    dividend.initialise(db)
-    burn.initialise(db)
-    cancel.initialise(db)
-    rps.initialise(db)
-    rpsresolve.initialise(db)
-    sweep.initialise(db)
-    dispenser.initialise(db)
-    fairminter.initialise(db)
-    fairmint.initialise(db)
-
-    gas.initialise(db)
-
     # Messages
     cursor.execute(
         """CREATE TABLE IF NOT EXISTS messages(
@@ -858,6 +845,25 @@ def initialise(db):
         cursor.execute("""ALTER TABLE mempool ADD COLUMN event TEXT""")
     if "addresses" not in columns:
         cursor.execute("""ALTER TABLE mempool ADD COLUMN addresses TEXT""")
+
+    # Consolidated
+    send.initialise(db)
+    destroy.initialise(db)
+    order.initialise(db)
+    btcpay.initialise(db)
+    issuance.initialise(db)
+    broadcast.initialise(db)
+    bet.initialise(db)
+    dividend.initialise(db)
+    burn.initialise(db)
+    cancel.initialise(db)
+    rps.initialise(db)
+    rpsresolve.initialise(db)
+    sweep.initialise(db)
+    dispenser.initialise(db)
+    fairminter.initialise(db)
+    fairmint.initialise(db)
+    gas.initialise(db)
 
     create_views(db)
 
@@ -1056,7 +1062,9 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             "fee": fee,
             "data": data,
             "utxos_info": " ".join(utxos_info),
-            "transaction_type": message_type.get_transaction_type(data, destination, block_index),
+            "transaction_type": message_type.get_transaction_type(
+                data, destination, utxos_info, block_index
+            ),
         }
         ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
 
@@ -1272,7 +1280,14 @@ def parse_new_block(db, decoded_block, tx_index=None):
     if tx_index is None:
         tx_index = get_next_tx_index(db)
 
-    if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+    if util.CURRENT_BLOCK_INDEX == config.BLOCK_FIRST:
+        previous_block = {
+            "ledger_hash": None,
+            "txlist_hash": None,
+            "messages_hash": None,
+            "block_index": config.BLOCK_FIRST - 1,
+        }
+    else:
         # get previous block
         previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
 
@@ -1289,24 +1304,28 @@ def parse_new_block(db, decoded_block, tx_index=None):
                     break
             current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
             raw_current_block = backend.bitcoind.getblock(current_block_hash)
-            decoded_block = deserialize.deserialize_block(raw_current_block, use_txid=True)
-
+            decoded_block = deserialize.deserialize_block(
+                raw_current_block,
+                parse_vouts=True,
+                block_index=previous_block_index + 1,
+            )
             logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
             # rollback to the previous block
             rollback(db, block_index=previous_block_index + 1)
+            previous_block = ledger.get_block(db, previous_block_index)
             util.CURRENT_BLOCK_INDEX = previous_block_index + 1
             tx_index = get_next_tx_index(db)
-    else:
-        previous_block = {
-            "ledger_hash": None,
-            "txlist_hash": None,
-            "messages_hash": None,
-        }
 
     if "height" not in decoded_block:
         decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
     else:
         decoded_block["block_index"] = decoded_block["height"]
+
+    # Sanity checks
+    if decoded_block["block_index"] != config.BLOCK_FIRST:
+        assert previous_block["ledger_hash"] is not None
+        assert previous_block["txlist_hash"] is not None
+    assert previous_block["block_index"] == decoded_block["block_index"] - 1
 
     with db:  # ensure all the block or nothing
         logger.info(f"Block {decoded_block['block_index']}", extra={"bold": True})

@@ -1,21 +1,30 @@
-**Notes about the Optional `encoding` Parameter.**
+**Notes about fee calculation**
 
-By default the default value of the `encoding` parameter detailed above is `auto`, which means that `counterparty-server` automatically determines the best way to encode the Counterparty protocol data into a new transaction. If you know what you are doing and would like to explicitly specify an encoding:
+To calculate the fees required for a transaction, we do not know the final size of the transaction before signing it.
+So the  composer injects fake script_sig and witnesses into the transaction before calculating the adjusted vsize.
 
-- To return the transaction as an **OP_RETURN** transaction, specify `opreturn` for the `encoding` parameter.
-   - **OP_RETURN** transactions cannot have more than 80 bytes of data. If you force `OP_RETURN` encoding and your transaction would have more than this amount, an exception will be generated.
+Two remarks:
 
-- To return the transaction as a **multisig** transaction, specify `multisig` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
-    - Note that with the newest versions of Bitcoin (0.12.1 onward), bare multisig encoding does not reliably propagate. More information on this is documented [here](https://github.com/rubensayshi/counterparty-core/pull/9).
+1. this only works for standard scripts
 
-- To return the transaction as a **pubkeyhash** transaction, specify `pubkeyhash` for the `encoding` parameter.
-    - `pubkey` should be set to the hex-encoded public key of the source address.
+1. the size of DER signatures can vary by a few bytes and it is impossible to predict it. The composer uses a fixed size of 70 bytes so there may be a discrepancy of a few satoshis with the fees requested with `sat_per_vbyte` (for example if a DER signature is 72 bytes with `sat_per_vbyte=2` there will be an error of 4 sats in the calculated fees).
 
-- To return the transaction as a 2 part **P2SH** transaction, specify `P2SH` for the encoding parameter.
-    - First call the `create_` method with the `encoding` set to `P2SH`.
-    - Sign the transaction as usual and broadcast it. It's recommended but not required to wait for the transaction to confirm as malleability is an issue here (P2SH isn't yet supported on segwit addresses).
-    - The resulting `txid` must be passed again on an identic call to the `create_` method, but now passing an additional parameter `p2sh_pretx_txid` with the value of the previous transaction's id.
-    - The resulting transaction is a `P2SH` encoded message, using the redeem script on the transaction inputs as data carrying mechanism.
-    - Sign the transaction following the `Bitcoinjs-lib on javascript, signing a P2SH redeeming transaction` section
-    - **NOTE**: Don't leave pretxs hanging without transmitting the second transaction as this pollutes the UTXO set and risks making bitcoin harder to run on low spec nodes.
+**Note about transaction chaining**
+
+if you make several transactions in the same block, you need to chain them using `inputs_set=<previous_tx_hash_in_the_chain>:<vout>`; otherwise, you can't guarantee the final order of the transactions.
+
+**Deprecated parameters**
+
+The following parameters are deprecated in the new composer and will no longer be supported in a future version:
+
+- `fee_per_kb`: Use `sat_per_vbyte` instead
+- `fee_provided`: Ue `max_fee` instead
+- `unspent_tx_hash`: Use `inputs_set` instead
+- `dust_return_pubkey`: Use `mutlisig_pubkey` instead
+- `return_psbt`: Use `verbose` instead
+- `regular_dust_size`: Automatically calculated
+- `multisig_dust_size`: Automatically calculated
+- `extended_tx_info`: API v1 only, use API v2 instead
+- `old_style_api`: API v1 only, use API v2 instead
+- `p2sh_pretx_txid`: Ignored, P2SH disabled
+- `segwit`: Ignored, Segwit automatically detected

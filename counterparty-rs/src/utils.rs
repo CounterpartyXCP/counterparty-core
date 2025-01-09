@@ -27,6 +27,7 @@ pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<Stri
     let network_enum = match network {
         "mainnet" => Network::Bitcoin,
         "testnet" => Network::Testnet,
+        "testnet4" => Network::Testnet4,
         "signet" => Network::Signet,
         "regtest" => Network::Regtest,
         _ => {
@@ -75,6 +76,66 @@ pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<Stri
         };
         panic!("we thought this shouldn't happen!");
         //Ok(address.to_string())
+    }
+}
+
+#[pyfunction]
+pub fn script_to_address2(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
+    // Convert the script pubkey to a Script object
+    let script = ScriptBuf::from(script_pubkey);
+
+    // Convert the network string to a Network enum value
+    let network_enum = match network {
+        "mainnet" => Network::Bitcoin,
+        "testnet" => Network::Testnet,
+        "testnet4" => Network::Testnet4,
+        "signet" => Network::Signet,
+        "regtest" => Network::Regtest,
+        _ => {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Invalid network value",
+            ))
+        }
+    };
+    if script.is_witness_program() {
+        // This block below is necessary to reproduce a prior truncation bug in the python codebase.
+        let version = match WitnessVersion::try_from(opcodes::Opcode::from(script.as_bytes()[0])) {
+            Ok(vers) => vers,
+            Err(_) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Invalid version value",
+                ))
+            }
+        };
+
+        let n = 22;
+        if script.len() < n {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Script length is less than 22",
+            ));
+        }
+        let program = WitnessProgram::new(version, &script.as_bytes()[2..n]).map_err(|e| {
+            return PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Could not create witness program from script: {}",
+                e
+            ));
+        })?;
+        let address = Address::from_witness_program(program, network_enum);
+        Ok(address.to_string())
+    } else {
+        /*
+         * the code below is correct, but not sure about the invocation path
+         * and untested bug compatibility
+         */
+        let address = match Address::from_script(&script, network_enum) {
+            Ok(addr) => addr,
+            Err(_) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "Failed to derive address",
+                ))
+            }
+        };
+        Ok(address.to_string())
     }
 }
 
@@ -311,6 +372,7 @@ pub fn register_utils_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()
     m.add_function(wrap_pyfunction!(inverse_hash, &m)?)?;
     m.add_function(wrap_pyfunction!(script_to_asm, &m)?)?;
     m.add_function(wrap_pyfunction!(script_to_address, &m)?)?;
+    m.add_function(wrap_pyfunction!(script_to_address2, &m)?)?;
     parent_module.add_submodule(&m)?;
     Ok(())
 }

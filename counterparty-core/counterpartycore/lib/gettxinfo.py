@@ -3,11 +3,10 @@ import logging
 import struct
 from io import BytesIO
 
-from counterpartycore.lib import arc4, backend, config, ledger, message_type, script, util
+from counterpartycore.lib import arc4, backend, config, ledger, message_type, p2sh, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
-from counterpartycore.lib.transaction_helper import p2sh_serializer
 from counterpartycore.lib.util import inverse_hash
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -15,31 +14,9 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def arc4_decrypt(cyphertext, decoded_tx):
     """Un-obfuscate. Initialise key once per attempt."""
-    if isinstance(decoded_tx["vin"][0]["hash"], str):
-        vin_hash = binascii.unhexlify(inverse_hash(decoded_tx["vin"][0]["hash"]))
-    else:
-        vin_hash = decoded_tx["vin"][0]["hash"]
-    key = arc4.init_arc4(vin_hash[::-1])
+    vin_hash = binascii.unhexlify(decoded_tx["vin"][0]["hash"])
+    key = arc4.init_arc4(vin_hash)
     return key.decrypt(cyphertext)
-
-
-def get_opreturn(asm):
-    if len(asm) == 2 and asm[0] == OP_RETURN:  # noqa: F405
-        pubkeyhash = asm[1]
-        if type(pubkeyhash) == bytes:  # noqa: E721
-            return pubkeyhash
-    raise DecodeError("invalid OP_RETURN")
-
-
-def decode_opreturn(asm, decoded_tx):
-    chunk = get_opreturn(asm)
-    chunk = arc4_decrypt(chunk, decoded_tx)
-    if chunk[: len(config.PREFIX)] == config.PREFIX:  # Data
-        destination, data = None, chunk[len(config.PREFIX) :]
-    else:
-        raise DecodeError("unrecognised OP_RETURN output")
-
-    return destination, data
 
 
 def decode_checksig(asm, decoded_tx):
@@ -60,7 +37,6 @@ def decode_scripthash(asm):
     destination = script.base58_check_encode(
         binascii.hexlify(asm[1]).decode("utf-8"), config.P2SH_ADDRESSVERSION
     )
-
     return destination, None
 
 
@@ -355,7 +331,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
         # Ignore transactions with invalid script.
         asm = script.script_to_asm(vin["script_sig"])
 
-        new_source, new_destination, new_data = p2sh_serializer.decode_p2sh_input(
+        new_source, new_destination, new_data = p2sh.decode_p2sh_input(
             asm, p2sh_is_segwit=prevout_is_segwit
         )
         # this could be a p2sh source address with no encoded data
@@ -412,77 +388,6 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
     return source, destination, btc_amount, fee, data, outs
 
 
-def parse_transaction_vouts(decoded_tx):
-    # Get destinations and data outputs.
-    destinations, btc_amount, fee, data, potential_dispensers = [], 0, 0, b"", []
-
-    for vout in decoded_tx["vout"]:
-        potential_dispensers.append((None, None))
-        # Fee is the input values minus output values.
-        output_value = vout["value"]
-        fee -= output_value
-
-        script_pub_key = vout["script_pub_key"]
-
-        # Ignore transactions with invalid script.
-        asm = script.script_to_asm(script_pub_key)
-        if asm[0] == OP_RETURN:  # noqa: F405
-            new_destination, new_data = decode_opreturn(asm, decoded_tx)
-        elif asm[-1] == OP_CHECKSIG:  # noqa: F405
-            new_destination, new_data = decode_checksig(asm, decoded_tx)
-            potential_dispensers[-1] = (new_destination, output_value)
-        elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
-            try:
-                new_destination, new_data = decode_checkmultisig(asm, decoded_tx)
-                potential_dispensers[-1] = (new_destination, output_value)
-            except script.MultiSigAddressError:
-                raise DecodeError("invalid OP_CHECKMULTISIG")  # noqa: B904
-        elif (
-            util.enabled("p2sh_addresses")
-            and asm[0] == OP_HASH160  # noqa: F405
-            and asm[-1] == OP_EQUAL  # noqa: F405
-            and len(asm) == 3
-        ):
-            new_destination, new_data = decode_scripthash(asm)
-            if util.enabled("p2sh_dispensers_support"):
-                potential_dispensers[-1] = (new_destination, output_value)
-        elif util.enabled("segwit_support") and asm[0] == b"":
-            # Segwit Vout, second param is redeemScript
-            # redeemScript = asm[1]
-            new_destination = script.script_to_address(script_pub_key)
-            new_data = None
-            if util.enabled("correct_segwit_txids"):
-                potential_dispensers[-1] = (new_destination, output_value)
-        else:
-            raise DecodeError("unrecognised output type")
-        assert not (new_destination and new_data)
-        assert (
-            new_destination != None or new_data != None  # noqa: E711
-        )  # `decode_*()` should never return `None, None`.
-
-        if util.enabled("null_data_check"):
-            if new_data == []:
-                raise DecodeError("new destination is `None`")
-
-        # All destinations come before all data.
-        if (
-            not data
-            and not new_data
-            and destinations
-            != [
-                config.UNSPENDABLE,
-            ]
-        ):
-            destinations.append(new_destination)
-            btc_amount += output_value
-        else:
-            if new_destination:  # Change.
-                break
-            data += new_data  # Data.
-
-    return destinations, btc_amount, fee, data, potential_dispensers
-
-
 def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=False):
     """Get multisig transaction info.
     The destinations, if they exists, always comes before the data output; the
@@ -493,16 +398,14 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         raise DecodeError("coinbase transaction")
 
     # Get destinations and data outputs.
-    if "parsed_vouts" in decoded_tx:
-        if isinstance(decoded_tx["parsed_vouts"], Exception):
-            raise DecodeError(str(decoded_tx["parsed_vouts"]))
-        elif decoded_tx["parsed_vouts"] == "DecodeError":
-            raise DecodeError("unrecognised output type")
-        destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
-    else:
-        destinations, btc_amount, fee, data, potential_dispensers = parse_transaction_vouts(
-            decoded_tx
-        )
+    if "parsed_vouts" not in decoded_tx:
+        raise DecodeError("no parsed_vouts in decoded_tx")
+    if isinstance(decoded_tx["parsed_vouts"], Exception):
+        raise DecodeError(str(decoded_tx["parsed_vouts"]))
+    if decoded_tx["parsed_vouts"] == "DecodeError":
+        raise DecodeError("unrecognised output type")
+
+    destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output
@@ -608,8 +511,8 @@ def get_tx_info_legacy(decoded_tx, block_index):
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1 : data_chunk_length + 1]
             data += data_chunk
-        elif len(asm) == 5 and (
-            block_index >= 293000 or config.TESTNET or config.REGTEST
+        elif len(asm) == 5 and util.after_block_or_test_network(
+            block_index, 293000
         ):  # Protocol change.
             # Be strict.
             pubkeyhash, address_version = get_pubkeyhash(script_pub_key, block_index)
@@ -762,7 +665,9 @@ def get_utxos_info(db, decoded_tx):
 
 def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
     if util.enabled("utxo_support", block_index=block_index) and not util.PARSING_MEMPOOL:
-        transaction_type = message_type.get_transaction_type(data, destination, block_index)
+        transaction_type = message_type.get_transaction_type(
+            data, destination, utxos_info, block_index
+        )
         if utxos_info[0] != "":
             # always remove from cache inputs with balance
             ledger.UTXOBalancesCache(db).remove_balance(utxos_info[0])

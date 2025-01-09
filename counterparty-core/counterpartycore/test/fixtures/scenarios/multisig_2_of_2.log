@@ -1,8 +1,20 @@
 Initializing database...
+Updating `transaction_type` column in `transactions` table...
+Updated 0 transactions in 0.00 seconds
+Adding `send_type` column to `sends` table
+Added `send_type` column to `sends` table in 0.00 seconds
+Adding `source_address` and `destination_address` column to `sends` table
+SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_sends] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_sends
+            BEFORE UPDATE ON sends BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+            END;] database schema ha (17) SQLITE_SCHEMA
+Added `source_address` and `destination_address` column to `sends` table in 0.00 seconds
+Fixing issuances `asset_events` field
 Fixing issuances `asset_longname` field
 SQLITE_LOG: statement aborts at 12: [SELECT value FROM config WHERE name = ?] database schema has changed (17) SQLITE_SCHEMA
 Fixing issuances `asset_longname` field
-SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_issuances] database schema has changed (17) SQLITE_SCHEMA
+SQLITE_LOG: statement aborts at 14: [DROP TRIGGER IF EXISTS block_update_issuances] database schema has changed (17) SQLITE_SCHEMA
 SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_fairminters] database schema has changed (17) SQLITE_SCHEMA
 SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_issuances
             BEFORE UPDATE ON issuances BEGIN
@@ -14,96 +26,76 @@ SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_f
             END;] databa (17) SQLITE_SCHEMA
 SQLITE_LOG: statement aborts at 27: [INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)] database schema has changed (17) SQLITE_SCHEMA
 Cleaning `transaction_count` table
+SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_transaction_count
+            BEFORE UPDATE ON transaction_count BEGIN
+                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+             (17) SQLITE_SCHEMA
 Initialising asset cache...
 Asset cache initialised in 0.00 seconds
-TX Construct - Transaction constructed.
-2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 62000000 BTC for 93000000000 XCP (5fde1c728d8d00aaa1b5f8dae963ceb4fd30c415eb0b8a982ba2d8d676fec0bb) [valid]
-TX Construct - Transaction constructed.
-Send XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (eacd03b732d28924807d4f0cb1c1aa5720a78bf44d23660fb1658a5fd1b4e9a3) [valid]
-TX Construct - Transaction constructed.
-Order opened for 50000000 BTC at 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0) [open]
-TX Construct - Transaction constructed.
-Order opened for 105000000 XCP at 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee) [open]
-Order match for 50000000 BTC against 100000000 XCP (025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0_c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee) [pending]
+2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 62000000 BTC for 93000000000 XCP (310507ec495cf46d402882513c6d98a7a1baa4df5d8518e32cf1dda2efbc6c19) [valid]
+Send XCP from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (cd5eceada946f038cc9bf1eabb261ff408a443ed9e9b9854741fd60a9f4b9407) [valid]
+Order opened for 50000000 BTC at 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (8e5917ea002c66ff984539a110f9a309361b591e6b19d19b7d3f51862b06cb24) [open]
+Order opened for 105000000 XCP at 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (1a4653caf52308d72ed7d0328fe3016722e282b62bfccefb8e9bf76f6dbb6aea) [open]
+Order match for 50000000 BTC against 100000000 XCP (8e5917ea002c66ff984539a110f9a309361b591e6b19d19b7d3f51862b06cb24_1a4653caf52308d72ed7d0328fe3016722e282b62bfccefb8e9bf76f6dbb6aea) [pending]
 Order match has only -10 confirmation(s).
-TX Construct - Transaction constructed.
-BTC Pay for order match 025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0_c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee (b0bf5693ba52a5c6bda34671ba065606bd02277f281e9aa19d25778e26c2f7e2) [valid]
-TX Construct - Transaction constructed.
-Issuance of 1000000000 BBBB by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 [93599860b4a4a3b672a79c064812eb18d2e1b532613e08bd3ae1ee2a9979eae2] (valid)
-TX Construct - Transaction constructed.
-Issuance of 100000 BBBC by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 [3318c4b8b244fbc64f6894d28f7a1866db5671f04d2e4f5911d0fd688f804404] (valid)
-TX Construct - Transaction constructed.
-Send BBBB from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (e43d2ab22a3a5fe1de032bdf042381fc1d6fc34794abc51a1b3db46ccf8cbdbe) [valid]
-TX Construct - Transaction constructed.
-Send BBBC from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (7b48b32b5373757d0bfa50358184117ca01b5ad564ca4338ecb021ae726a19c9) [valid]
+BTC Pay for order match 8e5917ea002c66ff984539a110f9a309361b591e6b19d19b7d3f51862b06cb24_1a4653caf52308d72ed7d0328fe3016722e282b62bfccefb8e9bf76f6dbb6aea (febc42071665c64c036347436a66072e771de9fd5a3e11107e4e57a6704b479e) [valid]
+Issuance of 1000000000 BBBB by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 [762788b84598aed19c5c03b1a0c2cb8511a5e8d0cbf8f3b7834712ca47585290] (valid)
+Issuance of 100000 BBBC by 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 [96816f2b3ef29efc0b9bfbdc02edbf4333c9b38bb51d7fe9660935224705012c] (valid)
+Send BBBB from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (511fa1da5a2ff093e9182a69284ce10160c9bd2dbbff4b6aa923be9d0e2056bc) [valid]
+Send BBBC from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (6b3b878e7dfe65224831fc563e5f29ff218fa2290b441321bf3523e73d9b265d) [valid]
 Total quantity to be distributed in dividends: 0.00000024 XCP
-TX Construct - Transaction constructed.
-Dividend of 600 XCP per unit of BBBB (cbc73bb03bae7cbaa0e88c9c16cb78fa6f315b9a6383f0f7efb63d0fdd831a81) [valid]
+Dividend of 600 XCP per unit of BBBB (ff5ab3f7287bb532cf30c7efb266dfd5c87a63eb063bf968b5bd809868ccfa2d) [valid]
 Total quantity to be distributed in dividends: 0.004208 XCP
-TX Construct - Transaction constructed.
-Dividend of 800 XCP per unit of BBBC (c59e9803933740537b59928d19d2b65812e6f2b8d1ac811d9262353a19327b97) [valid]
-TX Construct - Transaction constructed.
-Broadcast from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (0a15cc28e58f28a690051e66e6c50ecb68826077d59b75d05590a1db453d9d61) [valid]
-TX Construct - Transaction constructed.
-Open Bet (c36b65e3d4c105739d5c8cef470c0878d2e8da138416e09cb499edcec343c0b8) [open]
-TX Construct - Transaction constructed.
-Order cancelled BTC / XCP (025ca2c1784ca3c9389b9f227a5a04445908337e21e2ef9411c890e20aff61c0) [expired]
-Open Bet (23f77ca0034c19aa841413edfde7f4a3dca8d8ef582ce939dfc2e170c7c811a1) [open]
-Considering: c36b65e3d4c105739d5c8cef470c0878d2e8da138416e09cb499edcec343c0b8
+Dividend of 800 XCP per unit of BBBC (602f9efb6ca429f6a5ca8236280abd285d6507a1b02bbbcfefc4df7162151d7e) [valid]
+Broadcast from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (808694c7615586b0c0aa8a6d6b9de100f849f6c95581a4d144fbab033c6c33bc) [valid]
+Open Bet (62d6d5b4439e93847736e38bdc0e01e6ed1ce433d08a2923350ca101a97c3b1a) [open]
+Order cancelled BTC / XCP (8e5917ea002c66ff984539a110f9a309361b591e6b19d19b7d3f51862b06cb24) [expired]
+Open Bet (5e190355948cd65b6ba22933d08f591eed0531591755ebda61768b940f5d5049) [open]
+Considering: 62d6d5b4439e93847736e38bdc0e01e6ed1ce433d08a2923350ca101a97c3b1a
 Tx0 Inverse Odds: 0.5; Tx1 Odds: 0.6024096385542169
 Potential forward quantities: 50000000, 41500000
 Forward Quantity: 41500000
 Backward Quantity: 20750000
-Bet c36b65e3d4c105739d5c8cef470c0878d2e8da138416e09cb499edcec343c0b8 updated (23f77ca0034c19aa841413edfde7f4a3dca8d8ef582ce939dfc2e170c7c811a1) [open]
-Bet 23f77ca0034c19aa841413edfde7f4a3dca8d8ef582ce939dfc2e170c7c811a1 updated (23f77ca0034c19aa841413edfde7f4a3dca8d8ef582ce939dfc2e170c7c811a1) [filled]
+Bet 62d6d5b4439e93847736e38bdc0e01e6ed1ce433d08a2923350ca101a97c3b1a updated (5e190355948cd65b6ba22933d08f591eed0531591755ebda61768b940f5d5049) [open]
+Bet 5e190355948cd65b6ba22933d08f591eed0531591755ebda61768b940f5d5049 updated (5e190355948cd65b6ba22933d08f591eed0531591755ebda61768b940f5d5049) [filled]
 Bet match 13 for 41500000 XCP against 20750000 XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
-TX Construct - Transaction constructed.
-Order cancelled XCP / BTC (c6881f7505bd7fe0742c2ce50490e21431705bf2df4368be43f423fa0c515aee) [expired]
-Open Bet (a5a1927a83521144a5aa751f61065b530c9447c5b2c35e35064de32dae9573fd) [open]
-TX Construct - Transaction constructed.
-Open Bet (6aa4c5853aa9971d13c0291c4e91ee5cddd506521942377aca5c3b1a48780c75) [open]
-Considering: c36b65e3d4c105739d5c8cef470c0878d2e8da138416e09cb499edcec343c0b8
+Order cancelled XCP / BTC (1a4653caf52308d72ed7d0328fe3016722e282b62bfccefb8e9bf76f6dbb6aea) [expired]
+Open Bet (4ca8bd41c1add8021441fdfe6a47dbcb21daa286ef536cff0dfcfd9a22e959ca) [open]
+Open Bet (f78cfd3e9547c0bbd911e47fbc5daefa1ca27beb191064d8855b4b67f4f526d8) [open]
+Considering: 62d6d5b4439e93847736e38bdc0e01e6ed1ce433d08a2923350ca101a97c3b1a
 Skipping: leverages disagree.
-Considering: a5a1927a83521144a5aa751f61065b530c9447c5b2c35e35064de32dae9573fd
+Considering: 4ca8bd41c1add8021441fdfe6a47dbcb21daa286ef536cff0dfcfd9a22e959ca
 Tx0 Inverse Odds: 2.3333333333333335; Tx1 Odds: 2.3333333333333335
 Potential forward quantities: 150000000, 150000000
 Forward Quantity: 150000000
 Backward Quantity: 350000000
-Bet a5a1927a83521144a5aa751f61065b530c9447c5b2c35e35064de32dae9573fd updated (6aa4c5853aa9971d13c0291c4e91ee5cddd506521942377aca5c3b1a48780c75) [filled]
-Bet 6aa4c5853aa9971d13c0291c4e91ee5cddd506521942377aca5c3b1a48780c75 updated (6aa4c5853aa9971d13c0291c4e91ee5cddd506521942377aca5c3b1a48780c75) [filled]
+Bet 4ca8bd41c1add8021441fdfe6a47dbcb21daa286ef536cff0dfcfd9a22e959ca updated (f78cfd3e9547c0bbd911e47fbc5daefa1ca27beb191064d8855b4b67f4f526d8) [filled]
+Bet f78cfd3e9547c0bbd911e47fbc5daefa1ca27beb191064d8855b4b67f4f526d8 updated (f78cfd3e9547c0bbd911e47fbc5daefa1ca27beb191064d8855b4b67f4f526d8) [filled]
 Bet match 15 for 150000000 XCP against 350000000 XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
-TX Construct - Transaction constructed.
-Open Bet (91cea72c920a13cc450d14c92a81a318462300670308d6b1eb344ac06a72eda1) [open]
-TX Construct - Transaction constructed.
-Open Bet (c345c2e6d9899c7729a0ca2ef13fab71ca5808854fb6be62e3b3dcd9225d1c4a) [open]
-Considering: 91cea72c920a13cc450d14c92a81a318462300670308d6b1eb344ac06a72eda1
+Open Bet (128086826aaf8a869f813e239f184b0dbe052ac5933b8fae6f25d2946f2641c7) [open]
+Open Bet (ea07c230c2f6d5cb50785df3de7ee0cb05256b9d35932b4fbd37f37d454ac6a5) [open]
+Considering: 128086826aaf8a869f813e239f184b0dbe052ac5933b8fae6f25d2946f2641c7
 Tx0 Inverse Odds: 0.8666666666666667; Tx1 Odds: 0.8666666666666667
 Potential forward quantities: 750000000, 750000000
 Forward Quantity: 750000000
 Backward Quantity: 650000000
-Bet 91cea72c920a13cc450d14c92a81a318462300670308d6b1eb344ac06a72eda1 updated (c345c2e6d9899c7729a0ca2ef13fab71ca5808854fb6be62e3b3dcd9225d1c4a) [filled]
-Bet c345c2e6d9899c7729a0ca2ef13fab71ca5808854fb6be62e3b3dcd9225d1c4a updated (c345c2e6d9899c7729a0ca2ef13fab71ca5808854fb6be62e3b3dcd9225d1c4a) [filled]
+Bet 128086826aaf8a869f813e239f184b0dbe052ac5933b8fae6f25d2946f2641c7 updated (ea07c230c2f6d5cb50785df3de7ee0cb05256b9d35932b4fbd37f37d454ac6a5) [filled]
+Bet ea07c230c2f6d5cb50785df3de7ee0cb05256b9d35932b4fbd37f37d454ac6a5 updated (ea07c230c2f6d5cb50785df3de7ee0cb05256b9d35932b4fbd37f37d454ac6a5) [filled]
 Bet match 17 for 750000000 XCP against 650000000 XCP on 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2
-TX Construct - Transaction constructed.
-Broadcast from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (c473921b7c5d877de55ef38b39935e149003d6fec701bea0c8b66b77255942d4) [valid]
-Bet Match c36b65e3d4c105739d5c8cef470c0878d2e8da138416e09cb499edcec343c0b8_23f77ca0034c19aa841413edfde7f4a3dca8d8ef582ce939dfc2e170c7c811a1 resolved
-Bet Match c36b65e3d4c105739d5c8cef470c0878d2e8da138416e09cb499edcec343c0b8_23f77ca0034c19aa841413edfde7f4a3dca8d8ef582ce939dfc2e170c7c811a1 updated [settled: liquidated for bear]
-TX Construct - Transaction constructed.
-Broadcast from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (c9388ea12ab42ec1502dbb54e2da81beca5adee6056777559200aab28e5e1dc0) [valid]
-Bet Match a5a1927a83521144a5aa751f61065b530c9447c5b2c35e35064de32dae9573fd_6aa4c5853aa9971d13c0291c4e91ee5cddd506521942377aca5c3b1a48780c75 resolved
-Bet Match a5a1927a83521144a5aa751f61065b530c9447c5b2c35e35064de32dae9573fd_6aa4c5853aa9971d13c0291c4e91ee5cddd506521942377aca5c3b1a48780c75 updated [settled]
-TX Construct - Transaction constructed.
-Broadcast from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (54292b0676d266705f8dd0daa1194cff3d16414564f25c422309af75d8ca344e) [valid]
-Bet Match 91cea72c920a13cc450d14c92a81a318462300670308d6b1eb344ac06a72eda1_c345c2e6d9899c7729a0ca2ef13fab71ca5808854fb6be62e3b3dcd9225d1c4a resolved
-Bet Match 91cea72c920a13cc450d14c92a81a318462300670308d6b1eb344ac06a72eda1_c345c2e6d9899c7729a0ca2ef13fab71ca5808854fb6be62e3b3dcd9225d1c4a updated [settled: for notequal]
-TX Construct - Transaction constructed.
-Order opened for 50000000 BBBB at 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (6d3c6a9ea36e82a0e8162f69c68fc8bb95d316ad5586a30553fbaf1717f4121e) [open]
-TX Construct - Transaction constructed.
-2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 38000000 BTC for 56999887262 XCP (df080a76ceb263201901bc23c85c3e8dce4eca0e72c873131adaf2f46820e9f1) [valid]
-TX Construct - Transaction constructed.
-Bet c36b65e3d4c105739d5c8cef470c0878d2e8da138416e09cb499edcec343c0b8 canceled [expired]
-Bet Expiration c36b65e3d4c105739d5c8cef470c0878d2e8da138416e09cb499edcec343c0b8
-Send BBBC from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (abc5e16e5a7a1a7dd7d38ff1351b252a3813d40a695ab798f6a26cb904f91ab1) [valid]
-Order cancelled BBBB / XCP (6d3c6a9ea36e82a0e8162f69c68fc8bb95d316ad5586a30553fbaf1717f4121e) [expired]
+Broadcast from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (562fe7619e5611373746e827aec5a6f2fd48bb1c09389d73c118536e97e49ad8) [valid]
+Bet Match 62d6d5b4439e93847736e38bdc0e01e6ed1ce433d08a2923350ca101a97c3b1a_5e190355948cd65b6ba22933d08f591eed0531591755ebda61768b940f5d5049 resolved
+Bet Match 62d6d5b4439e93847736e38bdc0e01e6ed1ce433d08a2923350ca101a97c3b1a_5e190355948cd65b6ba22933d08f591eed0531591755ebda61768b940f5d5049 updated [settled: liquidated for bear]
+Broadcast from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (d1240688a64706772f36e1829b077e603db5ddc6ef6873c0c330fa8990ff2064) [valid]
+Bet Match 4ca8bd41c1add8021441fdfe6a47dbcb21daa286ef536cff0dfcfd9a22e959ca_f78cfd3e9547c0bbd911e47fbc5daefa1ca27beb191064d8855b4b67f4f526d8 resolved
+Bet Match 4ca8bd41c1add8021441fdfe6a47dbcb21daa286ef536cff0dfcfd9a22e959ca_f78cfd3e9547c0bbd911e47fbc5daefa1ca27beb191064d8855b4b67f4f526d8 updated [settled]
+Broadcast from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (9365988549e85fecff1203e562eb57912cdaa762143cf6734419f58cc1992ea3) [valid]
+Bet Match 128086826aaf8a869f813e239f184b0dbe052ac5933b8fae6f25d2946f2641c7_ea07c230c2f6d5cb50785df3de7ee0cb05256b9d35932b4fbd37f37d454ac6a5 resolved
+Bet Match 128086826aaf8a869f813e239f184b0dbe052ac5933b8fae6f25d2946f2641c7_ea07c230c2f6d5cb50785df3de7ee0cb05256b9d35932b4fbd37f37d454ac6a5 updated [settled: for notequal]
+Order opened for 50000000 BBBB at 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (8fcdfbb1c3bc19f452c2bc45a5b10b2f15b8a603149e615b1c594c3b230d294a) [open]
+2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 38000000 BTC for 56999887262 XCP (a24f91f6c27116bc89ca2702bf3399f2a273001038ce483dcc53875613ccbf3e) [valid]
+Bet 62d6d5b4439e93847736e38bdc0e01e6ed1ce433d08a2923350ca101a97c3b1a canceled [expired]
+Bet Expiration 62d6d5b4439e93847736e38bdc0e01e6ed1ce433d08a2923350ca101a97c3b1a
+Send BBBC from 2_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 to 2_mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 (cd7962197696600326ae50d637020036a406ce5be48b2d287f6d704c23f2e4ca) [valid]
+Order cancelled BBBB / XCP (8fcdfbb1c3bc19f452c2bc45a5b10b2f15b8a603149e615b1c594c3b230d294a) [expired]
 Checking for conservation of assets.
 All assets have been conserved.

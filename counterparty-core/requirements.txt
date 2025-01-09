@@ -36,4 +36,6 @@ gunicorn==23.0.0
 waitress==3.0.1
 hypothesis==6.116.0
 bitcoin-utils==0.7.1
-counterparty-rs==10.8.0
+pyzstd==0.16.2
+dredd_hooks==0.2.0
+counterparty-rs==10.9.0-rc.1

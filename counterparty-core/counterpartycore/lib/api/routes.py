@@ -1,5 +1,5 @@
 from counterpartycore.lib.api import compose, queries, util
-from counterpartycore.lib.backend import addrindexrs, bitcoind
+from counterpartycore.lib.backend import bitcoind, electrs
 
 
 def get_routes():
@@ -24,7 +24,7 @@ ROUTES = util.prepare_routes(
         "/v2/blocks/<int:block_index>/debits": queries.get_debits_by_block,
         "/v2/blocks/<int:block_index>/expirations": queries.get_expirations,
         "/v2/blocks/<int:block_index>/cancels": queries.get_cancels,
-        "/v2/blocks/<int:block_index>/destructions": queries.get_destructions,
+        "/v2/blocks/<int:block_index>/destructions": queries.get_valid_destructions_by_block,
         "/v2/blocks/<int:block_index>/issuances": queries.get_issuances_by_block,
         "/v2/blocks/<int:block_index>/sends": queries.get_sends_by_block,
         "/v2/blocks/<int:block_index>/dispenses": queries.get_dispenses_by_block,
@@ -61,6 +61,7 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/receives": queries.get_receive_by_address,
         "/v2/addresses/<address>/sends/<asset>": queries.get_sends_by_address_and_asset,
         "/v2/addresses/<address>/receives/<asset>": queries.get_receive_by_address_and_asset,
+        "/v2/addresses/<address>/destructions": queries.get_valid_destructions_by_address,
         "/v2/addresses/<address>/dispensers": queries.get_dispensers_by_address,
         "/v2/addresses/<address>/dispensers/<asset>": queries.get_dispenser_by_address_and_asset,
         "/v2/addresses/<address>/dispenses/sends": queries.get_dispenses_by_source,
@@ -90,15 +91,18 @@ ROUTES = util.prepare_routes(
         "/v2/addresses/<address>/compose/destroy": compose.compose_destroy,
         "/v2/addresses/<address>/compose/dispenser": compose.compose_dispenser,
         "/v2/addresses/<address>/compose/dividend": compose.compose_dividend,
+        "/v2/addresses/<address>/compose/dividend/estimatexcpfees": compose.get_dividend_estimate_xcp_fee,
         "/v2/addresses/<address>/compose/issuance": compose.compose_issuance,
         "/v2/addresses/<address>/compose/mpma": compose.compose_mpma,
         "/v2/addresses/<address>/compose/order": compose.compose_order,
         "/v2/addresses/<address>/compose/send": compose.compose_send,
         "/v2/addresses/<address>/compose/sweep": compose.compose_sweep,
+        "/v2/addresses/<address>/compose/sweep/estimatexcpfees": compose.get_sweep_estimate_xcp_fee,
         "/v2/addresses/<address>/compose/dispense": compose.compose_dispense,
         "/v2/addresses/<address>/compose/fairminter": compose.compose_fairminter,
         "/v2/addresses/<address>/compose/fairmint": compose.compose_fairmint,
         "/v2/addresses/<address>/compose/attach": compose.compose_attach,
+        "/v2/addresses/<address>/compose/attach/estimatexcpfees": compose.get_attach_estimate_xcp_fee,
         "/v2/utxos/<utxo>/compose/detach": compose.compose_detach,
         "/v2/utxos/<utxo>/compose/movetoutxo": compose.compose_movetoutxo,
         "/v2/compose/attach/estimatexcpfees": compose.get_attach_estimate_xcp_fee,
@@ -111,6 +115,7 @@ ROUTES = util.prepare_routes(
         "/v2/assets/<asset>/matches": queries.get_order_matches_by_asset,
         "/v2/assets/<asset>/credits": queries.get_credits_by_asset,
         "/v2/assets/<asset>/debits": queries.get_debits_by_asset,
+        "/v2/assets/<asset>/destructions": queries.get_valid_destructions_by_asset,
         "/v2/assets/<asset>/dividends": queries.get_dividends_by_asset,
         "/v2/assets/<asset>/issuances": queries.get_issuances_by_asset,
         "/v2/assets/<asset>/sends": queries.get_sends_by_asset,
@@ -151,6 +156,8 @@ ROUTES = util.prepare_routes(
         "/v2/events/counts": queries.get_all_events_counts,
         "/v2/events/<event>": queries.get_events_by_name,
         "/v2/events/<event>/count": queries.get_event_count,
+        ### destructions ###
+        "/v2/destructions": queries.get_all_valid_destructions,
         ### /dispenses ###
         "/v2/dispenses": queries.get_dispenses,
         ### /sends ###
@@ -172,10 +179,9 @@ ROUTES = util.prepare_routes(
         "/v2/fairmints": queries.get_all_fairmints,
         "/v2/fairmints/<tx_hash>": queries.get_fairmint,
         ### /bitcoin ###
-        "/v2/bitcoin/addresses/utxos": addrindexrs.get_unspent_txouts_by_addresses,
-        "/v2/bitcoin/addresses/<address>/transactions": addrindexrs.get_transactions_by_address,
-        "/v2/bitcoin/addresses/<address>/transactions/oldest": util.get_oldest_transaction_by_address,
-        "/v2/bitcoin/addresses/<address>/utxos": addrindexrs.get_unspent_txouts,
+        "/v2/bitcoin/addresses/utxos": electrs.get_utxos_by_addresses,
+        "/v2/bitcoin/addresses/<address>/transactions": electrs.get_history,
+        "/v2/bitcoin/addresses/<address>/utxos": electrs.get_utxos,
         "/v2/bitcoin/addresses/<address>/pubkey": util.pubkeyhash_to_pubkey,
         "/v2/bitcoin/transactions/<tx_hash>": util.get_transaction,
         "/v2/bitcoin/estimatesmartfee": bitcoind.fee_per_kb,

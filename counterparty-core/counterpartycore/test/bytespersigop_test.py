@@ -3,7 +3,7 @@ import tempfile
 
 import bitcoin as bitcoinlib
 
-from counterpartycore.lib import api, blocks, exceptions, ledger, transaction, util  # noqa: F401
+from counterpartycore.lib import api, blocks, composer, exceptions, ledger, util  # noqa: F401
 from counterpartycore.test import (
     conftest,  # noqa: F401
     util_test,
@@ -23,7 +23,7 @@ def test_bytespersigop(server_db):
         assert util.enabled("bytespersigop") == False  # noqa: E712
 
         # ADDR[0], bytespersigop=False, desc 41 bytes, opreturn
-        txhex = transaction.compose_transaction(
+        txhex = composer.compose_transaction(
             server_db,
             "issuance",
             {
@@ -34,9 +34,10 @@ def test_bytespersigop(server_db):
                 "divisible": False,
                 "description": "t" * 41,
             },
+            {},
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["rawtransaction"]))
 
         print("test_bytespersigop 4")
 
@@ -45,7 +46,7 @@ def test_bytespersigop(server_db):
         assert "OP_RETURN" in repr(tx.vout[0].scriptPubKey)
 
         # ADDR[0], bytespersigop=False, desc 42 bytes, multisig
-        txhex = transaction.compose_transaction(
+        txhex = composer.compose_transaction(
             server_db,
             "issuance",
             {
@@ -56,9 +57,10 @@ def test_bytespersigop(server_db):
                 "divisible": False,
                 "description": "t" * 42,
             },
+            {},
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["rawtransaction"]))
 
         assert len(tx.vin) == 1
         # assert len(tx.vout) == 3
@@ -70,7 +72,7 @@ def test_bytespersigop(server_db):
         assert util.enabled("bytespersigop") == True  # noqa: E712
 
         # ADDR[0], bytespersigop=True, desc 41 bytes, opreturn
-        txhex = transaction.compose_transaction(
+        txhex = composer.compose_transaction(
             server_db,
             "issuance",
             {
@@ -81,16 +83,17 @@ def test_bytespersigop(server_db):
                 "divisible": False,
                 "description": "t" * 41,
             },
+            {},
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["rawtransaction"]))
 
         assert len(tx.vin) == 1
         assert len(tx.vout) == 2
         assert "OP_RETURN" in repr(tx.vout[0].scriptPubKey)
 
         # ADDR[1], bytespersigop=True, desc 41 bytes, opreturn encoding
-        txhex = transaction.compose_transaction(
+        txhex = composer.compose_transaction(
             server_db,
             "issuance",
             {
@@ -101,9 +104,10 @@ def test_bytespersigop(server_db):
                 "divisible": False,
                 "description": "t" * 41,
             },
+            {},
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["rawtransaction"]))
 
         assert len(tx.vin) == 1
         assert len(tx.vout) == 2
@@ -111,7 +115,7 @@ def test_bytespersigop(server_db):
 
         # ADDR[1], bytespersigop=True, desc 20 bytes, FORCED encoding=multisig
         #  will use 2 UTXOs to make the bytes:sigop ratio in our favor
-        txhex = transaction.compose_transaction(
+        txhex = composer.compose_transaction(
             server_db,
             "issuance",
             {
@@ -122,11 +126,12 @@ def test_bytespersigop(server_db):
                 "divisible": False,
                 "description": "t" * 20,
             },
-            encoding="multisig",
+            {"encoding": "multisig"},
         )
 
-        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["unsigned_tx_hex"]))
+        print("rawtransaction: ", txhex["rawtransaction"])
+        tx = bitcoinlib.core.CTransaction.deserialize(binascii.unhexlify(txhex["rawtransaction"]))
 
-        assert len(tx.vin) == 2
+        assert len(tx.vin) == 1
         assert len(tx.vout) == 2
         assert "OP_CHECKMULTISIG" in repr(tx.vout[0].scriptPubKey)

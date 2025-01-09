@@ -136,13 +136,14 @@ class CustomisedJSONFormatter(JSONFormatter):
     def json_record(self, message: str, extra: dict, record: logging.LogRecord) -> dict:
         extra["filename"] = record.filename
         extra["funcName"] = record.funcName
-        extra["levelname"] = record.levelname
         extra["lineno"] = record.lineno
         extra["module"] = record.module
         extra["name"] = record.name
         extra["pathname"] = record.pathname
         extra["process"] = record.process
         extra["processName"] = record.processName
+        extra["levelName"] = record.levelname
+        extra["severity"] = record.levelname
         if hasattr(record, "stack_info"):
             extra["stack_info"] = record.stack_info
         else:

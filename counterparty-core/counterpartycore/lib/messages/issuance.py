@@ -131,12 +131,29 @@ def initialise(db):
             UPDATE issuances SET 
                 asset_events = (
                     SELECT
-                        json_extract(bindings, '$.asset_events')
+                        json_extract(messages.bindings, '$.asset_events')
                     FROM messages
                     WHERE messages.tx_hash = issuances.tx_hash
+                    AND messages.event IN ('ASSET_ISSUANCE', 'RESET_ISSUANCE', 'ASSET_TRANSFER')
                 );
         """)
         database.lock_update(db, "issuances")
+        database.set_config_value(db, "FIX_ASSET_EVENTS_FIELD_1", True)
+    elif database.get_config_value(db, "FIX_ASSET_EVENTS_FIELD_1") is None:
+        logger.debug("Fixing issuances `asset_events` field")
+        database.unlock_update(db, "issuances")
+        cursor.execute("""
+            UPDATE issuances SET 
+                asset_events = (
+                    SELECT
+                        json_extract(messages.bindings, '$.asset_events')
+                    FROM messages
+                    WHERE messages.tx_hash = issuances.tx_hash
+                    AND messages.event IN ('ASSET_ISSUANCE', 'RESET_ISSUANCE', 'ASSET_TRANSFER')
+                );
+        """)
+        database.lock_update(db, "issuances")
+        database.set_config_value(db, "FIX_ASSET_EVENTS_FIELD_1", True)
 
     # remove FOREIGN KEY with transactions
     if database.has_fk_on(cursor, "issuances", "transactions.tx_index"):
@@ -215,7 +232,7 @@ def validate(
 
     # Callable, or not.
     if not callable_:
-        if block_index >= 312500 or config.TESTNET or config.REGTEST:  # Protocol change.
+        if util.after_block_or_test_network(block_index, 312500):  # Protocol change.
             call_date = 0
             call_price = 0.0
         elif block_index >= 310000:  # Protocol change.
@@ -257,7 +274,7 @@ def validate(
         ) != bool(callable_):
             problems.append("cannot change callability")
         if last_issuance["call_date"] > call_date and (
-            call_date != 0 or (block_index < 312500 and (not config.TESTNET or not config.REGTEST))
+            call_date != 0 or (block_index < 312500 and not util.is_test_network())
         ):
             problems.append("cannot advance call date")
         if last_issuance["call_price"] > call_price:
@@ -306,9 +323,9 @@ def validate(
             problems.append("a subasset must be a numeric asset")
 
     # Check for existence of fee funds.
-    if quantity or (block_index >= 315000 or config.TESTNET or config.REGTEST):  # Protocol change.
+    if quantity or util.after_block_or_test_network(block_index, 315000):  # Protocol change.
         if not reissuance or (
-            block_index < 310000 and not config.TESTNET and not config.REGTEST
+            block_index < 310000 and not util.is_test_network()
         ):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
             balance = ledger.get_balance(db, source, config.XCP)
@@ -324,16 +341,16 @@ def validate(
                     fee = 0
                 else:
                     fee = int(0.5 * config.UNIT)
-            elif block_index >= 291700 or config.TESTNET or config.REGTEST:  # Protocol change.
+            elif util.after_block_or_test_network(block_index, 291700):  # Protocol change.
                 fee = int(0.5 * config.UNIT)
-            elif block_index >= 286000 or config.TESTNET or config.REGTEST:  # Protocol change.
+            elif util.after_block_or_test_network(block_index, 286000):  # Protocol change.
                 fee = 5 * config.UNIT
-            elif block_index > 281236 or config.TESTNET or config.REGTEST:  # Protocol change.
+            elif util.after_block_or_test_network(block_index, 281237):  # Protocol change.
                 fee = 5
             if fee and (balance < fee):
                 problems.append("insufficient funds")
 
-    if not (block_index >= 317500 or config.TESTNET or config.REGTEST):  # Protocol change.
+    if not util.after_block_or_test_network(block_index, 317500):  # Protocol change.
         if len(description) > 42:
             problems.append("description too long")
 
@@ -667,9 +684,10 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                             description = None
                     except UnicodeDecodeError:
                         description = ""
-        elif (block_index > 283271 or config.TESTNET or config.REGTEST) and len(
-            message
-        ) >= asset_format_length:  # Protocol change.
+        elif (
+            util.after_block_or_test_network(block_index, 283272)
+            and len(message) >= asset_format_length
+        ):  # Protocol change.
             if (len(message) - asset_format_length <= 42) and not util.enabled(
                 "pascal_string_removed"
             ):

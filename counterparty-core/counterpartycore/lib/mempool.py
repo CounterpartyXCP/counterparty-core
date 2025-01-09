@@ -15,6 +15,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     now = time.time()
     transaction_events = []
     cursor = db.cursor()
+    not_supported_txs = []
     try:
         with db:
             # insert fake block
@@ -44,8 +45,9 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             # list_tx
             decoded_tx_count = 0
             for raw_tx in raw_tx_list:
-                decoded_tx = deserialize.deserialize_tx(raw_tx, use_txid=True)
+                decoded_tx = deserialize.deserialize_tx(raw_tx, parse_vouts=True)
                 existing_tx = ledger.get_transaction(db, decoded_tx["tx_hash"])
+                not_supported_txs.append(decoded_tx["tx_hash"])
                 if existing_tx:
                     logger.trace(f"Transaction {decoded_tx['tx_hash']} already in the database")
                     continue
@@ -82,6 +84,9 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     except exceptions.MempoolError:
         # save events in the mempool table
         for event in transaction_events:
+            if event["tx_hash"] in not_supported_txs:
+                not_supported_txs.remove(event["tx_hash"])
+
             if timestamps:
                 event["timestamp"] = timestamps.get(event["tx_hash"], now)
             else:
@@ -105,6 +110,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             )
     logger.trace("Mempool transaction parsed successfully.")
     util.PARSING_MEMPOOL = False
+    return not_supported_txs
 
 
 def clean_transaction_events(db, tx_hash):
@@ -113,7 +119,7 @@ def clean_transaction_events(db, tx_hash):
 
 
 def clean_mempool(db):
-    logger.debug("Cleaning mempool...")
+    logger.debug("Remove validated transactions from mempool...")
     cursor = db.cursor()
     cursor.execute("SELECT * FROM mempool")
     mempool_events = cursor.fetchall()
@@ -122,31 +128,11 @@ def clean_mempool(db):
         tx = ledger.get_transaction(db, event["tx_hash"])
         if tx:
             clean_transaction_events(db, event["tx_hash"])
-
-
-def parse_raw_mempool(db):
-    logger.debug("Parsing raw mempool...")
-    raw_mempool = backend.bitcoind.getrawmempool(verbose=True)
-    raw_tx_list = []
-    timestamps = {}
-    cursor = db.cursor()
-    logger.debug(f"Found {len(raw_mempool)} transaction(s) in the mempool...")
-    txhash_list = []
-    for txid, tx_info in raw_mempool.items():
-        existing_tx_in_mempool = cursor.execute(
-            "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (txid,)
-        ).fetchone()
-        if existing_tx_in_mempool:
-            continue
-        txhash_list.append(txid)
-        timestamps[txid] = tx_info["time"]
-
-    logger.debug(f"Getting {len(txhash_list)} raw transactions by batch from the mempool...")
-    raw_transactions_by_hash = backend.addrindexrs.getrawtransaction_batch(
-        txhash_list, skip_missing=True
-    )
-    raw_tx_list = [raw_hex for raw_hex in raw_transactions_by_hash.values() if raw_hex is not None]
-
-    logger.debug(f"Parsing {len(raw_tx_list)} transaction(s) from the mempool...")
-    parse_mempool_transactions(db, raw_tx_list, timestamps)
-    logger.debug("Raw mempool parsed successfully.")
+    # remove transactions removed from the mempool
+    logger.debug("Remove transactions removed from the mempool...")
+    cursor.execute("SELECT distinct tx_hash FROM mempool")
+    tx_hashes = cursor.fetchall()
+    raw_mempool = backend.bitcoind.getrawmempool(verbose=False)
+    for tx_hash in tx_hashes:
+        if tx_hash["tx_hash"] not in raw_mempool:
+            clean_transaction_events(db, tx_hash["tx_hash"])

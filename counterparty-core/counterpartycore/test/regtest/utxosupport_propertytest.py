@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import decimal
+import math
 
 import hypothesis
-from counterpartycore.lib import util
+from counterpartycore.lib import config, util
 from hypothesis import settings
 from properytestnode import PropertyTestNode
+from regtestnode import ComposeError
 
 MESSAGE_IDS = [
     0,
@@ -33,9 +36,14 @@ MESSAGE_IDS = [
 ]
 
 
+def D(value):
+    return decimal.Decimal(str(value))
+
+
 class UTXOSupportPropertyTest(PropertyTestNode):
     def run_tests(self):
         # issue random assets
+        self.asset_owners = {}
         self.test_with_given_data(
             self.issue_assets,
             hypothesis.strategies.sampled_from(self.addresses),
@@ -80,7 +88,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
         )
 
         # test move with counterparty data
-        self.alrady_used = []
+        self.already_used = []
         self.test_with_given_data(
             self.move_with_counterparty_data,
             hypothesis.strategies.sampled_from(self.get_utxos_balances()),
@@ -88,11 +96,33 @@ class UTXOSupportPropertyTest(PropertyTestNode):
         )
 
         # detach assets
-        self.alrady_used = []
+        self.already_used = []
         self.test_with_given_data(
             self.detach_asset,
             hypothesis.strategies.sampled_from(self.balances),
             hypothesis.strategies.sampled_from(self.addresses + [None]),
+        )
+
+        # create fairminter
+        self.fairminters = {}
+        self.test_with_given_data(
+            self.create_fairminter,
+            hypothesis.strategies.sampled_from(self.addresses),
+            hypothesis.strategies.integers(min_value=1, max_value=1000 * 1e8),  # price
+            hypothesis.strategies.integers(min_value=1, max_value=10),  # quantity_by_price
+            hypothesis.strategies.booleans(),  # soft_caped
+            hypothesis.strategies.booleans(),  # with_commission
+            hypothesis.strategies.integers(min_value=1, max_value=10),  # commission
+        )
+
+        # create fairmints
+        self.fairminted = []
+        self.minters = []
+        self.test_with_given_data(
+            self.create_fairmints,
+            hypothesis.strategies.sampled_from(self.balances),
+            hypothesis.strategies.sampled_from(list(self.fairminters.keys())),
+            hypothesis.strategies.integers(min_value=1, max_value=1000 * 1e8),  # quantity
         )
 
     @settings(deadline=None)
@@ -114,6 +144,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
         self.upsert_balance(source, asset_name, quantity)
         # issuance fee
         self.upsert_balance(source, "XCP", -50000000, None)
+        self.asset_owners[source] = asset_name
 
     @settings(deadline=None)
     def attach_asset(self, balance, attach_quantity):
@@ -148,6 +179,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             {
                 "destination": destination,
                 "exact_fee": 0,
+                "inputs_source": utxo_address,
             },
         )
         self.upsert_balance(source, asset, -quantity, utxo_address)
@@ -255,9 +287,9 @@ class UTXOSupportPropertyTest(PropertyTestNode):
     def move_with_counterparty_data(self, utxo_balance, destination):
         utxo, utxo_asset, utxo_quantity, utxo_address = utxo_balance
 
-        if utxo in self.alrady_used or utxo_quantity == 0 or utxo_asset == "XCP":
+        if utxo in self.already_used or utxo_quantity == 0 or utxo_asset == "XCP":
             return
-        self.alrady_used.append(utxo)
+        self.already_used.append(utxo)
 
         tx_hash = self.send_transaction(
             utxo_address,
@@ -335,9 +367,9 @@ class UTXOSupportPropertyTest(PropertyTestNode):
         # don't detach assets not attached or with 0 quantity
         if utxo_address is None or quantity == 0:
             return
-        if source in self.alrady_used:
+        if source in self.already_used:
             return
-        self.alrady_used.append(source)
+        self.already_used.append(source)
 
         self.send_transaction(
             source,
@@ -345,6 +377,8 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             {
                 "exact_fee": 0,
                 "destination": destination,
+                "inputs_source": utxo_address,
+                "exclude_utxos_with_balances": True,
             },
         )
         for balance in self.balances:
@@ -352,6 +386,95 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 asset, quantity = balance[1], balance[2]
                 self.upsert_balance(source, asset, -quantity, utxo_address)
                 self.upsert_balance(destination or utxo_address, asset, quantity, None)
+
+    @settings(deadline=None)
+    def create_fairminter(
+        self, source, price, quantity_by_price, soft_caped, with_commission, commission
+    ):
+        if source in self.fairminters:
+            return
+        minted_asset_commission = commission / 100 if with_commission else 0.0
+        self.send_transaction(
+            source,
+            "fairminter",
+            {
+                "asset": self.asset_owners[source],
+                "price": price,
+                "quantity_by_price": quantity_by_price,
+                "soft_cap": int(100 * 1e8) if soft_caped else 0,
+                "soft_cap_deadline_block": 1000 if soft_caped else 0,
+                "minted_asset_commission": minted_asset_commission,
+            },
+        )
+        self.fairminters[source] = (price, quantity_by_price, soft_caped, minted_asset_commission)
+
+    @settings(deadline=None)
+    def create_fairmints(self, balance_source, fairminter_source, quantity):
+        source, asset, balance, utxo_address = balance_source
+        if (
+            asset != "XCP"
+            or utxo_address is not None
+            or source == fairminter_source
+            or source in self.minters
+        ):
+            return
+        if fairminter_source not in self.fairminters:
+            return
+        if fairminter_source in self.fairminted:
+            return
+
+        price, quantity_by_price, soft_caped, minted_asset_commission = self.fairminters[
+            fairminter_source
+        ]
+
+        total_price = (D(quantity) / D(quantity_by_price)) * D(price)
+        total_price = int(math.ceil(total_price))
+        earn_quantity = quantity
+        commission = 0
+        if minted_asset_commission > 0:
+            commission = int(D(minted_asset_commission) * D(earn_quantity))
+            earn_quantity -= commission
+
+        fairminer_asset = self.asset_owners[fairminter_source]
+
+        if total_price > balance:
+            error_raised = False
+            try:
+                self.send_transaction(
+                    source,
+                    "fairmint",
+                    {
+                        "asset": fairminer_asset,
+                        "quantity": quantity,
+                    },
+                )
+            except ComposeError as e:
+                assert str(e) == "['insufficient XCP balance']"
+                error_raised = True
+            assert error_raised
+        else:
+            self.send_transaction(
+                source,
+                "fairmint",
+                {
+                    "asset": fairminer_asset,
+                    "quantity": quantity,
+                },
+            )
+            print(f"Fairminted {quantity} {fairminer_asset} for {total_price} XCP")
+            self.upsert_balance(source, "XCP", -total_price)
+            if soft_caped:
+                self.upsert_balance(config.UNSPENDABLE_REGTEST, "XCP", total_price)
+                self.upsert_balance(
+                    config.UNSPENDABLE_REGTEST, fairminer_asset, earn_quantity + commission
+                )
+            else:
+                self.upsert_balance(fairminter_source, "XCP", total_price)
+                self.upsert_balance(source, fairminer_asset, earn_quantity)
+                if commission > 0:
+                    self.upsert_balance(fairminter_source, fairminer_asset, commission)
+            self.fairminted.append(fairminter_source)
+            self.minters.append(source)
 
 
 if __name__ == "__main__":
