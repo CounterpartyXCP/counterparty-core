@@ -31,11 +31,14 @@ def decompress_zst(zst_filepath):
     version = (
         os.path.basename(zst_filepath)
         .replace("counterparty.db.", "")
+        .replace("counterparty.testnet.db.", "")
         .replace("state.db.", "")
+        .replace("state.testnet.db.", "")
         .replace(".zst", "")
     )
     filename = zst_filepath.replace(f".{version}.zst", "")
     filepath = os.path.join(os.path.dirname(zst_filepath), filename)
+    print(f"Decompressing {zst_filepath} to {filepath}...")
     with io.open(filepath, "wb") as output_file:
         with open(zst_filepath, "rb") as input_file:
             pyzstd.decompress_stream(input_file, output_file, read_size=16 * 1024)
