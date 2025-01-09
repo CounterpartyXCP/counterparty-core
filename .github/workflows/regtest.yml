@@ -41,6 +41,8 @@ jobs:
         sudo cp bitcoin-28.0/bin/bitcoind /usr/local/bin/bitcoind
         sudo cp bitcoin-28.0/bin/bitcoin-wallet /usr/local/bin/bitcoin-wallet
         npm install dredd --global
+        git clone https://github.com/mempool/electrs && cd electrs
+        cargo install --path=.
     - name: Run regtest tests
       run: |
         cd counterparty-core
