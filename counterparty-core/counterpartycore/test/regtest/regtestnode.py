@@ -69,11 +69,15 @@ class RegtestNode:
             f"--wsgi-server={wsgi_server}",
             "--gunicorn-workers=2",
             "--no-telemetry",
+            "--electrs-url=http://localhost:3002",
             "-vv",
         )
         self.burn_in_one_block = burn_in_one_block
         self.electrs_process = None
         self.electrs_process_2 = None
+        self.electrs_process_pid = None
+        self.electrs_process_2_pid = None
+        self.second_node_started = False
 
     def api_call(self, url):
         result = sh.curl(f"http://localhost:24000/v2/{url}").strip()
@@ -385,6 +389,24 @@ class RegtestNode:
         )
         self.wait_for_bitcoind(node=2)
 
+    def get_electrs_tip(self, node=1):
+        port = 3002 if node == 1 else 3003
+        url = f"http://127.0.0.1:{port}/blocks/tip/height"
+        return int(sh.curl(url).strip())
+
+    def wait_for_electrs(self, node=1):
+        while True:
+            try:
+                current_block = self.api_call("")["result"]["counterparty_height"]
+                tip = self.get_electrs_tip(node)
+                if tip >= current_block:
+                    print("Electrs ready")
+                    break
+                print(f"Waiting for electr to catch up ({tip} < {current_block})...")
+            except sh.ErrorReturnCode:
+                print("Waiting for electr to be ready...")
+                time.sleep(1)
+
     def start_electrs(self, node=1):
         daemon_dir = self.datadir if node == 1 else f"{self.datadir}/node2"
         daemon_rpc_address = "127.0.0.1:18443" if node == 1 else "127.0.0.1:28443"
@@ -399,17 +421,17 @@ class RegtestNode:
         )
         if node == 1:
             self.electrs_process = self.electrs(_bg=True, _out=sys.stdout)
+            self.electrs_process_pid = self.electrs_process.process.pid
         else:
             self.electrs_process_2 = self.electrs(_bg=True, _out=sys.stdout)
+            self.electrs_process_2_pid = self.electrs_process_2.process.pid
 
     def stop_electrs(self):
-        if self.electrs_process:
-            self.electrs_process.terminate()
-            self.electrs_process.wait()
+        if self.electrs_process_pid:
+            os.kill(self.electrs_process_pid, signal.SIGTERM)
 
-        if self.electrs_process_2:
-            self.electrs_process_2.terminate()
-            self.electrs_process_2.wait()
+        if self.electrs_process_2_pid:
+            os.kill(self.electrs_process_2_pid, signal.SIGTERM)
 
     def start(self):
         if os.path.exists(self.datadir):
@@ -419,10 +441,7 @@ class RegtestNode:
 
         self.start_bitcoin_node()
 
-        self.bitcoin_cli(
-            "createwallet",
-            WALLET_NAME,
-        )
+        self.bitcoin_cli("createwallet", WALLET_NAME)
         print("Wallet created")
 
         self.generate_addresses_with_btc()
@@ -602,7 +621,11 @@ class RegtestNode:
             time.sleep(2)
             return self.get_xcp_balance(address)
 
-    def test_reorg(self):
+    def start_and_wait_second_node(self):
+        if self.second_node_started:
+            return
+        self.second_node_started = True
+
         print("Start a second node...")
         self.start_bitcoin_node_2()
 
@@ -617,6 +640,9 @@ class RegtestNode:
 
         print("Wait for the two nodes to sync...")
         self.wait_for_node_to_sync()
+
+    def test_reorg(self):
+        self.start_and_wait_second_node()
 
         print("Disconnect from the first node...")
         self.bitcoin_cli_2("disconnectnode", "localhost:18445")
@@ -659,6 +685,49 @@ class RegtestNode:
         final_xcp_balance = self.get_xcp_balance(self.addresses[0])
         print("Final XCP balance: ", final_xcp_balance)
         assert final_xcp_balance == initial_xcp_balance
+
+    def test_electrs(self):
+        self.start_and_wait_second_node()
+
+        # create a new address on the Bitcoin node not connected to Counterparty server
+        self.bitcoin_cli_2("createwallet", WALLET_NAME)
+        new_address = self.bitcoin_wallet_2("getnewaddress", WALLET_NAME, "bech32").strip()
+        # send 0.1 BTC to the new address
+        self.bitcoin_wallet("sendtoaddress", new_address, 0.1)
+        self.mine_blocks(1)
+        self.wait_for_counterparty_server()
+
+        # try to compose a transaction with the new address
+        transaction = self.compose(
+            new_address,
+            "send",
+            {
+                "destination": self.addresses[0],
+                "quantity": 1000,
+                "asset": "BTC",
+            },
+        )
+        assert "Electrs error" in transaction["error"]
+        assert "Failed to establish a new connection" in transaction["error"]
+
+        # start electrs
+        self.start_electrs()
+        self.wait_for_electrs()
+
+        # retry to compose a transaction with the new address
+        transaction = self.compose(
+            new_address,
+            "send",
+            {
+                "destination": self.addresses[0],
+                "quantity": 1000,
+                "asset": "BTC",
+            },
+        )
+        assert "error" not in transaction
+        assert transaction["result"]["rawtransaction"].startswith("02")
+
+        print("Electrs test successful")
 
     def test_invalid_detach(self):
         print("Test invalid detach...")

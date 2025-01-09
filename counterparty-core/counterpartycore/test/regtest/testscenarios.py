@@ -441,6 +441,8 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             regtest_node_thread.node.test_empty_ledger_hash()
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
+            print("Testing Electrs...")
+            regtest_node_thread.node.test_electrs()
             print("Testing fee calculation...")
             regtest_node_thread.node.test_fee_calculation()
     except KeyboardInterrupt:
