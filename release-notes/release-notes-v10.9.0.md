@@ -2,11 +2,11 @@
 
 This release represents a major technical milestone in the development of Counterparty Core: Counterparty no longer has AddrIndexRs as an external dependency. Originally, AddrIndexRs was used for transaction construction, and at the end of 2023 it was accidentally turned into a consensus-critical dependency (causing a number of subsequent consensus breaks and reliability issues). As of today, the only external dependency for a Counterparty node is Bitcoin Core itself.
 
-Counterparty Core will rely on Bitcoin Core by default to provide all of the information it needs for transaction construction (not consensus-critical). However this operation will only succeed if the `source` address for the transaction is in the Bitcoin Core wallet. If it isn't, then Counterparty Core will use some service (either local or remote) which implements the Electrum server API to gather the information it needs. If the address isn't in Bitcoin Core, Counterparty will by default connect to the Blockstream public API. This value is configurable using the `--electrs-url` CLI argument, and users can run their own instance of this service locally if they like. A public instance of Electrs is also available at <https://api.counterparty.io:3000>. This service does not need to be trusted in any way, and no private information is ever sent to it.
+Counterparty Core will rely on Bitcoin Core by default to provide all of the information it needs for transaction construction (which is not consensus-critical). However this operation will only succeed if the `source` address for the transaction is present in the Bitcoin Core wallet. If it isn't, then Counterparty Core will use some service (either local or remote) which implements the Electrum server API to gather the information it needs. If the address isn't in Bitcoin Core, Counterparty will by default connect to the Blockstream public API. This server is configurable using the `--electrs-url` CLI argument, however, and users can run their own instance of this service locally if they like. A public instance of Electrs is also available at <https://api.counterparty.io:3000>. This service does not need to be trusted in any way, and no private information is ever sent to it.
 
-As part of this upgrade, the node storage requirements have effectively decreased from ~300 GB to ~30 GB, dramatically decreasing the cost of node operation. Nodes should also be more reliable and more performant, generally.
+As a consequence of the removal of the AddrIndexRs dependency, the node storage requirements have effectively decreased from ~300 GB to ~30 GB, dramatically decreasing the cost of node operation. Nodes should also be more reliable and performant generally.
 
-This upgrade notably includes support for `testnet4`, since `testnet3` is no longer functional for testing purposes. A public server is available at <https://testnet4.counterparty.io:44000>.
+This upgrade notably includes support for `testnet4`, since `testnet3` is no longer usable for testing purposes. A public server is available at <https://testnet4.counterparty.io:44000>.
 
 Finally, this upgrade includes a completely rewritten transaction composition module in preparation for future testing work. The new composer API is fully backwards-compatible, but it now includes additional parameters which make constructing a transaction much more natural. Transactions composed with the new API will use a version byte of `2` instead of `1`.
 
@@ -15,7 +15,7 @@ Finally, this upgrade includes a completely rewritten transaction composition mo
 
 This upgrade does not include a protocol change and is not mandatory. After upgrading you can simply delete AddrIndexRs and shrink your disk.
 
-The following transaction construction parameters have been deprecated (but remain functional for now): `fee_per_kb`, `fee_provided`, `dust_return_pubkey`, `return_psbt`, `regular_dust_size`, `multisig_dust_size`, `extended_tx_info`, `old_style_api`, `p2sh_pretx_txid`, `segwit`, `unspent_tx_hash`
+The following transaction construction parameters have been deprecated (but remain functional for now): `fee_per_kb`, `fee_provided`, `dust_return_pubkey`, `return_psbt`, `regular_dust_size`, `multisig_dust_size`, `extended_tx_info`, `old_style_api`, `p2sh_pretx_txid`, `segwit`, `unspent_tx_hash`. These parameters have been superceded by `change_address`, `more_outputs`, `use_all_inputs_set`, `sat_per_vbyte`, `max_fee`, `verbose`, `multisig_pubkey`.
 
 
 # ChangeLog
@@ -52,7 +52,6 @@ The following transaction construction parameters have been deprecated (but rema
 - Add `testnet4` support
 
 ## API
-
 
 - Add the following parameters to the transaction composition API:
     * `change_address`: allows defining the change address
