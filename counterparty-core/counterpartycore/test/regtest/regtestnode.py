@@ -692,7 +692,7 @@ class RegtestNode:
         print("Final XCP balance: ", final_xcp_balance)
         assert final_xcp_balance == initial_xcp_balance
 
-        # Test reorg with a shorter chain of one block
+        # Test reorg with same length chain but one different block
         print("Disconnect from the first node...")
         self.bitcoin_cli_2("disconnectnode", "localhost:18445")
 
@@ -710,6 +710,20 @@ class RegtestNode:
             retry += 1
             print("Waiting for reorg...")
             assert retry < 100
+
+        # Test reorg with a same length chain but three different blocks
+        print("Invalidate block ", last_block - 3)
+        previous_block_hash = self.bitcoin_cli("getblockhash", last_block - 3).strip()
+        self.bitcoin_cli("invalidateblock", previous_block_hash)
+        self.mine_blocks(3)
+        retry = 0
+        while len(self.server_out.getvalue().split(f"Hashes don't match ({last_block - 3})")) < 3:
+            time.sleep(1)
+            retry += 1
+            print("Waiting for reorg...")
+            assert retry < 100
+
+        self.wait_for_counterparty_server(last_block)
 
         print("Reorg test successful")
 
