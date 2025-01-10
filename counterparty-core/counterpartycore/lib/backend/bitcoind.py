@@ -383,7 +383,7 @@ def decoderawtransaction(rawtx: str):
     Proxy to `decoderawtransaction` RPC call.
     :param rawtx: The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)
     """
-    return deserialize.deserialize_tx(rawtx)
+    return rpc("decoderawtransaction", [rawtx])
 
 
 def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
