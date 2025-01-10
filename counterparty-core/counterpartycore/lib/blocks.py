@@ -1274,13 +1274,7 @@ def handle_reorg(db):
     # search last block with the correct hash
     previous_block_index = util.CURRENT_BLOCK_INDEX - 1
     while True:
-        try:
-            previous_block_hash = backend.bitcoind.getblockhash(previous_block_index)
-        except exceptions.BlockOutOfRange:
-            # previous block and current block are not in the blockchain
-            logger.debug(f"Previous block is not in the blockchain ({previous_block_index}).")
-            previous_block_index -= 2
-            continue
+        previous_block_hash = backend.bitcoind.getblockhash(previous_block_index)
 
         try:
             current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
@@ -1303,6 +1297,7 @@ def handle_reorg(db):
     rollback(db, block_index=current_block_index)
     util.CURRENT_BLOCK_INDEX = previous_block_index
 
+    # get the new deserialized current block
     current_block = deserialize.deserialize_block(
         backend.bitcoind.getblock(current_block_hash),
         parse_vouts=True,
