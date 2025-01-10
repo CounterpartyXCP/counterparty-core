@@ -725,6 +725,21 @@ class RegtestNode:
 
         self.wait_for_counterparty_server(last_block)
 
+        # other tests expect the second node to be connected if running
+        print("Re-connect to the first node...")
+        self.bitcoin_cli_2(
+            "addnode",
+            "localhost:18445",
+            "onetry",
+            _out=sys.stdout,
+            _err=sys.stdout,
+        )
+        # fix block count for other tests
+        self.block_count -= 1
+
+        print("Wait for the two nodes to sync...")
+        last_block = self.wait_for_node_to_sync()
+
         print("Reorg test successful")
 
     def test_electrs(self):
