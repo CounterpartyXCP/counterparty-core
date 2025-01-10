@@ -1275,31 +1275,40 @@ def handle_reorg(db):
     previous_block_index = util.CURRENT_BLOCK_INDEX - 1
     while True:
         try:
-            bitcoin_block_hash = backend.bitcoind.getblockhash(previous_block_index)
+            previous_block_hash = backend.bitcoind.getblockhash(previous_block_index)
         except exceptions.BlockOutOfRange:
             # previous block and current block are not in the blockchain
             previous_block_index -= 2
             continue
-        counterparty_block_hash = ledger.get_block_hash(db, previous_block_index)
-        if bitcoin_block_hash != counterparty_block_hash:
-            previous_block_index -= 1
-        else:
-            break
-    current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
-    raw_current_block = backend.bitcoind.getblock(current_block_hash)
-    decoded_block = deserialize.deserialize_block(
-        raw_current_block,
-        parse_vouts=True,
-        block_index=previous_block_index + 1,
-    )
-    logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
-    # rollback to the previous block
-    rollback(db, block_index=previous_block_index + 1)
-    previous_block = ledger.get_block(db, previous_block_index)
-    util.CURRENT_BLOCK_INDEX = previous_block_index + 1
-    tx_index = get_next_tx_index(db)
 
-    return decoded_block, previous_block, tx_index
+        try:
+            current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
+        except exceptions.BlockOutOfRange:
+            # current block is not in the blockchain
+            previous_block_index -= 1
+            continue
+
+        if previous_block_hash != ledger.get_block_hash(db, previous_block_index):
+            # hashes don't match
+            previous_block_index -= 1
+            continue
+
+        break
+
+    logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
+
+    # rollback to the previous block
+    current_block_index = previous_block_index + 1
+    rollback(db, block_index=current_block_index)
+    util.CURRENT_BLOCK_INDEX = previous_block_index
+
+    current_block = deserialize.deserialize_block(
+        backend.bitcoind.getblock(current_block_hash),
+        parse_vouts=True,
+        block_index=current_block_index,
+    )
+
+    return current_block
 
 
 def parse_new_block(db, decoded_block, tx_index=None):
@@ -1324,12 +1333,8 @@ def parse_new_block(db, decoded_block, tx_index=None):
         previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
-            decoded_block, previous_block, tx_index = handle_reorg(db)
-
-    if "height" not in decoded_block:
-        decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
-    else:
-        decoded_block["block_index"] = decoded_block["height"]
+            new_current_block = handle_reorg(db)
+            return parse_new_block(db, new_current_block)
 
     # Sanity checks
     if decoded_block["block_index"] != config.BLOCK_FIRST:
