@@ -79,21 +79,15 @@ def rpc_call(payload, retry=0):
         result = response_json
     elif "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
         result = response_json["result"]
-    elif response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
-        raise exceptions.BitcoindRPCError(
-            f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
-        )
     elif "Block height out of range" in response_json["error"]["message"]:
         # this error should be managed by the caller
         raise exceptions.BlockOutOfRange(response_json["error"]["message"])
-    elif response_json["error"]["code"] in [-28, -8, -2]:
+    elif response_json["error"]["code"] in [-28, -8, -5, -2]:
         # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
-        logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
-        logger.debug(f"Payload: {payload}")
-        if retry >= 10:
-            raise exceptions.BitcoindRPCError(
-                f"Backend not ready after {retry} retries. ({response_json['error']})"
-            )
+        logger.debug(f"Error calling {payload}: {response_json['error']}")
+        logger.debug("Sleeping for ten seconds and retrying...")
+        if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
+            logger.warning(f"Is `txindex` enabled in {config.BTC_NAME} Core?")
         # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
         # seconds to start, this'll hit the maximum recursion depth limit.
         time.sleep(10)
