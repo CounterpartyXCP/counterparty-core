@@ -1278,6 +1278,7 @@ def handle_reorg(db):
             previous_block_hash = backend.bitcoind.getblockhash(previous_block_index)
         except exceptions.BlockOutOfRange:
             # previous block and current block are not in the blockchain
+            logger.debug(f"Previous block is not in the blockchain ({previous_block_index}).")
             previous_block_index -= 2
             continue
 
@@ -1285,11 +1286,13 @@ def handle_reorg(db):
             current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
         except exceptions.BlockOutOfRange:
             # current block is not in the blockchain
+            logger.debug(f"Current block is not in the blockchain ({previous_block_index + 1}).")
             previous_block_index -= 1
             continue
 
         if previous_block_hash != ledger.get_block_hash(db, previous_block_index):
             # hashes don't match
+            logger.debug(f"Hashes don't match ({previous_block_index}).")
             previous_block_index -= 1
             continue
 
