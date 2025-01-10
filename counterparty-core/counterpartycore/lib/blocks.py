@@ -1270,6 +1270,38 @@ def get_next_tx_index(db):
     return tx_index
 
 
+def handle_reorg(db):
+    # search last block with the correct hash
+    previous_block_index = util.CURRENT_BLOCK_INDEX - 1
+    while True:
+        try:
+            bitcoin_block_hash = backend.bitcoind.getblockhash(previous_block_index)
+        except exceptions.BlockOutOfRange:
+            # previous block and current block are not in the blockchain
+            previous_block_index -= 2
+            continue
+        counterparty_block_hash = ledger.get_block_hash(db, previous_block_index)
+        if bitcoin_block_hash != counterparty_block_hash:
+            previous_block_index -= 1
+        else:
+            break
+    current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
+    raw_current_block = backend.bitcoind.getblock(current_block_hash)
+    decoded_block = deserialize.deserialize_block(
+        raw_current_block,
+        parse_vouts=True,
+        block_index=previous_block_index + 1,
+    )
+    logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
+    # rollback to the previous block
+    rollback(db, block_index=previous_block_index + 1)
+    previous_block = ledger.get_block(db, previous_block_index)
+    util.CURRENT_BLOCK_INDEX = previous_block_index + 1
+    tx_index = get_next_tx_index(db)
+
+    return decoded_block, previous_block, tx_index
+
+
 def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
@@ -1290,36 +1322,9 @@ def parse_new_block(db, decoded_block, tx_index=None):
     else:
         # get previous block
         previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
-
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
-            # search last block with the correct hash
-            previous_block_index = util.CURRENT_BLOCK_INDEX - 1
-            while True:
-                try:
-                    bitcoin_block_hash = backend.bitcoind.getblockhash(previous_block_index)
-                except exceptions.BlockOutOfRange:
-                    # previous block and current block are not in the blockchain
-                    previous_block_index -= 2
-                    continue
-                counterparty_block_hash = ledger.get_block_hash(db, previous_block_index)
-                if bitcoin_block_hash != counterparty_block_hash:
-                    previous_block_index -= 1
-                else:
-                    break
-            current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
-            raw_current_block = backend.bitcoind.getblock(current_block_hash)
-            decoded_block = deserialize.deserialize_block(
-                raw_current_block,
-                parse_vouts=True,
-                block_index=previous_block_index + 1,
-            )
-            logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
-            # rollback to the previous block
-            rollback(db, block_index=previous_block_index + 1)
-            previous_block = ledger.get_block(db, previous_block_index)
-            util.CURRENT_BLOCK_INDEX = previous_block_index + 1
-            tx_index = get_next_tx_index(db)
+            decoded_block, previous_block, tx_index = handle_reorg(db)
 
     if "height" not in decoded_block:
         decoded_block["block_index"] = util.CURRENT_BLOCK_INDEX
