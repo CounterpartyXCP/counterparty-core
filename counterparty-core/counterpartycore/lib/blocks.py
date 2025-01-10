@@ -1295,8 +1295,6 @@ def handle_reorg(db):
 
         break
 
-    logger.warning("Blockchain reorganization detected at block %s.", previous_block_index)
-
     # rollback to the previous block
     current_block_index = previous_block_index + 1
     rollback(db, block_index=current_block_index)
@@ -1333,6 +1331,9 @@ def parse_new_block(db, decoded_block, tx_index=None):
         previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
+            logger.warning(
+                "Blockchain reorganization detected at block %s.", util.CURRENT_BLOCK_INDEX
+            )
             new_current_block = handle_reorg(db)
             return parse_new_block(db, new_current_block)
 
