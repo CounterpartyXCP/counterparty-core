@@ -83,11 +83,11 @@ def rpc_call(payload, retry=0):
         raise exceptions.BitcoindRPCError(
             f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
         )
+    elif "Block height out of range" in response_json["error"]["message"]:
+        # this error should be managed by the caller
+        raise exceptions.BlockOutOfRange(response_json["error"]["message"])
     elif response_json["error"]["code"] in [-28, -8, -2]:
         # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
-        if "Block height out of range" in response_json["error"]["message"]:
-            # this error should be managed by the caller
-            raise exceptions.BlockOutOfRange(response_json["error"]["message"])
         logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
         logger.debug(f"Payload: {payload}")
         if retry >= 10:
