@@ -114,9 +114,11 @@ def clean_data_dir(data_dir):
     if not os.path.exists(data_dir):
         os.makedirs(data_dir, mode=0o755)
         return
-    files_to_delete = glob.glob(os.path.join(data_dir, "*.db"))
-    files_to_delete += glob.glob(os.path.join(data_dir, "*.db-wal"))
-    files_to_delete += glob.glob(os.path.join(data_dir, "*.db-shm"))
+    network = "" if config.NETWORK_NAME == "mainnet" else f".{config.NETWORK_NAME}"
+    files_to_delete = []
+    for db_name in ["counterparty", "state"]:
+        for ext in ["db", "db-wal", "db-shm"]:
+            files_to_delete += glob.glob(os.path.join(data_dir, f"{db_name}{network}.{ext}"))
     for file in files_to_delete:
         os.remove(file)
 
