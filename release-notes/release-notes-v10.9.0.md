@@ -37,6 +37,8 @@ The following transaction construction parameters have been deprecated (but rema
 - Fix the `dispensers` table in State DB: include dispensers with same the `source` and `asset` but a different `tx_hash`
 - Fix endpoint to get info from raw transaction when block index is not provided
 - Fix issue where composed transactions contained `script_pubkey` (lock script) where the `script_sig` (unlock script) should be
+- Fix bootstrap when using `--bootstrap-url` flag
+- Fix Blockchain reorg of several blocks
 
 ## Codebase
 

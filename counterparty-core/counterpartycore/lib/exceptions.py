@@ -145,3 +145,7 @@ class RSFetchError(Exception):
 
 class ElectrsError(Exception):
     pass
+
+
+class BlockOutOfRange(Exception):
+    pass

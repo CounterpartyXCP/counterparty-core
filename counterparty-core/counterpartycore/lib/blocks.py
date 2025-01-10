@@ -1296,7 +1296,12 @@ def parse_new_block(db, decoded_block, tx_index=None):
             # search last block with the correct hash
             previous_block_index = util.CURRENT_BLOCK_INDEX - 1
             while True:
-                bitcoin_block_hash = backend.bitcoind.getblockhash(previous_block_index)
+                try:
+                    bitcoin_block_hash = backend.bitcoind.getblockhash(previous_block_index)
+                except exceptions.BlockOutOfRange:
+                    # previous block and current block are not in the blockchain
+                    previous_block_index -= 2
+                    continue
                 counterparty_block_hash = ledger.get_block_hash(db, previous_block_index)
                 if bitcoin_block_hash != counterparty_block_hash:
                     previous_block_index -= 1

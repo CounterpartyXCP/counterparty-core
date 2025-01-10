@@ -41,16 +41,8 @@ def rpc_call(payload, retry=0):
             )
 
             if response is None:  # noqa: E711
-                if config.TESTNET:
-                    network = "testnet"
-                elif config.TESTNET4:
-                    network = "testnet4"
-                elif config.REGTEST:
-                    network = "regtest"
-                else:
-                    network = "mainnet"
                 raise exceptions.BitcoindRPCError(
-                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
+                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
                 )
             if response.status_code in (401,):
                 raise exceptions.BitcoindRPCError(
@@ -93,6 +85,9 @@ def rpc_call(payload, retry=0):
         )
     elif response_json["error"]["code"] in [-28, -8, -2]:
         # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
+        if "Block height out of range" in response_json["error"]["message"]:
+            # this error should be managed by the caller
+            raise exceptions.BlockOutOfRange(response_json["error"]["message"])
         logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
         logger.debug(f"Payload: {payload}")
         if retry >= 10:
