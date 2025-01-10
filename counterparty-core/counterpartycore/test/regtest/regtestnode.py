@@ -662,6 +662,7 @@ class RegtestNode:
         assert intermediate_xcp_balance > initial_xcp_balance
 
         print("Mine a longest chain on the second node...")
+        before_reorg_block = int(self.bitcoin_cli_2("getblockcount").strip())
         self.bitcoin_cli_2("generatetoaddress", 6, self.addresses[0])
 
         print("Re-connect to the first node...")
@@ -679,12 +680,67 @@ class RegtestNode:
         self.wait_for_counterparty_server(block=last_block)
 
         print("Burn count after reorganization: ", self.get_burn_count(self.addresses[0]))
-        assert "Blockchain reorganization detected" in self.server_out.getvalue()
+
+        assert (
+            f"Blockchain reorganization detected at block {last_block - 1}"
+            in self.server_out.getvalue()
+        )
+        assert f"Hashes don't match ({before_reorg_block + 1})" in self.server_out.getvalue()
         assert self.get_burn_count(self.addresses[0]) == 1
 
         final_xcp_balance = self.get_xcp_balance(self.addresses[0])
         print("Final XCP balance: ", final_xcp_balance)
         assert final_xcp_balance == initial_xcp_balance
+
+        # Test reorg with same length chain but one different block
+        print("Disconnect from the first node...")
+        self.bitcoin_cli_2("disconnectnode", "localhost:18445")
+
+        print("Invalidate the last block on the first node...")
+        best_block_hash = self.bitcoin_cli("getbestblockhash").strip()
+        self.bitcoin_cli("invalidateblock", best_block_hash)
+
+        self.mine_blocks(1)
+        retry = 0
+        while (
+            f"Current block is not in the blockchain ({last_block + 1})."
+            not in self.server_out.getvalue()
+        ):
+            time.sleep(1)
+            retry += 1
+            print("Waiting for reorg...")
+            assert retry < 100
+
+        # Test reorg with a same length chain but three different blocks
+        print("Invalidate block ", last_block - 3)
+        previous_block_hash = self.bitcoin_cli("getblockhash", last_block - 3).strip()
+        self.bitcoin_cli("invalidateblock", previous_block_hash)
+        self.mine_blocks(3)
+        retry = 0
+        while len(self.server_out.getvalue().split(f"Hashes don't match ({last_block - 3})")) < 3:
+            time.sleep(1)
+            retry += 1
+            print("Waiting for reorg...")
+            assert retry < 100
+
+        self.wait_for_counterparty_server(last_block)
+
+        # other tests expect the second node to be connected if running
+        print("Re-connect to the first node...")
+        self.bitcoin_cli_2(
+            "addnode",
+            "localhost:18445",
+            "onetry",
+            _out=sys.stdout,
+            _err=sys.stdout,
+        )
+        # fix block count for other tests
+        self.block_count -= 1
+
+        print("Wait for the two nodes to sync...")
+        last_block = self.wait_for_node_to_sync()
+
+        print("Reorg test successful")
 
     def test_electrs(self):
         self.start_and_wait_second_node()

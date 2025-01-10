@@ -21,6 +21,11 @@ TRANSACTIONS_CACHE = OrderedDict()
 TRANSACTIONS_CACHE_MAX_SIZE = 10000
 
 
+# for testing
+def should_retry():
+    return True
+
+
 def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
@@ -41,16 +46,8 @@ def rpc_call(payload, retry=0):
             )
 
             if response is None:  # noqa: E711
-                if config.TESTNET:
-                    network = "testnet"
-                elif config.TESTNET4:
-                    network = "testnet4"
-                elif config.REGTEST:
-                    network = "regtest"
-                else:
-                    network = "mainnet"
                 raise exceptions.BitcoindRPCError(
-                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
+                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
                 )
             if response.status_code in (401,):
                 raise exceptions.BitcoindRPCError(
@@ -87,22 +84,21 @@ def rpc_call(payload, retry=0):
         result = response_json
     elif "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
         result = response_json["result"]
-    elif response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
-        raise exceptions.BitcoindRPCError(
-            f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
-        )
-    elif response_json["error"]["code"] in [-28, -8, -2]:
+    elif "Block height out of range" in response_json["error"]["message"]:
+        # this error should be managed by the caller
+        raise exceptions.BlockOutOfRange(response_json["error"]["message"])
+    elif response_json["error"]["code"] in [-28, -8, -5, -2]:
         # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
-        logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
-        logger.debug(f"Payload: {payload}")
-        if retry >= 10:
-            raise exceptions.BitcoindRPCError(
-                f"Backend not ready after {retry} retries. ({response_json['error']})"
-            )
-        # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-        # seconds to start, this'll hit the maximum recursion depth limit.
-        time.sleep(10)
-        return rpc_call(payload, retry=retry + 1)
+        warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
+        if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
+            warning_message += f" Is `txindex` enabled in {config.BTC_NAME} Core?"
+        logger.warning(warning_message)
+        if should_retry():
+            # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
+            # seconds to start, this'll hit the maximum recursion depth limit.
+            time.sleep(10)
+            return rpc_call(payload, retry=retry + 1)
+        raise exceptions.BitcoindRPCError(warning_message)
     else:
         raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
@@ -388,7 +384,7 @@ def decoderawtransaction(rawtx: str):
     Proxy to `decoderawtransaction` RPC call.
     :param rawtx: The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)
     """
-    return deserialize.deserialize_tx(rawtx)
+    return rpc("decoderawtransaction", [rawtx])
 
 
 def search_pubkey_in_transactions(pubkeyhash, tx_hashes):

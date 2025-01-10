@@ -238,9 +238,8 @@ class BlockchainWatcher:
             self.receive_message(topic, body, seq)
         except Exception as e:
             logger.error("Error processing message: %s", e)
-            import traceback
-
-            print(traceback.format_exc())  # for debugging
+            # import traceback
+            # print(traceback.format_exc())  # for debugging
             capture_exception(e)
             raise e
 
@@ -297,6 +296,7 @@ class BlockchainWatcher:
             except Exception as e:
                 logger.error("Error in handle loop: %s", e)
                 capture_exception(e)
+                self.stop()
                 break  # Optionally break the loop on other exceptions
 
     def start(self):
