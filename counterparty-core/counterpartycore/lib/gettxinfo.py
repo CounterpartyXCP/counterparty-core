@@ -127,7 +127,7 @@ def get_vin_info(vin):
     # have been from a while ago, so this call may not hit the cache.
     vin_ctx = backend.bitcoind.get_decoded_transaction(vin["hash"])
 
-    is_segwit = len(vin_ctx["vtxinwit"]) > 0
+    is_segwit = vin_ctx["segwit"]
     vout = vin_ctx["vout"][vin["n"]]
 
     return vout["value"], vout["script_pub_key"], is_segwit
@@ -393,6 +393,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
+
     # Ignore coinbase transactions.
     if decoded_tx["coinbase"]:
         raise DecodeError("coinbase transaction")
