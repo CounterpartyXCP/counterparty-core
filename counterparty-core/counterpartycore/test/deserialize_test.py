@@ -150,3 +150,59 @@ def test_deserialize():
     print(
         f"Time to deserialize  {4 * iterations} transactions with bitcoinlib: {end_time - start_time} seconds"
     )
+
+
+def mock_get_decoded_transaction(tx_hash):
+    txs = {
+        "094246c10d8b95f39662b92971588a205db77d89ffe0f21816733019a703cff9": "0100000001c47705b604b5b375fb43b6a7a632e20a7c10eb11d3202c00bd659e673d4d9396010000006a47304402204bc0847f52965c645e164078cfb5d743eb918c4fddaf4f592056b3470445e2c602202986c27c2f0f3b858b8fee94bf712338bc0ab8ff462edcea285a835143e10532012102e6dd23598e1d2428ecf7eb59c27fdfeeb7a27c26906e96dc1f3d5ebba6e54d08ffffffff02893000000000000017a9148760df63af4701313b244bf5ccd7479914843da18778cb0000000000001976a914533c940b158eae03f5bf71f1195d757c819c2e0c88ac00000000",
+        "05e7e9f59f155b28311a5e2860388783b839027b6529889de791351fe172752d": "020000000001016d72a3d323f82e76dcbf5fe9448a91ea9e68649e313d9a43822c0b27308a7b080200000017160014f6a785077f78695c12d51078ea7d9c10641f24acffffffff0208420000000000002251202525a906d3d870c6c00a2bfd63824c6597a4eddd8d24392f42ffbb2e6991fc5dcb8d04000000000017a914f54105af74fb10e70e899901b6ac4593ac20eea1870247304402205bd9f7e2ebe915532309548aad4e36f4b4feb856dab74f1b0e4df5292c0dbb4102202ca4d61fca54d08e2fd077c7e11154d2f271cf7102bb355c16dcb480d48dd57001210395c693bfc3a4d00e4380bec0d85871a1d0083618f8f01663199261d011e2a2bb00000000",
+        "c93934dc5149f771c0a9100302006058c51a13af5146ded1053dae2a219f7852": "020000000001019963e21ab347fbd1527f138a6788ad9d63b589fbab5a15a63ec4dc6f8318ffa34000000000ffffffff02315f00000000000016001457b185fde87fefac8aa2c7c823d4aae4c25aa8539f680000000000001600140b8846404281da37f3c4daa8da3b85d21293b97a024730440220662b27c5aa429153ebbe2ff3844efa7c493226c645573c04d6a4ebf404dc738702200f1c36ba63debb4d38d285980c3ecc8d7b20a70f88605b3358f8d10363d741cf012103c9d887d18d3c3a2bbdaf00c98b50863aa4d1d844e448aa4defe8fc4bdf9036b100000000",
+    }
+    decoded_tx = deserialize_rust(txs[tx_hash])
+    return decoded_tx
+
+
+@pytest.fixture(scope="function")
+def init_mock(monkeypatch):
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_decoded_transaction",
+        mock_get_decoded_transaction,
+    )
+
+
+def test_get_vin_info(init_mock):
+    vout_value, script_pubkey, is_segwit = gettxinfo.get_vin_info(
+        {
+            "hash": "094246c10d8b95f39662b92971588a205db77d89ffe0f21816733019a703cff9",
+            "n": 0,
+        }
+    )
+    assert vout_value == 12425
+    assert script_pubkey == b"\xa9\x14\x87`\xdfc\xafG\x011;$K\xf5\xcc\xd7G\x99\x14\x84=\xa1\x87"
+    assert not is_segwit
+
+    vout_value, script_pubkey, is_segwit = gettxinfo.get_vin_info(
+        {
+            "hash": "05e7e9f59f155b28311a5e2860388783b839027b6529889de791351fe172752d",
+            "n": 0,
+        }
+    )
+    assert vout_value == 16904
+    assert (
+        script_pubkey
+        == b"Q %%\xa9\x06\xd3\xd8p\xc6\xc0\n+\xfdc\x82Le\x97\xa4\xed\xdd\x8d$9/B\xff\xbb.i\x91\xfc]"
+    )
+    assert is_segwit
+
+    vout_value, script_pubkey, is_segwit = gettxinfo.get_vin_info(
+        {
+            "hash": "c93934dc5149f771c0a9100302006058c51a13af5146ded1053dae2a219f7852",
+            "n": 0,
+        }
+    )
+    assert vout_value == 24369
+    assert (
+        script_pubkey
+        == b"\x00\x14W\xb1\x85\xfd\xe8\x7f\xef\xac\x8a\xa2\xc7\xc8#\xd4\xaa\xe4\xc2Z\xa8S"
+    )
+    assert is_segwit
