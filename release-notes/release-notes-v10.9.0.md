@@ -41,6 +41,7 @@ The following transaction construction parameters have been deprecated (but rema
 - Fix logic for blockchain reorgs of several blocks
 - Have the node terminate when the `follow` loop raises an error
 - Don't stop the server on "No such mempool or blockchain" error
+- Handle correctly RPC call errors from the API
 
 
 ## Codebase
