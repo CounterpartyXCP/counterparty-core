@@ -8,7 +8,6 @@ import platform
 from decimal import Decimal as D
 
 import appdirs
-
 from counterpartycore.lib import config
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -54,29 +53,6 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
     os.chmod(filename, 0o660)  # nosec B103
 
 
-def extract_old_config():
-    old_config = {}
-
-    old_appdir = appdirs.user_config_dir(
-        appauthor="Counterparty", appname="counterpartyd", roaming=True
-    )
-    old_configfile = os.path.join(old_appdir, "counterpartyd.conf")
-
-    if os.path.exists(old_configfile):
-        configfile = configparser.SafeConfigParser(
-            allow_no_value=True, inline_comment_prefixes=("#", ";")
-        )
-        configfile.read(old_configfile)
-        if "Default" in configfile:
-            for key in configfile["Default"]:
-                new_key = key.replace("backend-rpc-", "backend-")
-                new_key = new_key.replace("blockchain-service-name", "backend-name")
-                new_value = configfile["Default"][key].replace("jmcorgan", "addrindex")
-                old_config[new_key] = new_value
-
-    return old_config
-
-
 def extract_bitcoincore_config():
     bitcoincore_config = {}
 
@@ -120,48 +96,7 @@ def get_server_known_config():
     bitcoincore_config = extract_bitcoincore_config()
     server_known_config.update(bitcoincore_config)
 
-    old_config = extract_old_config()
-    server_known_config.update(old_config)
-
     return server_known_config
-
-
-# generate client config from server config
-def server_to_client_config(server_config):
-    client_config = {}
-
-    config_keys = {
-        "backend-connect": "wallet-connect",
-        "backend-port": "wallet-port",
-        "backend-user": "wallet-user",
-        "backend-password": "wallet-password",
-        "backend-ssl": "wallet-ssl",
-        "backend-ssl-verify": "wallet-ssl-verify",
-        "rpc-host": "counterparty-rpc-connect",
-        "rpc-port": "counterparty-rpc-port",
-        "rpc-user": "counterparty-rpc-user",
-        "rpc-password": "counterparty-rpc-password",
-    }
-
-    for server_key, client_key in config_keys.items():
-        if server_key in server_config:
-            client_config[client_key] = server_config[server_key]
-
-    return client_config
-
-
-def generate_client_config_files(client_config_args):
-    configdir = appdirs.user_config_dir(
-        appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
-    )
-
-    client_configfile = os.path.join(configdir, "client.conf")
-    if not os.path.exists(client_configfile):
-        server_known_config = get_server_known_config()
-        client_known_config = server_to_client_config(server_known_config)
-        generate_config_file(client_configfile, client_config_args, client_known_config)
-
-    return client_configfile
 
 
 def generate_server_config_file(server_config_args):

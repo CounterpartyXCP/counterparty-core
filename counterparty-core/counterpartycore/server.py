@@ -16,7 +16,6 @@ from termcolor import colored, cprint
 
 from counterpartycore.lib import (
     backend,
-    bootstrap,
     check,
     config,
     database,
@@ -27,6 +26,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1, dbbuilder
+from counterpartycore.lib.cli import bootstrap
 from counterpartycore.lib.parser import blocks, follow
 
 logger = logging.getLogger(config.LOGGER_NAME)

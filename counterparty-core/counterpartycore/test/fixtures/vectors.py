@@ -13,7 +13,6 @@ from .contract_vectors.api_v1 import API_V1_VECTOR
 from .contract_vectors.blocks import BLOCKS_VECTOR
 from .contract_vectors.composer import COMPOSER_VECTOR
 from .contract_vectors.database import DATABASE_VECTOR
-from .contract_vectors.gas import GAS_VECTOR
 from .contract_vectors.gettxinfo import GETTXINFO_VECTOR
 from .contract_vectors.ledger import LEDGER_VECTOR
 from .contract_vectors.message_type import MESSAGE_TYPE_VECTOR
@@ -29,6 +28,7 @@ from .contract_vectors.messages.dividend import DIVIDEND_VECTOR
 from .contract_vectors.messages.enhanced_send import ENHANCED_SEND_VECTOR
 from .contract_vectors.messages.fairmint import FAIRMINT_VECTOR
 from .contract_vectors.messages.fairminter import FAIRMINTER_VECTOR
+from .contract_vectors.messages.gas import GAS_VECTOR
 from .contract_vectors.messages.issuance import ISSUANCE_VECTOR
 from .contract_vectors.messages.move import MOVE_VECTOR
 from .contract_vectors.messages.mpma import MPMA_VECTOR
@@ -47,7 +47,6 @@ UNITTEST_VECTOR = (
     | BLOCKS_VECTOR
     | COMPOSER_VECTOR
     | DATABASE_VECTOR
-    | GAS_VECTOR
     | GETTXINFO_VECTOR
     | LEDGER_VECTOR
     | MESSAGE_TYPE_VECTOR
@@ -66,6 +65,7 @@ UNITTEST_VECTOR = (
     | ENHANCED_SEND_VECTOR
     | FAIRMINTER_VECTOR
     | FAIRMINT_VECTOR
+    | GAS_VECTOR
     | ISSUANCE_VECTOR
     | MOVE_VECTOR
     | MPMA_VECTOR

@@ -6,11 +6,11 @@ from counterpartycore.lib import (
     composer,
     config,
     exceptions,
-    gas,
     message_type,
     messages,
     util,
 )
+from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
 from counterpartycore.lib.parser import deserialize, gettxinfo
 

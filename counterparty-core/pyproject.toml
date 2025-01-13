@@ -51,7 +51,7 @@ pre-install-commands = [
 ]
 
 [project.scripts]
-counterparty-server = "counterpartycore:cli.main"
+counterparty-server = "counterpartycore:cli.main.main"
 
 [tool.license_scanner]
 allowed-licences = [

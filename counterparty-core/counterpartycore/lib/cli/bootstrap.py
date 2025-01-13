@@ -9,10 +9,9 @@ from multiprocessing import Process
 
 import gnupg
 import pyzstd
-from termcolor import colored, cprint
-
 from counterpartycore.lib import config
-from counterpartycore.lib.public_keys import PUBLIC_KEYS
+from counterpartycore.lib.cli.public_keys import PUBLIC_KEYS
+from termcolor import colored, cprint
 
 
 def download_zst(data_dir, zst_url):
