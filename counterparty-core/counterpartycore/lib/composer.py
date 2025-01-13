@@ -13,7 +13,6 @@ from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 
 from counterpartycore.lib import (
-    arc4,
     backend,
     config,
     deserialize,
@@ -127,7 +126,7 @@ def determine_encoding(data, construct_params):
 
 
 def encrypt_data(data, arc4_key):
-    key = arc4.init_arc4(binascii.unhexlify(arc4_key))
+    key = util.init_arc4(binascii.unhexlify(arc4_key))
     return key.encrypt(data)
 
 

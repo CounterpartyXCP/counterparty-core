@@ -33,9 +33,6 @@ def test_vector(
 ):
     """Test the outputs of unit test vector. If testing parse, execute the transaction data on test db."""
 
-    # disable arc4 mocking for vectors because we're too lazy to update all the vectors
-    config_context.update({"DISABLE_ARC4_MOCKING": True})
-
     with util_test.ConfigContext(**config_context):
         # force unit tests to always run against latest protocol changes
         from counterpartycore.test import conftest

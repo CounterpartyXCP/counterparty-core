@@ -3,7 +3,7 @@ import logging
 import struct
 from io import BytesIO
 
-from counterpartycore.lib import arc4, backend, config, ledger, message_type, p2sh, script, util
+from counterpartycore.lib import backend, config, ledger, message_type, p2sh, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
@@ -15,7 +15,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def arc4_decrypt(cyphertext, decoded_tx):
     """Un-obfuscate. Initialise key once per attempt."""
     vin_hash = binascii.unhexlify(decoded_tx["vin"][0]["hash"])
-    key = arc4.init_arc4(vin_hash)
+    key = util.init_arc4(vin_hash)
     return key.decrypt(cyphertext)
 
 

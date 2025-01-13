@@ -8,8 +8,9 @@ from urllib.parse import quote_plus as urlencode
 from termcolor import cprint
 
 from counterpartycore import server
-from counterpartycore.lib import bootstrap, config, sentry, setup
+from counterpartycore.lib import bootstrap, config, setup
 from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.tools import sentry
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

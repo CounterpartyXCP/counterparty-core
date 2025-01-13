@@ -847,7 +847,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "transaction_helper.transaction_outputs",
             "backend",
             "message_type",
-            "address",
+            "tools.address",
         ]
         or (
             tx_name == "composer"

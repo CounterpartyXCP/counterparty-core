@@ -15,6 +15,7 @@ from operator import itemgetter
 from urllib.parse import urlparse
 
 import requests
+from arc4 import ARC4
 from counterparty_rs import utils as pycoin_rs_utils
 
 from counterpartycore.lib import config, exceptions
@@ -729,3 +730,9 @@ def is_url(url):
         return all([result.scheme, result.netloc])
     except ValueError:
         return False
+
+
+def init_arc4(seed):
+    if isinstance(seed, str):
+        seed = binascii.unhexlify(seed)
+    return ARC4(seed)

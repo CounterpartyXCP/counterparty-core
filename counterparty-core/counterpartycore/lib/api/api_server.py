@@ -19,7 +19,6 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
     script,
-    sentry,
     util,
 )
 from counterpartycore.lib.api import api_watcher, dbbuilder, queries, wsgi
@@ -32,6 +31,7 @@ from counterpartycore.lib.api.util import (
     to_json,
 )
 from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
+from counterpartycore.lib.tools import sentry
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth
 from sentry_sdk import capture_exception

@@ -3,7 +3,7 @@ import binascii
 from counterpartycore.lib import config
 
 ADDRESS_VECTOR = {
-    "address": {
+    "tools.address": {
         "pack": [
             {
                 "config_context": {"ADDRESSVERSION": config.ADDRESSVERSION_MAINNET},

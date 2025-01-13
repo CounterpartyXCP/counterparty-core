@@ -4,7 +4,6 @@ import logging
 import struct
 
 from counterpartycore.lib import (
-    address,
     config,
     database,
     exceptions,
@@ -13,6 +12,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.exceptions import *  # noqa: F403
+from counterpartycore.lib.tools import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

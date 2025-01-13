@@ -20,8 +20,8 @@ from counterpartycore.lib import (
     message_type,
     util,
 )
-from counterpartycore.lib.address import pack as address_pack
-from counterpartycore.lib.address import unpack as address_unpack
+from counterpartycore.lib.tools.address import pack as address_pack
+from counterpartycore.lib.tools.address import unpack as address_unpack
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

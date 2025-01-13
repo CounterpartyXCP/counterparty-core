@@ -16,7 +16,7 @@ from bitcoinutils.keys import P2wpkhAddress
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
-from counterpartycore.lib import arc4, config, database
+from counterpartycore.lib import config, database, util
 
 setup("regtest")
 
@@ -146,7 +146,7 @@ class RegtestNode:
             if messsage_id is not None:
                 tx_data += struct.pack(config.SHORT_TXTYPE_FORMAT, messsage_id)
             tx_data += data
-            key = arc4.init_arc4(binascii.unhexlify(utxo["txid"]))
+            key = util.init_arc4(binascii.unhexlify(utxo["txid"]))
             encrypted_data = key.encrypt(data)
             tx_outputs.append(TxOutput(0, Script(["OP_RETURN", b_to_h(encrypted_data)])))
 
@@ -829,7 +829,7 @@ class RegtestNode:
                 break
 
         data = binascii.unhexlify(data)
-        key = arc4.init_arc4(binascii.unhexlify(selected_utxo["txid"]))
+        key = util.init_arc4(binascii.unhexlify(selected_utxo["txid"]))
         data = key.encrypt(data)
         data = binascii.hexlify(data).decode("utf-8")
 

@@ -1,26 +1,16 @@
 import logging
 
 import bitcoin
-
 from counterpartycore.lib import config, exceptions, script  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-
-def address_scriptpubkey(address):
-    try:
-        bech32 = bitcoin.bech32.CBech32Data(address)
-        return b"".join([b"\x00\x14", bech32.to_bytes()])
-    except Exception as e:  # noqa: F841
-        bs58 = bitcoin.base58.decode(address)[1:-4]
-        return b"".join([b"\x76\xa9\x14", bs58, b"\x88\xac"])
 
 
 def pack(address):
     """
     Converts a base58 bitcoin address into a 21 byte bytes object
     """
-    from .util import enabled  # Here to account for test mock changes
+    from counterpartycore.lib.util import enabled  # Here to account for test mock changes
 
     if enabled("segwit_support"):
         try:
@@ -54,7 +44,7 @@ def unpack(short_address_bytes):
     """
     Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
     """
-    from .util import enabled  # Here to account for test mock changes
+    from counterpartycore.lib.util import enabled  # Here to account for test mock changes
 
     if short_address_bytes == b"":
         raise exceptions.UnpackError

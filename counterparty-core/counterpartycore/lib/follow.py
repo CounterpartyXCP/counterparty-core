@@ -18,10 +18,10 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
     mempool,
-    sentry,
     util,
 )
 from counterpartycore.lib.telemetry.oneshot import TelemetryOneShot
+from counterpartycore.lib.tools import sentry
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

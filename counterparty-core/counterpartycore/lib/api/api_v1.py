@@ -15,7 +15,6 @@ import re
 import threading
 import time
 
-import counterpartycore.lib.sentry as sentry  # noqa: F401
 import flask
 import jsonrpc
 from counterpartycore.lib import (
@@ -55,6 +54,7 @@ from counterpartycore.lib.telemetry.util import (  # noqa: E402
     is_docker,
     is_force_enabled,
 )
+from counterpartycore.lib.tools import sentry
 from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher
