@@ -1,4 +1,4 @@
-from ..params import (
+from counterpartycore.test.fixtures.params import (
     ADDR,
     DP,
 )

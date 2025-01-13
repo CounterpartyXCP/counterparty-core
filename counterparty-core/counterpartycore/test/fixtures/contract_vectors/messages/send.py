@@ -1,14 +1,13 @@
 import binascii
 
 from counterpartycore.lib import exceptions
-
-from ..params import (
+from counterpartycore.test.fixtures.params import (
     ADDR,
     MULTISIGADDR,
     P2SH_ADDR,
     P2WPKH_ADDR,
 )
-from ..params import DEFAULT_PARAMS as DP
+from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP
 
 SEND_VECTOR = {
     "send": {

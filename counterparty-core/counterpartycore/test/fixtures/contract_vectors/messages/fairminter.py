@@ -1,9 +1,9 @@
 from decimal import Decimal
 
-from ..params import (
+from counterpartycore.test.fixtures.params import (
     ADDR,
 )
-from ..params import DEFAULT_PARAMS as DP
+from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP
 
 # source
 # asset

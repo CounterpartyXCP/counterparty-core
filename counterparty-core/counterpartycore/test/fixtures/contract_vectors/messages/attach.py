@@ -1,6 +1,5 @@
 from counterpartycore.lib import config, exceptions
-
-from ..params import ADDR, DP
+from counterpartycore.test.fixtures.params import ADDR, DP
 
 UTXO_1 = "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:1"
 UTXO_2 = "e219be68972de7df99122a0213d7be2f597c14fa48b55457a81641583099fea4:0"

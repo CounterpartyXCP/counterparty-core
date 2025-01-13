@@ -82,7 +82,7 @@ def validate(address, allow_p2sh=True):
 
 def base58_encode(binary):
     """Encode the address in base58."""
-    # Convert big‐endian bytes to integer
+    # Convert big-endian bytes to integer
     n = int("0x0" + util.hexlify(binary), 16)
 
     # Divide that integer into base58
@@ -192,7 +192,7 @@ def base58_check_decode(s, version):
 
 
 def is_multisig(address):
-    """Check if the address is multi‐signature."""
+    """Check if the address is multi-signature."""
     array = address.split("_")
     return len(array) > 1
 
@@ -230,7 +230,7 @@ def make_canonical(address):
             [base58_check_decode(pubkeyhash, config.ADDRESSVERSION) for pubkeyhash in pubkeyhashes]
         except Base58Error:
             raise MultiSigAddressError(  # noqa: B904
-                "Multi‐signature address must use PubKeyHashes, not public keys."
+                "Multi-signature address must use PubKeyHashes, not public keys."
             )
         return construct_array(signatures_required, pubkeyhashes, signatures_possible)
     else:
@@ -238,7 +238,7 @@ def make_canonical(address):
 
 
 def test_array(signatures_required, pubs, signatures_possible):
-    """Check if multi‐signature data is valid."""
+    """Check if multi-signature data is valid."""
     try:
         signatures_required, signatures_possible = (
             int(signatures_required),
@@ -254,18 +254,18 @@ def test_array(signatures_required, pubs, signatures_possible):
         if "_" in pubkey:
             raise MultiSigAddressError("Invalid characters in pubkeys/pubkeyhashes.")
     if signatures_possible != len(pubs):
-        raise InputError("Incorrect number of pubkeys/pubkeyhashes in multi‐signature address.")
+        raise InputError("Incorrect number of pubkeys/pubkeyhashes in multi-signature address.")
 
 
 def construct_array(signatures_required, pubs, signatures_possible):
-    """Create a multi‐signature address."""
+    """Create a multi-signature address."""
     test_array(signatures_required, pubs, signatures_possible)
     address = "_".join([str(signatures_required)] + sorted(pubs) + [str(signatures_possible)])
     return address
 
 
 def extract_array(address):
-    """Extract data from multi‐signature address."""
+    """Extract data from multi-signature address."""
     assert is_multisig(address)
     array = address.split("_")
     signatures_required, pubs, signatures_possible = array[0], sorted(array[1:-1]), array[-1]
@@ -278,7 +278,7 @@ def pubkeyhash_array(address):
     signatures_required, pubs, signatures_possible = extract_array(address)
     if not all([is_pubkeyhash(pub) for pub in pubs]):
         raise MultiSigAddressError(
-            "Invalid PubKeyHashes. Multi‐signature address must use PubKeyHashes, not public keys."
+            "Invalid PubKeyHashes. Multi-signature address must use PubKeyHashes, not public keys."
         )
     pubkeyhashes = pubs
     return pubkeyhashes
@@ -393,12 +393,12 @@ def get_checksig(asm):
 
 
 def get_checkmultisig(asm):
-    # N‐of‐2
+    # N-of-2
     if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:3], asm[0]
         if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
             return pubkeys, signatures_required
-    # N‐of‐3
+    # N-of-3
     if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:4], asm[0]
         if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
