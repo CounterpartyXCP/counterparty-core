@@ -12,8 +12,10 @@ from bitcoin.core import key  # noqa: F401
 from bitstring import ReadError
 
 from counterpartycore.lib import config, exceptions, ledger, message_type, util
-
-from .utils.mpma_encoding import _decode_mpma_send_decode, _encode_mpma_send
+from counterpartycore.lib.messages.utils.mpma_encoding import (
+    _decode_mpma_send_decode,
+    _encode_mpma_send,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

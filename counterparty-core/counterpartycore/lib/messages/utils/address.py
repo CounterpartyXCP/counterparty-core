@@ -1,6 +1,7 @@
 import logging
 
 import bitcoin
+
 from counterpartycore.lib import config, exceptions, script  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)

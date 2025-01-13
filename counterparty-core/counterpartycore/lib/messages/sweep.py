@@ -12,7 +12,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.exceptions import *  # noqa: F403
-from counterpartycore.lib.tools import address
+from counterpartycore.lib.messages.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

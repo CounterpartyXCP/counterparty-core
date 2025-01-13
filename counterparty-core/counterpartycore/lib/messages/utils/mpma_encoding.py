@@ -5,7 +5,7 @@ import struct
 from bitstring import BitArray, ConstBitStream
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.tools import address
+from counterpartycore.lib.messages.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
