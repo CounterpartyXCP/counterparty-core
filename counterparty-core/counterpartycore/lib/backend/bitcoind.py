@@ -26,6 +26,22 @@ def should_retry():
     return True
 
 
+def get_json_response(response, retry=0):
+    try:
+        return response.json()
+    except json.decoder.JSONDecodeError as e:  # noqa: F841
+        if response.status_code == 200:
+            logger.warning(
+                f"Received invalid JSON with status 200 from Bitcoin Core: {response.text}. Retrying in 5 seconds..."
+            )
+            time.sleep(5)
+            if retry < 5:
+                return get_json_response(response, retry=retry + 1)
+        raise exceptions.BitcoindRPCError(  # noqa: B904
+            f"Received invalid JSON from backend with a response of {str(response.status_code)}: {response.text}"
+        ) from e
+
+
 def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
@@ -72,12 +88,7 @@ def rpc_call(payload, retry=0):
         raise broken_error
 
     # Handle json decode errors
-    try:
-        response_json = response.json()
-    except json.decoder.JSONDecodeError as e:  # noqa: F841
-        raise exceptions.BitcoindRPCError(  # noqa: B904
-            f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}"
-        ) from e
+    response_json = get_json_response(response)
 
     # Batch query returns a list
     if isinstance(response_json, list):
@@ -156,6 +167,8 @@ def safe_rpc(method, params):
             verify=(not config.BACKEND_SSL_NO_VERIFY),
             timeout=config.REQUESTS_TIMEOUT,
         ).json()
+        if "error" in response:
+            raise exceptions.BitcoindRPCError(response["error"]["message"])
         return response["result"]
     except (requests.exceptions.RequestException, json.decoder.JSONDecodeError, KeyError) as e:
         raise exceptions.BitcoindRPCError(f"Error calling {method}: {str(e)}") from e
@@ -376,7 +389,10 @@ def sendrawtransaction(signedhex: str):
     Proxy to `sendrawtransaction` RPC call.
     :param signedhex: The signed transaction hex.
     """
-    return rpc("sendrawtransaction", [signedhex])
+    try:
+        return rpc("sendrawtransaction", [signedhex])
+    except Exception as e:
+        raise exceptions.BitcoindRPCError(f"Error broadcasting transaction: {str(e)}") from e
 
 
 def decoderawtransaction(rawtx: str):

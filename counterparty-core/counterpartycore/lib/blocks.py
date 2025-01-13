@@ -24,7 +24,6 @@ from counterpartycore.lib import (  # noqa: E402
     gas,
     ledger,
     log,
-    mempool,
     message_type,
     util,
 )
@@ -1503,7 +1502,6 @@ def catch_up(db, check_asset_conservation=True):
                 fetcher = start_rsfetcher()
             else:
                 assert parsed_block_index == block_height
-            mempool.clean_mempool(db)
 
             parsed_blocks += 1
             formatted_duration = util.format_duration(time.time() - start_time)

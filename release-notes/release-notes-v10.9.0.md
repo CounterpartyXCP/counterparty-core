@@ -41,6 +41,9 @@ The following transaction construction parameters have been deprecated (but rema
 - Fix logic for blockchain reorgs of several blocks
 - Have the node terminate when the `follow` loop raises an error
 - Don't stop the server on "No such mempool or blockchain" error
+- Handle correctly RPC call errors from the API
+- Don't clean mempool on catchup
+- Retry 5 times when getting invalid Json with status 200 from Bitcoin Core
 
 
 ## Codebase
@@ -57,6 +60,7 @@ The following transaction construction parameters have been deprecated (but rema
 - Add `testnet4` support
 - Repeat the RPC call to Bitcoin Core indefinitely until it succeeds
 - Raise a specific `BlockOutOfRange` error when querying an unknown block
+- Add mainnet checkpoint for block 879058 and testnet4 checkpoint for block 64493
 
 ## API
 

@@ -138,7 +138,8 @@ class BlockchainWatcher:
                 blocks.catch_up(self.db, check_asset_conservation=False)
             else:
                 blocks.parse_new_block(self.db, decoded_block)
-            mempool.clean_mempool(self.db)
+            if not config.NO_MEMPOOL:
+                mempool.clean_mempool(self.db)
             if not config.NO_TELEMETRY:
                 TelemetryOneShot().submit()
 
