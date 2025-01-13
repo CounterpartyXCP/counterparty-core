@@ -60,7 +60,7 @@ The following transaction construction parameters have been deprecated (but rema
 - Add `testnet4` support
 - Repeat the RPC call to Bitcoin Core indefinitely until it succeeds
 - Raise a specific `BlockOutOfRange` error when querying an unknown block
-- Add mainnet checkoint for block 879058 and testnet4 checkpoint for block 64493
+- Add mainnet checkpoint for block 879058 and testnet4 checkpoint for block 64493
 
 ## API
 
