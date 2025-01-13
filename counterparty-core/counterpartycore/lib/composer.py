@@ -15,12 +15,12 @@ from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessI
 from counterpartycore.lib import (
     backend,
     config,
-    deserialize,
     exceptions,
     ledger,
     script,
     util,
 )
+from counterpartycore.lib.parser import deserialize
 
 MAX_INPUTS_SET = 100
 

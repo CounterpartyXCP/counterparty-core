@@ -1,5 +1,4 @@
 from counterparty_rs import indexer
-
 from counterpartycore.lib import config, util
 
 

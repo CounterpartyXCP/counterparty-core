@@ -16,19 +16,18 @@ from termcolor import colored, cprint
 
 from counterpartycore.lib import (
     backend,
-    blocks,
     bootstrap,
     check,
     config,
     database,
     exceptions,
-    follow,
     ledger,
     log,
     util,
 )
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1, dbbuilder
+from counterpartycore.lib.parser import blocks, follow
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal

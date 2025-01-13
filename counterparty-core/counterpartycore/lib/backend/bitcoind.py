@@ -10,7 +10,8 @@ from threading import current_thread
 import requests
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
-from counterpartycore.lib import config, deserialize, exceptions, script, util
+from counterpartycore.lib import config, exceptions, script, util
+from counterpartycore.lib.parser import deserialize
 from counterpartycore.lib.util import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)

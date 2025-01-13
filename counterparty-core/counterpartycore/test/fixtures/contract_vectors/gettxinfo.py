@@ -1,7 +1,8 @@
 import binascii
 
-from counterpartycore.lib import config, deserialize, exceptions
-from counterpartycore.lib.gettxinfo import SighashFlagError
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.parser import deserialize
+from counterpartycore.lib.parser.gettxinfo import SighashFlagError
 
 from ..params import DEFAULT_PARAMS as DP
 
@@ -9,7 +10,7 @@ config.NETWORK_NAME = "testnet"
 config.PREFIX = b"TESTXXXX"
 
 GETTXINFO_VECTOR = {
-    "gettxinfo": {
+    "parser.gettxinfo": {
         "get_tx_info": [
             # data in OP_CHECKSIG script
             {

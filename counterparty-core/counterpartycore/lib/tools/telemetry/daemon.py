@@ -3,8 +3,8 @@ import time
 import logging
 
 
-from counterpartycore.lib.telemetry.collectors.interface import TelemetryCollectorI
-from counterpartycore.lib.telemetry.clients.interface import TelemetryClientI
+from counterpartycore.lib.tools.telemetry.collectors.interface import TelemetryCollectorI
+from counterpartycore.lib.tools.telemetry.clients.interface import TelemetryClientI
 
 
 from counterpartycore.lib import config

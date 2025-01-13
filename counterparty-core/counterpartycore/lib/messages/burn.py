@@ -1,6 +1,7 @@
-#! /usr/bin/python3
+import csv
 import decimal
 import logging
+import os
 
 D = decimal.Decimal
 from fractions import Fraction  # noqa: E402
@@ -12,6 +13,13 @@ logger = logging.getLogger(config.LOGGER_NAME)
 f"""Burn {config.BTC} to earn {config.XCP} during a special period of time."""
 
 ID = 60
+
+MAINNET_BURNS = {}
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+with open(CURR_DIR + "/data/mainnet_burns.csv", "r") as f:
+    mainnet_burns_reader = csv.DictReader(f)
+    for line in mainnet_burns_reader:
+        MAINNET_BURNS[line["tx_hash"]] = line
 
 
 def initialise(db):
@@ -90,7 +98,7 @@ def compose(db, source: str, quantity: int, overburn: bool = False, skip_validat
     return (source, [(destination, quantity)], None)
 
 
-def parse(db, tx, mainnet_burns, message=None):
+def parse(db, tx, message=None):
     burn_parse_cursor = db.cursor()
 
     if util.is_test_network():
@@ -153,7 +161,7 @@ def parse(db, tx, mainnet_burns, message=None):
         # Mainnet burns are hard‐coded.
 
         try:
-            line = mainnet_burns[tx["tx_hash"]]
+            line = MAINNET_BURNS[tx["tx_hash"]]
         except KeyError:
             return
 

@@ -1,6 +1,6 @@
 import influxdb_client
 from counterpartycore.lib import config
-from counterpartycore.lib.telemetry.util import ID
+from counterpartycore.lib.tools.telemetry.util import ID
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 from .interface import TelemetryClientI

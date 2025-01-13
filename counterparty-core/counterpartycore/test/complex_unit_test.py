@@ -4,8 +4,9 @@ import tempfile
 import pytest
 from apsw import ConstraintError
 
-from counterpartycore.lib import blocks, ledger, util
+from counterpartycore.lib import ledger, util
 from counterpartycore.lib.api import api_v1
+from counterpartycore.lib.parser import blocks
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (

@@ -3,15 +3,11 @@ import tempfile
 
 import bitcoin as bitcoinlib
 
-from counterpartycore.lib import api, blocks, composer, exceptions, ledger, util  # noqa: F401
-from counterpartycore.test import (
-    conftest,  # noqa: F401
-    util_test,
-)
+from counterpartycore.lib import composer, util
+from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import ADDR
 
 # this is require near the top to do setup of the test suite
-from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: F401
 from counterpartycore.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"

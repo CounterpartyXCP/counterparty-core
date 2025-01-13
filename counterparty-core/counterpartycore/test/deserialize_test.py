@@ -5,7 +5,8 @@ from io import BytesIO
 import bitcoin as bitcoinlib
 import pytest
 
-from counterpartycore.lib import config, deserialize, gettxinfo, util
+from counterpartycore.lib import config, util
+from counterpartycore.lib.parser import deserialize, gettxinfo
 from counterpartycore.lib.util import inverse_hash
 
 

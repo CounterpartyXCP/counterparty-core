@@ -6,7 +6,6 @@ import logging
 import struct
 
 import bitcoin as bitcoinlib
-
 from counterpartycore.lib import config, exceptions, script
 
 logger = logging.getLogger(config.LOGGER_NAME)

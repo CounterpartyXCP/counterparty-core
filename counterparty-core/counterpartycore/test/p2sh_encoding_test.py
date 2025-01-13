@@ -7,24 +7,13 @@ import time
 import bitcoin as bitcoinlib
 import pytest
 
-# this is require near the top to do setup of the test suite
-from counterpartycore.test import (
-    conftest,  # noqa: F401
-    util_test,
-)
+from counterpartycore.lib import config, script, util
+from counterpartycore.lib.parser import deserialize, gettxinfo, p2sh
+from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import ADDR
 from counterpartycore.test.util_test import CURR_DIR
 
 logger = logging.getLogger(__name__)
-
-from counterpartycore.lib import (  # noqa: E402
-    config,
-    deserialize,
-    gettxinfo,
-    p2sh,
-    script,
-    util,
-)
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"

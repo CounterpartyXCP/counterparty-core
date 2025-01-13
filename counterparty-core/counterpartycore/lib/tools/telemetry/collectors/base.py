@@ -1,8 +1,8 @@
 import logging
 import os
 
-import counterpartycore.lib.telemetry.util as util
-from counterpartycore.lib import config, ledger  # noqa: I001, F4
+import counterpartycore.lib.tools.telemetry.util as util
+from counterpartycore.lib import config, ledger
 
 from .interface import TelemetryCollectorI
 

@@ -2,8 +2,8 @@ import logging
 
 from counterpartycore.lib import config
 from counterpartycore.lib.database import LedgerDBConnectionPool
-from counterpartycore.lib.telemetry.clients.influxdb import TelemetryClientInfluxDB
-from counterpartycore.lib.telemetry.collectors.influxdb import (
+from counterpartycore.lib.tools.telemetry.clients.influxdb import TelemetryClientInfluxDB
+from counterpartycore.lib.tools.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
 )
 from counterpartycore.lib.util import SingletonMeta

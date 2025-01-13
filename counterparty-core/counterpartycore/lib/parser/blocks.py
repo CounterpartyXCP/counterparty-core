@@ -5,10 +5,8 @@ Sieve blockchain for Counterparty transactions, and add them to the database.
 """
 
 import binascii
-import csv  # noqa: E402
 import decimal
-import logging  # noqa: E402
-import os
+import logging
 import struct
 import sys
 import time
@@ -19,7 +17,6 @@ from counterpartycore.lib import (  # noqa: E402
     check,
     config,
     database,
-    deserialize,
     exceptions,
     gas,
     ledger,
@@ -28,9 +25,7 @@ from counterpartycore.lib import (  # noqa: E402
     util,
 )
 from counterpartycore.lib.backend import rsfetcher
-from counterpartycore.lib.gettxinfo import get_tx_info  # noqa: E402
-
-from .messages import (  # noqa: E402
+from counterpartycore.lib.messages import (  # noqa: E402
     attach,
     bet,
     broadcast,
@@ -53,7 +48,9 @@ from .messages import (  # noqa: E402
     sweep,
     utxo,
 )
-from .messages.versions import enhanced_send, mpma  # noqa: E402
+from counterpartycore.lib.messages.versions import enhanced_send, mpma  # noqa: E402
+from counterpartycore.lib.parser import deserialize
+from counterpartycore.lib.parser.gettxinfo import get_tx_info  # noqa: E402
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -94,13 +91,6 @@ TABLES = ["balances", "credits", "debits", "messages"] + [
     "fairmints",
     "transaction_count",
 ]
-
-MAINNET_BURNS = {}
-CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(CURR_DIR + "/../mainnet_burns.csv", "r") as f:
-    mainnet_burns_reader = csv.DictReader(f)
-    for line in mainnet_burns_reader:
-        MAINNET_BURNS[line["tx_hash"]] = line
 
 
 def update_transaction(db, tx, supported):
@@ -167,7 +157,7 @@ def parse_tx(db, tx):
 
             # Burns.
             if tx["destination"] == config.UNSPENDABLE:
-                burn.parse(db, tx, MAINNET_BURNS)
+                burn.parse(db, tx)
                 return
 
             # Protocol change.

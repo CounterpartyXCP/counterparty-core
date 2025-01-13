@@ -21,9 +21,7 @@ from counterpartycore.lib import (
     backend,
     composer,
     config,
-    deserialize,
     exceptions,
-    gettxinfo,
     ledger,
     message_type,
     script,
@@ -49,12 +47,13 @@ from counterpartycore.lib.messages import (
     sweep,  # noqa: F401
 )
 from counterpartycore.lib.messages.versions import enhanced_send  # noqa: E402
-from counterpartycore.lib.telemetry.util import (  # noqa: E402
+from counterpartycore.lib.parser import deserialize, gettxinfo
+from counterpartycore.lib.tools import sentry
+from counterpartycore.lib.tools.telemetry.util import (  # noqa: E402
     get_uptime,
     is_docker,
     is_force_enabled,
 )
-from counterpartycore.lib.tools import sentry
 from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher

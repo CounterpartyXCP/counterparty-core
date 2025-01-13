@@ -14,7 +14,6 @@ import os
 import pprint
 import re
 import sys
-import tempfile  # noqa: F401
 import time
 
 import appdirs
@@ -25,7 +24,26 @@ import pytest
 from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
-from pycoin.coins.bitcoin import Tx  # noqa: F401
+
+from counterpartycore import server  # noqa: E402
+from counterpartycore.lib import (  # noqa: E402
+    check,
+    composer,  # noqa
+    config,
+    database,
+    exceptions,
+    ledger,
+    messages,
+    util,
+)
+from counterpartycore.lib.api.util import to_json  # noqa: E402
+from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
+from counterpartycore.lib.parser import blocks, deserialize, gettxinfo
+from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
+from counterpartycore.test.fixtures.scenarios import (
+    INTEGRATION_SCENARIOS,
+    standard_scenarios_params,
+)
 
 setup("testnet")
 
@@ -34,27 +52,6 @@ CURR_DIR = os.path.dirname(
 )
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, "..")))
 
-from counterpartycore import server  # noqa: E402
-from counterpartycore.lib import (  # noqa: E402
-    blocks,
-    check,
-    composer,  # noqa
-    config,
-    database,
-    deserialize,
-    exceptions,
-    gettxinfo,
-    ledger,
-    messages,
-    util,
-)
-from counterpartycore.lib.api.util import to_json  # noqa: E402
-from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
-from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
-from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
-    INTEGRATION_SCENARIOS,
-    standard_scenarios_params,
-)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal

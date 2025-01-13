@@ -1,8 +1,8 @@
 import time
 from unittest.mock import MagicMock, patch
 
-from counterpartycore.lib.telemetry.collectors.base import TelemetryCollectorBase
-from counterpartycore.lib.telemetry.daemon import TelemetryDaemon
+from counterpartycore.lib.tools.telemetry.collectors.base import TelemetryCollectorBase
+from counterpartycore.lib.tools.telemetry.daemon import TelemetryDaemon
 
 
 class TestTelemetryDaemon:
@@ -36,8 +36,8 @@ class TestTelemetryDaemon:
 
 
 class TestTelemetryCollectorBase:
-    @patch("counterpartycore.lib.telemetry.util.config")
-    @patch("counterpartycore.lib.telemetry.collectors.base.ledger")
+    @patch("counterpartycore.lib.tools.telemetry.util.config")
+    @patch("counterpartycore.lib.tools.telemetry.collectors.base.ledger")
     def test_collect(self, mock_ledger, mock_config):
         mock_db = MagicMock()
         mock_ledger.last_message.return_value = {"block_index": 12345}
@@ -63,8 +63,8 @@ class TestTelemetryCollectorBase:
         assert isinstance(data["dockerized"], bool)  # noqa: E712
         assert data["force_enabled"] == False  # noqa: E712
 
-    @patch("counterpartycore.lib.telemetry.collectors.base.ledger")
-    @patch("counterpartycore.lib.telemetry.collectors.base.os.path.exists")
+    @patch("counterpartycore.lib.tools.telemetry.collectors.base.ledger")
+    @patch("counterpartycore.lib.tools.telemetry.collectors.base.os.path.exists")
     def test_collect_with_docker(self, mock_exists, mock_ledger):
         mock_db = MagicMock()
         mock_exists.return_value = True

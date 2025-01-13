@@ -1,7 +1,7 @@
 from ..params import DP
 
 BLOCKS_VECTOR = {
-    "blocks": {
+    "parser.blocks": {
         "parse_tx": [
             {
                 "in": (
