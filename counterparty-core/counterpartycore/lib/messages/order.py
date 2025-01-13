@@ -4,15 +4,14 @@ import decimal
 import logging
 import struct
 
-from counterpartycore.lib import (  # noqa: F401
+from counterpartycore.lib import (
     config,
     database,
     exceptions,
     ledger,
-    log,
-    message_type,
     util,
 )
+from counterpartycore.lib.parser import message_type
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal

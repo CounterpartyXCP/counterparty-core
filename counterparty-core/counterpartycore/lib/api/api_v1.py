@@ -23,7 +23,6 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    message_type,
     script,
     util,
 )
@@ -47,7 +46,7 @@ from counterpartycore.lib.messages import (
     sweep,  # noqa: F401
 )
 from counterpartycore.lib.messages.versions import enhanced_send  # noqa: E402
-from counterpartycore.lib.parser import deserialize, gettxinfo
+from counterpartycore.lib.parser import deserialize, gettxinfo, message_type
 from counterpartycore.lib.tools import sentry
 from counterpartycore.lib.tools.telemetry.util import (  # noqa: E402
     get_uptime,

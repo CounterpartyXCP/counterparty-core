@@ -18,10 +18,11 @@ import requests
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
 from counterpartycore import server
-from counterpartycore.lib import config, database, exceptions, ledger, log, script, util
+from counterpartycore.lib import config, database, exceptions, ledger, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.cli import log
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -637,7 +638,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         return tx_hex
 
     monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
-    monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
+    monkeypatch.setattr("counterpartycore.lib.cli.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
     monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)

@@ -9,13 +9,12 @@ import zmq
 import zmq.asyncio
 from counterpartycore.lib import (
     backend,
-    check,
     config,
     exceptions,
     ledger,
     util,
 )
-from counterpartycore.lib.parser import blocks, deserialize, mempool
+from counterpartycore.lib.parser import blocks, check, deserialize, mempool
 from counterpartycore.lib.tools import sentry
 from counterpartycore.lib.tools.telemetry.oneshot import TelemetryOneShot
 from sentry_sdk import capture_exception

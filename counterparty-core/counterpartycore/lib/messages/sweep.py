@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 import logging
 import struct
 
@@ -8,11 +6,11 @@ from counterpartycore.lib import (
     database,
     exceptions,
     ledger,
-    message_type,
     util,
 )
 from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.messages.utils import address
+from counterpartycore.lib.parser import message_type
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

@@ -4,7 +4,6 @@ import sys
 import warnings
 
 import requests
-
 from counterpartycore.lib import config, database, ledger, util  # noqa: F401
 
 logger = logging.getLogger(config.LOGGER_NAME)

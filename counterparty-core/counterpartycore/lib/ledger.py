@@ -6,7 +6,8 @@ import time
 from contextlib import contextmanager
 from decimal import Decimal as D
 
-from counterpartycore.lib import backend, config, database, exceptions, log, util
+from counterpartycore.lib import backend, config, database, exceptions, util
+from counterpartycore.lib.cli import log
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

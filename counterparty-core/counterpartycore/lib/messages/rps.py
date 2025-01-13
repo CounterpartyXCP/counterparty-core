@@ -21,11 +21,10 @@ import json
 import logging
 import os
 
-from counterpartycore.lib import (  # noqa: F401
+from counterpartycore.lib import (
     config,
     database,
     ledger,
-    log,
     util,
 )
 

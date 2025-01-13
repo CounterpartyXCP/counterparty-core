@@ -6,13 +6,12 @@ from counterpartycore.lib import (
     composer,
     config,
     exceptions,
-    message_type,
     messages,
     util,
 )
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
-from counterpartycore.lib.parser import deserialize, gettxinfo
+from counterpartycore.lib.parser import deserialize, gettxinfo, message_type
 
 D = decimal.Decimal
 

@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 """
 Datastreams are identified by the address that publishes them, and referenced
 in transaction outputs.
@@ -13,19 +11,19 @@ Expiring a bet match doesn’t re‐open the constituent bets. (So all bets may 
 """
 
 import decimal
+import logging
 import struct
 
-D = decimal.Decimal
-import logging  # noqa: E402
-
-from counterpartycore.lib import (  # noqa: E402
+from counterpartycore.lib import (
     config,
     database,
     exceptions,
     ledger,
-    message_type,
     util,
 )
+from counterpartycore.lib.parser import message_type
+
+D = decimal.Decimal
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

@@ -1,21 +1,16 @@
-#! /usr/bin/python3
-
-import binascii  # noqa: F401
-import json  # noqa: F401
 import logging
-import math  # noqa: F401
 import struct
 from functools import reduce
 from itertools import groupby
 
-from bitcoin.core import key  # noqa: F401
 from bitstring import ReadError
 
-from counterpartycore.lib import config, exceptions, ledger, message_type, util
+from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages.utils.mpma_encoding import (
     _decode_mpma_send_decode,
     _encode_mpma_send,
 )
+from counterpartycore.lib.parser import message_type
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

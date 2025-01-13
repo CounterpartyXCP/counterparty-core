@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 """
 Allow simultaneous lock and transfer.
 """
@@ -8,7 +6,8 @@ import decimal
 import logging
 import struct
 
-from counterpartycore.lib import config, database, exceptions, ledger, message_type, util
+from counterpartycore.lib import config, database, exceptions, ledger, util
+from counterpartycore.lib.parser import message_type
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal

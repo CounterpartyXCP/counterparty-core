@@ -14,16 +14,14 @@ from datetime import timedelta
 
 from counterpartycore.lib import (  # noqa: E402
     backend,
-    check,
     config,
     database,
     exceptions,
     ledger,
-    log,
-    message_type,
     util,
 )
 from counterpartycore.lib.backend import rsfetcher
+from counterpartycore.lib.cli import log
 from counterpartycore.lib.messages import (  # noqa: E402
     attach,
     bet,
@@ -49,7 +47,7 @@ from counterpartycore.lib.messages import (  # noqa: E402
     utxo,
 )
 from counterpartycore.lib.messages.versions import enhanced_send, mpma  # noqa: E402
-from counterpartycore.lib.parser import deserialize
+from counterpartycore.lib.parser import check, deserialize, message_type
 from counterpartycore.lib.parser.gettxinfo import get_tx_info  # noqa: E402
 
 D = decimal.Decimal

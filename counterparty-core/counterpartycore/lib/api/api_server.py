@@ -13,7 +13,6 @@ import requests
 from bitcoin.wallet import CBitcoinAddressError
 from counterpartycore import server
 from counterpartycore.lib import (
-    check,
     config,
     database,
     exceptions,
@@ -31,6 +30,7 @@ from counterpartycore.lib.api.util import (
     to_json,
 )
 from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
+from counterpartycore.lib.parser import check
 from counterpartycore.lib.tools import sentry
 from flask import Flask, request
 from flask_httpauth import HTTPBasicAuth

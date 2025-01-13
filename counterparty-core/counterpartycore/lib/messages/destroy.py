@@ -1,12 +1,11 @@
-#! /usr/bin/python3
-
 """Destroy a quantity of an asset."""
 
 import logging
 import struct
 
-from counterpartycore.lib import config, database, ledger, message_type, script, util
+from counterpartycore.lib import config, database, ledger, script, util
 from counterpartycore.lib.exceptions import *  # noqa: F403
+from counterpartycore.lib.parser import message_type
 from counterpartycore.lib.script import AddressError
 
 logger = logging.getLogger(config.LOGGER_NAME)

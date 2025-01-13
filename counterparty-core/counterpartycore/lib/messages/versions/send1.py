@@ -1,12 +1,11 @@
-#! /usr/bin/python3
-
 """Create and parse 'send'-type messages."""
 
 import logging
 import struct
 
-from ... import config, exceptions, ledger, message_type, util
-from .. import dispense
+from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib.messages import dispense
+from counterpartycore.lib.parser import message_type
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

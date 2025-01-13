@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-#
 # What is a dispenser?
 #
 # A dispenser is a type of order where the holder address gives out a given amount
@@ -17,11 +15,11 @@ from counterpartycore.lib import (
     database,
     exceptions,
     ledger,
-    message_type,
     util,
 )
 from counterpartycore.lib.messages.utils.address import pack as address_pack
 from counterpartycore.lib.messages.utils.address import unpack as address_unpack
+from counterpartycore.lib.parser import message_type
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

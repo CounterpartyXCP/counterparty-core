@@ -3,11 +3,11 @@ import logging
 import struct
 from io import BytesIO
 
-from counterpartycore.lib import backend, config, ledger, message_type, script, util
+from counterpartycore.lib import backend, config, ledger, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
-from counterpartycore.lib.parser import p2sh
+from counterpartycore.lib.parser import message_type, p2sh
 from counterpartycore.lib.util import inverse_hash
 
 logger = logging.getLogger(config.LOGGER_NAME)

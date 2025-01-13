@@ -27,7 +27,6 @@ from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
 
 from counterpartycore import server  # noqa: E402
 from counterpartycore.lib import (  # noqa: E402
-    check,
     composer,  # noqa
     config,
     database,
@@ -38,7 +37,7 @@ from counterpartycore.lib import (  # noqa: E402
 )
 from counterpartycore.lib.api.util import to_json  # noqa: E402
 from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
-from counterpartycore.lib.parser import blocks, deserialize, gettxinfo
+from counterpartycore.lib.parser import blocks, check, deserialize, gettxinfo
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
 from counterpartycore.test.fixtures.scenarios import (
     INTEGRATION_SCENARIOS,
@@ -843,7 +842,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "transaction_helper.common_serializer",
             "transaction_helper.transaction_outputs",
             "backend",
-            "message_type",
+            "parser.message_type",
             "messages.utils.address",
         ]
         or (

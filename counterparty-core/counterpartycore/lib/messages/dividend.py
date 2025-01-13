@@ -1,21 +1,19 @@
-#! /usr/bin/python3
-
 """Pay out dividends."""
 
 import decimal
+import logging
 import struct
 
-D = decimal.Decimal
-import logging  # noqa: E402
-
-from counterpartycore.lib import (  # noqa: E402
+from counterpartycore.lib import (
     config,
     database,
     exceptions,
     ledger,
-    message_type,
     util,
 )
+from counterpartycore.lib.parser import message_type
+
+D = decimal.Decimal
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

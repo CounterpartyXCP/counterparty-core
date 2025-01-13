@@ -6,7 +6,8 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import config, database, exceptions, ledger, message_type
+from counterpartycore.lib import config, database, exceptions, ledger
+from counterpartycore.lib.parser import message_type
 
 from . import bet, order
 

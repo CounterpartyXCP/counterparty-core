@@ -8,9 +8,10 @@ import threading
 import gunicorn.app.base
 import waitress
 import waitress.server
-from counterpartycore.lib import config, database, ledger, log, util
+from counterpartycore.lib import config, database, ledger, util
 from counterpartycore.lib.api import api_watcher
 from counterpartycore.lib.api.util import BackendHeight
+from counterpartycore.lib.cli import log
 from gunicorn import util as gunicorn_util
 from gunicorn.arbiter import Arbiter
 from gunicorn.errors import AppImportError

@@ -3,9 +3,10 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, message_type, util
+from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.messages.versions import send1
+from counterpartycore.lib.parser import message_type
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

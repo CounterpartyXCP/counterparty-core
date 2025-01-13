@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from counterpartycore.lib import check, exceptions  # noqa: F401
+from counterpartycore.lib.parser import check
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (

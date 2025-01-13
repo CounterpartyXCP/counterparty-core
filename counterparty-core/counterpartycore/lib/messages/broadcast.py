@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 """
 Broadcast a message, with or without a price.
 
@@ -22,24 +20,24 @@ because it is stored as a four‐byte integer, it may not be greater than about
 """
 
 import decimal
+import logging
 import struct
+from fractions import Fraction
 
-D = decimal.Decimal
-import logging  # noqa: E402
-from fractions import Fraction  # noqa: E402
+from bitcoin.core import VarIntSerializer
 
-from bitcoin.core import VarIntSerializer  # noqa: E402
-
-from counterpartycore.lib import (  # noqa: E402
+from counterpartycore.lib import (
     config,
     database,
     exceptions,
     ledger,
-    message_type,
     util,
 )
+from counterpartycore.lib.parser import message_type
 
-from . import bet  # noqa: E402
+from . import bet
+
+D = decimal.Decimal
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
