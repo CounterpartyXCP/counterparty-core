@@ -156,6 +156,8 @@ def safe_rpc(method, params):
             verify=(not config.BACKEND_SSL_NO_VERIFY),
             timeout=config.REQUESTS_TIMEOUT,
         ).json()
+        if "error" in response:
+            raise exceptions.BitcoindRPCError(response["error"]["message"])
         return response["result"]
     except (requests.exceptions.RequestException, json.decoder.JSONDecodeError, KeyError) as e:
         raise exceptions.BitcoindRPCError(f"Error calling {method}: {str(e)}") from e
@@ -376,7 +378,10 @@ def sendrawtransaction(signedhex: str):
     Proxy to `sendrawtransaction` RPC call.
     :param signedhex: The signed transaction hex.
     """
-    return rpc("sendrawtransaction", [signedhex])
+    try:
+        return rpc("sendrawtransaction", [signedhex])
+    except Exception as e:
+        raise exceptions.BitcoindRPCError(f"Error broadcasting transaction: {str(e)}") from e
 
 
 def decoderawtransaction(rawtx: str):
