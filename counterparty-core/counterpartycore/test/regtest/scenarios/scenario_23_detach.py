@@ -173,4 +173,52 @@ SCENARIO = [
             }
         ],
     },
+    {
+        "title": "Attach DETACHA asset to UTXO",
+        "transaction": "attach",
+        "source": "$ADDRESS_10",
+        "params": {
+            "asset": "DETACHA",
+            "quantity": 1 * 10**8,
+        },
+        "set_variables": {
+            "ATTACH2_DETACHA_TX_HASH": "$TX_HASH",
+        },
+        "controls": [],
+    },
+    {
+        "title": "Move no confirmation",
+        "transaction": "movetoutxo",
+        "no_confirmation": True,
+        "source": "$ATTACH2_DETACHA_TX_HASH:0",
+        "params": {
+            "destination": "$ADDRESS_9",
+            "quantity": 1 * 10**8,
+        },
+        "controls": [
+            {
+                "url": "mempool/events?event_name=UTXO_MOVE",
+                "result": [
+                    {
+                        "event": "UTXO_MOVE",
+                        "params": {
+                            "asset": "DETACHA",
+                            "block_index": 9999999,
+                            "destination": "$TX_HASH:0",
+                            "destination_address": "$ADDRESS_9",
+                            "msg_index": 0,
+                            "quantity": 100000000,
+                            "send_type": "move",
+                            "source": "$ATTACH2_DETACHA_TX_HASH:0",
+                            "source_address": "$ADDRESS_10",
+                            "status": "valid",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": "$TX_INDEX",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    }
+                ],
+            }
+        ],
+    },
 ]
