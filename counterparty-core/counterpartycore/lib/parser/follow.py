@@ -19,6 +19,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.parser import blocks, check, deserialize, mempool
 from counterpartycore.lib.tools import sentry
 from counterpartycore.lib.tools.telemetry.oneshot import TelemetryOneShot
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -335,7 +336,7 @@ def get_raw_mempool(db):
         txhash_list.append(txid)
         timestamps[txid] = tx_info["time"]
 
-    chunks = util.chunkify(txhash_list, config.MAX_RPC_BATCH_SIZE)
+    chunks = helpers.chunkify(txhash_list, config.MAX_RPC_BATCH_SIZE)
 
     logger.debug(f"Found {len(txhash_list)} transaction(s) in the raw mempool...")
     return chunks, timestamps
@@ -372,7 +373,7 @@ class RawMempoolParser(threading.Thread):
             self.join()
 
 
-class NotSupportedTransactionsCache(metaclass=util.SingletonMeta):
+class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.not_suppported_txs = []
         self.cache_path = os.path.join(

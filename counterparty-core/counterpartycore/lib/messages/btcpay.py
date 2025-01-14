@@ -10,6 +10,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -141,7 +142,7 @@ def unpack(message, return_dict=False):
             binascii.hexlify(tx0_hash_bytes).decode("utf-8"),
             binascii.hexlify(tx1_hash_bytes).decode("utf-8"),
         )
-        order_match_id = util.make_id(tx0_hash, tx1_hash)
+        order_match_id = helpers.make_id(tx0_hash, tx1_hash)
         status = "valid"
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         tx0_hash, tx1_hash, order_match_id = None, None, None

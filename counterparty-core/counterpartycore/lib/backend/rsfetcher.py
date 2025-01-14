@@ -9,8 +9,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from counterparty_rs import indexer
 
-from counterpartycore.lib import config, exceptions, util
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -28,7 +29,7 @@ def delete_database_directory():
         logger.debug(f"RSFetcher - Reset database at {config.FETCHER_DB}")
 
 
-class RSFetcher(metaclass=util.SingletonMeta):
+class RSFetcher(metaclass=helpers.SingletonMeta):
     thread_index_counter = 0  # Add a thread index counter
 
     def __init__(self, indexer_config=None):

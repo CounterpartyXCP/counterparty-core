@@ -20,6 +20,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.messages.utils.address import pack as address_pack
 from counterpartycore.lib.messages.utils.address import unpack as address_unpack
 from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -508,7 +509,7 @@ def calculate_oracle_fee(
     last_fee_multiplier = last_fee / config.UNIT
 
     # Format mainchainrate to ######.##
-    oracle_mainchainrate = util.satoshirate_to_fiat(mainchainrate)
+    oracle_mainchainrate = helpers.satoshirate_to_fiat(mainchainrate)
     oracle_mainchainrate_btc = oracle_mainchainrate / last_price
 
     # Calculate the total amount earned for dispenser and the fee
@@ -899,7 +900,7 @@ def parse(db, tx, message):
     cursor.close()
 
 
-class DispensableCache(metaclass=util.SingletonMeta):
+class DispensableCache(metaclass=helpers.SingletonMeta):
     def __init__(self, db):
         logger.debug("Initialising Dispensable Cache...")
         self.dispensable = ledger.get_all_dispensables(db)
@@ -925,7 +926,7 @@ def is_dispensable(db, address, amount):
             last_price, last_fee, last_fiat_label, last_updated = ledger.get_oracle_last_price(
                 db, next_dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
             )
-            fiatrate = util.satoshirate_to_fiat(next_dispenser["satoshirate"])
+            fiatrate = helpers.satoshirate_to_fiat(next_dispenser["satoshirate"])
             if fiatrate == 0 or last_price == 0:
                 return False
             if amount >= fiatrate / last_price:

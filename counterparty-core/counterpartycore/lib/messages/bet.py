@@ -23,6 +23,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.utils import helpers
 
 D = decimal.Decimal
 
@@ -659,7 +660,7 @@ def match(db, tx):
                     logger.debug("Skipping: zero backward quantity.")
                     continue
 
-            bet_match_id = util.make_id(tx0["tx_hash"], tx1["tx_hash"])  # noqa: F841
+            bet_match_id = helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])  # noqa: F841
 
             # Debit the order.
             # Counterwager remainings may be negative.
@@ -729,7 +730,7 @@ def match(db, tx):
 
             # Record bet fulfillment.
             bindings = {
-                "id": util.make_id(tx0["tx_hash"], tx["tx_hash"]),
+                "id": helpers.make_id(tx0["tx_hash"], tx["tx_hash"]),
                 "tx0_index": tx0["tx_index"],
                 "tx0_hash": tx0["tx_hash"],
                 "tx0_address": tx0["source"],

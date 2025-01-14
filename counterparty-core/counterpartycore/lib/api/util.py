@@ -22,6 +22,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import compose
+from counterpartycore.lib.utils import helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -154,7 +155,7 @@ def get_backend_height():
     return block_count + blocks_behind
 
 
-class BackendHeight(metaclass=util.SingletonMeta):
+class BackendHeight(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.backend_height = get_backend_height()
         self.last_update = time.time()
@@ -638,14 +639,14 @@ def inject_fiat_price(ledger_db, dispenser):
     if "satoshirate" not in dispenser:
         return dispenser
     if dispenser["oracle_address"] != None:  # noqa: E711
-        dispenser["fiat_price"] = util.satoshirate_to_fiat(dispenser["satoshirate"])
+        dispenser["fiat_price"] = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
         (
             dispenser["oracle_price"],
             _oracle_fee,
             dispenser["fiat_unit"],
             dispenser["oracle_price_last_updated"],
         ) = ledger.get_oracle_last_price(
-            ledger_db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
+            ledger_db, dispenser["oracle_address"], helpers.CURRENT_BLOCK_INDEX
         )
 
         if dispenser["oracle_price"] > 0:

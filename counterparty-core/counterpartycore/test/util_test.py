@@ -40,6 +40,7 @@ from counterpartycore.lib.api.util import to_json
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
 from counterpartycore.lib.parser import blocks, check, deserialize, gettxinfo
+from counterpartycore.lib.utils import helpers
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartycore.test.fixtures.scenarios import (
     INTEGRATION_SCENARIOS,
@@ -551,7 +552,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
         tx_inputs_hashes.update([vin["txid"] for vin in tx["vin"]])
 
     # chunk txs to avoid huge memory spikes
-    for tx_inputs_hashes_chunk in util.chunkify(
+    for tx_inputs_hashes_chunk in helpers.chunkify(
         list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE
     ):
         raw_transactions = _getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)

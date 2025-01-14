@@ -18,10 +18,9 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
 from counterpartycore.lib.parser import deserialize, utxosinfo
-from counterpartycore.lib.utils import multisig, opcodes, script
+from counterpartycore.lib.utils import helpers, multisig, opcodes, script
 
 MAX_INPUTS_SET = 100
 
@@ -243,7 +242,7 @@ def data_to_pubkey_pairs(data, arc4_key):
     # Two pubkeys, minus length byte, minus prefix, minus two nonces,
     # minus two sign bytes.
     chunk_size = (33 * 2) - 1 - len(config.PREFIX) - 2 - 2
-    data_array = util.chunkify(data, chunk_size)
+    data_array = helpers.chunkify(data, chunk_size)
     pubkey_pairs = []
     for data_part in data_array:
         # Get data (fake) public key.
@@ -326,7 +325,7 @@ def prepare_outputs(source, destinations, data, unspent_list, construct_params):
 ################
 
 
-class UTXOLocks(metaclass=util.SingletonMeta):
+class UTXOLocks(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.init()
 
@@ -369,7 +368,7 @@ def complete_unspent_list(unspent_list):
 
     # get missing data from Bitcoin Core
     if len(txhash_set) > 0:
-        txhash_list_chunks = util.chunkify(list(txhash_set), config.MAX_RPC_BATCH_SIZE)
+        txhash_list_chunks = helpers.chunkify(list(txhash_set), config.MAX_RPC_BATCH_SIZE)
         txs = {}
         for txhash_list in txhash_list_chunks:
             txs = txs | backend.bitcoind.getrawtransaction_batch(

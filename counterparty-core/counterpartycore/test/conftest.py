@@ -725,4 +725,4 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     class MockSingletonMeta:
         pass
 
-    monkeypatch.setattr("counterpartycore.lib.util.SingletonMeta", MockSingletonMeta)
+    monkeypatch.setattr("counterpartycore.lib.utils.helpers.SingletonMeta", MockSingletonMeta)

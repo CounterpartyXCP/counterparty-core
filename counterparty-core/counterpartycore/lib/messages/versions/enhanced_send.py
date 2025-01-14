@@ -7,6 +7,7 @@ from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.messages.versions import send1
 from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -89,7 +90,7 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
             results = ledger.get_addresses(db, address=destination)
             if results:
                 result = results[0]
-                if result and util.active_options(
+                if result and helpers.active_options(
                     result["options"], config.ADDRESS_OPTION_REQUIRE_MEMO
                 ):
                     if memo_bytes is None or (len(memo_bytes) == 0):

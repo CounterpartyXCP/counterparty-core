@@ -16,6 +16,7 @@ from termcolor import colored, cprint
 
 from counterpartycore.lib import config, util
 from counterpartycore.lib.api.util import to_json
+from counterpartycore.lib.utils import helpers
 
 logging.TRACE = logging.DEBUG - 5
 logging.addLevelName(logging.TRACE, "TRACE")
@@ -372,7 +373,7 @@ def shutdown():
     logging.shutdown()
 
 
-class ZmqPublisher(metaclass=util.SingletonMeta):
+class ZmqPublisher(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)

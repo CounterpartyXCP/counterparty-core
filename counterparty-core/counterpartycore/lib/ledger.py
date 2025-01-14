@@ -9,7 +9,7 @@ from decimal import Decimal as D
 from counterpartycore.lib import backend, config, database, exceptions, util
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.parser import check, protocol, utxosinfo
-from counterpartycore.lib.utils import assetnames
+from counterpartycore.lib.utils import assetnames, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -471,7 +471,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
     return balances[0]["quantity"]
 
 
-class UTXOBalancesCache(metaclass=util.SingletonMeta):
+class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
     def __init__(self, db):
         logger.debug("Initialising utxo balances cache...")
         sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
@@ -1044,7 +1044,7 @@ def asset_destroyed_total_no_cache(db, asset):
     return destroyed_total
 
 
-class AssetCache(metaclass=util.SingletonMeta):
+class AssetCache(metaclass=helpers.SingletonMeta):
     def __init__(self, db) -> None:
         self.assets = {}
         self.assets_total_issued = {}
@@ -1899,7 +1899,7 @@ def get_open_btc_orders(db, address):
     return cursor.fetchall()
 
 
-class OrdersCache(metaclass=util.SingletonMeta):
+class OrdersCache(metaclass=helpers.SingletonMeta):
     def __init__(self, db):
         logger.debug("Initialising orders cache...")
         self.last_cleaning_block_index = 0

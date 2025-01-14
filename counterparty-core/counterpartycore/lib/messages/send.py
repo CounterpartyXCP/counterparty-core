@@ -1,9 +1,10 @@
 import logging
 import time
 
-from counterpartycore.lib import config, database, exceptions, util
+from counterpartycore.lib import config, database, exceptions
 from counterpartycore.lib.messages.versions import enhanced_send, mpma, send1
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import helpers
 
 ID = send1.ID
 
@@ -253,7 +254,7 @@ def compose(
                         return mpma.compose(
                             db,
                             source,
-                            util.flat(zip(asset, destination, quantity, memo, memo_is_hex)),
+                            helpers.flat(zip(asset, destination, quantity, memo, memo_is_hex)),
                             None,
                             None,
                             skip_validation,
@@ -281,7 +282,7 @@ def compose(
                         return mpma.compose(
                             db,
                             source,
-                            util.flat(
+                            helpers.flat(
                                 zip(asset, destination, quantity, memo["list"], memo_is_hex["list"])
                             ),
                             memo["msg_wide"],
@@ -293,7 +294,7 @@ def compose(
                         return mpma.compose(
                             db,
                             source,
-                            util.flat(zip(asset, destination, quantity)),
+                            helpers.flat(zip(asset, destination, quantity)),
                             memo,
                             memo_is_hex,
                             skip_validation,

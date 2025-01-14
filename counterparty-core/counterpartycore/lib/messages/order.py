@@ -12,6 +12,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -672,7 +673,7 @@ def match(db, tx, block_index=None):
         # Sanity check. Should never happen.
         if tx0["status"] != "open":
             raise Exception(f"Order match is not open: {tx0}.")
-        order_match_id = util.make_id(tx0["tx_hash"], tx1["tx_hash"])
+        order_match_id = helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])
         if not block_index:
             block_index = max(
                 ledger.get_order_first_block_index(cursor, tx0["tx_hash"]),
@@ -686,10 +687,10 @@ def match(db, tx, block_index=None):
         tx0_get_remaining = tx0["get_remaining"]
 
         # Ignore previous matches. (Both directions, just to be sure.)
-        if ledger.get_order_match(db, id=util.make_id(tx0["tx_hash"], tx1["tx_hash"])):
+        if ledger.get_order_match(db, id=helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])):
             logger.trace("Skipping: previous match")
             continue
-        if ledger.get_order_match(db, id=util.make_id(tx1["tx_hash"], tx0["tx_hash"])):
+        if ledger.get_order_match(db, id=helpers.make_id(tx1["tx_hash"], tx0["tx_hash"])):
             logger.trace("Skipping: previous match")
             continue
 
@@ -931,7 +932,7 @@ def match(db, tx, block_index=None):
 
             # Record order match.
             bindings = {
-                "id": util.make_id(tx0["tx_hash"], tx["tx_hash"]),
+                "id": helpers.make_id(tx0["tx_hash"], tx["tx_hash"]),
                 "tx0_index": tx0["tx_index"],
                 "tx0_hash": tx0["tx_hash"],
                 "tx0_address": tx0["source"],

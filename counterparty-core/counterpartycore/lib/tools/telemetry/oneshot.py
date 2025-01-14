@@ -6,7 +6,7 @@ from counterpartycore.lib.tools.telemetry.clients.influxdb import TelemetryClien
 from counterpartycore.lib.tools.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
 )
-from counterpartycore.lib.util import SingletonMeta
+from counterpartycore.lib.utils.helpers import SingletonMeta
 from sentry_sdk import capture_exception
 
 logger = logging.getLogger(config.LOGGER_NAME)

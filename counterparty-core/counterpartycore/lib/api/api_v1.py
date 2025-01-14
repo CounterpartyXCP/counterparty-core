@@ -60,6 +60,7 @@ from counterpartycore.lib.tools.telemetry.util import (  # noqa: E402
     is_docker,
     is_force_enabled,
 )
+from counterpartycore.lib.utils import helpers
 
 D = decimal.Decimal
 
@@ -1037,14 +1038,14 @@ class APIServer(threading.Thread):
                     oracle_fiat_label = ""
 
                     if dispenser["oracle_address"] != None:  # noqa: E711
-                        fiat_price = util.satoshirate_to_fiat(dispenser["satoshirate"])
+                        fiat_price = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
                         (
                             oracle_price,
                             oracle_fee,
                             oracle_fiat_label,
                             oracle_price_last_updated,
                         ) = ledger.get_oracle_last_price(
-                            db, dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
+                            db, dispenser["oracle_address"], helpers.CURRENT_BLOCK_INDEX
                         )
 
                         if oracle_price > 0:

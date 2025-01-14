@@ -12,7 +12,7 @@ import sys
 import time
 from datetime import timedelta
 
-from counterpartycore.lib import (  # noqa: E402
+from counterpartycore.lib import (
     backend,
     config,
     database,
@@ -22,7 +22,7 @@ from counterpartycore.lib import (  # noqa: E402
 )
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.cli import log
-from counterpartycore.lib.messages import (  # noqa: E402
+from counterpartycore.lib.messages import (
     attach,
     bet,
     broadcast,
@@ -46,9 +46,10 @@ from counterpartycore.lib.messages import (  # noqa: E402
     sweep,
     utxo,
 )
-from counterpartycore.lib.messages.versions import enhanced_send, mpma  # noqa: E402
+from counterpartycore.lib.messages.versions import enhanced_send, mpma
 from counterpartycore.lib.parser import check, deserialize, message_type, protocol
-from counterpartycore.lib.parser.gettxinfo import get_tx_info  # noqa: E402
+from counterpartycore.lib.parser.gettxinfo import get_tx_info
+from counterpartycore.lib.utils import helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -1494,7 +1495,7 @@ def catch_up(db, check_asset_conservation=True):
                 assert parsed_block_index == block_height
 
             parsed_blocks += 1
-            formatted_duration = util.format_duration(time.time() - start_time)
+            formatted_duration = helpers.format_duration(time.time() - start_time)
             logger.debug(
                 f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
             )

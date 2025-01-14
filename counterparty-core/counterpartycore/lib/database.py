@@ -9,6 +9,7 @@ import psutil
 from termcolor import cprint
 
 from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib.utils import helpers
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
 
@@ -142,12 +143,12 @@ class APSWConnectionPool:
             db.close()
 
 
-class LedgerDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+class LedgerDBConnectionPool(APSWConnectionPool, metaclass=helpers.SingletonMeta):
     def __init__(self):
         super().__init__(config.DATABASE, "Ledger DB")
 
 
-class StateDBConnectionPool(APSWConnectionPool, metaclass=util.SingletonMeta):
+class StateDBConnectionPool(APSWConnectionPool, metaclass=helpers.SingletonMeta):
     def __init__(self):
         super().__init__(config.STATE_DATABASE, "API DB")
 

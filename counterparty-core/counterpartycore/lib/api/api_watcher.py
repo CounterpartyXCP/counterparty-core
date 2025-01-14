@@ -7,7 +7,7 @@ import time
 from counterpartycore.lib import config, database, exceptions
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.parser import utxosinfo
-from counterpartycore.lib.util import format_duration
+from counterpartycore.lib.utils.helpers import format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

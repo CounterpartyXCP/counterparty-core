@@ -74,7 +74,6 @@ def verify_signature(public_key_data, signature_path, snapshot_path):
             verified = gpg.verify_file(s, snapshot_path, close_file=False)
     finally:
         pass
-        # shutil.rmtree(temp_dir)
 
     return verified
 

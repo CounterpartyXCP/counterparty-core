@@ -5,6 +5,7 @@ from math import floor
 from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages import dispenser as dispenser_module
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -20,7 +21,7 @@ def get_must_give(db, dispenser, btc_amount, block_index=None):
             raise exceptions.NoPriceError(
                 f"No price available for this oracle {dispenser['oracle_address']} at block {block_index}"
             )
-        fiatrate = util.satoshirate_to_fiat(dispenser["satoshirate"])
+        fiatrate = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
         return int(floor(((btc_amount / config.UNIT) * last_price) / fiatrate))
 
     return int(floor(btc_amount / dispenser["satoshirate"]))

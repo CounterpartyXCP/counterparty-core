@@ -21,12 +21,12 @@ from counterpartycore.lib import (
     database,
     exceptions,
     ledger,
-    util,
 )
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1, dbbuilder
 from counterpartycore.lib.cli import bootstrap, log
 from counterpartycore.lib.parser import blocks, check, follow
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -523,7 +523,7 @@ def initialise_config(
     config.GUNICORN_WORKERS = gunicorn_workers
 
     if electrs_url:
-        if not util.is_url(electrs_url):
+        if not helpers.is_url(electrs_url):
             raise ConfigurationError("Invalid Electrs URL")
         config.ELECTRS_URL = electrs_url
     else:

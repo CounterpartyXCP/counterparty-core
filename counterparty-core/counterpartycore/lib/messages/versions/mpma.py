@@ -11,6 +11,7 @@ from counterpartycore.lib.messages.utils.mpma_encoding import (
     _encode_mpma_send,
 )
 from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -128,7 +129,7 @@ def compose(
     if memo_is_hex and not isinstance(memo_is_hex, bool):
         raise exceptions.ComposeError("`memo_is_hex` must be a boolean")
 
-    out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
+    out_balances = helpers.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
     for asset, quantity in out_balances:
         if protocol.enabled("mpma_subasset_support"):
             # resolve subassets

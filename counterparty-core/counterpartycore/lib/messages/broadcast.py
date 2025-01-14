@@ -34,6 +34,7 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.utils import helpers
 
 from . import bet
 
@@ -108,7 +109,7 @@ def validate_address_options(options):
         raise exceptions.OptionsError("options integer overflow")
     elif options > config.ADDRESS_OPTION_MAX_VALUE:
         raise exceptions.OptionsError("options out of range")
-    elif not util.active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
+    elif not helpers.active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
         raise exceptions.OptionsError("options not possible")
 
 
@@ -323,7 +324,7 @@ def parse(db, tx, message):
     )
     for bet_match in bet_matches:
         broadcast_bet_match_cursor = db.cursor()
-        bet_match_id = util.make_id(bet_match["tx0_hash"], bet_match["tx1_hash"])
+        bet_match_id = helpers.make_id(bet_match["tx0_hash"], bet_match["tx1_hash"])
         bet_match_status = None
 
         # Calculate total funds held in escrow and total fee to be paid if
@@ -536,7 +537,7 @@ def parse(db, tx, message):
 
         # Update the bet match’s status.
         if bet_match_status:
-            bet_match_id = util.make_id(bet_match["tx0_hash"], bet_match["tx1_hash"])
+            bet_match_id = helpers.make_id(bet_match["tx0_hash"], bet_match["tx1_hash"])
             ledger.update_bet_match_status(db, bet_match_id, bet_match_status)
 
             logger.info(
