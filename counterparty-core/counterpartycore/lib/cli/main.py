@@ -1,16 +1,15 @@
-#! /usr/bin/env python3
-
 import argparse
 import logging
 import os
 from urllib.parse import quote_plus as urlencode
+
+from termcolor import cprint
 
 from counterpartycore import server
 from counterpartycore.lib import config
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import bootstrap, setup
 from counterpartycore.lib.tools import sentry
-from termcolor import cprint
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
