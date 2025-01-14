@@ -1,8 +1,9 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.utils import address
+from counterpartycore.lib.parser import utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -13,7 +14,7 @@ def validate(source):
     problems = []
 
     # check if source is a UTXO
-    if not util.is_utxo_format(source):
+    if not utxosinfo.is_utxo_format(source):
         problems.append("source must be a UTXO")
 
     return problems
@@ -146,7 +147,7 @@ def parse(db, tx, message):
     destination = unpack(message)
 
     # get all inputs with balances
-    sources = util.get_sources_from_utxos_info(tx["utxos_info"])
+    sources = utxosinfo.get_sources_from_utxos_info(tx["utxos_info"])
 
     # detach assets from all the sources
     # IMPORTANT: that's mean we can't detach assets and move utxo in th same transaction

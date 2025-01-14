@@ -4,6 +4,7 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.utils import address
+from counterpartycore.lib.parser import utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -172,17 +173,17 @@ def parse(db, tx, message):
     # determine destination
     if destination_vout is None:
         # if no destination_vout is provided, we use the first non-OPT_RETURN output
-        destination = util.get_destination_from_utxos_info(tx["utxos_info"])
+        destination = utxosinfo.get_destination_from_utxos_info(tx["utxos_info"])
         if not destination:
             problems.append("no UTXO to attach to")
     else:
         # check if destination_vout is valid
-        outputs_count = util.get_outputs_count_from_utxos_info(tx["utxos_info"])
+        outputs_count = utxosinfo.get_outputs_count_from_utxos_info(tx["utxos_info"])
         if outputs_count and destination_vout > outputs_count - 1:
             problems.append("destination vout is greater than the number of outputs")
 
         # check if destination_vout is an OP_RETURN output
-        op_return_output = util.get_op_return_output_from_utxos_info(tx["utxos_info"])
+        op_return_output = utxosinfo.get_op_return_output_from_utxos_info(tx["utxos_info"])
         if op_return_output and destination_vout == op_return_output:
             problems.append("destination vout is an OP_RETURN output")
 

@@ -12,8 +12,8 @@ import requests
 from bitcoinutils.keys import PublicKey
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
-from counterpartycore.lib import config, exceptions, util
-from counterpartycore.lib.parser import deserialize
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.parser import deserialize, utxosinfo
 from counterpartycore.lib.util import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -279,7 +279,7 @@ def safe_get_utxo_address(utxo):
 
 
 def is_valid_utxo(utxo):
-    if not util.is_utxo_format(utxo):
+    if not utxosinfo.is_utxo_format(utxo):
         return False
     try:
         get_utxo_address_and_value(utxo)

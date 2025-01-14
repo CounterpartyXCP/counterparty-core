@@ -4,9 +4,8 @@ import struct
 from counterpartycore.lib import (
     config,
     messages,
-    util,
 )
-from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.parser import protocol, utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -107,7 +106,7 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
     if message_type_id == messages.utxo.ID:
         try:
             message_data = messages.utxo.unpack(message, return_dict=True)
-            if util.is_utxo_format(message_data["source"]):
+            if utxosinfo.is_utxo_format(message_data["source"]):
                 return "detach"
             return "attach"
         except Exception:

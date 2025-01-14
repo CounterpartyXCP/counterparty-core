@@ -8,7 +8,7 @@ from decimal import Decimal as D
 
 from counterpartycore.lib import backend, config, database, exceptions, util
 from counterpartycore.lib.cli import log
-from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.parser import protocol, utxosinfo
 from counterpartycore.lib.utils import assetnames
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -281,7 +281,7 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
 
     balance_address = address
     utxo = None
-    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         balance_address = None
         utxo = address
         if not util.PARSING_MEMPOOL and balance == 0:
@@ -332,7 +332,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     debit_address = address
     utxo = None
     utxo_address = None
-    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         debit_address = None
         utxo = address
         utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
@@ -367,7 +367,7 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
 
     balance_address = address
     utxo = None
-    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         balance_address = None
         utxo = address
         if not util.PARSING_MEMPOOL and balance > 0:
@@ -414,7 +414,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     credit_address = address
     utxo = None
     utxo_address = None
-    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         credit_address = None
         utxo = address
         utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
@@ -451,7 +451,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
     cursor = db.cursor()
 
     field_name = "address"
-    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         field_name = "utxo"
 
     query = f"""
@@ -504,7 +504,7 @@ def get_address_balances(db, address: str):
     cursor = db.cursor()
 
     field_name = "address"
-    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         field_name = "utxo"
 
     query = f"""
@@ -526,7 +526,7 @@ def get_address_assets(db, address):
     cursor = db.cursor()
 
     field_name = "address"
-    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         field_name = "utxo"
 
     query = f"""
@@ -544,7 +544,7 @@ def get_balances_count(db, address):
     cursor = db.cursor()
 
     field_name = "address"
-    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         field_name = "utxo"
 
     query = f"""

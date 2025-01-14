@@ -4,8 +4,9 @@ import os
 import threading
 import time
 
-from counterpartycore.lib import config, database, exceptions, util
+from counterpartycore.lib import config, database, exceptions
 from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.parser import utxosinfo
 from counterpartycore.lib.util import format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -236,7 +237,7 @@ def update_address_events(state_db, event):
                 "block_index": event["block_index"],
             },
         )
-        if util.is_utxo_format(address):
+        if utxosinfo.is_utxo_format(address):
             utxo_address = search_address_from_utxo(state_db, address)
             if utxo_address is not None:
                 cursor.execute(

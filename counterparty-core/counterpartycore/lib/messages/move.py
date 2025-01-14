@@ -1,16 +1,16 @@
 import logging
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.detach import detach_assets
 from counterpartycore.lib.messages.utils import address
-from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.parser import protocol, utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def compose(db, source, destination, utxo_value=None, skip_validation=False):
     if not skip_validation:
-        if not util.is_utxo_format(source):
+        if not utxosinfo.is_utxo_format(source):
             raise exceptions.ComposeError("Invalid source utxo format")
 
         balances = ledger.get_utxo_balances(db, source)
@@ -89,7 +89,7 @@ def move_assets(db, tx):
     if "utxos_info" not in tx or not tx["utxos_info"]:
         return False
 
-    sources, destination, _outputs_count, _op_return_output = util.parse_utxos_info(
+    sources, destination, _outputs_count, _op_return_output = utxosinfo.parse_utxos_info(
         tx["utxos_info"]
     )
 

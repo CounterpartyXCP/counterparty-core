@@ -6,6 +6,7 @@ import struct
 from counterpartycore.lib import backend, config, exceptions, ledger, util
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.utils import address
+from counterpartycore.lib.parser import utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -44,10 +45,10 @@ def validate(db, source, destination, asset, quantity, block_index=None):
             destination_is_address = False
 
     # check if source is a UTXO
-    source_is_utxo = util.is_utxo_format(source)
+    source_is_utxo = utxosinfo.is_utxo_format(source)
     # check if destination is a UTXO
     if destination:
-        destination_is_utxo = util.is_utxo_format(destination)
+        destination_is_utxo = utxosinfo.is_utxo_format(destination)
     else:
         destination_is_utxo = True
 
@@ -98,11 +99,11 @@ def compose(
     # we make an RPC call only at the time of composition
     if (
         destination
-        and util.is_utxo_format(destination)
+        and utxosinfo.is_utxo_format(destination)
         and not backend.bitcoind.is_valid_utxo(destination)
     ):
         raise exceptions.ComposeError(["destination is not a UTXO"])
-    if util.is_utxo_format(source) and not backend.bitcoind.is_valid_utxo(source):
+    if utxosinfo.is_utxo_format(source) and not backend.bitcoind.is_valid_utxo(source):
         raise exceptions.ComposeError(["source is not a UTXO"])
 
     # create message
@@ -125,7 +126,7 @@ def compose(
     source_address = source
     destinations = []
     # if source is a UTXO, we get the corresponding address
-    if util.is_utxo_format(source):  # detach from utxo
+    if utxosinfo.is_utxo_format(source):  # detach from utxo
         source_address, _value = backend.bitcoind.get_utxo_address_and_value(source)
     elif not destination:  # attach to utxo
         # if no destination, we use the source address as the destination
@@ -162,10 +163,10 @@ def parse(db, tx, message):
     # if no destination, we assume the destination is the first non-OP_RETURN output
     # that's mean the last element of the UTXOs info in `transactions` table
     if not recipient:
-        recipient = util.get_destination_from_utxos_info(tx["utxos_info"])
+        recipient = utxosinfo.get_destination_from_utxos_info(tx["utxos_info"])
 
     # detach if source is a UTXO
-    if util.is_utxo_format(source):
+    if utxosinfo.is_utxo_format(source):
         source_address, _value = backend.bitcoind.get_utxo_address_and_value(source)
         if source_address != tx["source"]:
             problems.append("source does not match the UTXO source")
@@ -257,7 +258,7 @@ def parse(db, tx, message):
 
     # log valid transactions
     if status == "valid":
-        if util.is_utxo_format(source):
+        if utxosinfo.is_utxo_format(source):
             logger.info(
                 "Detach %(asset)s from %(source)s to address: %(destination)s (%(tx_hash)s) [%(status)s]",
                 bindings,

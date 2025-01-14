@@ -19,7 +19,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.parser import deserialize
+from counterpartycore.lib.parser import deserialize, utxosinfo
 from counterpartycore.lib.utils import multisig, opcodes, script
 
 MAX_INPUTS_SET = 100
@@ -418,7 +418,7 @@ def prepare_inputs_set(inputs_set):
         else:
             raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid format)")
 
-        if not util.is_utxo_format(f"{txid}:{vout}"):
+        if not utxosinfo.is_utxo_format(f"{txid}:{vout}"):
             raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid format)")
 
         unspent = {
@@ -528,7 +528,7 @@ def prepare_unspent_list(db, source, construct_params):
     if inputs_set is None:
         # get unspent list from Bitcoin Core or Electrs
         allow_unconfirmed_inputs = construct_params.get("allow_unconfirmed_inputs", False)
-        if util.is_utxo_format(source):
+        if utxosinfo.is_utxo_format(source):
             source_address = utxo_to_address(db, source)
         else:
             source_address = source
@@ -576,7 +576,7 @@ def prepare_unspent_list(db, source, construct_params):
     unspent_list = sorted(unspent_list, key=lambda x: x["value"], reverse=True)
 
     # if source is an utxo, ensure it is first in the unspent list
-    if util.is_utxo_format(source):
+    if utxosinfo.is_utxo_format(source):
         unspent_list = ensure_utxo_is_first(source, unspent_list)
         # complete unspent list again with missing data
         unspent_list = complete_unspent_list(unspent_list)
@@ -732,7 +732,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
 
     change_address = construct_params.get("change_address")
     if change_address is None:
-        if util.is_utxo_format(source):
+        if utxosinfo.is_utxo_format(source):
             change_address = utxo_to_address(db, source)
         else:
             change_address = source
@@ -889,7 +889,7 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
     first_utxo_txid = decoded_tx["vin"][0]["hash"]
     first_utxo = f"{first_utxo_txid}:{decoded_tx['vin'][0]['n']}"
 
-    if util.is_utxo_format(source):
+    if utxosinfo.is_utxo_format(source):
         source_is_ok = first_utxo == source
     else:
         source_is_ok = is_address_script(source, composed_tx["lock_scripts"][0])

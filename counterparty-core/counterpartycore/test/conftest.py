@@ -22,7 +22,7 @@ from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import log, server
-from counterpartycore.lib.parser import gettxinfo, protocol
+from counterpartycore.lib.parser import gettxinfo, protocol, utxosinfo
 from counterpartycore.lib.utils import assetnames, base58, multisig, opcodes, script
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
@@ -633,7 +633,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         pass
 
     def is_valid_utxo(value):
-        return util.is_utxo_format(value)
+        return utxosinfo.is_utxo_format(value)
 
     def get_utxo_address_and_value(value):
         return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 100
