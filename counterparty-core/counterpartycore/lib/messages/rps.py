@@ -25,8 +25,8 @@ from counterpartycore.lib import (
     config,
     database,
     ledger,
-    util,
 )
+from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -178,7 +178,7 @@ def initialise(db):
 
 
 def replay_events(db, key):
-    if util.is_test_network():
+    if protocol.is_test_network():
         return
     events = RPS_EVENTS.get(key)
     if events:

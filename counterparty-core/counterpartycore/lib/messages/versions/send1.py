@@ -5,7 +5,7 @@ import struct
 
 from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages import dispense
-from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.parser import message_type, protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -47,11 +47,11 @@ def validate(db, source, destination, asset, quantity, block_index):
     if quantity > config.MAX_INT:
         problems.append("integer overflow")
 
-    if util.enabled("send_destination_required"):  # Protocol change.
+    if protocol.enabled("send_destination_required"):  # Protocol change.
         if not destination:
             problems.append("destination is required")
 
-    if util.enabled("options_require_memo"):
+    if protocol.enabled("options_require_memo"):
         # Check destination address options
 
         cursor = db.cursor()
@@ -68,7 +68,7 @@ def validate(db, source, destination, asset, quantity, block_index):
 
 
 def compose_send_btc(db, source: str, destination: str, quantity: int):
-    if not util.enabled("enable_dispense_tx"):
+    if not protocol.enabled("enable_dispense_tx"):
         return (source, [(destination, quantity)], None)
     # try to compose a dispense instead
     try:

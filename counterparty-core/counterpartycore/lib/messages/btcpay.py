@@ -9,7 +9,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.parser import message_type, protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -78,7 +78,7 @@ def validate(db, source, order_match_id, block_index):
     # Figure out to which address the BTC are being paid.
     # Check that source address is correct.
     if order_match["backward_asset"] == config.BTC:
-        if source != order_match["tx1_address"] and not util.after_block_or_test_network(
+        if source != order_match["tx1_address"] and not protocol.after_block_or_test_network(
             block_index, 313900
         ):  # Protocol change.
             problems.append("incorrect source address")
@@ -87,7 +87,7 @@ def validate(db, source, order_match_id, block_index):
         escrowed_asset = order_match["forward_asset"]
         escrowed_quantity = order_match["forward_quantity"]
     elif order_match["forward_asset"] == config.BTC:
-        if source != order_match["tx0_address"] and not util.after_block_or_test_network(
+        if source != order_match["tx0_address"] and not protocol.after_block_or_test_network(
             block_index, 313900
         ):  # Protocol change.
             problems.append("incorrect source address")
@@ -186,7 +186,7 @@ def parse(db, tx, message):
             ledger.update_order_match_status(db, order_match_id, "completed")
 
             # Update give and get order status as filled if order_match is completed
-            if util.enabled("btc_order_filled"):
+            if protocol.enabled("btc_order_filled"):
                 order_matches = ledger.get_pending_order_matches(db, tx0_hash, tx1_hash)
                 if len(order_matches) == 0:
                     # mark both btc get and give orders as filled when order_match is completed and give or get remaining = 0

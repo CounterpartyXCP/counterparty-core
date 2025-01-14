@@ -3,7 +3,8 @@ import tempfile
 
 import bitcoin as bitcoinlib
 
-from counterpartycore.lib import composer, util
+from counterpartycore.lib import composer
+from counterpartycore.lib.parser import protocol
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import ADDR
 
@@ -16,7 +17,7 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 def test_bytespersigop(server_db):
     with util_test.MockProtocolChangesContext(short_tx_type_id=False):
-        assert util.enabled("bytespersigop") == False  # noqa: E712
+        assert protocol.enabled("bytespersigop") == False  # noqa: E712
 
         # ADDR[0], bytespersigop=False, desc 41 bytes, opreturn
         txhex = composer.compose_transaction(
@@ -65,7 +66,7 @@ def test_bytespersigop(server_db):
 
     # enable byterpersigop
     with util_test.MockProtocolChangesContext(bytespersigop=True):
-        assert util.enabled("bytespersigop") == True  # noqa: E712
+        assert protocol.enabled("bytespersigop") == True  # noqa: E712
 
         # ADDR[0], bytespersigop=True, desc 41 bytes, opreturn
         txhex = composer.compose_transaction(

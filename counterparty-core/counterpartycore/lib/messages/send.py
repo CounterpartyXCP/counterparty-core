@@ -3,6 +3,7 @@ import time
 
 from counterpartycore.lib import config, database, exceptions, util
 from counterpartycore.lib.messages.versions import enhanced_send, mpma, send1
+from counterpartycore.lib.parser import protocol
 
 ID = send1.ID
 
@@ -102,7 +103,7 @@ def initialise(db):
         with db:
             database.unlock_update(db, "sends")
             cursor.execute("""ALTER TABLE sends ADD COLUMN send_type TEXT""")
-            utxo_support_start = util.get_change_block_index("utxo_support")
+            utxo_support_start = protocol.get_change_block_index("utxo_support")
             cursor.execute(
                 """
                 UPDATE sends SET send_type = ? WHERE block_index < ?
@@ -220,10 +221,10 @@ def compose(
 ):
     # special case - enhanced_send replaces send by default when it is enabled
     #   but it can be explicitly disabled with an API parameter
-    if util.enabled("enhanced_sends"):
+    if protocol.enabled("enhanced_sends"):
         # Another special case, if destination, asset and quantity are arrays, it's an MPMA send
         if isinstance(destination, list) and isinstance(asset, list) and isinstance(quantity, list):
-            if util.enabled("mpma_sends"):
+            if protocol.enabled("mpma_sends"):
                 if len(destination) == len(asset) and len(asset) == len(quantity):
                     # Sending memos in a MPMA message can be done by several approaches:
                     # 1. Send a list of memos, there must be one for each send and they correspond to the sends by index

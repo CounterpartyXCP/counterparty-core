@@ -3,6 +3,8 @@ import logging
 import struct
 
 from counterpartycore.lib import config, database, exceptions, ledger, util
+from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import assetnames
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -212,7 +214,7 @@ def validate(
         if (
             premint_quantity > 0
             and premint_quantity >= hard_cap
-            and (hard_cap > 0 or not util.enabled("partial_mint_to_reach_hard_cap"))
+            and (hard_cap > 0 or not protocol.enabled("partial_mint_to_reach_hard_cap"))
         ):
             problems.append("Premint quantity must be < hard cap.")
 
@@ -487,7 +489,7 @@ def parse(db, tx, message):
         # if the asset is a subasset and does not exist we generate a random numeric name
         # subassets are free
         if existing_asset is None:
-            asset_name = util.deterministic_random_asset_name(db, asset_longname)
+            asset_name = assetnames.deterministic_random_asset_name(db, asset_longname)
         else:
             asset_name = existing_asset["asset"]
     else:
@@ -756,7 +758,7 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
     # until the soft cap is reached, payments, commissions and assets
     # are escrowed at the config.UNSPENDABLE address. When the soft cap deadline is reached,
     # we start by unescrow all the assets and payments for this fairminter...
-    if fairminter_supply > 0 or not util.enabled("partial_mint_to_reach_hard_cap"):
+    if fairminter_supply > 0 or not protocol.enabled("partial_mint_to_reach_hard_cap"):
         ledger.debit(
             db,
             config.UNSPENDABLE,
@@ -788,7 +790,7 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
     # if the soft cap is reached, the assets are distributed in `perform_fairmint_soft_cap_operations()`
     if fairmint_quantity < fairminter["soft_cap"]:
         close_fairminter(db, fairminter, block_index)
-        if fairminter_supply > 0 or not util.enabled("partial_mint_to_reach_hard_cap"):
+        if fairminter_supply > 0 or not protocol.enabled("partial_mint_to_reach_hard_cap"):
             # destroy assets
             bindings = {
                 "tx_index": fairminter["tx_index"],

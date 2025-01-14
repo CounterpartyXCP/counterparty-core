@@ -8,6 +8,8 @@ from decimal import Decimal as D
 
 from counterpartycore.lib import backend, config, database, exceptions, util
 from counterpartycore.lib.cli import log
+from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import assetnames
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -279,7 +281,7 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
 
     balance_address = address
     utxo = None
-    if util.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
         balance_address = None
         utxo = address
         if not util.PARSING_MEMPOOL and balance == 0:
@@ -320,7 +322,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
         raise DebitError("Cannot debit bitcoins.")
 
     # Contracts can only hold XCP balances.
-    if util.enabled("contracts_only_xcp_balances"):  # Protocol change.
+    if protocol.enabled("contracts_only_xcp_balances"):  # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
@@ -330,7 +332,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     debit_address = address
     utxo = None
     utxo_address = None
-    if util.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
         debit_address = None
         utxo = address
         utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
@@ -365,7 +367,7 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
 
     balance_address = address
     utxo = None
-    if util.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
         balance_address = None
         utxo = address
         if not util.PARSING_MEMPOOL and balance > 0:
@@ -405,14 +407,14 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
         raise CreditError("Cannot debit bitcoins.")
 
     # Contracts can only hold XCP balances.
-    if util.enabled("contracts_only_xcp_balances"):  # Protocol change.
+    if protocol.enabled("contracts_only_xcp_balances"):  # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
 
     credit_address = address
     utxo = None
     utxo_address = None
-    if util.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
         credit_address = None
         utxo = address
         utxo_address = backend.bitcoind.safe_get_utxo_address(utxo)
@@ -449,7 +451,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
     cursor = db.cursor()
 
     field_name = "address"
-    if util.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
         field_name = "utxo"
 
     query = f"""
@@ -502,7 +504,7 @@ def get_address_balances(db, address: str):
     cursor = db.cursor()
 
     field_name = "address"
-    if util.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
         field_name = "utxo"
 
     query = f"""
@@ -524,7 +526,7 @@ def get_address_assets(db, address):
     cursor = db.cursor()
 
     field_name = "address"
-    if util.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
         field_name = "utxo"
 
     query = f"""
@@ -542,7 +544,7 @@ def get_balances_count(db, address):
     cursor = db.cursor()
 
     field_name = "address"
-    if util.enabled("utxo_support") and util.is_utxo_format(address):
+    if protocol.enabled("utxo_support") and util.is_utxo_format(address):
         field_name = "utxo"
 
     query = f"""
@@ -596,7 +598,7 @@ def generate_asset_id(asset_name, block_index):
         raise exceptions.AssetNameError("too short")
 
     # Numeric asset names.
-    if util.enabled("numeric_asset_names"):  # Protocol change.
+    if protocol.enabled("numeric_asset_names"):  # Protocol change.
         if asset_name[0] == "A":
             # Must be numeric.
             try:
@@ -619,9 +621,9 @@ def generate_asset_id(asset_name, block_index):
     n = 0
     for c in asset_name:
         n *= 26
-        if c not in util.B26_DIGITS:
+        if c not in assetnames.B26_DIGITS:
             raise exceptions.AssetNameError("invalid character:", c)
-        digit = util.B26_DIGITS.index(c)
+        digit = assetnames.B26_DIGITS.index(c)
         n += digit
     asset_id = n
 
@@ -641,7 +643,7 @@ def generate_asset_name(asset_id, block_index):
     if asset_id < 26**3:
         raise exceptions.AssetIDError("too low")
 
-    if util.enabled("numeric_asset_names"):  # Protocol change.
+    if protocol.enabled("numeric_asset_names"):  # Protocol change.
         if asset_id <= 2**64 - 1:
             if 26**12 + 1 <= asset_id:
                 asset_name = "A" + str(asset_id)
@@ -654,7 +656,7 @@ def generate_asset_name(asset_id, block_index):
     n = asset_id
     while n > 0:
         n, r = divmod(n, 26)
-        res.append(util.B26_DIGITS[r])
+        res.append(assetnames.B26_DIGITS[r])
     asset_name = "".join(res[::-1])
 
     """
@@ -665,7 +667,7 @@ def generate_asset_name(asset_id, block_index):
 
 def get_asset_id(db, asset_name, block_index):
     """Return asset_id from asset_name."""
-    if not util.enabled("hotfix_numeric_assets"):
+    if not protocol.enabled("hotfix_numeric_assets"):
         return generate_asset_id(asset_name, block_index)
     cursor = db.cursor()
     query = """
@@ -683,7 +685,7 @@ def get_asset_id(db, asset_name, block_index):
 
 def get_asset_name(db, asset_id, block_index):
     """Return asset_name from asset_id."""
-    if not util.enabled("hotfix_numeric_assets"):
+    if not protocol.enabled("hotfix_numeric_assets"):
         return generate_asset_name(asset_id, block_index)
     cursor = db.cursor()
     query = """
@@ -702,11 +704,11 @@ def get_asset_name(db, asset_id, block_index):
 # If asset_name is an existing subasset (PARENT.child) then return the corresponding numeric asset name (A12345)
 #   If asset_name is not an existing subasset, then return the unmodified asset_name
 def resolve_subasset_longname(db, asset_name):
-    if util.enabled("subassets"):
+    if protocol.enabled("subassets"):
         subasset_longname = None
         try:
-            _subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(
-                asset_name, util.enabled("allow_subassets_on_numerics")
+            _subasset_parent, subasset_longname = assetnames.parse_subasset_from_asset_name(
+                asset_name, protocol.enabled("allow_subassets_on_numerics")
             )
         except Exception as e:  # noqa: F841
             logger.warning(f"Invalid subasset {asset_name}")
@@ -747,21 +749,71 @@ def is_divisible(db, asset):
         return issuances[0]["divisible"]
 
 
+def value_input(quantity, asset, divisible):
+    if asset == "leverage":
+        return round(quantity)
+
+    if asset in ("value", "fraction", "price", "odds"):
+        return float(quantity)  # TODO: Float?!
+
+    if divisible:
+        quantity = D(quantity) * config.UNIT
+        if quantity == quantity.to_integral():
+            return int(quantity)
+        else:
+            raise exceptions.QuantityError(
+                "Divisible assets have only eight decimal places of precision."
+            )
+    else:
+        quantity = D(quantity)
+        if quantity != round(quantity):
+            raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
+        return round(quantity)
+
+
+def value_output(quantity, asset, divisible):
+    def norm(num, places):
+        """Round only if necessary."""
+        num = round(num, places)
+        fmt = "{:." + str(places) + "f}"
+        # pylint: disable=C0209
+        num = fmt.format(num)
+        return num.rstrip("0") + "0" if num.rstrip("0")[-1] == "." else num.rstrip("0")
+
+    if asset == "fraction":
+        return str(norm(D(quantity) * D(100), 6)) + "%"
+
+    if asset in ("leverage", "value", "price", "odds"):
+        return norm(quantity, 6)
+
+    if divisible:
+        quantity = D(quantity) / D(config.UNIT)
+        if quantity == quantity.to_integral():
+            return str(quantity) + ".0"  # For divisible assets, display the decimal point.
+        else:
+            return norm(quantity, 8)
+    else:
+        quantity = D(quantity)
+        if quantity != round(quantity):
+            raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
+        return round(quantity)
+
+
 def value_out(db, quantity, asset, divisible=None):
     if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:  # noqa: E711
         divisible = is_divisible(db, asset)
-    return util.value_output(quantity, asset, divisible)
+    return value_output(quantity, asset, divisible)
 
 
 def value_in(db, quantity, asset, divisible=None):
     if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:  # noqa: E711
         divisible = is_divisible(db, asset)
-    return util.value_input(quantity, asset, divisible)
+    return value_input(quantity, asset, divisible)
 
 
 def price(numerator, denominator):
     """Return price as Fraction or Decimal."""
-    if util.after_block_or_test_network(util.CURRENT_BLOCK_INDEX, 294500):  # Protocol change.
+    if protocol.after_block_or_test_network(util.CURRENT_BLOCK_INDEX, 294500):  # Protocol change.
         return fractions.Fraction(numerator, denominator)
     else:
         numerator = D(numerator)
@@ -948,7 +1000,7 @@ def get_issuances(
         bindings.append(block_index)
     # no sql injection here
     query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
-    if util.enabled("fix_get_issuances", current_block_index):
+    if protocol.enabled("fix_get_issuances", current_block_index):
         order_fields = "rowid, tx_index"
     else:
         order_fields = "tx_index"
@@ -2361,7 +2413,7 @@ def holders(db, asset, exclude_empty_holders=False, block_index=None):
             table="rps_matches",
         )
 
-    if util.enabled("dispensers_in_holders"):
+    if protocol.enabled("dispensers_in_holders"):
         # Funds escrowed in dispensers.
         query = """
             SELECT * FROM (

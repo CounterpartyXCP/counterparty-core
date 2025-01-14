@@ -2,6 +2,7 @@ import binascii
 import functools
 import json
 import logging
+import re
 import time
 from collections import OrderedDict
 from multiprocessing import current_process
@@ -21,6 +22,17 @@ BLOCKS_CACHE = OrderedDict()
 BLOCKS_CACHE_MAX_SIZE = 1000
 TRANSACTIONS_CACHE = OrderedDict()
 TRANSACTIONS_CACHE_MAX_SIZE = 10000
+
+
+URL_USERNAMEPASS_REGEX = re.compile(".+://(.+)@")
+
+
+def clean_url_for_log(url):
+    m = URL_USERNAMEPASS_REGEX.match(url)
+    if m and m.group(1):
+        url = url.replace(m.group(1), "XXXXXXXX")
+
+    return url
 
 
 # for testing
@@ -65,11 +77,11 @@ def rpc_call(payload, retry=0):
 
             if response is None:  # noqa: E711
                 raise exceptions.BitcoindRPCError(
-                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
+                    f"Cannot communicate with Bitcoin Core at `{clean_url_for_log(url)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
                 )
             if response.status_code in (401,):
                 raise exceptions.BitcoindRPCError(
-                    f"Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}"
+                    f"Authorization error connecting to {clean_url_for_log(url)}: {response.status_code} {response.reason}"
                 )
             if response.status_code == 503:
                 raise ConnectionError("Received 503 error from backend")
@@ -80,7 +92,7 @@ def rpc_call(payload, retry=0):
             raise
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.warning(
-                f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Attempt: {tries})"
+                f"Could not connect to backend at `{clean_url_for_log(url)}`. (Attempt: {tries})"
             )
             time.sleep(5)
         except Exception as e:

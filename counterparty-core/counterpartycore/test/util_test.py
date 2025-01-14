@@ -805,14 +805,23 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                 method
                 in [
                     "api",
-                    "date_passed",
                     "dhash_string",
                     "get_url",
                     "hexlify",
                     "parse_subasset_from_asset_name",
                     "compact_subasset_longname",
                     "expand_subasset_longname",
-                    "enabled",
+                ]
+            )
+        )
+        or (
+            tx_name == "utils.assetnames"
+            and (
+                method
+                in [
+                    "parse_subasset_from_asset_name",
+                    "compact_subasset_longname",
+                    "expand_subasset_longname",
                 ]
             )
         )
@@ -829,6 +838,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         )
         or method
         in [
+            "enabled",
             "get_tx_info_legacy",
             "select_utxo_destination",
             "collect_sighash_flags",

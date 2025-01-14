@@ -4,12 +4,13 @@ from math import floor
 
 from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages import dispenser as dispenser_module
+from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def get_must_give(db, dispenser, btc_amount, block_index=None):
-    if (dispenser["oracle_address"] is not None) and util.enabled(  # noqa: E711
+    if (dispenser["oracle_address"] is not None) and protocol.enabled(  # noqa: E711
         "oracle_dispensers", block_index
     ):
         last_price, _last_fee, _last_fiat_label, _last_updated = ledger.get_oracle_last_price(
@@ -28,7 +29,7 @@ def get_must_give(db, dispenser, btc_amount, block_index=None):
 def validate_compose(db, source, destination, quantity):
     problems = []
 
-    if not util.enabled("enable_dispense_tx"):
+    if not protocol.enabled("enable_dispense_tx"):
         problems.append("dispense tx is not enabled")
         return problems
 
@@ -60,7 +61,7 @@ def validate_compose(db, source, destination, quantity):
             except exceptions.NoPriceError as e:
                 dispenser_problems.append(str(e))
         # no error if at least one dispenser is valid
-        if len(dispenser_problems) == 0 and util.enabled("accept_only_one_valid_dispenser"):
+        if len(dispenser_problems) == 0 and protocol.enabled("accept_only_one_valid_dispenser"):
             return []
         problems += dispenser_problems
     return problems
@@ -88,7 +89,7 @@ def parse(db, tx):
     cursor = db.cursor()
 
     outs = []
-    if util.enabled("multiple_dispenses"):
+    if protocol.enabled("multiple_dispenses"):
         outs = ledger.get_vouts(db, tx["tx_hash"])
     else:
         outs = [tx]
@@ -122,7 +123,7 @@ def parse(db, tx):
                 assert give_remaining >= 0
 
                 # Skip dispense if quantity is 0
-                if util.enabled("zero_quantity_value_adjustment_1") and actually_given == 0:
+                if protocol.enabled("zero_quantity_value_adjustment_1") and actually_given == 0:
                     continue
 
                 ledger.credit(
@@ -136,7 +137,7 @@ def parse(db, tx):
                 )
 
                 # Checking if the dispenser reach its max dispenses limit
-                max_dispenses_limit = util.get_value_by_block_index(
+                max_dispenses_limit = protocol.get_value_by_block_index(
                     "max_dispenses_limit", next_out["block_index"]
                 )
                 max_dispenser_limit_hit = False

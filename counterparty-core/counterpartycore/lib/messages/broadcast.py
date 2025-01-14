@@ -33,7 +33,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.parser import message_type, protocol
 
 from . import bet
 
@@ -87,6 +87,29 @@ def initialise(db):
     )
 
 
+def parse_options_from_string(string):
+    """Parse options integer from string, if exists."""
+    string_list = string.split(" ")
+    if len(string_list) == 2:
+        try:
+            options = int(string_list.pop())
+        except:  # noqa: E722
+            raise exceptions.OptionsError("options not an integer")  # noqa: B904
+        return options
+    else:
+        return False
+
+
+def validate_address_options(options):
+    """Ensure the options are all valid and in range."""
+    if (options > config.MAX_INT) or (options < 0):
+        raise exceptions.OptionsError("options integer overflow")
+    elif options > config.ADDRESS_OPTION_MAX_VALUE:
+        raise exceptions.OptionsError("options out of range")
+    elif not util.active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
+        raise exceptions.OptionsError("options not possible")
+
+
 def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     problems = []
 
@@ -94,7 +117,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     if timestamp > config.MAX_INT or value > config.MAX_INT or fee_fraction_int > config.MAX_INT:
         problems.append("integer overflow")
 
-    if util.enabled("max_fee_fraction"):
+    if protocol.enabled("max_fee_fraction"):
         if fee_fraction_int >= config.UNIT:
             problems.append("fee fraction greater than or equal to 1")
     else:
@@ -115,16 +138,16 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
         elif timestamp <= last_broadcast["timestamp"]:
             problems.append("feed timestamps not monotonically increasing")
 
-    if not util.after_block_or_test_network(block_index, 317500):  # Protocol change.
+    if not protocol.after_block_or_test_network(block_index, 317500):  # Protocol change.
         if len(text) > 52:
             problems.append("text too long")
 
-    if util.enabled("options_require_memo") and text and text.lower().startswith("options"):
+    if protocol.enabled("options_require_memo") and text and text.lower().startswith("options"):
         try:
             # Check for options and if they are valid.
-            options = util.parse_options_from_string(text)
+            options = parse_options_from_string(text)
             if options is not False:
-                util.validate_address_options(options)
+                validate_address_options(options)
         except exceptions.OptionsError as e:
             problems.append(str(e))
 
@@ -152,7 +175,7 @@ def compose(
     data = message_type.pack(ID)
 
     # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
-    if util.enabled("broadcast_pack_text"):
+    if protocol.enabled("broadcast_pack_text"):
         data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
         data += VarIntSerializer.serialize(len(text.encode("utf-8")))
         data += text.encode("utf-8")
@@ -168,7 +191,7 @@ def compose(
 
 def unpack(message, block_index, return_dict=False):
     try:
-        if util.enabled("broadcast_pack_text", block_index):
+        if protocol.enabled("broadcast_pack_text", block_index):
             timestamp, value, fee_fraction_int, rawtext = struct.unpack(
                 FORMAT + f"{len(message) - LENGTH}s", message
             )
@@ -254,12 +277,12 @@ def parse(db, tx, message):
     logger.info("Broadcast from %(source)s (%(tx_hash)s) [%(status)s]", bindings)
 
     # stop processing if broadcast is invalid for any reason
-    if util.enabled("broadcast_invalid_check") and status != "valid":
+    if protocol.enabled("broadcast_invalid_check") and status != "valid":
         return
 
     # Options? Should not fail to parse due to above checks.
-    if util.enabled("options_require_memo") and text and text.lower().startswith("options"):
-        options = util.parse_options_from_string(text)
+    if protocol.enabled("options_require_memo") and text and text.lower().startswith("options"):
+        options = parse_options_from_string(text)
         if options is not False:
             op_bindings = {
                 "block_index": tx["block_index"],
@@ -289,7 +312,7 @@ def parse(db, tx, message):
 
     # stop processing if broadcast is invalid for any reason
     # @TODO: remove this check once broadcast_invalid_check has been activated
-    if util.enabled("max_fee_fraction") and status != "valid":
+    if protocol.enabled("max_fee_fraction") and status != "valid":
         return
 
     # Handle bet matches that use this feed.
@@ -306,7 +329,7 @@ def parse(db, tx, message):
         # to betters.
         total_escrow = bet_match["forward_quantity"] + bet_match["backward_quantity"]
 
-        if util.enabled("inmutable_fee_fraction"):
+        if protocol.enabled("inmutable_fee_fraction"):
             fee_fraction = bet_match["fee_fraction_int"] / config.UNIT
         else:
             fee_fraction = fee_fraction_int / config.UNIT

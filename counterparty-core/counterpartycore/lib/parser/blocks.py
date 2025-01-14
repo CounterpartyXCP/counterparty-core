@@ -47,7 +47,7 @@ from counterpartycore.lib.messages import (  # noqa: E402
     utxo,
 )
 from counterpartycore.lib.messages.versions import enhanced_send, mpma  # noqa: E402
-from counterpartycore.lib.parser import check, deserialize, message_type
+from counterpartycore.lib.parser import check, deserialize, message_type, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info  # noqa: E402
 
 D = decimal.Decimal
@@ -140,7 +140,7 @@ def parse_tx(db, tx):
 
             # After "spend_utxo_to_detach" protocol change we move assets before parsing
             # only if the message is not an Attach or Detach, else will be moved after parsing
-            if not util.enabled("spend_utxo_to_detach") or message_type_id not in [
+            if not protocol.enabled("spend_utxo_to_detach") or message_type_id not in [
                 attach.ID,
                 detach.ID,
             ]:
@@ -159,15 +159,15 @@ def parse_tx(db, tx):
                 return
 
             # Protocol change.
-            rps_enabled = util.after_block_or_test_network(tx["block_index"], 308500)
+            rps_enabled = protocol.after_block_or_test_network(tx["block_index"], 308500)
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
-            elif message_type_id == enhanced_send.ID and util.enabled(
+            elif message_type_id == enhanced_send.ID and protocol.enabled(
                 "enhanced_sends", block_index=tx["block_index"]
             ):
                 enhanced_send.parse(db, tx, message)
-            elif message_type_id == mpma.ID and util.enabled(
+            elif message_type_id == mpma.ID and protocol.enabled(
                 "mpma_sends", block_index=tx["block_index"]
             ):
                 mpma.parse(db, tx, message)
@@ -176,15 +176,15 @@ def parse_tx(db, tx):
             elif message_type_id == btcpay.ID:
                 btcpay.parse(db, tx, message)
             elif message_type_id == issuance.ID or (
-                util.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
+                protocol.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
                 and message_type_id == issuance.LR_ISSUANCE_ID
             ):
                 issuance.parse(db, tx, message, message_type_id)
             elif (
                 message_type_id == issuance.SUBASSET_ID
-                and util.enabled("subassets", block_index=tx["block_index"])
+                and protocol.enabled("subassets", block_index=tx["block_index"])
             ) or (
-                util.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
+                protocol.enabled("issuance_backwards_compatibility", block_index=tx["block_index"])
                 and message_type_id == issuance.LR_SUBASSET_ID
             ):
                 issuance.parse(db, tx, message, message_type_id)
@@ -200,45 +200,45 @@ def parse_tx(db, tx):
                 rps.parse(db, tx, message)
             elif message_type_id == rpsresolve.ID and rps_enabled:
                 rpsresolve.parse(db, tx, message)
-            elif message_type_id == destroy.ID and util.enabled(
+            elif message_type_id == destroy.ID and protocol.enabled(
                 "destroy_reactivated", block_index=tx["block_index"]
             ):
                 destroy.parse(db, tx, message)
-            elif message_type_id == sweep.ID and util.enabled(
+            elif message_type_id == sweep.ID and protocol.enabled(
                 "sweep_send", block_index=tx["block_index"]
             ):
                 sweep.parse(db, tx, message)
-            elif message_type_id == dispenser.ID and util.enabled(
+            elif message_type_id == dispenser.ID and protocol.enabled(
                 "dispensers", block_index=tx["block_index"]
             ):
                 dispenser.parse(db, tx, message)
-            elif message_type_id == dispenser.DISPENSE_ID and util.enabled(
+            elif message_type_id == dispenser.DISPENSE_ID and protocol.enabled(
                 "dispensers", block_index=tx["block_index"]
             ):
                 dispense.parse(db, tx)
-            elif message_type_id == fairminter.ID and util.enabled(
+            elif message_type_id == fairminter.ID and protocol.enabled(
                 "fairminter", block_index=tx["block_index"]
             ):
                 fairminter.parse(db, tx, message)
-            elif message_type_id == fairmint.ID and util.enabled(
+            elif message_type_id == fairmint.ID and protocol.enabled(
                 "fairminter", block_index=tx["block_index"]
             ):
                 fairmint.parse(db, tx, message)
             elif (
                 message_type_id == utxo.ID
-                and util.enabled("utxo_support", block_index=tx["block_index"])
-                and not util.enabled("spend_utxo_to_detach")
+                and protocol.enabled("utxo_support", block_index=tx["block_index"])
+                and not protocol.enabled("spend_utxo_to_detach")
             ):
                 utxo.parse(db, tx, message)
-            elif message_type_id == attach.ID and util.enabled("spend_utxo_to_detach"):
+            elif message_type_id == attach.ID and protocol.enabled("spend_utxo_to_detach"):
                 attach.parse(db, tx, message)
-            elif message_type_id == detach.ID and util.enabled("spend_utxo_to_detach"):
+            elif message_type_id == detach.ID and protocol.enabled("spend_utxo_to_detach"):
                 detach.parse(db, tx, message)
             else:
                 supported = False
 
             # if attach or detach we move assets after parsing
-            if util.enabled("spend_utxo_to_detach") and message_type_id == attach.ID:
+            if protocol.enabled("spend_utxo_to_detach") and message_type_id == attach.ID:
                 moved = move.move_assets(db, tx)
 
     except Exception as e:
@@ -1033,7 +1033,9 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
         or (
             len(utxos_info) > 0
             and utxos_info[0] != ""
-            and util.enabled("spend_utxo_to_detach")  # utxo move or detach with a single OP_RETURN
+            and protocol.enabled(
+                "spend_utxo_to_detach"
+            )  # utxo move or detach with a single OP_RETURN
         )
         or (len(utxos_info) > 1 and utxos_info[0] != "" and utxos_info[1] != "")
     ):

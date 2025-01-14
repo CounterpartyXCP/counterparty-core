@@ -3,7 +3,8 @@ import logging
 import bitcoin
 from bitcoin.bech32 import CBech32Data
 
-from counterpartycore.lib import config, exceptions, util
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import base58, multisig
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -52,7 +53,7 @@ def validate(address, allow_p2sh=True):
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
         try:
-            if util.enabled("segwit_support"):
+            if protocol.enabled("segwit_support"):
                 if not is_bech32(pubkeyhash):
                     base58.base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
             else:
@@ -62,7 +63,7 @@ def validate(address, allow_p2sh=True):
                 raise e
             base58.base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
         except exceptions.Base58Error as e:
-            if not util.enabled("segwit_support") or not is_bech32(pubkeyhash):
+            if not protocol.enabled("segwit_support") or not is_bech32(pubkeyhash):
                 raise e
 
 
@@ -70,7 +71,9 @@ def pack(address):
     """
     Converts a base58 bitcoin address into a 21 byte bytes object
     """
-    from counterpartycore.lib.util import enabled  # Here to account for test mock changes
+    from counterpartycore.lib.parser.protocol import (
+        enabled,  # Here to account for test mock changes
+    )
 
     if enabled("segwit_support"):
         try:
@@ -104,7 +107,9 @@ def unpack(short_address_bytes):
     """
     Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
     """
-    from counterpartycore.lib.util import enabled  # Here to account for test mock changes
+    from counterpartycore.lib.parser.protocol import (
+        enabled,  # Here to account for test mock changes
+    )
 
     if short_address_bytes == b"":
         raise exceptions.UnpackError

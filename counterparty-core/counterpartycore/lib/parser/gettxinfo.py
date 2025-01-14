@@ -8,7 +8,7 @@ from bitcoinutils.keys import PublicKey
 from counterpartycore.lib import backend, config, exceptions, ledger, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
-from counterpartycore.lib.parser import gettxinfolegacy, message_type, p2sh
+from counterpartycore.lib.parser import gettxinfolegacy, message_type, p2sh, protocol
 from counterpartycore.lib.util import inverse_hash
 from counterpartycore.lib.utils import base58, multisig, script
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
@@ -255,7 +255,7 @@ def get_transaction_sources(decoded_tx):
             new_source, new_data = decode_scripthash(asm)
             if new_data or not new_source:
                 raise DecodeError("data in source")
-        elif util.enabled("segwit_support") and asm[0] == b"":
+        elif protocol.enabled("segwit_support") and asm[0] == b"":
             # Segwit output
             new_source = script.script_to_address(script_pubkey)
             new_data = None
@@ -264,7 +264,7 @@ def get_transaction_sources(decoded_tx):
 
         # old; append to sources, results in invalid addresses
         # new; first found source is source, the rest can be anything (to fund the TX for example)
-        if not (util.enabled("first_input_is_source") and len(sources)):
+        if not (protocol.enabled("first_input_is_source") and len(sources)):
             # Collect unique sources.
             if new_source not in sources:
                 sources.append(new_source)
@@ -280,7 +280,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
     for vin in decoded_tx["vin"]:
         vout_value, _script_pubkey, is_segwit = backend.bitcoind.get_vin_info(vin)
 
-        if util.enabled("prevout_segwit_fix"):
+        if protocol.enabled("prevout_segwit_fix"):
             prevout_is_segwit = is_segwit
         else:
             prevout_is_segwit = p2sh_is_segwit
@@ -337,7 +337,7 @@ def get_dispensers_tx_info(sources, dispensers_outputs):
             data = struct.pack(config.SHORT_TXTYPE_FORMAT, dispenser.DISPENSE_ID)
             data += b"\x00"
 
-            if util.enabled("multiple_dispenses"):
+            if protocol.enabled("multiple_dispenses"):
                 outs.append({"destination": out[0], "btc_amount": out[1], "out_index": out_index})
             else:
                 break  # Prevent inspection of further dispenses (only first one is valid)
@@ -373,7 +373,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     fee_added = False
     # P2SH encoding signalling
     p2sh_encoding_source = None
-    if util.enabled("p2sh_encoding") and data == b"P2SH":
+    if protocol.enabled("p2sh_encoding") and data == b"P2SH":
         p2sh_encoding_source, data, outputs_value = get_transaction_source_from_p2sh(
             decoded_tx, p2sh_is_segwit
         )
@@ -386,10 +386,10 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if not data and destinations != [
         config.UNSPENDABLE,
     ]:
-        if util.enabled("disable_vanilla_btc_dispense", block_index):
+        if protocol.enabled("disable_vanilla_btc_dispense", block_index):
             raise BTCOnlyError("no data and not unspendable")
 
-        if util.enabled("dispensers", block_index) and not composing:
+        if protocol.enabled("dispensers", block_index) and not composing:
             dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
             if len(dispensers_outputs) == 0:
                 raise BTCOnlyError("no data and not unspendable")
@@ -410,7 +410,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if not data and destinations != [
         config.UNSPENDABLE,
     ]:
-        assert util.enabled(
+        assert protocol.enabled(
             "dispensers", block_index
         )  # else an exception would have been raised above
         assert len(dispensers_outputs) > 0  # else an exception would have been raised above
@@ -423,7 +423,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     except struct.error:  # Deterministically raised.
         message_type_id = None
 
-    if message_type_id == dispenser.DISPENSE_ID and util.enabled(
+    if message_type_id == dispenser.DISPENSE_ID and protocol.enabled(
         "enable_dispense_tx", block_index=block_index
     ):
         # if there is a dispense prefix we assume all potential_dispensers are dispensers
@@ -440,7 +440,7 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=Fa
     if not block_index:
         block_index = util.CURRENT_BLOCK_INDEX
 
-    if util.enabled("p2sh_addresses", block_index=block_index):  # Protocol change.
+    if protocol.enabled("p2sh_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(
             db,
             decoded_tx,
@@ -448,7 +448,7 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=Fa
             p2sh_is_segwit=p2sh_is_segwit,
             composing=composing,
         )
-    elif util.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
+    elif protocol.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(
             db,
             decoded_tx,
@@ -528,7 +528,7 @@ def get_utxos_info(db, decoded_tx):
 
 
 def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
-    if util.enabled("utxo_support", block_index=block_index) and not util.PARSING_MEMPOOL:
+    if protocol.enabled("utxo_support", block_index=block_index) and not util.PARSING_MEMPOOL:
         transaction_type = message_type.get_transaction_type(
             data, destination, utxos_info, block_index
         )
@@ -547,7 +547,7 @@ def get_tx_info(db, decoded_tx, block_index, composing=False):
     """Get the transaction info. Returns normalized None data for DecodeError and BTCOnlyError."""
     data, destination, utxos_info = None, None, []
 
-    if util.enabled("utxo_support", block_index=block_index):
+    if protocol.enabled("utxo_support", block_index=block_index):
         # utxos_info contains sources (inputs with balances),
         # destination (first non-OP_RETURN output),
         # number of outputs and the OP_RETURN index

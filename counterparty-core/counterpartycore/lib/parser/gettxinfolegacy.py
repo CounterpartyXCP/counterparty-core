@@ -3,6 +3,7 @@ import logging
 
 from counterpartycore.lib import backend, config, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
+from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import base58, script
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
 
@@ -11,7 +12,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def get_pubkeyhash(scriptpubkey, block_index):
     asm = script.script_to_asm(scriptpubkey)
-    if util.enabled("multisig_addresses", block_index=block_index):
+    if protocol.enabled("multisig_addresses", block_index=block_index):
         if len(asm) > 0:
             if asm[0] == OP_DUP:  # noqa: F405
                 if (
@@ -24,7 +25,7 @@ def get_pubkeyhash(scriptpubkey, block_index):
                 else:
                     return asm[2], config.ADDRESSVERSION
 
-            elif (asm[0] == OP_HASH160) and util.enabled("p2sh_dispensers_support"):  # noqa: F405
+            elif (asm[0] == OP_HASH160) and protocol.enabled("p2sh_dispensers_support"):  # noqa: F405
                 if len(asm) != 3 or asm[-1] != "OP_EQUAL":
                     return None, None
                 else:
@@ -50,7 +51,7 @@ def is_witness_v0_keyhash(scriptpubkey):
 def get_address(scriptpubkey, block_index):
     if isinstance(scriptpubkey, str):
         scriptpubkey = binascii.unhexlify(scriptpubkey)
-    if util.enabled("correct_segwit_txids") and is_witness_v0_keyhash(scriptpubkey):
+    if protocol.enabled("correct_segwit_txids") and is_witness_v0_keyhash(scriptpubkey):
         address = script.script_to_address(scriptpubkey)
         return address
     else:
@@ -103,7 +104,7 @@ def get_tx_info_legacy(decoded_tx, block_index):
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1 : data_chunk_length + 1]
             data += data_chunk
-        elif len(asm) == 5 and util.after_block_or_test_network(
+        elif len(asm) == 5 and protocol.after_block_or_test_network(
             block_index, 293000
         ):  # Protocol change.
             # Be strict.

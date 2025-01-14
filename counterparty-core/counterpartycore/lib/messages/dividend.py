@@ -11,7 +11,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.parser import message_type, protocol
 
 D = decimal.Decimal
 
@@ -68,7 +68,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     if asset == config.BTC:
         problems.append(f"cannot pay dividends to holders of {config.BTC}")
     if asset == config.XCP:
-        if block_index < 317500 or util.after_block_or_test_network(
+        if block_index < 317500 or protocol.after_block_or_test_network(
             block_index, 320000
         ):  # Protocol change.
             problems.append(f"cannot pay dividends to holders of {config.XCP}")
@@ -88,7 +88,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         return None, None, problems, 0
 
     # Only issuer can pay dividends.
-    if util.after_block_or_test_network(block_index, 320000):  # Protocol change.
+    if protocol.after_block_or_test_network(block_index, 320000):  # Protocol change.
         issuer = ledger.get_asset_issuer(db, asset)
 
         if issuer != source:
@@ -103,7 +103,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
     # Calculate dividend quantities.
     exclude_empty = False
-    if util.enabled("zero_quantity_value_adjustment_1"):
+    if protocol.enabled("zero_quantity_value_adjustment_1"):
         exclude_empty = True
     holders = ledger.holders(db, asset, exclude_empty, block_index=block_index)
 
@@ -111,14 +111,14 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     addresses = []
     dividend_total = 0
     for holder in holders:
-        if block_index < 294500 and not util.is_test_network():  # Protocol change.
+        if block_index < 294500 and not protocol.is_test_network():  # Protocol change.
             if holder["escrow"]:
                 continue
 
         address = holder["address"]
         address_quantity = holder["address_quantity"]
 
-        if util.after_block_or_test_network(block_index, 296000):  # Protocol change.
+        if protocol.after_block_or_test_network(block_index, 296000):  # Protocol change.
             if address == source:
                 continue
 
@@ -126,7 +126,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
         if divisible:
             dividend_quantity /= config.UNIT
-        if not util.enabled("nondivisible_dividend_fix") and not dividend_divisible:
+        if not protocol.enabled("nondivisible_dividend_fix") and not dividend_divisible:
             dividend_quantity /= config.UNIT  # Pre-fix behaviour
 
         if dividend_asset == config.BTC and dividend_quantity < config.DEFAULT_MULTISIG_DUST_SIZE:
@@ -154,7 +154,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     fee = 0
     if not problems and dividend_asset != config.BTC:
         holder_count = len(set(addresses))
-        if util.after_block_or_test_network(block_index, 330000):  # Protocol change.
+        if protocol.after_block_or_test_network(block_index, 330000):  # Protocol change.
             fee = int(0.0002 * config.UNIT * holder_count)
         if fee:
             balance = ledger.get_balance(db, source, config.XCP)
@@ -177,7 +177,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
     # preserve order with old queries
     # TODO: remove and update checkpoints
-    if not util.is_test_network() and block_index in [313590, 313594]:
+    if not protocol.is_test_network() and block_index in [313590, 313594]:
         outputs.append(outputs.pop(-3))
 
     return dividend_total, outputs, problems, fee
@@ -227,7 +227,7 @@ def compose(
 
 def unpack(db, message, block_index, return_dict=False):
     try:
-        if util.after_block_or_test_network(block_index, 288151) and len(message) == LENGTH_2:
+        if protocol.after_block_or_test_network(block_index, 288151) and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
             asset = ledger.get_asset_name(db, asset_id, block_index)
             dividend_asset = ledger.get_asset_name(db, dividend_asset_id, block_index)
@@ -290,7 +290,7 @@ def parse(db, tx, message):
             action="dividend",
             event=tx["tx_hash"],
         )
-        if util.after_block_or_test_network(tx["block_index"], 330000):  # Protocol change.
+        if protocol.after_block_or_test_network(tx["block_index"], 330000):  # Protocol change.
             ledger.debit(
                 db,
                 tx["source"],
@@ -303,7 +303,7 @@ def parse(db, tx, message):
 
         # Credit.
         for output in outputs:
-            if not util.enabled("dont_credit_zero_dividend") or output["dividend_quantity"] > 0:
+            if not protocol.enabled("dont_credit_zero_dividend") or output["dividend_quantity"] > 0:
                 ledger.credit(
                     db,
                     output["address"],

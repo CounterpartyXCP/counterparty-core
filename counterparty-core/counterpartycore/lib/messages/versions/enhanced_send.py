@@ -6,7 +6,7 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.messages.versions import send1
-from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.parser import message_type, protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -83,7 +83,7 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
     if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
         problems.append("memo is too long")
 
-    if util.enabled("options_require_memo"):
+    if protocol.enabled("options_require_memo"):
         cursor = db.cursor()
         try:
             results = ledger.get_addresses(db, address=destination)

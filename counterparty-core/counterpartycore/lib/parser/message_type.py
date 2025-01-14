@@ -6,6 +6,7 @@ from counterpartycore.lib import (
     messages,
     util,
 )
+from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 def pack(message_type_id, block_index=None):
     # pack message ID into 1 byte if not zero
     if (
-        util.enabled("short_tx_type_id", block_index)
+        protocol.enabled("short_tx_type_id", block_index)
         and message_type_id > 0
         and message_type_id < 256
     ):
@@ -30,7 +31,7 @@ def unpack(packed_data, block_index=None):
 
     if len(packed_data) > 1:
         # try to read 1 byte first
-        if util.enabled("short_tx_type_id", block_index):
+        if protocol.enabled("short_tx_type_id", block_index):
             message_type_id = struct.unpack(config.SHORT_TXTYPE_FORMAT, packed_data[:1])[0]
             if message_type_id > 0:
                 message_remainder = packed_data[1:]
@@ -76,15 +77,15 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
         if destination == config.UNSPENDABLE and block_index <= config.BURN_END:
             return "burn"
         if (
-            block_index >= util.get_change_block_index("utxo_support")
+            block_index >= protocol.get_change_block_index("utxo_support")
             and len(utxos_info) > 0
             and utxos_info[0] != ""
         ):
             return "utxomove"
         if (
             destination != config.UNSPENDABLE
-            and block_index >= util.get_change_block_index("dispensers")
-            and block_index < util.get_change_block_index("disable_vanilla_btc_dispense")
+            and block_index >= protocol.get_change_block_index("dispensers")
+            and block_index < protocol.get_change_block_index("disable_vanilla_btc_dispense")
         ):
             return "dispense"
         return "unknown"

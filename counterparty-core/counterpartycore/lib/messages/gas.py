@@ -2,7 +2,8 @@ import logging
 import math
 from decimal import Decimal as D
 
-from counterpartycore.lib import config, database, ledger, util
+from counterpartycore.lib import config, database, ledger
+from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -103,7 +104,7 @@ def get_average_transactions(db, transaction_id, block_index):
 
 def get_transaction_fee(db, transaction_id, block_index):
     x = get_average_transactions(db, transaction_id, block_index)
-    fee_params = util.get_value_by_block_index("fee_parameters", block_index)
+    fee_params = protocol.get_value_by_block_index("fee_parameters", block_index)
 
     if fee_params is None:
         return 0

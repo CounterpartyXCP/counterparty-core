@@ -169,3 +169,7 @@ class VersionByteError(AddressError):
 
 class Base58Error(AddressError):
     pass
+
+
+class QuantityError(Exception):
+    pass

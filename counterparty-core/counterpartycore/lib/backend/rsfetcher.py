@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from counterparty_rs import indexer
 
 from counterpartycore.lib import config, exceptions, util
+from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -109,7 +110,7 @@ class RSFetcher(metaclass=util.SingletonMeta):
 
         self.next_height += 1
 
-        if util.enabled("correct_segwit_txids", block_index=block["height"]):
+        if protocol.enabled("correct_segwit_txids", block_index=block["height"]):
             for tx in block["transactions"]:
                 tx["tx_hash"] = tx["tx_id"]
 

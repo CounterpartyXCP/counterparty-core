@@ -2,7 +2,6 @@ from fractions import Fraction
 
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.ledger import CreditError, DebitError
-from counterpartycore.lib.util import QuantityError
 
 from ..params import (
     ADDR,
@@ -148,7 +147,7 @@ LEDGER_VECTOR = {
                     "DIVISIBLE",
                 ),
                 "error": (
-                    QuantityError,
+                    exceptions.QuantityError,
                     "Divisible assets have only eight decimal places of precision.",
                 ),
             },
@@ -157,7 +156,7 @@ LEDGER_VECTOR = {
                     1.1,
                     "NODIVISIBLE",
                 ),
-                "error": (QuantityError, "Fractional quantities of indivisible assets."),
+                "error": (exceptions.QuantityError, "Fractional quantities of indivisible assets."),
             },
         ],
         "value_out": [
@@ -187,7 +186,7 @@ LEDGER_VECTOR = {
                     1.1,
                     "NODIVISIBLE",
                 ),
-                "error": (QuantityError, "Fractional quantities of indivisible assets."),
+                "error": (exceptions.QuantityError, "Fractional quantities of indivisible assets."),
             },
         ],
         "xcp_created": [{"in": (), "out": 604506847920}],

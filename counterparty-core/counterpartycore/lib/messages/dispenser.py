@@ -19,7 +19,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.messages.utils.address import pack as address_pack
 from counterpartycore.lib.messages.utils.address import unpack as address_unpack
-from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.parser import message_type, protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -296,7 +296,7 @@ def validate(
             f"address doesn't have enough balance of {asset} ({available[0]['quantity']} < {escrow_quantity})"
         )
     elif (
-        util.enabled("dispenser_must_be_created_by_source")
+        protocol.enabled("dispenser_must_be_created_by_source")
         and open_address is not None
         and source != open_address
         and status != STATUS_CLOSED
@@ -318,7 +318,7 @@ def validate(
 
         # status == STATUS_OPEN_EMPTY_ADDRESS means open_address != source
         if (
-            util.enabled("dispenser_must_be_created_by_source")
+            protocol.enabled("dispenser_must_be_created_by_source")
             and status == STATUS_OPEN_EMPTY_ADDRESS
             and open_address == source
         ):
@@ -326,7 +326,7 @@ def validate(
 
         open_dispensers = []
         if (
-            util.enabled("dispenser_origin_permission_extended", block_index)
+            protocol.enabled("dispenser_origin_permission_extended", block_index)
             and status == STATUS_CLOSED
             and open_address
             and open_address != source
@@ -343,7 +343,7 @@ def validate(
         if len(open_dispensers) == 0 or open_dispensers[0]["status"] != STATUS_CLOSING:
             if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
                 if len(open_dispensers) > 0:
-                    max_refills = util.get_value_by_block_index("max_refills", block_index)
+                    max_refills = protocol.get_value_by_block_index("max_refills", block_index)
                     refilling_count = 0
                     if max_refills > 0:
                         refilling_count = ledger.get_refilling_count(
@@ -373,7 +373,7 @@ def validate(
             if status == STATUS_OPEN_EMPTY_ADDRESS:
                 # If an address is trying to refill a dispenser in a different address and it's the creator
                 if not (
-                    util.enabled("dispenser_origin_permission_extended", block_index)
+                    protocol.enabled("dispenser_origin_permission_extended", block_index)
                     and (len(open_dispensers) > 0)
                     and (open_dispensers[0]["origin"] == source)
                 ):
@@ -382,7 +382,7 @@ def validate(
                     )
 
                     if not (
-                        util.enabled("dispenser_origin_permission_extended", block_index)
+                        protocol.enabled("dispenser_origin_permission_extended", block_index)
                         and dispensers_from_same_origin_count > 0
                     ):
                         # It means that the same origin has not opened other dispensers in this address
@@ -393,7 +393,7 @@ def validate(
                                 "cannot open on another address if it has any balance history"
                             )
 
-                        if util.enabled("dispenser_origin_permission_extended", block_index):
+                        if protocol.enabled("dispenser_origin_permission_extended", block_index):
                             address_oldest_transaction = get_oldest_tx(
                                 query_address, block_index=util.CURRENT_BLOCK_INDEX
                             )
@@ -419,7 +419,7 @@ def validate(
 
     cursor.close()
 
-    if oracle_address is not None and util.enabled("oracle_dispensers", block_index):
+    if oracle_address is not None and protocol.enabled("oracle_dispensers", block_index):
         last_price, last_fee, last_label, last_updated = ledger.get_oracle_last_price(
             db, oracle_address, block_index
         )
@@ -476,13 +476,13 @@ def compose(
     data = message_type.pack(ID)
     data += struct.pack(FORMAT, assetid, give_quantity, escrow_quantity, mainchainrate, status)
     if (status == STATUS_OPEN_EMPTY_ADDRESS and open_address) or (
-        util.enabled("dispenser_origin_permission_extended")
+        protocol.enabled("dispenser_origin_permission_extended")
         and status == STATUS_CLOSED
         and open_address
         and open_address != source
     ):
         data += address_pack(open_address)
-    if oracle_address is not None and util.enabled("oracle_dispensers"):
+    if oracle_address is not None and protocol.enabled("oracle_dispensers"):
         oracle_fee = calculate_oracle_fee(
             db,
             escrow_quantity,
@@ -528,7 +528,7 @@ def unpack(message, return_dict=False):
         )
         read = LENGTH
         if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS or (
-            util.enabled("dispenser_origin_permission_extended")
+            protocol.enabled("dispenser_origin_permission_extended")
             and dispenser_status == STATUS_CLOSED
             and len(message) > read
         ):
@@ -591,7 +591,7 @@ def parse(db, tx, message):
         action_address = tx["source"]
 
     if status == "valid":
-        if util.enabled("dispenser_parsing_validation", util.CURRENT_BLOCK_INDEX):
+        if protocol.enabled("dispenser_parsing_validation", util.CURRENT_BLOCK_INDEX):
             asset_id, problems = validate(
                 db,
                 tx["source"],
@@ -618,7 +618,7 @@ def parse(db, tx, message):
                 )
 
                 if len(existing) == 0:
-                    if (oracle_address != None) and util.enabled(  # noqa: E711
+                    if (oracle_address != None) and protocol.enabled(  # noqa: E711
                         "oracle_dispensers", tx["block_index"]
                     ):
                         oracle_fee = calculate_oracle_fee(
@@ -709,7 +709,7 @@ def parse(db, tx, message):
                             "dispense_count": 0,
                         }
 
-                        if util.enabled("dispenser_origin_permission_extended"):
+                        if protocol.enabled("dispenser_origin_permission_extended"):
                             bindings["origin"] = tx["source"]
 
                         ledger.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
@@ -728,10 +728,10 @@ def parse(db, tx, message):
                     and existing[0]["give_quantity"] == give_quantity
                 ):
                     if tx["source"] == action_address or (
-                        util.enabled("dispenser_origin_permission_extended", tx["block_index"])
+                        protocol.enabled("dispenser_origin_permission_extended", tx["block_index"])
                         and tx["source"] == existing[0]["origin"]
                     ):
-                        if (oracle_address != None) and util.enabled(  # noqa: E711
+                        if (oracle_address != None) and protocol.enabled(  # noqa: E711
                             "oracle_dispensers", tx["block_index"]
                         ):
                             oracle_fee = calculate_oracle_fee(
@@ -774,7 +774,7 @@ def parse(db, tx, message):
                                     set_data,
                                     {
                                         "source": tx["source"]
-                                        if not util.enabled(
+                                        if not protocol.enabled(
                                             "dispenser_origin_permission_extended",
                                             tx["block_index"],
                                         )
@@ -814,11 +814,11 @@ def parse(db, tx, message):
                     status = "can only have one open dispenser per asset per address"
 
             elif dispenser_status == STATUS_CLOSED:
-                close_delay = util.get_value_by_block_index(
+                close_delay = protocol.get_value_by_block_index(
                     "dispenser_close_delay", tx["block_index"]
                 )
                 close_from_another_address = (
-                    util.enabled("dispenser_origin_permission_extended", tx["block_index"])
+                    protocol.enabled("dispenser_origin_permission_extended", tx["block_index"])
                     and action_address
                     and action_address != tx["source"]
                 )
@@ -938,7 +938,7 @@ def is_dispensable(db, address, amount):
 
 
 def close_pending(db, block_index):
-    block_delay = util.get_value_by_block_index("dispenser_close_delay", block_index)
+    block_delay = protocol.get_value_by_block_index("dispenser_close_delay", block_index)
 
     if block_delay > 0:
         pending_dispensers = ledger.get_pending_dispensers(db, block_index=block_index)

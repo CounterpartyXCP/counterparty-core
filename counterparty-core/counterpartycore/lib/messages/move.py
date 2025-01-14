@@ -3,6 +3,7 @@ import logging
 from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages.detach import detach_assets
 from counterpartycore.lib.messages.utils import address
+from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -97,7 +98,7 @@ def move_assets(db, tx):
         return False
 
     for source in sources:
-        if not destination and util.enabled(
+        if not destination and protocol.enabled(
             "spend_utxo_to_detach"
         ):  # one single OP_RETURN output in the transaction
             # we detach assets from the source

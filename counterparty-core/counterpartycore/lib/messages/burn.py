@@ -2,11 +2,12 @@ import csv
 import decimal
 import logging
 import os
+from fractions import Fraction
+
+from counterpartycore.lib import config, database, exceptions, ledger, util
+from counterpartycore.lib.parser import protocol
 
 D = decimal.Decimal
-from fractions import Fraction  # noqa: E402
-
-from counterpartycore.lib import config, database, exceptions, ledger, util  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -101,7 +102,7 @@ def compose(db, source: str, quantity: int, overburn: bool = False, skip_validat
 def parse(db, tx, message=None):
     burn_parse_cursor = db.cursor()
 
-    if util.is_test_network():
+    if protocol.is_test_network():
         problems = []
         status = "valid"
 

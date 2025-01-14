@@ -10,7 +10,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.messages.utils import address
-from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.parser import message_type, protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -69,7 +69,7 @@ def initialise(db):
 
 def get_total_fee(db, source, block_index):
     total_fee = ANTISPAM_FEE
-    antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
+    antispamfee = protocol.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
     if antispamfee > 0:
         balances_count = ledger.get_balances_count(db, source)[0]["cnt"]
         issuances_count = ledger.get_issuances_count(db, source)
@@ -196,7 +196,8 @@ def parse(db, tx, message):
     if status == "valid":
         try:
             antispamfee = (
-                util.get_value_by_block_index("sweep_antispam_fee", tx["block_index"]) * config.UNIT
+                protocol.get_value_by_block_index("sweep_antispam_fee", tx["block_index"])
+                * config.UNIT
             )
 
             if antispamfee > 0:
@@ -251,7 +252,7 @@ def parse(db, tx, message):
             sweep_pos = 0
 
             assets_issued = balances
-            if util.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
+            if protocol.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
                 assets_issued = ledger.get_asset_issued(db, tx["source"])
 
             for next_asset_issued in assets_issued:

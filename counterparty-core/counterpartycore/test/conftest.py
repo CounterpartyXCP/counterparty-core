@@ -22,8 +22,8 @@ from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import log, server
-from counterpartycore.lib.parser import gettxinfo
-from counterpartycore.lib.utils import base58, multisig, opcodes, script
+from counterpartycore.lib.parser import gettxinfo, protocol
+from counterpartycore.lib.utils import assetnames, base58, multisig, opcodes, script
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -72,7 +72,7 @@ ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = (
     False  # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
 )
 ALWAYS_LATEST_PROTOCOL_CHANGES = False  # Even when this is true, this can be overridden if allow_always_latest is False in MOCK_PROTOCOL_CHANGES_AT_BLOCK
-_enabled = util.enabled
+_enabled = protocol.enabled
 
 
 def enabled(change_name, block_index=None):
@@ -92,7 +92,7 @@ def enabled(change_name, block_index=None):
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
         # KeyError to mimic real util.enabled
-        if change_name not in util.PROTOCOL_CHANGES:
+        if change_name not in protocol.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
         # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or util.CURRENT_BLOCK_INDEX} enabled: True")
@@ -102,7 +102,7 @@ def enabled(change_name, block_index=None):
         return _enabled(change_name, block_index)
 
 
-util.enabled = enabled
+protocol.enabled = enabled
 
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
@@ -122,7 +122,7 @@ def shouldCheckForMockProtocolChangesAtBlock(change_name):
 
 
 RANDOM_ASSET_INT = None
-_generate_random_asset = util.generate_random_asset
+_generate_random_asset = assetnames.generate_random_asset
 
 
 def generate_random_asset(subasset_longname=None):
@@ -132,7 +132,7 @@ def generate_random_asset(subasset_longname=None):
         return "A" + str(RANDOM_ASSET_INT)
 
 
-util.generate_random_asset = generate_random_asset
+assetnames.generate_random_asset = generate_random_asset
 
 DISABLE_ARC4_MOCKING = False
 
@@ -670,7 +670,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.cli.log.isodt", isodt)
     monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
-    monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
+    monkeypatch.setattr("counterpartycore.lib.messages.bet.date_passed", date_passed)
     monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")

@@ -13,6 +13,7 @@ Expiring a bet match doesn’t re‐open the constituent bets. (So all bets may 
 import decimal
 import logging
 import struct
+import time
 
 from counterpartycore.lib import (
     config,
@@ -21,7 +22,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.parser import message_type, protocol
 
 D = decimal.Decimal
 
@@ -30,6 +31,12 @@ logger = logging.getLogger(config.LOGGER_NAME)
 FORMAT = ">HIQQdII"
 LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 ID = 40
+
+
+# For testing purposes
+def date_passed(date):
+    """Check if the date has already passed."""
+    return date <= int(time.time())
 
 
 def initialise(db):
@@ -349,7 +356,7 @@ def validate(
         problems.append("negative deadline")
     if expiration < 0:
         problems.append("negative expiration")
-    if expiration == 0 and not util.after_block_or_test_network(
+    if expiration == 0 and not protocol.after_block_or_test_network(
         block_index, 317500
     ):  # Protocol change.
         problems.append("zero expiration")
@@ -395,7 +402,7 @@ def compose(
         expiration,
         util.CURRENT_BLOCK_INDEX,
     )
-    if util.date_passed(deadline):
+    if date_passed(deadline):
         problems.append("deadline passed")
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -581,7 +588,7 @@ def match(db, tx):
     tx1_counterwager_remaining = tx1["counterwager_remaining"]
 
     bet_matches = ledger.get_matching_bets(db, tx1["feed_address"], counterbet_type)
-    if util.after_block_or_test_network(tx["block_index"], 284501):  # Protocol change.
+    if protocol.after_block_or_test_network(tx["block_index"], 284501):  # Protocol change.
         sorted(bet_matches, key=lambda x: x["tx_index"])  # Sort by tx index second.
         sorted(
             bet_matches, key=lambda x: ledger.price(x["wager_quantity"], x["counterwager_quantity"])
@@ -647,7 +654,7 @@ def match(db, tx):
             if not forward_quantity:
                 logger.debug("Skipping: zero forward quantity.")
                 continue
-            if util.after_block_or_test_network(tx1["block_index"], 286500):  # Protocol change.
+            if protocol.after_block_or_test_network(tx1["block_index"], 286500):  # Protocol change.
                 if not backward_quantity:
                     logger.debug("Skipping: zero backward quantity.")
                     continue
@@ -689,7 +696,7 @@ def match(db, tx):
             }
             logger.info("Bet %(bet_hash)s updated (%(tx_hash)s) [%(status)s]", log_data)
 
-            if util.after_block_or_test_network(tx1["block_index"], 292000):  # Protocol change
+            if protocol.after_block_or_test_network(tx1["block_index"], 292000):  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = "filled"

@@ -3,8 +3,9 @@ import logging
 import math
 import struct
 
-from counterpartycore.lib import config, database, exceptions, ledger, util
+from counterpartycore.lib import config, database, exceptions, ledger
 from counterpartycore.lib.messages import fairminter as fairminter_mod
+from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -92,7 +93,7 @@ def validate(
         balance = ledger.get_balance(db, source, config.XCP)
         if balance < xcp_total_price:
             problems.append("insufficient XCP balance")
-    elif not util.enabled("partial_mint_to_reach_hard_cap"):
+    elif not protocol.enabled("partial_mint_to_reach_hard_cap"):
         # check id we don't exceed the hard cap
         if (
             fairminter["hard_cap"] > 0
@@ -197,7 +198,7 @@ def parse(db, tx, message):
         earn_quantity = quantity
     else:
         paid_quantity = 0
-        if util.enabled("partial_mint_to_reach_hard_cap"):
+        if protocol.enabled("partial_mint_to_reach_hard_cap"):
             asset_supply = ledger.asset_supply(db, fairminter["asset"])
             if (
                 fairminter["hard_cap"] > 0
