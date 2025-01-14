@@ -736,3 +736,10 @@ def init_arc4(seed):
     if isinstance(seed, str):
         seed = binascii.unhexlify(seed)
     return ARC4(seed)
+
+
+def arc4_decrypt(cyphertext, decoded_tx):
+    """Un-obfuscate. Initialise key once per attempt."""
+    vin_hash = binascii.unhexlify(decoded_tx["vin"][0]["hash"])
+    key = init_arc4(vin_hash)
+    return key.decrypt(cyphertext)

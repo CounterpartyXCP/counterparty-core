@@ -8,9 +8,10 @@ from multiprocessing import current_process
 from threading import current_thread
 
 import requests
+from bitcoinutils.keys import PublicKey
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
-from counterpartycore.lib import config, exceptions, script, util
+from counterpartycore.lib import config, exceptions, util
 from counterpartycore.lib.parser import deserialize
 from counterpartycore.lib.util import ib2h
 
@@ -413,7 +414,10 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                     # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
                     try:
                         pubkey = vin["txinwitness"][1]
-                        if pubkeyhash == script.pubkey_to_p2whash(pubkey):
+                        if (
+                            pubkeyhash
+                            == PublicKey.from_hex(pubkey).get_segwit_address().to_string()
+                        ):
                             return pubkey
                     except binascii.Error:
                         pass
@@ -424,7 +428,15 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                     # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
                     try:
                         pubkey = asm[3]
-                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                        if (
+                            pubkeyhash
+                            == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
+                        ):
+                            return pubkey
+                        if (
+                            pubkeyhash
+                            == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+                        ):
                             return pubkey
                     except binascii.Error:
                         pass
@@ -433,7 +445,15 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
             if len(asm) == 3:  # p2pk
                 try:
                     pubkey = asm[1]
-                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                    if (
+                        pubkeyhash
+                        == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
+                    ):
+                        return pubkey
+                    if (
+                        pubkeyhash
+                        == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+                    ):
                         return pubkey
                 except binascii.Error:
                     pass
@@ -463,3 +483,14 @@ def list_unspent(source, allow_unconfirmed_inputs):
         return unspent_list
 
     return []
+
+
+def get_vin_info(vin):
+    # Note: We don't know what block the `vin` is in, and the block might
+    # have been from a while ago, so this call may not hit the cache.
+    vin_ctx = get_decoded_transaction(vin["hash"])
+
+    is_segwit = vin_ctx["segwit"]
+    vout = vin_ctx["vout"][vin["n"]]
+
+    return vout["value"], vout["script_pub_key"], is_segwit

@@ -12,6 +12,7 @@ from urllib.parse import quote_plus as urlencode
 
 import appdirs
 import bitcoin as bitcoinlib
+from bitcoinutils.setup import setup
 from termcolor import colored, cprint
 
 from counterpartycore.lib import (
@@ -161,7 +162,6 @@ def initialise_config(
     utxo_locks_max_addresses=config.DEFAULT_UTXO_LOCKS_MAX_ADDRESSES,
     utxo_locks_max_age=config.DEFAULT_UTXO_LOCKS_MAX_AGE,
     estimate_fee_per_kb=None,
-    customnet=None,
     no_mempool=False,
     no_telemetry=False,
     enable_zmq_publisher=False,
@@ -172,7 +172,6 @@ def initialise_config(
     gunicorn_workers=None,
     gunicorn_threads_per_worker=None,
     database_file=None,  # for tests
-    action=None,
     electrs_url=None,
 ):
     # log config already initialized
@@ -224,6 +223,11 @@ def initialise_config(
     if config.REGTEST:
         config.NETWORK_NAME = "regtest"
     network = f".{config.NETWORK_NAME}" if config.NETWORK_NAME != "mainnet" else ""
+
+    if config.NETWORK_NAME.startswith("testnet"):
+        setup("testnet")
+    else:
+        setup(config.NETWORK_NAME)
 
     # Database
     if database_file:
@@ -573,7 +577,6 @@ def initialise_log_and_config(args, api=False):
         "waitress_threads": args.waitress_threads,
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
-        "action": args.action,
         "electrs_url": args.electrs_url,
     }
     # for tests

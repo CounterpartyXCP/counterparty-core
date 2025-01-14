@@ -15,7 +15,7 @@ import bitcoin as bitcoinlib
 import pycoin
 import pytest
 import requests
-from pycoin.coins.bitcoin import Tx  # noqa: F401
+from bitcoinutils.keys import PublicKey
 
 from counterpartycore.lib import config, database, exceptions, ledger, opcodes, script, util
 from counterpartycore.lib.api import api_server as api_v2
@@ -417,7 +417,12 @@ def scriptpubkey_to_address(scriptpubkey):
 
     elif asm[-1] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = gettxinfo.get_checkmultisig(asm)
-        pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+        pubkeyhashes = [
+            PublicKey.from_hex(binascii.hexlify(pubkey).decode("utf-8"))
+            .get_address(compressed=True)
+            .to_string()
+            for pubkey in pubkeys
+        ]
         return script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
 
     elif len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:  # noqa: F405

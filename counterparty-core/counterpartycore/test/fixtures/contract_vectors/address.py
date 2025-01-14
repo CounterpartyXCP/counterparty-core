@@ -6,6 +6,28 @@ from ..params import P2SH_ADDR
 
 ADDRESS_VECTOR = {
     "messages.utils.address": {
+        "is_pubkeyhash": [
+            {
+                "comment": "valid bitcoin address",
+                "in": ("mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6",),
+                "out": True,
+            },
+            {
+                "comment": "valid P2SH bitcoin address, but is_pubkeyhash specifically checks for valid P2PKH address",
+                "in": (P2SH_ADDR[0],),
+                "out": False,
+            },
+            {
+                "comment": "invalid checksum",
+                "in": ("mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7",),
+                "out": False,
+            },
+            {
+                "comment": "invalid version byte",
+                "in": ("LnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6",),
+                "out": False,
+            },
+        ],
         "pubkeyhash_array": [
             {
                 "in": (

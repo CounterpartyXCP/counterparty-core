@@ -2,8 +2,9 @@ import binascii
 import logging
 
 import requests
+from bitcoinutils.keys import PublicKey
 
-from counterpartycore.lib import config, exceptions, script, util
+from counterpartycore.lib import config, exceptions
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -74,7 +75,7 @@ def pubkey_from_tx(tx, pubkeyhash):
                 # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
                 try:
                     pubkey = vin["witness"][1]
-                    if pubkeyhash == script.pubkey_to_p2whash(util.unhexlify(pubkey)):
+                    if pubkeyhash == PublicKey.from_hex(pubkey).get_segwit_address().to_string():
                         return pubkey
                 except binascii.Error:
                     pass
@@ -84,7 +85,15 @@ def pubkey_from_tx(tx, pubkeyhash):
                 # catch unhexlify errs for when asm[2] isn't a pubkey (eg; for P2SH)
                 try:
                     pubkey = asm[3]
-                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                    if (
+                        pubkeyhash
+                        == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
+                    ):
+                        return pubkey
+                    if (
+                        pubkeyhash
+                        == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+                    ):
                         return pubkey
                 except binascii.Error:
                     pass
@@ -93,7 +102,15 @@ def pubkey_from_tx(tx, pubkeyhash):
         if len(asm) == 3:  # p2pk
             try:
                 pubkey = asm[1]
-                if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                if (
+                    pubkeyhash
+                    == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
+                ):
+                    return pubkey
+                if (
+                    pubkeyhash
+                    == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+                ):
                     return pubkey
             except binascii.Error:
                 pass

@@ -5,37 +5,11 @@ Naming convention: a `pub` is either a pubkey or a pubkeyhash
 """
 
 import binascii
-import hashlib
 
 import bitcoin as bitcoinlib
-from bitcoinutils.keys import PublicKey
-from bitcoinutils.setup import setup
 from counterparty_rs import b58, utils
 
-# TODO: Use `python-bitcointools` instead. (Get rid of `pycoin` dependency.)
-from ripemd import ripemd160 as RIPEMD160  # nosec B413
-
-from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.opcodes import *  # noqa: F403
-
-
-def is_pubkeyhash(monosig_address):
-    """Check if PubKeyHash is valid P2PKH address."""
-    assert not is_multisig(monosig_address)
-    try:
-        base58_check_decode(monosig_address, config.ADDRESSVERSION)
-        return True
-    except (exceptions.Base58Error, exceptions.VersionByteError):
-        return False
-
-
-def extract_array(address):
-    """Extract data from multi-signature address."""
-    assert is_multisig(address)
-    array = address.split("_")
-    signatures_required, pubs, signatures_possible = array[0], sorted(array[1:-1]), array[-1]
-    test_array(signatures_required, pubs, signatures_possible)
-    return int(signatures_required), pubs, int(signatures_possible)
+from counterpartycore.lib import config, exceptions, opcodes
 
 
 def base58_check_encode(original, version):
@@ -89,29 +63,13 @@ def construct_array(signatures_required, pubs, signatures_possible):
     return address
 
 
-def hash160(x):
-    x = hashlib.sha256(x).digest()
-    m = RIPEMD160.new()
-    m.update(x)
-    return m.digest()
-
-
-def pubkey_to_pubkeyhash(pubkey):
-    """Convert public key to PubKeyHash."""
-    pubkeyhash = hash160(pubkey)
-    pubkey = base58_check_encode(
-        binascii.hexlify(pubkeyhash).decode("utf-8"), config.ADDRESSVERSION
-    )
-    return pubkey
-
-
-def pubkey_to_p2whash(pubkey):
-    if config.NETWORK_NAME == "testnet4":
-        setup("testnet")
-    else:
-        setup(config.NETWORK_NAME)
-    address = PublicKey.from_hex(pubkey).get_segwit_address().to_string()
-    return address
+def extract_array(address):
+    """Extract data from multi-signature address."""
+    assert is_multisig(address)
+    array = address.split("_")
+    signatures_required, pubs, signatures_possible = array[0], sorted(array[1:-1]), array[-1]
+    test_array(signatures_required, pubs, signatures_possible)
+    return int(signatures_required), pubs, int(signatures_possible)
 
 
 def script_to_asm(scriptpubkey):
@@ -121,7 +79,7 @@ def script_to_asm(scriptpubkey):
         elif isinstance(scriptpubkey, str):
             scriptpubkey = binascii.unhexlify(scriptpubkey)
         asm = utils.script_to_asm(scriptpubkey)
-        if asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
+        if asm[-1] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
             asm[-2] = int.from_bytes(asm[-2], "big")
             asm[0] = int.from_bytes(asm[0], "big")
         return asm

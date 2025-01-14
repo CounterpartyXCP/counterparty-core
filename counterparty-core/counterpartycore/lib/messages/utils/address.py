@@ -8,10 +8,20 @@ from counterpartycore.lib import config, exceptions, script, util
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
+def is_pubkeyhash(monosig_address):
+    """Check if PubKeyHash is valid P2PKH address."""
+    assert not script.is_multisig(monosig_address)
+    try:
+        script.base58_check_decode(monosig_address, config.ADDRESSVERSION)
+        return True
+    except (exceptions.Base58Error, exceptions.VersionByteError):
+        return False
+
+
 def pubkeyhash_array(address):
     """Return PubKeyHashes from an address."""
     signatures_required, pubs, signatures_possible = script.extract_array(address)
-    if not all([script.is_pubkeyhash(pub) for pub in pubs]):
+    if not all([is_pubkeyhash(pub) for pub in pubs]):
         raise exceptions.MultiSigAddressError(
             "Invalid PubKeyHashes. Multi-signature address must use PubKeyHashes, not public keys."
         )

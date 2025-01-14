@@ -2,20 +2,39 @@
 This module contains p2sh data encoding functions
 """
 
+import binascii
+import hashlib
 import logging
 import struct
 
 import bitcoin as bitcoinlib
 from bitcoin.bech32 import CBech32Data
+from ripemd import ripemd160 as RIPEMD160  # nosec B413
 
 from counterpartycore.lib import config, exceptions, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
+def hash160(x):
+    x = hashlib.sha256(x).digest()
+    m = RIPEMD160.new()
+    m.update(x)
+    return m.digest()
+
+
+def pubkey_to_pubkeyhash(pubkey):
+    """Convert public key to PubKeyHash."""
+    pubkeyhash = hash160(pubkey)
+    pubkey = script.base58_check_encode(
+        binascii.hexlify(pubkeyhash).decode("utf-8"), config.ADDRESSVERSION
+    )
+    return pubkey
+
+
 def pubkey_to_p2whash(pubkey):
     """Convert public key to PayToWitness."""
-    pubkeyhash = script.hash160(pubkey)
+    pubkeyhash = hash160(pubkey)
     pubkey = CBech32Data.from_bytes(0, pubkeyhash)
     return str(pubkey)
 
@@ -58,7 +77,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
         if p2sh_is_segwit:
             source = pubkey_to_p2whash(pubkey)
         else:
-            source = script.pubkey_to_pubkeyhash(pubkey)
+            source = pubkey_to_pubkeyhash(pubkey)
         redeem_script_is_valid = True
     elif (
         script_len > 41
@@ -124,7 +143,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                             if p2sh_is_segwit:
                                 source = pubkey_to_p2whash(pubkey)
                             else:
-                                source = script.pubkey_to_pubkeyhash(pubkey)
+                                source = pubkey_to_pubkeyhash(pubkey)
 
                             valid_sig = (
                                 redeem_script[pos] == bitcoinlib.core.script.OP_CHECKSIGVERIFY
