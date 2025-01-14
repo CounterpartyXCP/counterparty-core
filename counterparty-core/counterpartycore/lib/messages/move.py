@@ -1,7 +1,8 @@
 import logging
 
-from counterpartycore.lib import config, exceptions, ledger, script, util
+from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages.detach import detach_assets
+from counterpartycore.lib.messages.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -16,8 +17,8 @@ def compose(db, source, destination, utxo_value=None, skip_validation=False):
             raise exceptions.ComposeError("No assets attached to the source utxo")
 
         try:
-            script.validate(destination)
-        except script.AddressError as e:
+            address.validate(destination)
+        except exceptions.AddressError as e:
             raise exceptions.ComposeError("destination must be an address") from e
 
     value = config.DEFAULT_UTXO_VALUE

@@ -3,8 +3,9 @@
 import logging
 import struct
 
-from counterpartycore.lib import backend, config, exceptions, ledger, script, util
+from counterpartycore.lib import backend, config, exceptions, ledger, util
 from counterpartycore.lib.messages import gas
+from counterpartycore.lib.messages.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -32,14 +33,14 @@ def validate(db, source, destination, asset, quantity, block_index=None):
     destination_is_address = True
     # check if source is an address
     try:
-        script.validate(source)
-    except script.AddressError:
+        address.validate(source)
+    except exceptions.AddressError:
         source_is_address = False
     # check if destination is an address
     if destination:
         try:
-            script.validate(destination)
-        except script.AddressError:
+            address.validate(destination)
+        except exceptions.AddressError:
             destination_is_address = False
 
     # check if source is a UTXO

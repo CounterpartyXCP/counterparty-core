@@ -17,13 +17,20 @@ import time
 
 import flask
 import jsonrpc
+from flask import request
+from flask_httpauth import HTTPBasicAuth
+from jsonrpc import dispatcher
+from jsonrpc.exceptions import JSONRPCDispatchException
+from sentry_sdk import configure_scope as configure_sentry_scope
+from werkzeug.serving import make_server
+from xmltodict import unparse as serialize_to_xml
+
 from counterpartycore.lib import (
     backend,
     composer,
     config,
     exceptions,
     ledger,
-    script,
     util,
 )
 from counterpartycore.lib.api import util as api_util
@@ -53,13 +60,6 @@ from counterpartycore.lib.tools.telemetry.util import (  # noqa: E402
     is_docker,
     is_force_enabled,
 )
-from flask import request
-from flask_httpauth import HTTPBasicAuth
-from jsonrpc import dispatcher
-from jsonrpc.exceptions import JSONRPCDispatchException
-from sentry_sdk import configure_scope as configure_sentry_scope
-from werkzeug.serving import make_server
-from xmltodict import unparse as serialize_to_xml
 
 D = decimal.Decimal
 
@@ -635,7 +635,7 @@ class APIServer(threading.Thread):
                                 return tx_hexes
                 except (
                     TypeError,
-                    script.AddressError,
+                    exceptions.AddressError,
                     exceptions.ComposeError,
                     exceptions.TransactionError,
                     exceptions.BalanceError,
@@ -1231,7 +1231,7 @@ class APIServer(threading.Thread):
                             db, query_type, transaction_args, common_args
                         )
                 except (
-                    script.AddressError,
+                    exceptions.AddressError,
                     exceptions.ComposeError,
                     exceptions.TransactionError,
                     exceptions.BalanceError,

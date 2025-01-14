@@ -1,9 +1,59 @@
 import binascii
 
-from counterpartycore.lib import config
+from counterpartycore.lib import config, exceptions
+
+from ..params import P2SH_ADDR
 
 ADDRESS_VECTOR = {
     "messages.utils.address": {
+        "pubkeyhash_array": [
+            {
+                "in": (
+                    "1_xxxxxxxxxxxWRONGxxxxxxxxxxxxxxxxxx_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                ),
+                "error": (
+                    exceptions.MultiSigAddressError,
+                    "Invalid PubKeyHashes. Multi-signature address must use PubKeyHashes, not public keys.",
+                ),
+            },
+            {
+                "in": (
+                    "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                ),
+                "out": [
+                    "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                ],
+            },
+        ],
+        "validate": [
+            {
+                "comment": "valid bitcoin address",
+                "in": ("mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6",),
+                "out": None,
+            },
+            {"comment": "valid bitcoin P2SH address", "in": (P2SH_ADDR[0],), "out": None},
+            {
+                "comment": "invalid bitcoin address: bad checksum",
+                "in": ("mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP7",),
+                "error": (exceptions.Base58Error, "invalid base58 string"),
+            },
+            {
+                "comment": "valid multi-sig",
+                "in": (
+                    "1_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2",
+                ),
+                "out": None,
+            },
+            {
+                "comment": "invalid multi-sig with P2SH addres",
+                "in": ("1_" + P2SH_ADDR[0] + "_mnMrocns5kBjPZxRxXb5A1gx7gAoRZWPP6_2",),
+                "error": (
+                    exceptions.MultiSigAddressError,
+                    "Invalid PubKeyHashes. Multi-signature address must use PubKeyHashes, not public keys.",
+                ),
+            },
+        ],
         "pack": [
             {
                 "config_context": {"ADDRESSVERSION": config.ADDRESSVERSION_MAINNET},

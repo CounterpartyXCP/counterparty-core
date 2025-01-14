@@ -25,9 +25,8 @@ from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
 
-from counterpartycore import server  # noqa: E402
-from counterpartycore.lib import (  # noqa: E402
-    composer,  # noqa
+from counterpartycore.lib import (
+    composer,
     config,
     database,
     exceptions,
@@ -35,10 +34,11 @@ from counterpartycore.lib import (  # noqa: E402
     messages,
     util,
 )
-from counterpartycore.lib.api.util import to_json  # noqa: E402
+from counterpartycore.lib.api.util import to_json
+from counterpartycore.lib.cli import server
 from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
 from counterpartycore.lib.parser import blocks, check, deserialize, gettxinfo
-from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
+from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP
 from counterpartycore.test.fixtures.scenarios import (
     INTEGRATION_SCENARIOS,
     standard_scenarios_params,

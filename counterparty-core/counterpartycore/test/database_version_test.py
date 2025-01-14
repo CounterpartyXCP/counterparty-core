@@ -3,8 +3,8 @@ import tempfile
 
 import pytest
 
-from counterpartycore import server
 from counterpartycore.lib import config, database
+from counterpartycore.lib.cli import server
 from counterpartycore.lib.parser import check
 
 # this is require near the top to do setup of the test suite

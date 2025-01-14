@@ -17,12 +17,12 @@ import pytest
 import requests
 from pycoin.coins.bitcoin import Tx  # noqa: F401
 
-from counterpartycore import server
-from counterpartycore.lib import config, database, exceptions, ledger, script, util
+from counterpartycore.lib import config, database, exceptions, ledger, opcodes, script, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.lib.api import dbbuilder
-from counterpartycore.lib.cli import log
+from counterpartycore.lib.cli import log, server
+from counterpartycore.lib.parser import gettxinfo
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -402,6 +402,32 @@ def cp_server(request):
     return db
 
 
+def scriptpubkey_to_address(scriptpubkey):
+    asm = script.script_to_asm(scriptpubkey)
+
+    if asm[-1] == opcodes.OP_CHECKSIG:  # noqa: F405
+        try:
+            checksig = gettxinfo.get_checksig(asm)
+        except exceptions.DecodeError:  # coinbase
+            return None
+
+        return script.base58_check_encode(
+            binascii.hexlify(checksig).decode("utf-8"), config.ADDRESSVERSION
+        )
+
+    elif asm[-1] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
+        pubkeys, signatures_required = gettxinfo.get_checkmultisig(asm)
+        pubkeyhashes = [script.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+        return script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
+
+    elif len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:  # noqa: F405
+        return script.base58_check_encode(
+            binascii.hexlify(asm[1]).decode("utf-8"), config.P2SH_ADDRESSVERSION
+        )
+
+    return None
+
+
 class MockUTXOSet(object):
     """
     :type utxos list UTXOs list containing:
@@ -485,9 +511,7 @@ class MockUTXOSet(object):
             script_pub_key = binascii.hexlify(txout.script).decode("ascii")
             txouts.append(
                 {
-                    "address": script.scriptpubkey_to_address(
-                        bitcoinlib.core.CScript(txout.script)
-                    ),
+                    "address": scriptpubkey_to_address(bitcoinlib.core.CScript(txout.script)),
                     "confirmations": int(confirmations),
                     "amount": txout.coin_value / 1e8,
                     "value": txout.coin_value,

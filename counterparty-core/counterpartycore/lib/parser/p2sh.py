@@ -6,9 +6,18 @@ import logging
 import struct
 
 import bitcoin as bitcoinlib
+from bitcoin.bech32 import CBech32Data
+
 from counterpartycore.lib import config, exceptions, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+
+def pubkey_to_p2whash(pubkey):
+    """Convert public key to PayToWitness."""
+    pubkeyhash = script.hash160(pubkey)
+    pubkey = CBech32Data.from_bytes(0, pubkeyhash)
+    return str(pubkey)
 
 
 def decode_data_push(arr, pos):
@@ -47,7 +56,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
         # - OP_DROP [push] [33-byte pubkey] OP_CHECKSIGVERIFY [n] OP_DROP OP_DEPTH 0 OP_EQUAL
         pubkey = redeem_script[2:35]
         if p2sh_is_segwit:
-            source = script.pubkey_to_p2whash(pubkey)
+            source = pubkey_to_p2whash(pubkey)
         else:
             source = script.pubkey_to_pubkeyhash(pubkey)
         redeem_script_is_valid = True
@@ -113,7 +122,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                             pos, pubkey = decode_data_push(redeem_script, pos)
 
                             if p2sh_is_segwit:
-                                source = script.pubkey_to_p2whash(pubkey)
+                                source = pubkey_to_p2whash(pubkey)
                             else:
                                 source = script.pubkey_to_pubkeyhash(pubkey)
 

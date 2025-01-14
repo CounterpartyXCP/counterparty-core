@@ -1,7 +1,8 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, script, util
+from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib.messages.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -26,8 +27,8 @@ def compose(db, source, destination=None, skip_validation=False):
     # check if destination is an address
     if destination is not None:
         try:
-            script.validate(destination)
-        except script.AddressError as e:
+            address.validate(destination)
+        except exceptions.AddressError as e:
             raise exceptions.ComposeError("destination must be an address") from e
 
     # create message
@@ -90,7 +91,7 @@ def detach_assets(db, tx, source, destination=None):
         # check if destination is an address
         if detach_destination is not None:
             try:
-                script.validate(detach_destination)
+                address.validate(detach_destination)
             except Exception:  # let's catch all exceptions here
                 detach_destination = None
         # if no destination is provided, we credit the asset to utxo_address

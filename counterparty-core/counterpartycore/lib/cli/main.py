@@ -5,10 +5,9 @@ from urllib.parse import quote_plus as urlencode
 
 from termcolor import cprint
 
-from counterpartycore import server
 from counterpartycore.lib import config
 from counterpartycore.lib.api import dbbuilder
-from counterpartycore.lib.cli import bootstrap, setup
+from counterpartycore.lib.cli import bootstrap, server, setup
 from counterpartycore.lib.tools import sentry
 
 logger = logging.getLogger(config.LOGGER_NAME)

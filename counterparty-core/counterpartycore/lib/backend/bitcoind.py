@@ -413,7 +413,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                     # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
                     try:
                         pubkey = vin["txinwitness"][1]
-                        if pubkeyhash == script.pubkey_to_p2whash2(pubkey):
+                        if pubkeyhash == script.pubkey_to_p2whash(pubkey):
                             return pubkey
                     except binascii.Error:
                         pass

@@ -3,7 +3,7 @@ import logging
 import struct
 from io import BytesIO
 
-from counterpartycore.lib import backend, config, ledger, script, util
+from counterpartycore.lib import backend, config, exceptions, ledger, script, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.opcodes import *  # noqa: F403
@@ -11,6 +11,37 @@ from counterpartycore.lib.parser import message_type, p2sh
 from counterpartycore.lib.util import inverse_hash
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+
+def get_checksig(asm):
+    try:
+        op_dup, op_hash160, pubkeyhash, op_equalverify, op_checksig = asm
+    except ValueError:
+        raise exceptions.DecodeError("invalid OP_CHECKSIG") from None
+
+    if (op_dup, op_hash160, op_equalverify, op_checksig) == (
+        OP_DUP,  # noqa: F405
+        OP_HASH160,  # noqa: F405
+        OP_EQUALVERIFY,  # noqa: F405
+        OP_CHECKSIG,  # noqa: F405
+    ) and type(pubkeyhash) == bytes:  # noqa: E721
+        return pubkeyhash
+
+    raise exceptions.DecodeError("invalid OP_CHECKSIG")
+
+
+def get_checkmultisig(asm):
+    # N-of-2
+    if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:  # noqa: F405
+        pubkeys, signatures_required = asm[1:3], asm[0]
+        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
+            return pubkeys, signatures_required
+    # N-of-3
+    if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:  # noqa: F405
+        pubkeys, signatures_required = asm[1:4], asm[0]
+        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
+            return pubkeys, signatures_required
+    raise exceptions.DecodeError("invalid OP_CHECKMULTISIG")
 
 
 def arc4_decrypt(cyphertext, decoded_tx):
@@ -21,7 +52,7 @@ def arc4_decrypt(cyphertext, decoded_tx):
 
 
 def decode_checksig(asm, decoded_tx):
-    pubkeyhash = script.get_checksig(asm)
+    pubkeyhash = get_checksig(asm)
     chunk = arc4_decrypt(pubkeyhash, decoded_tx)  # TODO: This is slow!
     if chunk[1 : len(config.PREFIX) + 1] == config.PREFIX:  # Data
         # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
@@ -42,7 +73,7 @@ def decode_scripthash(asm):
 
 
 def decode_checkmultisig(asm, decoded_tx):
-    pubkeys, signatures_required = script.get_checkmultisig(asm)
+    pubkeys, signatures_required = get_checkmultisig(asm)
     chunk = b""
     for pubkey in pubkeys[:-1]:  # (No data in last pubkey.)
         chunk += pubkey[1:-1]  # Skip sign byte and nonce byte.

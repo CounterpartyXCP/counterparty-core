@@ -149,3 +149,23 @@ class ElectrsError(Exception):
 
 class BlockOutOfRange(Exception):
     pass
+
+
+class InputError(Exception):
+    pass
+
+
+class AddressError(Exception):
+    pass
+
+
+class MultiSigAddressError(AddressError):
+    pass
+
+
+class VersionByteError(AddressError):
+    pass
+
+
+class Base58Error(AddressError):
+    pass

@@ -17,6 +17,7 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
+    opcodes,
     script,
     util,
 )
@@ -25,6 +26,50 @@ from counterpartycore.lib.parser import deserialize
 MAX_INPUTS_SET = 100
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+
+def get_output_type(script_pub_key):
+    asm = script.script_to_asm(script_pub_key)
+    if asm[0] == opcodes.OP_RETURN:
+        return "OP_RETURN"
+    if len(asm) == 2 and asm[1] == opcodes.OP_CHECKSIG:
+        return "P2PK"
+    if (
+        len(asm) == 5
+        and asm[0] == opcodes.OP_DUP
+        and asm[3] == opcodes.OP_EQUALVERIFY
+        and asm[4] == opcodes.OP_CHECKSIG
+    ):
+        return "P2PKH"
+    if len(asm) >= 4 and asm[-1] == opcodes.OP_CHECKMULTISIG and asm[-2] == len(asm) - 3:
+        return "P2MS"
+    if len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:
+        return "P2SH"
+    if len(asm) == 2 and asm[0] == b"":
+        if len(asm[1]) == 32:
+            return "P2WSH"
+        return "P2WPKH"
+    if len(asm) == 2 and asm[0] == b"\x01":
+        return "P2TR"
+    return "UNKNOWN"
+
+
+def is_segwit_output(script_pub_key):
+    return get_output_type(script_pub_key) in ("P2WPKH", "P2WSH", "P2TR")
+
+
+def is_address_script(address, script_pub_key):
+    if script.is_multisig(address):
+        asm = script.script_to_asm(script_pub_key)
+        pubkeys = [binascii.hexlify(pubkey).decode("utf-8") for pubkey in asm[1:-2]]
+        addresses = [
+            PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+            for pubkey in pubkeys
+        ]
+        script_address = f"{asm[0]}_{'_'.join(addresses)}_{asm[-2]}"
+    else:
+        script_address = script.script_to_address2(script_pub_key)
+    return address == script_address
 
 
 ################
@@ -70,7 +115,7 @@ def create_tx_output(value, address_or_script, unspent_list, construct_params):
     try:
         # if hex string we assume it is a script
         if all(c in string.hexdigits for c in address_or_script):
-            has_segwit = script.is_segwit_output(address_or_script)
+            has_segwit = is_segwit_output(address_or_script)
             # check if it is a valid script
             output_script = Script.from_raw(address_or_script, has_segwit=has_segwit)
         else:
@@ -347,7 +392,7 @@ def complete_unspent_list(unspent_list):
                     if "value" not in utxo:
                         utxo["value"] = int(vout["value"] * config.UNIT)
                         utxo["amount"] = vout["value"]
-        utxo["is_segwit"] = script.is_segwit_output(utxo["script_pub_key"])
+        utxo["is_segwit"] = is_segwit_output(utxo["script_pub_key"])
         completed_unspent_list.append(utxo)
 
     return completed_unspent_list
@@ -563,7 +608,7 @@ OP_PUSHBYTES_33 = "21"
 
 # dummies script_sig from https://learnmeabitcoin.com/technical/script/
 def get_dummy_script_sig(script_pub_key):
-    output_type = script.get_output_type(script_pub_key)
+    output_type = get_output_type(script_pub_key)
     script_sig = None
     if output_type == "P2PK":
         script_sig = OP_PUSHBYTES_72 + DUMMY_DER_SIG
@@ -581,7 +626,7 @@ def get_dummy_script_sig(script_pub_key):
 
 
 def get_dummy_witness(script_pub_key):
-    output_type = script.get_output_type(script_pub_key)
+    output_type = get_output_type(script_pub_key)
     witness = None
     if output_type == "P2WPKH":
         witness = [DUMMY_DER_SIG, DUMMY_PUBKEY]
@@ -610,7 +655,7 @@ def generate_dummy_signed_tx(tx, selected_utxos):
 
 
 def get_output_sigops_count(script_pub_key, is_redeem_script=False, is_segwit=False):
-    output_type = script.get_output_type(script_pub_key)
+    output_type = get_output_type(script_pub_key)
     multiplicator = 1 if is_segwit else 4
     count = 0
     if output_type in ["P2PK", "P2PKH"]:
@@ -631,7 +676,7 @@ def get_output_sigops_count(script_pub_key, is_redeem_script=False, is_segwit=Fa
 
 
 def get_input_sigops_count(script_sig, script_pub_key):
-    prevout_type = script.get_output_type(script_pub_key)
+    prevout_type = get_output_type(script_pub_key)
     if prevout_type == "P2SH":
         asm = script.script_to_asm(script_sig)
         redeem_script = binascii.hexlify(asm[-1]).decode("utf-8")
@@ -848,7 +893,7 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
     if util.is_utxo_format(source):
         source_is_ok = first_utxo == source
     else:
-        source_is_ok = script.is_address_script(source, composed_tx["lock_scripts"][0])
+        source_is_ok = is_address_script(source, composed_tx["lock_scripts"][0])
 
     if not source_is_ok:
         raise exceptions.ComposeError(
@@ -860,7 +905,7 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
         address, value = destination
         out = decoded_tx["vout"][i]
 
-        if not script.is_address_script(address, out["script_pub_key"]):
+        if not is_address_script(address, out["script_pub_key"]):
             raise exceptions.ComposeError(
                 "Sanity check error: destination address does not match the output address"
             )

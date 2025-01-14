@@ -1,8 +1,9 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, script, util
+from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages import gas
+from counterpartycore.lib.messages.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -52,8 +53,8 @@ def validate(db, source, asset, quantity, destination_vout=None, block_index=Non
 
     # check if source is an address
     try:
-        script.validate(source)
-    except script.AddressError:
+        address.validate(source)
+    except exceptions.AddressError:
         problems.append("invalid source address")
 
     # validate asset and quantity

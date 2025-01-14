@@ -3,10 +3,11 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, database, ledger, script, util
+from counterpartycore.lib import config, database, ledger, util
 from counterpartycore.lib.exceptions import *  # noqa: F403
+from counterpartycore.lib.exceptions import AddressError
+from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.parser import message_type
-from counterpartycore.lib.script import AddressError
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -96,7 +97,7 @@ def validate(db, source, destination, asset, quantity):
         raise ValidateError("asset invalid")  # noqa: B904, F405
 
     try:
-        script.validate(source)
+        address.validate(source)
     except AddressError:
         raise ValidateError("source address invalid")  # noqa: B904, F405
 

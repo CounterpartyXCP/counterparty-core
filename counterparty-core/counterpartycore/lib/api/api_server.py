@@ -11,13 +11,17 @@ from multiprocessing import Process, Value
 import flask
 import requests
 from bitcoin.wallet import CBitcoinAddressError
-from counterpartycore import server
+from flask import Flask, request
+from flask_httpauth import HTTPBasicAuth
+from sentry_sdk import capture_exception
+from sentry_sdk import configure_scope as configure_sentry_scope
+from sentry_sdk import start_span as start_sentry_span
+
 from counterpartycore.lib import (
     config,
     database,
     exceptions,
     ledger,
-    script,
     util,
 )
 from counterpartycore.lib.api import api_watcher, dbbuilder, queries, wsgi
@@ -29,14 +33,10 @@ from counterpartycore.lib.api.util import (
     inject_details,
     to_json,
 )
+from counterpartycore.lib.cli import server
 from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
 from counterpartycore.lib.parser import check
 from counterpartycore.lib.tools import sentry
-from flask import Flask, request
-from flask_httpauth import HTTPBasicAuth
-from sentry_sdk import capture_exception
-from sentry_sdk import configure_scope as configure_sentry_scope
-from sentry_sdk import start_span as start_sentry_span
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -358,7 +358,7 @@ def handle_route(**kwargs):
         exceptions.ComposeError,
         exceptions.UnpackError,
         CBitcoinAddressError,
-        script.AddressError,
+        exceptions.AddressError,
         exceptions.ElectrsError,
         OverflowError,
     ) as e:

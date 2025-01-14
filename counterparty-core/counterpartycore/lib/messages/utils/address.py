@@ -1,10 +1,58 @@
 import logging
 
 import bitcoin
+from bitcoin.bech32 import CBech32Data
 
-from counterpartycore.lib import config, exceptions, script  # noqa: F401
+from counterpartycore.lib import config, exceptions, script, util
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+
+def pubkeyhash_array(address):
+    """Return PubKeyHashes from an address."""
+    signatures_required, pubs, signatures_possible = script.extract_array(address)
+    if not all([script.is_pubkeyhash(pub) for pub in pubs]):
+        raise exceptions.MultiSigAddressError(
+            "Invalid PubKeyHashes. Multi-signature address must use PubKeyHashes, not public keys."
+        )
+    pubkeyhashes = pubs
+    return pubkeyhashes
+
+
+def is_bech32(address):
+    try:
+        b32data = CBech32Data(address)  # noqa: F841
+        return True
+    except:  # noqa: E722
+        return False
+
+
+def validate(address, allow_p2sh=True):
+    """Make sure the address is valid.
+
+    May throw `AddressError`.
+    """
+    # Get array of pubkeyhashes to check.
+    if script.is_multisig(address):
+        pubkeyhashes = pubkeyhash_array(address)
+    else:
+        pubkeyhashes = [address]
+
+    # Check validity by attempting to decode.
+    for pubkeyhash in pubkeyhashes:
+        try:
+            if util.enabled("segwit_support"):
+                if not is_bech32(pubkeyhash):
+                    script.base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+            else:
+                script.base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+        except exceptions.VersionByteError as e:
+            if not allow_p2sh:
+                raise e
+            script.base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
+        except exceptions.Base58Error as e:
+            if not util.enabled("segwit_support") or not is_bech32(pubkeyhash):
+                raise e
 
 
 def pack(address):
@@ -25,11 +73,11 @@ def pack(address):
             return b"".join([witver, witprog])
         except Exception as ne:  # noqa: F841
             try:
-                script.validate(address)  # This will check if the address is valid
+                validate(address)  # This will check if the address is valid
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
                 return short_address_bytes
             except Exception as e:  # noqa: F841
-                raise script.AddressError(  # noqa: B904
+                raise exceptions.AddressError(  # noqa: B904
                     f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
                 )
     else:
