@@ -7,8 +7,9 @@ import time
 import bitcoin as bitcoinlib
 import pytest
 
-from counterpartycore.lib import config, script, util
+from counterpartycore.lib import config, util
 from counterpartycore.lib.parser import deserialize, gettxinfo, p2sh
+from counterpartycore.lib.utils import script
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import ADDR
 from counterpartycore.test.util_test import CURR_DIR

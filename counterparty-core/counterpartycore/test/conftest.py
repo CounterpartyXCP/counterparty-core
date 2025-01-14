@@ -17,12 +17,13 @@ import pytest
 import requests
 from bitcoinutils.keys import PublicKey
 
-from counterpartycore.lib import config, database, exceptions, ledger, opcodes, script, util
+from counterpartycore.lib import config, database, exceptions, ledger, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import log, server
 from counterpartycore.lib.parser import gettxinfo
+from counterpartycore.lib.utils import base58, multisig, opcodes, script
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -403,7 +404,7 @@ def cp_server(request):
 
 
 def scriptpubkey_to_address(scriptpubkey):
-    asm = script.script_to_asm(scriptpubkey)
+    asm = script.script_to_asm(bytes(scriptpubkey))
 
     if asm[-1] == opcodes.OP_CHECKSIG:  # noqa: F405
         try:
@@ -411,7 +412,7 @@ def scriptpubkey_to_address(scriptpubkey):
         except exceptions.DecodeError:  # coinbase
             return None
 
-        return script.base58_check_encode(
+        return base58.base58_check_encode(
             binascii.hexlify(checksig).decode("utf-8"), config.ADDRESSVERSION
         )
 
@@ -423,10 +424,10 @@ def scriptpubkey_to_address(scriptpubkey):
             .to_string()
             for pubkey in pubkeys
         ]
-        return script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
+        return multisig.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
 
     elif len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:  # noqa: F405
-        return script.base58_check_encode(
+        return base58.base58_check_encode(
             binascii.hexlify(asm[1]).decode("utf-8"), config.P2SH_ADDRESSVERSION
         )
 

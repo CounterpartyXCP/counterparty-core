@@ -3,16 +3,17 @@ import logging
 import bitcoin
 from bitcoin.bech32 import CBech32Data
 
-from counterpartycore.lib import config, exceptions, script, util
+from counterpartycore.lib import config, exceptions, util
+from counterpartycore.lib.utils import base58, multisig
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def is_pubkeyhash(monosig_address):
     """Check if PubKeyHash is valid P2PKH address."""
-    assert not script.is_multisig(monosig_address)
+    assert not multisig.is_multisig(monosig_address)
     try:
-        script.base58_check_decode(monosig_address, config.ADDRESSVERSION)
+        base58.base58_check_decode(monosig_address, config.ADDRESSVERSION)
         return True
     except (exceptions.Base58Error, exceptions.VersionByteError):
         return False
@@ -20,7 +21,7 @@ def is_pubkeyhash(monosig_address):
 
 def pubkeyhash_array(address):
     """Return PubKeyHashes from an address."""
-    signatures_required, pubs, signatures_possible = script.extract_array(address)
+    signatures_required, pubs, signatures_possible = multisig.extract_array(address)
     if not all([is_pubkeyhash(pub) for pub in pubs]):
         raise exceptions.MultiSigAddressError(
             "Invalid PubKeyHashes. Multi-signature address must use PubKeyHashes, not public keys."
@@ -43,7 +44,7 @@ def validate(address, allow_p2sh=True):
     May throw `AddressError`.
     """
     # Get array of pubkeyhashes to check.
-    if script.is_multisig(address):
+    if multisig.is_multisig(address):
         pubkeyhashes = pubkeyhash_array(address)
     else:
         pubkeyhashes = [address]
@@ -53,13 +54,13 @@ def validate(address, allow_p2sh=True):
         try:
             if util.enabled("segwit_support"):
                 if not is_bech32(pubkeyhash):
-                    script.base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+                    base58.base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
             else:
-                script.base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
+                base58.base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
         except exceptions.VersionByteError as e:
             if not allow_p2sh:
                 raise e
-            script.base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
+            base58.base58_check_decode(pubkeyhash, config.P2SH_ADDRESSVERSION)
         except exceptions.Base58Error as e:
             if not util.enabled("segwit_support") or not is_bech32(pubkeyhash):
                 raise e

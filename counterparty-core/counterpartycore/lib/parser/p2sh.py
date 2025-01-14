@@ -11,7 +11,8 @@ import bitcoin as bitcoinlib
 from bitcoin.bech32 import CBech32Data
 from ripemd import ripemd160 as RIPEMD160  # nosec B413
 
-from counterpartycore.lib import config, exceptions, script
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.utils import base58
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -26,7 +27,7 @@ def hash160(x):
 def pubkey_to_pubkeyhash(pubkey):
     """Convert public key to PubKeyHash."""
     pubkeyhash = hash160(pubkey)
-    pubkey = script.base58_check_encode(
+    pubkey = base58.base58_check_encode(
         binascii.hexlify(pubkeyhash).decode("utf-8"), config.ADDRESSVERSION
     )
     return pubkey

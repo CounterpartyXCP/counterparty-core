@@ -5,12 +5,13 @@ from io import BytesIO
 
 from bitcoinutils.keys import PublicKey
 
-from counterpartycore.lib import backend, config, exceptions, ledger, script, util
+from counterpartycore.lib import backend, config, exceptions, ledger, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
-from counterpartycore.lib.opcodes import *  # noqa: F403
 from counterpartycore.lib.parser import gettxinfolegacy, message_type, p2sh
 from counterpartycore.lib.util import inverse_hash
+from counterpartycore.lib.utils import base58, multisig, script
+from counterpartycore.lib.utils.opcodes import *  # noqa: F403
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -56,12 +57,12 @@ def decode_checksig(asm, decoded_tx):
         destination, data = None, chunk[len(config.PREFIX) :]
     else:  # Destination
         pubkeyhash = binascii.hexlify(pubkeyhash).decode("utf-8")
-        destination, data = script.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
+        destination, data = base58.base58_check_encode(pubkeyhash, config.ADDRESSVERSION), None
     return destination, data
 
 
 def decode_scripthash(asm):
-    destination = script.base58_check_encode(
+    destination = base58.base58_check_encode(
         binascii.hexlify(asm[1]).decode("utf-8"), config.P2SH_ADDRESSVERSION
     )
     return destination, None
@@ -84,7 +85,7 @@ def decode_checkmultisig(asm, decoded_tx):
             for pubkey in pubkeys
         ]
         destination, data = (
-            script.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)),
+            multisig.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)),
             None,
         )
 

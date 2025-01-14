@@ -1,9 +1,10 @@
 import binascii
 import logging
 
-from counterpartycore.lib import backend, config, script, util
+from counterpartycore.lib import backend, config, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
-from counterpartycore.lib.opcodes import *  # noqa: F403
+from counterpartycore.lib.utils import base58, script
+from counterpartycore.lib.utils.opcodes import *  # noqa: F403
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -57,11 +58,11 @@ def get_address(scriptpubkey, block_index):
         if not pubkeyhash:
             return False
         pubkeyhash = binascii.hexlify(pubkeyhash).decode("utf-8")
-        address = script.base58_check_encode(pubkeyhash, address_version)
+        address = base58.base58_check_encode(pubkeyhash, address_version)
         # Test decoding of address.
         if address != config.UNSPENDABLE and binascii.unhexlify(
             bytes(pubkeyhash, "utf-8")
-        ) != script.base58_check_decode(address, address_version):
+        ) != base58.base58_check_decode(address, address_version):
             return False
         return address
 

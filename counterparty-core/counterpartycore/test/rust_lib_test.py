@@ -7,13 +7,10 @@ from bitcoin import bech32 as bech32lib
 from counterparty_rs import b58, utils
 
 from counterpartycore.lib import config
-from counterpartycore.lib.opcodes import *  # noqa: F403
 from counterpartycore.lib.parser.gettxinfo import get_checksig
-from counterpartycore.lib.script import (
-    base58_check_decode,
-    base58_check_encode,
-    script_to_asm,
-)
+from counterpartycore.lib.utils.base58 import base58_check_decode, base58_check_encode
+from counterpartycore.lib.utils.opcodes import *  # noqa: F403
+from counterpartycore.lib.utils.script import script_to_asm
 
 
 def test_pycoin_rs():

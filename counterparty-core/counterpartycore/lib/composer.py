@@ -17,11 +17,10 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    opcodes,
-    script,
     util,
 )
 from counterpartycore.lib.parser import deserialize
+from counterpartycore.lib.utils import multisig, opcodes, script
 
 MAX_INPUTS_SET = 100
 
@@ -59,7 +58,7 @@ def is_segwit_output(script_pub_key):
 
 
 def is_address_script(address, script_pub_key):
-    if script.is_multisig(address):
+    if multisig.is_multisig(address):
         asm = script.script_to_asm(script_pub_key)
         pubkeys = [binascii.hexlify(pubkey).decode("utf-8") for pubkey in asm[1:-2]]
         addresses = [
@@ -86,8 +85,8 @@ def setup_bitcoinutils():
 
 def address_to_script_pub_key(address, unspent_list, construct_params):
     setup_bitcoinutils()
-    if script.is_multisig(address):
-        signatures_required, addresses, signatures_possible = script.extract_array(address)
+    if multisig.is_multisig(address):
+        signatures_required, addresses, signatures_possible = multisig.extract_array(address)
         pubkeys = [search_pubkey(addr, unspent_list, construct_params) for addr in addresses]
         if None in pubkeys:
             raise exceptions.ComposeError(
@@ -143,7 +142,7 @@ def multisig_dust_size(construct_params):
 
 
 def dust_size(address, construct_params):
-    if script.is_multisig(address):
+    if multisig.is_multisig(address):
         return multisig_dust_size(construct_params)
     return regular_dust_size(construct_params)
 

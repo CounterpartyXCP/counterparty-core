@@ -20,6 +20,7 @@ import appdirs
 import apsw
 import bitcoin as bitcoinlib
 import pycoin
+import pycoin.coins.bitcoin.Tx  # noqa: F401
 import pytest
 from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
@@ -838,6 +839,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         or tx_name
         in [
             "script",
+            "utils.multisig",
+            "utils.base58",
             "transaction",
             "transaction_helper.common_serializer",
             "transaction_helper.transaction_outputs",
