@@ -185,7 +185,7 @@ class BlockchainWatcher:
                 raw_tx = self.raw_tx_cache.get(item_hash)
                 if raw_tx is None:
                     try:
-                        raw_tx = backend.bitcoind.getrawtransaction(item_hash)
+                        raw_tx = backend.bitcoind.getrawtransaction(item_hash, no_retry=True)
                     except exceptions.BitcoindRPCError:
                         logger.trace("Transaction not found in bitcoind: %s", item_hash)
                         return
