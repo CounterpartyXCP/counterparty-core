@@ -202,7 +202,7 @@ def get_rows(
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
-            return f"""({','.join(['?' for e in range(0, len(value))])})"""
+            return f"""({",".join(["?" for e in range(0, len(value))])})"""
         else:
             return """?"""
 
@@ -288,10 +288,10 @@ def get_rows(
     for filter_ in filters:
         case_sensitive = False if "case_sensitive" not in filter_ else filter_["case_sensitive"]
         if filter_["op"] == "LIKE" and case_sensitive == False:  # noqa: E712
-            filter_["field"] = f"""UPPER({filter_['field']})"""
+            filter_["field"] = f"""UPPER({filter_["field"]})"""
             filter_["value"] = filter_["value"].upper()
         marker = value_to_marker(filter_["value"])
-        conditions.append(f"""{filter_['field']} {filter_['op']} {marker}""")
+        conditions.append(f"""{filter_["field"]} {filter_["op"]} {marker}""")
         if isinstance(filter_["value"], list):
             bindings += filter_["value"]
         else:
@@ -332,10 +332,10 @@ def get_rows(
         statement += """ WHERE"""
         all_conditions = []
         if len(conditions) > 0:
-            all_conditions.append(f"""({f' {filterop.upper()} '.join(conditions)})""")
+            all_conditions.append(f"""({f" {filterop.upper()} ".join(conditions)})""")
         if len(more_conditions) > 0:
-            all_conditions.append(f"""({' AND '.join(more_conditions)})""")
-        statement += f""" {' AND '.join(all_conditions)}"""
+            all_conditions.append(f"""({" AND ".join(more_conditions)})""")
+        statement += f""" {" AND ".join(all_conditions)}"""
 
     # ORDER BY
     if order_by != None:  # noqa: E711

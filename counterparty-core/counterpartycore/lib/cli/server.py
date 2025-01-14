@@ -223,7 +223,7 @@ def initialise_config(
         config.NETWORK_NAME = "testnet4"
     if config.REGTEST:
         config.NETWORK_NAME = "regtest"
-    network = f".{config.NETWORK_NAME }" if config.NETWORK_NAME != "mainnet" else ""
+    network = f".{config.NETWORK_NAME}" if config.NETWORK_NAME != "mainnet" else ""
 
     # Database
     if database_file:

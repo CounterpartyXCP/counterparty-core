@@ -83,10 +83,10 @@ def prepare_item(item, node, context):
     for i in reversed(range(11)):
         address = node.addresses[i]
         if "source" in item:
-            item["source"] = item["source"].replace(f"$ADDRESS_{i+1}", address)
+            item["source"] = item["source"].replace(f"$ADDRESS_{i + 1}", address)
         for key in item["params"]:
             if isinstance(item["params"][key], str):
-                item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i+1}", address)
+                item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i + 1}", address)
     for name, value in context.items():
         if "source" in item:
             item["source"] = item["source"].replace(f"${name}", value)
@@ -144,7 +144,7 @@ def control_result(
         )
         for i in reversed(range(11)):
             address = node.addresses[i]
-            control_url = control_url.replace(f"$ADDRESS_{i+1}", address)
+            control_url = control_url.replace(f"$ADDRESS_{i + 1}", address)
         result = node.api_call(control_url)
 
         if (

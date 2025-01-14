@@ -7,6 +7,8 @@ import time
 
 import zmq
 import zmq.asyncio
+from sentry_sdk import capture_exception
+
 from counterpartycore.lib import (
     backend,
     config,
@@ -17,7 +19,6 @@ from counterpartycore.lib import (
 from counterpartycore.lib.parser import blocks, check, deserialize, mempool
 from counterpartycore.lib.tools import sentry
 from counterpartycore.lib.tools.telemetry.oneshot import TelemetryOneShot
-from sentry_sdk import capture_exception
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

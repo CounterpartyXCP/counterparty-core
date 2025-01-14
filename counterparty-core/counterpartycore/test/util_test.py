@@ -726,7 +726,7 @@ def check_record(record, server_db, pytest_config):
         value = cursor.execute(sql).fetchall()[0][field]
         assert value == record["value"]
     else:
-        sql = f"""SELECT COUNT(*) AS c FROM {record['table']} """  # noqa: S608
+        sql = f"""SELECT COUNT(*) AS c FROM {record["table"]} """  # noqa: S608
         sql += """WHERE """
         bindings = []
         conditions = []
@@ -747,7 +747,7 @@ def check_record(record, server_db, pytest_config):
                     f"SELECT * FROM {record['table']} WHERE block_index = {record['values']['block_index']}: "  # noqa: S608
                 )
                 pprint.PrettyPrinter(indent=4).pprint(
-                    list(cursor.execute(f"""SELECT * FROM {record['table']}"""))  # noqa: S608
+                    list(cursor.execute(f"""SELECT * FROM {record["table"]}"""))  # noqa: S608
                 )
 
             raise AssertionError(

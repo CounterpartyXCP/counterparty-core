@@ -579,7 +579,7 @@ ISSUANCE_VECTOR = {
                 "in": (
                     ADDR[0],
                     None,
-                    f"A{26 ** 12 + 1}",
+                    f"A{26**12 + 1}",
                     1000,
                     True,
                     None,
@@ -610,7 +610,7 @@ ISSUANCE_VECTOR = {
                 "in": (
                     ADDR[1],
                     None,
-                    f"A{26 ** 12 + 1}",
+                    f"A{26**12 + 1}",
                     100000000,
                     True,
                     None,
@@ -641,7 +641,7 @@ ISSUANCE_VECTOR = {
                 "in": (
                     ADDR[0],
                     None,
-                    f"A{26 ** 12 + 1}",
+                    f"A{26**12 + 1}",
                     100000000,
                     True,
                     None,
@@ -673,7 +673,7 @@ ISSUANCE_VECTOR = {
                 "in": (
                     ADDR[0],
                     None,
-                    f"A{26 ** 12 + 1}",
+                    f"A{26**12 + 1}",
                     100000000,
                     True,
                     None,
@@ -704,7 +704,7 @@ ISSUANCE_VECTOR = {
                 "in": (
                     ADDR[0],
                     None,
-                    f"A{26 ** 12 + 101}",
+                    f"A{26**12 + 101}",
                     200000000,
                     True,
                     None,
@@ -979,7 +979,7 @@ ISSUANCE_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], f"A{2 ** 64 - 1}", 1000, None, None, False, None, None),
+                "in": (ADDR[0], f"A{2**64 - 1}", 1000, None, None, False, None, None),
                 "out": (
                     "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
                     [],
@@ -987,11 +987,11 @@ ISSUANCE_VECTOR = {
                 ),
             },
             {
-                "in": (ADDR[0], f"A{2 ** 64}", 1000, None, True, False, None, ""),
+                "in": (ADDR[0], f"A{2**64}", 1000, None, True, False, None, ""),
                 "error": (exceptions.AssetNameError, "numeric asset name not in range"),
             },
             {
-                "in": (ADDR[0], f"A{26 ** 12}", 1000, None, True, False, None, ""),
+                "in": (ADDR[0], f"A{26**12}", 1000, None, True, False, None, ""),
                 "error": (exceptions.AssetNameError, "numeric asset name not in range"),
             },
             {
@@ -1098,7 +1098,7 @@ ISSUANCE_VECTOR = {
             {
                 "in": (
                     ADDR[0],
-                    f"A{26 ** 12 + 101}",
+                    f"A{26**12 + 101}",
                     200000000,
                     None,
                     True,
@@ -1592,7 +1592,7 @@ ISSUANCE_VECTOR = {
                     {
                         "table": "issuances",
                         "values": {
-                            "asset": f"A{26 ** 12 + 1}",
+                            "asset": f"A{26**12 + 1}",
                             "asset_longname": "PARENT.child1",
                             "block_index": DP["default_block_index"],
                             "description": "",
@@ -1612,7 +1612,7 @@ ISSUANCE_VECTOR = {
                         "table": "credits",
                         "values": {
                             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                            "asset": f"A{26 ** 12 + 1}",
+                            "asset": f"A{26**12 + 1}",
                             "block_index": DP["default_block_index"],
                             "calling_function": "issuance",
                             "event": "71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace",
@@ -1634,7 +1634,7 @@ ISSUANCE_VECTOR = {
                         "table": "assets",
                         "values": {
                             "asset_id": int(26**12 + 1),
-                            "asset_name": f"A{26 ** 12 + 1}",
+                            "asset_name": f"A{26**12 + 1}",
                             "block_index": DP["default_block_index"],
                             "asset_longname": "PARENT.child1",
                         },
@@ -1666,7 +1666,7 @@ ISSUANCE_VECTOR = {
                     {
                         "table": "issuances",
                         "values": {
-                            "asset": f"A{26 ** 12 + 1}",
+                            "asset": f"A{26**12 + 1}",
                             "asset_longname": "PARENT.child1",
                             "block_index": DP["default_block_index"],
                             "description": "hello world",
@@ -1686,7 +1686,7 @@ ISSUANCE_VECTOR = {
                         "table": "credits",
                         "values": {
                             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                            "asset": f"A{26 ** 12 + 1}",
+                            "asset": f"A{26**12 + 1}",
                             "block_index": DP["default_block_index"],
                             "calling_function": "issuance",
                             "event": "71da4fac29d6442ef3ff13f291860f512a888161ae9e574f313562851912aace",
@@ -1708,7 +1708,7 @@ ISSUANCE_VECTOR = {
                         "table": "assets",
                         "values": {
                             "asset_id": int(26**12 + 1),
-                            "asset_name": f"A{26 ** 12 + 1}",
+                            "asset_name": f"A{26**12 + 1}",
                             "block_index": DP["default_block_index"],
                             "asset_longname": "PARENT.child1",
                         },
@@ -1986,7 +1986,7 @@ ISSUANCE_VECTOR = {
                     {
                         "table": "issuances",
                         "values": {
-                            "asset": f"A{26 ** 12 + 101}",
+                            "asset": f"A{26**12 + 101}",
                             "asset_longname": "PARENT.already.issued",
                             "block_index": DP["default_block_index"],
                             "description": "description",

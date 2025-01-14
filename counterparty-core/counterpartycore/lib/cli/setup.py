@@ -8,6 +8,7 @@ import platform
 from decimal import Decimal as D
 
 import appdirs
+
 from counterpartycore.lib import config
 
 logger = logging.getLogger(config.LOGGER_NAME)

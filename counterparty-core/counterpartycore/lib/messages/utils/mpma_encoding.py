@@ -93,7 +93,7 @@ def _solve_asset(db, asset_name, block_index):
 def _encode_compress_send_list(db, nbits, send, block_index):
     r = BitArray()
     r.append(f"uintbe:64={_solve_asset(db, send['assetName'], block_index)}")
-    r.append(f"uint:{nbits}={len(send['sendList'])-1}")
+    r.append(f"uint:{nbits}={len(send['sendList']) - 1}")
 
     for send_item in send["sendList"]:
         idx = send_item[0]

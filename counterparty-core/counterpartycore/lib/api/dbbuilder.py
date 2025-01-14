@@ -4,11 +4,12 @@ import os
 import sys
 import time
 
-from counterpartycore.lib import config
-from counterpartycore.lib.cli import log
 from yoyo import get_backend, read_migrations
 from yoyo.exceptions import LockTimeout
 from yoyo.migrations import topological_sort
+
+from counterpartycore.lib import config
+from counterpartycore.lib.cli import log
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

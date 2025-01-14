@@ -36,7 +36,7 @@ def initialise(db):
             "give_get_status_idx",
             "source_idx",
             "give_asset_idx",
-            "match_expire_idx" "forward_status_idx",
+            "match_expire_idxforward_status_idx",
             "backward_status_idx",
             "id_idx",
             "tx0_address_idx",

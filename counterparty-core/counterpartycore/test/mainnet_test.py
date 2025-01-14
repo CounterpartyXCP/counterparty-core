@@ -33,14 +33,14 @@ def get_last_block_api_v1(api_url):
     }
     response = requests.post(api_url, data=json.dumps(payload), headers=headers, timeout=10).json()
     last_block_index = response["result"]["last_block"]["block_index"]
-    version = f'v{response["result"]["version_major"]}.{response["result"]["version_minor"]}.{response["result"]["version_revision"]}'
+    version = f"v{response['result']['version_major']}.{response['result']['version_minor']}.{response['result']['version_revision']}"
     return last_block_index, version
 
 
 def get_last_block_api_v2(api_url):
     response = requests.get(f"{api_url}/v2/", timeout=10).json()
     last_block_index = response["result"]["counterparty_height"]
-    version = f'v{response["result"]["version"]}'
+    version = f"v{response['result']['version']}"
     return last_block_index, version
 
 
@@ -59,14 +59,14 @@ def get_last_block_api_xcpdev(api_url):
     response = xcpdev_query(f"{api_url}blocks")
     last_block_index = response["data"]["blocks"][0]["block_index"]
     response = xcpdev_query(f"{api_url}")
-    version = f'v{response["data"]["node"]["COUNTERPARTY_VERSION"]}'
+    version = f"v{response['data']['node']['COUNTERPARTY_VERSION']}"
     return last_block_index, version
 
 
 def get_last_block_api_wtf(api_url):
     response = requests.get(f"{api_url}runningInfo", timeout=10).json()
     last_block_index = response["result"]["last_block"]["block_index"]
-    version = f'v{response["result"]["version_major"]}.{response["result"]["version_minor"]}.{response["result"]["version_revision"]}'
+    version = f"v{response['result']['version_major']}.{response['result']['version_minor']}.{response['result']['version_revision']}"
     return last_block_index, version
 
 

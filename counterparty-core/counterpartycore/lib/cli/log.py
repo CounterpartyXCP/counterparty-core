@@ -9,12 +9,13 @@ from logging.handlers import RotatingFileHandler
 from multiprocessing import current_process
 
 import zmq
-from counterpartycore.lib import config, util
-from counterpartycore.lib.api.util import to_json
 from dateutil.tz import tzlocal
 from halo import Halo
 from json_log_formatter import JSONFormatter
 from termcolor import colored, cprint
+
+from counterpartycore.lib import config, util
+from counterpartycore.lib.api.util import to_json
 
 logging.TRACE = logging.DEBUG - 5
 logging.addLevelName(logging.TRACE, "TRACE")

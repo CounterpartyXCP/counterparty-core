@@ -209,7 +209,7 @@ UTIL_VECTOR = {
                     "create_issuance",
                     {
                         "source": ADDR[0],
-                        "asset": f"A{2 ** 64 - 1}",
+                        "asset": f"A{2**64 - 1}",
                         "quantity": 1000,
                         "encoding": "multisig",
                     },
