@@ -3,13 +3,13 @@ import logging
 import struct
 from io import BytesIO
 
+from arc4 import ARC4
 from bitcoinutils.keys import PublicKey
 
 from counterpartycore.lib import backend, config, exceptions, ledger, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import gettxinfolegacy, message_type, p2sh, protocol
-from counterpartycore.lib.util import inverse_hash
 from counterpartycore.lib.utils import base58, multisig, script
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
 
@@ -49,7 +49,8 @@ def get_checkmultisig(asm):
 
 def decode_checksig(asm, decoded_tx):
     pubkeyhash = get_checksig(asm)
-    chunk = util.arc4_decrypt(pubkeyhash, decoded_tx)  # TODO: This is slow!
+    key = binascii.unhexlify(decoded_tx["vin"][0]["hash"])
+    chunk = ARC4(key).decrypt(pubkeyhash)
     if chunk[1 : len(config.PREFIX) + 1] == config.PREFIX:  # Data
         # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
         chunk_length = chunk[0]
@@ -73,7 +74,8 @@ def decode_checkmultisig(asm, decoded_tx):
     chunk = b""
     for pubkey in pubkeys[:-1]:  # (No data in last pubkey.)
         chunk += pubkey[1:-1]  # Skip sign byte and nonce byte.
-    chunk = util.arc4_decrypt(chunk, decoded_tx)
+    key = binascii.unhexlify(decoded_tx["vin"][0]["hash"])
+    chunk = ARC4(key).decrypt(chunk)
     if chunk[1 : len(config.PREFIX) + 1] == config.PREFIX:  # Data
         # Padding byte in each output (instead of just in the last one) so that encoding methods may be mixed. Also, it’s just not very much data.
         chunk_length = chunk[0]
@@ -478,11 +480,7 @@ def get_inputs_with_balance(db, decoded_tx):
     sources = []
     # we check that each vin does not contain assets..
     for vin in decoded_tx["vin"]:
-        if isinstance(vin["hash"], str):
-            vin_hash = vin["hash"]
-        else:
-            vin_hash = inverse_hash(binascii.hexlify(vin["hash"]).decode("utf-8"))
-        utxo = vin_hash + ":" + str(vin["n"])
+        utxo = vin["hash"] + ":" + str(vin["n"])
         if ledger.utxo_has_balance(db, utxo):
             sources.append(utxo)
     return sources

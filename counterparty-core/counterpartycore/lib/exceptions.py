@@ -173,3 +173,7 @@ class Base58Error(AddressError):
 
 class QuantityError(Exception):
     pass
+
+
+class RPCError(Exception):
+    pass

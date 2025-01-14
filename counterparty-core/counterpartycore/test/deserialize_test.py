@@ -4,10 +4,10 @@ from io import BytesIO
 
 import bitcoin as bitcoinlib
 import pytest
+from counterparty_rs import utils as pycoin_rs_utils
 
-from counterpartycore.lib import backend, config, util
+from counterpartycore.lib import backend, config
 from counterpartycore.lib.parser import deserialize, gettxinfo
-from counterpartycore.lib.util import inverse_hash
 
 
 def deserialize_bitcoinlib(tx_hex):
@@ -117,7 +117,7 @@ def test_deserialize():
         for decoded_tx in [decoded_tx_rust, decoded_from_block]:
             for j, vin in enumerate(decoded_tx_bitcoinlib.vin):
                 assert vin.prevout.hash == binascii.unhexlify(
-                    inverse_hash(decoded_tx["vin"][j]["hash"])
+                    pycoin_rs_utils.inverse_hash(decoded_tx["vin"][j]["hash"])
                 )
                 assert vin.prevout.n == decoded_tx["vin"][j]["n"]
                 assert vin.scriptSig == decoded_tx["vin"][j]["script_sig"]
@@ -130,7 +130,9 @@ def test_deserialize():
             assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx["vtxinwit"][0]) > 0)
             assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx["coinbase"]
 
-            assert util.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx["tx_hash"]
+            assert decoded_tx_bitcoinlib.GetHash() == binascii.unhexlify(
+                pycoin_rs_utils.inverse_hash(decoded_tx["tx_hash"])
+            )
 
     iterations = 25
 

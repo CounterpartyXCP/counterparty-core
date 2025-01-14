@@ -17,45 +17,6 @@ FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
-def test_arc4():
-    text = bytes("testing", "utf-8")
-    k = util.init_arc4("00" * 32)
-    assert k.encrypt(text) == b"\xaa}\xfa5\xcaY:"
-
-    # '00' * 32 decrypt
-    k = util.init_arc4("00" * 32)
-    assert k.decrypt(b"\xaa}\xfa5\xcaY:") == text
-
-    # b'\x00' * 32 encrypt
-    k = util.init_arc4(b"\x00" * 32)
-    assert k.encrypt(text) == b"\xaa}\xfa5\xcaY:"
-
-    # b'\x00' * 32 decrypt
-    k = util.init_arc4(b"\x00" * 32)
-    assert k.decrypt(b"\xaa}\xfa5\xcaY:") == text
-
-    # '' * 32 encrypt, not allowed
-    with pytest.raises(ValueError):
-        k = util.init_arc4("" * 32)
-        assert k.encrypt(text) == b"\xaa}\xfa5\xcaY:"
-
-    # '01' * 32 encrypt
-    k = util.init_arc4("01" * 32)
-    assert k.encrypt(text) == b"rm}zqNN"
-
-    # '01' * 32 decrypt
-    k = util.init_arc4("01" * 32)
-    assert k.decrypt(b"rm}zqNN") == text
-
-    # b'\x01' * 32 encrypt
-    k = util.init_arc4(b"\x01" * 32)
-    assert k.encrypt(text) == b"rm}zqNN"
-
-    # b'\x01' * 32 decrypt
-    k = util.init_arc4(b"\x01" * 32)
-    assert k.decrypt(b"rm}zqNN") == text
-
-
 @pytest.mark.usefixtures("server_db")
 def test_transaction_arc4(server_db):
     v = int(100 * 1e8)

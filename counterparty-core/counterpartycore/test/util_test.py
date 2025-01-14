@@ -22,6 +22,7 @@ import bitcoin as bitcoinlib
 import pycoin
 import pycoin.coins.bitcoin.Tx  # noqa: F401
 import pytest
+import requests
 from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
@@ -150,7 +151,7 @@ def remove_database_files(database_filename):
 
 def insert_block(db, block_index, parse_block=True):
     """Add blocks to the blockchain."""
-    block_hash = util.dhash_string(chr(block_index))
+    block_hash = check.dhash_string(chr(block_index))
     block_time = block_index * 1000
     bindings = {
         "block_index": block_index,
@@ -794,18 +795,50 @@ def vector_to_args(vector, functions=[], pytest_config=None):  # noqa: B006
     return args
 
 
+def api(method, params):
+    """Poll API via JSON-RPC."""
+    headers = {"content-type": "application/json"}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+
+    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers, timeout=10)
+    if response == None:  # noqa: E711
+        raise exceptions.RPCError(f"Cannot communicate with {config.XCP_NAME} server.")
+    elif response.status_code != 200:
+        if response.status_code == 500:
+            raise exceptions.RPCError("Malformed API call.")
+        else:
+            raise exceptions.RPCError(str(response.status_code) + " " + response.reason)
+
+    response_json = response.json()
+    if "error" not in response_json.keys() or response_json["error"] == None:  # noqa: E711
+        try:
+            return response_json["result"]
+        except KeyError:
+            raise exceptions.RPCError(response_json)  # noqa: B904
+    else:
+        raise exceptions.RPCError(
+            f"{response_json['error']['message']} ({response_json['error']['code']})"
+        )
+
+
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     """Execute tested_method within context and arguments."""
+    if method == "test_rpc":
+        return api(inputs[0], inputs[1])
     if tx_name == "transaction" and method == "construct":
         return tested_method(server_db, inputs[0], **inputs[1])
-    elif (
+    if (
         (
             tx_name == "util"
             and (
                 method
                 in [
                     "api",
-                    "dhash_string",
                     "get_url",
                     "hexlify",
                     "parse_subasset_from_asset_name",
@@ -838,6 +871,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         )
         or method
         in [
+            "dhash_string",
             "enabled",
             "get_tx_info_legacy",
             "select_utxo_destination",
@@ -910,14 +944,17 @@ def check_outputs(
 ):
     """Check actual and expected outputs of a particular function."""
 
-    try:
-        tested_module = sys.modules[f"counterpartycore.lib.{tx_name}"]
-    except KeyError:  # TODO: hack
-        if tx_name == "api_v1":
-            tested_module = sys.modules["counterpartycore.lib.api.api_v1"]
-        else:
-            tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
-    tested_method = getattr(tested_module, method)
+    if method == "test_rpc":
+        tested_method = api
+    else:
+        try:
+            tested_module = sys.modules[f"counterpartycore.lib.{tx_name}"]
+        except KeyError:  # TODO: hack
+            if tx_name == "api_v1":
+                tested_module = sys.modules["counterpartycore.lib.api.api_v1"]
+            else:
+                tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
+        tested_method = getattr(tested_module, method)
 
     default_protocol_changes = mock_protocol_changes or {}
     if method in ["compose", "pack"] and "short_tx_type_id" not in default_protocol_changes:

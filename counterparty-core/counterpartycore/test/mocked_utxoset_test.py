@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from counterpartycore.lib import backend, util
+from counterpartycore.lib import backend
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (
@@ -85,7 +85,7 @@ def test_search_raw_transactions_unconfirmed(server_db):
 
     # create send
     v = int(100 * 1e8)
-    send1hex = util.api(
+    send1hex = util_test.api(
         "create_send", {"source": ADDR[0], "destination": ADDR[1], "asset": "XCP", "quantity": v}
     )
 
@@ -97,7 +97,7 @@ def test_search_raw_transactions_unconfirmed(server_db):
 
     # create send
     v = int(100 * 1e8)
-    send2hex = util.api(
+    send2hex = util_test.api(
         "create_send", {"source": ADDR[0], "destination": ADDR[1], "asset": "XCP", "quantity": v}
     )
 

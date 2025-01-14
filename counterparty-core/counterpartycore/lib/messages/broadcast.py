@@ -44,6 +44,8 @@ logger = logging.getLogger(config.LOGGER_NAME)
 FORMAT = ">IdI"
 LENGTH = 4 + 8 + 4
 ID = 30
+BET_TYPE_ID = {"BullCFD": 0, "BearCFD": 1, "Equal": 2, "NotEqual": 3}
+
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
 
 
@@ -338,8 +340,8 @@ def parse(db, tx, message):
         escrow_less_fee = total_escrow - fee
 
         # Get known bet match type IDs.
-        cfd_type_id = util.BET_TYPE_ID["BullCFD"] + util.BET_TYPE_ID["BearCFD"]
-        equal_type_id = util.BET_TYPE_ID["Equal"] + util.BET_TYPE_ID["NotEqual"]
+        cfd_type_id = BET_TYPE_ID["BullCFD"] + BET_TYPE_ID["BearCFD"]
+        equal_type_id = BET_TYPE_ID["Equal"] + BET_TYPE_ID["NotEqual"]
 
         # Get the bet match type ID of this bet match.
         bet_match_type_id = bet_match["tx0_bet_type"] + bet_match["tx1_bet_type"]

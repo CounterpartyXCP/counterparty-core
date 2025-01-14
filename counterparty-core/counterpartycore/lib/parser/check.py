@@ -1,3 +1,5 @@
+import binascii
+import hashlib
 import json
 import logging
 import sys
@@ -890,6 +892,17 @@ class ConsensusError(Exception):
     pass
 
 
+def dhash(text):
+    if not isinstance(text, bytes):
+        text = bytes(str(text), "utf-8")
+
+    return hashlib.sha256(hashlib.sha256(text).digest()).digest()
+
+
+def dhash_string(text):
+    return binascii.hexlify(dhash(text)).decode()
+
+
 def consensus_hash(db, field, previous_consensus_hash, content):
     assert field in ("ledger_hash", "txlist_hash", "messages_hash")
 
@@ -899,7 +912,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     # Initialise previous hash on first block.
     if block_index <= config.BLOCK_FIRST:
         assert not previous_consensus_hash
-        previous_consensus_hash = util.dhash_string(CONSENSUS_HASH_SEED)
+        previous_consensus_hash = dhash_string(CONSENSUS_HASH_SEED)
 
     # Get previous hash.
     if not previous_consensus_hash:
@@ -924,7 +937,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     else:
         consensus_hash_version = CONSENSUS_HASH_VERSION_MAINNET
 
-    calculated_hash = util.dhash_string(
+    calculated_hash = dhash_string(
         previous_consensus_hash + f"{consensus_hash_version}{''.join(content)}"
     )
 

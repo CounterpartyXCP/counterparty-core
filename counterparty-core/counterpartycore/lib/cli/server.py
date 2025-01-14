@@ -846,7 +846,7 @@ def show_params():
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder="big")
     random_bin = os.urandom(16)
-    move_random_hash_bin = util.dhash(random_bin + move)
+    move_random_hash_bin = check.dhash(random_bin + move)
     return binascii.hexlify(random_bin).decode("utf8"), binascii.hexlify(
         move_random_hash_bin
     ).decode("utf8")

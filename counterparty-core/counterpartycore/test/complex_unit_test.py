@@ -4,7 +4,7 @@ import tempfile
 import pytest
 from apsw import ConstraintError
 
-from counterpartycore.lib import ledger, util
+from counterpartycore.lib import ledger
 from counterpartycore.lib.api import api_v1
 from counterpartycore.lib.parser import blocks
 
@@ -28,7 +28,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     bob = "miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB"
 
     # check alices UTXOs
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1"
@@ -43,7 +43,7 @@ def test_alice_bob(server_db, cp_server, api_server):
 
     # create send
     v = int(100 * 1e8)
-    send1hex = util.api(
+    send1hex = util_test.api(
         "create_send",
         {
             "source": alice,
@@ -69,7 +69,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert bob_balance2 == bob_balance + v
 
     # check API result
-    result = util.api(
+    result = util_test.api(
         "get_balances",
         {
             "filters": [
@@ -87,7 +87,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     # -- do another TX
 
     # check alices UTXOs
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx1["tx_hash"]
@@ -102,7 +102,7 @@ def test_alice_bob(server_db, cp_server, api_server):
 
     # create send
     v = int(100 * 1e8)
-    send2hex = util.api(
+    send2hex = util_test.api(
         "create_send",
         {
             "source": alice,
@@ -129,7 +129,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     # -- do another TX, now unconfirmed
 
     # check alices UTXOs
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx2["tx_hash"]
@@ -144,7 +144,7 @@ def test_alice_bob(server_db, cp_server, api_server):
 
     # create send
     v = int(100 * 1e8)
-    send3hex = util.api(
+    send3hex = util_test.api(
         "create_send",
         {
             "source": alice,
@@ -169,11 +169,11 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert bob_balance2 == bob_balance
 
     # no confirmed UTXOs left, we use the 1 we had
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 0
 
     # unconfirmed UTXO is there, we can use it!
-    utxos = util.api("get_unspent_txouts", {"address": alice, "unconfirmed": True})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice, "unconfirmed": True})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx3["tx_hash"]
@@ -184,7 +184,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     # even doing this won't make it confirmed because it just mocks an empty block
     util_test.create_next_block(server_db)
 
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx3["tx_hash"]
@@ -227,7 +227,7 @@ def test_updated_tables_endpoints():
     for table in api_v1.API_TABLES:
         if table in ["mempool"]:
             continue
-        result = util.api("get_" + table, {})
+        result = util_test.api("get_" + table, {})
         assert isinstance(result, list)
         if table == "orders":
             assert result[0] == {

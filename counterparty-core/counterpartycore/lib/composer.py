@@ -7,6 +7,7 @@ import sys
 import time
 from collections import OrderedDict
 
+from arc4 import ARC4
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
@@ -170,8 +171,8 @@ def determine_encoding(data, construct_params):
 
 
 def encrypt_data(data, arc4_key):
-    key = util.init_arc4(binascii.unhexlify(arc4_key))
-    return key.encrypt(data)
+    key = binascii.unhexlify(arc4_key)
+    return ARC4(key).encrypt(data)
 
 
 def prepare_opreturn_output(data, arc4_key):

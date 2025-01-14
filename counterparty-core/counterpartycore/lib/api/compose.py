@@ -586,12 +586,14 @@ def info(db, rawtransaction: str, block_index: int = None):
         "destination": destination if destination else None,
         "btc_amount": btc_amount,
         "fee": fee,
-        "data": util.hexlify(data) if data else "",
         "decoded_tx": decoded_tx,
     }
     if data:
-        result["data"] = util.hexlify(data)
+        result["data"] = binascii.hexlify(data).decode("ascii")
         result["unpacked_data"] = unpack(db, result["data"], block_index)
+    else:
+        result["data"] = None
+        result["unpacked_data"] = None
     return result
 
 

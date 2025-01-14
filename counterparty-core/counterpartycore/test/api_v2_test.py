@@ -4,12 +4,12 @@ import tempfile
 import pytest
 import requests
 
-from counterpartycore.lib import util
 from counterpartycore.lib.api import routes
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (
     conftest,  # noqa: F401
+    util_test,
 )
 from counterpartycore.test.fixtures.params import ADDR
 from counterpartycore.test.util_test import CURR_DIR
@@ -358,7 +358,7 @@ def test_new_get_balances_vs_old():
     asset = "XCP"
     url = f"{API_ROOT}/v2/assets/{asset}/balances"
     new_balances = requests.get(url).json()["result"]  # noqa: S113
-    old_balance = util.api(
+    old_balance = util_test.api(
         "get_balances",
         {
             "filters": [

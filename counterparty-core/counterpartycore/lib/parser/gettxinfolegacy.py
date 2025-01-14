@@ -1,7 +1,9 @@
 import binascii
 import logging
 
-from counterpartycore.lib import backend, config, util
+from arc4 import ARC4
+
+from counterpartycore.lib import backend, config
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import base58, script
@@ -111,8 +113,8 @@ def get_tx_info_legacy(decoded_tx, block_index):
             pubkeyhash, address_version = get_pubkeyhash(script_pub_key, block_index)
             if not pubkeyhash:
                 continue
-
-            data_pubkey = util.arc4_decrypt(pubkeyhash, decoded_tx)
+            key = binascii.unhexlify(decoded_tx["vin"][0]["hash"])
+            data_pubkey = ARC4(key).decrypt(pubkeyhash)
             if data_pubkey[1:9] == config.PREFIX or pubkeyhash_encoding:
                 pubkeyhash_encoding = True
                 data_chunk_length = data_pubkey[0]  # No ord() necessary.

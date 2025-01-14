@@ -14,7 +14,6 @@ from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeo
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import deserialize, utxosinfo
-from counterpartycore.lib.util import ib2h
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -376,8 +375,6 @@ def add_block_in_cache(block_index, block):
 
 
 def get_decoded_transaction(tx_hash, block_index=None):
-    if isinstance(tx_hash, bytes):
-        tx_hash = ib2h(tx_hash)
     if tx_hash in TRANSACTIONS_CACHE:
         return TRANSACTIONS_CACHE[tx_hash]
 

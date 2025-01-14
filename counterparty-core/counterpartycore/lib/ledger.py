@@ -8,7 +8,7 @@ from decimal import Decimal as D
 
 from counterpartycore.lib import backend, config, database, exceptions, util
 from counterpartycore.lib.cli import log
-from counterpartycore.lib.parser import protocol, utxosinfo
+from counterpartycore.lib.parser import check, protocol, utxosinfo
 from counterpartycore.lib.utils import assetnames
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -180,7 +180,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
             previous_event_hash,
         ]
     )
-    event_hash = binascii.hexlify(util.dhash(event_hash_content)).decode("ascii")
+    event_hash = binascii.hexlify(check.dhash(event_hash_content)).decode("ascii")
     message_bindings = {
         "message_index": message_index,
         "block_index": block_index,

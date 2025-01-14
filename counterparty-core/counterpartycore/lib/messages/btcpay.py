@@ -102,7 +102,11 @@ def validate(db, source, order_match_id, block_index):
 
 
 def compose(db, source: str, order_match_id: str, skip_validation: bool = False):
-    tx0_hash, tx1_hash = util.parse_id(order_match_id)
+    assert order_match_id[64] == "_"
+    tx0_hash, tx1_hash = (
+        order_match_id[:64],
+        order_match_id[65:],
+    )  # UTF-8 encoding means that the indices are doubled.
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(
         db, source, order_match_id, util.CURRENT_BLOCK_INDEX

@@ -993,7 +993,7 @@ class APIServer(threading.Thread):
                 destination,
                 btc_amount,
                 fee,
-                util.hexlify(data) if data else "",
+                binascii.hexlify(data).decode("ascii") if data else "",
             )
 
         @dispatcher.add_method
