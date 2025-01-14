@@ -44,7 +44,7 @@ The following transaction construction parameters have been deprecated (but rema
 - Handle correctly RPC call errors from the API
 - Don't clean mempool on catchup
 - Retry 5 times when getting invalid Json with status 200 from Bitcoin Core
-- Don't retry RPC call when parsing Mempool transactions
+- Don't retry RPC call when parsing mempool transactions
 
 
 ## Codebase
