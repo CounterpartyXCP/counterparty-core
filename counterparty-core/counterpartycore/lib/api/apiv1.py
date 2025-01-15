@@ -1051,7 +1051,7 @@ class APIServer(threading.Thread):
                             oracle_fiat_label,
                             oracle_price_last_updated,
                         ) = ledger.ledger.get_oracle_last_price(
-                            db, dispenser["oracle_address"], helpers.CURRENT_BLOCK_INDEX
+                            db, dispenser["oracle_address"], CurrentState().current_block_index()
                         )
 
                         if oracle_price > 0:

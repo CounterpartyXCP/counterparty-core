@@ -2,8 +2,9 @@ import time
 
 from flask import request
 
-from counterpartycore.lib import backend
+from counterpartycore.lib import backend, ledger
 from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils.database import LedgerDBConnectionPool
 
 BACKEND_HEIGHT_REFRSH_INTERVAL = 3
 
@@ -34,9 +35,21 @@ class CurrentState(metaclass=helpers.SingletonMeta):
 
     def set_current_block_index(self, block_index):
         self.state["CURRENT_BLOCK_INDEX"] = block_index
+        if block_index:
+            with LedgerDBConnectionPool().connection() as ledger_db:
+                last_block = ledger.ledger.get_block(
+                    ledger_db, CurrentState().current_block_index()
+                )
+            if last_block:
+                self.state["CURRENT_BLOCK_TIME"] = last_block["block_time"]
+            else:
+                self.state["CURRENT_BLOCK_TIME"] = 0
 
     def current_block_index(self):
         return self.state.get("CURRENT_BLOCK_INDEX")
+
+    def current_block_time(self):
+        return self.state.get("CURRENT_BLOCK_TIME")
 
     def current_backend_height(self):
         if time.time() - self.last_update >= BACKEND_HEIGHT_REFRSH_INTERVAL:

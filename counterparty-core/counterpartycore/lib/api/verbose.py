@@ -10,6 +10,7 @@ from counterpartycore.lib import (
     ledger,
 )
 from counterpartycore.lib.api import compose
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import helpers
 
 D = decimal.Decimal
@@ -367,7 +368,7 @@ def inject_fiat_price(ledger_db, dispenser):
             dispenser["fiat_unit"],
             dispenser["oracle_price_last_updated"],
         ) = ledger.ledger.get_oracle_last_price(
-            ledger_db, dispenser["oracle_address"], helpers.CURRENT_BLOCK_INDEX
+            ledger_db, dispenser["oracle_address"], CurrentState().current_block_index()
         )
 
         if dispenser["oracle_price"] > 0:

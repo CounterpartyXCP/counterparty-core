@@ -6,8 +6,9 @@ import apsw
 import apsw.bestpractice
 import apsw.ext
 import psutil
-from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib import config, exceptions
+
+# from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import helpers
 from termcolor import cprint
 
@@ -161,7 +162,7 @@ def initialise_db():
     logger.info(f"Connecting to database... (SQLite {apsw.apswversion()})")
     db = get_connection(read_only=False)
 
-    CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
+    # CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
 
     return db
 

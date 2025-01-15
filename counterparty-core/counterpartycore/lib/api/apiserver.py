@@ -20,7 +20,6 @@ from sentry_sdk import start_span as start_sentry_span
 from counterpartycore.lib import (
     config,
     exceptions,
-    util,
 )
 from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, verbose, wsgi
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
@@ -68,9 +67,9 @@ def is_server_ready():
         CurrentState().current_backend_height() - 1,
     ]:
         return True
-    if util.CURRENT_BLOCK_TIME is None:
+    if CurrentState().current_block_time() is None:
         return False
-    if time.time() - util.CURRENT_BLOCK_TIME < 60:
+    if time.time() - CurrentState().current_block_time() < 60:
         return True
     return False
 

@@ -119,7 +119,9 @@ def get_tx_index(node, tx_hash):
 
 
 def get_last_tx_index(node):
-    time.sleep(2)  # wait for utils.CURRENT_BLOCK_INDEX to be updated and cache expired (each .5s)
+    time.sleep(
+        2
+    )  # wait for CurrentState().current_block_index() to be updated and cache expired (each .5s)
     result = node.api_call("transactions?limit=1")
     if "result" in result:
         return result["result"][0]["tx_index"]
