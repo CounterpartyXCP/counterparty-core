@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.9.0 (2025-01-14)
+# Release Notes - Counterparty Core v10.9.0 (2025-01-15)
 
 This release represents a major technical milestone in the development of Counterparty Core: Counterparty no longer has AddrIndexRs as an external dependency. Originally, AddrIndexRs was used for transaction construction, and at the end of 2023 it was accidentally turned into a consensus-critical dependency (causing a number of subsequent consensus breaks and reliability issues). As of today, the only external dependency for a Counterparty node is Bitcoin Core itself.
 
