@@ -187,7 +187,7 @@ class BlockchainWatcher:
                     try:
                         raw_tx = backend.bitcoind.getrawtransaction(item_hash, no_retry=True)
                     except exceptions.BitcoindRPCError:
-                        logger.trace("Transaction not found in bitcoind: %s", item_hash)
+                        logger.warning("Transaction not found in bitcoind: %s", item_hash)
                         return
                 # add transaction to mempool block
                 # logger.trace("Adding transaction to mempool block: %s", item_hash)
@@ -205,6 +205,7 @@ class BlockchainWatcher:
                     logger.trace("Waiting for new transactions in the mempool or a new block...")
         # transaction removed from mempool for non-block inclusion reasons
         elif label == "R":
+            logger.debug("Removing transaction from mempool: %s", item_hash)
             mempool.clean_transaction_events(self.db, item_hash)
 
     def receive_message(self, topic, body, seq):
