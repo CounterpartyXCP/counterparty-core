@@ -46,7 +46,6 @@ class BackendHeight(metaclass=helpers.SingletonMeta):
 def refresh_current_state(ledger_db, state_db):
     CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
 
-    util.CURRENT_BACKEND_HEIGHT = BackendHeight().get()
     if CurrentState().current_block_index():
         last_block = ledger.ledger.get_block(ledger_db, CurrentState().current_block_index())
         if last_block:
@@ -57,13 +56,13 @@ def refresh_current_state(ledger_db, state_db):
         util.CURRENT_BLOCK_TIME = 0
         CurrentState().set_current_block_index(0)
 
-    if util.CURRENT_BACKEND_HEIGHT > CurrentState().current_block_index():
+    if CurrentState().current_backend_height() > CurrentState().current_block_index():
         logger.debug(
-            f"Counterparty is currently behind Bitcoin Core. ({CurrentState().current_block_index()} < {util.CURRENT_BACKEND_HEIGHT})"
+            f"Counterparty is currently behind Bitcoin Core. ({CurrentState().current_block_index()} < {CurrentState().current_backend_height()})"
         )
-    elif util.CURRENT_BACKEND_HEIGHT < CurrentState().current_block_index():
+    elif CurrentState().current_backend_height() < CurrentState().current_block_index():
         logger.debug(
-            f"Bitcoin Core is currently behind the network. ({CurrentState().current_block_index()} > {util.CURRENT_BACKEND_HEIGHT})"
+            f"Bitcoin Core is currently behind the network. ({CurrentState().current_block_index()} > {CurrentState().current_backend_height()})"
         )
 
 

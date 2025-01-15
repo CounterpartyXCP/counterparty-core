@@ -17,7 +17,7 @@ import pytest
 import requests
 from bitcoinutils.keys import PublicKey
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1 as api
 from counterpartycore.lib.api import dbbuilder
@@ -353,7 +353,7 @@ def apiserver_v2(request, cp_server):
     def is_server_ready():
         return True
 
-    util.CURRENT_BACKEND_HEIGHT = 0
+    # util.CURRENT_BACKEND_HEIGHT = 0
 
     api_v2.is_server_ready = is_server_ready
 
@@ -728,3 +728,5 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         pass
 
     monkeypatch.setattr("counterpartycore.lib.utils.helpers.SingletonMeta", MockSingletonMeta)
+
+    # monkeypatch.setattr("counterpartycore.lib.ledger.current_state.get_backend_height", lambda: 0)

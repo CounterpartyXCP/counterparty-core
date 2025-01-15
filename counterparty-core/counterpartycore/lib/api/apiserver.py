@@ -60,11 +60,11 @@ def is_server_ready():
             return True
     except RuntimeError:
         pass
-    if util.CURRENT_BACKEND_HEIGHT is None:
+    if CurrentState().current_backend_height() is None:
         return False
     if CurrentState().current_block_index() in [
-        util.CURRENT_BACKEND_HEIGHT,
-        util.CURRENT_BACKEND_HEIGHT - 1,
+        CurrentState().current_backend_height(),
+        CurrentState().current_backend_height() - 1,
     ]:
         return True
     if util.CURRENT_BLOCK_TIME is None:
@@ -86,7 +86,7 @@ def api_root():
     with StateDBConnectionPool().connection() as state_db:
         counterparty_height = apiwatcher.get_last_block_parsed(state_db)
 
-    backend_height = util.CURRENT_BACKEND_HEIGHT
+    backend_height = CurrentState().current_backend_height()
     if backend_height is None:
         if config.FORCE:
             server_ready = True
@@ -99,7 +99,7 @@ def api_root():
         "server_ready": server_ready,
         "network": network,
         "version": config.VERSION_STRING,
-        "backend_height": util.CURRENT_BACKEND_HEIGHT,
+        "backend_height": CurrentState().current_backend_height(),
         "counterparty_height": counterparty_height,
         "documentation": "https://counterpartycore.docs.apiary.io/",
         "routes": f"{request.url_root}v2/routes",
@@ -174,7 +174,7 @@ def return_result(
     response.headers["X-COUNTERPARTY-HEIGHT"] = CurrentState().current_block_index()
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
-    response.headers["X-BITCOIN-HEIGHT"] = util.CURRENT_BACKEND_HEIGHT
+    response.headers["X-BITCOIN-HEIGHT"] = CurrentState().current_backend_height()
     response.headers["Content-Type"] = "application/json"
     set_cors_headers(response)
 
@@ -311,7 +311,7 @@ def handle_route(**kwargs):
     logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
     logger.debug(get_log_prefix(query_args))
 
-    if not config.FORCE and util.CURRENT_BACKEND_HEIGHT is None:
+    if not config.FORCE and CurrentState().current_backend_height() is None:
         return return_result(
             503,
             error="Backend still not ready. Please try again later.",
