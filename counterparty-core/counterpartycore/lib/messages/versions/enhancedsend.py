@@ -3,7 +3,8 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages.versions import send1
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import address, helpers
@@ -138,7 +139,7 @@ def compose(
         memo = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo)}s", memo)
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = CurrentState().current_block_index()
 
     problems = validate(db, source, destination, asset, quantity, memo_bytes, block_index)
     if problems and not skip_validation:

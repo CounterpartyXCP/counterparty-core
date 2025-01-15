@@ -30,8 +30,8 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database, helpers
 
@@ -169,7 +169,7 @@ def compose(
     fee_fraction_int = int(fee_fraction * 1e8)
 
     problems = validate(
-        db, source, timestamp, value, fee_fraction_int, text, util.CURRENT_BLOCK_INDEX
+        db, source, timestamp, value, fee_fraction_int, text, CurrentState().current_block_index()
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)

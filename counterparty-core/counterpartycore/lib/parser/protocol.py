@@ -2,7 +2,8 @@ import json
 import logging
 import os
 
-from counterpartycore.lib import config, util
+from counterpartycore.lib import config
+from counterpartycore.lib.ledger.currentstate import CurrentState
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -34,7 +35,7 @@ def enabled(change_name, block_index=None):
     enable_block_index = PROTOCOL_CHANGES[change_name][index_name]
 
     if not block_index:
-        block_index = util.CURRENT_BLOCK_INDEX
+        block_index = CurrentState().current_block_index()
 
     if block_index >= enable_block_index:
         return True
@@ -56,7 +57,7 @@ def get_change_block_index(change_name):
 
 def get_value_by_block_index(change_name, block_index=None):
     if not block_index:
-        block_index = util.CURRENT_BLOCK_INDEX
+        block_index = CurrentState().current_block_index()
     if block_index is None or block_index == 0:
         block_index = 9999999  # Set to a high number to get the highest value
 

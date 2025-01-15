@@ -3,7 +3,8 @@
 import logging
 import struct
 
-from counterpartycore.lib import backend, config, exceptions, ledger, util
+from counterpartycore.lib import backend, config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.parser import utxosinfo
 from counterpartycore.lib.utils import address
@@ -61,7 +62,7 @@ def validate(db, source, destination, asset, quantity, block_index=None):
 
     # fee only for attach to utxo
     if source_is_address:
-        fee = gas.get_transaction_fee(db, ID, block_index or util.CURRENT_BLOCK_INDEX)
+        fee = gas.get_transaction_fee(db, ID, block_index or CurrentState().current_block_index())
     else:
         fee = 0
 

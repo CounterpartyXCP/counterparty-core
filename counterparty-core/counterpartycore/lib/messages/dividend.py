@@ -8,8 +8,8 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database
 
@@ -203,7 +203,7 @@ def compose(
     dividend_asset = ledger.ledger.resolve_subasset_longname(db, dividend_asset)
 
     dividend_total, outputs, problems, fee = validate(
-        db, source, quantity_per_unit, asset, dividend_asset, util.CURRENT_BLOCK_INDEX
+        db, source, quantity_per_unit, asset, dividend_asset, CurrentState().current_block_index()
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -218,8 +218,10 @@ def compose(
             None,
         )
 
-    asset_id = ledger.ledger.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
-    dividend_asset_id = ledger.ledger.get_asset_id(db, dividend_asset, util.CURRENT_BLOCK_INDEX)
+    asset_id = ledger.ledger.get_asset_id(db, asset, CurrentState().current_block_index())
+    dividend_asset_id = ledger.ledger.get_asset_id(
+        db, dividend_asset, CurrentState().current_block_index()
+    )
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)

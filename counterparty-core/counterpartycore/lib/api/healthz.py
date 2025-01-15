@@ -8,9 +8,9 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
 from counterpartycore.lib.api import composer
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -25,7 +25,7 @@ def check_last_parsed_block(db, blockcount):
         )  # No blocks in the database
     if time.time() - last_block["block_time"] < 60:
         return
-    if util.CURRENT_BLOCK_INDEX + 1 < blockcount:
+    if CurrentState().current_block_index() + 1 < blockcount:
         raise exceptions.DatabaseError(f"{config.XCP_NAME} database is behind backend.")
     logger.trace("API Server - Database state check passed.")
 

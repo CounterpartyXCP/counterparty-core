@@ -2,7 +2,8 @@ import logging
 import struct
 from math import floor
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser as dispenser_module
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import helpers
@@ -16,7 +17,7 @@ def get_must_give(db, dispenser, btc_amount, block_index=None):
     ):
         last_price, _last_fee, _last_fiat_label, _last_updated = (
             ledger.ledger.get_oracle_last_price(
-                db, dispenser["oracle_address"], block_index or util.CURRENT_BLOCK_INDEX
+                db, dispenser["oracle_address"], block_index or CurrentState().current_block_index()
             )
         )
         if last_price is None:

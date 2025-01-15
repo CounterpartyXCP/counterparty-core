@@ -1,7 +1,8 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.parser import utxosinfo
 from counterpartycore.lib.utils import address
@@ -66,7 +67,7 @@ def validate(db, source, asset, quantity, destination_vout=None, block_index=Non
         return problems
 
     # attach needs fee
-    fee = gas.get_transaction_fee(db, ID, block_index or util.CURRENT_BLOCK_INDEX)
+    fee = gas.get_transaction_fee(db, ID, block_index or CurrentState().current_block_index())
 
     # check balances
     problems += validate_balance(db, source, asset, quantity, fee)

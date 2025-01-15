@@ -20,13 +20,13 @@ from sentry_sdk import start_span as start_sentry_span
 from counterpartycore.lib import (
     config,
     exceptions,
-    ledger,
     util,
 )
 from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, verbose, wsgi
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.cli.log import init_api_access_log
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.parser import check
 from counterpartycore.lib.utils import database
@@ -62,7 +62,10 @@ def is_server_ready():
         pass
     if util.CURRENT_BACKEND_HEIGHT is None:
         return False
-    if util.CURRENT_BLOCK_INDEX in [util.CURRENT_BACKEND_HEIGHT, util.CURRENT_BACKEND_HEIGHT - 1]:
+    if CurrentState().current_block_index() in [
+        util.CURRENT_BACKEND_HEIGHT,
+        util.CURRENT_BACKEND_HEIGHT - 1,
+    ]:
         return True
     if util.CURRENT_BLOCK_TIME is None:
         return False
@@ -168,7 +171,7 @@ def return_result(
     if error is not None:
         api_result["error"] = error
     response = flask.make_response(to_json(api_result), http_code)
-    response.headers["X-COUNTERPARTY-HEIGHT"] = util.CURRENT_BLOCK_INDEX
+    response.headers["X-COUNTERPARTY-HEIGHT"] = CurrentState().current_block_index()
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
     response.headers["X-BITCOIN-HEIGHT"] = util.CURRENT_BACKEND_HEIGHT
@@ -431,8 +434,9 @@ def init_flask_app():
         # Initialise the API access log
         init_api_access_log(app)
         # Get the last block index
-        with LedgerDBConnectionPool().connection() as db:
-            util.CURRENT_BLOCK_INDEX = ledger.ledger.last_db_index(db)
+        with StateDBConnectionPool().connection() as state_db:
+            CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
+
         methods = ["OPTIONS", "GET"]
         # Add routes
         app.add_url_rule(

@@ -16,6 +16,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database, helpers
 from counterpartycore.lib.utils.address import pack as address_pack
@@ -395,7 +396,7 @@ def validate(
 
                         if protocol.enabled("dispenser_origin_permission_extended", block_index):
                             address_oldest_transaction = get_oldest_tx(
-                                query_address, block_index=util.CURRENT_BLOCK_INDEX
+                                query_address, block_index=CurrentState().current_block_index()
                             )
                             if (
                                 ("block_index" in address_oldest_transaction)
@@ -463,14 +464,16 @@ def compose(
         mainchainrate,
         status,
         open_address,
-        util.CURRENT_BLOCK_INDEX,
+        CurrentState().current_block_index(),
         oracle_address,
     )
     if problems:
         if not skip_validation:
             raise exceptions.ComposeError(problems)
         else:
-            assetid = ledger.ledger.generate_asset_id(asset, block_index=util.CURRENT_BLOCK_INDEX)
+            assetid = ledger.ledger.generate_asset_id(
+                asset, block_index=CurrentState().current_block_index()
+            )
 
     destination = []
     data = messagetype.pack(ID)
@@ -489,7 +492,7 @@ def compose(
             give_quantity,
             mainchainrate,
             oracle_address,
-            util.CURRENT_BLOCK_INDEX,
+            CurrentState().current_block_index(),
         )
 
         if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
@@ -536,7 +539,7 @@ def unpack(message, return_dict=False):
             read = LENGTH + 21
         if len(message) > read:
             oracle_address = address_unpack(message[read : read + 21])
-        asset = ledger.ledger.generate_asset_name(assetid, util.CURRENT_BLOCK_INDEX)
+        asset = ledger.ledger.generate_asset_name(assetid, CurrentState().current_block_index())
         status = "valid"
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         (
@@ -591,7 +594,7 @@ def parse(db, tx, message):
         action_address = tx["source"]
 
     if status == "valid":
-        if protocol.enabled("dispenser_parsing_validation", util.CURRENT_BLOCK_INDEX):
+        if protocol.enabled("dispenser_parsing_validation", CurrentState().current_block_index()):
             asset_id, problems = validate(
                 db,
                 tx["source"],
@@ -926,7 +929,7 @@ def is_dispensable(db, address, amount):
         if next_dispenser["oracle_address"] != None:  # noqa: E711
             last_price, last_fee, last_fiat_label, last_updated = (
                 ledger.ledger.get_oracle_last_price(
-                    db, next_dispenser["oracle_address"], util.CURRENT_BLOCK_INDEX
+                    db, next_dispenser["oracle_address"], CurrentState().current_block_index()
                 )
             )
             fiatrate = helpers.satoshirate_to_fiat(next_dispenser["satoshirate"])

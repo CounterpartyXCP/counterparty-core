@@ -17,6 +17,7 @@ from werkzeug.serving import make_server
 from counterpartycore.lib import backend, config, ledger, util
 from counterpartycore.lib.api import apiwatcher
 from counterpartycore.lib.cli import log
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database, helpers
 
 multiprocessing.set_start_method("spawn", force=True)
@@ -43,25 +44,26 @@ class BackendHeight(metaclass=helpers.SingletonMeta):
 
 
 def refresh_current_state(ledger_db, state_db):
-    util.CURRENT_BLOCK_INDEX = apiwatcher.get_last_block_parsed(state_db)
+    CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
+
     util.CURRENT_BACKEND_HEIGHT = BackendHeight().get()
-    if util.CURRENT_BLOCK_INDEX:
-        last_block = ledger.ledger.get_block(ledger_db, util.CURRENT_BLOCK_INDEX)
+    if CurrentState().current_block_index():
+        last_block = ledger.ledger.get_block(ledger_db, CurrentState().current_block_index())
         if last_block:
             util.CURRENT_BLOCK_TIME = last_block["block_time"]
         else:
             util.CURRENT_BLOCK_TIME = 0
     else:
         util.CURRENT_BLOCK_TIME = 0
-        util.CURRENT_BLOCK_INDEX = 0
+        CurrentState().set_current_block_index(0)
 
-    if util.CURRENT_BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
+    if util.CURRENT_BACKEND_HEIGHT > CurrentState().current_block_index():
         logger.debug(
-            f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {util.CURRENT_BACKEND_HEIGHT})"
+            f"Counterparty is currently behind Bitcoin Core. ({CurrentState().current_block_index()} < {util.CURRENT_BACKEND_HEIGHT})"
         )
-    elif util.CURRENT_BACKEND_HEIGHT < util.CURRENT_BLOCK_INDEX:
+    elif util.CURRENT_BACKEND_HEIGHT < CurrentState().current_block_index():
         logger.debug(
-            f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {util.CURRENT_BACKEND_HEIGHT})"
+            f"Bitcoin Core is currently behind the network. ({CurrentState().current_block_index()} > {util.CURRENT_BACKEND_HEIGHT})"
         )
 
 

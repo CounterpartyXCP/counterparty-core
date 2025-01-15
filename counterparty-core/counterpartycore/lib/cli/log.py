@@ -17,6 +17,7 @@ from json_log_formatter import JSONFormatter
 from termcolor import colored, cprint
 
 from counterpartycore.lib import config, util
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import helpers
 
 logging.TRACE = logging.DEBUG - 5
@@ -63,7 +64,7 @@ def get_full_topic(record):
 
     if (
         topic is None
-        and util.CURRENT_BLOCK_INDEX is not None
+        and CurrentState().current_block_index() is not None
         and "/counterpartycore/lib/messages/" in record.pathname
         and util.PARSING_MEMPOOL
     ):
@@ -116,11 +117,11 @@ class CustomFormatter(logging.Formatter):
         log_message = "%(message)s"
         if (
             record.levelno != logging.EVENT
-            and util.CURRENT_BLOCK_INDEX is not None
+            and CurrentState().current_block_index() is not None
             and "/counterpartycore/lib/messages/" in record.pathname
             and not util.PARSING_MEMPOOL
         ):
-            log_message = f"Block {util.CURRENT_BLOCK_INDEX} - %(message)s"
+            log_message = f"Block {CurrentState().current_block_index()} - %(message)s"
 
         if hasattr(record, "bold"):
             log_message = colored(log_message, attrs=attrs)
@@ -155,13 +156,13 @@ class CustomisedJSONFormatter(JSONFormatter):
 
         if (
             record.levelno != logging.EVENT
-            and util.CURRENT_BLOCK_INDEX is not None
+            and CurrentState().current_block_index() is not None
             and "/counterpartycore/lib/messages/" in record.pathname
         ):
             if util.PARSING_MEMPOOL:
                 extra["block_index"] = "Mempool"
             else:
-                extra["block_index"] = util.CURRENT_BLOCK_INDEX
+                extra["block_index"] = CurrentState().current_block_index()
         else:
             extra["block_index"] = None
 

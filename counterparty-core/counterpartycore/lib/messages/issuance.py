@@ -6,7 +6,8 @@ import decimal
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import assetnames, database
 
@@ -418,7 +419,11 @@ def compose(
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
     issuances = ledger.ledger.get_issuances(
-        db, asset=asset, status="valid", first=True, current_block_index=util.CURRENT_BLOCK_INDEX
+        db,
+        asset=asset,
+        status="valid",
+        first=True,
+        current_block_index=CurrentState().current_block_index(),
     )
     if issuances:
         last_issuance = issuances[-1]
@@ -448,9 +453,9 @@ def compose(
                 #   generate a random numeric asset id which will map to this subasset
                 asset = assetnames.generate_random_asset(subasset_longname)
 
-    asset_id = ledger.ledger.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
+    asset_id = ledger.ledger.generate_asset_id(asset, CurrentState().current_block_index())
     asset_name = ledger.ledger.generate_asset_name(
-        asset_id, util.CURRENT_BLOCK_INDEX
+        asset_id, CurrentState().current_block_index()
     )  # This will remove leading zeros in the numeric assets
 
     (
@@ -479,7 +484,7 @@ def compose(
         description,
         subasset_parent,
         subasset_longname,
-        util.CURRENT_BLOCK_INDEX,
+        CurrentState().current_block_index(),
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -559,10 +564,10 @@ def compose(
             )
     else:
         subasset_format = protocol.get_value_by_block_index(
-            "issuance_subasset_serialization_format", util.CURRENT_BLOCK_INDEX
+            "issuance_subasset_serialization_format", CurrentState().current_block_index()
         )
         subasset_format_length = protocol.get_value_by_block_index(
-            "issuance_subasset_serialization_length", util.CURRENT_BLOCK_INDEX
+            "issuance_subasset_serialization_length", CurrentState().current_block_index()
         )
 
         # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B

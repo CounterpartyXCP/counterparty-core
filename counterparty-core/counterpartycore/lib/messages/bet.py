@@ -19,8 +19,8 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database, helpers
 
@@ -400,7 +400,7 @@ def compose(
         target_value,
         leverage,
         expiration,
-        util.CURRENT_BLOCK_INDEX,
+        CurrentState().current_block_index(),
     )
     if date_passed(deadline):
         problems.append("deadline passed")

@@ -5,9 +5,9 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
 from counterpartycore.lib.exceptions import *  # noqa: F403
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import address, database
 
@@ -117,7 +117,7 @@ def compose(
         memo = memo.encode("utf-8")
         memo = struct.pack(f">{len(memo)}s", memo)
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = CurrentState().current_block_index()
     problems, total_fee = validate(db, source, destination, flags, memo, block_index)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)

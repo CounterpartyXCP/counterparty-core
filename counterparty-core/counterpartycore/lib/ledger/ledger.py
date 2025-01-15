@@ -8,6 +8,7 @@ from decimal import Decimal as D
 
 from counterpartycore.lib import backend, config, exceptions, util
 from counterpartycore.lib.cli import log
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import check, protocol, utxosinfo
 from counterpartycore.lib.utils import assetnames, database, helpers
 
@@ -54,7 +55,9 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
             else:
                 AssetCache(db)  # initialization will add just created record to cache
 
-    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "insert", table_name, event, record | event_info)
+    add_to_journal(
+        db, CurrentState().current_block_index(), "insert", table_name, event, record | event_info
+    )
 
 
 # This function allows you to update a record using an INSERT.
@@ -79,7 +82,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     for key, value in update_data.items():
         new_record[key] = value
     # new block_index and tx_index
-    new_record["block_index"] = util.CURRENT_BLOCK_INDEX
+    new_record["block_index"] = CurrentState().current_block_index()
     # let's keep the original tx_index so we can preserve order
     # with the old queries (ordered by default by old primary key)
     # TODO: restore with protocol change and checkpoints update
@@ -98,7 +101,9 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     event_paylod = update_data | {id_name: id_value} | event_info
     if "rowid" in event_paylod:
         del event_paylod["rowid"]
-    add_to_journal(db, util.CURRENT_BLOCK_INDEX, "update", table_name, event, event_paylod)
+    add_to_journal(
+        db, CurrentState().current_block_index(), "update", table_name, event, event_paylod
+    )
 
 
 ###########################
@@ -294,7 +299,7 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
             "utxo": utxo,
             "utxo_address": utxo_address,
             "asset": asset,
-            "block_index": util.CURRENT_BLOCK_INDEX,
+            "block_index": CurrentState().current_block_index(),
             "tx_index": tx_index,
         }
         query = """
@@ -310,7 +315,7 @@ class DebitError(Exception):
 
 def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Debit given address by quantity of asset."""
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = CurrentState().current_block_index()
 
     if type(quantity) != int:  # noqa: E721
         raise DebitError("Quantity must be an integer.")
@@ -379,7 +384,7 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
         "utxo": utxo,
         "utxo_address": utxo_address,
         "asset": asset,
-        "block_index": util.CURRENT_BLOCK_INDEX,
+        "block_index": CurrentState().current_block_index(),
         "tx_index": tx_index,
     }
     query = """
@@ -395,7 +400,7 @@ class CreditError(Exception):
 
 def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Credit given address by quantity of asset."""
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = CurrentState().current_block_index()
 
     if type(quantity) != int:  # noqa: E721
         raise CreditError("Quantity must be an integer.")
@@ -813,7 +818,9 @@ def value_in(db, quantity, asset, divisible=None):
 
 def price(numerator, denominator):
     """Return price as Fraction or Decimal."""
-    if protocol.after_block_or_test_network(util.CURRENT_BLOCK_INDEX, 294500):  # Protocol change.
+    if protocol.after_block_or_test_network(
+        CurrentState().current_block_index(), 294500
+    ):  # Protocol change.
         return fractions.Fraction(numerator, denominator)
     else:
         numerator = D(numerator)
@@ -1356,6 +1363,13 @@ def get_blocks_time(db, block_indexes):
     for block in blocks:
         result[block["block_index"]] = block["block_time"]
     return result
+
+
+def get_current_block_index(db):
+    cursor = db.cursor()
+    query = "SELECT COALESCE(MAX(block_index), 0) AS block_index FROM blocks"
+    cursor.execute(query)
+    return cursor.fetchall()[0]["block_index"]
 
 
 def get_vouts(db, tx_hash):
@@ -1948,13 +1962,13 @@ class OrdersCache(metaclass=helpers.SingletonMeta):
         self.clean_filled_orders()
 
     def clean_filled_orders(self):
-        if util.CURRENT_BLOCK_INDEX - self.last_cleaning_block_index < 50:
+        if CurrentState().current_block_index() - self.last_cleaning_block_index < 50:
             return
-        self.last_cleaning_block_index = util.CURRENT_BLOCK_INDEX
+        self.last_cleaning_block_index = CurrentState().current_block_index()
         cursor = self.cache_db.cursor()
         cursor.execute(
             "DELETE FROM orders WHERE status = 'filled' AND block_index < ?",
-            (util.CURRENT_BLOCK_INDEX - 50,),
+            (CurrentState().current_block_index() - 50,),
         )
 
     def insert_order(self, order):
@@ -1983,7 +1997,7 @@ class OrdersCache(metaclass=helpers.SingletonMeta):
             bindings[key] = value
         if "block_index" not in bindings:
             set_data.append("block_index = :block_index")
-        bindings["block_index"] = util.CURRENT_BLOCK_INDEX
+        bindings["block_index"] = CurrentState().current_block_index()
         set_data = ", ".join(set_data)
         sql = f"""UPDATE orders SET {set_data} WHERE tx_hash = :tx_hash"""  # noqa S608
         cursor = self.cache_db.cursor()

@@ -8,6 +8,7 @@ import warnings
 import requests
 
 from counterpartycore.lib import config, ledger, util  # noqa: F401
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -908,7 +909,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     assert field in ("ledger_hash", "txlist_hash", "messages_hash")
 
     cursor = db.cursor()
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = CurrentState().current_block_index()
 
     # Initialise previous hash on first block.
     if block_index <= config.BLOCK_FIRST:
@@ -1035,7 +1036,7 @@ def check_change(protocol_change, change_name):
         explanation += f"as of block {protocol_change['block_index']}, the minimum version is "
         explanation += f"v{protocol_change['minimum_version_major']}.{protocol_change['minimum_version_minor']}.{protocol_change['minimum_version_revision']}. "
         explanation += f"Reason: ' {change_name} '. Please upgrade to the latest version and restart the server."
-        if util.CURRENT_BLOCK_INDEX >= protocol_change["block_index"]:
+        if CurrentState().current_block_index() >= protocol_change["block_index"]:
             raise VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)  # noqa: B028

@@ -5,7 +5,8 @@ from itertools import groupby
 
 from bitstring import ReadError
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 from counterpartycore.lib.utils.mpmaencoding import (
@@ -142,7 +143,7 @@ def compose(
         if balance < quantity and not skip_validation:
             raise exceptions.ComposeError(f"insufficient funds for {asset}")
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = CurrentState().current_block_index()
 
     cursor.close()
 

@@ -32,11 +32,11 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
 from counterpartycore.lib.api import composer, healthz
 from counterpartycore.lib.api.apiwatcher import STATE_DB_TABLES
 from counterpartycore.lib.cli.log import init_api_access_log
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -327,7 +327,7 @@ def get_rows(
     # legacy filters
     if not show_expired and table == "orders":
         # Ignore BTC orders one block early.
-        expire_index = util.CURRENT_BLOCK_INDEX + 1
+        expire_index = CurrentState().current_block_index() + 1
         more_conditions.append("""((give_asset == ? AND expire_index > ?) OR give_asset != ?)""")
         bindings += [config.BTC, expire_index, config.BTC]
 
@@ -1011,9 +1011,9 @@ class APIServer(threading.Thread):
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
                 with LedgerDBConnectionPool().connection() as db:
-                    unpacked = send.unpack(db, message, util.CURRENT_BLOCK_INDEX)
+                    unpacked = send.unpack(db, message, CurrentState().current_block_index())
             elif message_type_id == enhancedsend.ID:
-                unpacked = enhancedsend.unpack(message, util.CURRENT_BLOCK_INDEX)
+                unpacked = enhancedsend.unpack(message, CurrentState().current_block_index())
             else:
                 raise APIError("unsupported message type")
             return message_type_id, unpacked

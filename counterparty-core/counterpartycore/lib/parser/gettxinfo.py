@@ -8,6 +8,7 @@ from bitcoinutils.keys import PublicKey
 
 from counterpartycore.lib import backend, config, exceptions, ledger, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import gettxinfolegacy, messagetype, p2sh, protocol
 from counterpartycore.lib.utils import base58, multisig, script
@@ -440,7 +441,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
 def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=False):
     """Get the transaction info. Calls one of two subfunctions depending on signature type."""
     if not block_index:
-        block_index = util.CURRENT_BLOCK_INDEX
+        block_index = CurrentState().current_block_index()
 
     if protocol.enabled("p2sh_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(

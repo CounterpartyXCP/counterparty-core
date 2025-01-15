@@ -7,7 +7,8 @@ import time
 import bitcoin as bitcoinlib
 import pytest
 
-from counterpartycore.lib import config, util
+from counterpartycore.lib import config
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import deserialize, gettxinfo, p2sh
 from counterpartycore.lib.utils import script
 from counterpartycore.test import util_test
@@ -36,7 +37,7 @@ def test_p2sh_encoding_composed(server_db):
             gettxinfo._get_tx_info(
                 server_db,
                 deserialize.deserialize_tx(datatxhex, parse_vouts=True),
-                util.CURRENT_BLOCK_INDEX,
+                CurrentState().current_block_index(),
             )
         )
         print("!!!!!!!!!!!!!!!!>1")

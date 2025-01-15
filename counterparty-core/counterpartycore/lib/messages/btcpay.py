@@ -6,8 +6,8 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database, helpers
 
@@ -109,13 +109,13 @@ def compose(db, source: str, order_match_id: str, skip_validation: bool = False)
     )  # UTF-8 encoding means that the indices are doubled.
 
     destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(
-        db, source, order_match_id, util.CURRENT_BLOCK_INDEX
+        db, source, order_match_id, CurrentState().current_block_index()
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     # Warn if down to the wire.
-    time_left = order_match["match_expire_index"] - util.CURRENT_BLOCK_INDEX
+    time_left = order_match["match_expire_index"] - CurrentState().current_block_index()
     if time_left < 4:
         logger.warning(
             f"Only {time_left} blocks until that order match expires. The payment might not make into the blockchain in time."

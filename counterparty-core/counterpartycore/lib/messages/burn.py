@@ -4,7 +4,8 @@ import logging
 import os
 from fractions import Fraction
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import database
 
@@ -84,7 +85,7 @@ def compose(db, source: str, quantity: int, overburn: bool = False, skip_validat
     cursor = db.cursor()
     destination = config.UNSPENDABLE
     problems = validate(
-        db, source, destination, quantity, util.CURRENT_BLOCK_INDEX, overburn=overburn
+        db, source, destination, quantity, CurrentState().current_block_index(), overburn=overburn
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)

@@ -16,6 +16,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.monitors.telemetry.oneshot import TelemetryOneShot
 from counterpartycore.lib.parser import blocks, check, deserialize, mempool
@@ -124,7 +125,7 @@ class BlockchainWatcher:
         decoded_block = deserialize.deserialize_block(
             body.hex(),
             parse_vouts=True,
-            block_index=util.CURRENT_BLOCK_INDEX + 1,
+            block_index=CurrentState().current_block_index() + 1,
         )
         # check if already parsed by block.catch_up()
         existing_block = ledger.ledger.get_block_by_hash(self.db, decoded_block["block_hash"])

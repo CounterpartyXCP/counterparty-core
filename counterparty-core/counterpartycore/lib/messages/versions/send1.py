@@ -3,7 +3,8 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispense
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
@@ -100,7 +101,7 @@ def compose(
     if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = CurrentState().current_block_index()
 
     problems = validate(db, source, destination, asset, quantity, block_index)
     if problems and not skip_validation:

@@ -36,6 +36,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.cli import server
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
 from counterpartycore.lib.parser import blocks, check, deserialize, gettxinfo
 from counterpartycore.lib.utils import database, helpers
@@ -98,10 +99,10 @@ def reset_current_block_index(db):
     latest_block = list(
         cursor.execute("""SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1""")
     )[0]
-    util.CURRENT_BLOCK_INDEX = latest_block["block_index"]
+    CurrentState().set_current_block_index(latest_block["block_index"])
     cursor.close()
 
-    return util.CURRENT_BLOCK_INDEX
+    return CurrentState().current_block_index()
 
 
 def dump_database(db):
@@ -161,7 +162,7 @@ def insert_block(db, block_index, parse_block=True):
         "previous_block_hash": None,
         "difficulty": None,
     }
-    util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
+    CurrentState().set_current_block_index(block_index)
     ledger.ledger.insert_record(db, "blocks", bindings, "NEW_BLOCK")
 
     if parse_block:
@@ -239,7 +240,7 @@ def insert_raw_transaction(raw_transaction, db):
 
     MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=1)
 
-    util.CURRENT_BLOCK_INDEX = block_index
+    CurrentState().set_current_block_index(block_index)
     blocks.parse_block(db, block_index, block_time)
     return tx_hash, tx
 
@@ -262,7 +263,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
         raw_transaction, parse_vouts=True, block_index=config.MEMPOOL_BLOCK_INDEX
     )
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-        db, deserialized_tx, util.CURRENT_BLOCK_INDEX, composing=True
+        db, deserialized_tx, CurrentState().current_block_index(), composing=True
     )
     utxos_info = gettxinfo.get_utxos_info(db, deserialized_tx)
     tx = {
@@ -352,7 +353,7 @@ def insert_transaction(transaction, db):
         db, "transaction_outputs", transaction_outputs_bindings, "NEW_TRANSACTION_OUTPUT"
     )
 
-    util.CURRENT_BLOCK_INDEX = transaction["block_index"]
+    CurrentState().set_current_block_index(transaction["block_index"])
 
 
 def initialise_rawtransactions_db(db):

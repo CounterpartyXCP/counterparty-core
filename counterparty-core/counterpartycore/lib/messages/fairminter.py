@@ -2,7 +2,8 @@ import decimal
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import assetnames, database
 
@@ -172,9 +173,9 @@ def validate(
 
     # check asset name format
     try:
-        ledger.ledger.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
+        ledger.ledger.generate_asset_id(asset, CurrentState().current_block_index())
         if asset_parent != "":
-            ledger.ledger.generate_asset_id(asset_parent, util.CURRENT_BLOCK_INDEX)
+            ledger.ledger.generate_asset_id(asset_parent, CurrentState().current_block_index())
     except exceptions.AssetNameError as e:
         problems.append(f"Invalid asset name: {e}")
 

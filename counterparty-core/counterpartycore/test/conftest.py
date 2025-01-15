@@ -22,6 +22,7 @@ from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1 as api
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import log, server
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import gettxinfo, protocol, utxosinfo
 from counterpartycore.lib.utils import assetnames, base58, database, multisig, opcodes, script
 from counterpartycore.test import util_test
@@ -84,7 +85,7 @@ def enabled(change_name, block_index=None):
     if shouldCheckForMockProtocolChangesAtBlock(change_name):
         _block_index = block_index
         if _block_index is None:
-            _block_index = util.CURRENT_BLOCK_INDEX
+            _block_index = CurrentState().current_block_index()
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]["block_index"]:
             return True
         return False
@@ -95,10 +96,8 @@ def enabled(change_name, block_index=None):
         if change_name not in protocol.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
-        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or util.CURRENT_BLOCK_INDEX} enabled: True")
         return True
     else:
-        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or util.CURRENT_BLOCK_INDEX} enabled: {_enabled(change_name, block_index)}")
         return _enabled(change_name, block_index)
 
 

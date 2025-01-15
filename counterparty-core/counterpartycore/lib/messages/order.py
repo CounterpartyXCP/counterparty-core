@@ -8,8 +8,8 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database, helpers
 
@@ -487,13 +487,13 @@ def compose(
         get_quantity,
         expiration,
         fee_required,
-        util.CURRENT_BLOCK_INDEX,
+        CurrentState().current_block_index(),
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    give_id = ledger.ledger.get_asset_id(db, give_asset, util.CURRENT_BLOCK_INDEX)
-    get_id = ledger.ledger.get_asset_id(db, get_asset, util.CURRENT_BLOCK_INDEX)
+    give_id = ledger.ledger.get_asset_id(db, give_asset, CurrentState().current_block_index())
+    get_id = ledger.ledger.get_asset_id(db, get_asset, CurrentState().current_block_index())
     data = messagetype.pack(ID)
     data += struct.pack(
         FORMAT, give_id, give_quantity, get_id, get_quantity, expiration, fee_required

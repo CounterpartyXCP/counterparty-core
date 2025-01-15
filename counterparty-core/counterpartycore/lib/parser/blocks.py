@@ -21,6 +21,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.cli import log
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import (
     attach,
     bet,
@@ -333,7 +334,7 @@ def parse_block(
     ledger.ledger.BLOCK_JOURNAL = []
 
     if block_index != config.MEMPOOL_BLOCK_INDEX:
-        assert block_index == util.CURRENT_BLOCK_INDEX
+        assert block_index == CurrentState().current_block_index()
 
     # Expire orders, bets and rps.
     order.expire(db, block_index)
@@ -1023,7 +1024,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             util.CURRENT_TX_HASH = None
             return tx_index
     else:
-        assert block_index == util.CURRENT_BLOCK_INDEX
+        assert block_index == CurrentState().current_block_index()
 
     if (
         (
@@ -1123,7 +1124,7 @@ def rebuild_database(db, include_transactions=True):
 
 
 def rollback(db, block_index=0, force=False):
-    if not force and block_index > util.CURRENT_BLOCK_INDEX:
+    if not force and block_index > CurrentState().current_block_index():
         logger.debug("Block index is higher than current block index. No need to reparse.")
         return
     block_index = max(block_index, config.BLOCK_FIRST)
@@ -1138,7 +1139,7 @@ def rollback(db, block_index=0, force=False):
             cursor = db.cursor()
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
-    util.CURRENT_BLOCK_INDEX = block_index - 1
+    CurrentState().set_current_block_index(block_index - 1)
 
 
 def generate_progression_message(
@@ -1166,7 +1167,7 @@ def generate_progression_message(
 
 
 def reparse(db, block_index=0):
-    if block_index > util.CURRENT_BLOCK_INDEX:
+    if block_index > CurrentState().current_block_index():
         logger.debug("Block index is higher than current block index. No need to reparse.")
         return
     cursor = db.cursor()
@@ -1197,7 +1198,8 @@ def reparse(db, block_index=0):
         )
         for block in cursor.fetchall():
             start_time_block_parse = time.time()
-            util.CURRENT_BLOCK_INDEX = block["block_index"]
+            CurrentState().set_current_block_index(block["block_index"])
+
             # Add event manually to journal because block already exists
             ledger.ledger.add_to_journal(
                 db,
@@ -1216,7 +1218,7 @@ def reparse(db, block_index=0):
             previous_ledger_hash = None
             previous_txlist_hash = None
             previous_messages_hash = None
-            if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
+            if CurrentState().current_block_index() > config.BLOCK_FIRST:
                 previous_block = ledger.ledger.get_block(db, block["block_index"] - 1)
                 previous_ledger_hash = previous_block["ledger_hash"]
                 previous_txlist_hash = previous_block["txlist_hash"]
@@ -1261,7 +1263,7 @@ def get_next_tx_index(db):
 
 def handle_reorg(db):
     # search last block with the correct hash
-    previous_block_index = util.CURRENT_BLOCK_INDEX - 1
+    previous_block_index = CurrentState().current_block_index() - 1
     while True:
         previous_block_hash = backend.bitcoind.getblockhash(previous_block_index)
 
@@ -1284,7 +1286,7 @@ def handle_reorg(db):
     # rollback to the previous block
     current_block_index = previous_block_index + 1
     rollback(db, block_index=current_block_index)
-    util.CURRENT_BLOCK_INDEX = previous_block_index
+    CurrentState().set_current_block_index(previous_block_index)
 
     # get the new deserialized current block
     current_block = deserialize.deserialize_block(
@@ -1300,13 +1302,13 @@ def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
     # increment block index
-    util.CURRENT_BLOCK_INDEX += 1
+    CurrentState().set_current_block_index(CurrentState().current_block_index() + 1)
 
     # get next tx index if not provided
     if tx_index is None:
         tx_index = get_next_tx_index(db)
 
-    if util.CURRENT_BLOCK_INDEX == config.BLOCK_FIRST:
+    if CurrentState().current_block_index() == config.BLOCK_FIRST:
         previous_block = {
             "ledger_hash": None,
             "txlist_hash": None,
@@ -1315,11 +1317,12 @@ def parse_new_block(db, decoded_block, tx_index=None):
         }
     else:
         # get previous block
-        previous_block = ledger.ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
+        previous_block = ledger.ledger.get_block(db, CurrentState().current_block_index() - 1)
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
             logger.warning(
-                "Blockchain reorganization detected at block %s.", util.CURRENT_BLOCK_INDEX
+                "Blockchain reorganization detected at block %s.",
+                CurrentState().current_block_index(),
             )
             new_current_block = handle_reorg(db)
             return parse_new_block(db, new_current_block)
@@ -1398,7 +1401,7 @@ def rollback_empty_block(db):
 
 def check_database_version(db):
     # Update version if new database.
-    if util.CURRENT_BLOCK_INDEX <= config.BLOCK_FIRST:
+    if CurrentState().current_block_index() <= config.BLOCK_FIRST:
         database.update_version(db)
         return
     try:
@@ -1411,7 +1414,7 @@ def check_database_version(db):
         elif e.required_action == "reparse":
             reparse(db, block_index=e.from_block_index)
         # refresh the current block index
-        util.CURRENT_BLOCK_INDEX = ledger.ledger.last_db_index(db)
+        CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
         # update the database version
         database.update_version(db)
 
@@ -1419,7 +1422,7 @@ def check_database_version(db):
 def start_rsfetcher():
     fetcher = rsfetcher.RSFetcher()
     try:
-        fetcher.start(util.CURRENT_BLOCK_INDEX + 1)
+        fetcher.start(CurrentState().current_block_index() + 1)
     except exceptions.InvalidVersion as e:
         logger.error(e)
         sys.exit(1)
@@ -1438,17 +1441,21 @@ def catch_up(db, check_asset_conservation=True):
     try:
         util.BLOCK_PARSER_STATUS = "catching up"
         # update the current block index
-        util.CURRENT_BLOCK_INDEX = ledger.ledger.last_db_index(db)
-        if util.CURRENT_BLOCK_INDEX == 0:
+        current_block_index = ledger.ledger.last_db_index(db)
+        if current_block_index == 0:
             logger.info("New database.")
-            util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1
+            current_block_index = config.BLOCK_FIRST - 1
+        CurrentState().set_current_block_index(current_block_index)
 
         # Get block count.
         block_count = backend.bitcoind.getblockcount()
 
-        # Wait for bitcoind to catch up at least one block after util.CURRENT_BLOCK_INDEX
-        if backend.bitcoind.get_blocks_behind() > 0 and block_count <= util.CURRENT_BLOCK_INDEX:
-            backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+        # Wait for bitcoind to catch up at least one block after CurrentState().current_block_index()
+        if (
+            backend.bitcoind.get_blocks_behind() > 0
+            and block_count <= CurrentState().current_block_index()
+        ):
+            backend.bitcoind.wait_for_block(CurrentState().current_block_index() + 1)
             block_count = backend.bitcoind.getblockcount()
 
         # Get index of last transaction.
@@ -1457,7 +1464,7 @@ def catch_up(db, check_asset_conservation=True):
         start_time = time.time()
         parsed_blocks = 0
 
-        while util.CURRENT_BLOCK_INDEX < block_count:
+        while CurrentState().current_block_index() < block_count:
             # Get block information and transactions
             fetch_time_start = time.time()
             if fetcher is None:
@@ -1481,7 +1488,7 @@ def catch_up(db, check_asset_conservation=True):
             logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
 
             # Check for gaps in the blockchain
-            assert block_height <= util.CURRENT_BLOCK_INDEX + 1
+            assert block_height <= CurrentState().current_block_index() + 1
 
             # Parse the current block
             tx_index, parsed_block_index = parse_new_block(db, decoded_block, tx_index=tx_index)
@@ -1496,14 +1503,14 @@ def catch_up(db, check_asset_conservation=True):
             parsed_blocks += 1
             formatted_duration = helpers.format_duration(time.time() - start_time)
             logger.debug(
-                f"Block {util.CURRENT_BLOCK_INDEX}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
+                f"Block {CurrentState().current_block_index()}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
             )
 
             # Refresh block count.
-            if util.CURRENT_BLOCK_INDEX == block_count:
+            if CurrentState().current_block_index() == block_count:
                 # if bitcoind is catching up, wait for the next block
                 if backend.bitcoind.get_blocks_behind() > 0:
-                    backend.bitcoind.wait_for_block(util.CURRENT_BLOCK_INDEX + 1)
+                    backend.bitcoind.wait_for_block(CurrentState().current_block_index() + 1)
                 block_count = backend.bitcoind.getblockcount()
     finally:
         if fetcher is not None:
