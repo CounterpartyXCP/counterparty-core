@@ -150,8 +150,8 @@ def is_api_request():
     return False
 
 
-def rpc(method, params):
-    if is_api_request():
+def rpc(method, params, no_retry=False):
+    if is_api_request() or no_retry:
         return safe_rpc(method, params)
 
     payload = {
@@ -212,8 +212,8 @@ def convert_to_psbt(rawtx):
 
 
 @functools.lru_cache(maxsize=10000)
-def getrawtransaction(tx_hash, verbose=False):
-    return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
+def getrawtransaction(tx_hash, verbose=False, no_retry=False):
+    return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0], no_retry=no_retry)
 
 
 def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False):
