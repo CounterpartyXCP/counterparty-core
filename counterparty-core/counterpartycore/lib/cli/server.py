@@ -18,7 +18,6 @@ from termcolor import colored, cprint
 from counterpartycore.lib import (
     backend,
     config,
-    database,
     exceptions,
     ledger,
 )
@@ -26,7 +25,7 @@ from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1, dbbuilder
 from counterpartycore.lib.cli import bootstrap, log
 from counterpartycore.lib.parser import blocks, check, follow
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import database, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -773,7 +772,7 @@ def start_all(args):
 def reparse(block_index):
     ledger_db = database.initialise_db()
 
-    last_block = ledger.get_last_block(ledger_db)
+    last_block = ledger.ledger.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:
         print(colored("Block index is higher than current block index. No need to reparse.", "red"))
         ledger_db.close()
@@ -793,7 +792,7 @@ def reparse(block_index):
 def rollback(block_index=None):
     ledger_db = database.initialise_db()
 
-    last_block = ledger.get_last_block(ledger_db)
+    last_block = ledger.ledger.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:
         print(
             colored("Block index is higher than current block index. No need to rollback.", "red")

@@ -17,7 +17,8 @@ from bitcoinutils.keys import P2wpkhAddress
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config
+from counterpartycore.lib.utils import database
 
 setup("regtest")
 

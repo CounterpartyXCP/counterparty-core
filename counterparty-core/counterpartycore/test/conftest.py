@@ -17,13 +17,13 @@ import pytest
 import requests
 from bitcoinutils.keys import PublicKey
 
-from counterpartycore.lib import config, database, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.api import api_server as api_v2
 from counterpartycore.lib.api import api_v1 as api
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import log, server
 from counterpartycore.lib.parser import gettxinfo, protocol, utxosinfo
-from counterpartycore.lib.utils import assetnames, base58, multisig, opcodes, script
+from counterpartycore.lib.utils import assetnames, base58, database, multisig, opcodes, script
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -669,7 +669,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
     monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.cli.log.isodt", isodt)
-    monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
+    monkeypatch.setattr("counterpartycore.lib.ledger.ledger.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.messages.bet.date_passed", date_passed)
     monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):
@@ -697,29 +697,32 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         search_pubkey,
     )
 
-    monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
+    monkeypatch.setattr("counterpartycore.lib.utils.database.check_wal_file", check_wal_file)
     monkeypatch.setattr("counterpartycore.lib.messages.rps.expire", rps_expire)
 
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
+        "counterpartycore.lib.ledger.ledger.get_matching_orders",
+        ledger.ledger.get_matching_orders_no_cache,
     )
 
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.get_utxo_value", mocked_get_utxo_value
     )
-    # monkeypatch.setattr("counterpartycore.lib.composer.determine_encoding", determine_encoding)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.satoshis_per_vbyte", satoshis_per_vbyte
     )
 
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.asset_issued_total", ledger.asset_issued_total_no_cache
+        "counterpartycore.lib.ledger.ledger.asset_issued_total",
+        ledger.ledger.asset_issued_total_no_cache,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.get_last_issuance", ledger.get_last_issuance_no_cache
+        "counterpartycore.lib.ledger.ledger.get_last_issuance",
+        ledger.ledger.get_last_issuance_no_cache,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.asset_destroyed_total", ledger.asset_destroyed_total_no_cache
+        "counterpartycore.lib.ledger.ledger.asset_destroyed_total",
+        ledger.ledger.asset_destroyed_total_no_cache,
     )
 
     class MockSingletonMeta:

@@ -32,7 +32,7 @@ MULTISIG_PAIRS = [
 OPRETURN_DATA = b"\x8a]\xda\x15\xfbo\x05b\xc2cr\x0b8B\xb2:\xa8h\x13\xc7\xd1"
 
 COMPOSER_VECTOR = {
-    "composer": {
+    "api.composer": {
         "address_to_script_pub_key": [
             {
                 "comment": "P2PKH address",

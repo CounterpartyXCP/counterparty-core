@@ -1,6 +1,7 @@
 import logging
 
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config
+from counterpartycore.lib.utils import database
 
 from . import rps
 

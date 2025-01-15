@@ -19,7 +19,6 @@ from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import (
     config,
-    database,
     exceptions,
     ledger,
     util,
@@ -34,9 +33,10 @@ from counterpartycore.lib.api.util import (
     to_json,
 )
 from counterpartycore.lib.cli import server
-from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
+from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.parser import check
-from counterpartycore.lib.tools import sentry
+from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -437,7 +437,7 @@ def init_flask_app():
         init_api_access_log(app)
         # Get the last block index
         with LedgerDBConnectionPool().connection() as db:
-            util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+            util.CURRENT_BLOCK_INDEX = ledger.ledger.last_db_index(db)
         methods = ["OPTIONS", "GET"]
         # Add routes
         app.add_url_rule(

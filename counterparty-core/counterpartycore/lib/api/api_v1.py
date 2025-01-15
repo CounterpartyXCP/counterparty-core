@@ -27,15 +27,14 @@ from xmltodict import unparse as serialize_to_xml
 
 from counterpartycore.lib import (
     backend,
-    composer,
     config,
     exceptions,
     ledger,
     util,
 )
+from counterpartycore.lib.api import composer
 from counterpartycore.lib.api import util as api_util
 from counterpartycore.lib.api.api_watcher import STATE_DB_TABLES
-from counterpartycore.lib.database import LedgerDBConnectionPool, StateDBConnectionPool
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -53,14 +52,15 @@ from counterpartycore.lib.messages import (
     sweep,  # noqa: F401
 )
 from counterpartycore.lib.messages.versions import enhanced_send  # noqa: E402
-from counterpartycore.lib.parser import deserialize, gettxinfo, message_type
-from counterpartycore.lib.tools import sentry
-from counterpartycore.lib.tools.telemetry.util import (  # noqa: E402
+from counterpartycore.lib.monitors import sentry
+from counterpartycore.lib.monitors.telemetry.util import (  # noqa: E402
     get_uptime,
     is_docker,
     is_force_enabled,
 )
+from counterpartycore.lib.parser import deserialize, gettxinfo, message_type
 from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
 
 D = decimal.Decimal
 
@@ -392,7 +392,7 @@ def adjust_get_balances_results(query_result, ledger_db):
     for balances_row in list(query_result):
         asset = balances_row["asset"]
         if asset not in assets:
-            assets[asset] = ledger.is_divisible(ledger_db, asset)
+            assets[asset] = ledger.ledger.is_divisible(ledger_db, asset)
 
         balances_row["divisible"] = assets[asset]
         filtered_results.append(balances_row)
@@ -660,7 +660,7 @@ class APIServer(threading.Thread):
             if not isinstance(block_index, int):
                 raise APIError("block_index must be an integer.")
             with LedgerDBConnectionPool().connection() as db:
-                messages = ledger.get_messages(db, block_index=block_index)
+                messages = ledger.ledger.get_messages(db, block_index=block_index)
             return messages
 
         @dispatcher.add_method
@@ -677,7 +677,7 @@ class APIServer(threading.Thread):
                 if not isinstance(idx, int):
                     raise APIError("All items in message_indexes are not integers")
             with LedgerDBConnectionPool().connection() as db:
-                messages = ledger.get_messages(db, message_index_in=message_indexes)
+                messages = ledger.ledger.get_messages(db, message_index_in=message_indexes)
             return messages
 
         @dispatcher.add_method
@@ -686,16 +686,16 @@ class APIServer(threading.Thread):
                 if asset == "BTC":
                     return backend.bitcoind.get_btc_supply(normalize=False)
                 elif asset == "XCP":
-                    return ledger.xcp_supply(db)
+                    return ledger.ledger.xcp_supply(db)
                 else:
-                    asset = ledger.resolve_subasset_longname(db, asset)
-                    return ledger.asset_supply(db, asset)
+                    asset = ledger.ledger.resolve_subasset_longname(db, asset)
+                    return ledger.ledger.asset_supply(db, asset)
 
         @dispatcher.add_method
         def get_xcp_supply():
             logger.warning("Deprecated method: `get_xcp_supply`")
             with LedgerDBConnectionPool().connection() as db:
-                return ledger.xcp_supply(db)
+                return ledger.ledger.xcp_supply(db)
 
         @dispatcher.add_method
         def get_asset_info(assets=None, asset=None):
@@ -709,14 +709,14 @@ class APIServer(threading.Thread):
             assets_info = []
             with LedgerDBConnectionPool().connection() as db:
                 for asset in assets:
-                    asset = ledger.resolve_subasset_longname(db, asset)  # noqa: PLW2901
+                    asset = ledger.ledger.resolve_subasset_longname(db, asset)  # noqa: PLW2901
 
                     # BTC and XCP.
                     if asset in [config.BTC, config.XCP]:
                         if asset == config.BTC:
                             supply = backend.bitcoind.get_btc_supply(normalize=False)
                         else:
-                            supply = ledger.xcp_supply(db)
+                            supply = ledger.ledger.xcp_supply(db)
 
                         assets_info.append(
                             {
@@ -734,7 +734,9 @@ class APIServer(threading.Thread):
 
                     # User‐created asset.
                     cursor = db.cursor()
-                    issuances = ledger.get_issuances(db, asset=asset, status="valid", first=True)
+                    issuances = ledger.ledger.get_issuances(
+                        db, asset=asset, status="valid", first=True
+                    )
                     cursor.close()
                     if not issuances:
                         continue  # asset not found, most likely
@@ -751,7 +753,7 @@ class APIServer(threading.Thread):
                             "owner": last_issuance["issuer"],
                             "divisible": bool(last_issuance["divisible"]),
                             "locked": locked,
-                            "supply": ledger.asset_supply(db, asset),
+                            "supply": ledger.ledger.asset_supply(db, asset),
                             "description": last_issuance["description"],
                             "issuer": last_issuance["issuer"],
                         }
@@ -811,7 +813,9 @@ class APIServer(threading.Thread):
                 )
                 blocks = cursor.fetchall()  # noqa: F811
 
-                messages = collections.deque(ledger.get_messages(db, block_index_in=block_indexes))
+                messages = collections.deque(
+                    ledger.ledger.get_messages(db, block_index_in=block_indexes)
+                )
 
                 # Discard any messages less than min_message_index
                 if min_message_index:
@@ -839,10 +843,10 @@ class APIServer(threading.Thread):
                 else:
                     caught_up = True
 
-                last_block = ledger.get_last_block(db)
+                last_block = ledger.ledger.get_last_block(db)
 
                 try:
-                    last_message = ledger.last_message(db)
+                    last_message = ledger.ledger.last_message(db)
                 except:  # noqa: E722
                     last_message = None
 
@@ -914,7 +918,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_asset_names(longnames=False):
             with LedgerDBConnectionPool().connection() as db:
-                all_assets = ledger.get_valid_assets(db)
+                all_assets = ledger.ledger.get_valid_assets(db)
             if longnames:
                 names = [
                     {"asset": row["asset"], "asset_longname": row["asset_longname"]}
@@ -931,8 +935,8 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_holder_count(asset):
             with LedgerDBConnectionPool().connection() as db:
-                asset = ledger.resolve_subasset_longname(db, asset)
-                holders = ledger.holders(db, asset, True)
+                asset = ledger.ledger.resolve_subasset_longname(db, asset)
+                holders = ledger.ledger.holders(db, asset, True)
             addresses = []
             for holder in holders:
                 addresses.append(holder["address"])
@@ -941,8 +945,8 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_holders(asset):
             with LedgerDBConnectionPool().connection() as db:
-                asset = ledger.resolve_subasset_longname(db, asset)
-                holders = ledger.holders(db, asset, True)
+                asset = ledger.ledger.resolve_subasset_longname(db, asset)
+                holders = ledger.ledger.holders(db, asset, True)
             return holders
 
         @dispatcher.add_method
@@ -1025,9 +1029,9 @@ class APIServer(threading.Thread):
             dispensers = []
             with LedgerDBConnectionPool().connection() as db:
                 if tx_hash is not None:
-                    dispensers = ledger.get_dispenser_info(db, tx_hash=tx_hash)
+                    dispensers = ledger.ledger.get_dispenser_info(db, tx_hash=tx_hash)
                 else:
-                    dispensers = ledger.get_dispenser_info(db, tx_index=tx_index)
+                    dispensers = ledger.ledger.get_dispenser_info(db, tx_index=tx_index)
 
                 if len(dispensers) == 1:
                     dispenser = dispensers[0]
@@ -1044,7 +1048,7 @@ class APIServer(threading.Thread):
                             oracle_fee,
                             oracle_fiat_label,
                             oracle_price_last_updated,
-                        ) = ledger.get_oracle_last_price(
+                        ) = ledger.ledger.get_oracle_last_price(
                             db, dispenser["oracle_address"], helpers.CURRENT_BLOCK_INDEX
                         )
 

@@ -1,7 +1,7 @@
 from counterpartycore.lib import config
 
 DATABASE_VECTOR = {
-    "database": {
+    "utils.database": {
         "version": [{"in": (), "out": (config.VERSION_MAJOR, config.VERSION_MINOR)}],
         "update_version": [
             {

@@ -3,7 +3,6 @@ import struct
 
 from counterpartycore.lib import (
     config,
-    database,
     exceptions,
     ledger,
     util,
@@ -11,6 +10,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -71,8 +71,8 @@ def get_total_fee(db, source, block_index):
     total_fee = ANTISPAM_FEE
     antispamfee = protocol.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
     if antispamfee > 0:
-        balances_count = ledger.get_balances_count(db, source)[0]["cnt"]
-        issuances_count = ledger.get_issuances_count(db, source)
+        balances_count = ledger.ledger.get_balances_count(db, source)[0]["cnt"]
+        issuances_count = ledger.ledger.get_issuances_count(db, source)
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
     return total_fee
 
@@ -85,7 +85,7 @@ def validate(db, source, destination, flags, memo, block_index):
 
     cursor = db.cursor()
 
-    result = ledger.get_balance(db, source, "XCP")
+    result = ledger.ledger.get_balance(db, source, "XCP")
 
     total_fee = get_total_fee(db, source, block_index)
 
@@ -201,7 +201,7 @@ def parse(db, tx, message):
             )
 
             if antispamfee > 0:
-                ledger.debit(
+                ledger.ledger.debit(
                     db,
                     tx["source"],
                     "XCP",
@@ -211,7 +211,7 @@ def parse(db, tx, message):
                     event=tx["tx_hash"],
                 )
             else:
-                ledger.debit(
+                ledger.ledger.debit(
                     db,
                     tx["source"],
                     "XCP",
@@ -225,11 +225,11 @@ def parse(db, tx, message):
             status = "invalid: insufficient balance for antispam fee for sweep"
 
     if status == "valid":
-        balances = ledger.get_address_balances(db, tx["source"])
+        balances = ledger.ledger.get_address_balances(db, tx["source"])
 
         if flags & FLAG_BALANCES:
             for balance in balances:
-                ledger.debit(
+                ledger.ledger.debit(
                     db,
                     tx["source"],
                     balance["asset"],
@@ -238,7 +238,7 @@ def parse(db, tx, message):
                     action="sweep",
                     event=tx["tx_hash"],
                 )
-                ledger.credit(
+                ledger.ledger.credit(
                     db,
                     destination,
                     balance["asset"],
@@ -253,10 +253,10 @@ def parse(db, tx, message):
 
             assets_issued = balances
             if protocol.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
-                assets_issued = ledger.get_asset_issued(db, tx["source"])
+                assets_issued = ledger.ledger.get_asset_issued(db, tx["source"])
 
             for next_asset_issued in assets_issued:
-                issuances = ledger.get_issuances(
+                issuances = ledger.ledger.get_issuances(
                     db,
                     asset=next_asset_issued["asset"],
                     status="valid",
@@ -288,7 +288,7 @@ def parse(db, tx, message):
                             "reset": False,
                             "asset_events": "transfer",
                         }
-                        ledger.insert_record(db, "issuances", bindings, "ASSET_TRANSFER")
+                        ledger.ledger.insert_record(db, "issuances", bindings, "ASSET_TRANSFER")
                         sweep_pos += 1
 
         bindings = {
@@ -302,7 +302,7 @@ def parse(db, tx, message):
             "memo": memo_bytes,
             "fee_paid": total_fee if antispamfee > 0 else fee_paid,
         }
-        ledger.insert_record(db, "sweeps", bindings, "SWEEP")
+        ledger.ledger.insert_record(db, "sweeps", bindings, "SWEEP")
 
         logger.info("Sweep from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]", bindings)
 

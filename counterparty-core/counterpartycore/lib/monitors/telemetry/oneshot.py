@@ -1,11 +1,11 @@
 import logging
 
 from counterpartycore.lib import config
-from counterpartycore.lib.database import LedgerDBConnectionPool
-from counterpartycore.lib.tools.telemetry.clients.influxdb import TelemetryClientInfluxDB
-from counterpartycore.lib.tools.telemetry.collectors.influxdb import (
+from counterpartycore.lib.monitors.telemetry.clients.influxdb import TelemetryClientInfluxDB
+from counterpartycore.lib.monitors.telemetry.collectors.influxdb import (
     TelemetryCollectorInfluxDB,
 )
+from counterpartycore.lib.utils.database import LedgerDBConnectionPool
 from counterpartycore.lib.utils.helpers import SingletonMeta
 from sentry_sdk import capture_exception
 

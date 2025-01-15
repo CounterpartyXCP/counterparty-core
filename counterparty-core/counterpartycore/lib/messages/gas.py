@@ -2,8 +2,9 @@ import logging
 import math
 from decimal import Decimal as D
 
-from counterpartycore.lib import config, database, ledger
+from counterpartycore.lib import config, ledger
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -70,7 +71,7 @@ def increment_counter(db, transaction_id, block_index):
         "transaction_id": transaction_id,
         "count": new_count,
     }
-    ledger.insert_record(db, "transaction_count", bindings, "INCREMENT_TRANSACTION_COUNT")
+    ledger.ledger.insert_record(db, "transaction_count", bindings, "INCREMENT_TRANSACTION_COUNT")
 
 
 def get_transaction_count_for_last_period(db, transaction_id, block_index):

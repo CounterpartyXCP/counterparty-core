@@ -66,7 +66,7 @@ def validate(db, source, destination, asset, quantity, block_index=None):
         fee = 0
 
     # check if source has enough funds
-    asset_balance = ledger.get_balance(db, source, asset)
+    asset_balance = ledger.ledger.get_balance(db, source, asset)
     if asset == config.XCP:
         # fee is always paid in XCP
         if asset_balance < quantity + fee:
@@ -75,7 +75,7 @@ def validate(db, source, destination, asset, quantity, block_index=None):
         if asset_balance < quantity:
             problems.append("insufficient funds for transfer")
         if source_is_address:
-            xcp_balance = ledger.get_balance(db, source, config.XCP)
+            xcp_balance = ledger.ledger.get_balance(db, source, config.XCP)
             if xcp_balance < fee:
                 problems.append("insufficient funds for fee")
 
@@ -189,7 +189,7 @@ def parse(db, tx, message):
     bindings = {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
-        "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
+        "msg_index": ledger.ledger.get_send_msg_index(db, tx["tx_hash"]),
         "block_index": tx["block_index"],
         "status": status,
     }
@@ -207,7 +207,7 @@ def parse(db, tx, message):
             else:
                 fee_payer = recipient
             # debit fee from the fee payer
-            ledger.debit(
+            ledger.ledger.debit(
                 db,
                 fee_payer,
                 config.XCP,
@@ -227,12 +227,12 @@ def parse(db, tx, message):
                 "tag": f"{action} fee",
                 "status": "valid",
             }
-            ledger.insert_record(db, "destructions", destroy_bindings, "ASSET_DESTRUCTION")
+            ledger.ledger.insert_record(db, "destructions", destroy_bindings, "ASSET_DESTRUCTION")
         # debit asset from source and credit to recipient
-        ledger.debit(
+        ledger.ledger.debit(
             db, source, asset, quantity, tx["tx_index"], action=action, event=tx["tx_hash"]
         )
-        ledger.credit(
+        ledger.ledger.credit(
             db,
             recipient,
             asset,
@@ -254,7 +254,7 @@ def parse(db, tx, message):
         if action == "attach to utxo":
             gas.increment_counter(db, ID, tx["block_index"])
 
-    ledger.insert_record(db, "sends", bindings, event)
+    ledger.ledger.insert_record(db, "sends", bindings, event)
 
     # log valid transactions
     if status == "valid":

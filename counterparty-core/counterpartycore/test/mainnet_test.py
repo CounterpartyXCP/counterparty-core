@@ -4,10 +4,8 @@ import time
 import pytest
 import requests
 
-from counterpartycore.lib import database
-from counterpartycore.test import (
-    conftest,  # noqa: F401
-)
+from counterpartycore.lib.utils import database
+from counterpartycore.test import conftest  # noqa: F401
 
 LOCAL_API_URL = "http://localhost:4000"
 

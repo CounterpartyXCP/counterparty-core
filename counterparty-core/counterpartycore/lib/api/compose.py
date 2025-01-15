@@ -3,12 +3,12 @@ import decimal
 
 from counterpartycore.lib import (
     backend,
-    composer,
     config,
     exceptions,
     messages,
     util,
 )
+from counterpartycore.lib.api import composer
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
 from counterpartycore.lib.parser import deserialize, gettxinfo, message_type

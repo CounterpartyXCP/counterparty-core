@@ -65,5 +65,9 @@ def test_vector(
         )
         # dont check asset conservation after direct call to credit or debit
         # and also when canceling a non existent bet match
-        if f"{tx_name}.{method}" not in ["ledger.credit", "ledger.debit", "bet.cancel_bet_match"]:
+        if f"{tx_name}.{method}" not in [
+            "ledger.ledger.credit",
+            "ledger.ledger.debit",
+            "bet.cancel_bet_match",
+        ]:
             check.asset_conservation(server_db)

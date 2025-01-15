@@ -1,10 +1,10 @@
 import logging
 import time
 
-from counterpartycore.lib import config, database, exceptions
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages.versions import enhanced_send, mpma, send1
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import database, helpers
 
 ID = send1.ID
 

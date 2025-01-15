@@ -4,8 +4,9 @@ import logging
 import os
 from fractions import Fraction
 
-from counterpartycore.lib import config, database, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import database
 
 D = decimal.Decimal
 
@@ -89,7 +90,7 @@ def compose(db, source: str, quantity: int, overburn: bool = False, skip_validat
         raise exceptions.ComposeError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = ledger.get_burns(db, source)
+    burns = ledger.ledger.get_burns(db, source)
     already_burned = sum([burn["burned"] for burn in burns])
 
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
@@ -125,7 +126,7 @@ def parse(db, tx, message=None):
 
         if status == "valid":
             # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
-            burns = ledger.get_burns(db, tx["source"])
+            burns = ledger.ledger.get_burns(db, tx["source"])
             already_burned = sum([burn["burned"] for burn in burns])
             one = 1 * config.UNIT
             max_burn = one - already_burned
@@ -140,7 +141,7 @@ def parse(db, tx, message=None):
             earned = round(burned * multiplier)
 
             # Credit source address with earned XCP.
-            ledger.credit(
+            ledger.ledger.credit(
                 db,
                 tx["source"],
                 config.XCP,
@@ -166,7 +167,7 @@ def parse(db, tx, message=None):
         except KeyError:
             return
 
-        ledger.credit(
+        ledger.ledger.credit(
             db,
             line["source"],
             config.XCP,
@@ -196,7 +197,7 @@ def parse(db, tx, message=None):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, "burns", bindings, "BURN")
+        ledger.ledger.insert_record(db, "burns", bindings, "BURN")
 
     logger.info(
         "%(source)s burned %(burned)s BTC for %(earned)s XCP (%(tx_hash)s) [%(status)s]", bindings

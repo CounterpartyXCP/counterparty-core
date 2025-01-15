@@ -3,11 +3,12 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, database, ledger, util
+from counterpartycore.lib import config, ledger, util
 from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.exceptions import AddressError
 from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -68,7 +69,9 @@ def pack(db, asset, quantity, tag):
     else:
         tag = b""
 
-    data += struct.pack(FORMAT, ledger.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity)
+    data += struct.pack(
+        FORMAT, ledger.ledger.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX), quantity
+    )
     data += tag
     return data
 
@@ -77,7 +80,7 @@ def unpack(db, message, return_dict=False):
     try:
         asset_id, quantity = struct.unpack(FORMAT, message[0:16])
         tag = message[16:]
-        asset = ledger.get_asset_name(db, asset_id, util.CURRENT_BLOCK_INDEX)
+        asset = ledger.ledger.get_asset_name(db, asset_id, util.CURRENT_BLOCK_INDEX)
 
     except struct.error:
         raise UnpackError("could not unpack")  # noqa: B904, F405
@@ -92,7 +95,7 @@ def unpack(db, message, return_dict=False):
 
 def validate(db, source, destination, asset, quantity):
     try:
-        ledger.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
+        ledger.ledger.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
     except AssetError:  # noqa: F405
         raise ValidateError("asset invalid")  # noqa: B904, F405
 
@@ -116,13 +119,13 @@ def validate(db, source, destination, asset, quantity):
     if quantity < 0:
         raise ValidateError("quantity negative")  # noqa: F405
 
-    if ledger.get_balance(db, source, asset) < quantity:
+    if ledger.ledger.get_balance(db, source, asset) < quantity:
         raise BalanceError("balance insufficient")  # noqa: F405
 
 
 def compose(db, source: str, asset: str, quantity: int, tag: str, skip_validation: bool = False):
     # resolve subassets
-    asset = ledger.resolve_subasset_longname(db, asset)
+    asset = ledger.ledger.resolve_subasset_longname(db, asset)
 
     if not skip_validation:
         validate(db, source, None, asset, quantity)
@@ -139,7 +142,9 @@ def parse(db, tx, message):
     try:
         asset, quantity, tag = unpack(db, message)
         validate(db, tx["source"], tx["destination"], asset, quantity)
-        ledger.debit(db, tx["source"], asset, quantity, tx["tx_index"], "destroy", tx["tx_hash"])
+        ledger.ledger.debit(
+            db, tx["source"], asset, quantity, tx["tx_index"], "destroy", tx["tx_hash"]
+        )
 
     except UnpackError as e:  # noqa: F405
         status = "invalid: " + "".join(e.args)
@@ -158,7 +163,7 @@ def parse(db, tx, message):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+        ledger.ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
     logger.info(
         "Destroy of %(quantity)s %(asset)s by %(source)s (%(tx_hash)s) [%(status)s]", bindings

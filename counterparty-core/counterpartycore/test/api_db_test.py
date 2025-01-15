@@ -2,7 +2,8 @@ import tempfile
 
 import pytest
 
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config
+from counterpartycore.lib.utils import database
 from counterpartycore.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"

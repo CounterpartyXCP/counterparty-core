@@ -15,7 +15,6 @@ from datetime import timedelta
 from counterpartycore.lib import (
     backend,
     config,
-    database,
     exceptions,
     ledger,
     util,
@@ -49,7 +48,7 @@ from counterpartycore.lib.messages import (
 from counterpartycore.lib.messages.versions import enhanced_send, mpma
 from counterpartycore.lib.parser import check, deserialize, message_type, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import database, helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -93,7 +92,7 @@ TABLES = ["balances", "credits", "debits", "messages"] + [
 
 
 def update_transaction(db, tx, supported):
-    ledger.add_to_journal(
+    ledger.ledger.add_to_journal(
         db,
         tx["block_index"],
         "parse",
@@ -271,7 +270,7 @@ def replay_transactions_events(db, transactions):
             "utxos_info": tx["utxos_info"],
             "transaction_type": tx["transaction_type"],
         }
-        ledger.add_to_journal(
+        ledger.ledger.add_to_journal(
             db,
             tx["block_index"],
             "insert",
@@ -292,7 +291,7 @@ def replay_transactions_events(db, transactions):
                 "destination": next_out["destination"],
                 "btc_amount": next_out["btc_amount"],
             }
-            ledger.add_to_journal(
+            ledger.ledger.add_to_journal(
                 db,
                 tx["block_index"],
                 "insert",
@@ -330,8 +329,8 @@ def parse_block(
     if reparsing:
         replay_transactions_events(db, transactions)
 
-    ledger.BLOCK_LEDGER = []
-    ledger.BLOCK_JOURNAL = []
+    ledger.ledger.BLOCK_LEDGER = []
+    ledger.ledger.BLOCK_JOURNAL = []
 
     if block_index != config.MEMPOOL_BLOCK_INDEX:
         assert block_index == util.CURRENT_BLOCK_INDEX
@@ -369,10 +368,10 @@ def parse_block(
             db, "txlist_hash", previous_txlist_hash, txlist
         )
         new_ledger_hash, found_ledger_hash = check.consensus_hash(
-            db, "ledger_hash", previous_ledger_hash, ledger.BLOCK_LEDGER
+            db, "ledger_hash", previous_ledger_hash, ledger.ledger.BLOCK_LEDGER
         )
         new_messages_hash, found_messages_hash = check.consensus_hash(
-            db, "messages_hash", previous_messages_hash, ledger.BLOCK_JOURNAL
+            db, "messages_hash", previous_messages_hash, ledger.ledger.BLOCK_JOURNAL
         )
 
         update_block_query = """
@@ -394,7 +393,7 @@ def parse_block(
         cursor.execute(update_block_query, update_block_bindings)
 
         # trigger BLOCK_PARSED event
-        ledger.add_to_journal(
+        ledger.ledger.add_to_journal(
             db,
             block_index,
             "parse",
@@ -1019,7 +1018,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
     if block_hash is None or block_hash == config.MEMPOOL_BLOCK_HASH:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
-        existing_tx = ledger.get_transaction(db, tx_hash)
+        existing_tx = ledger.ledger.get_transaction(db, tx_hash)
         if existing_tx:
             util.CURRENT_TX_HASH = None
             return tx_index
@@ -1056,7 +1055,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
                 data, destination, utxos_info, block_index
             ),
         }
-        ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
+        ledger.ledger.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
 
         if dispensers_outs:
             for next_out in dispensers_outs:
@@ -1068,7 +1067,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
                     "destination": next_out["destination"],
                     "btc_amount": next_out["btc_amount"],
                 }
-                ledger.insert_record(
+                ledger.ledger.insert_record(
                     db,
                     "transaction_outputs",
                     transaction_outputs_bindings,
@@ -1200,7 +1199,7 @@ def reparse(db, block_index=0):
             start_time_block_parse = time.time()
             util.CURRENT_BLOCK_INDEX = block["block_index"]
             # Add event manually to journal because block already exists
-            ledger.add_to_journal(
+            ledger.ledger.add_to_journal(
                 db,
                 block["block_index"],
                 "insert",
@@ -1218,7 +1217,7 @@ def reparse(db, block_index=0):
             previous_txlist_hash = None
             previous_messages_hash = None
             if util.CURRENT_BLOCK_INDEX > config.BLOCK_FIRST:
-                previous_block = ledger.get_block(db, block["block_index"] - 1)
+                previous_block = ledger.ledger.get_block(db, block["block_index"] - 1)
                 previous_ledger_hash = previous_block["ledger_hash"]
                 previous_txlist_hash = previous_block["txlist_hash"]
                 previous_messages_hash = previous_block["messages_hash"]
@@ -1274,7 +1273,7 @@ def handle_reorg(db):
             previous_block_index -= 1
             continue
 
-        if previous_block_hash != ledger.get_block_hash(db, previous_block_index):
+        if previous_block_hash != ledger.ledger.get_block_hash(db, previous_block_index):
             # hashes don't match
             logger.debug(f"Hashes don't match ({previous_block_index}).")
             previous_block_index -= 1
@@ -1316,7 +1315,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
         }
     else:
         # get previous block
-        previous_block = ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
+        previous_block = ledger.ledger.get_block(db, util.CURRENT_BLOCK_INDEX - 1)
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
             logger.warning(
@@ -1341,7 +1340,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
             "previous_block_hash": decoded_block["hash_prev"],
             "difficulty": decoded_block["bits"],
         }
-        ledger.insert_record(db, "blocks", block_bindings, "NEW_BLOCK")
+        ledger.ledger.insert_record(db, "blocks", block_bindings, "NEW_BLOCK")
 
         # save transactions
         for transaction in decoded_block["transactions"]:
@@ -1412,7 +1411,7 @@ def check_database_version(db):
         elif e.required_action == "reparse":
             reparse(db, block_index=e.from_block_index)
         # refresh the current block index
-        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+        util.CURRENT_BLOCK_INDEX = ledger.ledger.last_db_index(db)
         # update the database version
         database.update_version(db)
 
@@ -1439,7 +1438,7 @@ def catch_up(db, check_asset_conservation=True):
     try:
         util.BLOCK_PARSER_STATUS = "catching up"
         # update the current block index
-        util.CURRENT_BLOCK_INDEX = ledger.last_db_index(db)
+        util.CURRENT_BLOCK_INDEX = ledger.ledger.last_db_index(db)
         if util.CURRENT_BLOCK_INDEX == 0:
             logger.info("New database.")
             util.CURRENT_BLOCK_INDEX = config.BLOCK_FIRST - 1

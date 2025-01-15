@@ -28,13 +28,12 @@ from bitcoin.core import VarIntSerializer
 
 from counterpartycore.lib import (
     config,
-    database,
     exceptions,
     ledger,
     util,
 )
 from counterpartycore.lib.parser import message_type, protocol
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import database, helpers
 
 from . import bet
 
@@ -133,7 +132,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     if not source:
         problems.append("null source address")
     # Check previous broadcast in this feed.
-    broadcasts = ledger.get_broadcasts_by_source(db, source, "valid", order_by="ASC")
+    broadcasts = ledger.ledger.get_broadcasts_by_source(db, source, "valid", order_by="ASC")
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if last_broadcast["locked"]:
@@ -275,7 +274,7 @@ def parse(db, tx, message):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, "broadcasts", bindings, "BROADCAST")
+        ledger.ledger.insert_record(db, "broadcasts", bindings, "BROADCAST")
 
     logger.info("Broadcast from %(source)s (%(tx_hash)s) [%(status)s]", bindings)
 
@@ -292,11 +291,11 @@ def parse(db, tx, message):
                 "address": tx["source"],
                 "options": options,
             }
-            existing_address = ledger.get_addresses(db, address=tx["source"])
+            existing_address = ledger.ledger.get_addresses(db, address=tx["source"])
             if len(existing_address) == 0:
-                ledger.insert_record(db, "addresses", op_bindings, "NEW_ADDRESS_OPTIONS")
+                ledger.ledger.insert_record(db, "addresses", op_bindings, "NEW_ADDRESS_OPTIONS")
             else:
-                ledger.insert_update(
+                ledger.ledger.insert_update(
                     db, "addresses", "address", tx["source"], op_bindings, "ADDRESS_OPTIONS_UPDATE"
                 )
 
@@ -304,11 +303,11 @@ def parse(db, tx, message):
     if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
-            for i in ledger.get_bet_by_feed(db, tx["source"], status="open"):
+            for i in ledger.ledger.get_bet_by_feed(db, tx["source"], status="open"):
                 bet.cancel_bet(db, i, "dropped", tx["block_index"], tx["tx_index"])
         # Cancel Pending Bet Matches?
         if value == -3:
-            for bet_match in ledger.get_pending_bet_matches(db, tx["source"]):
+            for bet_match in ledger.ledger.get_pending_bet_matches(db, tx["source"]):
                 bet.cancel_bet_match(db, bet_match, "dropped", tx["block_index"], tx["tx_index"])
         cursor.close()
         return
@@ -319,7 +318,7 @@ def parse(db, tx, message):
         return
 
     # Handle bet matches that use this feed.
-    bet_matches = ledger.get_pending_bet_matches(
+    bet_matches = ledger.ledger.get_pending_bet_matches(
         db, tx["source"], order_by="tx1_index ASC, tx0_index ASC"
     )
     for bet_match in bet_matches:
@@ -375,7 +374,7 @@ def parse(db, tx, message):
                     bull_credit = escrow_less_fee
                     bear_credit = 0
                     bet_match_status = "settled: liquidated for bull"
-                    ledger.credit(
+                    ledger.ledger.credit(
                         db,
                         bull_address,
                         config.XCP,
@@ -388,7 +387,7 @@ def parse(db, tx, message):
                     bull_credit = 0
                     bear_credit = escrow_less_fee
                     bet_match_status = "settled: liquidated for bear"
-                    ledger.credit(
+                    ledger.ledger.credit(
                         db,
                         bear_address,
                         config.XCP,
@@ -399,7 +398,7 @@ def parse(db, tx, message):
                     )
 
                 # Pay fee to feed.
-                ledger.credit(
+                ledger.ledger.credit(
                     db,
                     bet_match["feed_address"],
                     config.XCP,
@@ -421,14 +420,16 @@ def parse(db, tx, message):
                     "escrow_less_fee": None,
                     "fee": fee,
                 }
-                ledger.insert_record(db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON")
+                ledger.ledger.insert_record(
+                    db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON"
+                )
                 logger.debug("Bet Match %(bet_match_id)s resolved", bindings)
 
             # Settle (if not liquidated).
             elif timestamp >= bet_match["deadline"]:
                 bet_match_status = "settled"
 
-                ledger.credit(
+                ledger.ledger.credit(
                     db,
                     bull_address,
                     config.XCP,
@@ -437,7 +438,7 @@ def parse(db, tx, message):
                     action=f"bet {bet_match_status}",
                     event=tx["tx_hash"],
                 )
-                ledger.credit(
+                ledger.ledger.credit(
                     db,
                     bear_address,
                     config.XCP,
@@ -448,7 +449,7 @@ def parse(db, tx, message):
                 )
 
                 # Pay fee to feed.
-                ledger.credit(
+                ledger.ledger.credit(
                     db,
                     bet_match["feed_address"],
                     config.XCP,
@@ -470,7 +471,9 @@ def parse(db, tx, message):
                     "escrow_less_fee": None,
                     "fee": fee,
                 }
-                ledger.insert_record(db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON")
+                ledger.ledger.insert_record(
+                    db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON"
+                )
                 logger.debug("Bet Match %(bet_match_id)s resolved", bindings)
 
         # Equal[/NotEqual] bet.
@@ -487,7 +490,7 @@ def parse(db, tx, message):
             if value == bet_match["target_value"]:
                 winner = "Equal"
                 bet_match_status = "settled: for equal"
-                ledger.credit(
+                ledger.ledger.credit(
                     db,
                     equal_address,
                     config.XCP,
@@ -499,7 +502,7 @@ def parse(db, tx, message):
             else:
                 winner = "NotEqual"
                 bet_match_status = "settled: for notequal"
-                ledger.credit(
+                ledger.ledger.credit(
                     db,
                     notequal_address,
                     config.XCP,
@@ -510,7 +513,7 @@ def parse(db, tx, message):
                 )
 
             # Pay fee to feed.
-            ledger.credit(
+            ledger.ledger.credit(
                 db,
                 bet_match["feed_address"],
                 config.XCP,
@@ -532,13 +535,15 @@ def parse(db, tx, message):
                 "escrow_less_fee": escrow_less_fee,
                 "fee": fee,
             }
-            ledger.insert_record(db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON")
+            ledger.ledger.insert_record(
+                db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON"
+            )
             logger.debug("Bet Match %(bet_match_id)s resolved", bindings)
 
         # Update the bet match’s status.
         if bet_match_status:
             bet_match_id = helpers.make_id(bet_match["tx0_hash"], bet_match["tx1_hash"])
-            ledger.update_bet_match_status(db, bet_match_id, bet_match_status)
+            ledger.ledger.update_bet_match_status(db, bet_match_id, bet_match_status)
 
             logger.info(
                 "Bet Match %(id)s updated [%(status)s]",

@@ -15,13 +15,12 @@ from docstring_parser import parse as parse_docstring
 
 from counterpartycore.lib import (
     backend,
-    composer,
     config,
     exceptions,
     ledger,
     util,
 )
-from counterpartycore.lib.api import compose
+from counterpartycore.lib.api import compose, composer
 from counterpartycore.lib.utils import helpers
 
 D = decimal.Decimal
@@ -30,7 +29,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def check_last_parsed_block(db, blockcount):
     """Checks database to see if is caught up with backend."""
-    last_block = ledger.get_last_block(db)
+    last_block = ledger.ledger.get_last_block(db)
     if last_block is None:
         raise exceptions.DatabaseError(
             f"{config.XCP_NAME} database is behind backend."
@@ -365,10 +364,10 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
                     asset_list.append(item[field_name])
 
     # get asset issuances
-    issuance_by_asset = ledger.get_assets_last_issuance(state_db, asset_list)
+    issuance_by_asset = ledger.ledger.get_assets_last_issuance(state_db, asset_list)
 
     # get block_time for each block_index
-    block_times = ledger.get_blocks_time(ledger_db, block_indexes)
+    block_times = ledger.ledger.get_blocks_time(ledger_db, block_indexes)
 
     # inject issuance and block_time
     for result_item in result_list:
@@ -645,7 +644,7 @@ def inject_fiat_price(ledger_db, dispenser):
             _oracle_fee,
             dispenser["fiat_unit"],
             dispenser["oracle_price_last_updated"],
-        ) = ledger.get_oracle_last_price(
+        ) = ledger.ledger.get_oracle_last_price(
             ledger_db, dispenser["oracle_address"], helpers.CURRENT_BLOCK_INDEX
         )
 
@@ -680,7 +679,7 @@ def inject_dispensers(ledger_db, state_db, result_list):
                 dispenser_list.append(result_item["dispenser_tx_hash"])
 
     # get dispenser info
-    dispenser_info = ledger.get_dispensers_info(state_db, dispenser_list)
+    dispenser_info = ledger.ledger.get_dispensers_info(state_db, dispenser_list)
 
     # inject dispenser info
     enriched_result_list = []

@@ -3,8 +3,9 @@ import os
 
 import sentry_sdk
 
-from counterpartycore.lib import config, database
-from counterpartycore.lib.tools.telemetry.collectors.base import TelemetryCollectorBase
+from counterpartycore.lib import config
+from counterpartycore.lib.monitors.telemetry.collectors.base import TelemetryCollectorBase
+from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

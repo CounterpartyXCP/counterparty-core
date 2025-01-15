@@ -1,16 +1,15 @@
-import pprint  # noqa: F401
 import tempfile
 
 import pytest
 
-from counterpartycore.lib import composer, util  # noqa: F401
+from counterpartycore.lib.api import composer
 from counterpartycore.lib.messages import send
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (
     conftest,  # noqa: F401
 )
-from counterpartycore.test.fixtures.params import ADDR, DP  # noqa: F401
+from counterpartycore.test.fixtures.params import ADDR
 from counterpartycore.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"

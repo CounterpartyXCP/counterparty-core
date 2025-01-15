@@ -3,7 +3,7 @@ import tempfile
 
 import bitcoin as bitcoinlib
 
-from counterpartycore.lib import composer
+from counterpartycore.lib.api import composer
 from counterpartycore.lib.parser import protocol
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import ADDR

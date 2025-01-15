@@ -4,9 +4,10 @@ import os
 import threading
 import time
 
-from counterpartycore.lib import config, database, exceptions
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.parser import utxosinfo
+from counterpartycore.lib.utils import database
 from counterpartycore.lib.utils.helpers import format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)

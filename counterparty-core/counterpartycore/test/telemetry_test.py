@@ -1,8 +1,8 @@
 import time
 from unittest.mock import MagicMock, patch
 
-from counterpartycore.lib.tools.telemetry.collectors.base import TelemetryCollectorBase
-from counterpartycore.lib.tools.telemetry.daemon import TelemetryDaemon
+from counterpartycore.lib.monitors.telemetry.collectors.base import TelemetryCollectorBase
+from counterpartycore.lib.monitors.telemetry.daemon import TelemetryDaemon
 
 
 class TestTelemetryDaemon:
@@ -36,11 +36,11 @@ class TestTelemetryDaemon:
 
 
 class TestTelemetryCollectorBase:
-    @patch("counterpartycore.lib.tools.telemetry.util.config")
-    @patch("counterpartycore.lib.tools.telemetry.collectors.base.ledger")
+    @patch("counterpartycore.lib.monitors.telemetry.util.config")
+    @patch("counterpartycore.lib.monitors.telemetry.collectors.base.ledger")
     def test_collect(self, mock_ledger, mock_config):
         mock_db = MagicMock()
-        mock_ledger.last_message.return_value = {"block_index": 12345}
+        mock_ledger.ledger.last_message.return_value = {"block_index": 12345}
         mock_config.__version__ = "1.2.3"
         mock_config.TESTNET = False
         mock_config.TESTNET4 = False
@@ -52,7 +52,7 @@ class TestTelemetryCollectorBase:
 
         print("\n\n\n", data)
 
-        mock_ledger.last_message.assert_called_with(mock_db)
+        mock_ledger.ledger.last_message.assert_called_with(mock_db)
         mock_db.cursor().execute.assert_called_with(
             "SELECT * FROM blocks where block_index = ?", [12345]
         )
@@ -63,12 +63,12 @@ class TestTelemetryCollectorBase:
         assert isinstance(data["dockerized"], bool)  # noqa: E712
         assert data["force_enabled"] == False  # noqa: E712
 
-    @patch("counterpartycore.lib.tools.telemetry.collectors.base.ledger")
-    @patch("counterpartycore.lib.tools.telemetry.collectors.base.os.path.exists")
+    @patch("counterpartycore.lib.monitors.telemetry.collectors.base.ledger")
+    @patch("counterpartycore.lib.monitors.telemetry.collectors.base.os.path.exists")
     def test_collect_with_docker(self, mock_exists, mock_ledger):
         mock_db = MagicMock()
         mock_exists.return_value = True
-        mock_ledger.last_message.return_value = {"block_index": 12345}
+        mock_ledger.ledger.last_message.return_value = {"block_index": 12345}
         collector = TelemetryCollectorBase(mock_db)
         data = collector.collect()
         assert data["dockerized"] == True  # noqa: E712

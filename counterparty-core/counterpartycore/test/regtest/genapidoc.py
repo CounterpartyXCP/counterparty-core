@@ -6,8 +6,8 @@ import sys
 import requests
 import sh
 import yaml
-from counterpartycore.lib import database
 from counterpartycore.lib.api import routes
+from counterpartycore.lib.utils import database
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../apiary.apib")

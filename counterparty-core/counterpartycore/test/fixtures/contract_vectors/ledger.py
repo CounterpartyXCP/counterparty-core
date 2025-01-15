@@ -1,7 +1,7 @@
 from fractions import Fraction
 
 from counterpartycore.lib import exceptions
-from counterpartycore.lib.ledger import CreditError, DebitError
+from counterpartycore.lib.ledger.ledger import CreditError, DebitError
 
 from ..params import (
     ADDR,
@@ -9,7 +9,7 @@ from ..params import (
 from ..params import DEFAULT_PARAMS as DP
 
 LEDGER_VECTOR = {
-    "ledger": {
+    "ledger.ledger": {
         "generate_asset_id": [
             {"in": ("BTC", DP["default_block_index"]), "out": 0},
             {"in": ("XCP", DP["default_block_index"]), "out": 1},

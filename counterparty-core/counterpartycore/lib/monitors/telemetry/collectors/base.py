@@ -1,7 +1,7 @@
 import logging
 import os
 
-import counterpartycore.lib.tools.telemetry.util as util
+import counterpartycore.lib.monitors.telemetry.util as util
 from counterpartycore.lib import config, ledger
 
 from .interface import TelemetryCollectorI
@@ -31,7 +31,7 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
         force_enabled = util.is_force_enabled()
         platform = util.get_system()
 
-        block_index = ledger.last_message(self.db)["block_index"]
+        block_index = ledger.ledger.last_message(self.db)["block_index"]
         cursor = self.db.cursor()
         last_block = cursor.execute(
             "SELECT * FROM blocks where block_index = ?", [block_index]

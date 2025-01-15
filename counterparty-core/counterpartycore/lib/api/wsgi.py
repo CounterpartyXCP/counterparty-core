@@ -13,10 +13,11 @@ from gunicorn.arbiter import Arbiter
 from gunicorn.errors import AppImportError
 from werkzeug.serving import make_server
 
-from counterpartycore.lib import config, database, ledger, util
+from counterpartycore.lib import config, ledger, util
 from counterpartycore.lib.api import api_watcher
 from counterpartycore.lib.api.util import BackendHeight
 from counterpartycore.lib.cli import log
+from counterpartycore.lib.utils import database
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -27,7 +28,7 @@ def refresh_current_state(ledger_db, state_db):
     util.CURRENT_BLOCK_INDEX = api_watcher.get_last_block_parsed(state_db)
     util.CURRENT_BACKEND_HEIGHT = BackendHeight().get()
     if util.CURRENT_BLOCK_INDEX:
-        last_block = ledger.get_block(ledger_db, util.CURRENT_BLOCK_INDEX)
+        last_block = ledger.ledger.get_block(ledger_db, util.CURRENT_BLOCK_INDEX)
         if last_block:
             util.CURRENT_BLOCK_TIME = last_block["block_time"]
         else:
