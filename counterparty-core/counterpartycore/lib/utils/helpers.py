@@ -1,6 +1,10 @@
+import decimal
 import itertools
+import json
 from operator import itemgetter
 from urllib.parse import urlparse
+
+D = decimal.Decimal
 
 
 def chunkify(l, n):  # noqa: E741
@@ -62,3 +66,27 @@ def is_url(url):
         return all(result.scheme, result.netloc)
     except ValueError:
         return False
+
+
+class ApiJsonEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            return "{0:.8f}".format(o)
+        if isinstance(o, bytes):
+            return o.hex()
+        if callable(o):
+            return o.__name__
+        if hasattr(o, "__class__"):
+            return str(o)
+        return super().default(o)
+
+
+def to_json(obj, indent=None):
+    return json.dumps(obj, cls=ApiJsonEncoder, indent=indent)
+
+
+def divide(value1, value2):
+    decimal.getcontext().prec = 16
+    if value2 == 0 or value1 == 0:
+        return D(0)
+    return D(value1) / D(value2)

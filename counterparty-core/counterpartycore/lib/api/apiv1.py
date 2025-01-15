@@ -17,6 +17,8 @@ import time
 
 import flask
 import jsonrpc
+import requests
+import werkzeug
 from flask import request
 from flask_httpauth import HTTPBasicAuth
 from jsonrpc import dispatcher
@@ -32,9 +34,9 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.api import composer
-from counterpartycore.lib.api import util as api_util
+from counterpartycore.lib.api import composer, healthz
 from counterpartycore.lib.api.apiwatcher import STATE_DB_TABLES
+from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -513,7 +515,7 @@ class APIStatusPoller(threading.Thread):
                         check_backend_state()
                         code = 12
                         with LedgerDBConnectionPool().connection() as ledger_db:
-                            api_util.check_last_parsed_block(
+                            healthz.check_last_parsed_block(
                                 ledger_db, backend.bitcoind.getblockcount()
                             )
                         interval = interval_if_ready
@@ -837,7 +839,7 @@ class APIServer(threading.Thread):
             latest_block_index = backend.bitcoind.getblockcount()
             with LedgerDBConnectionPool().connection() as db:
                 try:
-                    api_util.check_last_parsed_block(db, latest_block_index)
+                    healthz.check_last_parsed_block(db, latest_block_index)
                 except exceptions.DatabaseError:
                     caught_up = False
                 else:
@@ -1095,7 +1097,7 @@ class APIServer(threading.Thread):
                 scope.set_transaction_name("healthcheck")
             check_type = request.args.get("type", "light")
             with LedgerDBConnectionPool().connection() as db:
-                return api_util.handle_healthz_route(db, check_type)
+                return healthz.handle_healthz_route(db, check_type)
 
         @app.route("/", defaults={"args_path": ""}, methods=["GET", "POST", "OPTIONS"])
         @app.route("/<path:args_path>", methods=["GET", "POST", "OPTIONS"])
@@ -1180,7 +1182,7 @@ class APIServer(threading.Thread):
             jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
 
             response = flask.Response(
-                api_util.to_json(jsonrpc_response.data), 200, mimetype="application/json"
+                helpers.to_json(jsonrpc_response.data), 200, mimetype="application/json"
             )
             _set_cors_headers(response)
             # response.headers["X-API-WARN"] = "Deprecated API"
@@ -1284,8 +1286,28 @@ class APIServer(threading.Thread):
         # Init the HTTP Server.
         self.is_ready = True
         self.server = make_server(config.RPC_HOST, config.RPC_PORT, app, threaded=True)
-        api_util.init_api_access_log(app)
+        init_api_access_log(app)
         self.ctx = app.app_context()
         self.ctx.push()
         # Run app server (blocking)
         self.server.serve_forever()
+
+
+def redirect_to_rpc_v1():
+    """
+    Redirect to the RPC API v1.
+    """
+    query_params = {
+        "headers": flask.request.headers,
+        "auth": (config.RPC_USER, config.RPC_PASSWORD),
+    }
+    url = f"http://localhost:{config.RPC_PORT}/"
+    if flask.request.query_string:
+        url += f"?{flask.request.query_string}"
+    request_function = getattr(requests, flask.request.method.lower())
+    if flask.request.method == "POST":
+        try:
+            query_params["json"] = flask.request.json
+        except werkzeug.exceptions.UnsupportedMediaType as e:
+            raise exceptions.JSONRPCInvalidRequest("Invalid JSON-RPC 2.0 request format") from e
+    return request_function(url, **query_params)

@@ -145,3 +145,11 @@ def list_unspent(source, allow_unconfirmed_inputs):
         return unspent_list
 
     return []
+
+
+def pubkeyhash_to_pubkey(address: str):
+    """
+    Get pubkey for an address.
+    :param address: Address to get pubkey for. (e.g. $ADDRESS_1)
+    """
+    return search_pubkey(address)

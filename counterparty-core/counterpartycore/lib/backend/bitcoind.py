@@ -503,3 +503,12 @@ def get_vin_info(vin):
     vout = vin_ctx["vout"][vin["n"]]
 
     return vout["value"], vout["script_pub_key"], is_segwit
+
+
+def get_transaction(tx_hash: str, format: str = "json"):
+    """
+    Get a transaction from the blockchain
+    :param tx_hash: The transaction hash (e.g. $LAST_TX_HASH)
+    :param format: Whether to return JSON output or raw hex (e.g. hex)
+    """
+    return getrawtransaction(tx_hash, verbose=format == "json")

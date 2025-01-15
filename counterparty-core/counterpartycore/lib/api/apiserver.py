@@ -23,20 +23,15 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, wsgi
-from counterpartycore.lib.api.routes import ROUTES
-from counterpartycore.lib.api.util import (
-    clean_rowids_and_confirmed_fields,
-    function_needs_db,
-    init_api_access_log,
-    inject_details,
-    to_json,
-)
+from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, verbose, wsgi
+from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli import server
+from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.parser import check
 from counterpartycore.lib.utils import database
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
+from counterpartycore.lib.utils.helpers import to_json
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -397,14 +392,14 @@ def handle_route(**kwargs):
         table = result.table
         result = result.result
 
-    result = clean_rowids_and_confirmed_fields(result)
+    result = verbose.clean_rowids_and_confirmed_fields(result)
 
     # inject details
-    verbose = request.args.get("verbose", "False")
-    if verbose.lower() in ["true", "1"]:
+    is_verbose = request.args.get("verbose", "False")
+    if is_verbose.lower() in ["true", "1"]:
         with LedgerDBConnectionPool().connection() as ledger_db:
             with StateDBConnectionPool().connection() as state_db:
-                result = inject_details(ledger_db, state_db, result, table)
+                result = verbose.inject_details(ledger_db, state_db, result, table)
 
     return return_result(
         200,

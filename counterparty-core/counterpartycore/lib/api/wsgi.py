@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 import threading
+import time
 
 import gunicorn.app.base
 import waitress
@@ -13,15 +14,32 @@ from gunicorn.arbiter import Arbiter
 from gunicorn.errors import AppImportError
 from werkzeug.serving import make_server
 
-from counterpartycore.lib import config, ledger, util
+from counterpartycore.lib import backend, config, ledger, util
 from counterpartycore.lib.api import apiwatcher
-from counterpartycore.lib.api.util import BackendHeight
 from counterpartycore.lib.cli import log
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, helpers
 
 multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+
+def get_backend_height():
+    block_count = backend.bitcoind.getblockcount()
+    blocks_behind = backend.bitcoind.get_blocks_behind()
+    return block_count + blocks_behind
+
+
+class BackendHeight(metaclass=helpers.SingletonMeta):
+    def __init__(self):
+        self.backend_height = get_backend_height()
+        self.last_update = time.time()
+
+    def get(self):
+        if time.time() - self.last_update > 0:  # one second cache
+            self.backend_height = get_backend_height()
+            self.last_update = time.time()
+        return self.backend_height
 
 
 def refresh_current_state(ledger_db, state_db):

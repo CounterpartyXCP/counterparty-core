@@ -5,9 +5,11 @@ import threading
 import time
 import traceback
 from datetime import datetime
+from logging import handlers as logging_handlers
 from logging.handlers import RotatingFileHandler
 from multiprocessing import current_process
 
+import flask
 import zmq
 from dateutil.tz import tzlocal
 from halo import Halo
@@ -15,7 +17,6 @@ from json_log_formatter import JSONFormatter
 from termcolor import colored, cprint
 
 from counterpartycore.lib import config, util
-from counterpartycore.lib.api.util import to_json
 from counterpartycore.lib.utils import helpers
 
 logging.TRACE = logging.DEBUG - 5
@@ -381,9 +382,32 @@ class ZmqPublisher(metaclass=helpers.SingletonMeta):
 
     def publish_event(self, db, event):
         logger.trace("Publishing event: %s", event["event"])
-        self.socket.send_multipart([event["event"].encode("utf-8"), to_json(event).encode("utf-8")])
+        self.socket.send_multipart(
+            [event["event"].encode("utf-8"), helpers.to_json(event).encode("utf-8")]
+        )
 
     def close(self):
         if self.socket:
             self.socket.close(linger=0)
             self.context.term()
+
+
+def init_api_access_log(flask_app):
+    """Initialize API logger."""
+    flask_app.logger.removeHandler(flask.logging.default_handler)
+    flask_app.logger.setLevel(logging.DEBUG)
+    werkzeug_logger = logging.getLogger("werkzeug")
+    while len(werkzeug_logger.handlers) > 0:
+        werkzeug_logger.removeHandler(werkzeug_logger.handlers[0])
+
+    # Log to file, if configured...
+    if config.API_LOG:
+        handler = logging_handlers.RotatingFileHandler(
+            config.API_LOG, "a", config.API_MAX_LOG_SIZE, config.API_MAX_LOG_COUNT
+        )
+        handler.propagate = False
+        handler.setLevel(logging.DEBUG)
+        flask_app.logger.addHandler(handler)
+        werkzeug_logger.addHandler(handler)
+
+    flask.cli.show_server_banner = lambda *args: None

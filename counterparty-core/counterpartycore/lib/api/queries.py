@@ -4,7 +4,7 @@ from typing import Literal
 
 from sentry_sdk import start_span as start_sentry_span
 
-from counterpartycore.lib.api.util import divide
+from counterpartycore.lib.utils.helpers import divide
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]

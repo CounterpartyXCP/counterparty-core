@@ -35,7 +35,6 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.api import composer
-from counterpartycore.lib.api.util import to_json
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
 from counterpartycore.lib.parser import blocks, check, deserialize, gettxinfo
@@ -1027,7 +1026,7 @@ def check_outputs(
                     )
                 else:
                     msg = f"expected outputs don't match test_outputs: expected_outputs={outputs} test_outputs={test_outputs}"
-                print(to_json(test_outputs))
+                print(helpers.to_json(test_outputs))
                 raise Exception(msg)  # noqa: B904
         if records is not None:
             for record in records:
