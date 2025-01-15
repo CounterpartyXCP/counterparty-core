@@ -21,6 +21,27 @@ TRANSACTIONS_CACHE = OrderedDict()
 TRANSACTIONS_CACHE_MAX_SIZE = 10000
 
 
+# for testing
+def should_retry():
+    return True
+
+
+def get_json_response(response, retry=0):
+    try:
+        return response.json()
+    except json.decoder.JSONDecodeError as e:  # noqa: F841
+        if response.status_code == 200:
+            logger.warning(
+                f"Received invalid JSON with status 200 from Bitcoin Core: {response.text}. Retrying in 5 seconds..."
+            )
+            time.sleep(5)
+            if retry < 5:
+                return get_json_response(response, retry=retry + 1)
+        raise exceptions.BitcoindRPCError(  # noqa: B904
+            f"Received invalid JSON from backend with a response of {str(response.status_code)}: {response.text}"
+        ) from e
+
+
 def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
     url = config.BACKEND_URL
@@ -41,16 +62,8 @@ def rpc_call(payload, retry=0):
             )
 
             if response is None:  # noqa: E711
-                if config.TESTNET:
-                    network = "testnet"
-                elif config.TESTNET4:
-                    network = "testnet4"
-                elif config.REGTEST:
-                    network = "regtest"
-                else:
-                    network = "mainnet"
                 raise exceptions.BitcoindRPCError(
-                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {network}, is backend?)"
+                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
                 )
             if response.status_code in (401,):
                 raise exceptions.BitcoindRPCError(
@@ -75,34 +88,28 @@ def rpc_call(payload, retry=0):
         raise broken_error
 
     # Handle json decode errors
-    try:
-        response_json = response.json()
-    except json.decoder.JSONDecodeError as e:  # noqa: F841
-        raise exceptions.BitcoindRPCError(  # noqa: B904
-            f"Received invalid JSON from backend with a response of {str(response.status_code) + ' ' + response.reason}"
-        ) from e
+    response_json = get_json_response(response)
 
     # Batch query returns a list
     if isinstance(response_json, list):
         result = response_json
     elif "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
         result = response_json["result"]
-    elif response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
-        raise exceptions.BitcoindRPCError(
-            f"{response_json['error']} Is `txindex` enabled in {config.BTC_NAME} Core?"
-        )
-    elif response_json["error"]["code"] in [-28, -8, -2]:
+    elif "Block height out of range" in response_json["error"]["message"]:
+        # this error should be managed by the caller
+        raise exceptions.BlockOutOfRange(response_json["error"]["message"])
+    elif response_json["error"]["code"] in [-28, -8, -5, -2]:
         # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
-        logger.debug(f"Backend not ready. Sleeping for ten seconds. ({response_json['error']})")
-        logger.debug(f"Payload: {payload}")
-        if retry >= 10:
-            raise exceptions.BitcoindRPCError(
-                f"Backend not ready after {retry} retries. ({response_json['error']})"
-            )
-        # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-        # seconds to start, this'll hit the maximum recursion depth limit.
-        time.sleep(10)
-        return rpc_call(payload, retry=retry + 1)
+        warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
+        if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
+            warning_message += f" Is `txindex` enabled in {config.BTC_NAME} Core?"
+        logger.warning(warning_message)
+        if should_retry():
+            # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
+            # seconds to start, this'll hit the maximum recursion depth limit.
+            time.sleep(10)
+            return rpc_call(payload, retry=retry + 1)
+        raise exceptions.BitcoindRPCError(warning_message)
     else:
         raise exceptions.BitcoindRPCError(response_json["error"]["message"])
 
@@ -130,8 +137,8 @@ def is_api_request():
     return False
 
 
-def rpc(method, params):
-    if is_api_request():
+def rpc(method, params, no_retry=False):
+    if is_api_request() or no_retry:
         return safe_rpc(method, params)
 
     payload = {
@@ -160,6 +167,8 @@ def safe_rpc(method, params):
             verify=(not config.BACKEND_SSL_NO_VERIFY),
             timeout=config.REQUESTS_TIMEOUT,
         ).json()
+        if "error" in response:
+            raise exceptions.BitcoindRPCError(response["error"]["message"])
         return response["result"]
     except (requests.exceptions.RequestException, json.decoder.JSONDecodeError, KeyError) as e:
         raise exceptions.BitcoindRPCError(f"Error calling {method}: {str(e)}") from e
@@ -190,8 +199,8 @@ def convert_to_psbt(rawtx):
 
 
 @functools.lru_cache(maxsize=10000)
-def getrawtransaction(tx_hash, verbose=False):
-    return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0])
+def getrawtransaction(tx_hash, verbose=False, no_retry=False):
+    return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0], no_retry=no_retry)
 
 
 def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False):
@@ -380,7 +389,10 @@ def sendrawtransaction(signedhex: str):
     Proxy to `sendrawtransaction` RPC call.
     :param signedhex: The signed transaction hex.
     """
-    return rpc("sendrawtransaction", [signedhex])
+    try:
+        return rpc("sendrawtransaction", [signedhex])
+    except Exception as e:
+        raise exceptions.BitcoindRPCError(f"Error broadcasting transaction: {str(e)}") from e
 
 
 def decoderawtransaction(rawtx: str):
@@ -388,7 +400,7 @@ def decoderawtransaction(rawtx: str):
     Proxy to `decoderawtransaction` RPC call.
     :param rawtx: The raw transaction hex. (e.g. 0200000000010199c94580cbea44aead18f429be20552e640804dc3b4808e39115197f1312954d000000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d0ffffffff0280f0fa02000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88ac70da0a27010000001600147c6b1112ed7bc76fd03af8b91d02fd6942c5a8d002000000000000)
     """
-    return deserialize.deserialize_tx(rawtx)
+    return rpc("decoderawtransaction", [rawtx])
 
 
 def search_pubkey_in_transactions(pubkeyhash, tx_hashes):

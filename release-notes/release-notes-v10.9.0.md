@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v10.9.0 (2025-01-??)
+# Release Notes - Counterparty Core v10.9.0 (2025-01-15)
 
 This release represents a major technical milestone in the development of Counterparty Core: Counterparty no longer has AddrIndexRs as an external dependency. Originally, AddrIndexRs was used for transaction construction, and at the end of 2023 it was accidentally turned into a consensus-critical dependency (causing a number of subsequent consensus breaks and reliability issues). As of today, the only external dependency for a Counterparty node is Bitcoin Core itself.
 
@@ -37,11 +37,20 @@ The following transaction construction parameters have been deprecated (but rema
 - Fix the `dispensers` table in State DB: include dispensers with same the `source` and `asset` but a different `tx_hash`
 - Fix endpoint to get info from raw transaction when block index is not provided
 - Fix issue where composed transactions contained `script_pubkey` (lock script) where the `script_sig` (unlock script) should be
+- Fix bootstrap when using `--bootstrap-url` flag and don't clean other networks files
+- Fix logic for blockchain reorgs of several blocks
+- Have the node terminate when the `follow` loop raises an error
+- Don't stop the server on "No such mempool or blockchain" error
+- Handle correctly RPC call errors from the API
+- Don't clean mempool on catchup
+- Retry 5 times when getting invalid Json with status 200 from Bitcoin Core
+- Don't retry RPC call when parsing mempool transactions
+
 
 ## Codebase
 
 - Remove the AddrIndexRs dependency
-- Replacement of `transaction.py` and `transaction_helper/*` with `composer.py`
+- Replace `transaction.py` and `transaction_helper/*` with `composer.py`
 - Use the `bitcoin-utils` library for generating transactions
 - No longer block the follow process on mempool parsing
 - Add a timeout when parsing mempool transaction from ZMQ
@@ -50,6 +59,9 @@ The following transaction construction parameters have been deprecated (but rema
 - Trigger State DB refreshes automatically on version bumps
 - Use only Rust to deserialize blocks and transactions
 - Add `testnet4` support
+- Repeat the RPC call to Bitcoin Core indefinitely until it succeeds
+- Raise a specific `BlockOutOfRange` error when querying an unknown block
+- Add mainnet checkpoint for block 879058 and testnet4 checkpoint for block 64493
 
 ## API
 

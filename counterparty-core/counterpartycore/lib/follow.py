@@ -138,7 +138,8 @@ class BlockchainWatcher:
                 blocks.catch_up(self.db, check_asset_conservation=False)
             else:
                 blocks.parse_new_block(self.db, decoded_block)
-            mempool.clean_mempool(self.db)
+            if not config.NO_MEMPOOL:
+                mempool.clean_mempool(self.db)
             if not config.NO_TELEMETRY:
                 TelemetryOneShot().submit()
 
@@ -184,9 +185,9 @@ class BlockchainWatcher:
                 raw_tx = self.raw_tx_cache.get(item_hash)
                 if raw_tx is None:
                     try:
-                        raw_tx = backend.bitcoind.getrawtransaction(item_hash)
+                        raw_tx = backend.bitcoind.getrawtransaction(item_hash, no_retry=True)
                     except exceptions.BitcoindRPCError:
-                        logger.trace("Transaction not found in bitcoind: %s", item_hash)
+                        logger.warning("Transaction not found in bitcoind: %s", item_hash)
                         return
                 # add transaction to mempool block
                 # logger.trace("Adding transaction to mempool block: %s", item_hash)
@@ -204,6 +205,7 @@ class BlockchainWatcher:
                     logger.trace("Waiting for new transactions in the mempool or a new block...")
         # transaction removed from mempool for non-block inclusion reasons
         elif label == "R":
+            logger.debug("Removing transaction from mempool: %s", item_hash)
             mempool.clean_transaction_events(self.db, item_hash)
 
     def receive_message(self, topic, body, seq):
@@ -238,9 +240,8 @@ class BlockchainWatcher:
             self.receive_message(topic, body, seq)
         except Exception as e:
             logger.error("Error processing message: %s", e)
-            import traceback
-
-            print(traceback.format_exc())  # for debugging
+            # import traceback
+            # print(traceback.format_exc())  # for debugging
             capture_exception(e)
             raise e
 
@@ -297,6 +298,7 @@ class BlockchainWatcher:
             except Exception as e:
                 logger.error("Error in handle loop: %s", e)
                 capture_exception(e)
+                self.stop()
                 break  # Optionally break the loop on other exceptions
 
     def start(self):

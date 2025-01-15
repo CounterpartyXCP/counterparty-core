@@ -156,6 +156,7 @@ impl IntoPy<PyObject> for Block {
     fn into_py(self, py: Python<'_>) -> PyObject {
         let dict = PyDict::new_bound(py);
         dict.set_item("height", self.height).unwrap();
+        dict.set_item("block_index", self.height).unwrap();
         dict.set_item("version", self.version).unwrap();
         dict.set_item("hash_prev", self.hash_prev).unwrap();
         dict.set_item("hash_merkle_root", self.hash_merkle_root)

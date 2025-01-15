@@ -32,4 +32,5 @@ def deserialize_block(block_hex, parse_vouts=False, block_index=None):
         }
     )
     current_block_index = block_index or util.CURRENT_BLOCK_INDEX
-    return deserializer.parse_block(block_hex, current_block_index, parse_vouts)
+    decoded_block = deserializer.parse_block(block_hex, current_block_index, parse_vouts)
+    return decoded_block
