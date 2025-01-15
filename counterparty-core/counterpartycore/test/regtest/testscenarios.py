@@ -445,6 +445,8 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
             regtest_node_thread.node.test_electrs()
             print("Testing fee calculation...")
             regtest_node_thread.node.test_fee_calculation()
+            print("Testing RBF...")
+            regtest_node_thread.node.test_rbf()
     except KeyboardInterrupt:
         print(regtest_node_thread.node.server_out.getvalue())
         pass

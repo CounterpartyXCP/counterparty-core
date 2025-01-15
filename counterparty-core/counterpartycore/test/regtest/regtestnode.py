@@ -361,6 +361,7 @@ class RegtestNode:
             "-acceptnonstdtxn",
             "-minrelaytxfee=0",
             "-blockmintxfee=0",
+            "-mempoolfullrbf",
             f"-datadir={self.datadir}",
             _bg=True,
             _out=sys.stdout,
@@ -384,6 +385,7 @@ class RegtestNode:
             "-minrelaytxfee=0",
             "-blockmintxfee=0",
             "-bind=127.0.0.1:2223=onion",
+            "-mempoolfullrbf",
             _bg=True,
             _out=sys.stdout,
         )
@@ -1133,6 +1135,69 @@ class RegtestNode:
             unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"],
         )
         assert size * 3 - 3 <= unsigned_tx["btc_fee"] <= size * 3 + 3
+
+    def test_rbf(self):
+        self.start_and_wait_second_node()
+
+        unsigned_tx = self.compose(
+            self.addresses[0],
+            "send",
+            {
+                "destination": self.addresses[1],
+                "quantity": 1,
+                "asset": "XCP",
+                "exact_fee": 1,
+                "verbose": True,
+                "validate": False,
+            },
+        )["result"]
+        transaction = Transaction.from_raw(unsigned_tx["rawtransaction"])
+        raw_hexs = []
+        # create 10 transactions with increasing fees
+        for _i in range(10):
+            transaction.outputs[1].amount -= 170
+            new_raw_transaction = transaction.to_hex()
+            signed_tx = json.loads(
+                self.bitcoin_wallet("signrawtransactionwithwallet", new_raw_transaction).strip()
+            )["hex"]
+            raw_hexs.append(signed_tx)
+
+        # check that no transaction is in the mempool
+        mempool_event_count_before = self.api_call("mempool/events?event_name=TRANSACTION_PARSED")[
+            "result_count"
+        ]
+        assert mempool_event_count_before == 0
+
+        # broadcast the transactions to the two nodes
+        tx_hahses = []
+        for i, raw_hex in enumerate(raw_hexs):
+            tx_hash = self.bitcoin_wallet("sendrawtransaction", raw_hex, 0).strip()
+            tx_hahses.append(tx_hash)
+            print(f"Transaction {i} sent: {tx_hash}")
+
+        # check that all transactions are in the mempool
+        mempool_event_count_after = self.api_call("mempool/events?event_name=TRANSACTION_PARSED")[
+            "result_count"
+        ]
+        while mempool_event_count_after == 0:
+            time.sleep(1)
+            mempool_event_count_after = self.api_call(
+                "mempool/events?event_name=TRANSACTION_PARSED"
+            )["result_count"]
+        time.sleep(10)
+
+        print("Mempool event count: ", mempool_event_count_after)
+
+        # only one event should be in the mempool
+        assert mempool_event_count_after == 1
+        # check that RBFed transactions are removed from the mempool
+        for tx_hash in tx_hahses[:-1]:
+            assert f"Removing transaction from mempool: {tx_hash}" in self.server_out.getvalue()
+        event = self.api_call("mempool/events?event_name=TRANSACTION_PARSED")["result"][0]
+        # check that the last transaction is the one in the mempool
+        assert event["tx_hash"] == tx_hahses[-1]
+
+        print("RBF test successful")
 
 
 class RegtestNodeThread(threading.Thread):
