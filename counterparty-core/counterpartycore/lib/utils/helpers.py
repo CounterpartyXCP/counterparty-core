@@ -63,7 +63,7 @@ def format_duration(seconds):
 def is_url(url):
     try:
         result = urlparse(url)
-        return all(result.scheme, result.netloc)
+        return all([result.scheme, result.netloc])
     except ValueError:
         return False
 

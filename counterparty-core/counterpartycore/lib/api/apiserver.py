@@ -60,6 +60,7 @@ def is_server_ready():
             return True
     except RuntimeError:
         pass
+
     if CurrentState().current_backend_height() is None:
         return False
     if CurrentState().current_block_index() in [
@@ -302,116 +303,128 @@ def query_params():
 
 @auth.login_required
 def handle_route(**kwargs):
-    if request.method == "OPTIONS":
-        return handle_options()
+    try:
+        if request.method == "OPTIONS":
+            return handle_options()
 
-    start_time = time.time()
-    query_args = query_params() | kwargs
+        start_time = time.time()
+        query_args = query_params() | kwargs
 
-    logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
-    logger.debug(get_log_prefix(query_args))
+        logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
+        logger.debug(get_log_prefix(query_args))
 
-    if not config.FORCE and CurrentState().current_backend_height() is None:
+        if not config.FORCE and CurrentState().current_backend_height() is None:
+            return return_result(
+                503,
+                error="Backend still not ready. Please try again later.",
+                start_time=start_time,
+                query_args=query_args,
+            )
+
+        rule = str(request.url_rule.rule)
+
+        with configure_sentry_scope() as scope:
+            scope.set_transaction_name(get_transaction_name(rule))
+
+        if not config.FORCE and not is_server_ready() and not return_result_if_not_ready(rule):
+            return return_result(
+                503, error="Counterparty not ready", start_time=start_time, query_args=query_args
+            )
+
+        if rule == "/v2/":
+            return return_result(
+                200, result=api_root(), start_time=start_time, query_args=query_args
+            )
+
+        route = ROUTES.get(rule)
+
+        # parse args
+        try:
+            function_args = prepare_args(route, **kwargs)
+        except ValueError as e:
+            return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
+
+        logger.trace(f"API Request - Arguments: {function_args}")
+
+        # call the function
+        try:
+            result = execute_api_function(rule, route, function_args)
+        except (
+            exceptions.JSONRPCInvalidRequest,
+            flask.wrappers.BadRequest,
+            exceptions.TransactionError,
+            exceptions.BalanceError,
+            exceptions.UnknownPubKeyError,
+            exceptions.AssetNameError,
+            exceptions.BitcoindRPCError,
+            exceptions.ComposeError,
+            exceptions.UnpackError,
+            CBitcoinAddressError,
+            exceptions.AddressError,
+            exceptions.ElectrsError,
+            OverflowError,
+        ) as e:
+            # import traceback
+            # print(traceback.format_exc())
+            return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
+        except Exception as e:
+            capture_exception(e)
+            logger.error("Error in API: %s", e)
+            import traceback
+
+            print(traceback.format_exc())
+            return return_result(
+                503, error="Unknown error", start_time=start_time, query_args=query_args
+            )
+
+        if isinstance(result, requests.Response):
+            message = f"API Request - {request.remote_addr} {request.method} {request.url}"
+            message += f" - Response {result.status_code}"
+            message += f" - {int((time.time() - start_time) * 1000)}ms"
+            logger.debug(message)
+            headers = dict(result.headers)
+            del headers["Connection"]  # remove "hop-by-hop" headers
+            return result.content, result.status_code, headers
+
+        # clean up and return the result
+        if result is None:
+            return return_result(
+                404, error="Not found", start_time=start_time, query_args=query_args
+            )
+
+        next_cursor = None
+        result_count = None
+        table = None
+        if isinstance(result, queries.QueryResult):
+            next_cursor = result.next_cursor
+            result_count = result.result_count
+            table = result.table
+            result = result.result
+
+        result = verbose.clean_rowids_and_confirmed_fields(result)
+
+        # inject details
+        is_verbose = request.args.get("verbose", "False")
+        if is_verbose.lower() in ["true", "1"]:
+            with LedgerDBConnectionPool().connection() as ledger_db:
+                with StateDBConnectionPool().connection() as state_db:
+                    result = verbose.inject_details(ledger_db, state_db, result, table)
+
         return return_result(
-            503,
-            error="Backend still not ready. Please try again later.",
+            200,
+            result=result,
+            next_cursor=next_cursor,
+            result_count=result_count,
             start_time=start_time,
             query_args=query_args,
         )
-
-    rule = str(request.url_rule.rule)
-
-    with configure_sentry_scope() as scope:
-        scope.set_transaction_name(get_transaction_name(rule))
-
-    if not config.FORCE and not is_server_ready() and not return_result_if_not_ready(rule):
-        return return_result(
-            503, error="Counterparty not ready", start_time=start_time, query_args=query_args
-        )
-
-    if rule == "/v2/":
-        return return_result(200, result=api_root(), start_time=start_time, query_args=query_args)
-
-    route = ROUTES.get(rule)
-
-    # parse args
-    try:
-        function_args = prepare_args(route, **kwargs)
-    except ValueError as e:
-        return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
-
-    logger.trace(f"API Request - Arguments: {function_args}")
-
-    # call the function
-    try:
-        result = execute_api_function(rule, route, function_args)
-    except (
-        exceptions.JSONRPCInvalidRequest,
-        flask.wrappers.BadRequest,
-        exceptions.TransactionError,
-        exceptions.BalanceError,
-        exceptions.UnknownPubKeyError,
-        exceptions.AssetNameError,
-        exceptions.BitcoindRPCError,
-        exceptions.ComposeError,
-        exceptions.UnpackError,
-        CBitcoinAddressError,
-        exceptions.AddressError,
-        exceptions.ElectrsError,
-        OverflowError,
-    ) as e:
-        # import traceback
-        # print(traceback.format_exc())
-        return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
         import traceback
 
         print(traceback.format_exc())
-        return return_result(
-            503, error="Unknown error", start_time=start_time, query_args=query_args
-        )
-
-    if isinstance(result, requests.Response):
-        message = f"API Request - {request.remote_addr} {request.method} {request.url}"
-        message += f" - Response {result.status_code}"
-        message += f" - {int((time.time() - start_time) * 1000)}ms"
-        logger.debug(message)
-        headers = dict(result.headers)
-        del headers["Connection"]  # remove "hop-by-hop" headers
-        return result.content, result.status_code, headers
-
-    # clean up and return the result
-    if result is None:
-        return return_result(404, error="Not found", start_time=start_time, query_args=query_args)
-
-    next_cursor = None
-    result_count = None
-    table = None
-    if isinstance(result, queries.QueryResult):
-        next_cursor = result.next_cursor
-        result_count = result.result_count
-        table = result.table
-        result = result.result
-
-    result = verbose.clean_rowids_and_confirmed_fields(result)
-
-    # inject details
-    is_verbose = request.args.get("verbose", "False")
-    if is_verbose.lower() in ["true", "1"]:
-        with LedgerDBConnectionPool().connection() as ledger_db:
-            with StateDBConnectionPool().connection() as state_db:
-                result = verbose.inject_details(ledger_db, state_db, result, table)
-
-    return return_result(
-        200,
-        result=result,
-        next_cursor=next_cursor,
-        result_count=result_count,
-        start_time=start_time,
-        query_args=query_args,
-    )
+        return return_result(500, error=f"Internal server error: {traceback.format_exc()}")
 
 
 def handle_not_found(error):

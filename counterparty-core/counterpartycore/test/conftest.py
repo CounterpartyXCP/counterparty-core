@@ -353,8 +353,6 @@ def apiserver_v2(request, cp_server):
     def is_server_ready():
         return True
 
-    # util.CURRENT_BACKEND_HEIGHT = 0
-
     api_v2.is_server_ready = is_server_ready
 
     args = argparse.Namespace(**server_config)
@@ -723,10 +721,3 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         "counterpartycore.lib.ledger.ledger.asset_destroyed_total",
         ledger.ledger.asset_destroyed_total_no_cache,
     )
-
-    class MockSingletonMeta:
-        pass
-
-    monkeypatch.setattr("counterpartycore.lib.utils.helpers.SingletonMeta", MockSingletonMeta)
-
-    # monkeypatch.setattr("counterpartycore.lib.ledger.current_state.get_backend_height", lambda: 0)
