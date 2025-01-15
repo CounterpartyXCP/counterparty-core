@@ -32,7 +32,7 @@ def compare_balances(api_db, ledger_db):
         assert ledger_balance["quantity"] == api_balance["quantity"]
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_api_database():
     ledger_db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
     api_db = database.get_db_connection(config.STATE_DATABASE, read_only=True, check_wal=False)

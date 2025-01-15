@@ -7,7 +7,7 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger, util
-from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import assetnames, database
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -493,9 +493,9 @@ def compose(
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
         if protocol.enabled("issuance_backwards_compatibility"):
-            data = message_type.pack(LR_ISSUANCE_ID)
+            data = messagetype.pack(LR_ISSUANCE_ID)
         else:
-            data = message_type.pack(ID)
+            data = messagetype.pack(ID)
 
         if description == None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
             # a special message is created to be catched by the parse function
@@ -571,9 +571,9 @@ def compose(
         compacted_subasset_longname = assetnames.compact_subasset_longname(subasset_longname)
         compacted_subasset_length = len(compacted_subasset_longname)
         if protocol.enabled("issuance_backwards_compatibility"):
-            data = message_type.pack(LR_SUBASSET_ID)
+            data = messagetype.pack(LR_SUBASSET_ID)
         else:
-            data = message_type.pack(SUBASSET_ID)
+            data = messagetype.pack(SUBASSET_ID)
 
         if description == None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
             # a special message is created to be catched by the parse function

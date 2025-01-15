@@ -12,7 +12,7 @@ import pyzstd
 from termcolor import colored, cprint
 
 from counterpartycore.lib import config
-from counterpartycore.lib.cli.public_keys import PUBLIC_KEYS
+from counterpartycore.lib.cli.publickeys import PUBLIC_KEYS
 
 
 def download_zst(data_dir, zst_url):

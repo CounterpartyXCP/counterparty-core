@@ -17,7 +17,7 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
 @conftest.add_fn_property(DISABLE_ARC4_MOCKING=True)
-@pytest.mark.usefixtures("api_server")
+@pytest.mark.usefixtures("apiserver")
 def test_vector(
     tx_name,
     method,

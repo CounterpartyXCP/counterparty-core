@@ -5,8 +5,8 @@ import struct
 
 from counterpartycore.lib import backend, config, exceptions, ledger, util
 from counterpartycore.lib.messages import gas
-from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.parser import utxosinfo
+from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

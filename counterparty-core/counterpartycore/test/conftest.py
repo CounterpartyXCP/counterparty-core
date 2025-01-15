@@ -18,8 +18,8 @@ import requests
 from bitcoinutils.keys import PublicKey
 
 from counterpartycore.lib import config, exceptions, ledger, util
-from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1 as api
+from counterpartycore.lib.api import apiserver as api_v2
+from counterpartycore.lib.api import apiv1 as api
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import log, server
 from counterpartycore.lib.parser import gettxinfo, protocol, utxosinfo
@@ -222,7 +222,7 @@ def rawtransactions_db(request):
 
 
 @pytest.fixture(scope="function")
-def server_db(request, cp_server, api_server):
+def server_db(request, cp_server, apiserver):
     """Enable database access for unit test vectors."""
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
@@ -238,9 +238,9 @@ def server_db(request, cp_server, api_server):
 
 
 @pytest.fixture(scope="module")
-def api_server(request, cp_server):
+def apiserver(request, cp_server):
     """
-    api_server fixture, for each module we bind it to a different port because we're unable to kill it
+    apiserver fixture, for each module we bind it to a different port because we're unable to kill it
     also `server_db` will inject itself into APIServer for each function
     """
 
@@ -250,14 +250,14 @@ def api_server(request, cp_server):
     server.configure_rpc(config.RPC_PASSWORD)
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
-    print("api_server", config.DATABASE, config.STATE_DATABASE)
+    print("apiserver", config.DATABASE, config.STATE_DATABASE)
 
     # start RPC server and wait for server to be ready
-    api_server = api.APIServer()
-    api_server.daemon = True
-    api_server.start()
+    apiserver = api.APIServer()
+    apiserver.daemon = True
+    apiserver.start()
     for attempt in range(5000):  # wait until server is ready.
-        if api_server.is_ready:
+        if apiserver.is_ready:
             time.sleep(0.5)  # extra time window
             break
         elif attempt == 4999:
@@ -267,11 +267,11 @@ def api_server(request, cp_server):
                 0.001
             )  # attempt to query the current block_index if possible (scenarios start with empty DB so it's not always possible)
 
-    return api_server
+    return apiserver
 
 
 @pytest.fixture(scope="module")
-def api_server_v2(request, cp_server):
+def apiserver_v2(request, cp_server):
     default_config = {
         "testnet": False,
         "testnet4": False,
@@ -359,8 +359,8 @@ def api_server_v2(request, cp_server):
     api_v2.is_server_ready = is_server_ready
 
     args = argparse.Namespace(**server_config)
-    api_server = api_v2.APIServer(None)
-    api_server.start(args)
+    apiserver = api_v2.APIServer(None)
+    apiserver.start(args)
 
     # wait for server to be ready
     while True:
@@ -380,9 +380,9 @@ def api_server_v2(request, cp_server):
             time.sleep(1)
             pass
 
-    request.addfinalizer(lambda: api_server.stop())
+    request.addfinalizer(lambda: apiserver.stop())
 
-    return api_server
+    return apiserver
 
 
 @pytest.fixture(scope="module")

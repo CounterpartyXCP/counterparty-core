@@ -6,12 +6,12 @@ from itertools import groupby
 from bitstring import ReadError
 
 from counterpartycore.lib import config, exceptions, ledger, util
-from counterpartycore.lib.messages.utils.mpma_encoding import (
+from counterpartycore.lib.parser import messagetype, protocol
+from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils.mpmaencoding import (
     _decode_mpma_send_decode,
     _encode_mpma_send,
 )
-from counterpartycore.lib.parser import message_type, protocol
-from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -150,7 +150,7 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
 
     try:
         data += _encode_mpma_send(

@@ -10,7 +10,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -494,7 +494,7 @@ def compose(
 
     give_id = ledger.ledger.get_asset_id(db, give_asset, util.CURRENT_BLOCK_INDEX)
     get_id = ledger.ledger.get_asset_id(db, get_asset, util.CURRENT_BLOCK_INDEX)
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(
         FORMAT, give_id, give_quantity, get_id, get_quantity, expiration, fee_required
     )

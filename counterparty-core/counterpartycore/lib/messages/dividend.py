@@ -10,7 +10,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database
 
 D = decimal.Decimal
@@ -220,7 +220,7 @@ def compose(
 
     asset_id = ledger.ledger.get_asset_id(db, asset, util.CURRENT_BLOCK_INDEX)
     dividend_asset_id = ledger.ledger.get_asset_id(db, dividend_asset, util.CURRENT_BLOCK_INDEX)
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)
 

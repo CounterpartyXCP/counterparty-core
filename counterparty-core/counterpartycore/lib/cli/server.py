@@ -21,8 +21,8 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
 )
-from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1, dbbuilder
+from counterpartycore.lib.api import apiserver as api_v2
+from counterpartycore.lib.api import apiv1, dbbuilder
 from counterpartycore.lib.cli import bootstrap, log
 from counterpartycore.lib.parser import blocks, check, follow
 from counterpartycore.lib.utils import database, helpers
@@ -648,8 +648,8 @@ class AssetConservationChecker(threading.Thread):
 
 def start_all(args):
     api_status_poller = None
-    api_server_v1 = None
-    api_server_v2 = None
+    apiserver_v1 = None
+    apiserver_v2 = None
     follower_daemon = None
     asset_conservation_checker = None
     db = None
@@ -689,9 +689,9 @@ def start_all(args):
 
         # API Server v2
         api_stop_event = multiprocessing.Event()
-        api_server_v2 = api_v2.APIServer(api_stop_event)
-        api_server_v2.start(args)
-        while not api_server_v2.is_ready() and not api_server_v2.has_stopped():
+        apiserver_v2 = api_v2.APIServer(api_stop_event)
+        apiserver_v2.start(args)
+        while not apiserver_v2.is_ready() and not apiserver_v2.has_stopped():
             logger.trace("Waiting for API server to start...")
             time.sleep(0.1)
 
@@ -699,14 +699,14 @@ def start_all(args):
         connect_to_backend()
 
         # API Status Poller
-        api_status_poller = api_v1.APIStatusPoller()
+        api_status_poller = apiv1.APIStatusPoller()
         api_status_poller.daemon = True
         api_status_poller.start()
 
         # API Server v1
-        api_server_v1 = api_v1.APIServer()
-        api_server_v1.daemon = True
-        api_server_v1.start()
+        apiserver_v1 = apiv1.APIServer()
+        apiserver_v1.daemon = True
+        apiserver_v1.start()
 
         # delete blocks with no ledger hashes
         # in case of reparse interrupted
@@ -739,8 +739,8 @@ def start_all(args):
             api_stop_event.set()
         if api_status_poller:
             api_status_poller.stop()
-        if api_server_v1:
-            api_server_v1.stop()
+        if apiserver_v1:
+            apiserver_v1.stop()
         if follower_daemon:
             follower_daemon.stop()
         if asset_conservation_checker:

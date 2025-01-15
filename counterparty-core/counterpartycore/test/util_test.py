@@ -889,8 +889,8 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "transaction_helper.common_serializer",
             "transaction_helper.transaction_outputs",
             "backend",
-            "parser.message_type",
-            "messages.utils.address",
+            "parser.messagetype",
+            "utils.address",
         ]
         or (
             tx_name == "api.composer"
@@ -911,7 +911,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                 "fairminter",
                 "fairmint",
                 "utxo",
-                "versions.enhanced_send",
+                "versions.enhancedsend",
                 "versions.mpma",
                 "sweep",
                 "attach",
@@ -950,8 +950,8 @@ def check_outputs(
         try:
             tested_module = sys.modules[f"counterpartycore.lib.{tx_name}"]
         except KeyError:  # TODO: hack
-            if tx_name == "api_v1":
-                tested_module = sys.modules["counterpartycore.lib.api.api_v1"]
+            if tx_name == "apiv1":
+                tested_module = sys.modules["counterpartycore.lib.api.apiv1"]
             else:
                 tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
         tested_method = getattr(tested_module, method)

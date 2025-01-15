@@ -6,9 +6,8 @@ import struct
 from counterpartycore.lib import config, ledger, util
 from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.exceptions import AddressError
-from counterpartycore.lib.messages.utils import address
-from counterpartycore.lib.parser import message_type
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.parser import messagetype
+from counterpartycore.lib.utils import address, database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -61,7 +60,7 @@ def initialise(db):
 
 
 def pack(db, asset, quantity, tag):
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     if isinstance(tag, str):
         tag = bytes(tag.encode("utf8"))[0:MAX_TAG_LENGTH]
     elif isinstance(tag, bytes):

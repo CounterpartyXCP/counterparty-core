@@ -11,7 +11,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
-from counterpartycore.lib.parser import deserialize, gettxinfo, message_type
+from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
 
 D = decimal.Decimal
 
@@ -610,7 +610,7 @@ def unpack(db, datahex: str, block_index: int = None):
 
     if data[: len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX) :]
-    message_type_id, message = message_type.unpack(data)
+    message_type_id, message = messagetype.unpack(data)
     block_index = block_index or util.CURRENT_BLOCK_INDEX
 
     issuance_ids = [
@@ -670,9 +670,9 @@ def unpack(db, datahex: str, block_index: int = None):
             message_type_name = "send"
             message_data = messages.send.unpack(db, message, block_index)
         # Enhanced send
-        elif message_type_id == messages.versions.enhanced_send.ID:
+        elif message_type_id == messages.versions.enhancedsend.ID:
             message_type_name = "enhanced_send"
-            message_data = messages.versions.enhanced_send.unpack(message, block_index)
+            message_data = messages.versions.enhancedsend.unpack(message, block_index)
         # MPMA send
         elif message_type_id == messages.versions.mpma.ID:
             message_type_name = "mpma_send"

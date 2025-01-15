@@ -3,7 +3,7 @@ import logging
 import time
 
 from counterpartycore.lib import backend, config, exceptions, ledger, util
-from counterpartycore.lib.api.api_watcher import EVENTS_ADDRESS_FIELDS
+from counterpartycore.lib.api.apiwatcher import EVENTS_ADDRESS_FIELDS
 from counterpartycore.lib.parser import blocks, deserialize
 
 logger = logging.getLogger(config.LOGGER_NAME)

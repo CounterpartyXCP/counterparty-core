@@ -5,7 +5,7 @@ from counterpartycore.lib import config, exceptions
 from ..params import P2SH_ADDR
 
 ADDRESS_VECTOR = {
-    "messages.utils.address": {
+    "utils.address": {
         "is_pubkeyhash": [
             {
                 "comment": "valid bitcoin address",

@@ -2,8 +2,8 @@ import logging
 
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.detach import detach_assets
-from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.parser import protocol, utxosinfo
+from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 

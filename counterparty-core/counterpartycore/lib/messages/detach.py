@@ -2,8 +2,8 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.parser import utxosinfo
+from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -38,7 +38,7 @@ def compose(db, source, destination=None, skip_validation=False):
     if destination is not None:
         data_content = destination.encode("utf-8")
     else:
-        data_content = b"0"  # not empty to avoid a protocol change in `message_type.unpack()`
+        data_content = b"0"  # not empty to avoid a protocol change in `messagetype.unpack()`
     data += struct.pack(f">{len(data_content)}s", data_content)
 
     return (source, [], data)

@@ -5,7 +5,7 @@ import struct
 
 from counterpartycore.lib import config, exceptions, ledger, util
 from counterpartycore.lib.messages import dispense
-from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -107,7 +107,7 @@ def compose(
         raise exceptions.ComposeError(problems)
 
     asset_id = ledger.ledger.get_asset_id(db, asset, block_index)
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
     cursor.close()

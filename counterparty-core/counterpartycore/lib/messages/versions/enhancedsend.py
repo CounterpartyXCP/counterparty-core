@@ -4,10 +4,9 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger, util
-from counterpartycore.lib.messages.utils import address
 from counterpartycore.lib.messages.versions import send1
-from counterpartycore.lib.parser import message_type, protocol
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.parser import messagetype, protocol
+from counterpartycore.lib.utils import address, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -152,7 +151,7 @@ def compose(
 
     short_address_bytes = address.pack(destination)
 
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(FORMAT, asset_id, quantity, short_address_bytes)
     data += memo_bytes
 

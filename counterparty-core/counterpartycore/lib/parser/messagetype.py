@@ -60,7 +60,7 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
         messages.issuance.LR_SUBASSET_ID: "issuance",
         messages.order.ID: "order",
         messages.send.ID: "send",
-        messages.versions.enhanced_send.ID: "enhanced_send",
+        messages.versions.enhancedsend.ID: "enhanced_send",
         messages.versions.mpma.ID: "mpma",
         messages.rps.ID: "rps",
         messages.rpsresolve.ID: "rpsresolve",

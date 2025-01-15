@@ -78,7 +78,7 @@ def test_search_raw_transactions_output():
     assert tx["vout"][1]["script_pub_key"]["type"] == "pubkeyhash"
 
 
-@pytest.mark.usefixtures("api_server")
+@pytest.mark.usefixtures("apiserver")
 def test_search_raw_transactions_unconfirmed(server_db):
     assert len(backend.electrs.get_history(ADDR[0], unconfirmed=True)) == 27
     assert len(backend.electrs.get_history(ADDR[0], unconfirmed=False)) == 27

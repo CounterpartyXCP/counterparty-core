@@ -34,7 +34,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.api import util as api_util
-from counterpartycore.lib.api.api_watcher import STATE_DB_TABLES
+from counterpartycore.lib.api.apiwatcher import STATE_DB_TABLES
 from counterpartycore.lib.messages import (
     bet,  # noqa: F401
     broadcast,  # noqa: F401
@@ -51,14 +51,14 @@ from counterpartycore.lib.messages import (
     send,
     sweep,  # noqa: F401
 )
-from counterpartycore.lib.messages.versions import enhanced_send  # noqa: E402
+from counterpartycore.lib.messages.versions import enhancedsend  # noqa: E402
 from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.monitors.telemetry.util import (  # noqa: E402
     get_uptime,
     is_docker,
     is_force_enabled,
 )
-from counterpartycore.lib.parser import deserialize, gettxinfo, message_type
+from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
 from counterpartycore.lib.utils import helpers
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
 
@@ -1004,14 +1004,14 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def unpack(data_hex):
             data = binascii.unhexlify(data_hex)
-            message_type_id, message = message_type.unpack(data)
+            message_type_id, message = messagetype.unpack(data)
 
             # TODO: Enabled only for `send`.
             if message_type_id == send.ID:
                 with LedgerDBConnectionPool().connection() as db:
                     unpacked = send.unpack(db, message, util.CURRENT_BLOCK_INDEX)
-            elif message_type_id == enhanced_send.ID:
-                unpacked = enhanced_send.unpack(message, util.CURRENT_BLOCK_INDEX)
+            elif message_type_id == enhancedsend.ID:
+                unpacked = enhancedsend.unpack(message, util.CURRENT_BLOCK_INDEX)
             else:
                 raise APIError("unsupported message type")
             return message_type_id, unpacked

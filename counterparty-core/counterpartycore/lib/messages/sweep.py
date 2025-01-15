@@ -8,9 +8,8 @@ from counterpartycore.lib import (
     util,
 )
 from counterpartycore.lib.exceptions import *  # noqa: F403
-from counterpartycore.lib.messages.utils import address
-from counterpartycore.lib.parser import message_type, protocol
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.parser import messagetype, protocol
+from counterpartycore.lib.utils import address, database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -125,7 +124,7 @@ def compose(
 
     short_address_bytes = address.pack(destination)
 
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(FORMAT, short_address_bytes, flags)
     data += memo
 

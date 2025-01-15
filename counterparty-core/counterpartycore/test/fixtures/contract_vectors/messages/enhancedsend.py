@@ -11,7 +11,7 @@ from counterpartycore.test.fixtures.params import (
 )
 
 ENHANCED_SEND_VECTOR = {
-    "versions.enhanced_send": {
+    "versions.enhancedsend": {
         "unpack": [
             {
                 "in": (

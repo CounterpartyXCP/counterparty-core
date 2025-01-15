@@ -1,10 +1,10 @@
 from counterpartycore.lib import exceptions
-from counterpartycore.lib.api.api_v1 import APIError
+from counterpartycore.lib.api.apiv1 import APIError
 
 from ..params import ADDR, DP, MULTISIGADDR, P2SH_ADDR
 
 API_V1_VECTOR = {
-    "api_v1": {
+    "apiv1": {
         "test_rpc": [
             {
                 "comment": "burn 1",

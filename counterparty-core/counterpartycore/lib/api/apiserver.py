@@ -23,7 +23,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.api import api_watcher, dbbuilder, queries, wsgi
+from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, wsgi
 from counterpartycore.lib.api.routes import ROUTES
 from counterpartycore.lib.api.util import (
     clean_rowids_and_confirmed_fields,
@@ -86,7 +86,7 @@ def api_root():
         network = "regtest"
 
     with StateDBConnectionPool().connection() as state_db:
-        counterparty_height = api_watcher.get_last_block_parsed(state_db)
+        counterparty_height = apiwatcher.get_last_block_parsed(state_db)
 
     backend_height = util.CURRENT_BACKEND_HEIGHT
     if backend_height is None:
@@ -243,7 +243,7 @@ def prepare_args(route, **kwargs):
 def execute_api_function(rule, route, function_args):
     # cache everything for one block
     with StateDBConnectionPool().connection() as state_db:
-        current_block_index = api_watcher.get_last_block_parsed(state_db)
+        current_block_index = apiwatcher.get_last_block_parsed(state_db)
     cache_key = f"{current_block_index}:{request.url}"
     # except for blocks and transactions cached forever
     if (
@@ -490,7 +490,7 @@ def check_database_version(state_db):
         database.update_version(state_db)
 
 
-def run_api_server(args, server_ready_value, stop_event, parent_pid):
+def run_apiserver(args, server_ready_value, stop_event, parent_pid):
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(signum, frame):
@@ -517,7 +517,7 @@ def run_api_server(args, server_ready_value, stop_event, parent_pid):
         )
         check_database_version(state_db)
 
-        watcher = api_watcher.APIWatcher(state_db)
+        watcher = apiwatcher.APIWatcher(state_db)
         watcher.start()
 
         app = init_flask_app()
@@ -597,7 +597,7 @@ class APIServer(object):
             raise Exception("API Server is already running")
         self.process = Process(
             name="API",
-            target=run_api_server,
+            target=run_apiserver,
             args=(vars(args), self.server_ready_value, self.stop_event, os.getpid()),
         )
         self.process.start()

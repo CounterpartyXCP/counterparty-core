@@ -2,7 +2,7 @@ import logging
 import time
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.messages.versions import enhanced_send, mpma, send1
+from counterpartycore.lib.messages.versions import enhancedsend, mpma, send1
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import database, helpers
 
@@ -306,7 +306,7 @@ def compose(
             else:
                 raise exceptions.ComposeError("mpma sends are not enabled")
         elif use_enhanced_send is None or use_enhanced_send == True:  # noqa: E712
-            return enhanced_send.compose(
+            return enhancedsend.compose(
                 db, source, destination, asset, quantity, memo, memo_is_hex, skip_validation
             )
     elif memo is not None or use_enhanced_send == True:  # noqa: E712

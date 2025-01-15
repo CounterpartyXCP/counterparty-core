@@ -32,7 +32,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database, helpers
 
 from . import bet
@@ -174,7 +174,7 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
 
     # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
     if protocol.enabled("broadcast_pack_text"):

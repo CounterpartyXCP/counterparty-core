@@ -8,7 +8,7 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -127,7 +127,7 @@ def compose(db, source: str, order_match_id: str, skip_validation: bool = False)
         binascii.unhexlify(bytes(tx0_hash, "utf-8")),
         binascii.unhexlify(bytes(tx1_hash, "utf-8")),
     )
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [(destination, btc_quantity)], data)
 

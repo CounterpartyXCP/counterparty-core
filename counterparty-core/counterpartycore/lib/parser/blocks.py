@@ -45,8 +45,8 @@ from counterpartycore.lib.messages import (
     sweep,
     utxo,
 )
-from counterpartycore.lib.messages.versions import enhanced_send, mpma
-from counterpartycore.lib.parser import check, deserialize, message_type, protocol
+from counterpartycore.lib.messages.versions import enhancedsend, mpma
+from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
 from counterpartycore.lib.utils import database, helpers
 
@@ -130,7 +130,7 @@ def parse_tx(db, tx):
         with db:
             if tx["data"] and len(tx["data"]) > 1:
                 try:
-                    message_type_id, message = message_type.unpack(tx["data"], tx["block_index"])
+                    message_type_id, message = messagetype.unpack(tx["data"], tx["block_index"])
                 except struct.error:  # Deterministically raised.
                     message_type_id = None
                     message = None
@@ -163,10 +163,10 @@ def parse_tx(db, tx):
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
-            elif message_type_id == enhanced_send.ID and protocol.enabled(
+            elif message_type_id == enhancedsend.ID and protocol.enabled(
                 "enhanced_sends", block_index=tx["block_index"]
             ):
-                enhanced_send.parse(db, tx, message)
+                enhancedsend.parse(db, tx, message)
             elif message_type_id == mpma.ID and protocol.enabled(
                 "mpma_sends", block_index=tx["block_index"]
             ):
@@ -432,7 +432,7 @@ def update_transaction_type(db, fix_utxo_move=False):
         for tx in cursor.fetchall():
             transaction_type = "unknown"
             if tx["supported"]:
-                transaction_type = message_type.get_transaction_type(
+                transaction_type = messagetype.get_transaction_type(
                     tx["data"], tx["destination"], tx["utxos_info"].split(" "), tx["block_index"]
                 )
 
@@ -1051,7 +1051,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             "fee": fee,
             "data": data,
             "utxos_info": " ".join(utxos_info),
-            "transaction_type": message_type.get_transaction_type(
+            "transaction_type": messagetype.get_transaction_type(
                 data, destination, utxos_info, block_index
             ),
         }

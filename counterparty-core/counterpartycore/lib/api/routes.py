@@ -7,7 +7,7 @@ def get_routes():
     return ROUTES
 
 
-# Define the API routes except root (`/`) defined in `api_server.py`
+# Define the API routes except root (`/`) defined in `apiserver.py`
 ROUTES = util.prepare_routes(
     {
         ### /blocks ###

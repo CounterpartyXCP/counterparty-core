@@ -9,7 +9,7 @@ from bitcoinutils.keys import PublicKey
 from counterpartycore.lib import backend, config, exceptions, ledger, util
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.messages import dispenser
-from counterpartycore.lib.parser import gettxinfolegacy, message_type, p2sh, protocol
+from counterpartycore.lib.parser import gettxinfolegacy, messagetype, p2sh, protocol
 from counterpartycore.lib.utils import base58, multisig, script
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
 
@@ -421,7 +421,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     destinations = "-".join(destinations)
 
     try:
-        message_type_id, _ = message_type.unpack(data, block_index)
+        message_type_id, _ = messagetype.unpack(data, block_index)
     except struct.error:  # Deterministically raised.
         message_type_id = None
 
@@ -527,7 +527,7 @@ def get_utxos_info(db, decoded_tx):
 
 def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
     if protocol.enabled("utxo_support", block_index=block_index) and not util.PARSING_MEMPOOL:
-        transaction_type = message_type.get_transaction_type(
+        transaction_type = messagetype.get_transaction_type(
             data, destination, utxos_info, block_index
         )
         if utxos_info[0] != "":

@@ -2,7 +2,6 @@ import logging
 
 import bitcoin
 from bitcoin.bech32 import CBech32Data
-
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import base58, multisig

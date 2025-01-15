@@ -7,7 +7,7 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.parser import message_type
+from counterpartycore.lib.parser import messagetype
 from counterpartycore.lib.utils import database
 
 from . import bet, order
@@ -85,7 +85,7 @@ def compose(db, source: str, offer_hash: str, skip_validation: bool = False):
         raise exceptions.ComposeError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, "utf-8"))
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return (source, [], data)
 

@@ -3,7 +3,7 @@ import binascii
 from counterpartycore.lib import config
 
 MESSAGE_TYPE_VECTOR = {
-    "parser.message_type": {
+    "parser.messagetype": {
         "unpack": [
             {
                 "in": (binascii.unhexlify("01deadbeef"), 310502),

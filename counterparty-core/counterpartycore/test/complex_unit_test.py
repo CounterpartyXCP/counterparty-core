@@ -5,7 +5,7 @@ import pytest
 from apsw import ConstraintError
 
 from counterpartycore.lib import ledger
-from counterpartycore.lib.api import api_v1
+from counterpartycore.lib.api import apiv1
 from counterpartycore.lib.parser import blocks
 
 # this is require near the top to do setup of the test suite
@@ -21,9 +21,9 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
 @pytest.mark.usefixtures("server_db")
-@pytest.mark.usefixtures("api_server")
+@pytest.mark.usefixtures("apiserver")
 @pytest.mark.usefixtures("cp_server")
-def test_alice_bob(server_db, cp_server, api_server):
+def test_alice_bob(server_db, cp_server, apiserver):
     alice = ADDR[0]
     bob = "miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB"
 
@@ -203,7 +203,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert bob_balance2 == bob_balance + v
 
 
-@pytest.mark.usefixtures("api_server")
+@pytest.mark.usefixtures("apiserver")
 def test_update_lock(server_db):
     cursor = server_db.cursor()
     for table in blocks.TABLES:
@@ -221,10 +221,10 @@ def test_update_lock(server_db):
         assert str(excinfo.value) == "ConstraintError: UPDATES NOT ALLOWED"
 
 
-@pytest.mark.usefixtures("api_server")
+@pytest.mark.usefixtures("apiserver")
 @pytest.mark.skip()
 def test_updated_tables_endpoints():
-    for table in api_v1.API_TABLES:
+    for table in apiv1.API_TABLES:
         if table in ["mempool"]:
             continue
         result = util_test.api("get_" + table, {})

@@ -16,10 +16,10 @@ from counterpartycore.lib import (
     ledger,
     util,
 )
-from counterpartycore.lib.messages.utils.address import pack as address_pack
-from counterpartycore.lib.messages.utils.address import unpack as address_unpack
-from counterpartycore.lib.parser import message_type, protocol
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils.address import pack as address_pack
+from counterpartycore.lib.utils.address import unpack as address_unpack
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -473,7 +473,7 @@ def compose(
             assetid = ledger.ledger.generate_asset_id(asset, block_index=util.CURRENT_BLOCK_INDEX)
 
     destination = []
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(FORMAT, assetid, give_quantity, escrow_quantity, mainchainrate, status)
     if (status == STATUS_OPEN_EMPTY_ADDRESS and open_address) or (
         protocol.enabled("dispenser_origin_permission_extended")
