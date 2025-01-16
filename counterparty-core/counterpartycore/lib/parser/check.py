@@ -7,7 +7,7 @@ import warnings
 
 import requests
 
-from counterpartycore.lib import config, ledger, util  # noqa: F401
+from counterpartycore.lib import config, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database
 

@@ -16,7 +16,7 @@ from halo import Halo
 from json_log_formatter import JSONFormatter
 from termcolor import colored, cprint
 
-from counterpartycore.lib import config, util
+from counterpartycore.lib import config
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import helpers
 
@@ -66,7 +66,7 @@ def get_full_topic(record):
         topic is None
         and CurrentState().current_block_index() is not None
         and "/counterpartycore/lib/messages/" in record.pathname
-        and util.PARSING_MEMPOOL
+        and CurrentState().parsing_mempool()
     ):
         topic = "Mempool"
 
@@ -119,7 +119,7 @@ class CustomFormatter(logging.Formatter):
             record.levelno != logging.EVENT
             and CurrentState().current_block_index() is not None
             and "/counterpartycore/lib/messages/" in record.pathname
-            and not util.PARSING_MEMPOOL
+            and not CurrentState().parsing_mempool()
         ):
             log_message = f"Block {CurrentState().current_block_index()} - %(message)s"
 
@@ -159,7 +159,7 @@ class CustomisedJSONFormatter(JSONFormatter):
             and CurrentState().current_block_index() is not None
             and "/counterpartycore/lib/messages/" in record.pathname
         ):
-            if util.PARSING_MEMPOOL:
+            if CurrentState().parsing_mempool():
                 extra["block_index"] = "Mempool"
             else:
                 extra["block_index"] = CurrentState().current_block_index()
@@ -311,7 +311,7 @@ def truncate_fields(bindings):
 
 
 def log_event(db, block_index, event_index, event_name, bindings):
-    block_name = "Mempool" if util.PARSING_MEMPOOL else f"Block {block_index}"
+    block_name = "Mempool" if CurrentState().parsing_mempool() else f"Block {block_index}"
     log_bindings = truncate_fields(bindings)
     log_bindings = " ".join([f"{key}={value}" for key, value in log_bindings.items()])
     log_message = f"{block_name} - {event_name} [{log_bindings}]"
@@ -325,9 +325,9 @@ def log_event(db, block_index, event_index, event_name, bindings):
         zmq_event = {
             "event": event_name,
             "params": bindings,
-            "mempool": util.PARSING_MEMPOOL,
+            "mempool": CurrentState().parsing_mempool(),
         }
-        if not util.PARSING_MEMPOOL:
+        if not CurrentState().parsing_mempool():
             zmq_event["block_index"] = block_index
             zmq_event["event_index"] = event_index
         zmq_publisher.publish_event(db, zmq_event)

@@ -3,7 +3,8 @@ import decimal
 import math
 
 import hypothesis
-from counterpartycore.lib import config, util
+from counterpartycore.lib import config
+from counterpartycore.lib.utils import assetnames
 from hypothesis import settings
 from properytestnode import PropertyTestNode
 from regtestnode import ComposeError
@@ -346,7 +347,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             utxo_address,
             "fairminter",
             {
-                "asset": util.gen_random_asset_name(utxo_asset),
+                "asset": assetnames.gen_random_asset_name(utxo_asset),
                 "price": 1,
                 "quantity_by_price": 5,
                 "exact_fee": 0,

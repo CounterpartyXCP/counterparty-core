@@ -14,7 +14,6 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
@@ -254,7 +253,7 @@ class BlockchainWatcher:
 
     async def handle(self):
         self.check_software_version_if_needed()
-        util.BLOCK_PARSER_STATUS = "following"
+        CurrentState().set_block_parser_status("catching up")
         late_since = None
 
         while True:

@@ -6,7 +6,7 @@ from io import BytesIO
 from arc4 import ARC4
 from bitcoinutils.keys import PublicKey
 
-from counterpartycore.lib import backend, config, exceptions, ledger, util
+from counterpartycore.lib import backend, config, exceptions, ledger
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser
@@ -527,7 +527,10 @@ def get_utxos_info(db, decoded_tx):
 
 
 def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
-    if protocol.enabled("utxo_support", block_index=block_index) and not util.PARSING_MEMPOOL:
+    if (
+        protocol.enabled("utxo_support", block_index=block_index)
+        and not CurrentState().parsing_mempool()
+    ):
         transaction_type = messagetype.get_transaction_type(
             data, destination, utxos_info, block_index
         )

@@ -45,6 +45,15 @@ class CurrentState(metaclass=helpers.SingletonMeta):
             else:
                 self.state["CURRENT_BLOCK_TIME"] = 0
 
+    def set_current_tx_hash(self, tx_hash):
+        self.state["CURRENT_TX_HASH"] = tx_hash
+
+    def set_parsing_mempool(self, parsing_mempool):
+        self.state["PARSING_MEMPOOL"] = parsing_mempool
+
+    def set_block_parser_status(self, status):
+        self.state["BLOCK_PARSER_STATUS"] = status
+
     def current_block_index(self):
         return self.state.get("CURRENT_BLOCK_INDEX")
 
@@ -56,3 +65,12 @@ class CurrentState(metaclass=helpers.SingletonMeta):
             self.backend_height = get_backend_height()
             self.last_update = time.time()
         return self.backend_height
+
+    def current_tx_hash(self):
+        return self.state.get("CURRENT_TX_HASH")
+
+    def parsing_mempool(self):
+        return self.state.get("PARSING_MEMPOOL")
+
+    def block_parser_status(self):
+        return self.state.get("BLOCK_PARSER_STATUS", "starting")

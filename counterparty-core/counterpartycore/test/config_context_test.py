@@ -1,8 +1,6 @@
-#! /usr/bin/python3
-import pprint  # noqa: F401
 import tempfile
 
-from counterpartycore.lib import config, util  # noqa: F401
+from counterpartycore.lib import config
 from counterpartycore.lib.parser import protocol
 from counterpartycore.test import (
     conftest,  # noqa: F401

@@ -6,7 +6,7 @@ import time
 from contextlib import contextmanager
 from decimal import Decimal as D
 
-from counterpartycore.lib import backend, config, exceptions, util
+from counterpartycore.lib import backend, config, exceptions
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import check, protocol, utxosinfo
@@ -40,7 +40,7 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
 
     with get_cursor(db) as cursor:
         cursor.execute(query, list(record.values()))
-        if table_name in ["issuances", "destructions"] and not util.PARSING_MEMPOOL:
+        if table_name in ["issuances", "destructions"] and not CurrentState().parsing_mempool():
             cursor.execute("SELECT last_insert_rowid() AS rowid")
             inserted_rowid = cursor.fetchone()["rowid"]
             new_record = cursor.execute(
@@ -181,7 +181,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
             category,
             bindings_string,
             event,
-            util.CURRENT_TX_HASH or "",
+            CurrentState().current_tx_hash() or "",
             previous_event_hash,
         ]
     )
@@ -194,7 +194,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         "bindings": bindings_string,
         "timestamp": current_time,
         "event": event,
-        "tx_hash": util.CURRENT_TX_HASH,
+        "tx_hash": CurrentState().current_tx_hash(),
         "event_hash": event_hash,
     }
     query = """INSERT INTO messages (
@@ -289,7 +289,7 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
     if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         balance_address = None
         utxo = address
-        if not util.PARSING_MEMPOOL and balance == 0:
+        if not CurrentState().parsing_mempool() and balance == 0:
             UTXOBalancesCache(db).remove_balance(utxo)
 
     if not no_balance:  # don't create balance if quantity is 0 and there is no balance
@@ -375,7 +375,7 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         balance_address = None
         utxo = address
-        if not util.PARSING_MEMPOOL and balance > 0:
+        if not CurrentState().parsing_mempool() and balance > 0:
             UTXOBalancesCache(db).add_balance(utxo)
 
     bindings = {
@@ -2039,14 +2039,14 @@ def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
 
 
 def get_matching_orders(db, tx_hash, give_asset, get_asset):
-    if util.BLOCK_PARSER_STATUS == "catching up":
+    if CurrentState().block_parser_status() == "catching up":
         return OrdersCache(db).get_matching_orders(tx_hash, give_asset, get_asset)
     return get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset)
 
 
 def insert_order(db, order):
     insert_record(db, "orders", order, "OPEN_ORDER")
-    if not util.PARSING_MEMPOOL:
+    if not CurrentState().parsing_mempool():
         OrdersCache(db).insert_order(order)
 
 
@@ -2055,7 +2055,7 @@ def insert_order(db, order):
 
 def update_order(db, tx_hash, update_data):
     insert_update(db, "orders", "tx_hash", tx_hash, update_data, "ORDER_UPDATE")
-    if not util.PARSING_MEMPOOL:
+    if not CurrentState().parsing_mempool():
         OrdersCache(db).update_order(tx_hash, update_data)
 
 
@@ -2092,7 +2092,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
             "ORDER_FILLED",
             {"tx_hash": order["tx_hash"]},
         )
-        if not util.PARSING_MEMPOOL:
+        if not CurrentState().parsing_mempool():
             OrdersCache(db).update_order(order["tx_hash"], update_data)
 
 

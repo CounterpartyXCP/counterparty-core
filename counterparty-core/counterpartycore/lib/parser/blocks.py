@@ -17,7 +17,6 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.cli import log
@@ -120,7 +119,7 @@ def update_transaction(db, tx, supported):
 
 
 def parse_tx(db, tx):
-    util.CURRENT_TX_HASH = tx["tx_hash"]
+    CurrentState().set_current_tx_hash(tx["tx_hash"])
     """Parse the transaction, return True for success."""
     cursor = db.cursor()
 
@@ -248,7 +247,7 @@ def parse_tx(db, tx):
         cursor.close()
         supported = supported or moved
         update_transaction(db, tx, supported)
-        util.CURRENT_TX_HASH = None
+        CurrentState().set_current_tx_hash(None)
 
     return supported
 
@@ -256,7 +255,7 @@ def parse_tx(db, tx):
 def replay_transactions_events(db, transactions):
     cursor = db.cursor()
     for tx in transactions:
-        util.CURRENT_TX_HASH = tx["tx_hash"]
+        CurrentState().set_current_tx_hash(tx["tx_hash"])
         transaction_bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
@@ -300,7 +299,7 @@ def replay_transactions_events(db, transactions):
                 "NEW_TRANSACTION_OUTPUT",
                 transaction_outputs_bindings,
             )
-        util.CURRENT_TX_HASH = None
+        CurrentState().set_current_tx_hash(None)
 
 
 def parse_block(
@@ -1008,7 +1007,7 @@ def create_views(db):
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
     assert type(tx_hash) == str  # noqa: E721
-    util.CURRENT_TX_HASH = tx_hash
+    CurrentState().set_current_tx_hash(tx_hash)
     cursor = db.cursor()
 
     source, destination, btc_amount, fee, data, dispensers_outs, utxos_info = get_tx_info(
@@ -1021,7 +1020,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
         block_index = config.MEMPOOL_BLOCK_INDEX
         existing_tx = ledger.ledger.get_transaction(db, tx_hash)
         if existing_tx:
-            util.CURRENT_TX_HASH = None
+            CurrentState().set_current_tx_hash(None)
             return tx_index
     else:
         assert block_index == CurrentState().current_block_index()
@@ -1080,7 +1079,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
         return tx_index + 1
     else:
         pass
-    util.CURRENT_TX_HASH = None
+    CurrentState().set_current_tx_hash(None)
     return tx_index
 
 
@@ -1439,7 +1438,7 @@ def catch_up(db, check_asset_conservation=True):
     fetcher = None
 
     try:
-        util.BLOCK_PARSER_STATUS = "catching up"
+        CurrentState().set_block_parser_status("catching up")
         # update the current block index
         current_block_index = ledger.ledger.last_db_index(db)
         if current_block_index == 0:

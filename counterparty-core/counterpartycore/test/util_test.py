@@ -32,7 +32,6 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
     messages,
-    util,
 )
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.cli import server
@@ -89,7 +88,6 @@ def init_database(sqlfile, dbfile, options=None):
     db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
     blocks.create_views(db)
     database.update_version(db)
-    util.FIRST_MULTISIG_BLOCK_TESTNET = 1
 
     return db
 
@@ -628,7 +626,6 @@ def run_scenario(scenario):
     """Execute a scenario for integration test, returns a dump of the db, a json with raw transactions and the full log."""
     server.initialise(database_file=":memory:", testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b"TESTXXXX"
-    util.FIRST_MULTISIG_BLOCK_TESTNET = 1
     checkpoints = dict(check.CHECKPOINTS_TESTNET)
     check.CHECKPOINTS_TESTNET = {}
 

@@ -14,7 +14,6 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
-    util,
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
@@ -719,7 +718,7 @@ def parse(db, tx, message):
 
                         ledger.ledger.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
                         # Add the address to the dispensable cache
-                        if not util.PARSING_MEMPOOL:
+                        if not CurrentState().parsing_mempool():
                             DispensableCache(db).new_dispensable(action_address)
 
                         logger.info(

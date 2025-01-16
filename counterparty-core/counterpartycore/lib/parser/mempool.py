@@ -2,15 +2,16 @@ import json
 import logging
 import time
 
-from counterpartycore.lib import backend, config, exceptions, ledger, util
+from counterpartycore.lib import backend, config, exceptions, ledger
 from counterpartycore.lib.api.apiwatcher import EVENTS_ADDRESS_FIELDS
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, deserialize
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
-    util.PARSING_MEMPOOL = True
+    CurrentState().set_parsing_mempool(True)
 
     logger.trace(f"Parsing {len(raw_tx_list)} raw transaction(s) from the mempool...")
     now = time.time()
@@ -110,7 +111,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
                 event,
             )
     logger.trace("Mempool transaction parsed successfully.")
-    util.PARSING_MEMPOOL = False
+    CurrentState().set_parsing_mempool(False)
     return not_supported_txs
 
 
