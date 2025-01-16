@@ -6,7 +6,7 @@ SCENARIO = [
         "params": {
             "asset": "XCP",
             "give_quantity": 1,
-            "escrow_quantity": 10000,
+            "escrow_quantity": 5000,
             "mainchainrate": 1,  # 1 BTC for 1 XCP
             "status": 0,
         },
@@ -23,7 +23,7 @@ SCENARIO = [
         "source": "$ADDRESS_2",
         "params": {
             "destination": "$ADDRESS_8",
-            "quantity": 6000,
+            "quantity": 3000,
             "asset": "BTC",
         },
         "controls": [
@@ -36,10 +36,10 @@ SCENARIO = [
                         "params": {
                             "asset": "XCP",
                             "block_index": "$BLOCK_INDEX",
-                            "btc_amount": 6000,
+                            "btc_amount": 3000,
                             "destination": "$ADDRESS_2",
                             "dispense_index": 0,
-                            "dispense_quantity": 6000,
+                            "dispense_quantity": 3000,
                             "dispenser_tx_hash": "$DISPENSER_XCP_TX_HASH",
                             "source": "$ADDRESS_8",
                             "tx_hash": "$TX_HASH",
