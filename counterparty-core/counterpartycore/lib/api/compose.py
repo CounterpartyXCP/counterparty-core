@@ -325,6 +325,7 @@ def compose_send(
     memo: str = None,
     memo_is_hex: bool = False,
     use_enhanced_send: bool = True,
+    no_dispense: bool = False,
     **construct_params,
 ):
     """
@@ -336,6 +337,7 @@ def compose_send(
     :param memo: The Memo associated with this transaction
     :param memo_is_hex: Whether the memo field is a hexadecimal string
     :param use_enhanced_send: If this is false, the construct a legacy transaction sending bitcoin dust
+    :param no_dispense: don't compose a dispense transaction even if the destination is a dispenser
     """
     params = {
         "source": address,
@@ -345,6 +347,7 @@ def compose_send(
         "memo": memo,
         "memo_is_hex": memo_is_hex,
         "use_enhanced_send": use_enhanced_send,
+        "no_dispense": no_dispense,
     }
     return composer.compose_transaction(db, "send", params, construct_params)
 

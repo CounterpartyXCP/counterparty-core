@@ -68,8 +68,8 @@ def validate(db, source, destination, asset, quantity, block_index):
     return problems
 
 
-def compose_send_btc(db, source: str, destination: str, quantity: int):
-    if not util.enabled("enable_dispense_tx"):
+def compose_send_btc(db, source: str, destination: str, quantity: int, no_dispense: bool):
+    if not util.enabled("enable_dispense_tx") or no_dispense:
         return (source, [(destination, quantity)], None)
     # try to compose a dispense instead
     try:
@@ -80,13 +80,19 @@ def compose_send_btc(db, source: str, destination: str, quantity: int):
 
 
 def compose(
-    db, source: str, destination: str, asset: str, quantity: int, skip_validation: bool = False
+    db,
+    source: str,
+    destination: str,
+    asset: str,
+    quantity: int,
+    skip_validation: bool = False,
+    no_dispense: bool = False,
 ):
     cursor = db.cursor()
 
     # Just send BTC?
     if asset == config.BTC:
-        return compose_send_btc(db, source, destination, quantity)
+        return compose_send_btc(db, source, destination, quantity, no_dispense)
 
     # resolve subassets
     asset = ledger.resolve_subasset_longname(db, asset)

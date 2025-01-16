@@ -217,6 +217,7 @@ def compose(
     memo_is_hex: bool = False,
     use_enhanced_send: bool = None,
     skip_validation: bool = False,
+    no_dispense: bool = False,
 ):
     # special case - enhanced_send replaces send by default when it is enabled
     #   but it can be explicitly disabled with an API parameter
@@ -305,12 +306,20 @@ def compose(
                 raise exceptions.ComposeError("mpma sends are not enabled")
         elif use_enhanced_send is None or use_enhanced_send == True:  # noqa: E712
             return enhanced_send.compose(
-                db, source, destination, asset, quantity, memo, memo_is_hex, skip_validation
+                db,
+                source,
+                destination,
+                asset,
+                quantity,
+                memo,
+                memo_is_hex,
+                skip_validation,
+                no_dispense,
             )
     elif memo is not None or use_enhanced_send == True:  # noqa: E712
         raise exceptions.ComposeError("enhanced sends are not enabled")
 
-    return send1.compose(db, source, destination, asset, quantity, skip_validation)
+    return send1.compose(db, source, destination, asset, quantity, skip_validation, no_dispense)
 
 
 def parse(db, tx, message):  # TODO: *args
