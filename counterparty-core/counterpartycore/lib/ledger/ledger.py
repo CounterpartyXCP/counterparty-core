@@ -14,13 +14,31 @@ from counterpartycore.lib.utils import assetnames, database, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-BLOCK_LEDGER = []
-BLOCK_JOURNAL = []
-
 
 ###############################
 #       UTIL FUNCTIONS        #
 ###############################
+
+
+class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):
+    def __init__(self):
+        self.reset()
+
+    def append_to_block_ledger(self, item):
+        self.ledger.append(item)
+
+    def append_to_block_journal(self, item):
+        self.journal.append(item)
+
+    def block_ledger(self):
+        return self.ledger
+
+    def block_journal(self):
+        return self.journal
+
+    def reset(self):
+        self.ledger = []
+        self.journal = []
 
 
 @contextmanager
@@ -213,7 +231,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
     cursor.execute(query, message_bindings)
     cursor.close()
 
-    BLOCK_JOURNAL.append(f"{command}{category}{bindings_string}")
+    ConsensusHashBuilder().append_to_block_journal(f"{command}{category}{bindings_string}")
 
     log.log_event(db, block_index, message_index, event, items)
 
@@ -357,7 +375,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     }
     insert_record(db, "debits", bindings, "DEBIT")
 
-    BLOCK_LEDGER.append(f"{block_index}{address}{asset}{quantity}")
+    ConsensusHashBuilder().append_to_block_ledger(f"{block_index}{address}{asset}{quantity}")
 
     return utxo_address
 
@@ -439,7 +457,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     }
     insert_record(db, "credits", bindings, "CREDIT")
 
-    BLOCK_LEDGER.append(f"{block_index}{address}{asset}{quantity}")
+    ConsensusHashBuilder().append_to_block_ledger(f"{block_index}{address}{asset}{quantity}")
 
     return utxo_address
 

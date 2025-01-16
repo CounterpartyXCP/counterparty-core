@@ -329,8 +329,7 @@ def parse_block(
     if reparsing:
         replay_transactions_events(db, transactions)
 
-    ledger.ledger.BLOCK_LEDGER = []
-    ledger.ledger.BLOCK_JOURNAL = []
+    ledger.ledger.ConsensusHashBuilder().reset()
 
     if block_index != config.MEMPOOL_BLOCK_INDEX:
         assert block_index == CurrentState().current_block_index()
@@ -368,10 +367,16 @@ def parse_block(
             db, "txlist_hash", previous_txlist_hash, txlist
         )
         new_ledger_hash, found_ledger_hash = check.consensus_hash(
-            db, "ledger_hash", previous_ledger_hash, ledger.ledger.BLOCK_LEDGER
+            db,
+            "ledger_hash",
+            previous_ledger_hash,
+            ledger.ledger.ConsensusHashBuilder().block_ledger(),
         )
         new_messages_hash, found_messages_hash = check.consensus_hash(
-            db, "messages_hash", previous_messages_hash, ledger.ledger.BLOCK_JOURNAL
+            db,
+            "messages_hash",
+            previous_messages_hash,
+            ledger.ledger.ConsensusHashBuilder().block_journal(),
         )
 
         update_block_query = """
