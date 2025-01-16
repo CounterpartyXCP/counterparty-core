@@ -621,6 +621,7 @@ def initialise_db(db):
     """Initialise blockchain in the db and insert first block."""
     blocks.initialise(db)
     insert_block(db, config.BLOCK_FIRST - 1, parse_block=True)
+    CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
 
 
 def run_scenario(scenario):
