@@ -97,7 +97,7 @@ def compose(
         raise exceptions.ComposeError("quantity must be an int (in satoshi)")
 
     # Only for outgoing (incoming will overburn).
-    balance = ledger.ledger.get_balance(db, source, asset)
+    balance = ledger.balances.get_balance(db, source, asset)
     if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
@@ -133,7 +133,7 @@ def parse(db, tx, message):
         # Oversend
         # doesn't make sense (0 and no balance should be the same) but let's not break the protocol
         try:
-            balance = ledger.ledger.get_balance(
+            balance = ledger.balances.get_balance(
                 db, tx["source"], asset, raise_error_if_no_balance=True
             )
             if balance < quantity:
@@ -151,10 +151,10 @@ def parse(db, tx, message):
             status = "invalid: " + "; ".join(problems)
 
     if status == "valid":
-        ledger.ledger.debit(
+        ledger.events.debit(
             db, tx["source"], asset, quantity, tx["tx_index"], action="send", event=tx["tx_hash"]
         )
-        ledger.ledger.credit(
+        ledger.events.credit(
             db,
             tx["destination"],
             asset,
@@ -178,7 +178,7 @@ def parse(db, tx, message):
         "send_type": "send",
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:
-        ledger.ledger.insert_record(db, "sends", bindings, "SEND")
+        ledger.events.insert_record(db, "sends", bindings, "SEND")
 
     logger.info(
         "Send %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]", bindings

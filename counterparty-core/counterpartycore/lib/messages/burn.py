@@ -108,7 +108,7 @@ def parse(db, tx, message=None):
             earned = round(burned * multiplier)
 
             # Credit source address with earned XCP.
-            ledger.ledger.credit(
+            ledger.events.credit(
                 db,
                 tx["source"],
                 config.XCP,
@@ -134,7 +134,7 @@ def parse(db, tx, message=None):
         except KeyError:
             return
 
-        ledger.ledger.credit(
+        ledger.events.credit(
             db,
             line["source"],
             config.XCP,
@@ -164,7 +164,7 @@ def parse(db, tx, message=None):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.ledger.insert_record(db, "burns", bindings, "BURN")
+        ledger.events.insert_record(db, "burns", bindings, "BURN")
 
     logger.info(
         "%(source)s burned %(burned)s BTC for %(earned)s XCP (%(tx_hash)s) [%(status)s]", bindings

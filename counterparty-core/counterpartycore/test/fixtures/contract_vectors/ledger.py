@@ -213,7 +213,7 @@ LEDGER_VECTOR = {
             },
         ],
     },
-    "ledger.ledger": {
+    "ledger.events": {
         "last_message": [
             {
                 "in": (),
@@ -230,6 +230,48 @@ LEDGER_VECTOR = {
                 },
             }
         ],
+        "debit": [
+            {"in": (ADDR[0], "XCP", 1, 0), "out": None},
+            {
+                "in": (ADDR[0], "BTC", DP["quantity"], 0),
+                "error": (exceptions.DebitError, "Cannot debit bitcoins."),
+            },
+            {
+                "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
+                "error": (exceptions.DebitError, "Negative quantity."),
+            },
+            {
+                "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
+                "error": (exceptions.DebitError, "Quantity must be an integer."),
+            },
+            {
+                "in": (ADDR[0], "XCP", 2**40, 0),
+                "error": (exceptions.DebitError, "Insufficient funds."),
+            },
+        ],
+        "credit": [
+            {"in": (ADDR[0], "XCP", 1, 0), "out": None},
+            {
+                "in": (ADDR[0], "BTC", DP["quantity"], 0),
+                "error": (exceptions.CreditError, "Cannot debit bitcoins."),
+            },
+            {
+                "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
+                "error": (exceptions.CreditError, "Negative quantity."),
+            },
+            {
+                "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
+                "error": (exceptions.CreditError, "Quantity must be an integer."),
+            },
+        ],
+    },
+    "ledger.balances": {
+        "get_balance": [
+            {"in": (ADDR[0], "XCP"), "out": 91674999900},
+            {"in": (ADDR[0], "foobar"), "out": 0},
+        ],
+    },
+    "ledger.ledger": {
         "generate_asset_id": [
             {"in": ("BTC", DP["default_block_index"]), "out": 0},
             {"in": ("XCP", DP["default_block_index"]), "out": 1},
@@ -284,40 +326,6 @@ LEDGER_VECTOR = {
             {"in": ("PARENT.nonexistent.subasset",), "out": "PARENT.nonexistent.subasset"},
             {"in": ("PARENT.ILEGAL^^^",), "out": "PARENT.ILEGAL^^^"},
             {"in": ("PARENT.already.issued",), "out": f"A{26**12 + 101}"},
-        ],
-        "debit": [
-            {"in": (ADDR[0], "XCP", 1, 0), "out": None},
-            {
-                "in": (ADDR[0], "BTC", DP["quantity"], 0),
-                "error": (exceptions.DebitError, "Cannot debit bitcoins."),
-            },
-            {
-                "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
-                "error": (exceptions.DebitError, "Negative quantity."),
-            },
-            {
-                "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
-                "error": (exceptions.DebitError, "Quantity must be an integer."),
-            },
-            {
-                "in": (ADDR[0], "XCP", 2**40, 0),
-                "error": (exceptions.DebitError, "Insufficient funds."),
-            },
-        ],
-        "credit": [
-            {"in": (ADDR[0], "XCP", 1, 0), "out": None},
-            {
-                "in": (ADDR[0], "BTC", DP["quantity"], 0),
-                "error": (exceptions.CreditError, "Cannot debit bitcoins."),
-            },
-            {
-                "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
-                "error": (exceptions.CreditError, "Negative quantity."),
-            },
-            {
-                "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
-                "error": (exceptions.CreditError, "Quantity must be an integer."),
-            },
         ],
         "is_divisible": [
             {"in": ("XCP",), "out": True},
@@ -396,127 +404,10 @@ LEDGER_VECTOR = {
                 "error": (exceptions.QuantityError, "Fractional quantities of indivisible assets."),
             },
         ],
-        "get_balance": [
-            {"in": (ADDR[0], "XCP"), "out": 91674999900},
-            {"in": (ADDR[0], "foobar"), "out": 0},
-        ],
         "get_asset_name": [
             {"in": (1, DP["default_block_index"]), "out": "XCP"},
             {"in": (0, DP["default_block_index"]), "out": "BTC"},
             {"in": (453, DP["default_block_index"]), "out": 0},
-        ],
-        "get_credits_by_asset": [
-            {
-                "in": ("A160361285792733729",),
-                "out": [
-                    {
-                        "block_index": 310504,
-                        "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
-                        "asset": "A160361285792733729",
-                        "quantity": 20,
-                        "calling_function": "escrowed premint",
-                        "event": "d0110ffec4330d438c7abf22615be38468b9127e9d178d4334616b5f05733c79",
-                        "tx_index": 505,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310505,
-                        "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
-                        "asset": "A160361285792733729",
-                        "quantity": 10,
-                        "calling_function": "escrowed fairmint",
-                        "event": "576d7993ac32b52a21ee8693061ff0b5fc8ee7dfe8d8c6bec438ee98313d6e57",
-                        "tx_index": 506,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
-                        "asset": "A160361285792733729",
-                        "quantity": 20,
-                        "calling_function": "escrowed fairmint",
-                        "event": "b3f38f734f84ad73390e8c319ca0c68774f087c4c7874f989ddf218f021144fc",
-                        "tx_index": 507,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 7,
-                        "calling_function": "unescrowed fairmint",
-                        "event": "576d7993ac32b52a21ee8693061ff0b5fc8ee7dfe8d8c6bec438ee98313d6e57",
-                        "tx_index": 506,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 3,
-                        "calling_function": "fairmint commission",
-                        "event": "576d7993ac32b52a21ee8693061ff0b5fc8ee7dfe8d8c6bec438ee98313d6e57",
-                        "tx_index": 506,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 14,
-                        "calling_function": "unescrowed fairmint",
-                        "event": "b3f38f734f84ad73390e8c319ca0c68774f087c4c7874f989ddf218f021144fc",
-                        "tx_index": 507,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 6,
-                        "calling_function": "fairmint commission",
-                        "event": "b3f38f734f84ad73390e8c319ca0c68774f087c4c7874f989ddf218f021144fc",
-                        "tx_index": 507,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 20,
-                        "calling_function": "premint",
-                        "event": "d0110ffec4330d438c7abf22615be38468b9127e9d178d4334616b5f05733c79",
-                        "tx_index": 0,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                ],
-            }
-        ],
-        "get_debits_by_asset": [
-            {
-                "in": ("A160361285792733729",),
-                "out": [
-                    {
-                        "block_index": 310506,
-                        "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
-                        "asset": "A160361285792733729",
-                        "quantity": 50,
-                        "action": "unescrowed fairmint",
-                        "event": "d0110ffec4330d438c7abf22615be38468b9127e9d178d4334616b5f05733c79",
-                        "tx_index": 0,
-                        "utxo": None,
-                        "utxo_address": None,
-                    }
-                ],
-            }
         ],
     },
 }

@@ -108,7 +108,7 @@ def parse(db, tx, message):
     }
     if "integer overflow" not in status:
         event_name = f"CANCEL_{offer_type.upper()}" if offer_type else "INVALID_CANCEL"
-        ledger.ledger.insert_record(db, "cancels", bindings, event_name)
+        ledger.events.insert_record(db, "cancels", bindings, event_name)
 
     log_data = bindings | {
         "offer_type": offer_type.capitalize() if offer_type else "Invalid",

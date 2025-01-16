@@ -161,7 +161,7 @@ def insert_block(db, block_index, parse_block=True):
         "difficulty": None,
     }
     CurrentState().set_current_block_index(block_index)
-    ledger.ledger.insert_record(db, "blocks", bindings, "NEW_BLOCK")
+    ledger.events.insert_record(db, "blocks", bindings, "NEW_BLOCK")
 
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
@@ -226,7 +226,7 @@ def insert_raw_transaction(raw_transaction, db):
             "supported": True,
             "utxos_info": " ".join(utxos_info),
         }
-        ledger.ledger.insert_record(db, "transactions", bindings, "NEW_TRANSACTION")
+        ledger.events.insert_record(db, "transactions", bindings, "NEW_TRANSACTION")
 
         tx = list(cursor.execute("""SELECT * FROM transactions WHERE tx_index = ?""", (tx_index,)))[
             0
@@ -335,8 +335,8 @@ def insert_transaction(transaction, db):
         "previous_block_hash": None,
         "difficulty": None,
     }
-    ledger.ledger.insert_record(db, "blocks", block_bindings, "NEW_BLOCK")
-    ledger.ledger.insert_record(db, "transactions", transaction, "NEW_TRANSACTION")
+    ledger.events.insert_record(db, "blocks", block_bindings, "NEW_BLOCK")
+    ledger.events.insert_record(db, "transactions", transaction, "NEW_TRANSACTION")
 
     # `dispenser.dispense()` needs some vouts. Let's say one vout per transaction.
     transaction_outputs_bindings = {
@@ -347,7 +347,7 @@ def insert_transaction(transaction, db):
         "destination": transaction["destination"],
         "btc_amount": transaction["btc_amount"],
     }
-    ledger.ledger.insert_record(
+    ledger.events.insert_record(
         db, "transaction_outputs", transaction_outputs_bindings, "NEW_TRANSACTION_OUTPUT"
     )
 
@@ -648,7 +648,7 @@ def run_scenario(scenario):
         db.execute(sql_file.read())
     initialise_db(db)
 
-    ledger.ledger.AssetCache(db).init(db)
+    ledger.caches.AssetCache(db).init(db)
 
     raw_transactions = []
 

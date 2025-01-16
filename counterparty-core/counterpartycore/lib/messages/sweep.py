@@ -31,7 +31,7 @@ def get_total_fee(db, source, block_index):
     total_fee = ANTISPAM_FEE
     antispamfee = protocol.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
     if antispamfee > 0:
-        balances_count = ledger.ledger.get_balances_count(db, source)[0]["cnt"]
+        balances_count = ledger.balances.get_balances_count(db, source)[0]["cnt"]
         issuances_count = ledger.ledger.get_issuances_count(db, source)
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
     return total_fee
@@ -45,7 +45,7 @@ def validate(db, source, destination, flags, memo, block_index):
 
     cursor = db.cursor()
 
-    result = ledger.ledger.get_balance(db, source, "XCP")
+    result = ledger.balances.get_balance(db, source, "XCP")
 
     total_fee = get_total_fee(db, source, block_index)
 
@@ -161,7 +161,7 @@ def parse(db, tx, message):
             )
 
             if antispamfee > 0:
-                ledger.ledger.debit(
+                ledger.events.debit(
                     db,
                     tx["source"],
                     "XCP",
@@ -171,7 +171,7 @@ def parse(db, tx, message):
                     event=tx["tx_hash"],
                 )
             else:
-                ledger.ledger.debit(
+                ledger.events.debit(
                     db,
                     tx["source"],
                     "XCP",
@@ -185,11 +185,11 @@ def parse(db, tx, message):
             status = "invalid: insufficient balance for antispam fee for sweep"
 
     if status == "valid":
-        balances = ledger.ledger.get_address_balances(db, tx["source"])
+        balances = ledger.balances.get_address_balances(db, tx["source"])
 
         if flags & FLAG_BALANCES:
             for balance in balances:
-                ledger.ledger.debit(
+                ledger.events.debit(
                     db,
                     tx["source"],
                     balance["asset"],
@@ -198,7 +198,7 @@ def parse(db, tx, message):
                     action="sweep",
                     event=tx["tx_hash"],
                 )
-                ledger.ledger.credit(
+                ledger.events.credit(
                     db,
                     destination,
                     balance["asset"],
@@ -248,7 +248,7 @@ def parse(db, tx, message):
                             "reset": False,
                             "asset_events": "transfer",
                         }
-                        ledger.ledger.insert_record(db, "issuances", bindings, "ASSET_TRANSFER")
+                        ledger.events.insert_record(db, "issuances", bindings, "ASSET_TRANSFER")
                         sweep_pos += 1
 
         bindings = {
@@ -262,7 +262,7 @@ def parse(db, tx, message):
             "memo": memo_bytes,
             "fee_paid": total_fee if antispamfee > 0 else fee_paid,
         }
-        ledger.ledger.insert_record(db, "sweeps", bindings, "SWEEP")
+        ledger.events.insert_record(db, "sweeps", bindings, "SWEEP")
 
         logger.info("Sweep from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]", bindings)
 

@@ -51,7 +51,7 @@ def cancel_order(db, order, status, block_index, tx_index):
     ledger.ledger.update_order(db, order["tx_hash"], set_data)
 
     if order["give_asset"] != config.BTC:  # Can’t credit BTC.
-        ledger.ledger.credit(
+        ledger.events.credit(
             db,
             order["source"],
             order["give_asset"],
@@ -68,7 +68,7 @@ def cancel_order(db, order, status, block_index, tx_index):
             "source": order["source"],
             "block_index": block_index,
         }
-        ledger.ledger.insert_record(db, "order_expirations", bindings, "ORDER_EXPIRATION")
+        ledger.events.insert_record(db, "order_expirations", bindings, "ORDER_EXPIRATION")
 
     logger.info(
         "Order cancelled %(give_asset)s / %(get_asset)s (%(order_hash)s) [%(status)s]",
@@ -101,7 +101,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     if tx0_order["status"] in ("expired", "cancelled"):
         tx0_order_status = tx0_order["status"]
         if order_match["forward_asset"] != config.BTC:
-            ledger.ledger.credit(
+            ledger.events.credit(
                 db,
                 order_match["tx0_address"],
                 order_match["forward_asset"],
@@ -144,7 +144,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     if tx1_order["status"] in ("expired", "cancelled"):
         tx1_order_status = tx1_order["status"]
         if order_match["backward_asset"] != config.BTC:
-            ledger.ledger.credit(
+            ledger.events.credit(
                 db,
                 order_match["tx1_address"],
                 order_match["backward_asset"],
@@ -211,7 +211,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
             "tx1_address": order_match["tx1_address"],
             "block_index": block_index,
         }
-        ledger.ledger.insert_record(
+        ledger.events.insert_record(
             db, "order_match_expirations", bindings, "ORDER_MATCH_EXPIRATION"
         )
 
@@ -314,7 +314,7 @@ def compose(
 
     # Check balance.
     if give_asset != config.BTC:
-        balance = ledger.ledger.get_balance(db, source, give_asset)
+        balance = ledger.balances.get_balance(db, source, give_asset)
         if balance < give_quantity:
             raise exceptions.ComposeError("insufficient funds")
 
@@ -392,7 +392,7 @@ def parse(db, tx, message):
             price = 0
 
         # Overorder
-        balance = ledger.ledger.get_balance(db, tx["source"], give_asset)
+        balance = ledger.balances.get_balance(db, tx["source"], give_asset)
         if give_asset != config.BTC:
             if balance == 0:
                 give_quantity = 0
@@ -433,7 +433,7 @@ def parse(db, tx, message):
     # Debit give quantity. (Escrow.)
     if status == "open":
         if give_asset != config.BTC:  # No need (or way) to debit BTC.
-            ledger.ledger.debit(
+            ledger.events.debit(
                 db,
                 tx["source"],
                 give_asset,
@@ -688,7 +688,7 @@ def match(db, tx, block_index=None):
             else:
                 status = "completed"
                 # Credit.
-                ledger.ledger.credit(
+                ledger.events.credit(
                     db,
                     tx1["source"],
                     tx1["get_asset"],
@@ -697,7 +697,7 @@ def match(db, tx, block_index=None):
                     action="order match",
                     event=order_match_id,
                 )
-                ledger.ledger.credit(
+                ledger.events.credit(
                     db,
                     tx0["source"],
                     tx0["get_asset"],
@@ -724,7 +724,7 @@ def match(db, tx, block_index=None):
                 if tx0["give_asset"] != config.BTC and tx0["get_asset"] != config.BTC:
                     # Fill order, and recredit give_remaining.
                     tx0_status = "filled"
-                    ledger.ledger.credit(
+                    ledger.events.credit(
                         db,
                         tx0["source"],
                         tx0["give_asset"],
@@ -749,7 +749,7 @@ def match(db, tx, block_index=None):
                 if tx1["give_asset"] != config.BTC and tx1["get_asset"] != config.BTC:
                     # Fill order, and recredit give_remaining.
                     tx1_status = "filled"
-                    ledger.ledger.credit(
+                    ledger.events.credit(
                         db,
                         tx1["source"],
                         tx1["give_asset"],
@@ -797,7 +797,7 @@ def match(db, tx, block_index=None):
                 "fee_paid": fee,
                 "status": status,
             }
-            ledger.ledger.insert_record(db, "order_matches", bindings, "ORDER_MATCH")
+            ledger.events.insert_record(db, "order_matches", bindings, "ORDER_MATCH")
 
             logger.info(
                 "Order match for %(forward_quantity)s %(forward_asset)s against %(backward_quantity)s %(backward_asset)s (%(id)s) [%(status)s]",

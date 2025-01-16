@@ -56,7 +56,7 @@ def validate(
             fairminter["price"]
         )
         xcp_total_price = int(math.ceil(xcp_total_price))
-        balance = ledger.ledger.get_balance(db, source, config.XCP)
+        balance = ledger.balances.get_balance(db, source, config.XCP)
         if balance < xcp_total_price:
             problems.append("insufficient XCP balance")
     elif not protocol.enabled("partial_mint_to_reach_hard_cap"):
@@ -124,7 +124,7 @@ def parse(db, tx, message):
             "source": tx["source"],
             "status": status,
         }
-        ledger.ledger.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
+        ledger.events.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
         logger.info(f"Fairmint {tx['tx_hash']} is invalid: {status}")
         return
 
@@ -185,12 +185,12 @@ def parse(db, tx, message):
 
     if paid_quantity > 0:
         # we debit the user
-        ledger.ledger.debit(
+        ledger.events.debit(
             db, tx["source"], config.XCP, paid_quantity, tx["tx_index"], xcp_action, tx["tx_hash"]
         )
         if xcp_destination:
             # we credit the destination if it exists (issuer or escrow)
-            ledger.ledger.credit(
+            ledger.events.credit(
                 db,
                 xcp_destination,
                 config.XCP,
@@ -211,11 +211,11 @@ def parse(db, tx, message):
                 "tag": xcp_action,
                 "status": "valid",
             }
-            ledger.ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+            ledger.events.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
     if asset_destination == config.UNSPENDABLE:
         # the minted amount and commission are escrowed
-        ledger.ledger.credit(
+        ledger.events.credit(
             db,
             asset_destination,
             asset,
@@ -226,12 +226,12 @@ def parse(db, tx, message):
         )
     else:
         # the minted amount is sent to the user
-        ledger.ledger.credit(
+        ledger.events.credit(
             db, asset_destination, asset, earn_quantity, tx["tx_index"], asset_action, tx["tx_hash"]
         )
         if commission > 0:
             # the commission is sent to the issuer
-            ledger.ledger.credit(
+            ledger.events.credit(
                 db,
                 fairminter["source"],
                 asset,
@@ -254,7 +254,7 @@ def parse(db, tx, message):
         "commission": commission,
         "status": status,
     }
-    ledger.ledger.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
+    ledger.events.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
 
     # we prepare the new issuance
     last_issuance = ledger.ledger.get_last_issuance(db, asset)
@@ -290,7 +290,7 @@ def parse(db, tx, message):
             ledger.ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance
-    ledger.ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+    ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
     # log
     logger.info(

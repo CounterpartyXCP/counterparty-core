@@ -34,7 +34,7 @@ def increment_counter(db, transaction_id, block_index):
         "transaction_id": transaction_id,
         "count": new_count,
     }
-    ledger.ledger.insert_record(db, "transaction_count", bindings, "INCREMENT_TRANSACTION_COUNT")
+    ledger.events.insert_record(db, "transaction_count", bindings, "INCREMENT_TRANSACTION_COUNT")
 
 
 def get_transaction_count_for_last_period(db, transaction_id, block_index):

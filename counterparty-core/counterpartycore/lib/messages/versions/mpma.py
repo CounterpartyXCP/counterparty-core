@@ -139,7 +139,7 @@ def compose(
         if not isinstance(quantity, int):
             raise exceptions.ComposeError(f"quantities must be an int (in satoshis) for {asset}")
 
-        balance = ledger.ledger.get_balance(db, source, asset)
+        balance = ledger.balances.get_balance(db, source, asset)
         if balance < quantity and not skip_validation:
             raise exceptions.ComposeError(f"insufficient funds for {asset}")
 
@@ -187,7 +187,7 @@ def parse(db, tx, message):
                 status = f"invalid: asset {asset_id} invalid at block index {tx['block_index']}"
                 break
 
-            balance = ledger.ledger.get_balance(db, tx["source"], asset_id)
+            balance = ledger.balances.get_balance(db, tx["source"], asset_id)
             if not balance:
                 status = f"invalid: insufficient funds for asset {asset_id}, address {tx['source']} has no balance"
                 break
@@ -215,7 +215,7 @@ def parse(db, tx, message):
 
     if status == "valid":
         for op in all_credits:
-            ledger.ledger.credit(
+            ledger.events.credit(
                 db,
                 op["destination"],
                 op["asset"],
@@ -226,7 +226,7 @@ def parse(db, tx, message):
             )
 
         for op in all_debits:
-            ledger.ledger.debit(
+            ledger.events.debit(
                 db,
                 tx["source"],
                 op["asset"],
@@ -258,7 +258,7 @@ def parse(db, tx, message):
                 "send_type": "send",
             }
 
-            ledger.ledger.insert_record(db, "sends", bindings, "MPMA_SEND")
+            ledger.events.insert_record(db, "sends", bindings, "MPMA_SEND")
 
             logger.info(
                 "Send (MPMA) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",

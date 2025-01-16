@@ -187,7 +187,7 @@ def validate(
             block_index < 310000 and not protocol.is_test_network()
         ):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
-            balance = ledger.ledger.get_balance(db, source, config.XCP)
+            balance = ledger.balances.get_balance(db, source, config.XCP)
             cursor.close()
             if protocol.enabled("numeric_asset_names"):  # Protocol change.
                 if subasset_longname is not None and protocol.enabled(
@@ -228,7 +228,7 @@ def validate(
 
     if protocol.enabled("cip03", block_index) and reset and issuances:
         # Checking that all supply are held by the owner of the asset
-        balances = ledger.ledger.get_asset_balances(db, asset)
+        balances = ledger.balances.get_asset_balances(db, asset)
 
         if len(balances) == 0:
             if ledger.supplies.asset_supply(db, asset) > 0:
@@ -782,7 +782,7 @@ def parse(db, tx, message, message_type_id):
 
     # Reset?
     if (status == "valid") and reset and protocol.enabled("cip03", tx["block_index"]):
-        balances_result = ledger.ledger.get_asset_balances(db, asset)
+        balances_result = ledger.balances.get_asset_balances(db, asset)
 
         if len(balances_result) <= 1:
             if len(balances_result) == 0:
@@ -798,7 +798,7 @@ def parse(db, tx, message, message_type_id):
 
             if owner_address == tx["source"]:
                 if owner_balance > 0:
-                    ledger.ledger.debit(
+                    ledger.events.debit(
                         db,
                         tx["source"],
                         asset,
@@ -818,7 +818,7 @@ def parse(db, tx, message, message_type_id):
                         "tag": "reset",
                         "status": "valid",
                     }
-                    ledger.ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+                    ledger.events.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
                 bindings = {
                     "tx_index": tx["tx_index"],
@@ -842,13 +842,13 @@ def parse(db, tx, message, message_type_id):
                     "asset_events": "reset",
                 }
 
-                ledger.ledger.insert_record(db, "issuances", bindings, "RESET_ISSUANCE")
+                ledger.events.insert_record(db, "issuances", bindings, "RESET_ISSUANCE")
 
                 logger.info("Reset issuance of %(asset)s [%(tx_hash)s] (%(status)s)", bindings)
 
                 # Credit.
                 if quantity:
-                    ledger.ledger.credit(
+                    ledger.events.credit(
                         db,
                         tx["source"],
                         asset,
@@ -871,7 +871,7 @@ def parse(db, tx, message, message_type_id):
 
         # Debit fee.
         if status == "valid":
-            ledger.ledger.debit(
+            ledger.events.debit(
                 db,
                 tx["source"],
                 config.XCP,
@@ -908,7 +908,7 @@ def parse(db, tx, message, message_type_id):
                 "block_index": tx["block_index"],
                 "asset_longname": subasset_longname,
             }
-            ledger.ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
+            ledger.events.insert_record(db, "assets", bindings, "ASSET_CREATION")
             asset_events.append("creation")
 
         if status == "valid" and reissuance:
@@ -950,7 +950,7 @@ def parse(db, tx, message, message_type_id):
         if "cannot issue during fair minting" in status:
             bindings["fair_minting"] = True
         if "integer overflow" not in status:
-            ledger.ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+            ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
         logger.info(
             "Issuance of %(quantity)s %(asset)s by %(source)s [%(tx_hash)s] (%(status)s)", bindings
@@ -958,7 +958,7 @@ def parse(db, tx, message, message_type_id):
 
         # Credit.
         if status == "valid" and quantity:
-            ledger.ledger.credit(
+            ledger.events.credit(
                 db,
                 tx["source"],
                 asset,

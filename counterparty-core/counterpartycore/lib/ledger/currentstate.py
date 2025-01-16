@@ -73,3 +73,24 @@ class CurrentState(metaclass=helpers.SingletonMeta):
 
     def block_parser_status(self):
         return self.state.get("BLOCK_PARSER_STATUS", "starting")
+
+
+class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):
+    def __init__(self):
+        self.reset()
+
+    def append_to_block_ledger(self, item):
+        self.ledger.append(item)
+
+    def append_to_block_journal(self, item):
+        self.journal.append(item)
+
+    def block_ledger(self):
+        return self.ledger
+
+    def block_journal(self):
+        return self.journal
+
+    def reset(self):
+        self.ledger = []
+        self.journal = []

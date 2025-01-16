@@ -666,7 +666,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
     monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
     monkeypatch.setattr("counterpartycore.lib.cli.log.isodt", isodt)
-    monkeypatch.setattr("counterpartycore.lib.ledger.ledger.curr_time", curr_time)
+    monkeypatch.setattr("counterpartycore.lib.ledger.events.curr_time", curr_time)
     monkeypatch.setattr("counterpartycore.lib.messages.bet.date_passed", date_passed)
     monkeypatch.setattr("counterpartycore.lib.cli.log.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):

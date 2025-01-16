@@ -39,7 +39,7 @@ def replay_events(db, key):
         return
     events = RPS_EVENTS.get(key)
     if events:
-        ledger.ledger.replay_events(db, events)
+        ledger.events.replay_events(db, events)
 
 
 def parse(db, tx, message):

@@ -139,7 +139,7 @@ def parse(db, tx, message):
         # BTC must be paid all at once.
         if tx["btc_amount"] >= btc_quantity:
             # Credit source address for the currency that he bought with the bitcoins.
-            ledger.ledger.credit(
+            ledger.events.credit(
                 db,
                 tx["source"],
                 escrowed_asset,
@@ -177,7 +177,7 @@ def parse(db, tx, message):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.ledger.insert_record(db, "btcpays", bindings, "BTC_PAY")
+        ledger.events.insert_record(db, "btcpays", bindings, "BTC_PAY")
     logger.info("BTC Pay for order match %(order_match_id)s (%(tx_hash)s) [%(status)s]", bindings)
 
     cursor.close()

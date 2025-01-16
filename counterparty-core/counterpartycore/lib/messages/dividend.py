@@ -109,7 +109,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         problems.append("zero dividend")
 
     if dividend_asset != config.BTC:
-        dividend_balances = ledger.ledger.get_balance(db, source, dividend_asset)
+        dividend_balances = ledger.balances.get_balance(db, source, dividend_asset)
         if dividend_balances < dividend_total:
             problems.append(f"insufficient funds ({dividend_asset})")
 
@@ -119,7 +119,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         if protocol.after_block_or_test_network(block_index, 330000):  # Protocol change.
             fee = int(0.0002 * config.UNIT * holder_count)
         if fee:
-            balance = ledger.ledger.get_balance(db, source, config.XCP)
+            balance = ledger.balances.get_balance(db, source, config.XCP)
             if balance < fee:
                 problems.append(f"insufficient funds ({config.XCP})")
 
@@ -245,7 +245,7 @@ def parse(db, tx, message):
 
     if status == "valid":
         # Debit.
-        ledger.ledger.debit(
+        ledger.events.debit(
             db,
             tx["source"],
             dividend_asset,
@@ -255,7 +255,7 @@ def parse(db, tx, message):
             event=tx["tx_hash"],
         )
         if protocol.after_block_or_test_network(tx["block_index"], 330000):  # Protocol change.
-            ledger.ledger.debit(
+            ledger.events.debit(
                 db,
                 tx["source"],
                 config.XCP,
@@ -268,7 +268,7 @@ def parse(db, tx, message):
         # Credit.
         for output in outputs:
             if not protocol.enabled("dont_credit_zero_dividend") or output["dividend_quantity"] > 0:
-                ledger.ledger.credit(
+                ledger.events.credit(
                     db,
                     output["address"],
                     dividend_asset,
@@ -292,7 +292,7 @@ def parse(db, tx, message):
     }
 
     if "integer overflow" not in status:
-        ledger.ledger.insert_record(db, "dividends", bindings, "ASSET_DIVIDEND")
+        ledger.events.insert_record(db, "dividends", bindings, "ASSET_DIVIDEND")
 
     logger.info(
         "Dividend of %(quantity_per_unit)s %(dividend_asset)s per unit of %(asset)s (%(tx_hash)s) [%(status)s]",

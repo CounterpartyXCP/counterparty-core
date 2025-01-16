@@ -482,7 +482,7 @@ def get_inputs_with_balance(db, decoded_tx):
     # we check that each vin does not contain assets..
     for vin in decoded_tx["vin"]:
         utxo = vin["hash"] + ":" + str(vin["n"])
-        if ledger.ledger.utxo_has_balance(db, utxo):
+        if ledger.balances.utxo_has_balance(db, utxo):
             sources.append(utxo)
     return sources
 
@@ -536,13 +536,13 @@ def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
         )
         if utxos_info[0] != "":
             # always remove from cache inputs with balance
-            ledger.ledger.UTXOBalancesCache(db).remove_balance(utxos_info[0])
+            ledger.caches.UTXOBalancesCache(db).remove_balance(utxos_info[0])
             # add to cache the destination if it's not a detach
             if utxos_info[1] != "" and transaction_type != "detach":
-                ledger.ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
+                ledger.caches.UTXOBalancesCache(db).add_balance(utxos_info[1])
         elif utxos_info[1] != "" and transaction_type == "attach":
             # add to cache the destination if it's an attach
-            ledger.ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
+            ledger.caches.UTXOBalancesCache(db).add_balance(utxos_info[1])
 
 
 def get_tx_info(db, decoded_tx, block_index, composing=False):

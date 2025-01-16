@@ -652,7 +652,7 @@ class APIServer(threading.Thread):
             if not isinstance(block_index, int):
                 raise exceptions.APIError("block_index must be an integer.")
             with LedgerDBConnectionPool().connection() as db:
-                messages = ledger.ledger.get_messages(db, block_index=block_index)
+                messages = ledger.events.get_messages(db, block_index=block_index)
             return messages
 
         @dispatcher.add_method
@@ -669,7 +669,7 @@ class APIServer(threading.Thread):
                 if not isinstance(idx, int):
                     raise exceptions.APIError("All items in message_indexes are not integers")
             with LedgerDBConnectionPool().connection() as db:
-                messages = ledger.ledger.get_messages(db, message_index_in=message_indexes)
+                messages = ledger.events.get_messages(db, message_index_in=message_indexes)
             return messages
 
         @dispatcher.add_method
@@ -806,7 +806,7 @@ class APIServer(threading.Thread):
                 blocks = cursor.fetchall()  # noqa: F811
 
                 messages = collections.deque(
-                    ledger.ledger.get_messages(db, block_index_in=block_indexes)
+                    ledger.events.get_messages(db, block_index_in=block_indexes)
                 )
 
                 # Discard any messages less than min_message_index
@@ -838,7 +838,7 @@ class APIServer(threading.Thread):
                 last_block = ledger.blocks.get_last_block(db)
 
                 try:
-                    last_message = ledger.ledger.last_message(db)
+                    last_message = ledger.events.last_message(db)
                 except:  # noqa: E722
                     last_message = None
 

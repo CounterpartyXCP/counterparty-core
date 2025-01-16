@@ -81,7 +81,7 @@ def validate(
         problems.append(f"invalid status {status}")
 
     cursor = db.cursor()
-    available = ledger.ledger.get_balance(db, source, asset, return_list=True)
+    available = ledger.balances.get_balance(db, source, asset, return_list=True)
 
     if len(available) == 0:
         problems.append(f"address doesn't have the asset {asset}")
@@ -180,7 +180,7 @@ def validate(
                         and dispensers_from_same_origin_count > 0
                     ):
                         # It means that the same origin has not opened other dispensers in this address
-                        existing_balances = ledger.ledger.get_balances_count(db, query_address)
+                        existing_balances = ledger.balances.get_balances_count(db, query_address)
 
                         if existing_balances[0]["cnt"] > 0:
                             problems.append(
@@ -435,12 +435,12 @@ def parse(db, tx, message):
                         try:
                             if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
                                 is_empty_address = True
-                                address_assets = ledger.ledger.get_address_assets(
+                                address_assets = ledger.balances.get_address_assets(
                                     db, action_address
                                 )
                                 if len(address_assets) > 0:
                                     for asset_name in address_assets:
-                                        asset_balance = ledger.ledger.get_balance(
+                                        asset_balance = ledger.balances.get_balance(
                                             db, action_address, asset_name["asset"]
                                         )
                                         if asset_balance > 0:
@@ -448,7 +448,7 @@ def parse(db, tx, message):
                                             break
 
                                 if is_empty_address:
-                                    ledger.ledger.debit(
+                                    ledger.events.debit(
                                         db,
                                         tx["source"],
                                         asset,
@@ -457,7 +457,7 @@ def parse(db, tx, message):
                                         action="open dispenser empty addr",
                                         event=tx["tx_hash"],
                                     )
-                                    ledger.ledger.credit(
+                                    ledger.events.credit(
                                         db,
                                         action_address,
                                         asset,
@@ -466,7 +466,7 @@ def parse(db, tx, message):
                                         action="open dispenser empty addr",
                                         event=tx["tx_hash"],
                                     )
-                                    ledger.ledger.debit(
+                                    ledger.events.debit(
                                         db,
                                         action_address,
                                         asset,
@@ -478,7 +478,7 @@ def parse(db, tx, message):
                                 else:
                                     status = "invalid: address not empty"
                             else:
-                                ledger.ledger.debit(
+                                ledger.events.debit(
                                     db,
                                     tx["source"],
                                     asset,
@@ -510,7 +510,7 @@ def parse(db, tx, message):
                         if protocol.enabled("dispenser_origin_permission_extended"):
                             bindings["origin"] = tx["source"]
 
-                        ledger.ledger.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
+                        ledger.events.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
                         # Add the address to the dispensable cache
                         if not CurrentState().parsing_mempool():
                             DispensableCache(db).new_dispensable(action_address)
@@ -551,7 +551,7 @@ def parse(db, tx, message):
                         if status == "valid":
                             # Refill the dispenser by the given amount
                             try:
-                                ledger.ledger.debit(
+                                ledger.events.debit(
                                     db,
                                     tx["source"],
                                     asset,
@@ -596,7 +596,7 @@ def parse(db, tx, message):
                                     "dispense_quantity": escrow_quantity,
                                     "dispenser_tx_hash": dispenser_tx_hash,
                                 }
-                                ledger.ledger.insert_record(
+                                ledger.events.insert_record(
                                     db, "dispenser_refills", bindings_refill, "REFILL_DISPENSER"
                                 )
 
@@ -635,7 +635,7 @@ def parse(db, tx, message):
                     )
                 if len(existing) == 1:
                     if close_delay == 0:
-                        ledger.ledger.credit(
+                        ledger.events.credit(
                             db,
                             tx["source"],
                             asset,
@@ -745,7 +745,7 @@ def close_pending(db, block_index):
 
         for dispenser in pending_dispensers:
             # use tx_index=0 for block actions
-            ledger.ledger.credit(
+            ledger.events.credit(
                 db,
                 dispenser["last_status_tx_source"],
                 dispenser["asset"],

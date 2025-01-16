@@ -50,7 +50,7 @@ def cancel_bet(db, bet, status, block_index, tx_index):
     logger.info("Bet %(bet_hash)s canceled [%(status)s]", log_data)
 
     # Refund wager.
-    ledger.ledger.credit(
+    ledger.events.credit(
         db,
         bet["source"],
         config.XCP,
@@ -64,7 +64,7 @@ def cancel_bet(db, bet, status, block_index, tx_index):
 def cancel_bet_match(db, bet_match, status, block_index, tx_index):
     # Does not re‐open, re‐fill, etc. constituent bets.
     # Recredit tx0 address.
-    ledger.ledger.credit(
+    ledger.events.credit(
         db,
         bet_match["tx0_address"],
         config.XCP,
@@ -75,7 +75,7 @@ def cancel_bet_match(db, bet_match, status, block_index, tx_index):
     )
 
     # Recredit tx1 address.
-    ledger.ledger.credit(
+    ledger.events.credit(
         db,
         bet_match["tx1_address"],
         config.XCP,
@@ -213,7 +213,7 @@ def compose(
     expiration: int,
     skip_validation: bool = False,
 ):
-    if ledger.ledger.get_balance(db, source, config.XCP) < wager_quantity:
+    if ledger.balances.get_balance(db, source, config.XCP) < wager_quantity:
         raise exceptions.ComposeError("insufficient funds")
 
     problems, leverage = validate(
@@ -323,7 +323,7 @@ def parse(db, tx, message):
         fee_fraction = get_fee_fraction(db, feed_address)
 
         # Overbet
-        balance = ledger.ledger.get_balance(db, tx["source"], config.XCP)
+        balance = ledger.balances.get_balance(db, tx["source"], config.XCP)
         if balance == 0:
             wager_quantity = 0
         else:
@@ -349,7 +349,7 @@ def parse(db, tx, message):
 
     # Debit quantity wagered. (Escrow.)
     if status == "open":
-        ledger.ledger.debit(
+        ledger.events.debit(
             db,
             tx["source"],
             config.XCP,
@@ -380,7 +380,7 @@ def parse(db, tx, message):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.ledger.insert_record(db, "bets", bindings, "OPEN_BET")
+        ledger.events.insert_record(db, "bets", bindings, "OPEN_BET")
 
     logger.info("Open Bet (%(tx_hash)s) [%(status)s]", bindings)
 
@@ -501,7 +501,7 @@ def match(db, tx):
             if tx0_wager_remaining <= 0 or tx0_counterwager_remaining <= 0:
                 # Fill order, and recredit give_remaining.
                 tx0_status = "filled"
-                ledger.ledger.credit(
+                ledger.events.credit(
                     db,
                     tx0["source"],
                     config.XCP,
@@ -528,7 +528,7 @@ def match(db, tx):
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = "filled"
-                    ledger.ledger.credit(
+                    ledger.events.credit(
                         db,
                         tx1["source"],
                         config.XCP,
@@ -584,7 +584,7 @@ def match(db, tx):
                 "fee_fraction_int": tx1["fee_fraction_int"],
                 "status": "pending",
             }
-            ledger.ledger.insert_record(db, "bet_matches", bindings, "BET_MATCH")
+            ledger.events.insert_record(db, "bet_matches", bindings, "BET_MATCH")
             logger.info(
                 "Bet match %(tx0_index)s for %(forward_quantity)s XCP against %(backward_quantity)s XCP on %(feed_address)s",
                 bindings,
@@ -608,7 +608,7 @@ def expire(db, block_index, block_time):
             "source": bet["source"],
             "block_index": block_index,
         }
-        ledger.ledger.insert_record(db, "bet_expirations", bindings, "BET_EXPIRATION")
+        ledger.events.insert_record(db, "bet_expirations", bindings, "BET_EXPIRATION")
         logger.info("Bet Expiration %(bet_hash)s", bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
@@ -623,7 +623,7 @@ def expire(db, block_index, block_time):
             "tx1_address": bet_match["tx1_address"],
             "block_index": block_index,
         }
-        ledger.ledger.insert_record(db, "bet_match_expirations", bindings, "BET_MATCH_EXPIRATION")
+        ledger.events.insert_record(db, "bet_match_expirations", bindings, "BET_MATCH_EXPIRATION")
         logger.info("Bet Match Expiration %(bet_match_id)s", bindings)
 
     cursor.close()

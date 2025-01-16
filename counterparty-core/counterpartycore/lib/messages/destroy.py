@@ -79,7 +79,7 @@ def validate(db, source, destination, asset, quantity):
     if quantity < 0:
         raise ValidateError("quantity negative")  # noqa: F405
 
-    if ledger.ledger.get_balance(db, source, asset) < quantity:
+    if ledger.balances.get_balance(db, source, asset) < quantity:
         raise BalanceError("balance insufficient")  # noqa: F405
 
 
@@ -102,7 +102,7 @@ def parse(db, tx, message):
     try:
         asset, quantity, tag = unpack(db, message)
         validate(db, tx["source"], tx["destination"], asset, quantity)
-        ledger.ledger.debit(
+        ledger.events.debit(
             db, tx["source"], asset, quantity, tx["tx_index"], "destroy", tx["tx_hash"]
         )
 
@@ -123,7 +123,7 @@ def parse(db, tx, message):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+        ledger.events.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
     logger.info(
         "Destroy of %(quantity)s %(asset)s by %(source)s (%(tx_hash)s) [%(status)s]", bindings

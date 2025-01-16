@@ -505,7 +505,7 @@ def filter_utxos_with_balances(db, source, unspent_list, construct_params):
         if str_input == source:
             new_unspent_list.append(utxo)
             continue
-        utxo_balances = ledger.ledger.get_utxo_balances(db, str_input)
+        utxo_balances = ledger.balances.get_utxo_balances(db, str_input)
         with_balances = len(utxo_balances) > 0 and any(
             balance["quantity"] > 0 for balance in utxo_balances
         )

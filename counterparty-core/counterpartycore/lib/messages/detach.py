@@ -75,12 +75,12 @@ def detach_assets(db, tx, source, destination=None):
             "status": status,
             "send_type": "detach",
         }
-        ledger.ledger.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
+        ledger.events.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
         # stop here to avoid further processing
         return
 
     # we detach all the assets from the source UTXO
-    balances = ledger.ledger.get_utxo_balances(db, source)
+    balances = ledger.balances.get_utxo_balances(db, source)
     for balance in balances:
         if balance["quantity"] == 0:
             continue
@@ -99,7 +99,7 @@ def detach_assets(db, tx, source, destination=None):
         if detach_destination is None:
             detach_destination = balance["utxo_address"]
 
-        source_address = ledger.ledger.debit(
+        source_address = ledger.events.debit(
             db,
             source,
             balance["asset"],
@@ -108,7 +108,7 @@ def detach_assets(db, tx, source, destination=None):
             action=action,
             event=tx["tx_hash"],
         )
-        ledger.ledger.credit(
+        ledger.events.credit(
             db,
             detach_destination,
             balance["asset"],
@@ -131,7 +131,7 @@ def detach_assets(db, tx, source, destination=None):
             "fee_paid": 0,
             "send_type": "detach",
         }
-        ledger.ledger.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
+        ledger.events.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
 
     logger.info(
         "Detach assets from %(source)s (%(tx_hash)s) [%(status)s]",

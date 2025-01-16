@@ -130,7 +130,7 @@ def parse(db, tx):
                 if protocol.enabled("zero_quantity_value_adjustment_1") and actually_given == 0:
                     continue
 
-                ledger.ledger.credit(
+                ledger.events.credit(
                     db,
                     next_out["source"],
                     dispenser["asset"],
@@ -162,7 +162,7 @@ def parse(db, tx):
                             dispenser["closing_reason"] = "no_more_to_give"
 
                         # return the remaining to the owner
-                        ledger.ledger.credit(
+                        ledger.events.credit(
                             db,
                             dispenser["source"],
                             dispenser["asset"],
@@ -206,7 +206,7 @@ def parse(db, tx):
                     "dispenser_tx_hash": dispenser["tx_hash"],
                     "btc_amount": next_out["btc_amount"],
                 }
-                ledger.ledger.insert_record(db, "dispenses", bindings, "DISPENSE")
+                ledger.events.insert_record(db, "dispenses", bindings, "DISPENSE")
                 dispense_index += 1
 
                 logger.info(
