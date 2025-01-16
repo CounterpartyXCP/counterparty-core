@@ -9,6 +9,7 @@ SCENARIO = [
             "escrow_quantity": 5000,
             "mainchainrate": 1,  # 1 BTC for 1 XCP
             "status": 0,
+            "exact_fee": 0,
         },
         "set_variables": {
             "DISPENSER_XCP_TX_HASH": "$TX_HASH",
@@ -25,6 +26,7 @@ SCENARIO = [
             "destination": "$ADDRESS_8",
             "quantity": 3000,
             "asset": "BTC",
+            "exact_fee": 0,
         },
         "controls": [
             {
