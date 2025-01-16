@@ -6,8 +6,9 @@ from io import BytesIO
 from arc4 import ARC4
 from bitcoinutils.keys import PublicKey
 
-from counterpartycore.lib import backend, config, exceptions, ledger
+from counterpartycore.lib import backend, config, exceptions
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import gettxinfolegacy, messagetype, p2sh, protocol
@@ -482,7 +483,7 @@ def get_inputs_with_balance(db, decoded_tx):
     # we check that each vin does not contain assets..
     for vin in decoded_tx["vin"]:
         utxo = vin["hash"] + ":" + str(vin["n"])
-        if ledger.ledger.utxo_has_balance(db, utxo):
+        if ledger.utxo_has_balance(db, utxo):
             sources.append(utxo)
     return sources
 
@@ -536,13 +537,13 @@ def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
         )
         if utxos_info[0] != "":
             # always remove from cache inputs with balance
-            ledger.ledger.UTXOBalancesCache(db).remove_balance(utxos_info[0])
+            ledger.UTXOBalancesCache(db).remove_balance(utxos_info[0])
             # add to cache the destination if it's not a detach
             if utxos_info[1] != "" and transaction_type != "detach":
-                ledger.ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
+                ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
         elif utxos_info[1] != "" and transaction_type == "attach":
             # add to cache the destination if it's an attach
-            ledger.ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
+            ledger.UTXOBalancesCache(db).add_balance(utxos_info[1])
 
 
 def get_tx_info(db, decoded_tx, block_index, composing=False):

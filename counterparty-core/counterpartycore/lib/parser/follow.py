@@ -13,8 +13,8 @@ from counterpartycore.lib import (
     backend,
     config,
     exceptions,
-    ledger,
 )
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.monitors.telemetry.oneshot import TelemetryOneShot
@@ -127,9 +127,9 @@ class BlockchainWatcher:
             block_index=CurrentState().current_block_index() + 1,
         )
         # check if already parsed by block.catch_up()
-        existing_block = ledger.ledger.get_block_by_hash(self.db, decoded_block["block_hash"])
+        existing_block = ledger.get_block_by_hash(self.db, decoded_block["block_hash"])
         if existing_block is None:
-            previous_block = ledger.ledger.get_block_by_hash(self.db, decoded_block["hash_prev"])
+            previous_block = ledger.get_block_by_hash(self.db, decoded_block["hash_prev"])
             if previous_block is None:
                 # catch up with rpc if previous block is missing
                 logger.debug("Previous block is missing. Catching up...")
@@ -244,7 +244,7 @@ class BlockchainWatcher:
             raise e
 
     def is_late(self):
-        last_parsed_block = ledger.ledger.get_last_block(self.db)
+        last_parsed_block = ledger.get_last_block(self.db)
         if last_parsed_block:
             last_parsed_block_index = last_parsed_block["block_index"]
             bitcoind_block_index = backend.bitcoind.getblockcount()

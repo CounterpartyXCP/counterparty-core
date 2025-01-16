@@ -1,6 +1,7 @@
 import logging
 
-from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.messages.detach import detach_assets
 from counterpartycore.lib.parser import protocol, utxosinfo
 from counterpartycore.lib.utils import address
@@ -13,7 +14,7 @@ def compose(db, source, destination, utxo_value=None, skip_validation=False):
         if not utxosinfo.is_utxo_format(source):
             raise exceptions.ComposeError("Invalid source utxo format")
 
-        balances = ledger.ledger.get_utxo_balances(db, source)
+        balances = ledger.get_utxo_balances(db, source)
         if not balances:
             raise exceptions.ComposeError("No assets attached to the source utxo")
 
@@ -34,13 +35,13 @@ def compose(db, source, destination, utxo_value=None, skip_validation=False):
 
 def move_balances(db, tx, source, destination):
     action = "utxo move"
-    msg_index = ledger.ledger.get_send_msg_index(db, tx["tx_hash"])
-    balances = ledger.ledger.get_utxo_balances(db, source)
+    msg_index = ledger.get_send_msg_index(db, tx["tx_hash"])
+    balances = ledger.get_utxo_balances(db, source)
     for balance in balances:
         if balance["quantity"] == 0:
             continue
         # debit asset from source
-        source_address = ledger.ledger.debit(
+        source_address = ledger.debit(
             db,
             source,
             balance["asset"],
@@ -50,7 +51,7 @@ def move_balances(db, tx, source, destination):
             event=tx["tx_hash"],
         )
         # credit asset to destination
-        destination_address = ledger.ledger.credit(
+        destination_address = ledger.credit(
             db,
             destination,
             balance["asset"],
@@ -75,7 +76,7 @@ def move_balances(db, tx, source, destination):
             "send_type": "move",
         }
 
-        ledger.ledger.insert_record(db, "sends", bindings, "UTXO_MOVE")
+        ledger.insert_record(db, "sends", bindings, "UTXO_MOVE")
         msg_index += 1
 
         # log the move

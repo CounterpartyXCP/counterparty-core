@@ -17,8 +17,8 @@ from counterpartycore.lib import (
     backend,
     config,
     exceptions,
-    ledger,
 )
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.parser import deserialize, utxosinfo
 from counterpartycore.lib.utils import helpers, multisig, opcodes, script
 
@@ -505,7 +505,7 @@ def filter_utxos_with_balances(db, source, unspent_list, construct_params):
         if str_input == source:
             new_unspent_list.append(utxo)
             continue
-        utxo_balances = ledger.ledger.get_utxo_balances(db, str_input)
+        utxo_balances = ledger.get_utxo_balances(db, str_input)
         with_balances = len(utxo_balances) > 0 and any(
             balance["quantity"] > 0 for balance in utxo_balances
         )

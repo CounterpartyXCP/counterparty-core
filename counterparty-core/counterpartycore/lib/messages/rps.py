@@ -21,7 +21,8 @@ import json
 import logging
 import os
 
-from counterpartycore.lib import config, ledger
+from counterpartycore.lib import config
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -39,7 +40,7 @@ def replay_events(db, key):
         return
     events = RPS_EVENTS.get(key)
     if events:
-        ledger.ledger.replay_events(db, events)
+        ledger.replay_events(db, events)
 
 
 def parse(db, tx, message):

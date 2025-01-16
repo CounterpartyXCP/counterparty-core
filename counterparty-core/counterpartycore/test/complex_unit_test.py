@@ -4,8 +4,8 @@ import tempfile
 import pytest
 from apsw import ConstraintError
 
-from counterpartycore.lib import ledger
 from counterpartycore.lib.api import apiv1
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.parser import blocks
 
 # this is require near the top to do setup of the test suite
@@ -36,8 +36,8 @@ def test_alice_bob(server_db, cp_server, apiserver):
     assert utxos[0]["confirmations"] == 74
 
     # balance before send
-    alice_balance = ledger.ledger.get_balance(server_db, alice, "XCP")
-    bob_balance = ledger.ledger.get_balance(server_db, bob, "XCP")
+    alice_balance = ledger.get_balance(server_db, alice, "XCP")
+    bob_balance = ledger.get_balance(server_db, bob, "XCP")
     assert alice_balance == 91674999900
     assert bob_balance == 0
 
@@ -63,8 +63,8 @@ def test_alice_bob(server_db, cp_server, apiserver):
 
     # time.sleep(10)
     # balances after send
-    alice_balance2 = ledger.ledger.get_balance(server_db, alice, "XCP")
-    bob_balance2 = ledger.ledger.get_balance(server_db, bob, "XCP")
+    alice_balance2 = ledger.get_balance(server_db, alice, "XCP")
+    bob_balance2 = ledger.get_balance(server_db, bob, "XCP")
     assert alice_balance2 == alice_balance - v
     assert bob_balance2 == bob_balance + v
 
@@ -95,8 +95,8 @@ def test_alice_bob(server_db, cp_server, apiserver):
     assert utxos[0]["confirmations"] == 1
 
     # balances before send
-    alice_balance = ledger.ledger.get_balance(server_db, alice, "XCP")
-    bob_balance = ledger.ledger.get_balance(server_db, bob, "XCP")
+    alice_balance = ledger.get_balance(server_db, alice, "XCP")
+    bob_balance = ledger.get_balance(server_db, bob, "XCP")
     assert alice_balance == alice_balance2
     assert bob_balance == bob_balance2
 
@@ -121,8 +121,8 @@ def test_alice_bob(server_db, cp_server, apiserver):
     tx2hash, tx2 = util_test.insert_raw_transaction(send2hex, server_db)
 
     # balances after send
-    alice_balance2 = ledger.ledger.get_balance(server_db, alice, "XCP")
-    bob_balance2 = ledger.ledger.get_balance(server_db, bob, "XCP")
+    alice_balance2 = ledger.get_balance(server_db, alice, "XCP")
+    bob_balance2 = ledger.get_balance(server_db, bob, "XCP")
     assert alice_balance2 == alice_balance - v
     assert bob_balance2 == bob_balance + v
 
@@ -137,8 +137,8 @@ def test_alice_bob(server_db, cp_server, apiserver):
     assert utxos[0]["confirmations"] == 1
 
     # balances before send
-    alice_balance = ledger.ledger.get_balance(server_db, alice, "XCP")
-    bob_balance = ledger.ledger.get_balance(server_db, bob, "XCP")
+    alice_balance = ledger.get_balance(server_db, alice, "XCP")
+    bob_balance = ledger.get_balance(server_db, bob, "XCP")
     assert alice_balance == alice_balance2
     assert bob_balance == bob_balance2
 
@@ -163,8 +163,8 @@ def test_alice_bob(server_db, cp_server, apiserver):
     tx3 = util_test.insert_unconfirmed_raw_transaction(send3hex, server_db)
 
     # balances after send, unaffected
-    alice_balance2 = ledger.ledger.get_balance(server_db, alice, "XCP")
-    bob_balance2 = ledger.ledger.get_balance(server_db, bob, "XCP")
+    alice_balance2 = ledger.get_balance(server_db, alice, "XCP")
+    bob_balance2 = ledger.get_balance(server_db, bob, "XCP")
     assert alice_balance2 == alice_balance
     assert bob_balance2 == bob_balance
 
@@ -197,8 +197,8 @@ def test_alice_bob(server_db, cp_server, apiserver):
     tx3bhash, tx3b = util_test.insert_raw_transaction(send3hex, server_db)
 
     # balances after send
-    alice_balance2 = ledger.ledger.get_balance(server_db, alice, "XCP")
-    bob_balance2 = ledger.ledger.get_balance(server_db, bob, "XCP")
+    alice_balance2 = ledger.get_balance(server_db, alice, "XCP")
+    bob_balance2 = ledger.get_balance(server_db, bob, "XCP")
     assert alice_balance2 == alice_balance - v
     assert bob_balance2 == bob_balance + v
 

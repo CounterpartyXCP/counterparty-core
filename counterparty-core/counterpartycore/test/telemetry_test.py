@@ -40,7 +40,7 @@ class TestTelemetryCollectorBase:
     @patch("counterpartycore.lib.monitors.telemetry.collectors.base.ledger")
     def test_collect(self, mock_ledger, mock_config):
         mock_db = MagicMock()
-        mock_ledger.ledger.last_message.return_value = {"block_index": 12345}
+        mock_ledger.last_message.return_value = {"block_index": 12345}
         mock_config.__version__ = "1.2.3"
         mock_config.TESTNET = False
         mock_config.TESTNET4 = False
@@ -52,7 +52,7 @@ class TestTelemetryCollectorBase:
 
         print("\n\n\n", data)
 
-        mock_ledger.ledger.last_message.assert_called_with(mock_db)
+        mock_ledger.last_message.assert_called_with(mock_db)
         mock_db.cursor().execute.assert_called_with(
             "SELECT * FROM blocks where block_index = ?", [12345]
         )
@@ -68,7 +68,7 @@ class TestTelemetryCollectorBase:
     def test_collect_with_docker(self, mock_exists, mock_ledger):
         mock_db = MagicMock()
         mock_exists.return_value = True
-        mock_ledger.ledger.last_message.return_value = {"block_index": 12345}
+        mock_ledger.last_message.return_value = {"block_index": 12345}
         collector = TelemetryCollectorBase(mock_db)
         data = collector.collect()
         assert data["dockerized"] == True  # noqa: E712

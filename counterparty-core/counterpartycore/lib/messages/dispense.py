@@ -2,7 +2,8 @@ import logging
 import struct
 from math import floor
 
-from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser as dispenser_module
 from counterpartycore.lib.parser import protocol
@@ -15,10 +16,8 @@ def get_must_give(db, dispenser, btc_amount, block_index=None):
     if (dispenser["oracle_address"] is not None) and protocol.enabled(  # noqa: E711
         "oracle_dispensers", block_index
     ):
-        last_price, _last_fee, _last_fiat_label, _last_updated = (
-            ledger.ledger.get_oracle_last_price(
-                db, dispenser["oracle_address"], block_index or CurrentState().current_block_index()
-            )
+        last_price, _last_fee, _last_fiat_label, _last_updated = ledger.get_oracle_last_price(
+            db, dispenser["oracle_address"], block_index or CurrentState().current_block_index()
         )
         if last_price is None:
             raise exceptions.NoPriceError(
@@ -40,7 +39,7 @@ def validate_compose(db, source, destination, quantity):
     if source == destination:
         raise exceptions.ComposeError("source and destination must be different")
 
-    dispensers = ledger.ledger.get_dispensers(db, address=destination)
+    dispensers = ledger.get_dispensers(db, address=destination)
     if len(dispensers) == 0:
         problems.append("address doesn't have any open dispenser")
         return problems
@@ -94,7 +93,7 @@ def parse(db, tx):
 
     outs = []
     if protocol.enabled("multiple_dispenses"):
-        outs = ledger.ledger.get_vouts(db, tx["tx_hash"])
+        outs = ledger.get_vouts(db, tx["tx_hash"])
     else:
         outs = [tx]
 
@@ -108,7 +107,7 @@ def parse(db, tx):
     for next_out in outs:
         dispensers = []
         if next_out["destination"] is not None:
-            dispensers = ledger.ledger.get_dispensers(
+            dispensers = ledger.get_dispensers(
                 db, address=next_out["destination"], status_in=[0, 11], order_by="asset"
             )
 
@@ -130,7 +129,7 @@ def parse(db, tx):
                 if protocol.enabled("zero_quantity_value_adjustment_1") and actually_given == 0:
                     continue
 
-                ledger.ledger.credit(
+                ledger.credit(
                     db,
                     next_out["source"],
                     dispenser["asset"],
@@ -162,7 +161,7 @@ def parse(db, tx):
                             dispenser["closing_reason"] = "no_more_to_give"
 
                         # return the remaining to the owner
-                        ledger.ledger.credit(
+                        ledger.credit(
                             db,
                             dispenser["source"],
                             dispenser["asset"],
@@ -183,7 +182,7 @@ def parse(db, tx):
                     "status": dispenser["status"],
                     "dispense_count": dispenser["dispense_count"] + 1,
                 }
-                ledger.ledger.update_dispenser(
+                ledger.update_dispenser(
                     db,
                     dispenser["rowid"],
                     set_data,
@@ -206,7 +205,7 @@ def parse(db, tx):
                     "dispenser_tx_hash": dispenser["tx_hash"],
                     "btc_amount": next_out["btc_amount"],
                 }
-                ledger.ledger.insert_record(db, "dispenses", bindings, "DISPENSE")
+                ledger.insert_record(db, "dispenses", bindings, "DISPENSE")
                 dispense_index += 1
 
                 logger.info(

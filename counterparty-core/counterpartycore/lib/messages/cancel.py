@@ -6,7 +6,8 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.parser import messagetype
 
 from . import bet, order
@@ -22,8 +23,8 @@ def validate(db, source, offer_hash):
     problems = []
 
     # TODO: make query only if necessary
-    orders = ledger.ledger.get_order(db, order_hash=offer_hash)
-    bets = ledger.ledger.get_bet(db, bet_hash=offer_hash)
+    orders = ledger.get_order(db, order_hash=offer_hash)
+    bets = ledger.get_bet(db, bet_hash=offer_hash)
 
     offer_type = None
     if orders:
@@ -108,7 +109,7 @@ def parse(db, tx, message):
     }
     if "integer overflow" not in status:
         event_name = f"CANCEL_{offer_type.upper()}" if offer_type else "INVALID_CANCEL"
-        ledger.ledger.insert_record(db, "cancels", bindings, event_name)
+        ledger.insert_record(db, "cancels", bindings, event_name)
 
     log_data = bindings | {
         "offer_type": offer_type.capitalize() if offer_type else "Invalid",

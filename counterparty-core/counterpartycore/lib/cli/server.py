@@ -19,11 +19,11 @@ from counterpartycore.lib import (
     backend,
     config,
     exceptions,
-    ledger,
 )
 from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1, dbbuilder
 from counterpartycore.lib.cli import bootstrap, log
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, check, follow
 from counterpartycore.lib.utils import database, helpers
@@ -52,7 +52,7 @@ def initialise(*args, **kwargs):
     )
     initialise_config(*args, **kwargs)
     db = database.initialise_db()
-    CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
+    CurrentState().set_current_block_index(ledger.last_db_index(db))
     return db
 
 
@@ -673,7 +673,7 @@ def start_all(args):
         # Initialise database
         database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
         db = database.initialise_db()
-        CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
+        CurrentState().set_current_block_index(ledger.last_db_index(db))
         blocks.check_database_version(db)
         database.optimize(db)
 
@@ -771,9 +771,9 @@ def start_all(args):
 
 def reparse(block_index):
     ledger_db = database.initialise_db()
-    CurrentState().set_current_block_index(ledger.ledger.last_db_index(ledger_db))
+    CurrentState().set_current_block_index(ledger.last_db_index(ledger_db))
 
-    last_block = ledger.ledger.get_last_block(ledger_db)
+    last_block = ledger.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:
         print(colored("Block index is higher than current block index. No need to reparse.", "red"))
         ledger_db.close()
@@ -792,9 +792,9 @@ def reparse(block_index):
 
 def rollback(block_index=None):
     ledger_db = database.initialise_db()
-    CurrentState().set_current_block_index(ledger.ledger.last_db_index(ledger_db))
+    CurrentState().set_current_block_index(ledger.last_db_index(ledger_db))
 
-    last_block = ledger.ledger.get_last_block(ledger_db)
+    last_block = ledger.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:
         print(
             colored("Block index is higher than current block index. No need to rollback.", "red")
@@ -822,7 +822,7 @@ def vacuum():
 
 def check_database():
     db = database.initialise_db()
-    CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
+    CurrentState().set_current_block_index(ledger.last_db_index(db))
 
     start_all_time = time.time()
 

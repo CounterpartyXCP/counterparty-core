@@ -4,7 +4,8 @@
 import logging
 import time
 
-from counterpartycore.lib import config, ledger
+from counterpartycore.lib import config
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.utils import database
 from yoyo import step
 
@@ -110,7 +111,7 @@ def apply(db):
             "asset": "XCP",
             "divisible": True,
             "locked": True,
-            "supply": ledger.ledger.xcp_supply(ledger_db),
+            "supply": ledger.xcp_supply(ledger_db),
             "description": "The Counterparty protocol native currency",
             "first_issuance_block_index": 278319,
             "last_issuance_block_index": 283810,

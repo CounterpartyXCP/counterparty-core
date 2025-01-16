@@ -2,7 +2,8 @@ import time
 
 from flask import request
 
-from counterpartycore.lib import backend, ledger
+from counterpartycore.lib import backend
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.utils import helpers
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool
 
@@ -37,9 +38,7 @@ class CurrentState(metaclass=helpers.SingletonMeta):
         self.state["CURRENT_BLOCK_INDEX"] = block_index
         if block_index:
             with LedgerDBConnectionPool().connection() as ledger_db:
-                last_block = ledger.ledger.get_block(
-                    ledger_db, CurrentState().current_block_index()
-                )
+                last_block = ledger.get_block(ledger_db, CurrentState().current_block_index())
             if last_block:
                 self.state["CURRENT_BLOCK_TIME"] = last_block["block_time"]
             else:

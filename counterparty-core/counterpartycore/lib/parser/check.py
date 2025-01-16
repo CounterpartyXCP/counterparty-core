@@ -7,7 +7,8 @@ import warnings
 
 import requests
 
-from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database
 
@@ -978,8 +979,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
 def asset_conservation(db, stop_event=None):
     logger.debug("Checking for conservation of assets.")
     with db:
-        supplies = ledger.ledger.supplies(db)
-        held = ledger.ledger.held(db)
+        supplies = ledger.supplies(db)
+        held = ledger.held(db)
         for asset in supplies.keys():
             if stop_event is not None and stop_event.is_set():
                 logger.debug("Stop event received. Exiting asset conservation check...")
@@ -989,15 +990,15 @@ def asset_conservation(db, stop_event=None):
             if asset_issued != asset_held:
                 raise exceptions.SanityError(
                     "{} {} issued ≠ {} {} held".format(
-                        ledger.ledger.value_out(db, asset_issued, asset),
+                        ledger.value_out(db, asset_issued, asset),
                         asset,
-                        ledger.ledger.value_out(db, asset_held, asset),
+                        ledger.value_out(db, asset_held, asset),
                         asset,
                     )
                 )
             logger.trace(
                 "{} has been conserved ({} {} both issued and held)".format(
-                    asset, ledger.ledger.value_out(db, asset_issued, asset), asset
+                    asset, ledger.value_out(db, asset_issued, asset), asset
                 )
             )
     logger.debug("All assets have been conserved.")
