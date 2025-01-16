@@ -521,7 +521,7 @@ def run_apiserver(args, server_ready_value, stop_event, parent_pid):
         sentry.init()
         server.initialise_log_and_config(argparse.Namespace(**args), api=True)
 
-        dbbuilder.apply_outstanding_migration()
+        database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
 
         state_db = database.get_db_connection(
             config.STATE_DATABASE, read_only=False, check_wal=False

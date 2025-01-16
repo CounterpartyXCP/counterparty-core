@@ -7,10 +7,10 @@ import apsw.bestpractice
 import apsw.ext
 import psutil
 from counterpartycore.lib import config, exceptions
-
-# from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import helpers
 from termcolor import cprint
+from yoyo import get_backend, read_migrations
+from yoyo.exceptions import LockTimeout
 
 apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
 
@@ -162,8 +162,6 @@ def initialise_db():
     logger.info(f"Connecting to database... (SQLite {apsw.apswversion()})")
     db = get_connection(read_only=False)
 
-    # CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
-
     return db
 
 
@@ -216,19 +214,6 @@ def version(db):
     return version_major, version_minor
 
 
-def init_config_table(db):
-    cursor = db.cursor()
-
-    sql = """
-        CREATE TABLE IF NOT EXISTS config (
-            name TEXT PRIMARY KEY,
-            value TEXT
-        )
-    """
-    cursor.execute(sql)
-    cursor.execute("CREATE INDEX IF NOT EXISTS config_config_name_idx ON config (name)")
-
-
 def set_config_value(db, name, value):
     cursor = db.cursor()
     cursor.execute("INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)", (name, value))
@@ -271,73 +256,23 @@ def close(db):
     db.close()  # always close connection with write access last
 
 
-def field_is_pk(cursor, table, field):
-    cursor.execute(f"PRAGMA table_info({table})")
-    for row in cursor:
-        if row["name"] == field and row["pk"] == 1:
-            return True
-    return False
+def apply_outstanding_migration(db_file, migration_dir):
+    logger.info(f"Applying migrations to {db_file}...")
+    # Apply migrations
+    backend = get_backend(f"sqlite:///{db_file}")
+    migrations = read_migrations(migration_dir)
+    try:
+        # with backend.lock():
+        backend.apply_migrations(backend.to_apply(migrations))
+    except LockTimeout:
+        logger.debug("API Watcher - Migration lock timeout. Breaking lock and retrying...")
+        backend.break_lock()
+        backend.apply_migrations(backend.to_apply(migrations))
+    backend.connection.close()
 
 
-def has_fk_on(cursor, table, foreign_key):
-    cursor.execute(f"PRAGMA foreign_key_list ({table})")
-    for row in cursor:
-        if f"{row['table']}.{row['to']}" == foreign_key:
-            return True
-    return False
-
-
-def index_exists(cursor, table, index):
-    cursor.execute(f"PRAGMA index_list({table})")
-    for row in cursor:
-        if row["name"] == index:
-            return True
-    return False
-
-
-def create_indexes(cursor, table, indexes, unique=False):
-    for index in indexes:
-        field_names = [field.split(" ")[0] for field in index]
-        index_name = f"{table}_{'_'.join(field_names)}_idx"
-        fields = ", ".join(index)
-        unique_clause = "UNIQUE" if unique else ""
-        query = f"""
-            CREATE {unique_clause} INDEX IF NOT EXISTS {index_name} ON {table} ({fields})
-        """
-        cursor.execute(query)
-
-
-def drop_indexes(cursor, indexes):
-    for index_name in [indexes]:
-        cursor.execute(f"""DROP INDEX IF EXISTS {index_name}""")
-
-
-# called by contracts, no sql injection
-def copy_old_table(cursor, table_name, new_create_query):
-    cursor.execute(f"""ALTER TABLE {table_name} RENAME TO old_{table_name}""")
-    cursor.execute(new_create_query)
-    cursor.execute(f"""INSERT INTO {table_name} SELECT * FROM old_{table_name}""")  # nosec B608  # noqa: S608
-    cursor.execute(f"""DROP TABLE old_{table_name}""")
-
-
-def table_exists(cursor, table):
-    table_name = cursor.execute(
-        f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"  # nosec B608  # noqa: S608
-    ).fetchone()
-    return table_name is not None
-
-
-def lock_update(db, table):
-    cursor = db.cursor()
-    cursor.execute(
-        f"""CREATE TRIGGER IF NOT EXISTS block_update_{table}
-            BEFORE UPDATE ON {table} BEGIN
-                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-            END;
-        """
-    )
-
-
-def unlock_update(db, table):
-    cursor = db.cursor()
-    cursor.execute(f"DROP TRIGGER IF EXISTS block_update_{table}")
+def rollback_all_migrations(db_file, migration_dir):
+    logger.info(f"Rolling back all migrations from {db_file}...")
+    backend = get_backend(f"sqlite:///{db_file}")
+    migrations = read_migrations(migration_dir)
+    backend.rollback_migrations(backend.to_rollback(migrations))

@@ -6,7 +6,6 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import fairminter as fairminter_mod
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -15,40 +14,6 @@ ID = 91
 
 def D(value):
     return decimal.Decimal(str(value))
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    create_table_sql = """
-        CREATE TABLE IF NOT EXISTS fairmints (
-            tx_hash TEXT PRIMARY KEY,
-            tx_index INTEGER,
-            block_index INTEGER,
-            source TEXT,
-            fairminter_tx_hash TEXT,
-            asset TEXT,
-            earn_quantity INTEGER,
-            paid_quantity INTEGER,
-            commission INTEGER,
-            status TEXT
-        )
-    """
-
-    cursor.execute(create_table_sql)
-
-    database.create_indexes(
-        cursor,
-        "fairmints",
-        [
-            ["tx_hash"],
-            ["block_index"],
-            ["fairminter_tx_hash"],
-            ["asset"],
-            ["source"],
-            ["status"],
-        ],
-    )
 
 
 def validate(

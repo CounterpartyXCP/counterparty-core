@@ -8,7 +8,6 @@ import struct
 
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.parser import messagetype
-from counterpartycore.lib.utils import database
 
 from . import bet, order
 
@@ -17,38 +16,6 @@ logger = logging.getLogger(config.LOGGER_NAME)
 FORMAT = ">32s"
 LENGTH = 32
 ID = 70
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "source_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS cancels(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      offer_hash TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-    # Offer hash is not a foreign key. (And it cannot be, because of some invalid cancels.)
-
-    database.create_indexes(
-        cursor,
-        "cancels",
-        [
-            ["block_index"],
-            ["source"],
-        ],
-    )
 
 
 def validate(db, source, offer_hash):

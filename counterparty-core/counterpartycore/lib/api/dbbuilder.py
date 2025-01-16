@@ -4,17 +4,13 @@ import os
 import sys
 import time
 
-from yoyo import get_backend, read_migrations
-from yoyo.exceptions import LockTimeout
 from yoyo.migrations import topological_sort
 
 from counterpartycore.lib import config
 from counterpartycore.lib.cli import log
+from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "migrations")
 
 MIGRATIONS_AFTER_ROLLBACK = [
     "0004.create_and_populate_assets_info",
@@ -37,21 +33,6 @@ def filter_migrations(migrations, wanted_ids):
     return migrations.__class__(topological_sort(filtered_migrations), migrations.post_apply)
 
 
-def apply_outstanding_migration():
-    logger.info("Applying migrations...")
-    # Apply migrations
-    backend = get_backend(f"sqlite:///{config.STATE_DATABASE}")
-    migrations = read_migrations(MIGRATIONS_DIR)
-    try:
-        # with backend.lock():
-        backend.apply_migrations(backend.to_apply(migrations))
-    except LockTimeout:
-        logger.debug("API Watcher - Migration lock timeout. Breaking lock and retrying...")
-        backend.break_lock()
-        backend.apply_migrations(backend.to_apply(migrations))
-    backend.connection.close()
-
-
 def import_from_path(module_name, file_path):
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)
@@ -61,7 +42,7 @@ def import_from_path(module_name, file_path):
 
 
 def import_migration(migration_id):
-    migration_path = os.path.join(MIGRATIONS_DIR, f"{migration_id}.py")
+    migration_path = os.path.join(config.STATE_DB_MIGRATIONS_DIR, f"{migration_id}.py")
     module_name = "apsw_" + migration_id.split(".")[1]
     return import_from_path(module_name, migration_path)
 
@@ -115,7 +96,7 @@ def build_state_db():
             os.unlink(config.STATE_DATABASE + ext)
 
     with log.Spinner("Applying migrations"):
-        apply_outstanding_migration()
+        database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
 
     logger.info(f"State DB built in {time.time() - start_time:.2f} seconds")
 

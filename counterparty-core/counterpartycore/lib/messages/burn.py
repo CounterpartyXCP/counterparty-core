@@ -7,7 +7,6 @@ from fractions import Fraction
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import database
 
 D = decimal.Decimal
 
@@ -23,39 +22,6 @@ with open(CURR_DIR + "/data/mainnet_burns.csv", "r") as f:
     mainnet_burns_reader = csv.DictReader(f)
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line["tx_hash"]] = line
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "status_idx",
-            "address_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS burns(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      burned INTEGER,
-                      earned INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-
-    database.create_indexes(
-        cursor,
-        "burns",
-        [
-            ["status"],
-            ["source"],
-        ],
-    )
 
 
 def validate(db, source, destination, quantity, block_index, overburn=False):

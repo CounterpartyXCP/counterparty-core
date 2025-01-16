@@ -4,47 +4,10 @@ from decimal import Decimal as D
 
 from counterpartycore.lib import config, ledger
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 PERIOD_DURATION = 2016  # blocks, around 2 weeks
-
-
-def initialise(db):
-    cursor = db.cursor()
-    # transaction_count
-    cursor.execute(
-        """CREATE TABLE IF NOT EXISTS transaction_count(
-            block_index INTEGER,
-            transaction_id INTEGER,
-            count INTEGER)
-        """
-    )
-    database.create_indexes(
-        cursor,
-        "transaction_count",
-        [
-            ["block_index", "transaction_id"],
-        ],
-    )
-
-    if database.get_config_value(db, "CLEAN_TRANSACTION_COUNT_1") is None:
-        logger.debug("Cleaning `transaction_count` table")
-        database.unlock_update(db, "transaction_count")
-        cursor.execute("DELETE FROM transaction_count")
-        cursor.execute("""
-            SELECT block_index, count(*) AS count FROM credits 
-            WHERE calling_function='attach to utxo'
-            GROUP BY block_index
-        """)
-        for row in cursor.fetchall():
-            cursor.execute(
-                "INSERT INTO transaction_count (block_index, transaction_id, count) VALUES (?, ?, ?)",
-                (row["block_index"], 101, row["count"]),
-            )
-        database.lock_update(db, "transaction_count")
-        database.set_config_value(db, "CLEAN_TRANSACTION_COUNT_1", True)
 
 
 def get_transaction_count_by_block(db, transaction_id, block_index):

@@ -33,7 +33,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import helpers
 
 from . import bet
 
@@ -47,46 +47,6 @@ ID = 30
 BET_TYPE_ID = {"BullCFD": 0, "BearCFD": 1, "Equal": 2, "NotEqual": 3}
 
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "block_index_idx",
-            "status_source_idx",
-            "status_source_index_idx",
-            "timestamp_idx",
-            "broadcasts_status_source_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS broadcasts(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      timestamp INTEGER,
-                      value REAL,
-                      fee_fraction_int INTEGER,
-                      text TEXT,
-                      locked BOOL,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-
-    database.create_indexes(
-        cursor,
-        "broadcasts",
-        [
-            ["block_index"],
-            ["status", "source", "tx_index"],
-            ["timestamp"],
-        ],
-    )
 
 
 def parse_options_from_string(string):

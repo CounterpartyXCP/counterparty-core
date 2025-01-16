@@ -5,108 +5,12 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import assetnames, database
+from counterpartycore.lib.utils import assetnames
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
 ID = 90
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    create_table_sql = """
-        CREATE TABLE IF NOT EXISTS fairminters (
-            tx_hash TEXT,
-            tx_index INTEGER,
-            block_index INTEGER,
-            source TEXT,
-            asset TEXT,
-            asset_parent TEXT,
-            asset_longname TEXT,
-            description TEXT,
-            price INTEGER,
-            quantity_by_price INTEGER,
-            hard_cap INTEGER,
-            burn_payment BOOL,
-            max_mint_per_tx INTEGER,
-            premint_quantity INTEGER,
-            start_block INTEGER,
-            end_block INTEGER,
-            minted_asset_commission_int INTEGER,
-            soft_cap INTEGER,
-            soft_cap_deadline_block INTEGER,
-            lock_description BOOL,
-            lock_quantity BOOL,
-            divisible BOOL,
-            pre_minted BOOL DEFAULT 0,
-            status TEXT
-        )
-    """
-    cursor.execute(create_table_sql)
-
-    database.create_indexes(
-        cursor,
-        "fairminters",
-        [
-            ["tx_hash"],
-            ["block_index"],
-            ["asset"],
-            ["asset_longname"],
-            ["asset_parent"],
-            ["source"],
-            ["status"],
-        ],
-    )
-
-    if database.get_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1") is None:
-        logger.debug("Fixing issuances `asset_longname` field")
-        with db:
-            # disable triggers
-            for table in ["issuances", "fairminters"]:
-                database.unlock_update(db, table)
-            # get assets with `asset_longname` field not set
-            sql = """
-                SELECT 
-                    DISTINCT(asset),
-                    (SELECT asset_longname FROM issuances WHERE asset = i.asset ORDER BY rowid ASC LIMIT 1) AS asset_longname
-                FROM issuances AS i WHERE 
-                    asset IN (SELECT DISTINCT(asset) FROM issuances WHERE asset_longname is NOT NULL AND asset_longname != '')
-                    AND (asset_longname is NULL OR asset_longname = '') 
-                    AND status='valid'
-                    AND fair_minting = 1;
-            """
-            cursor.execute(sql)
-            assets = cursor.fetchall()
-            # update `asset_longname` field
-            for asset in assets:
-                sql = "UPDATE issuances SET asset_longname = ? WHERE asset = ? AND (asset_longname = '' OR asset_longname IS NULL)"
-                cursor.execute(sql, (asset["asset_longname"], asset["asset"]))
-                asset_parent = asset["asset_longname"].split(".")[0]
-                sql = "UPDATE fairminters SET asset_longname = ?, asset_parent = ? WHERE asset = ? AND (asset_longname = '' OR asset_longname IS NULL)"
-                cursor.execute(sql, (asset["asset_longname"], asset_parent, asset["asset"]))
-            # re-enable triggers
-            for table in ["issuances", "fairminters"]:
-                database.lock_update(db, table)
-            database.set_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_1", True)
-
-    if database.get_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_2") is None:
-        logger.debug("Fixing issuances `asset_longname` field")
-        # disable triggers
-        for table in ["issuances", "fairminters"]:
-            database.unlock_update(db, table)
-        cursor.execute(
-            "UPDATE issuances SET asset_longname = ? WHERE asset_longname = ?", (None, "")
-        )
-        cursor.execute(
-            "UPDATE fairminters SET asset_longname = ? WHERE asset_longname = ?", (None, "")
-        )
-        cursor.execute("UPDATE fairminters SET asset_parent = ? WHERE asset_parent = ?", (None, ""))
-        # re-enable triggers
-        for table in ["issuances", "fairminters"]:
-            database.lock_update(db, table)
-        database.set_config_value(db, "FIX_ISSUANCES_ASSET_LONGNAME_2", True)
 
 
 def validate(

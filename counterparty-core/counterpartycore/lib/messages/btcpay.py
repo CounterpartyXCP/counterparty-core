@@ -9,49 +9,13 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 FORMAT = ">32s32s"
 LENGTH = 32 + 32
 ID = 11
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "block_index_idx",
-            "source_idx",
-            "destination_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS btcpays(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      btc_amount INTEGER,
-                      order_match_id TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-
-    database.create_indexes(
-        cursor,
-        "btcpays",
-        [
-            ["block_index"],
-            ["source"],
-            ["destination"],
-        ],
-    )
 
 
 def validate(db, source, order_match_id, block_index):

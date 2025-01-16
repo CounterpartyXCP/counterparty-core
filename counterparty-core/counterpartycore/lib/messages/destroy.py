@@ -8,7 +8,7 @@ from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.exceptions import AddressError
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype
-from counterpartycore.lib.utils import address, database
+from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -16,48 +16,6 @@ FORMAT = ">QQ"
 LENGTH = 8 + 8
 MAX_TAG_LENGTH = 34
 ID = 110
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "status_idx",
-            "address_idx",
-        ],
-    )
-
-    create_destructions_sql = """
-        CREATE TABLE IF NOT EXISTS destructions(
-            tx_index INTEGER,
-            tx_hash TEXT,
-            block_index INTEGER,
-            source TEXT,
-            asset INTEGER,
-            quantity INTEGER,
-            tag TEXT,
-            status TEXT
-        )
-    """
-    cursor.execute(create_destructions_sql)
-
-    if database.has_fk_on(cursor, "destructions", "transactions.tx_index") or database.field_is_pk(
-        cursor, "destructions", "tx_index"
-    ):
-        database.copy_old_table(cursor, "destructions", create_destructions_sql)
-
-    database.create_indexes(
-        cursor,
-        "destructions",
-        [
-            ["status"],
-            ["source"],
-            ["asset"],
-        ],
-    )
 
 
 def pack(db, asset, quantity, tag):

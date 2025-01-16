@@ -675,9 +675,9 @@ def start_all(args):
             bootstrap.bootstrap(no_confirm=True, snapshot_url=args.bootstrap_url)
 
         # Initialise database
+        database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
         db = database.initialise_db()
         CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
-        blocks.initialise(db)
         blocks.check_database_version(db)
         database.optimize(db)
 

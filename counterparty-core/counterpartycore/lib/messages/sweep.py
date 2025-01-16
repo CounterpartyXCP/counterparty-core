@@ -9,7 +9,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import address, database
+from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -25,45 +25,6 @@ FLAG_OWNERSHIP = 2
 FLAG_BINARY_MEMO = 4
 
 FLAGS_ALL = FLAG_BINARY_MEMO | FLAG_BALANCES | FLAG_OWNERSHIP
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "block_index_idx",
-            "source_idx",
-            "destination_idx",
-            "memo_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS sweeps(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      flags INTEGER,
-                      status TEXT,
-                      memo BLOB,
-                      fee_paid INTEGER,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-
-    database.create_indexes(
-        cursor,
-        "sweeps",
-        [
-            ["block_index"],
-            ["source"],
-            ["destination"],
-            ["memo"],
-        ],
-    )
 
 
 def get_total_fee(db, source, block_index):

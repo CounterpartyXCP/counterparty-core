@@ -85,8 +85,8 @@ def init_database(sqlfile, dbfile, options=None):
     server.initialise(database_file=dbfile, testnet=True, verbose=True, **kwargs)
 
     restore_database(config.DATABASE, sqlfile)
+    database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
     db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
-    blocks.create_views(db)
     database.update_version(db)
 
     return db
@@ -617,7 +617,6 @@ def get_history(db, address, unconfirmed=False):
 
 def initialise_db(db):
     """Initialise blockchain in the db and insert first block."""
-    blocks.initialise(db)
     insert_block(db, config.BLOCK_FIRST - 1, parse_block=True)
     CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
 
@@ -643,6 +642,10 @@ def run_scenario(scenario):
     asyncio_log.setLevel(logging.ERROR)
 
     db = database.get_connection(read_only=False)
+    with open(
+        os.path.join(config.LEDGER_DB_MIGRATIONS_DIR, "0001.initial_migration.sql"), "r"
+    ) as sql_file:
+        db.execute(sql_file.read())
     initialise_db(db)
 
     ledger.ledger.AssetCache(db).init(db)
@@ -1164,9 +1167,6 @@ def reparse(testnet=True, checkpoint_count=5):
     # we start one block after the checkpoint before the first one we want to check
     block_index = sorted(list(CHECKPOINTS.keys()))[-checkpoint_count - 1]
     print(f"Checking from block {block_index}")
-
-    # Initialise missing tables
-    blocks.initialise(memory_db)
 
     try:
         blocks.reparse(memory_db, block_index)

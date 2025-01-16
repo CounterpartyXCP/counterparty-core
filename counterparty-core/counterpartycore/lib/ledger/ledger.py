@@ -16,7 +16,6 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 BLOCK_LEDGER = []
 BLOCK_JOURNAL = []
-LAST_BLOCK = None
 
 
 ###############################
@@ -1940,14 +1939,13 @@ class OrdersCache(metaclass=helpers.SingletonMeta):
             status TEXT)
         """
         cache_cursor.execute(create_orders_query)
-        database.create_indexes(
-            cache_cursor,
-            "orders",
-            [
-                ["tx_hash"],
-                ["get_asset", "give_asset", "status"],
-            ],
+        cache_cursor.execute(
+            "CREATE INDEX IF NOT EXISTS orders_expire_index_idx ON orders (tx_hash)"
         )
+        cache_cursor.execute(
+            "CREATE INDEX IF NOT EXISTS orders_get_asset_give_asset_idx ON orders (get_asset, give_asset, status)"
+        )
+
         select_orders_query = """
             SELECT * FROM (
                 SELECT *, MAX(rowid) FROM orders GROUP BY tx_hash

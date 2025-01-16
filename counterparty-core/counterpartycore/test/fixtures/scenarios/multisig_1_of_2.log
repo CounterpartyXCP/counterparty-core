@@ -1,35 +1,3 @@
-Initializing database...
-Updating `transaction_type` column in `transactions` table...
-Updated 0 transactions in 0.00 seconds
-Adding `send_type` column to `sends` table
-Added `send_type` column to `sends` table in 0.00 seconds
-Adding `source_address` and `destination_address` column to `sends` table
-SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_sends] database schema has changed (17) SQLITE_SCHEMA
-SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_sends
-            BEFORE UPDATE ON sends BEGIN
-                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-            END;] database schema ha (17) SQLITE_SCHEMA
-Added `source_address` and `destination_address` column to `sends` table in 0.00 seconds
-Fixing issuances `asset_events` field
-Fixing issuances `asset_longname` field
-SQLITE_LOG: statement aborts at 12: [SELECT value FROM config WHERE name = ?] database schema has changed (17) SQLITE_SCHEMA
-Fixing issuances `asset_longname` field
-SQLITE_LOG: statement aborts at 14: [DROP TRIGGER IF EXISTS block_update_issuances] database schema has changed (17) SQLITE_SCHEMA
-SQLITE_LOG: statement aborts at 2: [DROP TRIGGER IF EXISTS block_update_fairminters] database schema has changed (17) SQLITE_SCHEMA
-SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_issuances
-            BEFORE UPDATE ON issuances BEGIN
-                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-            END;] database s (17) SQLITE_SCHEMA
-SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_fairminters
-            BEFORE UPDATE ON fairminters BEGIN
-                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-            END;] databa (17) SQLITE_SCHEMA
-SQLITE_LOG: statement aborts at 27: [INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)] database schema has changed (17) SQLITE_SCHEMA
-Cleaning `transaction_count` table
-SQLITE_LOG: statement aborts at 13: [CREATE TRIGGER IF NOT EXISTS block_update_transaction_count
-            BEFORE UPDATE ON transaction_count BEGIN
-                SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
-             (17) SQLITE_SCHEMA
 Initialising asset cache...
 Asset cache initialised in 0.00 seconds
 1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2 burned 62000000 BTC for 93000000000 XCP (344133ac8c24d6d0103e9428bfb7d0123bf85ebc37494a75d5eeb30a0126da87) [valid]

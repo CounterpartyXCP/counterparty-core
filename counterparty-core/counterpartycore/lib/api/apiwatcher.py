@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import threading
 import time
 
@@ -11,9 +10,6 @@ from counterpartycore.lib.utils import database
 from counterpartycore.lib.utils.helpers import format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "migrations")
 
 UPDATE_EVENTS_ID_FIELDS = {
     "BLOCK_PARSED": ["block_index"],

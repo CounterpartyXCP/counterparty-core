@@ -11,7 +11,6 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import database
 
 D = decimal.Decimal
 
@@ -22,43 +21,6 @@ LENGTH_1 = 8 + 8
 FORMAT_2 = ">QQQ"
 LENGTH_2 = 8 + 8 + 8
 ID = 50
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "block_index_idx",
-            "source_idx",
-            "asset_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS dividends(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      asset TEXT,
-                      dividend_asset TEXT,
-                      quantity_per_unit INTEGER,
-                      fee_paid INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-
-    database.create_indexes(
-        cursor,
-        "dividends",
-        [
-            ["block_index"],
-            ["source"],
-            ["asset"],
-        ],
-    )
 
 
 def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
