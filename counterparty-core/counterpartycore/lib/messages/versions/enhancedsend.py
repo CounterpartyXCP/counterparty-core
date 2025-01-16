@@ -35,7 +35,7 @@ def unpack(message, block_index):
         full_address = address.unpack(short_address_bytes)
 
         # asset id to name
-        asset = ledger.ledger.generate_asset_name(asset_id, block_index)
+        asset = ledger.issuances.generate_asset_name(asset_id, block_index)
         if asset == config.BTC:
             raise exceptions.AssetNameError(f"{config.BTC} not allowed")
 
@@ -87,7 +87,7 @@ def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
     if protocol.enabled("options_require_memo"):
         cursor = db.cursor()
         try:
-            results = ledger.ledger.get_addresses(db, address=destination)
+            results = ledger.other.get_addresses(db, address=destination)
             if results:
                 result = results[0]
                 if result and helpers.active_options(
@@ -119,7 +119,7 @@ def compose(
         return send1.compose_send_btc(db, source, destination, quantity)
 
     # resolve subassets
-    asset = ledger.ledger.resolve_subasset_longname(db, asset)
+    asset = ledger.issuances.resolve_subasset_longname(db, asset)
 
     # quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
@@ -146,9 +146,9 @@ def compose(
         raise exceptions.ComposeError(problems)
 
     if not skip_validation:
-        asset_id = ledger.ledger.get_asset_id(db, asset, block_index)
+        asset_id = ledger.issuances.get_asset_id(db, asset, block_index)
     else:
-        asset_id = ledger.ledger.generate_asset_id(asset, block_index)
+        asset_id = ledger.issuances.generate_asset_id(asset, block_index)
 
     short_address_bytes = address.pack(destination)
 
@@ -221,7 +221,7 @@ def parse(db, tx, message):
         "quantity": quantity,
         "status": status,
         "memo": memo_bytes,
-        "msg_index": ledger.ledger.get_send_msg_index(db, tx["tx_hash"]),
+        "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
         "send_type": "send",
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:

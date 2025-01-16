@@ -989,15 +989,15 @@ def asset_conservation(db, stop_event=None):
             if asset_issued != asset_held:
                 raise exceptions.SanityError(
                     "{} {} issued ≠ {} {} held".format(
-                        ledger.ledger.value_out(db, asset_issued, asset),
+                        ledger.issuances.value_out(db, asset_issued, asset),
                         asset,
-                        ledger.ledger.value_out(db, asset_held, asset),
+                        ledger.issuances.value_out(db, asset_held, asset),
                         asset,
                     )
                 )
             logger.trace(
                 "{} has been conserved ({} {} both issued and held)".format(
-                    asset, ledger.ledger.value_out(db, asset_issued, asset), asset
+                    asset, ledger.issuances.value_out(db, asset_issued, asset), asset
                 )
             )
     logger.debug("All assets have been conserved.")

@@ -860,7 +860,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             )
         )
         or (
-            tx_name == "ledger.ledger"
+            tx_name == "ledger.issuances"
             and (
                 method
                 in [
@@ -1045,7 +1045,7 @@ def compare_strings(string1, string2):
 
 
 def get_block_ledger(db, block_index):
-    """Return the block's ledger.ledger."""
+    """Return the block's ledger.other."""
     cursor = db.cursor()
     debits = list(cursor.execute("""SELECT * FROM debits WHERE block_index = ?""", (block_index,)))
     credits = list(

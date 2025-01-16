@@ -197,7 +197,7 @@ def parse(db, tx, message):
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
-            "msg_index": ledger.ledger.get_send_msg_index(db, tx["tx_hash"]),
+            "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
             "block_index": tx["block_index"],
             "status": status,
             "send_type": "attach",
@@ -230,7 +230,7 @@ def parse(db, tx, message):
     bindings = {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
-        "msg_index": ledger.ledger.get_send_msg_index(db, tx["tx_hash"]),
+        "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
         "block_index": tx["block_index"],
         "status": "valid",
         "source": source,

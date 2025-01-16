@@ -20,7 +20,7 @@ def unpack(db, message, block_index):
     # Only used for `unpack` API call at the moment.
     try:
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = ledger.ledger.get_asset_name(db, asset_id, block_index)
+        asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
 
     except struct.error:
         raise exceptions.UnpackError("could not unpack")  # noqa: B904
@@ -57,7 +57,7 @@ def validate(db, source, destination, asset, quantity, block_index):
         # Check destination address options
 
         cursor = db.cursor()
-        results = ledger.ledger.get_addresses(db, address=destination)
+        results = ledger.other.get_addresses(db, address=destination)
         if results:
             result = results[0]
             if result and helpers.active_options(
@@ -90,7 +90,7 @@ def compose(
         return compose_send_btc(db, source, destination, quantity)
 
     # resolve subassets
-    asset = ledger.ledger.resolve_subasset_longname(db, asset)
+    asset = ledger.issuances.resolve_subasset_longname(db, asset)
 
     # quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
@@ -107,7 +107,7 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    asset_id = ledger.ledger.get_asset_id(db, asset, block_index)
+    asset_id = ledger.issuances.get_asset_id(db, asset, block_index)
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
@@ -123,7 +123,7 @@ def parse(db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = ledger.ledger.get_asset_name(db, asset_id, tx["block_index"])
+        asset = ledger.issuances.get_asset_name(db, asset_id, tx["block_index"])
         status = "valid"
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
         asset, quantity = None, None
@@ -174,7 +174,7 @@ def parse(db, tx, message):
         "asset": asset,
         "quantity": quantity,
         "status": status,
-        "msg_index": ledger.ledger.get_send_msg_index(db, tx["tx_hash"]),
+        "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
         "send_type": "send",
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:

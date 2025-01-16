@@ -29,7 +29,7 @@ def pack(db, asset, quantity, tag):
 
     data += struct.pack(
         FORMAT,
-        ledger.ledger.get_asset_id(db, asset, CurrentState().current_block_index()),
+        ledger.issuances.get_asset_id(db, asset, CurrentState().current_block_index()),
         quantity,
     )
     data += tag
@@ -40,7 +40,7 @@ def unpack(db, message, return_dict=False):
     try:
         asset_id, quantity = struct.unpack(FORMAT, message[0:16])
         tag = message[16:]
-        asset = ledger.ledger.get_asset_name(db, asset_id, CurrentState().current_block_index())
+        asset = ledger.issuances.get_asset_name(db, asset_id, CurrentState().current_block_index())
 
     except struct.error:
         raise UnpackError("could not unpack")  # noqa: B904, F405
@@ -55,7 +55,7 @@ def unpack(db, message, return_dict=False):
 
 def validate(db, source, destination, asset, quantity):
     try:
-        ledger.ledger.get_asset_id(db, asset, CurrentState().current_block_index())
+        ledger.issuances.get_asset_id(db, asset, CurrentState().current_block_index())
     except AssetError:  # noqa: F405
         raise ValidateError("asset invalid")  # noqa: B904, F405
 
@@ -85,7 +85,7 @@ def validate(db, source, destination, asset, quantity):
 
 def compose(db, source: str, asset: str, quantity: int, tag: str, skip_validation: bool = False):
     # resolve subassets
-    asset = ledger.ledger.resolve_subasset_longname(db, asset)
+    asset = ledger.issuances.resolve_subasset_longname(db, asset)
 
     if not skip_validation:
         validate(db, source, None, asset, quantity)

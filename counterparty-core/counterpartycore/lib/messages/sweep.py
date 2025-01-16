@@ -32,7 +32,7 @@ def get_total_fee(db, source, block_index):
     antispamfee = protocol.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
     if antispamfee > 0:
         balances_count = ledger.balances.get_balances_count(db, source)[0]["cnt"]
-        issuances_count = ledger.ledger.get_issuances_count(db, source)
+        issuances_count = ledger.issuances.get_issuances_count(db, source)
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
     return total_fee
 
@@ -213,10 +213,10 @@ def parse(db, tx, message):
 
             assets_issued = balances
             if protocol.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
-                assets_issued = ledger.ledger.get_asset_issued(db, tx["source"])
+                assets_issued = ledger.issuances.get_asset_issued(db, tx["source"])
 
             for next_asset_issued in assets_issued:
-                issuances = ledger.ledger.get_issuances(
+                issuances = ledger.issuances.get_issuances(
                     db,
                     asset=next_asset_issued["asset"],
                     status="valid",

@@ -34,7 +34,7 @@ def compose(db, source, destination, utxo_value=None, skip_validation=False):
 
 def move_balances(db, tx, source, destination):
     action = "utxo move"
-    msg_index = ledger.ledger.get_send_msg_index(db, tx["tx_hash"])
+    msg_index = ledger.other.get_send_msg_index(db, tx["tx_hash"])
     balances = ledger.balances.get_utxo_balances(db, source)
     for balance in balances:
         if balance["quantity"] == 0:

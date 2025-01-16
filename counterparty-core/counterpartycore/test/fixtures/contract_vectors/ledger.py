@@ -271,7 +271,7 @@ LEDGER_VECTOR = {
             {"in": (ADDR[0], "foobar"), "out": 0},
         ],
     },
-    "ledger.ledger": {
+    "ledger.issuances": {
         "generate_asset_id": [
             {"in": ("BTC", DP["default_block_index"]), "out": 0},
             {"in": ("XCP", DP["default_block_index"]), "out": 1},

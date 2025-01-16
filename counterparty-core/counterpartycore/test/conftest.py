@@ -698,8 +698,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     monkeypatch.setattr("counterpartycore.lib.messages.rps.expire", rps_expire)
 
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.ledger.get_matching_orders",
-        ledger.ledger.get_matching_orders_no_cache,
+        "counterpartycore.lib.ledger.markets.get_matching_orders",
+        ledger.markets.get_matching_orders_no_cache,
     )
 
     monkeypatch.setattr(
@@ -714,8 +714,8 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         ledger.supplies.asset_issued_total_no_cache,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.ledger.get_last_issuance",
-        ledger.ledger.get_last_issuance_no_cache,
+        "counterpartycore.lib.ledger.issuances.get_last_issuance",
+        ledger.issuances.get_last_issuance_no_cache,
     )
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.supplies.asset_destroyed_total",

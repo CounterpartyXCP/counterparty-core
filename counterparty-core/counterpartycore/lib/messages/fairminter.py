@@ -77,13 +77,13 @@ def validate(
 
     # check asset name format
     try:
-        ledger.ledger.generate_asset_id(asset, CurrentState().current_block_index())
+        ledger.issuances.generate_asset_id(asset, CurrentState().current_block_index())
         if asset_parent != "":
-            ledger.ledger.generate_asset_id(asset_parent, CurrentState().current_block_index())
+            ledger.issuances.generate_asset_id(asset_parent, CurrentState().current_block_index())
     except exceptions.AssetNameError as e:
         problems.append(f"Invalid asset name: {e}")
 
-    existing_asset = ledger.ledger.get_asset(db, asset)
+    existing_asset = ledger.issuances.get_asset(db, asset)
     if existing_asset and existing_asset["asset_longname"] and asset_parent == "":
         asset_parent, asset = existing_asset["asset_longname"].split(".")
 
@@ -91,7 +91,7 @@ def validate(
     asset_name = asset
     if asset_parent != "":
         asset_name = f"{asset_parent}.{asset}"
-    existing_asset = ledger.ledger.get_asset(db, asset_name)
+    existing_asset = ledger.issuances.get_asset(db, asset_name)
 
     if existing_asset:
         # check if a fair minter is already opened for this asset
@@ -126,7 +126,7 @@ def validate(
     if existing_asset is None:
         if asset_parent != "":
             # if the asset does not exist its parent must exist
-            existing_parent = ledger.ledger.get_asset(db, asset_parent)
+            existing_parent = ledger.issuances.get_asset(db, asset_parent)
             if existing_parent is None:
                 problems.append("Asset parent does not exist")
         elif not asset.startswith("A"):
@@ -377,7 +377,7 @@ def parse(db, tx, message):
     if end_block > 0 and tx["block_index"] > end_block:
         status = "closed"
 
-    existing_asset = ledger.ledger.get_asset(db, asset)
+    existing_asset = ledger.issuances.get_asset(db, asset)
     if existing_asset and existing_asset["asset_longname"] and asset_parent == "":
         asset_parent, asset = existing_asset["asset_longname"].split(".")
 
@@ -386,7 +386,9 @@ def parse(db, tx, message):
     if asset_parent != "":
         asset_longname = f"{asset_parent}.{asset}"
 
-    existing_asset = ledger.ledger.get_asset(db, asset_longname if asset_longname != "" else asset)
+    existing_asset = ledger.issuances.get_asset(
+        db, asset_longname if asset_longname != "" else asset
+    )
 
     fee = 0
     asset_name = asset
@@ -444,7 +446,7 @@ def parse(db, tx, message):
 
     if not existing_asset:
         # Add to table of assets if new asset
-        asset_id = ledger.ledger.generate_asset_id(asset_name, tx["block_index"])
+        asset_id = ledger.issuances.generate_asset_id(asset_name, tx["block_index"])
         bindings = {
             "asset_id": str(asset_id),
             "asset_name": asset_name,
@@ -541,7 +543,7 @@ def unescrow_premint(db, fairminter, destroy=False):
 # called each block
 def open_fairminters(db, block_index):
     # gets the fairminters with a `start_block` equal to `block_index`
-    fairminters = ledger.ledger.get_fairminters_to_open(db, block_index)
+    fairminters = ledger.issuances.get_fairminters_to_open(db, block_index)
     for fairminter in fairminters:
         assert fairminter["status"] != "open"  # sanity check
         # update status to open
@@ -552,14 +554,14 @@ def open_fairminters(db, block_index):
             unescrow_premint(db, fairminter)
             update_data["pre_minted"] = True
         # update fairminter
-        ledger.ledger.update_fairminter(db, fairminter["tx_hash"], update_data)
+        ledger.issuances.update_fairminter(db, fairminter["tx_hash"], update_data)
 
 
 def close_fairminter(db, fairminter, block_index):
     # update status to closed
-    ledger.ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+    ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
     # unlock issuance when fair minter is closed
-    last_issuance = ledger.ledger.get_asset(db, fairminter["asset"])
+    last_issuance = ledger.issuances.get_asset(db, fairminter["asset"])
     last_issuance["quantity"] = 0
     last_issuance["fair_minting"] = False
     last_issuance["block_index"] = block_index
@@ -575,7 +577,7 @@ def close_fairminter(db, fairminter, block_index):
 
 
 def close_fairminters(db, block_index):
-    fairminters = ledger.ledger.get_fairminters_to_close(db, block_index)
+    fairminters = ledger.issuances.get_fairminters_to_close(db, block_index)
     for fairminter in fairminters:
         assert fairminter["status"] != "closed"  # sanity check
         close_fairminter(db, fairminter, block_index)
@@ -656,11 +658,11 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
     """
     Performs necessary operations for a fairminter whose soft cap deadline has been reached.
     """
-    fairmint_quantity, paid_quantity = ledger.ledger.get_fairmint_quantities(
+    fairmint_quantity, paid_quantity = ledger.issuances.get_fairmint_quantities(
         db, fairminter["tx_hash"]
     )
     fairminter_supply = fairmint_quantity + fairminter["premint_quantity"]
-    fairmints = ledger.ledger.get_valid_fairmints(db, fairminter["tx_hash"])
+    fairmints = ledger.issuances.get_valid_fairmints(db, fairminter["tx_hash"])
 
     # until the soft cap is reached, payments, commissions and assets
     # are escrowed at the config.UNSPENDABLE address. When the soft cap deadline is reached,
@@ -725,7 +727,7 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
 
 def perform_fairminter_soft_cap_operations(db, block_index):
     # get fairminters with `soft_cap_deadline_block` equal to `block_index`
-    fairminters = ledger.ledger.get_fairminters_by_soft_cap_deadline(db, block_index)
+    fairminters = ledger.issuances.get_fairminters_by_soft_cap_deadline(db, block_index)
 
     for fairminter in fairminters:
         soft_cap_deadline_reached(db, fairminter, block_index)

@@ -22,8 +22,8 @@ def validate(db, source, offer_hash):
     problems = []
 
     # TODO: make query only if necessary
-    orders = ledger.ledger.get_order(db, order_hash=offer_hash)
-    bets = ledger.ledger.get_bet(db, bet_hash=offer_hash)
+    orders = ledger.markets.get_order(db, order_hash=offer_hash)
+    bets = ledger.other.get_bet(db, bet_hash=offer_hash)
 
     offer_type = None
     if orders:

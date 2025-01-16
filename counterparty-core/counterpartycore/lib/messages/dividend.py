@@ -44,21 +44,21 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
     # Examine asset.
     try:
-        divisible = ledger.ledger.is_divisible(db, asset)
+        divisible = ledger.issuances.is_divisible(db, asset)
     except exceptions.AssetError:
         problems.append(f"no such asset, {asset}.")
         return None, None, problems, 0
 
     # Only issuer can pay dividends.
     if protocol.after_block_or_test_network(block_index, 320000):  # Protocol change.
-        issuer = ledger.ledger.get_asset_issuer(db, asset)
+        issuer = ledger.issuances.get_asset_issuer(db, asset)
 
         if issuer != source:
             problems.append("only issuer can pay dividends")
 
     # Examine dividend asset.
     try:
-        dividend_divisible = ledger.ledger.is_divisible(db, dividend_asset)
+        dividend_divisible = ledger.issuances.is_divisible(db, dividend_asset)
     except exceptions.AssetError:
         problems.append(f"no such dividend asset, {dividend_asset}.")
         return None, None, problems, 0
@@ -161,8 +161,8 @@ def compose(
     skip_validation: bool = False,
 ):
     # resolve subassets
-    asset = ledger.ledger.resolve_subasset_longname(db, asset)
-    dividend_asset = ledger.ledger.resolve_subasset_longname(db, dividend_asset)
+    asset = ledger.issuances.resolve_subasset_longname(db, asset)
+    dividend_asset = ledger.issuances.resolve_subasset_longname(db, dividend_asset)
 
     dividend_total, outputs, problems, fee = validate(
         db, source, quantity_per_unit, asset, dividend_asset, CurrentState().current_block_index()
@@ -170,7 +170,7 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
     logger.info(
-        f"Total quantity to be distributed in dividends: {ledger.ledger.value_out(db, dividend_total, dividend_asset)} {dividend_asset}"
+        f"Total quantity to be distributed in dividends: {ledger.issuances.value_out(db, dividend_total, dividend_asset)} {dividend_asset}"
     )
 
     if dividend_asset == config.BTC:
@@ -180,8 +180,8 @@ def compose(
             None,
         )
 
-    asset_id = ledger.ledger.get_asset_id(db, asset, CurrentState().current_block_index())
-    dividend_asset_id = ledger.ledger.get_asset_id(
+    asset_id = ledger.issuances.get_asset_id(db, asset, CurrentState().current_block_index())
+    dividend_asset_id = ledger.issuances.get_asset_id(
         db, dividend_asset, CurrentState().current_block_index()
     )
     data = messagetype.pack(ID)
@@ -193,12 +193,12 @@ def unpack(db, message, block_index, return_dict=False):
     try:
         if protocol.after_block_or_test_network(block_index, 288151) and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
-            asset = ledger.ledger.get_asset_name(db, asset_id, block_index)
-            dividend_asset = ledger.ledger.get_asset_name(db, dividend_asset_id, block_index)
+            asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
+            dividend_asset = ledger.issuances.get_asset_name(db, dividend_asset_id, block_index)
             status = "valid"
         elif len(message) == LENGTH_1:
             quantity_per_unit, asset_id = struct.unpack(FORMAT_1, message)
-            asset = ledger.ledger.get_asset_name(db, asset_id, block_index)
+            asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
             dividend_asset = config.XCP
             status = "valid"
         else:

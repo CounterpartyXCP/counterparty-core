@@ -384,7 +384,7 @@ def adjust_get_balances_results(query_result, ledger_db):
     for balances_row in list(query_result):
         asset = balances_row["asset"]
         if asset not in assets:
-            assets[asset] = ledger.ledger.is_divisible(ledger_db, asset)
+            assets[asset] = ledger.issuances.is_divisible(ledger_db, asset)
 
         balances_row["divisible"] = assets[asset]
         filtered_results.append(balances_row)
@@ -680,7 +680,7 @@ class APIServer(threading.Thread):
                 elif asset == "XCP":
                     return ledger.supplies.xcp_supply(db)
                 else:
-                    asset = ledger.ledger.resolve_subasset_longname(db, asset)
+                    asset = ledger.issuances.resolve_subasset_longname(db, asset)
                     return ledger.supplies.asset_supply(db, asset)
 
         @dispatcher.add_method
@@ -701,7 +701,7 @@ class APIServer(threading.Thread):
             assets_info = []
             with LedgerDBConnectionPool().connection() as db:
                 for asset in assets:
-                    asset = ledger.ledger.resolve_subasset_longname(db, asset)  # noqa: PLW2901
+                    asset = ledger.issuances.resolve_subasset_longname(db, asset)  # noqa: PLW2901
 
                     # BTC and XCP.
                     if asset in [config.BTC, config.XCP]:
@@ -726,7 +726,7 @@ class APIServer(threading.Thread):
 
                     # User‐created asset.
                     cursor = db.cursor()
-                    issuances = ledger.ledger.get_issuances(
+                    issuances = ledger.issuances.get_issuances(
                         db, asset=asset, status="valid", first=True
                     )
                     cursor.close()
@@ -910,7 +910,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_asset_names(longnames=False):
             with LedgerDBConnectionPool().connection() as db:
-                all_assets = ledger.ledger.get_valid_assets(db)
+                all_assets = ledger.other.get_valid_assets(db)
             if longnames:
                 names = [
                     {"asset": row["asset"], "asset_longname": row["asset_longname"]}
@@ -927,7 +927,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_holder_count(asset):
             with LedgerDBConnectionPool().connection() as db:
-                asset = ledger.ledger.resolve_subasset_longname(db, asset)
+                asset = ledger.issuances.resolve_subasset_longname(db, asset)
                 holders = ledger.supplies.holders(db, asset, True)
             addresses = []
             for holder in holders:
@@ -937,7 +937,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_holders(asset):
             with LedgerDBConnectionPool().connection() as db:
-                asset = ledger.ledger.resolve_subasset_longname(db, asset)
+                asset = ledger.issuances.resolve_subasset_longname(db, asset)
                 holders = ledger.supplies.holders(db, asset, True)
             return holders
 
@@ -1021,9 +1021,9 @@ class APIServer(threading.Thread):
             dispensers = []
             with LedgerDBConnectionPool().connection() as db:
                 if tx_hash is not None:
-                    dispensers = ledger.ledger.get_dispenser_info(db, tx_hash=tx_hash)
+                    dispensers = ledger.markets.get_dispenser_info(db, tx_hash=tx_hash)
                 else:
-                    dispensers = ledger.ledger.get_dispenser_info(db, tx_index=tx_index)
+                    dispensers = ledger.markets.get_dispenser_info(db, tx_index=tx_index)
 
                 if len(dispensers) == 1:
                     dispenser = dispensers[0]
@@ -1040,7 +1040,7 @@ class APIServer(threading.Thread):
                             oracle_fee,
                             oracle_fiat_label,
                             oracle_price_last_updated,
-                        ) = ledger.ledger.get_oracle_last_price(
+                        ) = ledger.other.get_oracle_last_price(
                             db, dispenser["oracle_address"], CurrentState().current_block_index()
                         )
 

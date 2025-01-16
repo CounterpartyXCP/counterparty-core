@@ -27,7 +27,7 @@ def validate(
     if not isinstance(quantity, int):
         problems.append("quantity must be an integer")
 
-    fairminter = ledger.ledger.get_fairminter_by_asset(db, asset)
+    fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
     if not fairminter:
         problems.append(f"fairminter not found for asset: `{asset}`")
         return problems
@@ -76,7 +76,7 @@ def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: boo
         raise exceptions.ComposeError(problems)
 
     if quantity != 0:
-        fairminter = ledger.ledger.get_fairminter_by_asset(db, asset)
+        fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
         if fairminter["price"] == 0:
             raise exceptions.ComposeError("quantity is not allowed for free fairminters")
 
@@ -129,7 +129,7 @@ def parse(db, tx, message):
         return
 
     # get corresponding fairminter
-    fairminter = ledger.ledger.get_fairminter_by_asset(db, asset)
+    fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
 
     # determine if the soft cap has been reached
     soft_cap_not_reached = (
@@ -257,7 +257,7 @@ def parse(db, tx, message):
     ledger.events.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
 
     # we prepare the new issuance
-    last_issuance = ledger.ledger.get_last_issuance(db, asset)
+    last_issuance = ledger.issuances.get_last_issuance(db, asset)
     bindings = last_issuance | {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
@@ -287,7 +287,7 @@ def parse(db, tx, message):
                 and fairminter["soft_cap_deadline_block"] >= tx["block_index"]
             ):
                 fairminter_mod.soft_cap_deadline_reached(db, fairminter, tx["block_index"])
-            ledger.ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+            ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance
     ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")

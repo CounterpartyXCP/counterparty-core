@@ -70,7 +70,7 @@ def detach_assets(db, tx, source, destination=None):
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
-            "msg_index": ledger.ledger.get_send_msg_index(db, tx["tx_hash"]),
+            "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
             "block_index": tx["block_index"],
             "status": status,
             "send_type": "detach",
@@ -120,7 +120,7 @@ def detach_assets(db, tx, source, destination=None):
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
-            "msg_index": ledger.ledger.get_send_msg_index(db, tx["tx_hash"]),
+            "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
             "block_index": tx["block_index"],
             "status": "valid",
             "source": source,

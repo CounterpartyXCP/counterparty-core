@@ -87,7 +87,7 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
                     asset_list.append(item[field_name])
 
     # get asset issuances
-    issuance_by_asset = ledger.ledger.get_assets_last_issuance(state_db, asset_list)
+    issuance_by_asset = ledger.issuances.get_assets_last_issuance(state_db, asset_list)
 
     # get block_time for each block_index
     block_times = ledger.blocks.get_blocks_time(ledger_db, block_indexes)
@@ -367,7 +367,7 @@ def inject_fiat_price(ledger_db, dispenser):
             _oracle_fee,
             dispenser["fiat_unit"],
             dispenser["oracle_price_last_updated"],
-        ) = ledger.ledger.get_oracle_last_price(
+        ) = ledger.other.get_oracle_last_price(
             ledger_db, dispenser["oracle_address"], CurrentState().current_block_index()
         )
 
@@ -402,7 +402,7 @@ def inject_dispensers(ledger_db, state_db, result_list):
                 dispenser_list.append(result_item["dispenser_tx_hash"])
 
     # get dispenser info
-    dispenser_info = ledger.ledger.get_dispensers_info(state_db, dispenser_list)
+    dispenser_info = ledger.markets.get_dispensers_info(state_db, dispenser_list)
 
     # inject dispenser info
     enriched_result_list = []

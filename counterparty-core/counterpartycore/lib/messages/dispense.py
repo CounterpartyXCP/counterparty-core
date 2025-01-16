@@ -15,10 +15,8 @@ def get_must_give(db, dispenser, btc_amount, block_index=None):
     if (dispenser["oracle_address"] is not None) and protocol.enabled(  # noqa: E711
         "oracle_dispensers", block_index
     ):
-        last_price, _last_fee, _last_fiat_label, _last_updated = (
-            ledger.ledger.get_oracle_last_price(
-                db, dispenser["oracle_address"], block_index or CurrentState().current_block_index()
-            )
+        last_price, _last_fee, _last_fiat_label, _last_updated = ledger.other.get_oracle_last_price(
+            db, dispenser["oracle_address"], block_index or CurrentState().current_block_index()
         )
         if last_price is None:
             raise exceptions.NoPriceError(
@@ -40,7 +38,7 @@ def validate_compose(db, source, destination, quantity):
     if source == destination:
         raise exceptions.ComposeError("source and destination must be different")
 
-    dispensers = ledger.ledger.get_dispensers(db, address=destination)
+    dispensers = ledger.markets.get_dispensers(db, address=destination)
     if len(dispensers) == 0:
         problems.append("address doesn't have any open dispenser")
         return problems
@@ -108,7 +106,7 @@ def parse(db, tx):
     for next_out in outs:
         dispensers = []
         if next_out["destination"] is not None:
-            dispensers = ledger.ledger.get_dispensers(
+            dispensers = ledger.markets.get_dispensers(
                 db, address=next_out["destination"], status_in=[0, 11], order_by="asset"
             )
 
@@ -183,7 +181,7 @@ def parse(db, tx):
                     "status": dispenser["status"],
                     "dispense_count": dispenser["dispense_count"] + 1,
                 }
-                ledger.ledger.update_dispenser(
+                ledger.markets.update_dispenser(
                     db,
                     dispenser["rowid"],
                     set_data,

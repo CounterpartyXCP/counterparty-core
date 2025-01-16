@@ -92,7 +92,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
     if not source:
         problems.append("null source address")
     # Check previous broadcast in this feed.
-    broadcasts = ledger.ledger.get_broadcasts_by_source(db, source, "valid", order_by="ASC")
+    broadcasts = ledger.other.get_broadcasts_by_source(db, source, "valid", order_by="ASC")
     if broadcasts:
         last_broadcast = broadcasts[-1]
         if last_broadcast["locked"]:
@@ -251,7 +251,7 @@ def parse(db, tx, message):
                 "address": tx["source"],
                 "options": options,
             }
-            existing_address = ledger.ledger.get_addresses(db, address=tx["source"])
+            existing_address = ledger.other.get_addresses(db, address=tx["source"])
             if len(existing_address) == 0:
                 ledger.events.insert_record(db, "addresses", op_bindings, "NEW_ADDRESS_OPTIONS")
             else:
@@ -263,11 +263,11 @@ def parse(db, tx, message):
     if value is None or value < 0:
         # Cancel Open Bets?
         if value == -2:
-            for i in ledger.ledger.get_bet_by_feed(db, tx["source"], status="open"):
+            for i in ledger.other.get_bet_by_feed(db, tx["source"], status="open"):
                 bet.cancel_bet(db, i, "dropped", tx["block_index"], tx["tx_index"])
         # Cancel Pending Bet Matches?
         if value == -3:
-            for bet_match in ledger.ledger.get_pending_bet_matches(db, tx["source"]):
+            for bet_match in ledger.other.get_pending_bet_matches(db, tx["source"]):
                 bet.cancel_bet_match(db, bet_match, "dropped", tx["block_index"], tx["tx_index"])
         cursor.close()
         return
@@ -278,7 +278,7 @@ def parse(db, tx, message):
         return
 
     # Handle bet matches that use this feed.
-    bet_matches = ledger.ledger.get_pending_bet_matches(
+    bet_matches = ledger.other.get_pending_bet_matches(
         db, tx["source"], order_by="tx1_index ASC, tx0_index ASC"
     )
     for bet_match in bet_matches:
@@ -503,7 +503,7 @@ def parse(db, tx, message):
         # Update the bet match’s status.
         if bet_match_status:
             bet_match_id = helpers.make_id(bet_match["tx0_hash"], bet_match["tx1_hash"])
-            ledger.ledger.update_bet_match_status(db, bet_match_id, bet_match_status)
+            ledger.other.update_bet_match_status(db, bet_match_id, bet_match_status)
 
             logger.info(
                 "Bet Match %(id)s updated [%(status)s]",

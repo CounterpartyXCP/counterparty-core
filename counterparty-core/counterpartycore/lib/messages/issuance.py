@@ -101,7 +101,7 @@ def validate(
                 problems.append("call price for non‐callable asset")
 
     # Valid re-issuance?
-    issuances = ledger.ledger.get_issuances(
+    issuances = ledger.issuances.get_issuances(
         db, asset=asset, status="valid", first=True, current_block_index=block_index
     )
     reissued_asset_longname = None
@@ -161,7 +161,7 @@ def validate(
 
     # validate parent ownership for subasset
     if subasset_longname is not None and not reissuance:
-        parent_issuances = ledger.ledger.get_issuances(
+        parent_issuances = ledger.issuances.get_issuances(
             db, asset=subasset_parent, status="valid", first=True, current_block_index=block_index
         )
         if parent_issuances:
@@ -173,7 +173,7 @@ def validate(
 
     # validate subasset issuance is not a duplicate
     if subasset_longname is not None and not reissuance:
-        assets = ledger.ledger.get_assets_by_longname(db, subasset_longname)
+        assets = ledger.issuances.get_assets_by_longname(db, subasset_longname)
         if len(assets) > 0:
             problems.append("subasset already exists")
 
@@ -276,7 +276,7 @@ def compose(
 ):
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
-    issuances = ledger.ledger.get_issuances(
+    issuances = ledger.issuances.get_issuances(
         db,
         asset=asset,
         status="valid",
@@ -302,7 +302,7 @@ def compose(
         )
         if subasset_longname is not None:
             # try to find an existing subasset
-            assets = ledger.ledger.get_assets_by_longname(db, subasset_longname)
+            assets = ledger.issuances.get_assets_by_longname(db, subasset_longname)
             if len(assets) > 0:
                 # this is a reissuance
                 asset = assets[0]["asset_name"]
@@ -311,8 +311,8 @@ def compose(
                 #   generate a random numeric asset id which will map to this subasset
                 asset = assetnames.generate_random_asset(subasset_longname)
 
-    asset_id = ledger.ledger.generate_asset_id(asset, CurrentState().current_block_index())
-    asset_name = ledger.ledger.generate_asset_name(
+    asset_id = ledger.issuances.generate_asset_id(asset, CurrentState().current_block_index())
+    asset_name = ledger.issuances.generate_asset_name(
         asset_id, CurrentState().current_block_index()
     )  # This will remove leading zeros in the numeric assets
 
@@ -624,18 +624,18 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                 "",
             )
         try:
-            asset = ledger.ledger.generate_asset_name(asset_id, block_index)
+            asset = ledger.issuances.generate_asset_name(asset_id, block_index)
 
             ##This is for backwards compatibility with assets names longer than 12 characters
             if asset.startswith("A"):
-                named_asset = ledger.ledger.get_asset_name(db, asset_id, block_index)
+                named_asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
 
                 if named_asset != 0:
                     asset = named_asset
 
             if description == None:  # noqa: E711
                 try:
-                    description = ledger.ledger.get_asset_description(db, asset)
+                    description = ledger.issuances.get_asset_description(db, asset)
                 except exceptions.AssetError:
                     description = ""
 
@@ -703,7 +703,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
 
 
 def _get_last_description(db, asset, default, block_index):
-    issuances = ledger.ledger.get_issuances(
+    issuances = ledger.issuances.get_issuances(
         db, asset=asset, status="valid", first=True, current_block_index=block_index
     )
     if len(issuances) > 0:
@@ -786,7 +786,7 @@ def parse(db, tx, message, message_type_id):
 
         if len(balances_result) <= 1:
             if len(balances_result) == 0:
-                issuances_result = ledger.ledger.get_issuances(
+                issuances_result = ledger.issuances.get_issuances(
                     db, asset=asset, last=True, current_block_index=tx["block_index"]
                 )
 
