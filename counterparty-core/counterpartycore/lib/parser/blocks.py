@@ -20,6 +20,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.cli import log
+from counterpartycore.lib.ledger import blocks as ledger_blocks
 from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import (
@@ -637,7 +638,7 @@ def reparse(db, block_index=0):
             previous_txlist_hash = None
             previous_messages_hash = None
             if CurrentState().current_block_index() > config.BLOCK_FIRST:
-                previous_block = ledger.get_block(db, block["block_index"] - 1)
+                previous_block = ledger_blocks.get_block(db, block["block_index"] - 1)
                 previous_ledger_hash = previous_block["ledger_hash"]
                 previous_txlist_hash = previous_block["txlist_hash"]
                 previous_messages_hash = previous_block["messages_hash"]
@@ -735,7 +736,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
         }
     else:
         # get previous block
-        previous_block = ledger.get_block(db, CurrentState().current_block_index() - 1)
+        previous_block = ledger_blocks.get_block(db, CurrentState().current_block_index() - 1)
         # check if reorg is needed
         if decoded_block["hash_prev"] != previous_block["block_hash"]:
             logger.warning(
