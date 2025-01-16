@@ -7,8 +7,9 @@ import sys
 import time
 
 import sh
+from counterpartycore.lib.exceptions import ComposeError
 from regtestcli import atomic_swap
-from regtestnode import ComposeError, RegtestNodeThread, print_server_output
+from regtestnode import RegtestNodeThread, print_server_output
 from scenarios import (
     scenario_1_fairminter,
     scenario_2_fairminter,

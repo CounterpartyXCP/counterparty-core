@@ -1,5 +1,4 @@
 from counterpartycore.lib import exceptions
-from counterpartycore.lib.api.apiv1 import APIError
 
 from ..params import ADDR, DP, MULTISIGADDR, P2SH_ADDR
 
@@ -510,11 +509,11 @@ API_V1_VECTOR = {
             },
             {
                 "in": ("balances", None, "barfoo", None, None, None, None, None, 1000, 0, True),
-                "error": (APIError, "Invalid filter operator (OR, AND)"),
+                "error": (exceptions.APIError, "Invalid filter operator (OR, AND)"),
             },
             {
                 "in": (None, None, "AND", None, None, None, None, None, 1000, 0, True),
-                "error": (APIError, "Unknown table"),
+                "error": (exceptions.APIError, "Unknown table"),
             },
             {
                 "in": (
@@ -530,27 +529,27 @@ API_V1_VECTOR = {
                     0,
                     True,
                 ),
-                "error": (APIError, "Invalid order direction (ASC, DESC)"),
+                "error": (exceptions.APIError, "Invalid order direction (ASC, DESC)"),
             },
             {
                 "in": ("balances", None, "AND", None, None, None, None, None, 1000.0, 0, True),
-                "error": (APIError, "Invalid limit"),
+                "error": (exceptions.APIError, "Invalid limit"),
             },
             {
                 "in": ("balances", None, "AND", None, None, None, None, None, 1001, 0, True),
-                "error": (APIError, "Limit should be lower or equal to 1000"),
+                "error": (exceptions.APIError, "Limit should be lower or equal to 1000"),
             },
             {
                 "in": ("balances", None, "AND", None, None, None, None, None, 1000, 0.0, True),
-                "error": (APIError, "Invalid offset"),
+                "error": (exceptions.APIError, "Invalid offset"),
             },
             {
                 "in": ("balances", None, "AND", "*", None, None, None, None, 1000, 0, True),
-                "error": (APIError, "Invalid order_by, must be a field name"),
+                "error": (exceptions.APIError, "Invalid order_by, must be a field name"),
             },
             {
                 "in": ("balances", [0], "AND", None, None, None, None, None, 1000, 0, True),
-                "error": (APIError, "Unknown filter type"),
+                "error": (exceptions.APIError, "Unknown filter type"),
             },
             {
                 "in": (
@@ -566,7 +565,7 @@ API_V1_VECTOR = {
                     0,
                     True,
                 ),
-                "error": (APIError, "A specified filter is missing the 'value' field"),
+                "error": (exceptions.APIError, "A specified filter is missing the 'value' field"),
             },
             {
                 "in": (
@@ -582,7 +581,7 @@ API_V1_VECTOR = {
                     0,
                     True,
                 ),
-                "error": (APIError, "Invalid value for the field 'bar'"),
+                "error": (exceptions.APIError, "Invalid value for the field 'bar'"),
             },
             {
                 "in": (
@@ -598,7 +597,7 @@ API_V1_VECTOR = {
                     0,
                     True,
                 ),
-                "error": (APIError, "Invalid value for the field 'bar'"),
+                "error": (exceptions.APIError, "Invalid value for the field 'bar'"),
             },
             {
                 "in": (
@@ -614,7 +613,7 @@ API_V1_VECTOR = {
                     0,
                     True,
                 ),
-                "error": (APIError, "Invalid operator for the field 'bar'"),
+                "error": (exceptions.APIError, "Invalid operator for the field 'bar'"),
             },
             {
                 "in": (
@@ -630,7 +629,7 @@ API_V1_VECTOR = {
                     0,
                     True,
                 ),
-                "error": (APIError, "case_sensitive must be a boolean"),
+                "error": (exceptions.APIError, "case_sensitive must be a boolean"),
             },
             {
                 "comment": "standard send with no memo",
@@ -857,7 +856,7 @@ API_V1_VECTOR = {
                     0,
                     True,
                 ),
-                "error": (APIError, "Invalid memo_hex value"),
+                "error": (exceptions.APIError, "Invalid memo_hex value"),
             },
             {
                 "comment": "search by memo hex",

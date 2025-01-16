@@ -1,7 +1,6 @@
 from fractions import Fraction
 
 from counterpartycore.lib import exceptions
-from counterpartycore.lib.ledger.ledger import CreditError, DebitError
 
 from ..params import (
     ADDR,
@@ -10,6 +9,22 @@ from ..params import DEFAULT_PARAMS as DP
 
 LEDGER_VECTOR = {
     "ledger.ledger": {
+        "last_message": [
+            {
+                "in": (),
+                "out": {
+                    "message_index": 1743,
+                    "block_index": 310703,
+                    "command": "parse",
+                    "category": "blocks",
+                    "bindings": '{"block_index":310703,"ledger_hash":"3e8ba9968f58a14dd4950aa1a1f02d58edfd246a2ac733a5fac4aa2c04505e3e","messages_hash":"794d8c3df2ea1ce1b68833e0c33f7a846445f6da53dadceaaff41aac66dd5c83","transaction_count":0,"txlist_hash":"c76b69cb9056ed5b35e10737d93aa2fde389690899503f46f3ca18d419ce4dd2"}',
+                    "timestamp": 0,
+                    "event": "BLOCK_PARSED",
+                    "tx_hash": None,
+                    "event_hash": "7c68ff23281790be67a757e3ba0eb0a0bcd57ca2cae307531a1ae9de28f9c939",
+                },
+            }
+        ],
         "generate_asset_id": [
             {"in": ("BTC", DP["default_block_index"]), "out": 0},
             {"in": ("XCP", DP["default_block_index"]), "out": 1},
@@ -50,22 +65,6 @@ LEDGER_VECTOR = {
             {"in": (2**64, 308000), "error": (exceptions.AssetIDError, "too high")},
         ],
         "price": [{"in": (1, 10), "out": Fraction(1, 10)}],
-        "last_message": [
-            {
-                "in": (),
-                "out": {
-                    "message_index": 1743,
-                    "block_index": 310703,
-                    "command": "parse",
-                    "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"3e8ba9968f58a14dd4950aa1a1f02d58edfd246a2ac733a5fac4aa2c04505e3e","messages_hash":"794d8c3df2ea1ce1b68833e0c33f7a846445f6da53dadceaaff41aac66dd5c83","transaction_count":0,"txlist_hash":"c76b69cb9056ed5b35e10737d93aa2fde389690899503f46f3ca18d419ce4dd2"}',
-                    "timestamp": 0,
-                    "event": "BLOCK_PARSED",
-                    "tx_hash": None,
-                    "event_hash": "7c68ff23281790be67a757e3ba0eb0a0bcd57ca2cae307531a1ae9de28f9c939",
-                },
-            }
-        ],
         "get_asset_id": [
             {"in": ("XCP", DP["default_block_index"]), "out": 1},
             {"in": ("BTC", DP["default_block_index"]), "out": 0},
@@ -85,31 +84,34 @@ LEDGER_VECTOR = {
             {"in": (ADDR[0], "XCP", 1, 0), "out": None},
             {
                 "in": (ADDR[0], "BTC", DP["quantity"], 0),
-                "error": (DebitError, "Cannot debit bitcoins."),
+                "error": (exceptions.DebitError, "Cannot debit bitcoins."),
             },
             {
                 "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
-                "error": (DebitError, "Negative quantity."),
+                "error": (exceptions.DebitError, "Negative quantity."),
             },
             {
                 "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
-                "error": (DebitError, "Quantity must be an integer."),
+                "error": (exceptions.DebitError, "Quantity must be an integer."),
             },
-            {"in": (ADDR[0], "XCP", 2**40, 0), "error": (DebitError, "Insufficient funds.")},
+            {
+                "in": (ADDR[0], "XCP", 2**40, 0),
+                "error": (exceptions.DebitError, "Insufficient funds."),
+            },
         ],
         "credit": [
             {"in": (ADDR[0], "XCP", 1, 0), "out": None},
             {
                 "in": (ADDR[0], "BTC", DP["quantity"], 0),
-                "error": (CreditError, "Cannot debit bitcoins."),
+                "error": (exceptions.CreditError, "Cannot debit bitcoins."),
             },
             {
                 "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
-                "error": (CreditError, "Negative quantity."),
+                "error": (exceptions.CreditError, "Negative quantity."),
             },
             {
                 "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
-                "error": (CreditError, "Quantity must be an integer."),
+                "error": (exceptions.CreditError, "Quantity must be an integer."),
             },
         ],
         "is_divisible": [

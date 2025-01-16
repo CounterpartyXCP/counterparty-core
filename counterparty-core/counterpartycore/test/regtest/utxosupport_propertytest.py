@@ -4,10 +4,10 @@ import math
 
 import hypothesis
 from counterpartycore.lib import config
+from counterpartycore.lib.exceptions import ComposeError
 from counterpartycore.lib.utils import assetnames
 from hypothesis import settings
 from properytestnode import PropertyTestNode
-from regtestnode import ComposeError
 
 MESSAGE_IDS = [
     0,
