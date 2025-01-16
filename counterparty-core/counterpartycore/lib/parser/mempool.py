@@ -48,7 +48,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             decoded_tx_count = 0
             for raw_tx in raw_tx_list:
                 decoded_tx = deserialize.deserialize_tx(raw_tx, parse_vouts=True)
-                existing_tx = ledger.ledger.get_transaction(db, decoded_tx["tx_hash"])
+                existing_tx = ledger.blocks.get_transaction(db, decoded_tx["tx_hash"])
                 not_supported_txs.append(decoded_tx["tx_hash"])
                 if existing_tx:
                     logger.trace(f"Transaction {decoded_tx['tx_hash']} already in the database")
@@ -127,7 +127,7 @@ def clean_mempool(db):
     mempool_events = cursor.fetchall()
     for event in mempool_events:
         # print(event)
-        tx = ledger.ledger.get_transaction(db, event["tx_hash"])
+        tx = ledger.blocks.get_transaction(db, event["tx_hash"])
         if tx:
             clean_transaction_events(db, event["tx_hash"])
     # remove transactions removed from the mempool

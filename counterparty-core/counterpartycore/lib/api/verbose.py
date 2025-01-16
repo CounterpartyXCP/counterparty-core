@@ -90,7 +90,7 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
     issuance_by_asset = ledger.ledger.get_assets_last_issuance(state_db, asset_list)
 
     # get block_time for each block_index
-    block_times = ledger.ledger.get_blocks_time(ledger_db, block_indexes)
+    block_times = ledger.blocks.get_blocks_time(ledger_db, block_indexes)
 
     # inject issuance and block_time
     for result_item in result_list:

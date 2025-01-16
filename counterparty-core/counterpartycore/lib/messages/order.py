@@ -196,10 +196,10 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     if protocol.after_block_or_test_network(block_index, 310000):  # Protocol change.
         if not protocol.after_block_or_test_network(block_index, 315000):  # Protocol change.
             match(
-                db, ledger.ledger.get_transactions(db, tx_hash=tx0_order["tx_hash"])[0], block_index
+                db, ledger.blocks.get_transactions(db, tx_hash=tx0_order["tx_hash"])[0], block_index
             )
             match(
-                db, ledger.ledger.get_transactions(db, tx_hash=tx1_order["tx_hash"])[0], block_index
+                db, ledger.blocks.get_transactions(db, tx_hash=tx1_order["tx_hash"])[0], block_index
             )
 
     if status == "expired":

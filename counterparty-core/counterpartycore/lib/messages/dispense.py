@@ -94,7 +94,7 @@ def parse(db, tx):
 
     outs = []
     if protocol.enabled("multiple_dispenses"):
-        outs = ledger.ledger.get_vouts(db, tx["tx_hash"])
+        outs = ledger.blocks.get_vouts(db, tx["tx_hash"])
     else:
         outs = [tx]
 

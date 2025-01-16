@@ -835,7 +835,7 @@ class APIServer(threading.Thread):
                 else:
                     caught_up = True
 
-                last_block = ledger.ledger.get_last_block(db)
+                last_block = ledger.blocks.get_last_block(db)
 
                 try:
                     last_message = ledger.ledger.last_message(db)

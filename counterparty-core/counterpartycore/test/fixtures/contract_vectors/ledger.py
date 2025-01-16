@@ -8,6 +8,9 @@ from ..params import (
 from ..params import DEFAULT_PARAMS as DP
 
 LEDGER_VECTOR = {
+    "ledger.blocks": {
+        "last_db_index": [{"in": (), "out": DP["default_block_index"] - 1}],
+    },
     "ledger.ledger": {
         "last_message": [
             {
@@ -400,7 +403,6 @@ LEDGER_VECTOR = {
                 ],
             },
         ],
-        "last_db_index": [{"in": (), "out": DP["default_block_index"] - 1}],
         "get_credits_by_asset": [
             {
                 "in": ("A160361285792733729",),

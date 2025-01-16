@@ -18,7 +18,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def check_last_parsed_block(db, blockcount):
     """Checks database to see if is caught up with backend."""
-    last_block = ledger.ledger.get_last_block(db)
+    last_block = ledger.blocks.get_last_block(db)
     if last_block is None:
         raise exceptions.DatabaseError(
             f"{config.XCP_NAME} database is behind backend."

@@ -434,7 +434,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
     if block_hash is None or block_hash == config.MEMPOOL_BLOCK_HASH:
         block_hash = config.MEMPOOL_BLOCK_HASH
         block_index = config.MEMPOOL_BLOCK_INDEX
-        existing_tx = ledger.ledger.get_transaction(db, tx_hash)
+        existing_tx = ledger.blocks.get_transaction(db, tx_hash)
         if existing_tx:
             CurrentState().set_current_tx_hash(None)
             return tx_index
@@ -693,7 +693,7 @@ def handle_reorg(db):
             previous_block_index -= 1
             continue
 
-        if previous_block_hash != ledger.ledger.get_block_hash(db, previous_block_index):
+        if previous_block_hash != ledger.blocks.get_block_hash(db, previous_block_index):
             # hashes don't match
             logger.debug(f"Hashes don't match ({previous_block_index}).")
             previous_block_index -= 1
@@ -832,7 +832,7 @@ def check_database_version(db):
         elif e.required_action == "reparse":
             reparse(db, block_index=e.from_block_index)
         # refresh the current block index
-        CurrentState().set_current_block_index(ledger.ledger.last_db_index(db))
+        CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
         # update the database version
         database.update_version(db)
 
@@ -859,7 +859,7 @@ def catch_up(db, check_asset_conservation=True):
     try:
         CurrentState().set_block_parser_status("catching up")
         # update the current block index
-        current_block_index = ledger.ledger.last_db_index(db)
+        current_block_index = ledger.blocks.last_db_index(db)
         if current_block_index == 0:
             logger.info("New database.")
             current_block_index = config.BLOCK_FIRST - 1
