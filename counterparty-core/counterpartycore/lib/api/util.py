@@ -211,8 +211,6 @@ def prepare_route_args(function):
     for arg_name, arg in function_args.items():
         if arg_name == "construct_params":
             for carg_name, carg_info in composer.CONSTRUCT_PARAMS.items():
-                if carg_name in composer.DEPRECATED_CONSTRUCT_PARAMS:
-                    continue
                 args.append(
                     {
                         "name": carg_name,

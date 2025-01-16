@@ -989,7 +989,7 @@ def prepare_construct_params(construct_params):
     cleaned_construct_params = construct_params.copy()
     # copy deprecated parameters to new ones
     for deprecated_param, new_param, copyer in [
-        ("fee_per_kb", "sat_per_vbyte", lambda x: x // 1024),
+        ("fee_per_kb", "sat_per_vbyte", lambda x: max(x // 1024, 1)),
         ("fee_provided", "max_fee", lambda x: x),
         ("dust_return_pubkey", "mutlisig_pubkey", lambda x: x),
         ("return_psbt", "verbose", lambda x: x),

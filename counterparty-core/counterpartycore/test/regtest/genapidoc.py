@@ -8,6 +8,7 @@ import sh
 import yaml
 from counterpartycore.lib import database
 from counterpartycore.lib.api import routes
+from counterpartycore.lib.composer import DEPRECATED_CONSTRUCT_PARAMS
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../apiary.apib")
@@ -250,6 +251,8 @@ def gen_blueprint(db):
         if len(route["args"]) > 0:
             md += "\n\n+ Parameters\n"
             for arg in route["args"]:
+                if arg["name"] in DEPRECATED_CONSTRUCT_PARAMS:
+                    continue
                 required = "required" if arg["required"] else "optional"
                 description = arg.get("description", "")
                 if current_group.lower() == "compose" and arg["name"] == "exact_fee":

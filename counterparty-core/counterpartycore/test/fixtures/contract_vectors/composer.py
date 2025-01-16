@@ -1397,7 +1397,52 @@ COMPOSER_VECTOR = {
                         "The `unspent_tx_hash` parameter is deprecated, use `inputs_set` instead",
                     ],
                 ),
-            }
+            },
+            {
+                "in": (
+                    {
+                        "fee_per_kb": 1023,
+                        "fee_provided": 666,
+                        "dust_return_pubkey": DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                        "return_psbt": True,
+                        "regular_dust_size": 357,
+                        "multisig_dust_size": 1200,
+                        "extended_tx_info": True,
+                        "old_style_api": True,
+                        "p2sh_pretx_txid": "aabbb",
+                        "segwit": True,
+                        "unspent_tx_hash": "aabbcc",
+                    },
+                ),
+                "out": (
+                    {
+                        "sat_per_vbyte": 1,
+                        "max_fee": 666,
+                        "mutlisig_pubkey": DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                        "verbose": True,
+                        "regular_dust_size": 357,
+                        "multisig_dust_size": 1200,
+                        "extended_tx_info": True,
+                        "old_style_api": True,
+                        "p2sh_pretx_txid": "aabbb",
+                        "segwit": True,
+                        "unspent_tx_hash": "aabbcc",
+                    },
+                    [
+                        "The `fee_per_kb` parameter is deprecated, use `sat_per_vbyte` instead",
+                        "The `fee_provided` parameter is deprecated, use `max_fee` instead",
+                        "The `dust_return_pubkey` parameter is deprecated, use `mutlisig_pubkey` instead",
+                        "The `return_psbt` parameter is deprecated, use `verbose` instead",
+                        "The `regular_dust_size` parameter is deprecated, automatically calculated",
+                        "The `multisig_dust_size` parameter is deprecated, automatically calculated",
+                        "The `extended_tx_info` parameter is deprecated (api v1 only), use api v2 instead",
+                        "The `old_style_api` parameter is deprecated (api v1 only), use api v2 instead",
+                        "The `p2sh_pretx_txid` parameter is ignored, p2sh disabled",
+                        "The `segwit` parameter is ignored, segwit automatically detected",
+                        "The `unspent_tx_hash` parameter is deprecated, use `inputs_set` instead",
+                    ],
+                ),
+            },
         ],
         "compose_transaction": [
             {

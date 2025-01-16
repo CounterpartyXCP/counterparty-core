@@ -12632,6 +12632,83 @@
                         "required": false
                     },
                     {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12808,6 +12885,83 @@
                         "required": false
                     },
                     {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -12963,6 +13117,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
@@ -13131,6 +13362,83 @@
                         "required": false
                     },
                     {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13286,6 +13594,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
@@ -13456,6 +13841,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
@@ -13655,6 +14117,83 @@
                         "required": false
                     },
                     {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -13822,6 +14361,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
@@ -14049,6 +14665,83 @@
                         "required": false
                     },
                     {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14247,6 +14940,83 @@
                         "required": false
                     },
                     {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14432,6 +15202,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
@@ -14626,6 +15473,83 @@
                         "required": false
                     },
                     {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -14793,6 +15717,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
@@ -14976,6 +15977,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
@@ -15249,6 +16327,83 @@
                         "required": false
                     },
                     {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -15411,6 +16566,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
@@ -15589,6 +16821,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
@@ -15771,6 +17080,83 @@
                         "required": false
                     },
                     {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
+                        "required": false
+                    },
+                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",
@@ -15933,6 +17319,83 @@
                         "type": "bool",
                         "default": false,
                         "description": "Return only the data part of the transaction",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_per_kb",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `sat_per_vbyte` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "fee_provided",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, use `max_fee` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "unspent_tx_hash",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `inputs_set` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "dust_return_pubkey",
+                        "type": "str",
+                        "default": null,
+                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "return_psbt",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated, use `verbose` instead",
+                        "required": false
+                    },
+                    {
+                        "name": "regular_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "multisig_dust_size",
+                        "type": "int",
+                        "default": null,
+                        "description": "Deprecated, automatically calculated",
+                        "required": false
+                    },
+                    {
+                        "name": "extended_tx_info",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "old_style_api",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Deprecated (API v1 only), use API v2 instead",
+                        "required": false
+                    },
+                    {
+                        "name": "p2sh_pretx_txid",
+                        "type": "str",
+                        "default": null,
+                        "description": "Ignored, P2SH disabled",
+                        "required": false
+                    },
+                    {
+                        "name": "segwit",
+                        "type": "bool",
+                        "default": false,
+                        "description": "Ignored, Segwit automatically detected",
                         "required": false
                     },
                     {
