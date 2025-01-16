@@ -7,8 +7,8 @@ import struct
 from counterpartycore.lib import (
     config,
     exceptions,
+    ledger,
 )
-from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 
@@ -44,21 +44,21 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
     # Examine asset.
     try:
-        divisible = ledger.is_divisible(db, asset)
+        divisible = ledger.ledger.is_divisible(db, asset)
     except exceptions.AssetError:
         problems.append(f"no such asset, {asset}.")
         return None, None, problems, 0
 
     # Only issuer can pay dividends.
     if protocol.after_block_or_test_network(block_index, 320000):  # Protocol change.
-        issuer = ledger.get_asset_issuer(db, asset)
+        issuer = ledger.ledger.get_asset_issuer(db, asset)
 
         if issuer != source:
             problems.append("only issuer can pay dividends")
 
     # Examine dividend asset.
     try:
-        dividend_divisible = ledger.is_divisible(db, dividend_asset)
+        dividend_divisible = ledger.ledger.is_divisible(db, dividend_asset)
     except exceptions.AssetError:
         problems.append(f"no such dividend asset, {dividend_asset}.")
         return None, None, problems, 0
@@ -67,7 +67,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     exclude_empty = False
     if protocol.enabled("zero_quantity_value_adjustment_1"):
         exclude_empty = True
-    holders = ledger.holders(db, asset, exclude_empty, block_index=block_index)
+    holders = ledger.ledger.holders(db, asset, exclude_empty, block_index=block_index)
 
     outputs = []
     addresses = []
@@ -109,7 +109,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         problems.append("zero dividend")
 
     if dividend_asset != config.BTC:
-        dividend_balances = ledger.get_balance(db, source, dividend_asset)
+        dividend_balances = ledger.ledger.get_balance(db, source, dividend_asset)
         if dividend_balances < dividend_total:
             problems.append(f"insufficient funds ({dividend_asset})")
 
@@ -119,7 +119,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         if protocol.after_block_or_test_network(block_index, 330000):  # Protocol change.
             fee = int(0.0002 * config.UNIT * holder_count)
         if fee:
-            balance = ledger.get_balance(db, source, config.XCP)
+            balance = ledger.ledger.get_balance(db, source, config.XCP)
             if balance < fee:
                 problems.append(f"insufficient funds ({config.XCP})")
 
@@ -146,7 +146,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
 
 def get_estimate_xcp_fee(db, asset, block_index):
-    holders = ledger.holders(db, asset, True, block_index=block_index)
+    holders = ledger.ledger.holders(db, asset, True, block_index=block_index)
     addresses = [holder["address"] for holder in holders]
     holder_count = len(set(addresses))
     return int(0.0002 * config.UNIT * holder_count)
@@ -161,8 +161,8 @@ def compose(
     skip_validation: bool = False,
 ):
     # resolve subassets
-    asset = ledger.resolve_subasset_longname(db, asset)
-    dividend_asset = ledger.resolve_subasset_longname(db, dividend_asset)
+    asset = ledger.ledger.resolve_subasset_longname(db, asset)
+    dividend_asset = ledger.ledger.resolve_subasset_longname(db, dividend_asset)
 
     dividend_total, outputs, problems, fee = validate(
         db, source, quantity_per_unit, asset, dividend_asset, CurrentState().current_block_index()
@@ -170,7 +170,7 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
     logger.info(
-        f"Total quantity to be distributed in dividends: {ledger.value_out(db, dividend_total, dividend_asset)} {dividend_asset}"
+        f"Total quantity to be distributed in dividends: {ledger.ledger.value_out(db, dividend_total, dividend_asset)} {dividend_asset}"
     )
 
     if dividend_asset == config.BTC:
@@ -180,8 +180,8 @@ def compose(
             None,
         )
 
-    asset_id = ledger.get_asset_id(db, asset, CurrentState().current_block_index())
-    dividend_asset_id = ledger.get_asset_id(
+    asset_id = ledger.ledger.get_asset_id(db, asset, CurrentState().current_block_index())
+    dividend_asset_id = ledger.ledger.get_asset_id(
         db, dividend_asset, CurrentState().current_block_index()
     )
     data = messagetype.pack(ID)
@@ -193,12 +193,12 @@ def unpack(db, message, block_index, return_dict=False):
     try:
         if protocol.after_block_or_test_network(block_index, 288151) and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
-            asset = ledger.get_asset_name(db, asset_id, block_index)
-            dividend_asset = ledger.get_asset_name(db, dividend_asset_id, block_index)
+            asset = ledger.ledger.get_asset_name(db, asset_id, block_index)
+            dividend_asset = ledger.ledger.get_asset_name(db, dividend_asset_id, block_index)
             status = "valid"
         elif len(message) == LENGTH_1:
             quantity_per_unit, asset_id = struct.unpack(FORMAT_1, message)
-            asset = ledger.get_asset_name(db, asset_id, block_index)
+            asset = ledger.ledger.get_asset_name(db, asset_id, block_index)
             dividend_asset = config.XCP
             status = "valid"
         else:
@@ -245,7 +245,7 @@ def parse(db, tx, message):
 
     if status == "valid":
         # Debit.
-        ledger.debit(
+        ledger.ledger.debit(
             db,
             tx["source"],
             dividend_asset,
@@ -255,7 +255,7 @@ def parse(db, tx, message):
             event=tx["tx_hash"],
         )
         if protocol.after_block_or_test_network(tx["block_index"], 330000):  # Protocol change.
-            ledger.debit(
+            ledger.ledger.debit(
                 db,
                 tx["source"],
                 config.XCP,
@@ -268,7 +268,7 @@ def parse(db, tx, message):
         # Credit.
         for output in outputs:
             if not protocol.enabled("dont_credit_zero_dividend") or output["dividend_quantity"] > 0:
-                ledger.credit(
+                ledger.ledger.credit(
                     db,
                     output["address"],
                     dividend_asset,
@@ -292,7 +292,7 @@ def parse(db, tx, message):
     }
 
     if "integer overflow" not in status:
-        ledger.insert_record(db, "dividends", bindings, "ASSET_DIVIDEND")
+        ledger.ledger.insert_record(db, "dividends", bindings, "ASSET_DIVIDEND")
 
     logger.info(
         "Dividend of %(quantity_per_unit)s %(dividend_asset)s per unit of %(asset)s (%(tx_hash)s) [%(status)s]",

@@ -3,8 +3,7 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.ledger import ledger
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispense
 from counterpartycore.lib.parser import messagetype, protocol
@@ -21,7 +20,7 @@ def unpack(db, message, block_index):
     # Only used for `unpack` API call at the moment.
     try:
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = ledger.get_asset_name(db, asset_id, block_index)
+        asset = ledger.ledger.get_asset_name(db, asset_id, block_index)
 
     except struct.error:
         raise exceptions.UnpackError("could not unpack")  # noqa: B904
@@ -58,7 +57,7 @@ def validate(db, source, destination, asset, quantity, block_index):
         # Check destination address options
 
         cursor = db.cursor()
-        results = ledger.get_addresses(db, address=destination)
+        results = ledger.ledger.get_addresses(db, address=destination)
         if results:
             result = results[0]
             if result and helpers.active_options(
@@ -91,14 +90,14 @@ def compose(
         return compose_send_btc(db, source, destination, quantity)
 
     # resolve subassets
-    asset = ledger.resolve_subasset_longname(db, asset)
+    asset = ledger.ledger.resolve_subasset_longname(db, asset)
 
     # quantity must be in int satoshi (not float, string, etc)
     if not isinstance(quantity, int):
         raise exceptions.ComposeError("quantity must be an int (in satoshi)")
 
     # Only for outgoing (incoming will overburn).
-    balance = ledger.get_balance(db, source, asset)
+    balance = ledger.ledger.get_balance(db, source, asset)
     if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
@@ -108,7 +107,7 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    asset_id = ledger.get_asset_id(db, asset, block_index)
+    asset_id = ledger.ledger.get_asset_id(db, asset, block_index)
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
@@ -124,7 +123,7 @@ def parse(db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = ledger.get_asset_name(db, asset_id, tx["block_index"])
+        asset = ledger.ledger.get_asset_name(db, asset_id, tx["block_index"])
         status = "valid"
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
         asset, quantity = None, None
@@ -134,7 +133,9 @@ def parse(db, tx, message):
         # Oversend
         # doesn't make sense (0 and no balance should be the same) but let's not break the protocol
         try:
-            balance = ledger.get_balance(db, tx["source"], asset, raise_error_if_no_balance=True)
+            balance = ledger.ledger.get_balance(
+                db, tx["source"], asset, raise_error_if_no_balance=True
+            )
             if balance < quantity:
                 quantity = min(balance, quantity)
         except exceptions.BalanceError:
@@ -150,10 +151,10 @@ def parse(db, tx, message):
             status = "invalid: " + "; ".join(problems)
 
     if status == "valid":
-        ledger.debit(
+        ledger.ledger.debit(
             db, tx["source"], asset, quantity, tx["tx_index"], action="send", event=tx["tx_hash"]
         )
-        ledger.credit(
+        ledger.ledger.credit(
             db,
             tx["destination"],
             asset,
@@ -173,11 +174,11 @@ def parse(db, tx, message):
         "asset": asset,
         "quantity": quantity,
         "status": status,
-        "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
+        "msg_index": ledger.ledger.get_send_msg_index(db, tx["tx_hash"]),
         "send_type": "send",
     }
     if "integer overflow" not in status and "quantity must be in satoshis" not in status:
-        ledger.insert_record(db, "sends", bindings, "SEND")
+        ledger.ledger.insert_record(db, "sends", bindings, "SEND")
 
     logger.info(
         "Send %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]", bindings

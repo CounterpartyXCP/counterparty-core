@@ -17,12 +17,11 @@ import pytest
 import requests
 from bitcoinutils.keys import PublicKey
 
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1 as api
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import log, server
-from counterpartycore.lib.ledger import ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import gettxinfo, protocol, utxosinfo
 from counterpartycore.lib.utils import assetnames, base58, database, multisig, opcodes, script
@@ -700,7 +699,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.ledger.get_matching_orders",
-        ledger.get_matching_orders_no_cache,
+        ledger.ledger.get_matching_orders_no_cache,
     )
 
     monkeypatch.setattr(
@@ -712,13 +711,13 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
 
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.ledger.asset_issued_total",
-        ledger.asset_issued_total_no_cache,
+        ledger.ledger.asset_issued_total_no_cache,
     )
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.ledger.get_last_issuance",
-        ledger.get_last_issuance_no_cache,
+        ledger.ledger.get_last_issuance_no_cache,
     )
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.ledger.asset_destroyed_total",
-        ledger.asset_destroyed_total_no_cache,
+        ledger.ledger.asset_destroyed_total_no_cache,
     )
