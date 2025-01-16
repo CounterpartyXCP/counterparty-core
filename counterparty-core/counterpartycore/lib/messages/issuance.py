@@ -231,7 +231,7 @@ def validate(
         balances = ledger.ledger.get_asset_balances(db, asset)
 
         if len(balances) == 0:
-            if ledger.ledger.asset_supply(db, asset) > 0:
+            if ledger.supplies.asset_supply(db, asset) > 0:
                 problems.append("Cannot reset an asset with no holder")
         elif len(balances) > 1:
             problems.append("Cannot reset an asset with many holders")

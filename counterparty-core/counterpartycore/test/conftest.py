@@ -710,14 +710,14 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     )
 
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.ledger.asset_issued_total",
-        ledger.ledger.asset_issued_total_no_cache,
+        "counterpartycore.lib.ledger.supplies.asset_issued_total",
+        ledger.supplies.asset_issued_total_no_cache,
     )
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.ledger.get_last_issuance",
         ledger.ledger.get_last_issuance_no_cache,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.ledger.asset_destroyed_total",
-        ledger.ledger.asset_destroyed_total_no_cache,
+        "counterpartycore.lib.ledger.supplies.asset_destroyed_total",
+        ledger.supplies.asset_destroyed_total_no_cache,
     )

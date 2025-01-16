@@ -978,8 +978,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
 def asset_conservation(db, stop_event=None):
     logger.debug("Checking for conservation of assets.")
     with db:
-        supplies = ledger.ledger.supplies(db)
-        held = ledger.ledger.held(db)
+        supplies = ledger.supplies.supplies(db)
+        held = ledger.supplies.held(db)
         for asset in supplies.keys():
             if stop_event is not None and stop_event.is_set():
                 logger.debug("Stop event received. Exiting asset conservation check...")

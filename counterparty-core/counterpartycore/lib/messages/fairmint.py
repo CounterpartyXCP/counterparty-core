@@ -35,7 +35,7 @@ def validate(
     if fairminter["status"] != "open":
         problems.append(f"fairminter is not open for asset: `{asset}`")
 
-    asset_supply = ledger.ledger.asset_supply(db, fairminter["asset"])
+    asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
 
     if fairminter["price"] > 0:
         # if the fairminter is not free the quantity is mandatory
@@ -165,7 +165,7 @@ def parse(db, tx, message):
     else:
         paid_quantity = 0
         if protocol.enabled("partial_mint_to_reach_hard_cap"):
-            asset_supply = ledger.ledger.asset_supply(db, fairminter["asset"])
+            asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
             if (
                 fairminter["hard_cap"] > 0
                 and asset_supply + fairminter["max_mint_per_tx"] > fairminter["hard_cap"]
@@ -271,7 +271,7 @@ def parse(db, tx, message):
 
     # we check if the hard cap is reached and in this case...
     if fairminter["hard_cap"] > 0:
-        asset_supply = ledger.ledger.asset_supply(db, fairminter["asset"])
+        asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
         alredy_minted = asset_supply + earn_quantity + commission
         if alredy_minted == fairminter["hard_cap"]:
             # ...we unlock the issuances for this assets

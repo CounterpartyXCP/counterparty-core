@@ -67,7 +67,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     exclude_empty = False
     if protocol.enabled("zero_quantity_value_adjustment_1"):
         exclude_empty = True
-    holders = ledger.ledger.holders(db, asset, exclude_empty, block_index=block_index)
+    holders = ledger.supplies.holders(db, asset, exclude_empty, block_index=block_index)
 
     outputs = []
     addresses = []
@@ -146,7 +146,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
 
 def get_estimate_xcp_fee(db, asset, block_index):
-    holders = ledger.ledger.holders(db, asset, True, block_index=block_index)
+    holders = ledger.supplies.holders(db, asset, True, block_index=block_index)
     addresses = [holder["address"] for holder in holders]
     holder_count = len(set(addresses))
     return int(0.0002 * config.UNIT * holder_count)

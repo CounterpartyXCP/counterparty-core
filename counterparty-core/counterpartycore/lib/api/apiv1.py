@@ -678,16 +678,16 @@ class APIServer(threading.Thread):
                 if asset == "BTC":
                     return backend.bitcoind.get_btc_supply(normalize=False)
                 elif asset == "XCP":
-                    return ledger.ledger.xcp_supply(db)
+                    return ledger.supplies.xcp_supply(db)
                 else:
                     asset = ledger.ledger.resolve_subasset_longname(db, asset)
-                    return ledger.ledger.asset_supply(db, asset)
+                    return ledger.supplies.asset_supply(db, asset)
 
         @dispatcher.add_method
         def get_xcp_supply():
             logger.warning("Deprecated method: `get_xcp_supply`")
             with LedgerDBConnectionPool().connection() as db:
-                return ledger.ledger.xcp_supply(db)
+                return ledger.supplies.xcp_supply(db)
 
         @dispatcher.add_method
         def get_asset_info(assets=None, asset=None):
@@ -708,7 +708,7 @@ class APIServer(threading.Thread):
                         if asset == config.BTC:
                             supply = backend.bitcoind.get_btc_supply(normalize=False)
                         else:
-                            supply = ledger.ledger.xcp_supply(db)
+                            supply = ledger.supplies.xcp_supply(db)
 
                         assets_info.append(
                             {
@@ -745,7 +745,7 @@ class APIServer(threading.Thread):
                             "owner": last_issuance["issuer"],
                             "divisible": bool(last_issuance["divisible"]),
                             "locked": locked,
-                            "supply": ledger.ledger.asset_supply(db, asset),
+                            "supply": ledger.supplies.asset_supply(db, asset),
                             "description": last_issuance["description"],
                             "issuer": last_issuance["issuer"],
                         }
@@ -928,7 +928,7 @@ class APIServer(threading.Thread):
         def get_holder_count(asset):
             with LedgerDBConnectionPool().connection() as db:
                 asset = ledger.ledger.resolve_subasset_longname(db, asset)
-                holders = ledger.ledger.holders(db, asset, True)
+                holders = ledger.supplies.holders(db, asset, True)
             addresses = []
             for holder in holders:
                 addresses.append(holder["address"])
@@ -938,7 +938,7 @@ class APIServer(threading.Thread):
         def get_holders(asset):
             with LedgerDBConnectionPool().connection() as db:
                 asset = ledger.ledger.resolve_subasset_longname(db, asset)
-                holders = ledger.ledger.holders(db, asset, True)
+                holders = ledger.supplies.holders(db, asset, True)
             return holders
 
         @dispatcher.add_method
