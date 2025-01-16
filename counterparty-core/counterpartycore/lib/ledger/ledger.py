@@ -295,7 +295,7 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
         no_balance = True
 
     if old_balance < quantity:
-        raise DebitError("Insufficient funds.")
+        raise exceptions.DebitError("Insufficient funds.")
 
     balance = round(old_balance - quantity)
     balance = min(balance, config.MAX_INT)
@@ -326,22 +326,18 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
         balance_cursor.execute(query, bindings)
 
 
-class DebitError(Exception):
-    pass
-
-
 def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Debit given address by quantity of asset."""
     block_index = CurrentState().current_block_index()
 
     if type(quantity) != int:  # noqa: E721
-        raise DebitError("Quantity must be an integer.")
+        raise exceptions.DebitError("Quantity must be an integer.")
     if quantity < 0:
-        raise DebitError("Negative quantity.")
+        raise exceptions.DebitError("Negative quantity.")
     if quantity > config.MAX_INT:
-        raise DebitError("Quantity can't be higher than MAX_INT.")
+        raise exceptions.DebitError("Quantity can't be higher than MAX_INT.")
     if asset == config.BTC:
-        raise DebitError("Cannot debit bitcoins.")
+        raise exceptions.DebitError("Cannot debit bitcoins.")
 
     # Contracts can only hold XCP balances.
     if protocol.enabled("contracts_only_xcp_balances"):  # Protocol change.
@@ -411,22 +407,18 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
     balance_cursor.execute(query, bindings)
 
 
-class CreditError(Exception):
-    pass
-
-
 def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Credit given address by quantity of asset."""
     block_index = CurrentState().current_block_index()
 
     if type(quantity) != int:  # noqa: E721
-        raise CreditError("Quantity must be an integer.")
+        raise exceptions.CreditError("Quantity must be an integer.")
     if quantity < 0:
-        raise CreditError("Negative quantity.")
+        raise exceptions.CreditError("Negative quantity.")
     if quantity > config.MAX_INT:
-        raise CreditError("Quantity can't be higher than MAX_INT.")
+        raise exceptions.CreditError("Quantity can't be higher than MAX_INT.")
     if asset == config.BTC:
-        raise CreditError("Cannot debit bitcoins.")
+        raise exceptions.CreditError("Cannot debit bitcoins.")
 
     # Contracts can only hold XCP balances.
     if protocol.enabled("contracts_only_xcp_balances"):  # Protocol change.

@@ -824,7 +824,7 @@ def check_database_version(db):
         return
     try:
         check.database_version(db)
-    except check.DatabaseVersionError as e:
+    except exceptions.VersionError as e:
         logger.info(str(e))
         # rollback or reparse the database
         if e.required_action == "rollback":

@@ -17,20 +17,12 @@ from bitcoinutils.keys import P2wpkhAddress
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
-from counterpartycore.lib import config
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.utils import database
 
 setup("regtest")
 
 WALLET_NAME = "xcpwallet"
-
-
-class ServerNotReady(Exception):
-    pass
-
-
-class ComposeError(Exception):
-    pass
 
 
 class RegtestNode:
@@ -223,7 +215,7 @@ class RegtestNode:
                     no_confirmation,
                     dont_wait_mempool=dont_wait_mempool,
                 )
-            raise ComposeError(result["error"])
+            raise exceptions.ComposeError(result["error"])
         if return_only_data:
             return result["result"]["data"]
         raw_transaction = result["result"]["rawtransaction"]
@@ -264,17 +256,17 @@ class RegtestNode:
                     current_block = result["result"]["counterparty_height"]
                     if current_block < target_block:
                         print(f"Waiting for block {current_block} < {target_block}")
-                        raise ServerNotReady
+                        raise exceptions.ServerNotReady
                     else:
                         return
                 elif result and "result" in result:
                     print(
                         f"Server not ready: {result['result']['counterparty_height']} < {result['result']['backend_height']}"
                     )
-                    raise ServerNotReady
+                    raise exceptions.ServerNotReady
                 raise json.JSONDecodeError("Invalid response", "", 0)
-            except (sh.ErrorReturnCode, ServerNotReady, json.JSONDecodeError) as e:
-                if not isinstance(e, ServerNotReady):
+            except (sh.ErrorReturnCode, exceptions.ServerNotReady, json.JSONDecodeError) as e:
+                if not isinstance(e, exceptions.ServerNotReady):
                     print("Waiting for counterparty...")
                 time.sleep(1)
 

@@ -7,7 +7,7 @@ import warnings
 
 import requests
 
-from counterpartycore.lib import config, ledger
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database
 
@@ -890,10 +890,6 @@ CHECKPOINTS_TESTNET4 = {
 }
 
 
-class ConsensusError(Exception):
-    pass
-
-
 def dhash(text):
     if not isinstance(text, bytes):
         text = bytes(str(text), "utf-8")
@@ -925,7 +921,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         except IndexError:
             previous_consensus_hash = None
         if not previous_consensus_hash:
-            raise ConsensusError(
+            raise exceptions.ConsensusError(
                 f"Empty previous {field} for block {block_index}. Please launch a `rollback`."
             )
 
@@ -954,7 +950,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
     if found_hash and field != "messages_hash":
         # Check against existing value.
         if calculated_hash != found_hash:
-            raise ConsensusError(
+            raise exceptions.ConsensusError(
                 f"Inconsistent {field} for block {block_index} (calculated {calculated_hash}, vs {found_hash} in database)."
             )
 
@@ -974,13 +970,9 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         and checkpoints[block_index][field] != calculated_hash
     ):
         error_message = f"Incorrect {field} hash for block {block_index}.  Calculated {calculated_hash} but expected {checkpoints[block_index][field]}"
-        raise ConsensusError(error_message)
+        raise exceptions.ConsensusError(error_message)
 
     return calculated_hash, found_hash
-
-
-class SanityError(Exception):
-    pass
 
 
 def asset_conservation(db, stop_event=None):
@@ -995,7 +987,7 @@ def asset_conservation(db, stop_event=None):
             asset_issued = supplies[asset]
             asset_held = held[asset] if asset in held and held[asset] != None else 0  # noqa: E711
             if asset_issued != asset_held:
-                raise SanityError(
+                raise exceptions.SanityError(
                     "{} {} issued ≠ {} {} held".format(
                         ledger.ledger.value_out(db, asset_issued, asset),
                         asset,
@@ -1009,14 +1001,6 @@ def asset_conservation(db, stop_event=None):
                 )
             )
     logger.debug("All assets have been conserved.")
-
-
-class VersionError(Exception):
-    pass
-
-
-class VersionUpdateRequiredError(VersionError):
-    pass
 
 
 def check_change(protocol_change, change_name):
@@ -1037,7 +1021,7 @@ def check_change(protocol_change, change_name):
         explanation += f"v{protocol_change['minimum_version_major']}.{protocol_change['minimum_version_minor']}.{protocol_change['minimum_version_revision']}. "
         explanation += f"Reason: ' {change_name} '. Please upgrade to the latest version and restart the server."
         if CurrentState().current_block_index() >= protocol_change["block_index"]:
-            raise VersionUpdateRequiredError(explanation)
+            raise exceptions.VersionUpdateRequiredError(explanation)
         else:
             warnings.warn(explanation)  # noqa: B028
 
@@ -1066,19 +1050,12 @@ def software_version():
         protocol_change = versions[change_name]
         try:
             check_change(protocol_change, change_name)
-        except VersionUpdateRequiredError:  # noqa: F841
+        except exceptions.VersionUpdateRequiredError:  # noqa: F841
             logger.error("Version Update Required")
             sys.exit(config.EXITCODE_UPDATE_REQUIRED)
 
     logger.debug("Version check passed.")
     return True
-
-
-class DatabaseVersionError(Exception):
-    def __init__(self, message, required_action, from_block_index=None):
-        super(DatabaseVersionError, self).__init__(message)
-        self.required_action = required_action
-        self.from_block_index = from_block_index
 
 
 def check_need_reparse(version_minor, message):
@@ -1093,7 +1070,7 @@ def check_need_reparse(version_minor, message):
     if need_reparse_from is not None:
         for min_version_minor, min_version_block_index in need_reparse_from:
             if version_minor < min_version_minor:
-                raise DatabaseVersionError(
+                raise exceptions.VersionError(
                     message=message,
                     required_action="reparse",
                     from_block_index=min_version_block_index,
@@ -1112,7 +1089,7 @@ def check_need_rollback(version_minor, message):
     if need_rollback_from is not None:
         for min_version_minor, min_version_block_index in need_rollback_from:
             if version_minor < min_version_minor:
-                raise DatabaseVersionError(
+                raise exceptions.VersionError(
                     message=message,
                     required_action="rollback",
                     from_block_index=min_version_block_index,
@@ -1127,7 +1104,7 @@ def database_version(db):
     version_major, version_minor = database.version(db)
     if version_major != config.VERSION_MAJOR:
         # Rollback database if major version has changed.
-        raise DatabaseVersionError(
+        raise exceptions.VersionError(
             message=f"Client major version number mismatch: {version_major} ≠ {config.VERSION_MAJOR}.",
             required_action="rollback",
             from_block_index=config.BLOCK_FIRST,
@@ -1140,7 +1117,7 @@ def database_version(db):
         message += "Checking if a rollback or a reparse is needed..."
         check_need_rollback(version_minor, message)
         check_need_reparse(version_minor, message)
-        raise DatabaseVersionError(message=message, required_action=None)
+        raise exceptions.VersionError(message=message, required_action=None)
     else:
         version_string = database.get_config_value(db, "VERSION_STRING")
         if version_string:

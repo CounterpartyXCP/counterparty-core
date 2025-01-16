@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from counterpartycore.lib import config
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.parser import check
 from counterpartycore.lib.utils import database
@@ -35,7 +35,7 @@ def test_check_database_version():
     check.database_version(db)
 
     config.VERSION_MAJOR += 1
-    with pytest.raises(check.DatabaseVersionError) as exception:
+    with pytest.raises(exceptions.VersionError) as exception:
         check.database_version(db)
     assert exception.value.from_block_index == config.BLOCK_FIRST
     assert exception.value.required_action == "rollback"

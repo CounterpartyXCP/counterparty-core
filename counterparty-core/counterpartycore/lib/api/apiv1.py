@@ -132,14 +132,6 @@ CURRENT_API_STATUS_CODE = None  # is updated by the APIStatusPoller
 CURRENT_API_STATUS_RESPONSE_JSON = None  # is updated by the APIStatusPoller
 
 
-class APIError(Exception):
-    pass
-
-
-class BackendError(Exception):
-    pass
-
-
 def check_backend_state():
     f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""  # noqa: B021
     block_count = backend.bitcoind.getblockcount()
@@ -147,18 +139,16 @@ def check_backend_state():
     cblock = backend.bitcoind.getblock(block_hash, verbosity=1)
     time_behind = time.time() - cblock["time"]  # TODO: Block times are not very reliable.
     if time_behind > 60 * 60 * 2:  # Two hours.
-        raise BackendError(f"Bitcoind is running about {round(time_behind / 3600)} hours behind.")
+        raise exceptions.BackendError(
+            f"Bitcoind is running about {round(time_behind / 3600)} hours behind."
+        )
 
     # check backend index
     blocks_behind = backend.bitcoind.get_blocks_behind()
     if blocks_behind > 5:
-        raise BackendError(f"Bitcoind is running {blocks_behind} blocks behind.")
+        raise exceptions.BackendError(f"Bitcoind is running {blocks_behind} blocks behind.")
 
     logger.debug("API Status Poller - Backend state check passed.")
-
-
-class DatabaseError(Exception):
-    pass
 
 
 # TODO: ALL queries EVERYWHERE should be done with these methods
@@ -171,7 +161,7 @@ def db_query(db, statement, bindings=(), callback=None, **callback_args):
     for word in forbidden_words:
         # This will find if the forbidden word is in the statement as a whole word. For example, "transactions" will be allowed because the "s" at the end
         if re.search(r"\b" + word + "\b", statement.lower()):
-            raise APIError(f"Forbidden word in query: '{word}'.")
+            raise exceptions.APIError(f"Forbidden word in query: '{word}'.")
 
     if callable(callback):
         cursor.execute(statement, bindings)
@@ -211,22 +201,22 @@ def get_rows(
 
     # TODO: Document that op can be anything that SQLite3 accepts.
     if not table or table.lower() not in API_TABLES:
-        raise APIError("Unknown table")
+        raise exceptions.APIError("Unknown table")
     if filterop and filterop.upper() not in ["OR", "AND"]:
-        raise APIError("Invalid filter operator (OR, AND)")
+        raise exceptions.APIError("Invalid filter operator (OR, AND)")
     if order_dir and order_dir.upper() not in ["ASC", "DESC"]:
-        raise APIError("Invalid order direction (ASC, DESC)")
+        raise exceptions.APIError("Invalid order direction (ASC, DESC)")
     if not isinstance(limit, int):
-        raise APIError("Invalid limit")
+        raise exceptions.APIError("Invalid limit")
     elif config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
-        raise APIError(f"Limit should be lower or equal to {config.API_LIMIT_ROWS}")
+        raise exceptions.APIError(f"Limit should be lower or equal to {config.API_LIMIT_ROWS}")
     elif config.API_LIMIT_ROWS != 0 and limit == 0:
-        raise APIError("Limit should be greater than 0")
+        raise exceptions.APIError("Limit should be greater than 0")
     if not isinstance(offset, int):
-        raise APIError("Invalid offset")
+        raise exceptions.APIError("Invalid offset")
     # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
     if order_by and not re.compile("^[a-z0-9_]+$").match(order_by):
-        raise APIError("Invalid order_by, must be a field name")
+        raise exceptions.APIError("Invalid order_by, must be a field name")
 
     if isinstance(filters, dict):  # single filter entry, convert to a one entry list
         filters = [
@@ -246,21 +236,21 @@ def get_rows(
         elif type(filter_) == dict:  # noqa: E721
             new_filters.append(filter_)
         else:
-            raise APIError("Unknown filter type")
+            raise exceptions.APIError("Unknown filter type")
     filters = new_filters
 
     # validate filter(s)
     for filter_ in filters:
         for field in ["field", "op", "value"]:  # should have all fields
             if field not in filter_:
-                raise APIError(f"A specified filter is missing the '{field}' field")
+                raise exceptions.APIError(f"A specified filter is missing the '{field}' field")
         if not isinstance(filter_["value"], (str, int, float, list)):
-            raise APIError(f"Invalid value for the field '{filter_['field']}'")
+            raise exceptions.APIError(f"Invalid value for the field '{filter_['field']}'")
         if isinstance(filter_["value"], list) and filter_["op"].upper() not in [
             "IN",
             "NOT IN",
         ]:
-            raise APIError(f"Invalid value for the field '{filter_['field']}'")
+            raise exceptions.APIError(f"Invalid value for the field '{filter_['field']}'")
         if filter_["op"].upper() not in [
             "=",
             "==",
@@ -274,9 +264,9 @@ def get_rows(
             "NOT IN",
             "NOT LIKE",
         ]:
-            raise APIError(f"Invalid operator for the field '{filter_['field']}'")
+            raise exceptions.APIError(f"Invalid operator for the field '{filter_['field']}'")
         if "case_sensitive" in filter_ and not isinstance(filter_["case_sensitive"], bool):
-            raise APIError("case_sensitive must be a boolean")
+            raise exceptions.APIError("case_sensitive must be a boolean")
 
     # special case for memo and memo_hex field searches
     if table == "sends":
@@ -424,7 +414,7 @@ def adjust_get_sends_memo_filters(filters):
             try:
                 filter_["value"] = bytes.fromhex(filter_["value"])
             except ValueError as e:  # noqa: F841
-                raise APIError("Invalid memo_hex value")  # noqa: B904
+                raise exceptions.APIError("Invalid memo_hex value")  # noqa: B904
 
 
 def adjust_get_sends_results(query_result):
@@ -519,7 +509,7 @@ class APIStatusPoller(threading.Thread):
                                 ledger_db, backend.bitcoind.getblockcount()
                             )
                         interval = interval_if_ready
-            except (BackendError, exceptions.DatabaseError) as e:
+            except (exceptions.BackendError, exceptions.DatabaseError) as e:
                 interval = interval_if_not_ready
                 exception_name = e.__class__.__name__
                 exception_text = str(e)
@@ -572,7 +562,7 @@ class APIServer(threading.Thread):
                 try:
                     return get_rows(table=table, **kwargs)
                 except TypeError as e:  # TODO: generalise for all API methods
-                    raise APIError(str(e))  # noqa: B904
+                    raise exceptions.APIError(str(e))  # noqa: B904
 
             return get_method
 
@@ -660,7 +650,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_messages(block_index):
             if not isinstance(block_index, int):
-                raise APIError("block_index must be an integer.")
+                raise exceptions.APIError("block_index must be an integer.")
             with LedgerDBConnectionPool().connection() as db:
                 messages = ledger.ledger.get_messages(db, block_index=block_index)
             return messages
@@ -677,7 +667,7 @@ class APIServer(threading.Thread):
                 ]
             for idx in message_indexes:  # make sure the data is clean
                 if not isinstance(idx, int):
-                    raise APIError("All items in message_indexes are not integers")
+                    raise exceptions.APIError("All items in message_indexes are not integers")
             with LedgerDBConnectionPool().connection() as db:
                 messages = ledger.ledger.get_messages(db, message_index_in=message_indexes)
             return messages
@@ -705,7 +695,7 @@ class APIServer(threading.Thread):
                 assets = [asset]
 
             if not isinstance(assets, list):
-                raise APIError(
+                raise exceptions.APIError(
                     "assets must be a list of asset names, even if it just contains one entry"
                 )
             assets_info = []
@@ -793,16 +783,16 @@ class APIServer(threading.Thread):
             must_be_non_empty_list_int = "block_indexes must be a non-empty list of integers"
 
             if not isinstance(block_indexes, (list, tuple)):
-                raise APIError(must_be_non_empty_list_int)
+                raise exceptions.APIError(must_be_non_empty_list_int)
 
             if len(block_indexes) == 0:
-                raise APIError(must_be_non_empty_list_int)
+                raise exceptions.APIError(must_be_non_empty_list_int)
 
             if len(block_indexes) >= 250:
-                raise APIError("can only specify up to 250 indexes at a time.")
+                raise exceptions.APIError("can only specify up to 250 indexes at a time.")
             for block_index in block_indexes:
                 if not isinstance(block_index, int):
-                    raise APIError(must_be_non_empty_list_int)
+                    raise exceptions.APIError(must_be_non_empty_list_int)
 
             with LedgerDBConnectionPool().connection() as db:
                 cursor = db.cursor()
@@ -1015,7 +1005,7 @@ class APIServer(threading.Thread):
             elif message_type_id == enhancedsend.ID:
                 unpacked = enhancedsend.unpack(message, CurrentState().current_block_index())
             else:
-                raise APIError("unsupported message type")
+                raise exceptions.APIError("unsupported message type")
             return message_type_id, unpacked
 
         @dispatcher.add_method
@@ -1026,7 +1016,7 @@ class APIServer(threading.Thread):
         @dispatcher.add_method
         def get_dispenser_info(tx_hash=None, tx_index=None):
             if tx_hash is None and tx_index is None:
-                raise APIError("You must provided a tx hash or a tx index")
+                raise exceptions.APIError("You must provided a tx hash or a tx index")
 
             dispensers = []
             with LedgerDBConnectionPool().connection() as db:
@@ -1057,7 +1047,7 @@ class APIServer(threading.Thread):
                         if oracle_price > 0:
                             satoshi_price = math.ceil((fiat_price / oracle_price) * config.UNIT)
                         else:
-                            raise APIError("Last oracle price is zero")
+                            raise exceptions.APIError("Last oracle price is zero")
 
                     return {
                         "tx_index": dispenser["tx_index"],
@@ -1264,7 +1254,7 @@ class APIServer(threading.Thread):
                         filters=data_filter,
                         filterop=operator,
                     )
-                except APIError as error:  # noqa: F841
+                except exceptions.APIError as error:  # noqa: F841
                     return flask.Response("API Error", 400, mimetype="application/json")
 
             # See which encoding to choose from.

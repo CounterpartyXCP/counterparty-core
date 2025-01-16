@@ -35,10 +35,6 @@ OK_GREEN = colored("[OK]", "green")
 SPINNER_STYLE = "bouncingBar"
 
 
-class ConfigurationError(Exception):
-    pass
-
-
 def initialise(*args, **kwargs):
     initialise_log_config(
         verbose=kwargs.pop("verbose", 0),
@@ -277,9 +273,9 @@ def initialise_config(
     try:
         config.BACKEND_PORT = int(config.BACKEND_PORT)
         if not (int(config.BACKEND_PORT) > 1 and int(config.BACKEND_PORT) < 65535):
-            raise ConfigurationError("invalid backend API port number")
+            raise exceptions.ConfigurationError("invalid backend API port number")
     except:  # noqa: E722
-        raise ConfigurationError(  # noqa: B904
+        raise exceptions.ConfigurationError(  # noqa: B904
             "Please specific a valid port number backend-port configuration parameter"
         )
 
@@ -293,7 +289,7 @@ def initialise_config(
     if backend_password:
         config.BACKEND_PASSWORD = backend_password
     else:
-        raise ConfigurationError(
+        raise exceptions.ConfigurationError(
             "Please specific a valid password backend-password configuration parameter"
         )
 
@@ -366,9 +362,9 @@ def initialise_config(
     try:
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535):
-            raise ConfigurationError("invalid server API port number")
+            raise exceptions.ConfigurationError("invalid server API port number")
     except:  # noqa: E722
-        raise ConfigurationError(  # noqa: B904
+        raise exceptions.ConfigurationError(  # noqa: B904
             "Please specific a valid port number rpc-port configuration parameter"
         )
 
@@ -416,9 +412,9 @@ def initialise_config(
     try:
         config.API_PORT = int(config.API_PORT)
         if not (int(config.API_PORT) > 1 and int(config.API_PORT) < 65535):
-            raise ConfigurationError("invalid server API port number")
+            raise exceptions.ConfigurationError("invalid server API port number")
     except:  # noqa: E722
-        raise ConfigurationError(  # noqa: B904
+        raise exceptions.ConfigurationError(  # noqa: B904
             "Please specific a valid port number rpc-port configuration parameter"
         )
 
@@ -439,9 +435,9 @@ def initialise_config(
     try:
         config.ZMQ_PUBLISHER_PORT = int(config.ZMQ_PUBLISHER_PORT)
         if not (int(config.ZMQ_PUBLISHER_PORT) > 1 and int(config.ZMQ_PUBLISHER_PORT) < 65535):
-            raise ConfigurationError("invalid ZeroMQ publisher port number")
+            raise exceptions.ConfigurationError("invalid ZeroMQ publisher port number")
     except:  # noqa: E722
-        raise ConfigurationError(  # noqa: B904
+        raise exceptions.ConfigurationError(  # noqa: B904
             "Please specific a valid port number rpc-port configuration parameter"
         )
 
@@ -526,7 +522,7 @@ def initialise_config(
 
     if electrs_url:
         if not helpers.is_url(electrs_url):
-            raise ConfigurationError("Invalid Electrs URL")
+            raise exceptions.ConfigurationError("Invalid Electrs URL")
         config.ELECTRS_URL = electrs_url
     else:
         if config.NETWORK_NAME == "testnet":

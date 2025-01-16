@@ -412,10 +412,6 @@ def welcome_message(action, server_configfile):
     cprint(f"\n{'-' * 30} {action.upper()} {'-' * 30}\n", "green")
 
 
-class VersionError(Exception):
-    pass
-
-
 def main():
     sentry.init()
     # Post installation tasks
