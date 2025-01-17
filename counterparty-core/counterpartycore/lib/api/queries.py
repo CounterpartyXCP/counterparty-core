@@ -955,7 +955,10 @@ def get_mempool_events_by_addresses(
     """
     where = []
     for address in addresses.split(","):
-        where.append({"addresses__like": f"%{address}%", "event__in": event_name.split(",")})
+        where_address = {"addresses__like": f"%{address}%"}
+        if event_name:
+            where_address["event__in"] = event_name.split(",")
+        where.append(where_address)
     select = "tx_hash, event, bindings AS params, timestamp"
     result = select_rows(
         ledger_db,
