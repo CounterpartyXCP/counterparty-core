@@ -72,9 +72,9 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
         item = result_item
         if "params" in item:
             item = item["params"]
-            if "unpacked_data" in item:
+            if "unpacked_data" in item and item["unpacked_data"]:
                 item = item["unpacked_data"]["message_data"]
-        elif "unpacked_data" in item:
+        elif "unpacked_data" in item and item["unpacked_data"]:
             item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
             if isinstance(item, list):

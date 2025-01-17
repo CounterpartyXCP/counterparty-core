@@ -369,9 +369,6 @@ def handle_route(**kwargs):
         except Exception as e:
             capture_exception(e)
             logger.error("Error in API: %s", e)
-            import traceback
-
-            print(traceback.format_exc())
             return return_result(
                 503, error="Unknown error", start_time=start_time, query_args=query_args
             )
@@ -420,10 +417,7 @@ def handle_route(**kwargs):
     except Exception as e:
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        import traceback
-
-        print(traceback.format_exc())
-        return return_result(500, error=f"Internal server error: {traceback.format_exc()}")
+        return return_result(500, error="Internal server error")
 
 
 def handle_not_found(error):
