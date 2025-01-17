@@ -5887,18 +5887,19 @@
                     "message_type": "issuance",
                     "message_type_id": 21,
                     "message_data": {
-                        "asset_id": null,
-                        "asset": null,
-                        "subasset_longname": null,
-                        "quantity": null,
-                        "divisible": null,
+                        "asset_id": 95428956661682277,
+                        "asset": "A95428956661682277",
+                        "subasset_longname": "PARENT.already.issued",
+                        "quantity": 100000000,
+                        "divisible": true,
                         "lock": null,
                         "reset": null,
-                        "callable": null,
-                        "call_date": null,
-                        "call_price": null,
-                        "description": null,
-                        "status": "invalid: could not unpack"
+                        "callable": false,
+                        "call_date": 0,
+                        "call_price": 0.0,
+                        "description": "Child of parent",
+                        "status": "valid",
+                        "quantity_normalized": "1.00000000"
                     }
                 },
                 "btc_amount_normalized": "0.00000000"

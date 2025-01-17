@@ -272,7 +272,7 @@ def apiserver(request, cp_server):
 @pytest.fixture(scope="module")
 def apiserver_v2(request, cp_server):
     default_config = {
-        "testnet": False,
+        "testnet": True,
         "testnet4": False,
         "regtest": False,
         "api_limit_rows": 1000,
@@ -349,6 +349,12 @@ def apiserver_v2(request, cp_server):
         os.unlink(config.STATE_DATABASE + "-wal")
 
     dbbuilder.build_state_db()
+
+    # set WAL mode to on, need write access
+    ledger_db = database.get_db_connection(config.DATABASE, read_only=False, check_wal=False)
+    api_db = database.get_db_connection(config.STATE_DATABASE, read_only=False, check_wal=False)
+    ledger_db.close()
+    api_db.close()
 
     def is_server_ready():
         return True

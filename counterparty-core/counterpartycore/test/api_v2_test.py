@@ -136,6 +136,8 @@ def test_api_v2_unpack(request, server_db):
     for data in datas:
         result = requests.get(url, params={"datahex": data["datahex"]})  # noqa: S113
         assert result.status_code == 200
+        print("test output", result.json())
+        print("fixture output", data["result"])
         assert result.json()["result"] == data["result"]
 
 
