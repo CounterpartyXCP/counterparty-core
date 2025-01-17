@@ -107,6 +107,6 @@ def setup_bitcoinutils(network=None):
 
 
 def is_valid_tx_hash(tx_hash):
-    if all(c in string.hexdigits for c in hash) and len(tx_hash) == 64:
+    if all(c in string.hexdigits for c in tx_hash) and len(tx_hash) == 64:
         return True
     return False
