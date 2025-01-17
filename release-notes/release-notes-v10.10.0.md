@@ -11,6 +11,7 @@
 
 - Fix ignored deprecated parameters in Compose API
 - Fix Get Mempool Events By Addresses endpoint for attach, detach and UTXO move
+- Retry ten times on telemetry request error
 
 ## Codebase
 
@@ -25,6 +26,7 @@
 
 - Add no_dispense parameter to not automatically compose a dispense transaction even if the destination is a dispenser
 - Add `event_name` parameter to Get Mempool Events By Addresses endpoint
+- Check addresses and hashes format in parameters
 
 ## CLI
 
