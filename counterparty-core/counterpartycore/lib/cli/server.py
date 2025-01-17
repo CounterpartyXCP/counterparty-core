@@ -12,7 +12,6 @@ from urllib.parse import quote_plus as urlencode
 
 import appdirs
 import bitcoin as bitcoinlib
-from bitcoinutils.setup import setup
 from termcolor import colored, cprint
 
 from counterpartycore.lib import (
@@ -222,10 +221,7 @@ def initialise_config(
         config.NETWORK_NAME = "regtest"
     network = f".{config.NETWORK_NAME}" if config.NETWORK_NAME != "mainnet" else ""
 
-    if config.NETWORK_NAME.startswith("testnet"):
-        setup("testnet")
-    else:
-        setup(config.NETWORK_NAME)
+    helpers.setup_bitcoinutils()
 
     # Database
     if database_file:

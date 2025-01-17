@@ -880,6 +880,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
             "get_der_signature_sighash_flag",
             "get_schnorr_signature_sighash_flag",
             "check_signatures_sighash_flag",
+            "is_valid_tx_hash",
         ]
         or tx_name
         in [

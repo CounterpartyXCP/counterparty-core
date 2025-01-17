@@ -28,9 +28,8 @@ from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.parser import check
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import address, database, helpers
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
-from counterpartycore.lib.utils.helpers import to_json
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -170,7 +169,7 @@ def return_result(
             api_result["result_count"] = result_count
     if error is not None:
         api_result["error"] = error
-    response = flask.make_response(to_json(api_result), http_code)
+    response = flask.make_response(helpers.to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = CurrentState().current_block_index()
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
@@ -234,6 +233,15 @@ def prepare_args(route, **kwargs):
                 function_args[arg_name] = str_arg
         else:
             function_args[arg_name] = str_arg
+
+    for arg_name, str_arg in function_args.items():
+        if str_arg is not None:
+            if arg_name.startswith("address"):
+                addresses = str_arg.split(",")
+                if not all([address.is_valid_address(addr) for addr in addresses]):
+                    raise ValueError(f"Invalid address: {str_arg}")
+            elif arg_name.endswith("_hash") and not helpers.is_valid_tx_hash(str_arg):
+                raise ValueError(f"Invalid transaction hash: {str_arg}")
 
     return function_args
 

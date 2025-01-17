@@ -10,7 +10,6 @@ from collections import OrderedDict
 from arc4 import ARC4
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
-from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 
 from counterpartycore.lib import (
@@ -76,15 +75,8 @@ def is_address_script(address, script_pub_key):
 ################
 
 
-def setup_bitcoinutils():
-    if config.NETWORK_NAME == "testnet4":
-        setup("testnet")
-    else:
-        setup(config.NETWORK_NAME)
-
-
 def address_to_script_pub_key(address, unspent_list, construct_params):
-    setup_bitcoinutils()
+    helpers.setup_bitcoinutils()
     if multisig.is_multisig(address):
         signatures_required, addresses, signatures_possible = multisig.extract_array(address)
         pubkeys = [search_pubkey(addr, unspent_list, construct_params) for addr in addresses]
@@ -1053,7 +1045,7 @@ def prepare_construct_params(construct_params):
 
 
 def compose_transaction(db, name, params, construct_parameters):
-    setup_bitcoinutils()
+    helpers.setup_bitcoinutils()
 
     construct_params, warnings = prepare_construct_params(construct_parameters)
 

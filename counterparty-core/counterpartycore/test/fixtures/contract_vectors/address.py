@@ -123,5 +123,97 @@ ADDRESS_VECTOR = {
                 "out": "2MtAV7xpAzU69E8GxRF2Vd2xt79kDnif6F5",
             },
         ],
+        "is_valid_address": [
+            {
+                "in": ("18H63wjcZqaBwifMjopS9jSZejivq7Lgq4", "mainnet"),
+                "out": True,
+            },
+            {
+                "in": ("1MWqsvFhABHULk24U81tV9aTaWJj2z5m7Z", "mainnet"),
+                "out": True,
+            },
+            {
+                "in": ("1EDrzMiWkB1yW3YKbceDX25kuxpicUSPqn", "mainnet"),
+                "out": True,
+            },
+            {
+                "in": (
+                    "2_1HFhTq3rzAaodxjU4dJ8ctxwUHZ6gHMDS7_1workshyTLmwVf1PvnDMLPUi3MZZWXzH8_2",
+                    "mainnet",
+                ),
+                "out": True,
+            },
+            {
+                "in": (
+                    "2_17VLRV4y7g15KNhCepYvgigHHvREzbEmRn_1FkQMTyqzD2BK5PsmWX13AeJAHz5NEw7gq_1HhfcdD1hRaim17m5qLEwGgHY7PBTb1Dof_3",
+                    "mainnet",
+                ),
+                "out": True,
+            },
+            {
+                "in": ("bc1q707uusxpdv60jz8973z8rudj6y4ae73vwerhx8", "mainnet"),
+                "out": True,
+            },
+            {
+                "in": ("bc1q7rdrecerefrzenl6eq94fqxzhjj02shf0hm490", "mainnet"),
+                "out": True,
+            },
+            {
+                "in": ("bc1qx8g8dca9clxs4z6y4fdtmw6x2qcyffymtp4eed", "mainnet"),
+                "out": True,
+            },
+            {
+                "in": ("3Hcy4ypuvSnbySZAxSj2jiCfFCRzqvCXwC", "mainnet"),
+                "out": True,
+            },
+            {
+                "in": ("3FA93F7DgJEBkAvq1d9WFrrrFGGppkYHYd", "mainnet"),
+                "out": True,
+            },
+            {
+                "in": ("35cNLGf1SRG7R1Hkuh4V5dP4qfHmsyqUTk", "mainnet"),
+                "out": True,
+            },
+            {
+                "in": ("tb1q5ljtmkhtkhgrxdxaqvvut2trtrrsjgx8fsxfl5", "testnet"),
+                "out": True,
+            },
+            {
+                "in": ("tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a", "testnet"),
+                "out": True,
+            },
+            {
+                "in": ("mtuTqahviyGpNL3qT5zV88Gm1YAbD2zZg8", "testnet"),
+                "out": True,
+            },
+            {
+                "in": ("mtuTqahviyGpNL3qT5zV88Gm1YAbD2zZg", "testnet"),
+                "out": False,
+            },
+            {
+                "in": ("tc1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a", "testnet"),
+                "out": False,
+            },
+            {
+                "in": ("35cNLGf1SRG7R1Hkuh4V5dP4qfHmsyqUTk0", "mainnet"),
+                "out": False,
+            },
+            {
+                "in": ("toto", "mainnet"),
+                "out": False,
+            },
+            {
+                "in": ("toto", "testnet"),
+                "out": False,
+            },
+            {
+                "in": ("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "testnet"),
+                "out": True,
+            },
+            {
+                "in": ("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "testnet"),
+                "out": True,
+            },
+        ],
     },
 }
