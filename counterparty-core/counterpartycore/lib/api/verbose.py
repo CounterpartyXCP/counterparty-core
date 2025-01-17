@@ -317,7 +317,7 @@ def inject_normalized_quantities(result_list):
                 elif (
                     "params" in item
                     and "unpacked_data" in item["params"]
-                    and [item]["params"]["unpacked_data"]
+                    and item["params"]["unpacked_data"]
                     and "asset_info" in item["params"]["unpacked_data"]["message_data"]
                 ):
                     asset_info = item["params"]["unpacked_data"]["message_data"]["asset_info"]
