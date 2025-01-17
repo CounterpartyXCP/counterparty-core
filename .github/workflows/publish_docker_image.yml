@@ -35,4 +35,6 @@ jobs:
         docker push $DOCKER_REPO:$VERSION
         if [[ ${{ github.event_name }} == 'release' ]]; then
           docker push $DOCKER_REPO:latest
+          echo "Image pushed: $DOCKER_REPO:latest"
         fi
+        echo "Image pushed: $DOCKER_REPO:$VERSION"
