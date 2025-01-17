@@ -238,7 +238,7 @@ def prepare_args(route, **kwargs):
         if str_arg is not None:
             if arg_name.startswith("address"):
                 addresses = str_arg.split(",")
-                if not all([address.is_valid_address(addr) for addr in addresses]):
+                if not all(address.is_valid_address(addr) for addr in addresses):
                     raise ValueError(f"Invalid address: {str_arg}")
             elif arg_name.endswith("_hash") and not helpers.is_valid_tx_hash(str_arg):
                 raise ValueError(f"Invalid transaction hash: {str_arg}")
