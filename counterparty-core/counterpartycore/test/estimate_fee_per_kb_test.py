@@ -1,14 +1,12 @@
-#! /usr/bin/python3
 import binascii
 import tempfile
 
 import bitcoin as bitcoinlib
 import pytest
 
-from counterpartycore.lib import backend, composer
-from counterpartycore.test import (
-    util_test,
-)
+from counterpartycore.lib import backend
+from counterpartycore.lib.api import composer
+from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import ADDR
 
 # this is require near the top to do setup of the test suite

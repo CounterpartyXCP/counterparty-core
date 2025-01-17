@@ -4,7 +4,8 @@
 import logging
 import time
 
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config
+from counterpartycore.lib.utils import database
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)

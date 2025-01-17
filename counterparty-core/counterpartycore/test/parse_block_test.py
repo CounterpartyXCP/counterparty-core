@@ -2,7 +2,7 @@
 import pprint
 import tempfile
 
-from counterpartycore.lib import blocks
+from counterpartycore.lib.parser import blocks
 from counterpartycore.test import (
     conftest,  # noqa: F401
 )

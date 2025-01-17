@@ -1,23 +1,25 @@
 import logging
 
-from counterpartycore.lib import config, exceptions, ledger, script, util
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.detach import detach_assets
+from counterpartycore.lib.parser import protocol, utxosinfo
+from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def compose(db, source, destination, utxo_value=None, skip_validation=False):
     if not skip_validation:
-        if not util.is_utxo_format(source):
+        if not utxosinfo.is_utxo_format(source):
             raise exceptions.ComposeError("Invalid source utxo format")
 
-        balances = ledger.get_utxo_balances(db, source)
+        balances = ledger.balances.get_utxo_balances(db, source)
         if not balances:
             raise exceptions.ComposeError("No assets attached to the source utxo")
 
         try:
-            script.validate(destination)
-        except script.AddressError as e:
+            address.validate(destination)
+        except exceptions.AddressError as e:
             raise exceptions.ComposeError("destination must be an address") from e
 
     value = config.DEFAULT_UTXO_VALUE
@@ -32,13 +34,13 @@ def compose(db, source, destination, utxo_value=None, skip_validation=False):
 
 def move_balances(db, tx, source, destination):
     action = "utxo move"
-    msg_index = ledger.get_send_msg_index(db, tx["tx_hash"])
-    balances = ledger.get_utxo_balances(db, source)
+    msg_index = ledger.other.get_send_msg_index(db, tx["tx_hash"])
+    balances = ledger.balances.get_utxo_balances(db, source)
     for balance in balances:
         if balance["quantity"] == 0:
             continue
         # debit asset from source
-        source_address = ledger.debit(
+        source_address = ledger.events.debit(
             db,
             source,
             balance["asset"],
@@ -48,7 +50,7 @@ def move_balances(db, tx, source, destination):
             event=tx["tx_hash"],
         )
         # credit asset to destination
-        destination_address = ledger.credit(
+        destination_address = ledger.events.credit(
             db,
             destination,
             balance["asset"],
@@ -73,7 +75,7 @@ def move_balances(db, tx, source, destination):
             "send_type": "move",
         }
 
-        ledger.insert_record(db, "sends", bindings, "UTXO_MOVE")
+        ledger.events.insert_record(db, "sends", bindings, "UTXO_MOVE")
         msg_index += 1
 
         # log the move
@@ -87,7 +89,7 @@ def move_assets(db, tx):
     if "utxos_info" not in tx or not tx["utxos_info"]:
         return False
 
-    sources, destination, _outputs_count, _op_return_output = util.parse_utxos_info(
+    sources, destination, _outputs_count, _op_return_output = utxosinfo.parse_utxos_info(
         tx["utxos_info"]
     )
 
@@ -96,7 +98,7 @@ def move_assets(db, tx):
         return False
 
     for source in sources:
-        if not destination and util.enabled(
+        if not destination and protocol.enabled(
             "spend_utxo_to_detach"
         ):  # one single OP_RETURN output in the transaction
             # we detach assets from the source

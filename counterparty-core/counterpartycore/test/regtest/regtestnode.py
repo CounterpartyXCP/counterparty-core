@@ -12,23 +12,17 @@ import urllib.parse
 from io import StringIO
 
 import sh
+from arc4 import ARC4
 from bitcoinutils.keys import P2wpkhAddress
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
-from counterpartycore.lib import arc4, config, database
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.utils import database
 
 setup("regtest")
 
 WALLET_NAME = "xcpwallet"
-
-
-class ServerNotReady(Exception):
-    pass
-
-
-class ComposeError(Exception):
-    pass
 
 
 class RegtestNode:
@@ -146,8 +140,8 @@ class RegtestNode:
             if messsage_id is not None:
                 tx_data += struct.pack(config.SHORT_TXTYPE_FORMAT, messsage_id)
             tx_data += data
-            key = arc4.init_arc4(binascii.unhexlify(utxo["txid"]))
-            encrypted_data = key.encrypt(data)
+            key = binascii.unhexlify(utxo["txid"])
+            encrypted_data = ARC4(key).encrypt(data)
             tx_outputs.append(TxOutput(0, Script(["OP_RETURN", b_to_h(encrypted_data)])))
 
         tx_outputs.append(
@@ -221,7 +215,7 @@ class RegtestNode:
                     no_confirmation,
                     dont_wait_mempool=dont_wait_mempool,
                 )
-            raise ComposeError(result["error"])
+            raise exceptions.ComposeError(result["error"])
         if return_only_data:
             return result["result"]["data"]
         raw_transaction = result["result"]["rawtransaction"]
@@ -262,17 +256,17 @@ class RegtestNode:
                     current_block = result["result"]["counterparty_height"]
                     if current_block < target_block:
                         print(f"Waiting for block {current_block} < {target_block}")
-                        raise ServerNotReady
+                        raise exceptions.ServerNotReady
                     else:
                         return
                 elif result and "result" in result:
                     print(
                         f"Server not ready: {result['result']['counterparty_height']} < {result['result']['backend_height']}"
                     )
-                    raise ServerNotReady
+                    raise exceptions.ServerNotReady
                 raise json.JSONDecodeError("Invalid response", "", 0)
-            except (sh.ErrorReturnCode, ServerNotReady, json.JSONDecodeError) as e:
-                if not isinstance(e, ServerNotReady):
+            except (sh.ErrorReturnCode, exceptions.ServerNotReady, json.JSONDecodeError) as e:
+                if not isinstance(e, exceptions.ServerNotReady):
                     print("Waiting for counterparty...")
                 time.sleep(1)
 
@@ -831,8 +825,8 @@ class RegtestNode:
                 break
 
         data = binascii.unhexlify(data)
-        key = arc4.init_arc4(binascii.unhexlify(selected_utxo["txid"]))
-        data = key.encrypt(data)
+        key = binascii.unhexlify(selected_utxo["txid"])
+        data = ARC4(key).encrypt(data)
         data = binascii.hexlify(data).decode("utf-8")
 
         # correct input should be:

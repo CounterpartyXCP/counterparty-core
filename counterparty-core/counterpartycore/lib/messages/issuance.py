@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 """
 Allow simultaneous lock and transfer.
 """
@@ -8,7 +6,10 @@ import decimal
 import logging
 import struct
 
-from counterpartycore.lib import config, database, exceptions, ledger, message_type, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.parser import messagetype, protocol
+from counterpartycore.lib.utils import assetnames
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -29,148 +30,6 @@ LR_SUBASSET_ID = 23
 
 DESCRIPTION_MARK_BYTE = b"\xc0"
 DESCRIPTION_NULL_ACTION = "NULL"
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "block_index_idx",
-            "valid_asset_idx",
-            "status_idx",
-            "source_idx",
-            "asset_longname_idx",
-            "status_asset_txindex_idx",
-            "issuances_status_idx",
-            "issuances_asset_status_idx",
-        ],
-    )
-
-    create_issuances_query = """
-        CREATE TABLE IF NOT EXISTS issuances(
-            tx_index INTEGER,
-            tx_hash TEXT,
-            msg_index INTEGER DEFAULT 0,
-            block_index INTEGER,
-            asset TEXT,
-            quantity INTEGER,
-            divisible BOOL,
-            source TEXT,
-            issuer TEXT,
-            transfer BOOL,
-            callable BOOL,
-            call_date INTEGER,
-            call_price REAL,
-            description TEXT,
-            fee_paid INTEGER,
-            locked BOOL DEFAULT FALSE,
-            status TEXT,
-            asset_longname TEXT,
-            reset BOOL DEFAULT FALSE,
-            description_locked BOOL,
-            fair_minting BOOL DEFAULT FALSE,
-            asset_events TEXT,
-            PRIMARY KEY (tx_index, msg_index),
-            UNIQUE (tx_hash, msg_index)
-        )
-    """
-
-    cursor.execute(create_issuances_query)
-
-    # Add asset_longname for sub-assets
-    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
-    columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(issuances)""")]
-    if "asset_longname" not in columns:
-        cursor.execute("""ALTER TABLE issuances ADD COLUMN asset_longname TEXT""")
-    if "reset" not in columns:
-        cursor.execute("""ALTER TABLE issuances ADD COLUMN reset BOOL""")
-    if "description_locked" not in columns:
-        cursor.execute("""ALTER TABLE issuances ADD COLUMN description_locked BOOL""")
-
-    # If sweep_hotfix activated, Create issuances copy, copy old data, drop old table, rename new table, recreate indexes
-    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
-    if "msg_index" not in columns:
-        cursor.execute(
-            create_issuances_query.replace("NOT EXISTS issuances", "NOT EXISTS new_issuances")
-        )
-        cursor.execute(
-            """INSERT INTO new_issuances(tx_index, tx_hash, msg_index,
-                block_index, asset, quantity, divisible, source, issuer, transfer, callable,
-                call_date, call_price, description, fee_paid, locked, status, asset_longname, 
-                reset, description_locked, fairminting, asset_events)
-                SELECT tx_index, tx_hash, 0, block_index, asset, quantity, divisible, source,
-                issuer, transfer, callable, call_date, call_price, description, fee_paid,
-                locked, status, asset_longname, reset, description_locked, fairminting, asset_events
-                FROM issuances""",
-            {},
-        )
-        cursor.execute("DROP TABLE issuances")
-        cursor.execute("ALTER TABLE new_issuances RENAME TO issuances")
-
-    if "fair_minting" not in columns:
-        cursor.execute("""ALTER TABLE issuances ADD COLUMN fair_minting BOOL DEFAULT 0""")
-
-    if "asset_events" not in columns:
-        logger.info("Adding `asset_events` column to issuances table...")
-        database.unlock_update(db, "issuances")
-        cursor.execute("""
-            ALTER TABLE issuances ADD COLUMN asset_events TEXT;
-            ALTER TABLE issuances RENAME COLUMN locked TO locked_old;
-            ALTER TABLE issuances ADD COLUMN locked BOOL DEFAULT FALSE;
-            UPDATE issuances SET locked = locked_old;
-            ALTER TABLE issuances DROP COLUMN locked_old;
-            UPDATE issuances SET locked = 0 WHERE locked IS NULL;
-            ALTER TABLE issuances RENAME COLUMN reset TO reset_old;
-            ALTER TABLE issuances ADD COLUMN reset BOOL DEFAULT FALSE;
-            UPDATE issuances SET reset = reset_old;
-            ALTER TABLE issuances DROP COLUMN reset_old;
-            UPDATE issuances SET locked = 0 WHERE locked IS NULL;
-            UPDATE issuances SET 
-                asset_events = (
-                    SELECT
-                        json_extract(messages.bindings, '$.asset_events')
-                    FROM messages
-                    WHERE messages.tx_hash = issuances.tx_hash
-                    AND messages.event IN ('ASSET_ISSUANCE', 'RESET_ISSUANCE', 'ASSET_TRANSFER')
-                );
-        """)
-        database.lock_update(db, "issuances")
-        database.set_config_value(db, "FIX_ASSET_EVENTS_FIELD_1", True)
-    elif database.get_config_value(db, "FIX_ASSET_EVENTS_FIELD_1") is None:
-        logger.debug("Fixing issuances `asset_events` field")
-        database.unlock_update(db, "issuances")
-        cursor.execute("""
-            UPDATE issuances SET 
-                asset_events = (
-                    SELECT
-                        json_extract(messages.bindings, '$.asset_events')
-                    FROM messages
-                    WHERE messages.tx_hash = issuances.tx_hash
-                    AND messages.event IN ('ASSET_ISSUANCE', 'RESET_ISSUANCE', 'ASSET_TRANSFER')
-                );
-        """)
-        database.lock_update(db, "issuances")
-        database.set_config_value(db, "FIX_ASSET_EVENTS_FIELD_1", True)
-
-    # remove FOREIGN KEY with transactions
-    if database.has_fk_on(cursor, "issuances", "transactions.tx_index"):
-        database.copy_old_table(cursor, "issuances", create_issuances_query)
-
-    database.create_indexes(
-        cursor,
-        "issuances",
-        [
-            ["block_index"],
-            ["source"],
-            ["asset_longname"],
-            ["status", "asset", "tx_index DESC"],
-            ["status", "asset_longname", "tx_index DESC"],
-            ["issuer"],
-        ],
-    )
 
 
 def validate(
@@ -232,7 +91,7 @@ def validate(
 
     # Callable, or not.
     if not callable_:
-        if util.after_block_or_test_network(block_index, 312500):  # Protocol change.
+        if protocol.after_block_or_test_network(block_index, 312500):  # Protocol change.
             call_date = 0
             call_price = 0.0
         elif block_index >= 310000:  # Protocol change.
@@ -242,7 +101,7 @@ def validate(
                 problems.append("call price for non‐callable asset")
 
     # Valid re-issuance?
-    issuances = ledger.get_issuances(
+    issuances = ledger.issuances.get_issuances(
         db, asset=asset, status="valid", first=True, current_block_index=block_index
     )
     reissued_asset_longname = None
@@ -251,7 +110,7 @@ def validate(
         last_issuance = issuances[-1]
         reissued_asset_longname = last_issuance["asset_longname"]
         issuance_locked = False
-        if util.enabled("issuance_lock_fix"):
+        if protocol.enabled("issuance_lock_fix"):
             for issuance in issuances:
                 if issuance["locked"]:
                     issuance_locked = True
@@ -266,15 +125,15 @@ def validate(
         if last_issuance["issuer"] != source:
             problems.append("issued by another address")
         if (bool(last_issuance["divisible"]) != bool(divisible)) and (
-            (not util.enabled("cip03", block_index)) or (not reset)
+            (not protocol.enabled("cip03", block_index)) or (not reset)
         ):
             problems.append("cannot change divisibility")
-        if (not util.enabled("issuance_callability_parameters_removal", block_index)) and bool(
+        if (not protocol.enabled("issuance_callability_parameters_removal", block_index)) and bool(
             last_issuance["callable"]
         ) != bool(callable_):
             problems.append("cannot change callability")
         if last_issuance["call_date"] > call_date and (
-            call_date != 0 or (block_index < 312500 and not util.is_test_network())
+            call_date != 0 or (block_index < 312500 and not protocol.is_test_network())
         ):
             problems.append("cannot advance call date")
         if last_issuance["call_price"] > call_price:
@@ -284,7 +143,7 @@ def validate(
         if issuance_locked and reset:
             problems.append("cannot reset a locked asset")
         if (
-            util.enabled("lockable_issuance_descriptions", block_index)
+            protocol.enabled("lockable_issuance_descriptions", block_index)
             and last_issuance["description_locked"]
         ):
             if description is not None:
@@ -302,7 +161,7 @@ def validate(
 
     # validate parent ownership for subasset
     if subasset_longname is not None and not reissuance:
-        parent_issuances = ledger.get_issuances(
+        parent_issuances = ledger.issuances.get_issuances(
             db, asset=subasset_parent, status="valid", first=True, current_block_index=block_index
         )
         if parent_issuances:
@@ -314,7 +173,7 @@ def validate(
 
     # validate subasset issuance is not a duplicate
     if subasset_longname is not None and not reissuance:
-        assets = ledger.get_assets_by_longname(db, subasset_longname)
+        assets = ledger.issuances.get_assets_by_longname(db, subasset_longname)
         if len(assets) > 0:
             problems.append("subasset already exists")
 
@@ -323,16 +182,18 @@ def validate(
             problems.append("a subasset must be a numeric asset")
 
     # Check for existence of fee funds.
-    if quantity or util.after_block_or_test_network(block_index, 315000):  # Protocol change.
+    if quantity or protocol.after_block_or_test_network(block_index, 315000):  # Protocol change.
         if not reissuance or (
-            block_index < 310000 and not util.is_test_network()
+            block_index < 310000 and not protocol.is_test_network()
         ):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
-            balance = ledger.get_balance(db, source, config.XCP)
+            balance = ledger.balances.get_balance(db, source, config.XCP)
             cursor.close()
-            if util.enabled("numeric_asset_names"):  # Protocol change.
-                if subasset_longname is not None and util.enabled("subassets"):  # Protocol change.
-                    if util.enabled("free_subassets", block_index):
+            if protocol.enabled("numeric_asset_names"):  # Protocol change.
+                if subasset_longname is not None and protocol.enabled(
+                    "subassets"
+                ):  # Protocol change.
+                    if protocol.enabled("free_subassets", block_index):
                         fee = 0
                     else:
                         # subasset issuance is 0.25
@@ -341,23 +202,23 @@ def validate(
                     fee = 0
                 else:
                     fee = int(0.5 * config.UNIT)
-            elif util.after_block_or_test_network(block_index, 291700):  # Protocol change.
+            elif protocol.after_block_or_test_network(block_index, 291700):  # Protocol change.
                 fee = int(0.5 * config.UNIT)
-            elif util.after_block_or_test_network(block_index, 286000):  # Protocol change.
+            elif protocol.after_block_or_test_network(block_index, 286000):  # Protocol change.
                 fee = 5 * config.UNIT
-            elif util.after_block_or_test_network(block_index, 281237):  # Protocol change.
+            elif protocol.after_block_or_test_network(block_index, 281237):  # Protocol change.
                 fee = 5
             if fee and (balance < fee):
                 problems.append("insufficient funds")
 
-    if not util.after_block_or_test_network(block_index, 317500):  # Protocol change.
+    if not protocol.after_block_or_test_network(block_index, 317500):  # Protocol change.
         if len(description) > 42:
             problems.append("description too long")
 
     # For SQLite3
     call_date = min(call_date, config.MAX_INT)
     assert isinstance(quantity, int)
-    if reset and util.enabled("cip03", block_index):  # reset will overwrite the quantity
+    if reset and protocol.enabled("cip03", block_index):  # reset will overwrite the quantity
         if quantity > config.MAX_INT:
             problems.append("total quantity overflow")
     else:
@@ -365,12 +226,12 @@ def validate(
         if total + quantity > config.MAX_INT:
             problems.append("total quantity overflow")
 
-    if util.enabled("cip03", block_index) and reset and issuances:
+    if protocol.enabled("cip03", block_index) and reset and issuances:
         # Checking that all supply are held by the owner of the asset
-        balances = ledger.get_asset_balances(db, asset)
+        balances = ledger.balances.get_asset_balances(db, asset)
 
         if len(balances) == 0:
-            if ledger.asset_supply(db, asset) > 0:
+            if ledger.supplies.asset_supply(db, asset) > 0:
                 problems.append("Cannot reset an asset with no holder")
         elif len(balances) > 1:
             problems.append("Cannot reset an asset with many holders")
@@ -382,7 +243,7 @@ def validate(
     #    problems.append('cannot issue and transfer simultaneously')
 
     # For SQLite3
-    if util.enabled("integer_overflow_fix", block_index=block_index) and (
+    if protocol.enabled("integer_overflow_fix", block_index=block_index) and (
         fee > config.MAX_INT or quantity > config.MAX_INT
     ):
         problems.append("integer overflow")
@@ -415,8 +276,12 @@ def compose(
 ):
     # Callability is deprecated, so for re‐issuances set relevant parameters
     # to old values; for first issuances, make uncallable.
-    issuances = ledger.get_issuances(
-        db, asset=asset, status="valid", first=True, current_block_index=util.CURRENT_BLOCK_INDEX
+    issuances = ledger.issuances.get_issuances(
+        db,
+        asset=asset,
+        status="valid",
+        first=True,
+        current_block_index=CurrentState().current_block_index(),
     )
     if issuances:
         last_issuance = issuances[-1]
@@ -431,24 +296,24 @@ def compose(
     # check subasset
     subasset_parent = None
     subasset_longname = None
-    if util.enabled("subassets"):  # Protocol change.
-        subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(
-            asset, util.enabled("allow_subassets_on_numerics")
+    if protocol.enabled("subassets"):  # Protocol change.
+        subasset_parent, subasset_longname = assetnames.parse_subasset_from_asset_name(
+            asset, protocol.enabled("allow_subassets_on_numerics")
         )
         if subasset_longname is not None:
             # try to find an existing subasset
-            assets = ledger.get_assets_by_longname(db, subasset_longname)
+            assets = ledger.issuances.get_assets_by_longname(db, subasset_longname)
             if len(assets) > 0:
                 # this is a reissuance
                 asset = assets[0]["asset_name"]
             else:
                 # this is a new issuance
                 #   generate a random numeric asset id which will map to this subasset
-                asset = util.generate_random_asset(subasset_longname)
+                asset = assetnames.generate_random_asset(subasset_longname)
 
-    asset_id = ledger.generate_asset_id(asset, util.CURRENT_BLOCK_INDEX)
-    asset_name = ledger.generate_asset_name(
-        asset_id, util.CURRENT_BLOCK_INDEX
+    asset_id = ledger.issuances.generate_asset_id(asset, CurrentState().current_block_index())
+    asset_name = ledger.issuances.generate_asset_name(
+        asset_id, CurrentState().current_block_index()
     )  # This will remove leading zeros in the numeric assets
 
     (
@@ -477,30 +342,32 @@ def compose(
         description,
         subasset_parent,
         subasset_longname,
-        util.CURRENT_BLOCK_INDEX,
+        CurrentState().current_block_index(),
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     if subasset_longname is None or reissuance:
-        asset_format = util.get_value_by_block_index("issuance_asset_serialization_format")
-        asset_format_length = util.get_value_by_block_index("issuance_asset_serialization_length")
+        asset_format = protocol.get_value_by_block_index("issuance_asset_serialization_format")
+        asset_format_length = protocol.get_value_by_block_index(
+            "issuance_asset_serialization_length"
+        )
 
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
-        if util.enabled("issuance_backwards_compatibility"):
-            data = message_type.pack(LR_ISSUANCE_ID)
+        if protocol.enabled("issuance_backwards_compatibility"):
+            data = messagetype.pack(LR_ISSUANCE_ID)
         else:
-            data = message_type.pack(ID)
+            data = messagetype.pack(ID)
 
-        if description == None and util.enabled("issuance_description_special_null"):  # noqa: E711
+        if description == None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
             # a special message is created to be catched by the parse function
             curr_format = (
                 asset_format + f"{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s"
             )
             encoded_description = DESCRIPTION_MARK_BYTE + DESCRIPTION_NULL_ACTION.encode("utf-8")
         else:
-            if (len(validated_description) <= 42) and not util.enabled("pascal_string_removed"):
+            if (len(validated_description) <= 42) and not protocol.enabled("pascal_string_removed"):
                 curr_format = FORMAT_2 + f"{len(validated_description) + 1}p"
             else:
                 curr_format = asset_format + f"{len(validated_description)}s"
@@ -554,24 +421,24 @@ def compose(
                 encoded_description,
             )
     else:
-        subasset_format = util.get_value_by_block_index(
-            "issuance_subasset_serialization_format", util.CURRENT_BLOCK_INDEX
+        subasset_format = protocol.get_value_by_block_index(
+            "issuance_subasset_serialization_format", CurrentState().current_block_index()
         )
-        subasset_format_length = util.get_value_by_block_index(
-            "issuance_subasset_serialization_length", util.CURRENT_BLOCK_INDEX
+        subasset_format_length = protocol.get_value_by_block_index(
+            "issuance_subasset_serialization_length", CurrentState().current_block_index()
         )
 
         # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B
         #   Used only for initial subasset issuance
         # compacts a subasset name to save space
-        compacted_subasset_longname = util.compact_subasset_longname(subasset_longname)
+        compacted_subasset_longname = assetnames.compact_subasset_longname(subasset_longname)
         compacted_subasset_length = len(compacted_subasset_longname)
-        if util.enabled("issuance_backwards_compatibility"):
-            data = message_type.pack(LR_SUBASSET_ID)
+        if protocol.enabled("issuance_backwards_compatibility"):
+            data = messagetype.pack(LR_SUBASSET_ID)
         else:
-            data = message_type.pack(SUBASSET_ID)
+            data = messagetype.pack(SUBASSET_ID)
 
-        if description == None and util.enabled("issuance_description_special_null"):  # noqa: E711
+        if description == None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
             # a special message is created to be catched by the parse function
             curr_format = (
                 subasset_format
@@ -627,14 +494,16 @@ def compose(
 
 
 def unpack(db, message, message_type_id, block_index, return_dict=False):
-    asset_format = util.get_value_by_block_index("issuance_asset_serialization_format", block_index)
-    asset_format_length = util.get_value_by_block_index(
+    asset_format = protocol.get_value_by_block_index(
+        "issuance_asset_serialization_format", block_index
+    )
+    asset_format_length = protocol.get_value_by_block_index(
         "issuance_asset_serialization_length", block_index
     )
-    subasset_format = util.get_value_by_block_index(
+    subasset_format = protocol.get_value_by_block_index(
         "issuance_subasset_serialization_format", block_index
     )
-    subasset_format_length = util.get_value_by_block_index(
+    subasset_format_length = protocol.get_value_by_block_index(
         "issuance_subasset_serialization_length", block_index
     )
 
@@ -642,7 +511,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
     try:
         subasset_longname = None
         if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
-            if not util.enabled("subassets", block_index=block_index):
+            if not protocol.enabled("subassets", block_index=block_index):
                 logger.warning(f"subassets are not enabled at block {block_index}")
                 raise exceptions.UnpackError
 
@@ -671,7 +540,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
             compacted_subasset_longname, description = struct.unpack(
                 messages_format, message[subasset_format_length:]
             )
-            subasset_longname = util.expand_subasset_longname(compacted_subasset_longname)
+            subasset_longname = assetnames.expand_subasset_longname(compacted_subasset_longname)
             callable_, call_date, call_price = False, 0, 0.0
             try:
                 description = description.decode("utf-8")
@@ -685,10 +554,10 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                     except UnicodeDecodeError:
                         description = ""
         elif (
-            util.after_block_or_test_network(block_index, 283272)
+            protocol.after_block_or_test_network(block_index, 283272)
             and len(message) >= asset_format_length
         ):  # Protocol change.
-            if (len(message) - asset_format_length <= 42) and not util.enabled(
+            if (len(message) - asset_format_length <= 42) and not protocol.enabled(
                 "pascal_string_removed"
             ):
                 curr_format = asset_format + f"{len(message) - asset_format_length}p"
@@ -755,18 +624,18 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                 "",
             )
         try:
-            asset = ledger.generate_asset_name(asset_id, block_index)
+            asset = ledger.issuances.generate_asset_name(asset_id, block_index)
 
             ##This is for backwards compatibility with assets names longer than 12 characters
             if asset.startswith("A"):
-                named_asset = ledger.get_asset_name(db, asset_id, block_index)
+                named_asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
 
                 if named_asset != 0:
                     asset = named_asset
 
             if description == None:  # noqa: E711
                 try:
-                    description = ledger.get_asset_description(db, asset)
+                    description = ledger.issuances.get_asset_description(db, asset)
                 except exceptions.AssetError:
                     description = ""
 
@@ -834,7 +703,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
 
 
 def _get_last_description(db, asset, default, block_index):
-    issuances = ledger.get_issuances(
+    issuances = ledger.issuances.get_issuances(
         db, asset=asset, status="valid", first=True, current_block_index=block_index
     )
     if len(issuances) > 0:
@@ -863,9 +732,9 @@ def parse(db, tx, message, message_type_id):
     if status == "valid" and subasset_longname is not None:  # Protocol change.
         try:
             # ensure the subasset_longname is valid
-            util.validate_subasset_longname(subasset_longname)
-            subasset_parent, subasset_longname = util.parse_subasset_from_asset_name(
-                subasset_longname, util.enabled("allow_subassets_on_numerics")
+            assetnames.validate_subasset_longname(subasset_longname)
+            subasset_parent, subasset_longname = assetnames.parse_subasset_from_asset_name(
+                subasset_longname, protocol.enabled("allow_subassets_on_numerics")
             )
         except exceptions.AssetNameError as e:  # noqa: F841
             asset = None
@@ -906,18 +775,18 @@ def parse(db, tx, message, message_type_id):
         if problems:
             status = "invalid: " + "; ".join(problems)
         if (
-            not util.enabled("integer_overflow_fix", block_index=tx["block_index"])
+            not protocol.enabled("integer_overflow_fix", block_index=tx["block_index"])
             and "total quantity overflow" in problems
         ):
             quantity = 0
 
     # Reset?
-    if (status == "valid") and reset and util.enabled("cip03", tx["block_index"]):
-        balances_result = ledger.get_asset_balances(db, asset)
+    if (status == "valid") and reset and protocol.enabled("cip03", tx["block_index"]):
+        balances_result = ledger.balances.get_asset_balances(db, asset)
 
         if len(balances_result) <= 1:
             if len(balances_result) == 0:
-                issuances_result = ledger.get_issuances(
+                issuances_result = ledger.issuances.get_issuances(
                     db, asset=asset, last=True, current_block_index=tx["block_index"]
                 )
 
@@ -929,7 +798,7 @@ def parse(db, tx, message, message_type_id):
 
             if owner_address == tx["source"]:
                 if owner_balance > 0:
-                    ledger.debit(
+                    ledger.events.debit(
                         db,
                         tx["source"],
                         asset,
@@ -949,7 +818,7 @@ def parse(db, tx, message, message_type_id):
                         "tag": "reset",
                         "status": "valid",
                     }
-                    ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+                    ledger.events.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
                 bindings = {
                     "tx_index": tx["tx_index"],
@@ -973,13 +842,13 @@ def parse(db, tx, message, message_type_id):
                     "asset_events": "reset",
                 }
 
-                ledger.insert_record(db, "issuances", bindings, "RESET_ISSUANCE")
+                ledger.events.insert_record(db, "issuances", bindings, "RESET_ISSUANCE")
 
                 logger.info("Reset issuance of %(asset)s [%(tx_hash)s] (%(status)s)", bindings)
 
                 # Credit.
                 if quantity:
-                    ledger.credit(
+                    ledger.events.credit(
                         db,
                         tx["source"],
                         asset,
@@ -1002,7 +871,7 @@ def parse(db, tx, message, message_type_id):
 
         # Debit fee.
         if status == "valid":
-            ledger.debit(
+            ledger.events.debit(
                 db,
                 tx["source"],
                 config.XCP,
@@ -1022,7 +891,7 @@ def parse(db, tx, message, message_type_id):
             if description.lower() == "lock":
                 lock = True
                 description = last_description
-            elif description.lower() == "lock_description" and util.enabled(
+            elif description.lower() == "lock_description" and protocol.enabled(
                 "lockable_issuance_descriptions", tx["block_index"]
             ):
                 description_locked = True
@@ -1039,7 +908,7 @@ def parse(db, tx, message, message_type_id):
                 "block_index": tx["block_index"],
                 "asset_longname": subasset_longname,
             }
-            ledger.insert_record(db, "assets", bindings, "ASSET_CREATION")
+            ledger.events.insert_record(db, "assets", bindings, "ASSET_CREATION")
             asset_events.append("creation")
 
         if status == "valid" and reissuance:
@@ -1081,7 +950,7 @@ def parse(db, tx, message, message_type_id):
         if "cannot issue during fair minting" in status:
             bindings["fair_minting"] = True
         if "integer overflow" not in status:
-            ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+            ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
         logger.info(
             "Issuance of %(quantity)s %(asset)s by %(source)s [%(tx_hash)s] (%(status)s)", bindings
@@ -1089,7 +958,7 @@ def parse(db, tx, message, message_type_id):
 
         # Credit.
         if status == "valid" and quantity:
-            ledger.credit(
+            ledger.events.credit(
                 db,
                 tx["source"],
                 asset,

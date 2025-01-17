@@ -3,8 +3,9 @@ import logging
 import math
 import struct
 
-from counterpartycore.lib import config, database, exceptions, ledger, util
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import fairminter as fairminter_mod
+from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -13,40 +14,6 @@ ID = 91
 
 def D(value):
     return decimal.Decimal(str(value))
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    create_table_sql = """
-        CREATE TABLE IF NOT EXISTS fairmints (
-            tx_hash TEXT PRIMARY KEY,
-            tx_index INTEGER,
-            block_index INTEGER,
-            source TEXT,
-            fairminter_tx_hash TEXT,
-            asset TEXT,
-            earn_quantity INTEGER,
-            paid_quantity INTEGER,
-            commission INTEGER,
-            status TEXT
-        )
-    """
-
-    cursor.execute(create_table_sql)
-
-    database.create_indexes(
-        cursor,
-        "fairmints",
-        [
-            ["tx_hash"],
-            ["block_index"],
-            ["fairminter_tx_hash"],
-            ["asset"],
-            ["source"],
-            ["status"],
-        ],
-    )
 
 
 def validate(
@@ -60,7 +27,7 @@ def validate(
     if not isinstance(quantity, int):
         problems.append("quantity must be an integer")
 
-    fairminter = ledger.get_fairminter_by_asset(db, asset)
+    fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
     if not fairminter:
         problems.append(f"fairminter not found for asset: `{asset}`")
         return problems
@@ -68,7 +35,7 @@ def validate(
     if fairminter["status"] != "open":
         problems.append(f"fairminter is not open for asset: `{asset}`")
 
-    asset_supply = ledger.asset_supply(db, fairminter["asset"])
+    asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
 
     if fairminter["price"] > 0:
         # if the fairminter is not free the quantity is mandatory
@@ -89,10 +56,10 @@ def validate(
             fairminter["price"]
         )
         xcp_total_price = int(math.ceil(xcp_total_price))
-        balance = ledger.get_balance(db, source, config.XCP)
+        balance = ledger.balances.get_balance(db, source, config.XCP)
         if balance < xcp_total_price:
             problems.append("insufficient XCP balance")
-    elif not util.enabled("partial_mint_to_reach_hard_cap"):
+    elif not protocol.enabled("partial_mint_to_reach_hard_cap"):
         # check id we don't exceed the hard cap
         if (
             fairminter["hard_cap"] > 0
@@ -109,7 +76,7 @@ def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: boo
         raise exceptions.ComposeError(problems)
 
     if quantity != 0:
-        fairminter = ledger.get_fairminter_by_asset(db, asset)
+        fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
         if fairminter["price"] == 0:
             raise exceptions.ComposeError("quantity is not allowed for free fairminters")
 
@@ -157,12 +124,12 @@ def parse(db, tx, message):
             "source": tx["source"],
             "status": status,
         }
-        ledger.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
+        ledger.events.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
         logger.info(f"Fairmint {tx['tx_hash']} is invalid: {status}")
         return
 
     # get corresponding fairminter
-    fairminter = ledger.get_fairminter_by_asset(db, asset)
+    fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
 
     # determine if the soft cap has been reached
     soft_cap_not_reached = (
@@ -197,8 +164,8 @@ def parse(db, tx, message):
         earn_quantity = quantity
     else:
         paid_quantity = 0
-        if util.enabled("partial_mint_to_reach_hard_cap"):
-            asset_supply = ledger.asset_supply(db, fairminter["asset"])
+        if protocol.enabled("partial_mint_to_reach_hard_cap"):
+            asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
             if (
                 fairminter["hard_cap"] > 0
                 and asset_supply + fairminter["max_mint_per_tx"] > fairminter["hard_cap"]
@@ -218,12 +185,12 @@ def parse(db, tx, message):
 
     if paid_quantity > 0:
         # we debit the user
-        ledger.debit(
+        ledger.events.debit(
             db, tx["source"], config.XCP, paid_quantity, tx["tx_index"], xcp_action, tx["tx_hash"]
         )
         if xcp_destination:
             # we credit the destination if it exists (issuer or escrow)
-            ledger.credit(
+            ledger.events.credit(
                 db,
                 xcp_destination,
                 config.XCP,
@@ -244,11 +211,11 @@ def parse(db, tx, message):
                 "tag": xcp_action,
                 "status": "valid",
             }
-            ledger.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
+            ledger.events.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
     if asset_destination == config.UNSPENDABLE:
         # the minted amount and commission are escrowed
-        ledger.credit(
+        ledger.events.credit(
             db,
             asset_destination,
             asset,
@@ -259,12 +226,12 @@ def parse(db, tx, message):
         )
     else:
         # the minted amount is sent to the user
-        ledger.credit(
+        ledger.events.credit(
             db, asset_destination, asset, earn_quantity, tx["tx_index"], asset_action, tx["tx_hash"]
         )
         if commission > 0:
             # the commission is sent to the issuer
-            ledger.credit(
+            ledger.events.credit(
                 db,
                 fairminter["source"],
                 asset,
@@ -287,10 +254,10 @@ def parse(db, tx, message):
         "commission": commission,
         "status": status,
     }
-    ledger.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
+    ledger.events.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
 
     # we prepare the new issuance
-    last_issuance = ledger.get_last_issuance(db, asset)
+    last_issuance = ledger.issuances.get_last_issuance(db, asset)
     bindings = last_issuance | {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
@@ -304,7 +271,7 @@ def parse(db, tx, message):
 
     # we check if the hard cap is reached and in this case...
     if fairminter["hard_cap"] > 0:
-        asset_supply = ledger.asset_supply(db, fairminter["asset"])
+        asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
         alredy_minted = asset_supply + earn_quantity + commission
         if alredy_minted == fairminter["hard_cap"]:
             # ...we unlock the issuances for this assets
@@ -320,10 +287,10 @@ def parse(db, tx, message):
                 and fairminter["soft_cap_deadline_block"] >= tx["block_index"]
             ):
                 fairminter_mod.soft_cap_deadline_reached(db, fairminter, tx["block_index"])
-            ledger.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+            ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance
-    ledger.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+    ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
     # log
     logger.info(

@@ -11,8 +11,14 @@
 
 - Fix ignored deprecated parameters in Compose API
 
-
 ## Codebase
+
+- Remove counterparty-wallet
+- Split vector file
+- Move python tests from `counterparty-rs` to `counterparty-core`
+- Reorganize files and functions, split too big files, delete all unused functions
+- Remove globals in `lib/util.py` and `ledger.py`
+- Use yoyo migrations to update database
 
 ## API
 

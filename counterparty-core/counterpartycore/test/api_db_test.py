@@ -2,7 +2,8 @@ import tempfile
 
 import pytest
 
-from counterpartycore.lib import config, database
+from counterpartycore.lib import config
+from counterpartycore.lib.utils import database
 from counterpartycore.test.util_test import CURR_DIR
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
@@ -31,7 +32,7 @@ def compare_balances(api_db, ledger_db):
         assert ledger_balance["quantity"] == api_balance["quantity"]
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_api_database():
     ledger_db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
     api_db = database.get_db_connection(config.STATE_DATABASE, read_only=True, check_wal=False)

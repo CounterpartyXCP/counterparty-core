@@ -19895,12 +19895,6 @@
                         "description": "Address to get pubkey for. (e.g. $ADDRESS_1)"
                     },
                     {
-                        "name": "provided_pubkeys",
-                        "default": null,
-                        "required": false,
-                        "type": "str"
-                    },
-                    {
                         "name": "verbose",
                         "type": "bool",
                         "default": "false",

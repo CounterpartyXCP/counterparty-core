@@ -1,7 +1,9 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, ledger, script, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.parser import utxosinfo
+from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -12,7 +14,7 @@ def validate(source):
     problems = []
 
     # check if source is a UTXO
-    if not util.is_utxo_format(source):
+    if not utxosinfo.is_utxo_format(source):
         problems.append("source must be a UTXO")
 
     return problems
@@ -26,8 +28,8 @@ def compose(db, source, destination=None, skip_validation=False):
     # check if destination is an address
     if destination is not None:
         try:
-            script.validate(destination)
-        except script.AddressError as e:
+            address.validate(destination)
+        except exceptions.AddressError as e:
             raise exceptions.ComposeError("destination must be an address") from e
 
     # create message
@@ -36,7 +38,7 @@ def compose(db, source, destination=None, skip_validation=False):
     if destination is not None:
         data_content = destination.encode("utf-8")
     else:
-        data_content = b"0"  # not empty to avoid a protocol change in `message_type.unpack()`
+        data_content = b"0"  # not empty to avoid a protocol change in `messagetype.unpack()`
     data += struct.pack(f">{len(data_content)}s", data_content)
 
     return (source, [], data)
@@ -68,17 +70,17 @@ def detach_assets(db, tx, source, destination=None):
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
-            "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
+            "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
             "block_index": tx["block_index"],
             "status": status,
             "send_type": "detach",
         }
-        ledger.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
+        ledger.events.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
         # stop here to avoid further processing
         return
 
     # we detach all the assets from the source UTXO
-    balances = ledger.get_utxo_balances(db, source)
+    balances = ledger.balances.get_utxo_balances(db, source)
     for balance in balances:
         if balance["quantity"] == 0:
             continue
@@ -90,14 +92,14 @@ def detach_assets(db, tx, source, destination=None):
         # check if destination is an address
         if detach_destination is not None:
             try:
-                script.validate(detach_destination)
+                address.validate(detach_destination)
             except Exception:  # let's catch all exceptions here
                 detach_destination = None
         # if no destination is provided, we credit the asset to utxo_address
         if detach_destination is None:
             detach_destination = balance["utxo_address"]
 
-        source_address = ledger.debit(
+        source_address = ledger.events.debit(
             db,
             source,
             balance["asset"],
@@ -106,7 +108,7 @@ def detach_assets(db, tx, source, destination=None):
             action=action,
             event=tx["tx_hash"],
         )
-        ledger.credit(
+        ledger.events.credit(
             db,
             detach_destination,
             balance["asset"],
@@ -118,7 +120,7 @@ def detach_assets(db, tx, source, destination=None):
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
-            "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
+            "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
             "block_index": tx["block_index"],
             "status": "valid",
             "source": source,
@@ -129,7 +131,7 @@ def detach_assets(db, tx, source, destination=None):
             "fee_paid": 0,
             "send_type": "detach",
         }
-        ledger.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
+        ledger.events.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
 
     logger.info(
         "Detach assets from %(source)s (%(tx_hash)s) [%(status)s]",
@@ -145,7 +147,7 @@ def parse(db, tx, message):
     destination = unpack(message)
 
     # get all inputs with balances
-    sources = util.get_sources_from_utxos_info(tx["utxos_info"])
+    sources = utxosinfo.get_sources_from_utxos_info(tx["utxos_info"])
 
     # detach assets from all the sources
     # IMPORTANT: that's mean we can't detach assets and move utxo in th same transaction
