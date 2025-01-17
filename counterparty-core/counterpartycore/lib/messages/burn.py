@@ -1,11 +1,14 @@
-#! /usr/bin/python3
+import csv
 import decimal
 import logging
+import os
+from fractions import Fraction
+
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.parser import protocol
 
 D = decimal.Decimal
-from fractions import Fraction  # noqa: E402
-
-from counterpartycore.lib import config, database, exceptions, ledger, util  # noqa: E402
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -13,38 +16,12 @@ f"""Burn {config.BTC} to earn {config.XCP} during a special period of time."""
 
 ID = 60
 
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "status_idx",
-            "address_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS burns(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      burned INTEGER,
-                      earned INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-
-    database.create_indexes(
-        cursor,
-        "burns",
-        [
-            ["status"],
-            ["source"],
-        ],
-    )
+MAINNET_BURNS = {}
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+with open(CURR_DIR + "/data/mainnet_burns.csv", "r") as f:
+    mainnet_burns_reader = csv.DictReader(f)
+    for line in mainnet_burns_reader:
+        MAINNET_BURNS[line["tx_hash"]] = line
 
 
 def validate(db, source, destination, quantity, block_index, overburn=False):
@@ -74,13 +51,13 @@ def compose(db, source: str, quantity: int, overburn: bool = False, skip_validat
     cursor = db.cursor()
     destination = config.UNSPENDABLE
     problems = validate(
-        db, source, destination, quantity, util.CURRENT_BLOCK_INDEX, overburn=overburn
+        db, source, destination, quantity, CurrentState().current_block_index(), overburn=overburn
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
-    burns = ledger.get_burns(db, source)
+    burns = ledger.other.get_burns(db, source)
     already_burned = sum([burn["burned"] for burn in burns])
 
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
@@ -90,10 +67,10 @@ def compose(db, source: str, quantity: int, overburn: bool = False, skip_validat
     return (source, [(destination, quantity)], None)
 
 
-def parse(db, tx, mainnet_burns, message=None):
+def parse(db, tx, message=None):
     burn_parse_cursor = db.cursor()
 
-    if util.is_test_network():
+    if protocol.is_test_network():
         problems = []
         status = "valid"
 
@@ -116,7 +93,7 @@ def parse(db, tx, mainnet_burns, message=None):
 
         if status == "valid":
             # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
-            burns = ledger.get_burns(db, tx["source"])
+            burns = ledger.other.get_burns(db, tx["source"])
             already_burned = sum([burn["burned"] for burn in burns])
             one = 1 * config.UNIT
             max_burn = one - already_burned
@@ -131,7 +108,7 @@ def parse(db, tx, mainnet_burns, message=None):
             earned = round(burned * multiplier)
 
             # Credit source address with earned XCP.
-            ledger.credit(
+            ledger.events.credit(
                 db,
                 tx["source"],
                 config.XCP,
@@ -153,11 +130,11 @@ def parse(db, tx, mainnet_burns, message=None):
         # Mainnet burns are hard‐coded.
 
         try:
-            line = mainnet_burns[tx["tx_hash"]]
+            line = MAINNET_BURNS[tx["tx_hash"]]
         except KeyError:
             return
 
-        ledger.credit(
+        ledger.events.credit(
             db,
             line["source"],
             config.XCP,
@@ -187,7 +164,7 @@ def parse(db, tx, mainnet_burns, message=None):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, "burns", bindings, "BURN")
+        ledger.events.insert_record(db, "burns", bindings, "BURN")
 
     logger.info(
         "%(source)s burned %(burned)s BTC for %(earned)s XCP (%(tx_hash)s) [%(status)s]", bindings

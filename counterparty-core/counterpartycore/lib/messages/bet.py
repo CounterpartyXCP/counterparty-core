@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 """
 Datastreams are identified by the address that publishes them, and referenced
 in transaction outputs.
@@ -13,19 +11,20 @@ Expiring a bet match doesn’t re‐open the constituent bets. (So all bets may 
 """
 
 import decimal
+import logging
 import struct
+import time
 
-D = decimal.Decimal
-import logging  # noqa: E402
-
-from counterpartycore.lib import (  # noqa: E402
+from counterpartycore.lib import (
     config,
-    database,
     exceptions,
     ledger,
-    message_type,
-    util,
 )
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.parser import messagetype, protocol
+from counterpartycore.lib.utils import helpers
+
+D = decimal.Decimal
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -34,183 +33,16 @@ LENGTH = 2 + 4 + 8 + 8 + 8 + 4 + 4
 ID = 40
 
 
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "block_index_idx",
-            "index_hash_idx",
-            "expire_idx",
-            "feed_valid_bettype_idx",
-            "source_idx",
-            "status_idx",
-            "match_expire_idx",
-            "valid_feed_idx",
-            "tx0_address_idx",
-            "tx1_address_idx",
-        ],
-    )
-
-    # Bets.
-    create_bets_query = """CREATE TABLE IF NOT EXISTS bets(
-                        tx_index INTEGER,
-                        tx_hash TEXT,
-                        block_index INTEGER,
-                        source TEXT,
-                        feed_address TEXT,
-                        bet_type INTEGER,
-                        deadline INTEGER,
-                        wager_quantity INTEGER,
-                        wager_remaining INTEGER,
-                        counterwager_quantity INTEGER,
-                        counterwager_remaining INTEGER,
-                        target_value REAL,
-                        leverage INTEGER,
-                        expiration INTEGER,
-                        expire_index INTEGER,
-                        fee_fraction_int INTEGER,
-                        status TEXT)
-                        """
-    # create table
-    cursor.execute(create_bets_query)
-    # migrate old table
-    if database.field_is_pk(cursor, "bets", "tx_index"):
-        database.copy_old_table(cursor, "bets", create_bets_query)
-    # create indexes
-    database.create_indexes(
-        cursor,
-        "bets",
-        [
-            ["block_index"],
-            ["tx_index", "tx_hash"],
-            ["status"],
-            ["tx_hash"],
-            ["feed_address"],
-            ["expire_index"],
-            ["feed_address", "bet_type"],
-        ],
-    )
-
-    # Bet Matches
-    create_bet_matches_query = """CREATE TABLE IF NOT EXISTS bet_matches(
-                                id TEXT,
-                                tx0_index INTEGER,
-                                tx0_hash TEXT,
-                                tx0_address TEXT,
-                                tx1_index INTEGER,
-                                tx1_hash TEXT,
-                                tx1_address TEXT,
-                                tx0_bet_type INTEGER,
-                                tx1_bet_type INTEGER,
-                                feed_address TEXT,
-                                initial_value INTEGER,
-                                deadline INTEGER,
-                                target_value REAL,
-                                leverage INTEGER,
-                                forward_quantity INTEGER,
-                                backward_quantity INTEGER,
-                                tx0_block_index INTEGER,
-                                tx1_block_index INTEGER,
-                                block_index INTEGER,
-                                tx0_expiration INTEGER,
-                                tx1_expiration INTEGER,
-                                match_expire_index INTEGER,
-                                fee_fraction_int INTEGER,
-                                status TEXT)
-                                """
-    # create table
-    cursor.execute(create_bet_matches_query)
-    # migrate old table
-    if database.field_is_pk(cursor, "bet_matches", "id"):
-        database.copy_old_table(cursor, "bet_matches", create_bet_matches_query)
-    # create indexes
-    database.create_indexes(
-        cursor,
-        "bet_matches",
-        [
-            ["block_index"],
-            ["id"],
-            ["status"],
-            ["deadline"],
-            ["tx0_address"],
-            ["tx1_address"],
-        ],
-    )
-
-    # Bet Expirations
-    create_bet_expirations_query = """CREATE TABLE IF NOT EXISTS bet_expirations(
-                                    bet_index INTEGER PRIMARY KEY,
-                                    bet_hash TEXT UNIQUE,
-                                    source TEXT,
-                                    block_index INTEGER,
-                                    FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                                    """
-    # create table
-    cursor.execute(create_bet_expirations_query)
-    # migrate old table
-    if database.has_fk_on(cursor, "bet_expirations", "bets.tx_index"):
-        database.copy_old_table(cursor, "bet_expirations", create_bet_expirations_query)
-    # create indexes
-    database.create_indexes(
-        cursor,
-        "bet_expirations",
-        [
-            ["block_index"],
-            ["source"],
-        ],
-    )
-
-    # Bet Match Expirations
-    create_bet_match_expirations_query = """CREATE TABLE IF NOT EXISTS bet_match_expirations(
-                                          bet_match_id TEXT PRIMARY KEY,
-                                          tx0_address TEXT,
-                                          tx1_address TEXT,
-                                          block_index INTEGER,
-                                          FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                                          """
-    # create table
-    cursor.execute(create_bet_match_expirations_query)
-    # migrate old table
-    if database.has_fk_on(cursor, "bet_match_expirations", "bet_matches.id"):
-        database.copy_old_table(cursor, "bet_match_expirations", create_bet_match_expirations_query)
-    # create indexes
-    database.create_indexes(
-        cursor,
-        "bet_match_expirations",
-        [
-            ["block_index"],
-            ["tx0_address"],
-            ["tx1_address"],
-        ],
-    )
-
-    # Bet Match Resolutions
-    create_bet_match_resolutions_query = """CREATE TABLE IF NOT EXISTS bet_match_resolutions(
-                                            bet_match_id TEXT PRIMARY KEY,
-                                            bet_match_type_id INTEGER,
-                                            block_index INTEGER,
-                                            winner TEXT,
-                                            settled BOOL,
-                                            bull_credit INTEGER,
-                                            bear_credit INTEGER,
-                                            escrow_less_fee INTEGER,
-                                            fee INTEGER,
-                                            FOREIGN KEY (block_index) REFERENCES blocks(block_index))
-                                            """
-    # create table
-    cursor.execute(create_bet_match_resolutions_query)
-    # migrate old table
-    if database.has_fk_on(cursor, "bet_match_resolutions", "bet_matches.id"):
-        database.copy_old_table(cursor, "bet_match_resolutions", create_bet_match_resolutions_query)
+# For testing purposes
+def date_passed(date):
+    """Check if the date has already passed."""
+    return date <= int(time.time())
 
 
 def cancel_bet(db, bet, status, block_index, tx_index):
     # Update status of bet.
     set_data = {"status": status}
-    ledger.update_bet(db, bet["tx_hash"], set_data)
+    ledger.other.update_bet(db, bet["tx_hash"], set_data)
 
     log_data = set_data | {
         "bet_hash": bet["tx_hash"],
@@ -218,7 +50,7 @@ def cancel_bet(db, bet, status, block_index, tx_index):
     logger.info("Bet %(bet_hash)s canceled [%(status)s]", log_data)
 
     # Refund wager.
-    ledger.credit(
+    ledger.events.credit(
         db,
         bet["source"],
         config.XCP,
@@ -232,7 +64,7 @@ def cancel_bet(db, bet, status, block_index, tx_index):
 def cancel_bet_match(db, bet_match, status, block_index, tx_index):
     # Does not re‐open, re‐fill, etc. constituent bets.
     # Recredit tx0 address.
-    ledger.credit(
+    ledger.events.credit(
         db,
         bet_match["tx0_address"],
         config.XCP,
@@ -243,7 +75,7 @@ def cancel_bet_match(db, bet_match, status, block_index, tx_index):
     )
 
     # Recredit tx1 address.
-    ledger.credit(
+    ledger.events.credit(
         db,
         bet_match["tx1_address"],
         config.XCP,
@@ -253,7 +85,7 @@ def cancel_bet_match(db, bet_match, status, block_index, tx_index):
         event=bet_match["id"],
     )
     # Update status of bet match.
-    ledger.update_bet_match_status(db, bet_match["id"], status)
+    ledger.other.update_bet_match_status(db, bet_match["id"], status)
 
     logger.info(
         "Bet Match %(id)s canceled [%(status)s]",
@@ -266,7 +98,7 @@ def cancel_bet_match(db, bet_match, status, block_index, tx_index):
 
 def get_fee_fraction(db, feed_address):
     """Get fee fraction from last broadcast from the feed_address address."""
-    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
+    broadcasts = ledger.other.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
 
     if broadcasts:
         last_broadcast = broadcasts[-1]
@@ -309,7 +141,7 @@ def validate(
         problems.append("integer overflow")
 
     # Look at feed to be bet on.
-    broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
+    broadcasts = ledger.other.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
     if not broadcasts:
         problems.append("feed doesn’t exist")
     elif not broadcasts[-1]["text"]:
@@ -351,7 +183,7 @@ def validate(
         problems.append("negative deadline")
     if expiration < 0:
         problems.append("negative expiration")
-    if expiration == 0 and not util.after_block_or_test_network(
+    if expiration == 0 and not protocol.after_block_or_test_network(
         block_index, 317500
     ):  # Protocol change.
         problems.append("zero expiration")
@@ -381,7 +213,7 @@ def compose(
     expiration: int,
     skip_validation: bool = False,
 ):
-    if ledger.get_balance(db, source, config.XCP) < wager_quantity:
+    if ledger.balances.get_balance(db, source, config.XCP) < wager_quantity:
         raise exceptions.ComposeError("insufficient funds")
 
     problems, leverage = validate(
@@ -395,14 +227,14 @@ def compose(
         target_value,
         leverage,
         expiration,
-        util.CURRENT_BLOCK_INDEX,
+        CurrentState().current_block_index(),
     )
-    if util.date_passed(deadline):
+    if date_passed(deadline):
         problems.append("deadline passed")
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(
         FORMAT,
         bet_type,
@@ -484,20 +316,20 @@ def parse(db, tx, message):
     feed_address = tx["destination"]
     if status == "open":
         try:
-            odds = ledger.price(wager_quantity, counterwager_quantity)
+            odds = ledger.issuances.price(wager_quantity, counterwager_quantity)
         except ZeroDivisionError:
             odds = 0
 
         fee_fraction = get_fee_fraction(db, feed_address)
 
         # Overbet
-        balance = ledger.get_balance(db, tx["source"], config.XCP)
+        balance = ledger.balances.get_balance(db, tx["source"], config.XCP)
         if balance == 0:
             wager_quantity = 0
         else:
             if balance < wager_quantity:
                 wager_quantity = balance
-                counterwager_quantity = int(ledger.price(wager_quantity, odds))
+                counterwager_quantity = int(ledger.issuances.price(wager_quantity, odds))
 
         problems, leverage = validate(
             db,
@@ -517,7 +349,7 @@ def parse(db, tx, message):
 
     # Debit quantity wagered. (Escrow.)
     if status == "open":
-        ledger.debit(
+        ledger.events.debit(
             db,
             tx["source"],
             config.XCP,
@@ -548,7 +380,7 @@ def parse(db, tx, message):
         "status": status,
     }
     if "integer overflow" not in status:
-        ledger.insert_record(db, "bets", bindings, "OPEN_BET")
+        ledger.events.insert_record(db, "bets", bindings, "OPEN_BET")
 
     logger.info("Open Bet (%(tx_hash)s) [%(status)s]", bindings)
 
@@ -561,7 +393,7 @@ def parse(db, tx, message):
 
 def match(db, tx):
     # Get bet in question.
-    bets = ledger.get_bet(db, bet_hash=tx["tx_hash"])
+    bets = ledger.other.get_bet(db, bet_hash=tx["tx_hash"])
     if not bets:
         return
     else:
@@ -582,11 +414,12 @@ def match(db, tx):
     tx1_wager_remaining = tx1["wager_remaining"]
     tx1_counterwager_remaining = tx1["counterwager_remaining"]
 
-    bet_matches = ledger.get_matching_bets(db, tx1["feed_address"], counterbet_type)
-    if util.after_block_or_test_network(tx["block_index"], 284501):  # Protocol change.
+    bet_matches = ledger.other.get_matching_bets(db, tx1["feed_address"], counterbet_type)
+    if protocol.after_block_or_test_network(tx["block_index"], 284501):  # Protocol change.
         sorted(bet_matches, key=lambda x: x["tx_index"])  # Sort by tx index second.
         sorted(
-            bet_matches, key=lambda x: ledger.price(x["wager_quantity"], x["counterwager_quantity"])
+            bet_matches,
+            key=lambda x: ledger.issuances.price(x["wager_quantity"], x["counterwager_quantity"]),
         )  # Sort by price first.
 
     tx1_status = tx1["status"]
@@ -625,22 +458,24 @@ def match(db, tx):
 
         # If the odds agree, make the trade. The found order sets the odds,
         # and they trade as much as they can.
-        tx0_odds = ledger.price(tx0["wager_quantity"], tx0["counterwager_quantity"])
-        tx0_inverse_odds = ledger.price(tx0["counterwager_quantity"], tx0["wager_quantity"])
-        tx1_odds = ledger.price(tx1["wager_quantity"], tx1["counterwager_quantity"])
+        tx0_odds = ledger.issuances.price(tx0["wager_quantity"], tx0["counterwager_quantity"])
+        tx0_inverse_odds = ledger.issuances.price(
+            tx0["counterwager_quantity"], tx0["wager_quantity"]
+        )
+        tx1_odds = ledger.issuances.price(tx1["wager_quantity"], tx1["counterwager_quantity"])
 
         if tx["block_index"] < 286000:
-            tx0_inverse_odds = ledger.price(1, tx0_odds)  # Protocol change.
+            tx0_inverse_odds = ledger.issuances.price(1, tx0_odds)  # Protocol change.
 
         logger.debug(f"Tx0 Inverse Odds: {float(tx0_inverse_odds)}; Tx1 Odds: {float(tx1_odds)}")
         if tx0_inverse_odds > tx1_odds:
             logger.debug("Skipping: price mismatch.")
         else:
             logger.debug(
-                f"Potential forward quantities: {tx0_wager_remaining}, {int(ledger.price(tx1_wager_remaining, tx1_odds))}"
+                f"Potential forward quantities: {tx0_wager_remaining}, {int(ledger.issuances.price(tx1_wager_remaining, tx1_odds))}"
             )
             forward_quantity = int(
-                min(tx0_wager_remaining, int(ledger.price(tx1_wager_remaining, tx1_odds)))
+                min(tx0_wager_remaining, int(ledger.issuances.price(tx1_wager_remaining, tx1_odds)))
             )
             logger.debug(f"Forward Quantity: {forward_quantity}")
             backward_quantity = round(forward_quantity / tx0_odds)
@@ -649,12 +484,12 @@ def match(db, tx):
             if not forward_quantity:
                 logger.debug("Skipping: zero forward quantity.")
                 continue
-            if util.after_block_or_test_network(tx1["block_index"], 286500):  # Protocol change.
+            if protocol.after_block_or_test_network(tx1["block_index"], 286500):  # Protocol change.
                 if not backward_quantity:
                     logger.debug("Skipping: zero backward quantity.")
                     continue
 
-            bet_match_id = util.make_id(tx0["tx_hash"], tx1["tx_hash"])  # noqa: F841
+            bet_match_id = helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])  # noqa: F841
 
             # Debit the order.
             # Counterwager remainings may be negative.
@@ -668,7 +503,7 @@ def match(db, tx):
             if tx0_wager_remaining <= 0 or tx0_counterwager_remaining <= 0:
                 # Fill order, and recredit give_remaining.
                 tx0_status = "filled"
-                ledger.credit(
+                ledger.events.credit(
                     db,
                     tx0["source"],
                     config.XCP,
@@ -683,7 +518,7 @@ def match(db, tx):
                 "counterwager_remaining": tx0_counterwager_remaining,
                 "status": tx0_status,
             }
-            ledger.update_bet(db, tx0["tx_hash"], set_data)
+            ledger.other.update_bet(db, tx0["tx_hash"], set_data)
 
             log_data = set_data | {
                 "tx_hash": tx["tx_hash"],
@@ -691,11 +526,11 @@ def match(db, tx):
             }
             logger.info("Bet %(bet_hash)s updated (%(tx_hash)s) [%(status)s]", log_data)
 
-            if util.after_block_or_test_network(tx1["block_index"], 292000):  # Protocol change
+            if protocol.after_block_or_test_network(tx1["block_index"], 292000):  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = "filled"
-                    ledger.credit(
+                    ledger.events.credit(
                         db,
                         tx1["source"],
                         config.XCP,
@@ -710,7 +545,7 @@ def match(db, tx):
                 "counterwager_remaining": tx1_counterwager_remaining,
                 "status": tx1_status,
             }
-            ledger.update_bet(db, tx1["tx_hash"], set_data)
+            ledger.other.update_bet(db, tx1["tx_hash"], set_data)
 
             log_data = set_data | {
                 "tx_hash": tx["tx_hash"],
@@ -719,12 +554,14 @@ def match(db, tx):
             logger.info("Bet %(bet_hash)s updated (%(tx_hash)s) [%(status)s]", log_data)
 
             # Get last value of feed.
-            broadcasts = ledger.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
+            broadcasts = ledger.other.get_broadcasts_by_source(
+                db, feed_address, "valid", order_by="ASC"
+            )
             initial_value = broadcasts[-1]["value"]
 
             # Record bet fulfillment.
             bindings = {
-                "id": util.make_id(tx0["tx_hash"], tx["tx_hash"]),
+                "id": helpers.make_id(tx0["tx_hash"], tx["tx_hash"]),
                 "tx0_index": tx0["tx_index"],
                 "tx0_hash": tx0["tx_hash"],
                 "tx0_address": tx0["source"],
@@ -749,7 +586,7 @@ def match(db, tx):
                 "fee_fraction_int": tx1["fee_fraction_int"],
                 "status": "pending",
             }
-            ledger.insert_record(db, "bet_matches", bindings, "BET_MATCH")
+            ledger.events.insert_record(db, "bet_matches", bindings, "BET_MATCH")
             logger.info(
                 "Bet match %(tx0_index)s for %(forward_quantity)s XCP against %(backward_quantity)s XCP on %(feed_address)s",
                 bindings,
@@ -762,7 +599,7 @@ def expire(db, block_index, block_time):
     cursor = db.cursor()
 
     # Expire bets and give refunds for the quantity wager_remaining.
-    for bet in ledger.get_bets_to_expire(db, block_index):
+    for bet in ledger.other.get_bets_to_expire(db, block_index):
         # use tx_index=0 for block actions
         cancel_bet(db, bet, "expired", block_index, 0)
 
@@ -773,11 +610,11 @@ def expire(db, block_index, block_time):
             "source": bet["source"],
             "block_index": block_index,
         }
-        ledger.insert_record(db, "bet_expirations", bindings, "BET_EXPIRATION")
+        ledger.events.insert_record(db, "bet_expirations", bindings, "BET_EXPIRATION")
         logger.info("Bet Expiration %(bet_hash)s", bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
-    for bet_match in ledger.get_bet_matches_to_expire(db, block_time):
+    for bet_match in ledger.other.get_bet_matches_to_expire(db, block_time):
         # use tx_index=0 for block actions
         cancel_bet_match(db, bet_match, "expired", block_index, 0)
 
@@ -788,7 +625,7 @@ def expire(db, block_index, block_time):
             "tx1_address": bet_match["tx1_address"],
             "block_index": block_index,
         }
-        ledger.insert_record(db, "bet_match_expirations", bindings, "BET_MATCH_EXPIRATION")
+        ledger.events.insert_record(db, "bet_match_expirations", bindings, "BET_MATCH_EXPIRATION")
         logger.info("Bet Match Expiration %(bet_match_id)s", bindings)
 
     cursor.close()

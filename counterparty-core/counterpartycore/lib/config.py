@@ -1,3 +1,5 @@
+import os
+
 """Variables prefixed with `DEFAULT` should be able to be overridden by
 configuration file and command‐line arguments."""
 
@@ -227,3 +229,7 @@ LOG_IN_CONSOLE = False
 DEFAULT_DB_CONNECTION_POOL_SIZE = 10
 
 DEFAULT_UTXO_VALUE = 10000
+
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+LEDGER_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "ledger", "migrations")
+STATE_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "api", "migrations")

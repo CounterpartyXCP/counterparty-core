@@ -6,7 +6,8 @@ import binascii
 import logging
 import struct
 
-from counterpartycore.lib import config, database, exceptions, ledger, message_type
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.parser import messagetype
 
 from . import bet, order
 
@@ -17,44 +18,12 @@ LENGTH = 32
 ID = 70
 
 
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "source_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS cancels(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      offer_hash TEXT,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-    # Offer hash is not a foreign key. (And it cannot be, because of some invalid cancels.)
-
-    database.create_indexes(
-        cursor,
-        "cancels",
-        [
-            ["block_index"],
-            ["source"],
-        ],
-    )
-
-
 def validate(db, source, offer_hash):
     problems = []
 
     # TODO: make query only if necessary
-    orders = ledger.get_order(db, order_hash=offer_hash)
-    bets = ledger.get_bet(db, bet_hash=offer_hash)
+    orders = ledger.markets.get_order(db, order_hash=offer_hash)
+    bets = ledger.other.get_bet(db, bet_hash=offer_hash)
 
     offer_type = None
     if orders:
@@ -83,7 +52,7 @@ def compose(db, source: str, offer_hash: str, skip_validation: bool = False):
         raise exceptions.ComposeError(problems)
 
     offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, "utf-8"))
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return (source, [], data)
 
@@ -139,7 +108,7 @@ def parse(db, tx, message):
     }
     if "integer overflow" not in status:
         event_name = f"CANCEL_{offer_type.upper()}" if offer_type else "INVALID_CANCEL"
-        ledger.insert_record(db, "cancels", bindings, event_name)
+        ledger.events.insert_record(db, "cancels", bindings, event_name)
 
     log_data = bindings | {
         "offer_type": offer_type.capitalize() if offer_type else "Invalid",

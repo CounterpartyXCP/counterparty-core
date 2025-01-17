@@ -1,6 +1,3 @@
-#! /usr/bin/python3
-
-
 class DatabaseError(Exception):
     pass
 
@@ -53,10 +50,8 @@ class PushDataDecodeError(DecodeError):
     pass
 
 
-class BTCOnlyError(MessageError):
-    def __init__(self, msg, decoded_tx=None):
-        super(BTCOnlyError, self).__init__(msg)
-        self.decoded_tx = decoded_tx
+class BTCOnlyError(Exception):
+    pass
 
 
 class BalanceError(Exception):
@@ -148,4 +143,75 @@ class ElectrsError(Exception):
 
 
 class BlockOutOfRange(Exception):
+    pass
+
+
+class InputError(Exception):
+    pass
+
+
+class AddressError(Exception):
+    pass
+
+
+class MultiSigAddressError(AddressError):
+    pass
+
+
+class VersionByteError(AddressError):
+    pass
+
+
+class Base58Error(AddressError):
+    pass
+
+
+class QuantityError(Exception):
+    pass
+
+
+class RPCError(Exception):
+    pass
+
+
+class APIError(Exception):
+    pass
+
+
+class BackendError(Exception):
+    pass
+
+
+class ConsensusError(Exception):
+    pass
+
+
+class SanityError(Exception):
+    pass
+
+
+class VersionError(Exception):
+    def __init__(self, message, required_action, from_block_index=None):
+        super(VersionError, self).__init__(message)
+        self.required_action = required_action
+        self.from_block_index = from_block_index
+
+
+class VersionUpdateRequiredError(Exception):
+    pass
+
+
+class ConfigurationError(Exception):
+    pass
+
+
+class DebitError(Exception):
+    pass
+
+
+class CreditError(Exception):
+    pass
+
+
+class ServerNotReady(Exception):
     pass

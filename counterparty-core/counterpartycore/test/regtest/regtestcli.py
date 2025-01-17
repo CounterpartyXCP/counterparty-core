@@ -3,7 +3,7 @@ import decimal
 import json
 
 import sh
-from counterpartycore.lib import arc4
+from arc4 import ARC4
 
 D = decimal.Decimal
 
@@ -138,8 +138,8 @@ def atomic_swap(seller_address, utxo, price_btc, buyer_address, data=None):
 
     if data:
         data = binascii.unhexlify(data)
-        key = arc4.init_arc4(binascii.unhexlify(buyer_utxos[0]["txid"]))
-        data = key.encrypt(data)
+        key = binascii.unhexlify(buyer_utxos[0]["txid"])
+        data = ARC4(key).encrypt(data)
         data = binascii.hexlify(data).decode("utf-8")
 
     # Buyer generates PSBT

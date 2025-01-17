@@ -4,8 +4,9 @@ import tempfile
 import pytest
 from apsw import ConstraintError
 
-from counterpartycore.lib import blocks, ledger, util
-from counterpartycore.lib.api import api_v1
+from counterpartycore.lib import ledger
+from counterpartycore.lib.api import apiv1
+from counterpartycore.lib.parser import blocks
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (
@@ -20,14 +21,14 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
 @pytest.mark.usefixtures("server_db")
-@pytest.mark.usefixtures("api_server")
+@pytest.mark.usefixtures("apiserver")
 @pytest.mark.usefixtures("cp_server")
-def test_alice_bob(server_db, cp_server, api_server):
+def test_alice_bob(server_db, cp_server, apiserver):
     alice = ADDR[0]
     bob = "miJqNkHhC5xsB61gsiSWXeTLnEGSQnWbXB"
 
     # check alices UTXOs
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1"
@@ -35,14 +36,14 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert utxos[0]["confirmations"] == 74
 
     # balance before send
-    alice_balance = ledger.get_balance(server_db, alice, "XCP")
-    bob_balance = ledger.get_balance(server_db, bob, "XCP")
+    alice_balance = ledger.balances.get_balance(server_db, alice, "XCP")
+    bob_balance = ledger.balances.get_balance(server_db, bob, "XCP")
     assert alice_balance == 91674999900
     assert bob_balance == 0
 
     # create send
     v = int(100 * 1e8)
-    send1hex = util.api(
+    send1hex = util_test.api(
         "create_send",
         {
             "source": alice,
@@ -62,13 +63,13 @@ def test_alice_bob(server_db, cp_server, api_server):
 
     # time.sleep(10)
     # balances after send
-    alice_balance2 = ledger.get_balance(server_db, alice, "XCP")
-    bob_balance2 = ledger.get_balance(server_db, bob, "XCP")
+    alice_balance2 = ledger.balances.get_balance(server_db, alice, "XCP")
+    bob_balance2 = ledger.balances.get_balance(server_db, bob, "XCP")
     assert alice_balance2 == alice_balance - v
     assert bob_balance2 == bob_balance + v
 
     # check API result
-    result = util.api(
+    result = util_test.api(
         "get_balances",
         {
             "filters": [
@@ -86,7 +87,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     # -- do another TX
 
     # check alices UTXOs
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx1["tx_hash"]
@@ -94,14 +95,14 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert utxos[0]["confirmations"] == 1
 
     # balances before send
-    alice_balance = ledger.get_balance(server_db, alice, "XCP")
-    bob_balance = ledger.get_balance(server_db, bob, "XCP")
+    alice_balance = ledger.balances.get_balance(server_db, alice, "XCP")
+    bob_balance = ledger.balances.get_balance(server_db, bob, "XCP")
     assert alice_balance == alice_balance2
     assert bob_balance == bob_balance2
 
     # create send
     v = int(100 * 1e8)
-    send2hex = util.api(
+    send2hex = util_test.api(
         "create_send",
         {
             "source": alice,
@@ -120,15 +121,15 @@ def test_alice_bob(server_db, cp_server, api_server):
     tx2hash, tx2 = util_test.insert_raw_transaction(send2hex, server_db)
 
     # balances after send
-    alice_balance2 = ledger.get_balance(server_db, alice, "XCP")
-    bob_balance2 = ledger.get_balance(server_db, bob, "XCP")
+    alice_balance2 = ledger.balances.get_balance(server_db, alice, "XCP")
+    bob_balance2 = ledger.balances.get_balance(server_db, bob, "XCP")
     assert alice_balance2 == alice_balance - v
     assert bob_balance2 == bob_balance + v
 
     # -- do another TX, now unconfirmed
 
     # check alices UTXOs
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx2["tx_hash"]
@@ -136,14 +137,14 @@ def test_alice_bob(server_db, cp_server, api_server):
     assert utxos[0]["confirmations"] == 1
 
     # balances before send
-    alice_balance = ledger.get_balance(server_db, alice, "XCP")
-    bob_balance = ledger.get_balance(server_db, bob, "XCP")
+    alice_balance = ledger.balances.get_balance(server_db, alice, "XCP")
+    bob_balance = ledger.balances.get_balance(server_db, bob, "XCP")
     assert alice_balance == alice_balance2
     assert bob_balance == bob_balance2
 
     # create send
     v = int(100 * 1e8)
-    send3hex = util.api(
+    send3hex = util_test.api(
         "create_send",
         {
             "source": alice,
@@ -162,17 +163,17 @@ def test_alice_bob(server_db, cp_server, api_server):
     tx3 = util_test.insert_unconfirmed_raw_transaction(send3hex, server_db)
 
     # balances after send, unaffected
-    alice_balance2 = ledger.get_balance(server_db, alice, "XCP")
-    bob_balance2 = ledger.get_balance(server_db, bob, "XCP")
+    alice_balance2 = ledger.balances.get_balance(server_db, alice, "XCP")
+    bob_balance2 = ledger.balances.get_balance(server_db, bob, "XCP")
     assert alice_balance2 == alice_balance
     assert bob_balance2 == bob_balance
 
     # no confirmed UTXOs left, we use the 1 we had
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 0
 
     # unconfirmed UTXO is there, we can use it!
-    utxos = util.api("get_unspent_txouts", {"address": alice, "unconfirmed": True})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice, "unconfirmed": True})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx3["tx_hash"]
@@ -183,7 +184,7 @@ def test_alice_bob(server_db, cp_server, api_server):
     # even doing this won't make it confirmed because it just mocks an empty block
     util_test.create_next_block(server_db)
 
-    utxos = util.api("get_unspent_txouts", {"address": alice})
+    utxos = util_test.api("get_unspent_txouts", {"address": alice})
     assert len(utxos) == 1
     assert utxos[0]["address"] == alice
     assert utxos[0]["txid"] == tx3["tx_hash"]
@@ -196,13 +197,13 @@ def test_alice_bob(server_db, cp_server, api_server):
     tx3bhash, tx3b = util_test.insert_raw_transaction(send3hex, server_db)
 
     # balances after send
-    alice_balance2 = ledger.get_balance(server_db, alice, "XCP")
-    bob_balance2 = ledger.get_balance(server_db, bob, "XCP")
+    alice_balance2 = ledger.balances.get_balance(server_db, alice, "XCP")
+    bob_balance2 = ledger.balances.get_balance(server_db, bob, "XCP")
     assert alice_balance2 == alice_balance - v
     assert bob_balance2 == bob_balance + v
 
 
-@pytest.mark.usefixtures("api_server")
+@pytest.mark.usefixtures("apiserver")
 def test_update_lock(server_db):
     cursor = server_db.cursor()
     for table in blocks.TABLES:
@@ -220,13 +221,13 @@ def test_update_lock(server_db):
         assert str(excinfo.value) == "ConstraintError: UPDATES NOT ALLOWED"
 
 
-@pytest.mark.usefixtures("api_server")
+@pytest.mark.usefixtures("apiserver")
 @pytest.mark.skip()
 def test_updated_tables_endpoints():
-    for table in api_v1.API_TABLES:
+    for table in apiv1.API_TABLES:
         if table in ["mempool"]:
             continue
-        result = util.api("get_" + table, {})
+        result = util_test.api("get_" + table, {})
         assert isinstance(result, list)
         if table == "orders":
             assert result[0] == {

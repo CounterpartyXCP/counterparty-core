@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from counterpartycore.lib import gas
+from counterpartycore.lib.messages import gas
 from counterpartycore.test.fixtures.params import ADDR, DP  # noqa: F401
 from counterpartycore.test.util_test import CURR_DIR
 

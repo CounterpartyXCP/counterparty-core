@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from counterpartycore.lib import check, exceptions  # noqa: F401
+from counterpartycore.lib.parser import check
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (
@@ -17,7 +17,7 @@ FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
 
 
 @conftest.add_fn_property(DISABLE_ARC4_MOCKING=True)
-@pytest.mark.usefixtures("api_server")
+@pytest.mark.usefixtures("apiserver")
 def test_vector(
     tx_name,
     method,
@@ -32,9 +32,6 @@ def test_vector(
     server_db,
 ):
     """Test the outputs of unit test vector. If testing parse, execute the transaction data on test db."""
-
-    # disable arc4 mocking for vectors because we're too lazy to update all the vectors
-    config_context.update({"DISABLE_ARC4_MOCKING": True})
 
     with util_test.ConfigContext(**config_context):
         # force unit tests to always run against latest protocol changes
@@ -68,5 +65,9 @@ def test_vector(
         )
         # dont check asset conservation after direct call to credit or debit
         # and also when canceling a non existent bet match
-        if f"{tx_name}.{method}" not in ["ledger.credit", "ledger.debit", "bet.cancel_bet_match"]:
+        if f"{tx_name}.{method}" not in [
+            "ledger.events.credit",
+            "ledger.events.debit",
+            "bet.cancel_bet_match",
+        ]:
             check.asset_conservation(server_db)

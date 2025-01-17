@@ -1,8 +1,6 @@
 from fractions import Fraction
 
 from counterpartycore.lib import exceptions
-from counterpartycore.lib.ledger import CreditError, DebitError
-from counterpartycore.lib.util import QuantityError
 
 from ..params import (
     ADDR,
@@ -10,186 +8,10 @@ from ..params import (
 from ..params import DEFAULT_PARAMS as DP
 
 LEDGER_VECTOR = {
-    "ledger": {
-        "generate_asset_id": [
-            {"in": ("BTC", DP["default_block_index"]), "out": 0},
-            {"in": ("XCP", DP["default_block_index"]), "out": 1},
-            {"in": ("BCD", 308000), "error": (exceptions.AssetNameError, "too short")},
-            {
-                "in": ("ABCD", 308000),
-                "error": (exceptions.AssetNameError, "non‐numeric asset name starts with ‘A’"),
-            },
-            {
-                "in": (f"A{26 ** 12}", 308000),
-                "error": (exceptions.AssetNameError, "numeric asset name not in range"),
-            },
-            {
-                "in": (f"A{2 ** 64}", 308000),
-                "error": (exceptions.AssetNameError, "numeric asset name not in range"),
-            },
-            {"in": (f"A{26 ** 12 + 1}", 308000), "out": 26**12 + 1},
-            {"in": (f"A{2 ** 64 - 1}", 308000), "out": 2**64 - 1},
-            {
-                "in": ("LONGASSETNAMES", 308000),
-                "error": (exceptions.AssetNameError, "long asset names must be numeric"),
-            },
-            {
-                "in": ("BCDE_F", 308000),
-                "error": (exceptions.AssetNameError, "invalid character:"),
-            },
-            {"in": ("BAAA", 308000), "out": 26**3},
-            {"in": ("ZZZZZZZZZZZZ", 308000), "out": 26**12 - 1},
-        ],
-        "generate_asset_name": [
-            {"in": (0, DP["default_block_index"]), "out": "BTC"},
-            {"in": (1, DP["default_block_index"]), "out": "XCP"},
-            {"in": (26**12 - 1, 308000), "out": "ZZZZZZZZZZZZ"},
-            {"in": (26**3, 308000), "out": "BAAA"},
-            {"in": (2**64 - 1, 308000), "out": f"A{2 ** 64 - 1}"},
-            {"in": (26**12 + 1, 308000), "out": f"A{26 ** 12 + 1}"},
-            {"in": (26**3 - 1, 308000), "error": (exceptions.AssetIDError, "too low")},
-            {"in": (2**64, 308000), "error": (exceptions.AssetIDError, "too high")},
-        ],
-        "price": [{"in": (1, 10), "out": Fraction(1, 10)}],
-        "last_message": [
-            {
-                "in": (),
-                "out": {
-                    "message_index": 1743,
-                    "block_index": 310703,
-                    "command": "parse",
-                    "category": "blocks",
-                    "bindings": '{"block_index":310703,"ledger_hash":"3e8ba9968f58a14dd4950aa1a1f02d58edfd246a2ac733a5fac4aa2c04505e3e","messages_hash":"794d8c3df2ea1ce1b68833e0c33f7a846445f6da53dadceaaff41aac66dd5c83","transaction_count":0,"txlist_hash":"c76b69cb9056ed5b35e10737d93aa2fde389690899503f46f3ca18d419ce4dd2"}',
-                    "timestamp": 0,
-                    "event": "BLOCK_PARSED",
-                    "tx_hash": None,
-                    "event_hash": "7c68ff23281790be67a757e3ba0eb0a0bcd57ca2cae307531a1ae9de28f9c939",
-                },
-            }
-        ],
-        "get_asset_id": [
-            {"in": ("XCP", DP["default_block_index"]), "out": 1},
-            {"in": ("BTC", DP["default_block_index"]), "out": 0},
-            {
-                "in": ("foobar", DP["default_block_index"]),
-                "error": (exceptions.AssetError, "No such asset: foobar"),
-            },
-        ],
-        "resolve_subasset_longname": [
-            {"in": ("XCP",), "out": "XCP"},
-            {"in": ("PARENT",), "out": "PARENT"},
-            {"in": ("PARENT.nonexistent.subasset",), "out": "PARENT.nonexistent.subasset"},
-            {"in": ("PARENT.ILEGAL^^^",), "out": "PARENT.ILEGAL^^^"},
-            {"in": ("PARENT.already.issued",), "out": f"A{26 ** 12 + 101}"},
-        ],
-        "debit": [
-            {"in": (ADDR[0], "XCP", 1, 0), "out": None},
-            {
-                "in": (ADDR[0], "BTC", DP["quantity"], 0),
-                "error": (DebitError, "Cannot debit bitcoins."),
-            },
-            {
-                "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
-                "error": (DebitError, "Negative quantity."),
-            },
-            {
-                "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
-                "error": (DebitError, "Quantity must be an integer."),
-            },
-            {"in": (ADDR[0], "XCP", 2**40, 0), "error": (DebitError, "Insufficient funds.")},
-        ],
-        "credit": [
-            {"in": (ADDR[0], "XCP", 1, 0), "out": None},
-            {
-                "in": (ADDR[0], "BTC", DP["quantity"], 0),
-                "error": (CreditError, "Cannot debit bitcoins."),
-            },
-            {
-                "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
-                "error": (CreditError, "Negative quantity."),
-            },
-            {
-                "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
-                "error": (CreditError, "Quantity must be an integer."),
-            },
-        ],
-        "is_divisible": [
-            {"in": ("XCP",), "out": True},
-            {"in": ("BTC",), "out": True},
-            {"in": ("DIVISIBLE",), "out": True},
-            {"in": ("NODIVISIBLE",), "out": False},
-            {"in": ("foobar",), "error": (exceptions.AssetError, "No such asset: foobar")},
-        ],
-        "value_in": [
-            {
-                "in": (
-                    1.1,
-                    "leverage",
-                ),
-                "out": 1,
-            },
-            {
-                "in": (
-                    1 / 10,
-                    "fraction",
-                ),
-                "out": 0.1,
-            },
-            {
-                "in": (
-                    1,
-                    "NODIVISIBLE",
-                ),
-                "out": 1,
-            },
-            {
-                "in": (
-                    1.111111111111,
-                    "DIVISIBLE",
-                ),
-                "error": (
-                    QuantityError,
-                    "Divisible assets have only eight decimal places of precision.",
-                ),
-            },
-            {
-                "in": (
-                    1.1,
-                    "NODIVISIBLE",
-                ),
-                "error": (QuantityError, "Fractional quantities of indivisible assets."),
-            },
-        ],
-        "value_out": [
-            {
-                "in": (
-                    1.1,
-                    "leverage",
-                ),
-                "out": "1.1",
-            },
-            {
-                "in": (
-                    1 / 10,
-                    "fraction",
-                ),
-                "out": "10.0%",
-            },
-            {
-                "in": (
-                    1,
-                    "NODIVISIBLE",
-                ),
-                "out": 1,
-            },
-            {
-                "in": (
-                    1.1,
-                    "NODIVISIBLE",
-                ),
-                "error": (QuantityError, "Fractional quantities of indivisible assets."),
-            },
-        ],
+    "ledger.blocks": {
+        "last_db_index": [{"in": (), "out": DP["default_block_index"] - 1}],
+    },
+    "ledger.supplies": {
         "xcp_created": [{"in": (), "out": 604506847920}],
         "xcp_destroyed": [{"in": (), "out": 725000000}],
         "xcp_supply": [
@@ -252,15 +74,6 @@ LEDGER_VECTOR = {
                     "TESTDISP": 1000,
                 },
             }
-        ],
-        "get_balance": [
-            {"in": (ADDR[0], "XCP"), "out": 91674999900},
-            {"in": (ADDR[0], "foobar"), "out": 0},
-        ],
-        "get_asset_name": [
-            {"in": (1, DP["default_block_index"]), "out": "XCP"},
-            {"in": (0, DP["default_block_index"]), "out": "BTC"},
-            {"in": (453, DP["default_block_index"]), "out": 0},
         ],
         "holders": [
             {
@@ -399,119 +212,202 @@ LEDGER_VECTOR = {
                 ],
             },
         ],
-        "last_db_index": [{"in": (), "out": DP["default_block_index"] - 1}],
-        "get_credits_by_asset": [
+    },
+    "ledger.events": {
+        "last_message": [
             {
-                "in": ("A160361285792733729",),
-                "out": [
-                    {
-                        "block_index": 310504,
-                        "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
-                        "asset": "A160361285792733729",
-                        "quantity": 20,
-                        "calling_function": "escrowed premint",
-                        "event": "d0110ffec4330d438c7abf22615be38468b9127e9d178d4334616b5f05733c79",
-                        "tx_index": 505,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310505,
-                        "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
-                        "asset": "A160361285792733729",
-                        "quantity": 10,
-                        "calling_function": "escrowed fairmint",
-                        "event": "576d7993ac32b52a21ee8693061ff0b5fc8ee7dfe8d8c6bec438ee98313d6e57",
-                        "tx_index": 506,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
-                        "asset": "A160361285792733729",
-                        "quantity": 20,
-                        "calling_function": "escrowed fairmint",
-                        "event": "b3f38f734f84ad73390e8c319ca0c68774f087c4c7874f989ddf218f021144fc",
-                        "tx_index": 507,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 7,
-                        "calling_function": "unescrowed fairmint",
-                        "event": "576d7993ac32b52a21ee8693061ff0b5fc8ee7dfe8d8c6bec438ee98313d6e57",
-                        "tx_index": 506,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 3,
-                        "calling_function": "fairmint commission",
-                        "event": "576d7993ac32b52a21ee8693061ff0b5fc8ee7dfe8d8c6bec438ee98313d6e57",
-                        "tx_index": 506,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 14,
-                        "calling_function": "unescrowed fairmint",
-                        "event": "b3f38f734f84ad73390e8c319ca0c68774f087c4c7874f989ddf218f021144fc",
-                        "tx_index": 507,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 6,
-                        "calling_function": "fairmint commission",
-                        "event": "b3f38f734f84ad73390e8c319ca0c68774f087c4c7874f989ddf218f021144fc",
-                        "tx_index": 507,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                    {
-                        "block_index": 310506,
-                        "address": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                        "asset": "A160361285792733729",
-                        "quantity": 20,
-                        "calling_function": "premint",
-                        "event": "d0110ffec4330d438c7abf22615be38468b9127e9d178d4334616b5f05733c79",
-                        "tx_index": 0,
-                        "utxo": None,
-                        "utxo_address": None,
-                    },
-                ],
+                "in": (),
+                "out": {
+                    "message_index": 1743,
+                    "block_index": 310703,
+                    "command": "parse",
+                    "category": "blocks",
+                    "bindings": '{"block_index":310703,"ledger_hash":"3e8ba9968f58a14dd4950aa1a1f02d58edfd246a2ac733a5fac4aa2c04505e3e","messages_hash":"794d8c3df2ea1ce1b68833e0c33f7a846445f6da53dadceaaff41aac66dd5c83","transaction_count":0,"txlist_hash":"c76b69cb9056ed5b35e10737d93aa2fde389690899503f46f3ca18d419ce4dd2"}',
+                    "timestamp": 0,
+                    "event": "BLOCK_PARSED",
+                    "tx_hash": None,
+                    "event_hash": "7c68ff23281790be67a757e3ba0eb0a0bcd57ca2cae307531a1ae9de28f9c939",
+                },
             }
         ],
-        "get_debits_by_asset": [
+        "debit": [
+            {"in": (ADDR[0], "XCP", 1, 0), "out": None},
             {
-                "in": ("A160361285792733729",),
-                "out": [
-                    {
-                        "block_index": 310506,
-                        "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
-                        "asset": "A160361285792733729",
-                        "quantity": 50,
-                        "action": "unescrowed fairmint",
-                        "event": "d0110ffec4330d438c7abf22615be38468b9127e9d178d4334616b5f05733c79",
-                        "tx_index": 0,
-                        "utxo": None,
-                        "utxo_address": None,
-                    }
-                ],
-            }
+                "in": (ADDR[0], "BTC", DP["quantity"], 0),
+                "error": (exceptions.DebitError, "Cannot debit bitcoins."),
+            },
+            {
+                "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
+                "error": (exceptions.DebitError, "Negative quantity."),
+            },
+            {
+                "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
+                "error": (exceptions.DebitError, "Quantity must be an integer."),
+            },
+            {
+                "in": (ADDR[0], "XCP", 2**40, 0),
+                "error": (exceptions.DebitError, "Insufficient funds."),
+            },
+        ],
+        "credit": [
+            {"in": (ADDR[0], "XCP", 1, 0), "out": None},
+            {
+                "in": (ADDR[0], "BTC", DP["quantity"], 0),
+                "error": (exceptions.CreditError, "Cannot debit bitcoins."),
+            },
+            {
+                "in": (ADDR[0], "BTC", -1 * DP["quantity"], 0),
+                "error": (exceptions.CreditError, "Negative quantity."),
+            },
+            {
+                "in": (ADDR[0], "BTC", 1.1 * DP["quantity"], 0),
+                "error": (exceptions.CreditError, "Quantity must be an integer."),
+            },
+        ],
+    },
+    "ledger.balances": {
+        "get_balance": [
+            {"in": (ADDR[0], "XCP"), "out": 91674999900},
+            {"in": (ADDR[0], "foobar"), "out": 0},
+        ],
+    },
+    "ledger.issuances": {
+        "generate_asset_id": [
+            {"in": ("BTC", DP["default_block_index"]), "out": 0},
+            {"in": ("XCP", DP["default_block_index"]), "out": 1},
+            {"in": ("BCD", 308000), "error": (exceptions.AssetNameError, "too short")},
+            {
+                "in": ("ABCD", 308000),
+                "error": (exceptions.AssetNameError, "non‐numeric asset name starts with ‘A’"),
+            },
+            {
+                "in": (f"A{26**12}", 308000),
+                "error": (exceptions.AssetNameError, "numeric asset name not in range"),
+            },
+            {
+                "in": (f"A{2**64}", 308000),
+                "error": (exceptions.AssetNameError, "numeric asset name not in range"),
+            },
+            {"in": (f"A{26**12 + 1}", 308000), "out": 26**12 + 1},
+            {"in": (f"A{2**64 - 1}", 308000), "out": 2**64 - 1},
+            {
+                "in": ("LONGASSETNAMES", 308000),
+                "error": (exceptions.AssetNameError, "long asset names must be numeric"),
+            },
+            {
+                "in": ("BCDE_F", 308000),
+                "error": (exceptions.AssetNameError, "invalid character:"),
+            },
+            {"in": ("BAAA", 308000), "out": 26**3},
+            {"in": ("ZZZZZZZZZZZZ", 308000), "out": 26**12 - 1},
+        ],
+        "generate_asset_name": [
+            {"in": (0, DP["default_block_index"]), "out": "BTC"},
+            {"in": (1, DP["default_block_index"]), "out": "XCP"},
+            {"in": (26**12 - 1, 308000), "out": "ZZZZZZZZZZZZ"},
+            {"in": (26**3, 308000), "out": "BAAA"},
+            {"in": (2**64 - 1, 308000), "out": f"A{2**64 - 1}"},
+            {"in": (26**12 + 1, 308000), "out": f"A{26**12 + 1}"},
+            {"in": (26**3 - 1, 308000), "error": (exceptions.AssetIDError, "too low")},
+            {"in": (2**64, 308000), "error": (exceptions.AssetIDError, "too high")},
+        ],
+        "price": [{"in": (1, 10), "out": Fraction(1, 10)}],
+        "get_asset_id": [
+            {"in": ("XCP", DP["default_block_index"]), "out": 1},
+            {"in": ("BTC", DP["default_block_index"]), "out": 0},
+            {
+                "in": ("foobar", DP["default_block_index"]),
+                "error": (exceptions.AssetError, "No such asset: foobar"),
+            },
+        ],
+        "resolve_subasset_longname": [
+            {"in": ("XCP",), "out": "XCP"},
+            {"in": ("PARENT",), "out": "PARENT"},
+            {"in": ("PARENT.nonexistent.subasset",), "out": "PARENT.nonexistent.subasset"},
+            {"in": ("PARENT.ILEGAL^^^",), "out": "PARENT.ILEGAL^^^"},
+            {"in": ("PARENT.already.issued",), "out": f"A{26**12 + 101}"},
+        ],
+        "is_divisible": [
+            {"in": ("XCP",), "out": True},
+            {"in": ("BTC",), "out": True},
+            {"in": ("DIVISIBLE",), "out": True},
+            {"in": ("NODIVISIBLE",), "out": False},
+            {"in": ("foobar",), "error": (exceptions.AssetError, "No such asset: foobar")},
+        ],
+        "value_in": [
+            {
+                "in": (
+                    1.1,
+                    "leverage",
+                ),
+                "out": 1,
+            },
+            {
+                "in": (
+                    1 / 10,
+                    "fraction",
+                ),
+                "out": 0.1,
+            },
+            {
+                "in": (
+                    1,
+                    "NODIVISIBLE",
+                ),
+                "out": 1,
+            },
+            {
+                "in": (
+                    1.111111111111,
+                    "DIVISIBLE",
+                ),
+                "error": (
+                    exceptions.QuantityError,
+                    "Divisible assets have only eight decimal places of precision.",
+                ),
+            },
+            {
+                "in": (
+                    1.1,
+                    "NODIVISIBLE",
+                ),
+                "error": (exceptions.QuantityError, "Fractional quantities of indivisible assets."),
+            },
+        ],
+        "value_out": [
+            {
+                "in": (
+                    1.1,
+                    "leverage",
+                ),
+                "out": "1.1",
+            },
+            {
+                "in": (
+                    1 / 10,
+                    "fraction",
+                ),
+                "out": "10.0%",
+            },
+            {
+                "in": (
+                    1,
+                    "NODIVISIBLE",
+                ),
+                "out": 1,
+            },
+            {
+                "in": (
+                    1.1,
+                    "NODIVISIBLE",
+                ),
+                "error": (exceptions.QuantityError, "Fractional quantities of indivisible assets."),
+            },
+        ],
+        "get_asset_name": [
+            {"in": (1, DP["default_block_index"]), "out": "XCP"},
+            {"in": (0, DP["default_block_index"]), "out": "BTC"},
+            {"in": (453, DP["default_block_index"]), "out": 0},
         ],
     },
 }

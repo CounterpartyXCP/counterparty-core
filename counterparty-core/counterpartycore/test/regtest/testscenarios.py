@@ -7,8 +7,9 @@ import sys
 import time
 
 import sh
+from counterpartycore.lib.exceptions import ComposeError
 from regtestcli import atomic_swap
-from regtestnode import ComposeError, RegtestNodeThread, print_server_output
+from regtestnode import RegtestNodeThread, print_server_output
 from scenarios import (
     scenario_1_fairminter,
     scenario_2_fairminter,
@@ -83,10 +84,10 @@ def prepare_item(item, node, context):
     for i in reversed(range(11)):
         address = node.addresses[i]
         if "source" in item:
-            item["source"] = item["source"].replace(f"$ADDRESS_{i+1}", address)
+            item["source"] = item["source"].replace(f"$ADDRESS_{i + 1}", address)
         for key in item["params"]:
             if isinstance(item["params"][key], str):
-                item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i+1}", address)
+                item["params"][key] = item["params"][key].replace(f"$ADDRESS_{i + 1}", address)
     for name, value in context.items():
         if "source" in item:
             item["source"] = item["source"].replace(f"${name}", value)
@@ -119,7 +120,9 @@ def get_tx_index(node, tx_hash):
 
 
 def get_last_tx_index(node):
-    time.sleep(2)  # wait for utils.CURRENT_BLOCK_INDEX to be updated and cache expired (each .5s)
+    time.sleep(
+        2
+    )  # wait for CurrentState().current_block_index() to be updated and cache expired (each .5s)
     result = node.api_call("transactions?limit=1")
     if "result" in result:
         return result["result"][0]["tx_index"]
@@ -144,7 +147,7 @@ def control_result(
         )
         for i in reversed(range(11)):
             address = node.addresses[i]
-            control_url = control_url.replace(f"$ADDRESS_{i+1}", address)
+            control_url = control_url.replace(f"$ADDRESS_{i + 1}", address)
         result = node.api_call(control_url)
 
         if (

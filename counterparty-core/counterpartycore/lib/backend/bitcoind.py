@@ -2,16 +2,18 @@ import binascii
 import functools
 import json
 import logging
+import re
 import time
 from collections import OrderedDict
 from multiprocessing import current_process
 from threading import current_thread
 
 import requests
+from bitcoinutils.keys import PublicKey
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
-from counterpartycore.lib import config, deserialize, exceptions, script, util
-from counterpartycore.lib.util import ib2h
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.parser import deserialize, utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -19,6 +21,17 @@ BLOCKS_CACHE = OrderedDict()
 BLOCKS_CACHE_MAX_SIZE = 1000
 TRANSACTIONS_CACHE = OrderedDict()
 TRANSACTIONS_CACHE_MAX_SIZE = 10000
+
+
+URL_USERNAMEPASS_REGEX = re.compile(".+://(.+)@")
+
+
+def clean_url_for_log(url):
+    m = URL_USERNAMEPASS_REGEX.match(url)
+    if m and m.group(1):
+        url = url.replace(m.group(1), "XXXXXXXX")
+
+    return url
 
 
 # for testing
@@ -63,11 +76,11 @@ def rpc_call(payload, retry=0):
 
             if response is None:  # noqa: E711
                 raise exceptions.BitcoindRPCError(
-                    f"Cannot communicate with Bitcoin Core at `{util.clean_url_for_log(url)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
+                    f"Cannot communicate with Bitcoin Core at `{clean_url_for_log(url)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
                 )
             if response.status_code in (401,):
                 raise exceptions.BitcoindRPCError(
-                    f"Authorization error connecting to {util.clean_url_for_log(url)}: {response.status_code} {response.reason}"
+                    f"Authorization error connecting to {clean_url_for_log(url)}: {response.status_code} {response.reason}"
                 )
             if response.status_code == 503:
                 raise ConnectionError("Received 503 error from backend")
@@ -78,7 +91,7 @@ def rpc_call(payload, retry=0):
             raise
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.warning(
-                f"Could not connect to backend at `{util.clean_url_for_log(url)}`. (Attempt: {tries})"
+                f"Could not connect to backend at `{clean_url_for_log(url)}`. (Attempt: {tries})"
             )
             time.sleep(5)
         except Exception as e:
@@ -265,7 +278,7 @@ def safe_get_utxo_address(utxo):
 
 
 def is_valid_utxo(utxo):
-    if not util.is_utxo_format(utxo):
+    if not utxosinfo.is_utxo_format(utxo):
         return False
     try:
         get_utxo_address_and_value(utxo)
@@ -362,8 +375,6 @@ def add_block_in_cache(block_index, block):
 
 
 def get_decoded_transaction(tx_hash, block_index=None):
-    if isinstance(tx_hash, bytes):
-        tx_hash = ib2h(tx_hash)
     if tx_hash in TRANSACTIONS_CACHE:
         return TRANSACTIONS_CACHE[tx_hash]
 
@@ -412,7 +423,10 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                     # catch unhexlify errs for when txinwitness[1] isn't a witness program (eg; for P2W)
                     try:
                         pubkey = vin["txinwitness"][1]
-                        if pubkeyhash == script.pubkey_to_p2whash2(pubkey):
+                        if (
+                            pubkeyhash
+                            == PublicKey.from_hex(pubkey).get_segwit_address().to_string()
+                        ):
                             return pubkey
                     except binascii.Error:
                         pass
@@ -423,7 +437,15 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                     # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
                     try:
                         pubkey = asm[3]
-                        if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                        if (
+                            pubkeyhash
+                            == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
+                        ):
+                            return pubkey
+                        if (
+                            pubkeyhash
+                            == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+                        ):
                             return pubkey
                     except binascii.Error:
                         pass
@@ -432,7 +454,15 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
             if len(asm) == 3:  # p2pk
                 try:
                     pubkey = asm[1]
-                    if pubkeyhash == script.pubkey_to_pubkeyhash(util.unhexlify(pubkey)):
+                    if (
+                        pubkeyhash
+                        == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
+                    ):
+                        return pubkey
+                    if (
+                        pubkeyhash
+                        == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+                    ):
                         return pubkey
                 except binascii.Error:
                     pass
@@ -462,3 +492,23 @@ def list_unspent(source, allow_unconfirmed_inputs):
         return unspent_list
 
     return []
+
+
+def get_vin_info(vin):
+    # Note: We don't know what block the `vin` is in, and the block might
+    # have been from a while ago, so this call may not hit the cache.
+    vin_ctx = get_decoded_transaction(vin["hash"])
+
+    is_segwit = vin_ctx["segwit"]
+    vout = vin_ctx["vout"][vin["n"]]
+
+    return vout["value"], vout["script_pub_key"], is_segwit
+
+
+def get_transaction(tx_hash: str, format: str = "json"):
+    """
+    Get a transaction from the blockchain
+    :param tx_hash: The transaction hash (e.g. $LAST_TX_HASH)
+    :param format: Whether to return JSON output or raw hex (e.g. hex)
+    """
+    return getrawtransaction(tx_hash, verbose=format == "json")

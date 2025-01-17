@@ -4,9 +4,10 @@ from io import BytesIO
 
 import bitcoin as bitcoinlib
 import pytest
+from counterparty_rs import utils as pycoin_rs_utils
 
-from counterpartycore.lib import config, deserialize, gettxinfo, util
-from counterpartycore.lib.util import inverse_hash
+from counterpartycore.lib import backend, config
+from counterpartycore.lib.parser import deserialize, gettxinfo
 
 
 def deserialize_bitcoinlib(tx_hex):
@@ -116,7 +117,7 @@ def test_deserialize():
         for decoded_tx in [decoded_tx_rust, decoded_from_block]:
             for j, vin in enumerate(decoded_tx_bitcoinlib.vin):
                 assert vin.prevout.hash == binascii.unhexlify(
-                    inverse_hash(decoded_tx["vin"][j]["hash"])
+                    pycoin_rs_utils.inverse_hash(decoded_tx["vin"][j]["hash"])
                 )
                 assert vin.prevout.n == decoded_tx["vin"][j]["n"]
                 assert vin.scriptSig == decoded_tx["vin"][j]["script_sig"]
@@ -129,7 +130,9 @@ def test_deserialize():
             assert decoded_tx_bitcoinlib.has_witness() == (len(decoded_tx["vtxinwit"][0]) > 0)
             assert decoded_tx_bitcoinlib.is_coinbase() == decoded_tx["coinbase"]
 
-            assert util.ib2h(decoded_tx_bitcoinlib.GetHash()) == decoded_tx["tx_hash"]
+            assert decoded_tx_bitcoinlib.GetHash() == binascii.unhexlify(
+                pycoin_rs_utils.inverse_hash(decoded_tx["tx_hash"])
+            )
 
     iterations = 25
 
@@ -171,7 +174,7 @@ def init_mock(monkeypatch):
 
 
 def test_get_vin_info(init_mock):
-    vout_value, script_pubkey, is_segwit = gettxinfo.get_vin_info(
+    vout_value, script_pubkey, is_segwit = backend.bitcoind.get_vin_info(
         {
             "hash": "094246c10d8b95f39662b92971588a205db77d89ffe0f21816733019a703cff9",
             "n": 0,
@@ -181,7 +184,7 @@ def test_get_vin_info(init_mock):
     assert script_pubkey == b"\xa9\x14\x87`\xdfc\xafG\x011;$K\xf5\xcc\xd7G\x99\x14\x84=\xa1\x87"
     assert not is_segwit
 
-    vout_value, script_pubkey, is_segwit = gettxinfo.get_vin_info(
+    vout_value, script_pubkey, is_segwit = backend.bitcoind.get_vin_info(
         {
             "hash": "05e7e9f59f155b28311a5e2860388783b839027b6529889de791351fe172752d",
             "n": 0,
@@ -194,7 +197,7 @@ def test_get_vin_info(init_mock):
     )
     assert is_segwit
 
-    vout_value, script_pubkey, is_segwit = gettxinfo.get_vin_info(
+    vout_value, script_pubkey, is_segwit = backend.bitcoind.get_vin_info(
         {
             "hash": "c93934dc5149f771c0a9100302006058c51a13af5146ded1053dae2a219f7852",
             "n": 0,
