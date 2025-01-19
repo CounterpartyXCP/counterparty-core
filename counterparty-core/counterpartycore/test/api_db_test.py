@@ -34,8 +34,8 @@ def compare_balances(api_db, ledger_db):
 
 @pytest.mark.usefixtures("apiserver_v2")
 def test_api_database():
-    ledger_db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
-    api_db = database.get_db_connection(config.STATE_DATABASE, read_only=True, check_wal=False)
+    ledger_db = database.get_db_connection(config.DATABASE, read_only=False, check_wal=False)
+    api_db = database.get_db_connection(config.STATE_DATABASE, read_only=False, check_wal=False)
 
     compare_balances(api_db, ledger_db)
 

@@ -6,6 +6,7 @@ SCENARIO = [
         "params": {
             "asset": "DETACHA",
             "quantity": 10 * 10**8,
+            "exact_fee": 0,
         },
         "set_variables": {
             "CREATE_DETACHA_TX_HASH": "$TX_HASH",
@@ -20,12 +21,12 @@ SCENARIO = [
         "params": {
             "asset": "DETACHB",
             "quantity": 10 * 10**8,
+            "exact_fee": 0,
         },
         "set_variables": {
             "CREATE_DETACHB_TX_HASH": "$TX_HASH",
             "CREATE_DETACHB_TX_INDEX": "$TX_INDEX",
         },
-        "controls": [],
     },
     {
         "title": "Attach DETACHA asset to UTXO",
@@ -35,11 +36,37 @@ SCENARIO = [
         "params": {
             "asset": "DETACHA",
             "quantity": 1 * 10**8,
+            "inputs_set": "$CREATE_DETACHB_TX_HASH:1",
+            "exact_fee": 0,
         },
         "set_variables": {
             "ATTACH_DETACHA_TX_HASH": "$TX_HASH",
         },
-        "controls": [],
+        "controls": [
+            {
+                "url": "addresses/mempool?event_name=ATTACH_TO_UTXO&addresses=$ADDRESS_10",
+                "result": [
+                    {
+                        "event": "ATTACH_TO_UTXO",
+                        "params": {
+                            "asset": "DETACHA",
+                            "block_index": 9999999,
+                            "destination": "$ATTACH_DETACHA_TX_HASH:0",
+                            "destination_address": "$ADDRESS_10",
+                            "fee_paid": 0,
+                            "msg_index": 0,
+                            "quantity": 100000000,
+                            "send_type": "attach",
+                            "source": "$ADDRESS_10",
+                            "status": "valid",
+                            "tx_hash": "$ATTACH_DETACHA_TX_HASH",
+                            "tx_index": "$TX_INDEX",
+                        },
+                        "tx_hash": "$ATTACH_DETACHA_TX_HASH",
+                    }
+                ],
+            }
+        ],
     },
     {
         "title": "Attach DETACHB asset to UTXO",
@@ -50,6 +77,7 @@ SCENARIO = [
             "quantity": 1 * 10**8,
             "inputs_set": "$ATTACH_DETACHA_TX_HASH:0",
             "exact_fee": 0,
+            "validate": False,
         },
         "set_variables": {
             "ATTACH_DETACHB_TX_HASH": "$TX_HASH",
@@ -218,7 +246,53 @@ SCENARIO = [
                         "tx_hash": "$TX_HASH",
                     }
                 ],
-            }
+            },
+            {
+                "url": "addresses/mempool?addresses=$ADDRESS_10&event_name=UTXO_MOVE",
+                "result": [
+                    {
+                        "event": "UTXO_MOVE",
+                        "params": {
+                            "asset": "DETACHA",
+                            "block_index": 9999999,
+                            "destination": "$TX_HASH:0",
+                            "destination_address": "$ADDRESS_9",
+                            "msg_index": 0,
+                            "quantity": 100000000,
+                            "send_type": "move",
+                            "source": "$ATTACH2_DETACHA_TX_HASH:0",
+                            "source_address": "$ADDRESS_10",
+                            "status": "valid",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": "$TX_INDEX",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    }
+                ],
+            },
+            {
+                "url": "addresses/mempool?addresses=$ADDRESS_9&event_name=UTXO_MOVE",
+                "result": [
+                    {
+                        "event": "UTXO_MOVE",
+                        "params": {
+                            "asset": "DETACHA",
+                            "block_index": 9999999,
+                            "destination": "$TX_HASH:0",
+                            "destination_address": "$ADDRESS_9",
+                            "msg_index": 0,
+                            "quantity": 100000000,
+                            "send_type": "move",
+                            "source": "$ATTACH2_DETACHA_TX_HASH:0",
+                            "source_address": "$ADDRESS_10",
+                            "status": "valid",
+                            "tx_hash": "$TX_HASH",
+                            "tx_index": "$TX_INDEX",
+                        },
+                        "tx_hash": "$TX_HASH",
+                    }
+                ],
+            },
         ],
     },
 ]

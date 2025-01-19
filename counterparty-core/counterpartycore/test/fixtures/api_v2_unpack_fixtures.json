@@ -689,21 +689,21 @@
     {
         "datahex": "0000001501530821671b10650000000005f5e10001108e90a57dba9967c422e83080f22f0c684368696c64206f6620706172656e74",
         "result": {
-            "message_type": "issuance",
-            "message_type_id": 21,
+            "message_type": "issuance", 
+            "message_type_id": 21, 
             "message_data": {
-                "asset_id": null,
-                "asset": null,
-                "subasset_longname": null,
-                "quantity": null,
-                "divisible": null,
+                "asset_id": 95428956661682277,
+                "asset": "A95428956661682277",
+                "subasset_longname": "PARENT.already.issued",
+                "quantity": 100000000,
+                "divisible": true,
                 "lock": null,
                 "reset": null,
-                "callable": null,
-                "call_date": null,
-                "call_price": null,
-                "description": null,
-                "status": "invalid: could not unpack"
+                "callable": false,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "Child of parent",
+                "status": "valid"
             }
         }
     }

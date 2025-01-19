@@ -1106,7 +1106,7 @@ class RegtestNode:
                 "destination": self.addresses[1],
                 "quantity": 5,
                 "asset": "XCP",
-                "sat_per_vbyte": 3,
+                "fee_per_kb": 3 * 1024,  # try deprecated parameter
                 "verbose": True,
                 "validate": False,
             },

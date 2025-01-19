@@ -2,9 +2,10 @@ import logging
 
 import bitcoin
 from bitcoin.bech32 import CBech32Data
+from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import base58, multisig
+from counterpartycore.lib.utils import base58, helpers, multisig
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -125,3 +126,26 @@ def unpack(short_address_bytes):
     else:
         check = bitcoin.core.Hash(short_address_bytes)[0:4]
         return bitcoin.base58.encode(short_address_bytes + check)
+
+
+def is_valid_address(address, network=None):
+    print("Checking address validity", address, config.NETWORK_NAME)
+    helpers.setup_bitcoinutils(network)
+    if multisig.is_multisig(address):
+        return True
+    try:
+        P2wpkhAddress(address).to_script_pub_key()
+        return True
+    except ValueError:
+        pass
+    try:
+        P2pkhAddress(address).to_script_pub_key()
+        return True
+    except ValueError:
+        pass
+    try:
+        P2shAddress(address).to_script_pub_key()
+        return True
+    except ValueError:
+        pass
+    return False

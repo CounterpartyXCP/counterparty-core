@@ -136,6 +136,8 @@ def test_api_v2_unpack(request, server_db):
     for data in datas:
         result = requests.get(url, params={"datahex": data["datahex"]})  # noqa: S113
         assert result.status_code == 200
+        print("test output", result.json())
+        print("fixture output", data["result"])
         assert result.json()["result"] == data["result"]
 
 
@@ -551,3 +553,14 @@ def test_asset_dispensers():
             "close_block_index": None,
         }
     ]
+
+
+@pytest.mark.usefixtures("apiserver_v2")
+def test_invalid_hash():
+    tx_hash = "65e649d58b95602b04172375dbd86783b7379e455a2bc801338d9299d10425a"
+    url = f"{API_ROOT}/v2/orders/{tx_hash}/matches"
+    result = requests.get(url).json()  # noqa: S113
+    assert (
+        result["error"]
+        == "Invalid transaction hash: 65e649d58b95602b04172375dbd86783b7379e455a2bc801338d9299d10425a"
+    )

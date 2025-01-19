@@ -1,8 +1,12 @@
 import decimal
 import itertools
 import json
+import string
 from operator import itemgetter
 from urllib.parse import urlparse
+
+from bitcoinutils.setup import setup
+from counterpartycore.lib import config
 
 D = decimal.Decimal
 
@@ -90,3 +94,19 @@ def divide(value1, value2):
     if value2 == 0 or value1 == 0:
         return D(0)
     return D(value1) / D(value2)
+
+
+def setup_bitcoinutils(network=None):
+    if network is not None:
+        setup(network)
+        return
+    if config.NETWORK_NAME == "testnet4":
+        setup("testnet")
+    else:
+        setup(config.NETWORK_NAME)
+
+
+def is_valid_tx_hash(tx_hash):
+    if all(c in string.hexdigits for c in tx_hash) and len(tx_hash) == 64:
+        return True
+    return False

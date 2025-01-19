@@ -118,4 +118,28 @@ UTIL_VECTOR = {
             }
         ],
     },
+    "utils.helpers": {
+        "is_valid_tx_hash": [
+            {
+                "in": ("foobar",),
+                "out": False,
+            },
+            {
+                "in": ("3f2c7ccae98af81e44c0ec419659f50d8b7d48c681e5d57fc747d0461e42dda1",),
+                "out": True,
+            },
+            {
+                "in": ("3f2c7ccae98af81e44c0ec419659f50d8b7d48c681e5d57fc747d0461e42dda11",),
+                "out": False,
+            },
+            {
+                "in": ("3f2c7ccae98af81e44c0ec419659f50d8b7d48c681e5d57fc747d0461e42dda",),
+                "out": False,
+            },
+            {
+                "in": ("3f2c7ccae98af81e44c0ec419659f50d8b7d48c681e5d57fc747d0461e42ddaG",),
+                "out": False,
+            },
+        ],
+    },
 }

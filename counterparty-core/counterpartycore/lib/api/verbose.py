@@ -72,9 +72,9 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
         item = result_item
         if "params" in item:
             item = item["params"]
-            if "unpacked_data" in item:
+            if "unpacked_data" in item and item["unpacked_data"]:
                 item = item["unpacked_data"]["message_data"]
-        elif "unpacked_data" in item:
+        elif "unpacked_data" in item and item["unpacked_data"]:
             item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
             if isinstance(item, list):
@@ -115,9 +115,9 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
                 item["params"][field_name_time] = block_times[item["params"][field_name]]
         if "params" in item:
             item = item["params"]
-            if "unpacked_data" in item:
+            if "unpacked_data" in item and item["unpacked_data"]:
                 item = item["unpacked_data"]["message_data"]
-        elif "unpacked_data" in item:
+        elif "unpacked_data" in item and item["unpacked_data"]:
             item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
             if isinstance(item, list):
@@ -225,7 +225,7 @@ def inject_normalized_quantities(result_list):
                     item["params"] = inject_normalized_quantity(
                         item["params"], field_name, {"divisible": field_info["divisible"]}
                     )
-                    if "unpacked_data" in item["params"]:
+                    if "unpacked_data" in item["params"] and item["params"]["unpacked_data"]:
                         item["params"]["unpacked_data"]["message_data"] = (
                             inject_normalized_quantity(
                                 item["params"]["unpacked_data"]["message_data"],
@@ -233,7 +233,7 @@ def inject_normalized_quantities(result_list):
                                 {"divisible": field_info["divisible"]},
                             )
                         )
-                if "unpacked_data" in item:
+                if "unpacked_data" in item and item["unpacked_data"]:
                     item["unpacked_data"]["message_data"] = inject_normalized_quantity(
                         item["unpacked_data"]["message_data"],
                         field_name,
@@ -251,8 +251,10 @@ def inject_normalized_quantities(result_list):
                 )
                 continue
 
-            if "unpacked_data" in item and isinstance(
-                item["unpacked_data"]["message_data"], list
+            if (
+                "unpacked_data" in item
+                and item["unpacked_data"]
+                and isinstance(item["unpacked_data"]["message_data"], list)
             ):  # mpma send
                 for pos, sub_item in enumerate(item["unpacked_data"]["message_data"]):
                     if field_info["asset_field"] in sub_item:
@@ -264,6 +266,7 @@ def inject_normalized_quantities(result_list):
             if (
                 "params" in item
                 and "unpacked_data" in item["params"]
+                and item["params"]["unpacked_data"]
                 and isinstance(item["params"]["unpacked_data"]["message_data"], list)
             ):  # mpma send
                 for pos, sub_item in enumerate(item["params"]["unpacked_data"]["message_data"]):
@@ -281,6 +284,7 @@ def inject_normalized_quantities(result_list):
             elif (
                 "params" in item
                 and "unpacked_data" in item["params"]
+                and item["params"]["unpacked_data"]
                 and field_info["asset_field"] in item["params"]["unpacked_data"]["message_data"]
             ):
                 asset_info = item["params"]["unpacked_data"]["message_data"][
@@ -288,6 +292,7 @@ def inject_normalized_quantities(result_list):
                 ]
             elif (
                 "unpacked_data" in item
+                and item["unpacked_data"]
                 and field_info["asset_field"] in item["unpacked_data"]["message_data"]
             ):
                 asset_info = item["unpacked_data"]["message_data"][field_info["asset_field"]]
@@ -297,7 +302,11 @@ def inject_normalized_quantities(result_list):
                 "params" in item and "divisible" in item["params"] and field_name in item["params"]
             ):
                 asset_info = {"divisible": item["params"]["divisible"]}
-            elif "unpacked_data" in item and "divisible" in item["unpacked_data"]["message_data"]:
+            elif (
+                "unpacked_data" in item
+                and item["unpacked_data"]
+                and "divisible" in item["unpacked_data"]["message_data"]
+            ):
                 asset_info = {"divisible": item["unpacked_data"]["message_data"]["divisible"]}
 
             if asset_info is None:
@@ -308,11 +317,13 @@ def inject_normalized_quantities(result_list):
                 elif (
                     "params" in item
                     and "unpacked_data" in item["params"]
+                    and item["params"]["unpacked_data"]
                     and "asset_info" in item["params"]["unpacked_data"]["message_data"]
                 ):
                     asset_info = item["params"]["unpacked_data"]["message_data"]["asset_info"]
                 elif (
                     "unpacked_data" in item
+                    and item["unpacked_data"]
                     and "asset_info" in item["unpacked_data"]["message_data"]
                 ):
                     asset_info = item["unpacked_data"]["message_data"]["asset_info"]
@@ -328,12 +339,17 @@ def inject_normalized_quantities(result_list):
             if (
                 "params" in item
                 and "unpacked_data" in item["params"]
+                and item["params"]["unpacked_data"]
                 and field_name in item["params"]["unpacked_data"]["message_data"]
             ):
                 item["params"]["unpacked_data"]["message_data"] = inject_normalized_quantity(  # noqa
                     item["params"]["unpacked_data"]["message_data"], field_name, asset_info
                 )
-            if "unpacked_data" in item and field_name in item["unpacked_data"]["message_data"]:
+            if (
+                "unpacked_data" in item
+                and item["unpacked_data"]
+                and field_name in item["unpacked_data"]["message_data"]
+            ):
                 item["unpacked_data"]["message_data"] = inject_normalized_quantity(  # noqa
                     item["unpacked_data"]["message_data"], field_name, asset_info
                 )

@@ -53,9 +53,9 @@ EVENTS_ADDRESS_FIELDS = {
     "BURN": ["source"],
     "NEW_FAIRMINT": ["source"],
     "NEW_FAIRMINTER": ["source"],
-    "ATTACH_TO_UTXO": ["source", "destination"],
-    "DETACH_FROM_UTXO": ["source", "destination"],
-    "UTXO_MOVE": ["source", "destination"],
+    "ATTACH_TO_UTXO": ["source", "destination_address"],
+    "DETACH_FROM_UTXO": ["sourc_address", "destination"],
+    "UTXO_MOVE": ["source_address", "destination_address"],
 }
 
 EXPIRATION_EVENTS_OBJECT_ID = {

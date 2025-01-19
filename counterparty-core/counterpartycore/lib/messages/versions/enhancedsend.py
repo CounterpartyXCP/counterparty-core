@@ -110,13 +110,14 @@ def compose(
     memo: str,
     memo_is_hex: bool,
     skip_validation: bool = False,
+    no_dispense: bool = False,
 ):
     cursor = db.cursor()
 
     # Just send BTC?
     if asset == config.BTC:
         # try to compose a dispense instead
-        return send1.compose_send_btc(db, source, destination, quantity)
+        return send1.compose_send_btc(db, source, destination, quantity, no_dispense)
 
     # resolve subassets
     asset = ledger.issuances.resolve_subasset_longname(db, asset)
