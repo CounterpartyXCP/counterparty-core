@@ -605,6 +605,7 @@ def get_dummy_script_sig(script_pub_key):
         script_sig = OP_PUSHBYTES_72 + DUMMY_DER_SIG
     elif output_type == "P2PKH":
         script_sig = OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_33 + DUMMY_PUBKEY
+        print("P2PKH", script_sig)
     elif output_type == "P2MS":
         asm = script.script_to_asm(script_pub_key)
         required_signatures = asm[0]
