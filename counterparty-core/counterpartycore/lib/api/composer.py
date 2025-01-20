@@ -783,6 +783,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         needed_fee = sat_per_vbyte * adjusted_vsize
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
+        needed_fee = int(needed_fee)
         # if change is enough for needed fee, add change output and break
         if change_amount > needed_fee:
             change_amount = int(change_amount - needed_fee)
@@ -932,7 +933,7 @@ CONSTRUCT_PARAMS = {
     "encoding": (str, "auto", "The encoding method to use"),
     "validate": (bool, True, "Validate the transaction"),
     # fee parameters
-    "sat_per_vbyte": (int, None, "The fee per vbyte in satoshis"),
+    "sat_per_vbyte": (float, None, "The fee per vbyte in satoshis"),
     "confirmation_target": (
         int,
         config.ESTIMATE_FEE_CONF_TARGET,
@@ -1020,11 +1021,17 @@ DEPRECATED_CONSTRUCT_PARAMS = [
 ]
 
 
+def fee_per_kb_to_sat_per_vbyte(fee_per_kb):
+    if fee_per_kb is None or fee_per_kb == 0:
+        return 0
+    return fee_per_kb / 1024
+
+
 def prepare_construct_params(construct_params):
     cleaned_construct_params = construct_params.copy()
     # copy deprecated parameters to new ones
     for deprecated_param, new_param, copyer in [
-        ("fee_per_kb", "sat_per_vbyte", lambda x: max(x // 1024, 1)),
+        ("fee_per_kb", "sat_per_vbyte", fee_per_kb_to_sat_per_vbyte),
         ("fee_provided", "max_fee", lambda x: x),
         ("dust_return_pubkey", "mutlisig_pubkey", lambda x: x),
         ("return_psbt", "verbose", lambda x: x),
