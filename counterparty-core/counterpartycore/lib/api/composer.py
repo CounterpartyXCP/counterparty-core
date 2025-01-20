@@ -1025,8 +1025,6 @@ DEPRECATED_CONSTRUCT_PARAMS = [
 def fee_per_kb_to_sat_per_vbyte(fee_per_kb):
     if fee_per_kb is None or fee_per_kb == 0:
         return 0
-    print("Fee per kb", fee_per_kb)
-    print("Fee per vbyte", float(D(fee_per_kb) / D(1024)))
     return float(D(fee_per_kb) / D(1024))
 
 
