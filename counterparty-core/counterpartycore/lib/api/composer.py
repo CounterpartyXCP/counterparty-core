@@ -6,6 +6,7 @@ import string
 import sys
 import time
 from collections import OrderedDict
+from decimal import Decimal as D
 
 from arc4 import ARC4
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress, PublicKey
@@ -1024,7 +1025,9 @@ DEPRECATED_CONSTRUCT_PARAMS = [
 def fee_per_kb_to_sat_per_vbyte(fee_per_kb):
     if fee_per_kb is None or fee_per_kb == 0:
         return 0
-    return fee_per_kb / 1024
+    print("Fee per kb", fee_per_kb)
+    print("Fee per vbyte", float(D(fee_per_kb) / D(1024)))
+    return float(D(fee_per_kb) / D(1024))
 
 
 def prepare_construct_params(construct_params):
