@@ -80,7 +80,8 @@ def ledger_db(bitcoind_mock):
         # dummy sign the transaction
         tx = Transaction.from_raw(tx["rawtransaction"])
         unspent = bitcoind_mock.list_unspent(params["source"])
-        signed_tx = composer.generate_dummy_signed_tx(tx, unspent).serialize()
+        signed_tx = composer.generate_dummy_signed_tx(tx, unspent)
+        signed_tx = signed_tx.serialize()
         # broadcast transaction
         bitcoind_mock.sendrawtransaction(db, signed_tx)
         # re-enable all protocol changes

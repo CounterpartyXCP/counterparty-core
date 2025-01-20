@@ -588,13 +588,15 @@ def utxos_to_txins(utxos: list):
 #   Composition   #
 ##################
 
+OP_0 = "00"
+OP_PUSHBYTES_33 = "21"
+OP_PUSHBYTES_72 = "48"
+OP_PUSHBYTES_73 = "49"
+
 DUMMY_DER_SIG = "3045" + "00" * 69 + "01"
-DUMMY_REEDEM_SCRIPT = DUMMY_DER_SIG
+DUMMY_REEDEM_SCRIPT = OP_PUSHBYTES_72 + DUMMY_DER_SIG
 DUMMY_PUBKEY = "03" + 32 * "00"
 DUMMY_SCHNORR_SIG = "00" * 65
-OP_0 = "00"
-OP_PUSHBYTES_72 = "48"
-OP_PUSHBYTES_33 = "21"
 
 
 # dummies script_sig from https://learnmeabitcoin.com/technical/script/
@@ -605,13 +607,12 @@ def get_dummy_script_sig(script_pub_key):
         script_sig = OP_PUSHBYTES_72 + DUMMY_DER_SIG
     elif output_type == "P2PKH":
         script_sig = OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_33 + DUMMY_PUBKEY
-        print("P2PKH", script_sig)
     elif output_type == "P2MS":
         asm = script.script_to_asm(script_pub_key)
         required_signatures = asm[0]
         script_sig = OP_0 + (required_signatures * DUMMY_DER_SIG)
     elif output_type == "P2SH":
-        script_sig = OP_0 + OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_72 + DUMMY_REEDEM_SCRIPT
+        script_sig = OP_0 + OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_73 + DUMMY_REEDEM_SCRIPT
     if script_sig is not None:
         return Script.from_raw(script_sig)
     return None
@@ -643,6 +644,7 @@ def generate_dummy_signed_tx(tx, selected_utxos):
         dummy_witness = get_dummy_witness(utxo["script_pub_key"])
         if dummy_witness is not None:
             dummy_signed_tx.witnesses.append(dummy_witness)
+            dummy_signed_tx.has_segwit = True
     return dummy_signed_tx
 
 

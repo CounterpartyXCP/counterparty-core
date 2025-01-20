@@ -108,4 +108,11 @@ DEFAULT_PARAMS["pubkey"]["2N6P6d3iypnnud4YJDfHZ6kc513N8ezWmPx"] = (
     "0282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b0"
 )
 
-P2WPKH_ADDR = ["tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"]
+
+P2WPKH_ADDR = ["bcrt1qfaw3f6ryl9jn4f5l0x7qdccxyl82snmwkrcfh9"]
+DEFAULT_PARAMS["privkey"]["bcrt1qfaw3f6ryl9jn4f5l0x7qdccxyl82snmwkrcfh9"] = (
+    "fff4e9f45244db7694296879d9ffbf03758104f0d614aac252a8d7b5eca3427d"
+)
+DEFAULT_PARAMS["pubkey"]["bcrt1qfaw3f6ryl9jn4f5l0x7qdccxyl82snmwkrcfh9"] = (
+    "02653194070e7b2fb47eda68d0412341c5a88cddc7f7635929bb1d6996264fd4fd"
+)

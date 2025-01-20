@@ -3,6 +3,11 @@
 from .params import ADDR, MULTISIGADDR, P2SH_ADDR, P2WPKH_ADDR
 from .params import DEFAULT_PARAMS as DP
 
+# 3 or 4 elements by transaction:
+# 1. Transaction name
+# 2. Compose parameters
+# 3. Transaction construct parameters
+# 4. Optional list of protocol changes to disable
 UNITTEST_FIXTURE = [
     [
         "burn",
@@ -484,11 +489,11 @@ UNITTEST_FIXTURE = [
     [
         "broadcast",
         {
-            "source": ADDR[6],
-            "timestamp": 1388000004,
+            "source": ADDR[4],
+            "timestamp": 1388000002,
             "value": 1,
             "fee_fraction": 0.0,
-            "text": "options 1",
+            "text": "options 0",
         },
         {"encoding": "multisig"},
         {"options_require_memo": True},
@@ -496,11 +501,11 @@ UNITTEST_FIXTURE = [
     [
         "broadcast",
         {
-            "source": ADDR[6],
-            "timestamp": 1388000004,
+            "source": ADDR[4],
+            "timestamp": 1388000003,
             "value": 1,
             "fee_fraction": 0.0,
-            "text": "options 1",
+            "text": "lock",
         },
         {"encoding": "multisig"},
     ],
@@ -548,7 +553,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "address": ADDR[2],
+            "source": ADDR[2],
             "asset": "DIVIDEND",
             "quantity": 100,
             "transfer_destination": None,
@@ -572,7 +577,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "address": ADDR[0],
+            "source": ADDR[0],
             "asset": "PARENT",
             "quantity": DP["quantity"] * 1,
             "transfer_destination": None,
@@ -586,7 +591,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "address": ADDR[0],
+            "source": ADDR[0],
             "asset": "PARENT.already.issued",
             "quantity": DP["quantity"] * 1,
             "transfer_destination": None,
@@ -599,115 +604,139 @@ UNITTEST_FIXTURE = [
     ],
     [
         "fairminter",
-        (ADDR[0], "FREEFAIRMIN", "", 0, 1, 10),
+        {
+            "source": ADDR[0],
+            "asset": "FREEFAIRMIN",
+            "asset_parent": "",
+            "price": 0,
+            "quantity_by_price": 1,
+            "max_mint_per_tx": 10,
+        },
         {"encoding": "opreturn"},
-        {"short_tx_type_id": True, "fairminter": True},
     ],
     [
         "fairminter",
-        (ADDR[0], "PAIDFAIRMIN", "", 10, 1, 0),
+        {
+            "source": ADDR[0],
+            "asset": "PAIDFAIRMIN",
+            "asset_parent": "",
+            "price": 10,
+            "quantity_by_price": 1,
+            "max_mint_per_tx": 0,
+        },
         {"encoding": "opreturn"},
-        {"short_tx_type_id": True, "fairminter": True},
     ],
     [
         "fairmint",
-        (ADDR[0], "FREEFAIRMIN", 0),
+        {"source": ADDR[0], "asset": "FREEFAIRMIN", "quantity": 0},
         {"encoding": "opreturn"},
-        {"short_tx_type_id": True, "fairminter": True},
     ],
     [
         "fairminter",
-        (
-            ADDR[0],  # source
-            "RAIDFAIRMIN",  # asset
-            "",  # asset_parent
-            10,  # price
-            1,  # quantity_by_price
-            10,  # max_mint_per_tx
-            30,  # hard_cap
-            20,  # premint_quantity
-        ),
+        {
+            "source": ADDR[0],
+            "asset": "RAIDFAIRMIN",
+            "asset_parent": "",
+            "price": 10,
+            "quantity_by_price": 1,
+            "max_mint_per_tx": 10,
+            "hard_cap": 30,
+            "premint_quantity": 20,
+        },
         {"encoding": "opreturn"},
-        {"short_tx_type_id": True, "fairminter": True},
     ],
     [
         "fairminter",
-        (
-            ADDR[0],  # source
-            "QAIDFAIRMIN",  # asset
-            "",  # asset_parent,
-            10,  # price=0,
-            1,  # quantity_by_price
-            0,  # max_mint_per_tx,
-            50,  # hard_cap=0,
-            20,  # premint_quantity=0,
-            0,  # start_block=0,
-            0,  # end_block=0,
-            20,  # soft_cap=0,
-            400000,  # soft_cap_deadline_block=0,
-            0.5,  # minted_asset_commission=0.0,
-        ),
+        {
+            "source": ADDR[0],
+            "asset": "QAIDFAIRMIN",
+            "asset_parent": "",
+            "price": 10,
+            "quantity_by_price": 1,
+            "max_mint_per_tx": 0,
+            "hard_cap": 50,
+            "premint_quantity": 20,
+            "start_block": 0,
+            "end_block": 0,
+            "soft_cap": 20,
+            "soft_cap_deadline_block": 400000,
+            "minted_asset_commission": 0.5,
+        },
         {"encoding": "opreturn"},
-        {"short_tx_type_id": True, "fairminter": True},
     ],
     [
         "fairminter",
-        (
-            ADDR[1],  # source
-            "A160361285792733729",  # asset
-            "",  # asset_parent,
-            10,  # price=0,
-            1,  # quantity_by_price
-            0,  # max_mint_per_tx,
-            50,  # hard_cap=0,
-            20,  # premint_quantity=0,
-            0,  # start_block=0,
-            0,  # end_block=0,
-            20,  # soft_cap=0,
-            310520,  # soft_cap_deadline_block=0,
-            0.3,  # minted_asset_commission=0.0,
-            False,  # burn_payment=False,
-            True,  # lock_description=False,
-            True,  # lock_quantity
-            True,  # divisible
-            "softcap description",
-        ),
+        {
+            "source": ADDR[1],
+            "asset": "A160361285792733729",
+            "asset_parent": "",
+            "price": 10,
+            "quantity_by_price": 1,
+            "max_mint_per_tx": 0,
+            "hard_cap": 50,
+            "premint_quantity": 20,
+            "start_block": 0,
+            "end_block": 0,
+            "soft_cap": 20,
+            "soft_cap_deadline_block": 310520,
+            "minted_asset_commission": 0.3,
+            "burn_payment": False,
+            "lock_description": True,
+            "lock_quantity": True,
+            "divisible": True,
+            "description": "softcap description",
+        },
         {"encoding": "multisig"},
-        {"short_tx_type_id": True, "fairminter": True},
     ],
     [
         "fairmint",
-        (ADDR[1], "A160361285792733729", 10),
+        {"source": ADDR[1], "asset": "A160361285792733729", "quantity": 10},
         {"encoding": "opreturn"},
-        {"short_tx_type_id": True, "fairminter": True},
     ],
     [
         "fairmint",
-        (ADDR[1], "A160361285792733729", 20),
+        {"source": ADDR[1], "asset": "A160361285792733729", "quantity": 20},
         {"encoding": "opreturn"},
-        {"short_tx_type_id": True, "fairminter": True},
     ],
     [
         "attach",
-        (ADDR[0], "XCP", 100),
+        {"source": ADDR[0], "asset": "XCP", "quantity": 100},
         {"encoding": "multisig"},
-        {"short_tx_type_id": True, "utxo_support": True, "spend_utxo_to_detach": True},
     ],
     [
         "attach",
-        (
-            ADDR[0],
-            "DIVISIBLE",
-            1,
-        ),
+        {
+            "source": ADDR[0],
+            "asset": "DIVISIBLE",
+            "quantity": 1,
+        },
         {"encoding": "multisig"},
-        {"short_tx_type_id": True, "utxo_support": True, "spend_utxo_to_detach": True},
     ],
     [
         "issuance",
-        (ADDR[5], "TESTDISP", 1000, None, False, None, None, "Test dispensers asset"),
+        {
+            "source": ADDR[5],
+            "asset": "TESTDISP",
+            "quantity": 1000,
+            "transfer_destination": None,
+            "divisible": False,
+            "lock": None,
+            "reset": None,
+            "description": "Test dispensers asset",
+        },
         {"encoding": "multisig"},
     ],
-    ["dispenser", (ADDR[5], "TESTDISP", 100, 100, 100, 0), {"encoding": "opreturn"}],
+    [
+        "dispenser",
+        {
+            "source": ADDR[5],
+            "asset": "TESTDISP",
+            "give_quantity": 100,
+            "escrow_quantity": 100,
+            "mainchainrate": 100,
+            "status": 0,
+        },
+        {"encoding": "opreturn"},
+    ],
     ["mine_empty_blocks", 703],
 ]

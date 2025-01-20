@@ -14,6 +14,7 @@ from ..fixtures.params import DEFAULT_PARAMS
 class MockTransactions(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.source_by_txid = {}
+        self.address_and_value_by_utxo = {}
 
     def list_unspent(self, source, allow_unconfirmed_inputs=True):
         construct_params = {}
@@ -23,13 +24,10 @@ class MockTransactions(metaclass=helpers.SingletonMeta):
             construct_params["pubkeys"] = ",".join(pubkeys)
 
         script_pub_key = composer.address_to_script_pub_key(source, network="regtest").to_hex()
-        print("script_pub_key:", script_pub_key)
-        print("asm", script.script_to_asm(script_pub_key))
 
         # deterministic txid from the source
         txid = check.dhash_string(f"{source}{list(self.source_by_txid.values()).count(source)}")
         self.source_by_txid[txid] = source
-        print("New txid:", txid)
 
         return [
             {
@@ -48,6 +46,15 @@ class MockTransactions(metaclass=helpers.SingletonMeta):
         is_segwit = composer.is_segwit_output(script_pub_key)
         return value, script_pub_key, is_segwit
 
+    def get_utxo_address_and_value(self, utxo):
+        return self.address_and_value_by_utxo[utxo]
+
+    def save_address_and_value(self, decoded_tx):
+        address = script.script_to_address2(decoded_tx["vout"][-1]["script_pub_key"])
+        value = decoded_tx["vout"][-1]["value"]
+        utxo = f"{decoded_tx['tx_id']}:0"
+        self.address_and_value_by_utxo[utxo] = (address, value)
+
 
 def list_unspent(source, allow_unconfirmed_inputs=True):
     return MockTransactions().list_unspent(source, allow_unconfirmed_inputs)
@@ -55,6 +62,10 @@ def list_unspent(source, allow_unconfirmed_inputs=True):
 
 def get_vin_info(vin):
     return MockTransactions().get_vin_info(vin)
+
+
+def get_utxo_address_and_value(utxo):
+    return MockTransactions().get_utxo_address_and_value(utxo)
 
 
 def satoshis_per_vbyte():
@@ -81,7 +92,13 @@ def mine_empty_blocks(db, blocks):
 
 def sendrawtransaction(db, rawtransaction):
     decoded_tx = deserialize.deserialize_tx(rawtransaction, parse_vouts=True)
+    MockTransactions().save_address_and_value(decoded_tx)
     mine_block(db, [decoded_tx])
+    cursor = db.cursor()
+    transaction = cursor.execute(
+        "SELECT * FROM transactions WHERE tx_hash = ?", (decoded_tx["tx_id"],)
+    ).fetchone()
+    assert transaction is not None
 
 
 def is_valid_der(der):
@@ -102,6 +119,7 @@ def bitcoind_mock(monkeypatch):
     monkeypatch.setattr(f"{bitcoind_module}.list_unspent", list_unspent)
     monkeypatch.setattr(f"{bitcoind_module}.satoshis_per_vbyte", satoshis_per_vbyte)
     monkeypatch.setattr(f"{bitcoind_module}.get_vin_info", get_vin_info)
+    monkeypatch.setattr(f"{bitcoind_module}.get_utxo_address_and_value", get_utxo_address_and_value)
     monkeypatch.setattr(f"{gettxinfo_module}.is_valid_der", is_valid_der)
     monkeypatch.setattr(f"{backend_module}.search_pubkey", search_pubkey)
     monkeypatch.setattr("counterpartycore.lib.messages.bet.date_passed", lambda x: False)
