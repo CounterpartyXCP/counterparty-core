@@ -6,7 +6,7 @@ import tempfile
 import pytest
 from bitcoinutils.transactions import Transaction
 from counterpartycore.lib import config
-from counterpartycore.lib.api import composer
+from counterpartycore.lib.api import composer, dbbuilder
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.lib.ledger.currentstate import CurrentState
@@ -29,8 +29,9 @@ def enable_all_protocol_changes():
         os.remove(regtest_protocole_file)
 
 
-@pytest.fixture(scope="function")
-def ledger_db(bitcoind_mock):
+@pytest.fixture(scope="session", autouse=True)
+def build_dbs(bitcoind_mock):
+    print("Building databases...")
     # prepare empty directory
     if os.path.exists(DATA_DIR):
         shutil.rmtree(DATA_DIR)
@@ -45,6 +46,7 @@ def ledger_db(bitcoind_mock):
             DATA_DIR,
         ]
     )
+    print("args", args)
     server.initialise_log_and_config(args)
 
     # initialise database
@@ -58,7 +60,7 @@ def ledger_db(bitcoind_mock):
     bitcoind_mock.mine_block(db, [])
 
     for tx_params in UNITTEST_FIXTURE:
-        print("tx_params", tx_params)
+        # print("tx_params", tx_params)
         if isinstance(tx_params[1], tuple):
             return db
 
@@ -87,4 +89,22 @@ def ledger_db(bitcoind_mock):
         # re-enable all protocol changes
         enable_all_protocol_changes()
 
-    return db
+    dbbuilder.build_state_db()
+
+
+@pytest.fixture(scope="function")
+def ledger_db(build_dbs):
+    tmpdir = os.path.join(DATA_DIR, "tmp")
+    if os.path.exists(tmpdir):
+        shutil.rmtree(tmpdir)
+    os.makedirs(tmpdir)
+
+    database_path = os.path.join(tmpdir, "counterparty.regtest.db")
+    shutil.copyfile(config.DATABASE, database_path)
+
+    db = database.get_db_connection(database_path, read_only=False)
+
+    yield db
+
+    db.close()
+    shutil.rmtree(tmpdir)

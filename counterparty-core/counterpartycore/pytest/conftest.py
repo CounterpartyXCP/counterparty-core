@@ -1,4 +1,4 @@
-from .mocks.bitcoind import bitcoind_mock
-from .mocks.ledgerdb import ledger_db
+from .mocks.bitcoind import bitcoind_mock, monkeymodule
+from .mocks.ledgerdb import build_dbs, ledger_db
 
-__all__ = ["bitcoind_mock", "ledger_db"]
+__all__ = ["bitcoind_mock", "ledger_db", "build_dbs", "monkeymodule"]

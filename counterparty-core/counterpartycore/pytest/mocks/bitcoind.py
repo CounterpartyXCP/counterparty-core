@@ -111,16 +111,27 @@ def search_pubkey(source, tx_hashes):
     return DEFAULT_PARAMS["pubkey"][source]
 
 
-@pytest.fixture(scope="function")
-def bitcoind_mock(monkeypatch):
+@pytest.fixture(scope="session")
+def monkeymodule():
+    from _pytest.monkeypatch import MonkeyPatch
+
+    mpatch = MonkeyPatch()
+    yield mpatch
+    mpatch.undo()
+
+
+@pytest.fixture(scope="session")
+def bitcoind_mock(monkeymodule):
     bitcoind_module = "counterpartycore.lib.backend.bitcoind"
     gettxinfo_module = "counterpartycore.lib.parser.gettxinfo"
     backend_module = "counterpartycore.lib.backend"
-    monkeypatch.setattr(f"{bitcoind_module}.list_unspent", list_unspent)
-    monkeypatch.setattr(f"{bitcoind_module}.satoshis_per_vbyte", satoshis_per_vbyte)
-    monkeypatch.setattr(f"{bitcoind_module}.get_vin_info", get_vin_info)
-    monkeypatch.setattr(f"{bitcoind_module}.get_utxo_address_and_value", get_utxo_address_and_value)
-    monkeypatch.setattr(f"{gettxinfo_module}.is_valid_der", is_valid_der)
-    monkeypatch.setattr(f"{backend_module}.search_pubkey", search_pubkey)
-    monkeypatch.setattr("counterpartycore.lib.messages.bet.date_passed", lambda x: False)
+    monkeymodule.setattr(f"{bitcoind_module}.list_unspent", list_unspent)
+    monkeymodule.setattr(f"{bitcoind_module}.satoshis_per_vbyte", satoshis_per_vbyte)
+    monkeymodule.setattr(f"{bitcoind_module}.get_vin_info", get_vin_info)
+    monkeymodule.setattr(
+        f"{bitcoind_module}.get_utxo_address_and_value", get_utxo_address_and_value
+    )
+    monkeymodule.setattr(f"{gettxinfo_module}.is_valid_der", is_valid_der)
+    monkeymodule.setattr(f"{backend_module}.search_pubkey", search_pubkey)
+    monkeymodule.setattr("counterpartycore.lib.messages.bet.date_passed", lambda x: False)
     return sys.modules[__name__]
