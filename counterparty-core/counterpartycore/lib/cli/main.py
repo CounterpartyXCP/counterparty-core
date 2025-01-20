@@ -412,11 +412,7 @@ def welcome_message(action, server_configfile):
     cprint(f"\n{'-' * 30} {action.upper()} {'-' * 30}\n", "green")
 
 
-def main():
-    sentry.init()
-    # Post installation tasks
-    server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
-
+def arg_parser():
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
         prog=APP_NAME,
@@ -490,6 +486,15 @@ def main():
     )
     setup.add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
 
+    return parser
+
+
+def main():
+    sentry.init()
+    # Post installation tasks
+    server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
+
+    parser = arg_parser()
     args = parser.parse_args()
 
     # Help message

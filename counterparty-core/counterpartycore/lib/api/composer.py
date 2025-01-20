@@ -588,7 +588,7 @@ def utxos_to_txins(utxos: list):
 #   Composition   #
 ##################
 
-DUMMY_DER_SIG = "3045" + "00" * 70
+DUMMY_DER_SIG = "3045" + "00" * 69 + "01"
 DUMMY_REEDEM_SCRIPT = DUMMY_DER_SIG
 DUMMY_PUBKEY = "03" + 32 * "00"
 DUMMY_SCHNORR_SIG = "00" * 65
