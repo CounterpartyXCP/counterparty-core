@@ -12,6 +12,7 @@
 - Fix ignored deprecated parameters in Compose API
 - Fix Get Mempool Events By Addresses endpoint for attach, detach and UTXO move
 - Retry ten times on telemetry request error
+- Return "no implemented" error when trying to get info about RPS transactions
 
 ## Codebase
 

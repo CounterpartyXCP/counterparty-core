@@ -694,11 +694,11 @@ def unpack(db, datahex: str, block_index: int = None):
         # RPS
         elif message_type_id == messages.rps.ID:
             message_type_name = "rps"
-            message_data = messages.rps.unpack(message, return_dict=True)
+            message_data = {"error": "RPS messages decoding is not implemented"}
         # RPS Resolve
         elif message_type_id == messages.rpsresolve.ID:
             message_type_name = "rpsresolve"
-            message_data = messages.rpsresolve.unpack(message, return_dict=True)
+            message_data = {"error": "RPS Resolve messages decoding is not implemented"}
         # Sweep
         elif message_type_id == messages.sweep.ID:
             message_type_name = "sweep"
