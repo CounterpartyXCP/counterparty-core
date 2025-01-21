@@ -45,7 +45,8 @@ def get_json_response(response, retry=0):
     except json.decoder.JSONDecodeError as e:  # noqa: F841
         if response.status_code == 200:
             logger.warning(
-                f"Received invalid JSON with status 200 from Bitcoin Core: {response.text}. Retrying in 5 seconds..."
+                f"Received invalid JSON with status 200 from Bitcoin Core: {response.text}. Retrying in 5 seconds...",
+                stack_info=True,
             )
             time.sleep(5)
             if retry < 5:
@@ -91,7 +92,8 @@ def rpc_call(payload, retry=0):
             raise
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.warning(
-                f"Could not connect to backend at `{clean_url_for_log(url)}`. (Attempt: {tries})"
+                f"Could not connect to backend at `{clean_url_for_log(url)}`. (Attempt: {tries})",
+                stack_info=True,
             )
             time.sleep(5)
         except Exception as e:
@@ -116,7 +118,7 @@ def rpc_call(payload, retry=0):
         warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
         if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
             warning_message += f" Is `txindex` enabled in {config.BTC_NAME} Core?"
-        logger.warning(warning_message)
+        logger.warning(warning_message, stack_info=True)
         if should_retry():
             # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
             # seconds to start, this'll hit the maximum recursion depth limit.
@@ -374,11 +376,11 @@ def add_block_in_cache(block_index, block):
         add_transaction_in_cache(transaction["tx_hash"], transaction)
 
 
-def get_decoded_transaction(tx_hash, block_index=None):
+def get_decoded_transaction(tx_hash, block_index=None, no_retry=False):
     if tx_hash in TRANSACTIONS_CACHE:
         return TRANSACTIONS_CACHE[tx_hash]
 
-    raw_tx = getrawtransaction(tx_hash)
+    raw_tx = getrawtransaction(tx_hash, no_retry=no_retry)
     tx = deserialize.deserialize_tx(raw_tx, block_index=block_index)
 
     add_transaction_in_cache(tx_hash, tx)
@@ -494,10 +496,10 @@ def list_unspent(source, allow_unconfirmed_inputs):
     return []
 
 
-def get_vin_info(vin):
+def get_vin_info(vin, no_retry=False):
     # Note: We don't know what block the `vin` is in, and the block might
     # have been from a while ago, so this call may not hit the cache.
-    vin_ctx = get_decoded_transaction(vin["hash"])
+    vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
 
     is_segwit = vin_ctx["segwit"]
     vout = vin_ctx["vout"][vin["n"]]

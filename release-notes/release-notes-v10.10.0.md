@@ -12,6 +12,9 @@
 - Fix ignored deprecated parameters in Compose API
 - Fix Get Mempool Events By Addresses endpoint for attach, detach and UTXO move
 - Retry ten times on telemetry request error
+- Return "no implemented" error when trying to get info about RPS transactions
+- Fix typo in `protocol_changes.json' for testnet4
+- Don't retry to get vin info when parsing mempool
 
 ## Codebase
 
@@ -21,12 +24,14 @@
 - Reorganize files and functions, split too big files, delete all unused functions
 - Remove globals in `lib/util.py` and `ledger.py`
 - Use yoyo migrations to update database
+- Add stacktrace when warning from bitcoind
 
 ## API
 
 - Add no_dispense parameter to not automatically compose a dispense transaction even if the destination is a dispenser
 - Add `event_name` parameter to Get Mempool Events By Addresses endpoint
 - Check addresses and hashes format in parameters
+- `sat_per_vbyte` parameter accepts float
 
 ## CLI
 

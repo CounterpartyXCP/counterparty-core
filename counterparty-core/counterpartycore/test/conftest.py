@@ -618,7 +618,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         pubkeys = [DEFAULT_PARAMS["pubkey"][pubkeyhash] for pubkeyhash in pubkeyhashes]
         return pubkeys[0]
 
-    def mocked_getrawtransaction(tx_hash, verbose=False, block_index=None):
+    def mocked_getrawtransaction(tx_hash, verbose=False, block_index=None, no_retry=False):
         return util_test.getrawtransaction(
             rawtransactions_db, tx_hash, verbose=verbose, block_index=block_index
         )
