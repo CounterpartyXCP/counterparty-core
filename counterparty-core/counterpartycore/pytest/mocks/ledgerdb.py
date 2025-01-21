@@ -92,19 +92,32 @@ def build_dbs(bitcoind_mock):
     dbbuilder.build_state_db()
 
 
-@pytest.fixture(scope="function")
-def ledger_db(build_dbs):
-    tmpdir = os.path.join(DATA_DIR, "tmp")
+def get_tmp_connection(db_name):
+    tmpdir = os.path.join(DATA_DIR, f"tmp-{db_name}")
     if os.path.exists(tmpdir):
         shutil.rmtree(tmpdir)
     os.makedirs(tmpdir)
 
-    database_path = os.path.join(tmpdir, "counterparty.regtest.db")
-    shutil.copyfile(config.DATABASE, database_path)
+    database_path = os.path.join(tmpdir, f"{db_name}.regtest.db")
+    fixture_db_path = config.DATABASE if db_name == "counterparty" else config.STATE_DATABASE
+    shutil.copyfile(fixture_db_path, database_path)
 
     db = database.get_db_connection(database_path, read_only=False)
 
-    yield db
+    return db, tmpdir
 
+
+@pytest.fixture(scope="function")
+def ledger_db(build_dbs):
+    db, tmpdir = get_tmp_connection("counterparty")
+    yield db
+    db.close()
+    shutil.rmtree(tmpdir)
+
+
+@pytest.fixture(scope="function")
+def state_db(build_dbs):
+    db, tmpdir = get_tmp_connection("state")
+    yield db
     db.close()
     shutil.rmtree(tmpdir)
