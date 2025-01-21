@@ -15,6 +15,7 @@
 - Return "no implemented" error when trying to get info about RPS transactions
 - Fix typo in `protocol_changes.json' for testnet4
 - Fix wrong fee calculation for detach and move
+- Don't retry to get vin info when parsing mempool
 
 ## Codebase
 
@@ -24,6 +25,7 @@
 - Reorganize files and functions, split too big files, delete all unused functions
 - Remove globals in `lib/util.py` and `ledger.py`
 - Use yoyo migrations to update database
+- Add stacktrace when warning from bitcoind
 
 ## API
 
