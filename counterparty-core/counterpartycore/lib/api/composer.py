@@ -386,7 +386,6 @@ def complete_unspent_list(unspent_list):
                         utxo["amount"] = vout["value"]
         utxo["is_segwit"] = is_segwit_output(utxo["script_pub_key"])
         completed_unspent_list.append(utxo)
-
     return completed_unspent_list
 
 
@@ -479,7 +478,8 @@ def ensure_utxo_is_first(utxo, unspent_list):
             {
                 "txid": txid,
                 "vout": vout,
-                "value": value,
+                "value": int(value * config.UNIT),
+                "amount": value,
             },
         )
     return new_unspent_list
@@ -854,6 +854,7 @@ def construct(db, tx_info, construct_params):
     btc_out = sum(output.amount for output in outputs)
     btc_change = sum(change_output.amount for change_output in change_outputs)
     lock_scripts = [utxo["script_pub_key"] for utxo in selected_utxos]
+    inputs_values = [utxo["value"] for utxo in selected_utxos]
     tx = Transaction(inputs, outputs + change_outputs)
     unsigned_tx_hex = tx.serialize()
     adjusted_vsize, virtual_size, sigops_count = get_size_info(tx, selected_utxos)
@@ -866,6 +867,7 @@ def construct(db, tx_info, construct_params):
         "btc_fee": btc_in - btc_out - btc_change,
         "data": config.PREFIX + data if data else None,
         "lock_scripts": lock_scripts,
+        "inputs_values": inputs_values,
         "signed_tx_estimated_size": {
             "vsize": virtual_size,
             "adjusted_vsize": adjusted_vsize,
@@ -878,6 +880,11 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
     tx_hex = composed_tx["rawtransaction"]
     source, destinations, data = tx_info
     decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)
+
+    total_out = sum(out["value"] for out in decoded_tx["vout"])
+    assert total_out == composed_tx["btc_out"] + composed_tx["btc_change"]
+    assert composed_tx["btc_in"] == total_out + composed_tx["btc_fee"]
+    assert sum(composed_tx["inputs_values"]) == composed_tx["btc_in"]
 
     # check if source address matches the first input address
     first_utxo_txid = decoded_tx["vin"][0]["hash"]
