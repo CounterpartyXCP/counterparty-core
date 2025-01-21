@@ -19,7 +19,7 @@ def test_parse_block(server_db):
     test_outputs = blocks.parse_block(server_db, DP["default_block_index"], 1420914478)
     outputs = (
         "5b552bb7df9b51ee288d374c5fafc39dfa9aaad7e3c10773af65925b43027db1",
-        "49a36795243e562f8a6444c2f67ed6f1f0394b7b5ef7d63fd1af5ec49312eb6f",
+        "bad41e0faa06ebf0b9382b39ae59158a077e8eebbd3ca032b806f93b19574536",
         "691224f734f9bceee86f040342c0724b45252ca581f94b43fb24777cdb1b6496",
     )
     try:

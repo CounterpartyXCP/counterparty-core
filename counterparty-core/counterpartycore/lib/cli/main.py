@@ -412,7 +412,7 @@ def welcome_message(action, server_configfile):
     cprint(f"\n{'-' * 30} {action.upper()} {'-' * 30}\n", "green")
 
 
-def arg_parser():
+def arg_parser(no_config_file=False):
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
         prog=APP_NAME,
@@ -429,11 +429,13 @@ def arg_parser():
         action="version",
         version=f"{APP_NAME} v{APP_VERSION}; counterparty-core v{config.VERSION_STRING}",
     )
-    parser.add_argument("--config-file", help="the path to the configuration file")
-
-    cmd_args = parser.parse_known_args()[0]
-    config_file_path = getattr(cmd_args, "config_file", None)
-    configfile = setup.read_config_file("server.conf", config_file_path)
+    if not no_config_file:
+        parser.add_argument("--config-file", help="the path to the configuration file")
+        cmd_args = parser.parse_known_args()[0]
+        config_file_path = getattr(cmd_args, "config_file", None)
+        configfile = setup.read_config_file("server.conf", config_file_path)
+    else:
+        configfile = {"Default": {}}
 
     setup.add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
 

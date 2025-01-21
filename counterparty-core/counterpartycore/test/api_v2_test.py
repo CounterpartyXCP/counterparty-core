@@ -532,6 +532,7 @@ def test_asset_dispensers():
 
     url = f"{API_ROOT}/v2/assets/{asset}/dispensers?status=0"
     result = requests.get(url)  # noqa: S113
+    print(json.dumps(result.json(), indent=4))
     assert result.json()["result"] == [
         {
             "tx_index": 511,

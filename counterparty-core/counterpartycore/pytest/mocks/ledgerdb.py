@@ -38,7 +38,7 @@ def build_dbs(bitcoind_mock):
     os.makedirs(DATA_DIR)
 
     # initialise config variables
-    parser = arg_parser()
+    parser = arg_parser(no_config_file=True)
     args = parser.parse_args(
         [
             "--regtest",
