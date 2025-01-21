@@ -89,6 +89,10 @@ def to_json(obj, indent=None):
     return json.dumps(obj, cls=ApiJsonEncoder, indent=indent)
 
 
+def to_short_json(obj):
+    return json.dumps(obj, cls=ApiJsonEncoder, indent=None, sort_keys=True, separators=(",", ":"))
+
+
 def divide(value1, value2):
     decimal.getcontext().prec = 16
     if value2 == 0 or value1 == 0:

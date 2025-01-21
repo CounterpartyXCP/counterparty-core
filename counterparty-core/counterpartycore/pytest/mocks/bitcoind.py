@@ -11,7 +11,7 @@ from counterpartycore.lib.utils import helpers, multisig, script
 from ..fixtures.params import DEFAULT_PARAMS
 
 
-class MockTransactions(metaclass=helpers.SingletonMeta):
+class BlockchainMock(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.source_by_txid = {}
         self.address_and_value_by_utxo = {}
@@ -47,7 +47,8 @@ class MockTransactions(metaclass=helpers.SingletonMeta):
         return value, script_pub_key, is_segwit
 
     def get_utxo_address_and_value(self, utxo):
-        return self.address_and_value_by_utxo[utxo]
+        txid, vout = utxo.split(":")
+        return self.address_and_value_by_utxo[f"{txid}:0"]
 
     def save_address_and_value(self, decoded_tx):
         address = script.script_to_address2(decoded_tx["vout"][-1]["script_pub_key"])
@@ -55,17 +56,55 @@ class MockTransactions(metaclass=helpers.SingletonMeta):
         utxo = f"{decoded_tx['tx_id']}:0"
         self.address_and_value_by_utxo[utxo] = (address, value)
 
+    def get_dummy_tx_hash(self, source):
+        txid = check.dhash_string(f"{source}{list(self.source_by_txid.values()).count(source)}")
+        self.source_by_txid[txid] = source
+        self.address_and_value_by_utxo[f"{txid}:0"] = (source, int(10 * config.UNIT))
+        return txid
+
+    def dummy_tx(
+        self,
+        ledger_db,
+        source,
+        outputs_count=2,
+        op_return_position=1,
+        utxo_source=None,
+        utxo_destination=None,
+    ):
+        # we take an existing tx to avoid foreign key constraint errors
+        cursor = ledger_db.cursor()
+        tx = cursor.execute(
+            "SELECT * FROM transactions WHERE source = ? ORDER BY rowid DESC", (source,)
+        ).fetchone()
+
+        utxos_info = [utxo_source or ""]
+        if utxo_destination is not None:
+            utxos_info.append(f"{utxo_destination}")
+        else:
+            utxos_info.append(f"{tx['tx_hash']}:0")
+        utxos_info.append(f"{outputs_count}")
+        utxos_info.append(f"{op_return_position}")
+        utxos_info = " ".join(utxos_info)
+
+        return {
+            "source": source,
+            "block_index": tx["block_index"],
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "utxos_info": utxos_info,
+        }
+
 
 def list_unspent(source, allow_unconfirmed_inputs=True):
-    return MockTransactions().list_unspent(source, allow_unconfirmed_inputs)
+    return BlockchainMock().list_unspent(source, allow_unconfirmed_inputs)
 
 
 def get_vin_info(vin):
-    return MockTransactions().get_vin_info(vin)
+    return BlockchainMock().get_vin_info(vin)
 
 
 def get_utxo_address_and_value(utxo):
-    return MockTransactions().get_utxo_address_and_value(utxo)
+    return BlockchainMock().get_utxo_address_and_value(utxo)
 
 
 def satoshis_per_vbyte():
@@ -92,7 +131,7 @@ def mine_empty_blocks(db, blocks):
 
 def sendrawtransaction(db, rawtransaction):
     decoded_tx = deserialize.deserialize_tx(rawtransaction, parse_vouts=True)
-    MockTransactions().save_address_and_value(decoded_tx)
+    BlockchainMock().save_address_and_value(decoded_tx)
     mine_block(db, [decoded_tx])
     cursor = db.cursor()
     transaction = cursor.execute(
@@ -135,3 +174,8 @@ def bitcoind_mock(monkeymodule):
     monkeymodule.setattr(f"{backend_module}.search_pubkey", search_pubkey)
     monkeymodule.setattr("counterpartycore.lib.messages.bet.date_passed", lambda x: False)
     return sys.modules[__name__]
+
+
+@pytest.fixture(scope="function")
+def blockchain_mock():
+    return BlockchainMock()

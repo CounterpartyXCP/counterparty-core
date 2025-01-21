@@ -121,3 +121,39 @@ def state_db(build_dbs):
     yield db
     db.close()
     shutil.rmtree(tmpdir)
+
+
+def check_record(ledger_db, record):
+    """Allow direct record access to the db."""
+    cursor = ledger_db.cursor()
+
+    if record["table"] == "pragma":
+        field = record["field"]
+        sql = f"""PRAGMA {field}"""
+        value = cursor.execute(sql).fetchall()[0][field]
+        assert value == record["value"]
+    else:
+        sql = f"SELECT COUNT(*) AS count FROM {record['table']} WHERE "  # noqa: S608
+        bindings = []
+        conditions = []
+        fields = []
+        for field in record["values"]:
+            if record["values"][field] is not None:
+                fields.append(field)
+                conditions.append(f"{field} = ?")
+                bindings.append(record["values"][field])
+        sql += " AND ".join(conditions)
+        count = cursor.execute(sql, tuple(bindings)).fetchone()["count"]
+        ok = (record.get("not", False) and count == 0) or count == 1
+        if not ok:
+            last_record = cursor.execute(
+                f"SELECT {', '.join(fields)} FROM {record['table']} ORDER BY rowid DESC LIMIT 1"  # noqa: S608
+            ).fetchone()
+            print("test output", json.dumps(last_record, sort_keys=True))
+            print("expected output", json.dumps(record["values"], sort_keys=True))
+            assert ok, f"Record not found in {record['table']}: {record['values']}"
+
+
+def check_records(ledger_db, records):
+    for record in records:
+        check_record(ledger_db, record)
