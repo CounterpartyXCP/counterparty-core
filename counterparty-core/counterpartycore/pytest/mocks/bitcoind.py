@@ -66,6 +66,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         self,
         ledger_db,
         source,
+        destination=None,
         outputs_count=2,
         op_return_position=1,
         utxo_source=None,
@@ -92,6 +93,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
             "utxos_info": utxos_info,
+            "destination": destination,
         }
 
 

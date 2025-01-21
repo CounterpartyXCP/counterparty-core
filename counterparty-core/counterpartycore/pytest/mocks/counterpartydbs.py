@@ -30,6 +30,17 @@ def enable_all_protocol_changes():
         os.remove(regtest_protocole_file)
 
 
+class ProtocolChangesDisabled:
+    def __init__(self, change_names):
+        self.disabled_changes = change_names
+
+    def __enter__(self):
+        disable_protocol_changes(self.disabled_changes)
+
+    def __exit__(self, type, value, traceback):
+        enable_all_protocol_changes()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def build_dbs(bitcoind_mock):
     print("Building databases...")
