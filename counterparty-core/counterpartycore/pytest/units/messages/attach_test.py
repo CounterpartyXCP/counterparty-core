@@ -1,46 +1,52 @@
 import pytest
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import attach
-from counterpartycore.lib.utils.helpers import to_short_json
-from counterpartycore.pytest.fixtures.params import ADDR
-from counterpartycore.pytest.mocks.counterpartydbs import check_records
 
 DUMMY_UTXO = 64 * "0" + ":1"
 
 
-def test_validate(ledger_db):
-    assert attach.validate(ledger_db, ADDR[0], "XCP", 100) == []
-    assert attach.validate(ledger_db, ADDR[0], "XCP", 100, 1) == []
+def test_validate(ledger_db, addresses):
+    assert attach.validate(ledger_db, addresses[0], "XCP", 100) == []
+    assert attach.validate(ledger_db, addresses[0], "XCP", 100, 1) == []
     assert attach.validate(ledger_db, DUMMY_UTXO, "XCP", 100) == ["invalid source address"]
-    assert attach.validate(ledger_db, ADDR[0], "XCP", 0) == ["quantity must be greater than zero"]
-    assert attach.validate(ledger_db, ADDR[0], "XCP", 99999999999999) == [
+    assert attach.validate(ledger_db, addresses[0], "XCP", 0) == [
+        "quantity must be greater than zero"
+    ]
+    assert attach.validate(ledger_db, addresses[0], "XCP", 99999999999999) == [
         "insufficient funds for transfer and fee"
     ]
-    assert attach.validate(ledger_db, ADDR[0], "DIVISIBLE", 99999999999999) == [
+    assert attach.validate(ledger_db, addresses[0], "DIVISIBLE", 99999999999999) == [
         "insufficient funds for transfer"
     ]
-    assert attach.validate(ledger_db, ADDR[0], "BTC", 100) == ["cannot send bitcoins"]
-    assert attach.validate(ledger_db, ADDR[0], "XCP", config.MAX_INT + 1) == ["integer overflow"]
-    assert attach.validate(ledger_db, ADDR[0], "XCP", "100") == ["quantity must be in satoshis"]
-    assert attach.validate(ledger_db, ADDR[0], "XCP", 100, -1) == [
+    assert attach.validate(ledger_db, addresses[0], "BTC", 100) == ["cannot send bitcoins"]
+    assert attach.validate(ledger_db, addresses[0], "XCP", config.MAX_INT + 1) == [
+        "integer overflow"
+    ]
+    assert attach.validate(ledger_db, addresses[0], "XCP", "100") == [
+        "quantity must be in satoshis"
+    ]
+    assert attach.validate(ledger_db, addresses[0], "XCP", 100, -1) == [
         "destination vout must be greater than or equal to zero"
     ]
-    assert attach.validate(ledger_db, ADDR[0], "XCP", 100, "1") == [
+    assert attach.validate(ledger_db, addresses[0], "XCP", 100, "1") == [
         "if provided destination must be an integer"
     ]
 
 
-def test_compose(ledger_db):
-    assert attach.compose(ledger_db, ADDR[0], "XCP", 100, None, 1) == (ADDR[0], [], b"eXCP|100|1")
-    assert attach.compose(ledger_db, ADDR[0], "XCP", 100, 666) == (
-        ADDR[0],
-        [(ADDR[0], 666)],
+def test_compose(ledger_db, addresses):
+    assert attach.compose(ledger_db, addresses[0], "XCP", 100, None, 1) == (
+        addresses[0],
+        [],
+        b"eXCP|100|1",
+    )
+    assert attach.compose(ledger_db, addresses[0], "XCP", 100, 666) == (
+        addresses[0],
+        [(addresses[0], 666)],
         b"eXCP|100|",
     )
-    assert attach.compose(ledger_db, ADDR[0], "XCP", 100) == (
-        ADDR[0],
-        [(ADDR[0], 10000)],
+    assert attach.compose(ledger_db, addresses[0], "XCP", 100) == (
+        addresses[0],
+        [(addresses[0], 10000)],
         b"eXCP|100|",
     )
 
@@ -58,20 +64,21 @@ def test_unpack():
     assert attach.unpack(b"XCP|100|") == ("XCP", 100, None)
 
 
-def test_parse_without_destination(ledger_db, blockchain_mock):
-    tx = blockchain_mock.dummy_tx(ledger_db, ADDR[0])
+def test_parse_without_destination(
+    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, addresses[0])
     message = b"XCP|100|"
     attach.parse(ledger_db, tx, message)
 
     utxo = f"{tx['tx_hash']}:0"
-    current_block_index = CurrentState().current_block_index()
-    check_records(
+    test_helpers.check_records(
         ledger_db,
         [
             {
                 "table": "debits",
                 "values": {
-                    "address": ADDR[0],
+                    "address": addresses[0],
                     "asset": "XCP",
                     "quantity": 100,
                     "event": tx["tx_hash"],
@@ -100,9 +107,9 @@ def test_parse_without_destination(ledger_db, blockchain_mock):
                     "tx_hash": tx["tx_hash"],
                     "block_index": tx["block_index"],
                     "status": "valid",
-                    "source": ADDR[0],
+                    "source": addresses[0],
                     "destination": utxo,
-                    "destination_address": ADDR[0],
+                    "destination_address": addresses[0],
                     "asset": "XCP",
                     "quantity": 100,
                     "fee_paid": 0,
@@ -115,17 +122,17 @@ def test_parse_without_destination(ledger_db, blockchain_mock):
                     "block_index": current_block_index,
                     "command": "insert",
                     "category": "sends",
-                    "bindings": to_short_json(
+                    "bindings": test_helpers.to_short_json(
                         {
                             "asset": "XCP",
                             "block_index": tx["block_index"],
                             "destination": utxo,
-                            "destination_address": ADDR[0],
+                            "destination_address": addresses[0],
                             "fee_paid": 0,
                             "quantity": 100,
                             "msg_index": 1,
                             "send_type": "attach",
-                            "source": ADDR[0],
+                            "source": addresses[0],
                             "status": "valid",
                             "tx_hash": tx["tx_hash"],
                             "tx_index": tx["tx_index"],
@@ -138,14 +145,15 @@ def test_parse_without_destination(ledger_db, blockchain_mock):
     )
 
 
-def test_parse_with_destination(ledger_db, blockchain_mock):
-    tx = blockchain_mock.dummy_tx(ledger_db, ADDR[0], op_return_position=0)
+def test_parse_with_destination(
+    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, addresses[0], op_return_position=0)
     message = b"XCP|100|1"
     attach.parse(ledger_db, tx, message)
 
     utxo = f"{tx['tx_hash']}:1"
-    current_block_index = CurrentState().current_block_index()
-    check_records(
+    test_helpers.check_records(
         ledger_db,
         [
             {
@@ -154,17 +162,17 @@ def test_parse_with_destination(ledger_db, blockchain_mock):
                     "block_index": current_block_index,
                     "command": "insert",
                     "category": "sends",
-                    "bindings": to_short_json(
+                    "bindings": test_helpers.to_short_json(
                         {
                             "asset": "XCP",
                             "block_index": tx["block_index"],
                             "destination": utxo,
-                            "destination_address": ADDR[0],
+                            "destination_address": addresses[0],
                             "fee_paid": 0,
                             "quantity": 100,
                             "msg_index": 1,
                             "send_type": "attach",
-                            "source": ADDR[0],
+                            "source": addresses[0],
                             "status": "valid",
                             "tx_hash": tx["tx_hash"],
                             "tx_index": tx["tx_index"],
@@ -177,13 +185,14 @@ def test_parse_with_destination(ledger_db, blockchain_mock):
     )
 
 
-def test_parse_with_op_return_destination(ledger_db, blockchain_mock):
-    tx = blockchain_mock.dummy_tx(ledger_db, ADDR[0], op_return_position=1)
+def test_parse_with_op_return_destination(
+    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, addresses[0], op_return_position=1)
     message = b"XCP|100|1"
     attach.parse(ledger_db, tx, message)
 
-    current_block_index = CurrentState().current_block_index()
-    check_records(
+    test_helpers.check_records(
         ledger_db,
         [
             {
@@ -192,7 +201,7 @@ def test_parse_with_op_return_destination(ledger_db, blockchain_mock):
                     "block_index": current_block_index,
                     "command": "insert",
                     "category": "sends",
-                    "bindings": to_short_json(
+                    "bindings": test_helpers.to_short_json(
                         {
                             "block_index": tx["block_index"],
                             "msg_index": 1,
@@ -209,13 +218,14 @@ def test_parse_with_op_return_destination(ledger_db, blockchain_mock):
     )
 
 
-def test_parse_with_invalid_destination(ledger_db, blockchain_mock):
-    tx = blockchain_mock.dummy_tx(ledger_db, ADDR[0])
+def test_parse_with_invalid_destination(
+    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, addresses[0])
     message = b"XCP|100|3"
     attach.parse(ledger_db, tx, message)
 
-    current_block_index = CurrentState().current_block_index()
-    check_records(
+    test_helpers.check_records(
         ledger_db,
         [
             {
@@ -224,7 +234,7 @@ def test_parse_with_invalid_destination(ledger_db, blockchain_mock):
                     "block_index": current_block_index,
                     "command": "insert",
                     "category": "sends",
-                    "bindings": to_short_json(
+                    "bindings": test_helpers.to_short_json(
                         {
                             "block_index": tx["block_index"],
                             "msg_index": 1,
@@ -241,16 +251,16 @@ def test_parse_with_invalid_destination(ledger_db, blockchain_mock):
     )
 
 
-def test_parse_with_no_destination(ledger_db, blockchain_mock):
+def test_parse_with_no_destination(
+    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+):
     tx = blockchain_mock.dummy_tx(
-        ledger_db, ADDR[0], utxo_destination="", outputs_count=1, op_return_position=0
+        ledger_db, addresses[0], utxo_destination="", outputs_count=1, op_return_position=0
     )
-    print(tx)
     message = b"XCP|100|"
     attach.parse(ledger_db, tx, message)
 
-    current_block_index = CurrentState().current_block_index()
-    check_records(
+    test_helpers.check_records(
         ledger_db,
         [
             {
@@ -259,7 +269,7 @@ def test_parse_with_no_destination(ledger_db, blockchain_mock):
                     "block_index": current_block_index,
                     "command": "insert",
                     "category": "sends",
-                    "bindings": to_short_json(
+                    "bindings": test_helpers.to_short_json(
                         {
                             "block_index": tx["block_index"],
                             "msg_index": 1,

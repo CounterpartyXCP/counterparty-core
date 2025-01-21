@@ -13,6 +13,7 @@ from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database
 
 from ..fixtures.ledgerdb import UNITTEST_FIXTURE
+from ..fixtures.params import ADDR
 
 DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-pytest-data")
 
@@ -157,3 +158,13 @@ def check_record(ledger_db, record):
 def check_records(ledger_db, records):
     for record in records:
         check_record(ledger_db, record)
+
+
+@pytest.fixture(scope="function")
+def current_block_index():
+    return CurrentState().current_block_index()
+
+
+@pytest.fixture(scope="function")
+def addresses():
+    return ADDR
