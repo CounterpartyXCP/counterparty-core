@@ -24,6 +24,7 @@
 - Reorganize files and functions, split too big files, delete all unused functions
 - Remove globals in `lib/util.py` and `ledger.py`
 - Use yoyo migrations to update database
+- Add stacktrace when warning from bitcoind
 
 ## API
 
