@@ -240,7 +240,12 @@ def get_transaction_sources(decoded_tx):
     outputs_value = 0
 
     for vin in decoded_tx["vin"]:  # Loop through inputs.
-        vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(vin)
+        try:
+            vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(
+                vin, no_retry=CurrentState().parsing_mempool()
+            )
+        except exceptions.BitcoindRPCError as e:
+            raise DecodeError("vin not found") from e
 
         outputs_value += vout_value
 

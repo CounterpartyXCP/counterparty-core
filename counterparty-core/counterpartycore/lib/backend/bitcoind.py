@@ -374,11 +374,11 @@ def add_block_in_cache(block_index, block):
         add_transaction_in_cache(transaction["tx_hash"], transaction)
 
 
-def get_decoded_transaction(tx_hash, block_index=None):
+def get_decoded_transaction(tx_hash, block_index=None, no_retry=False):
     if tx_hash in TRANSACTIONS_CACHE:
         return TRANSACTIONS_CACHE[tx_hash]
 
-    raw_tx = getrawtransaction(tx_hash)
+    raw_tx = getrawtransaction(tx_hash, no_retry=no_retry)
     tx = deserialize.deserialize_tx(raw_tx, block_index=block_index)
 
     add_transaction_in_cache(tx_hash, tx)
@@ -494,10 +494,10 @@ def list_unspent(source, allow_unconfirmed_inputs):
     return []
 
 
-def get_vin_info(vin):
+def get_vin_info(vin, no_retry=False):
     # Note: We don't know what block the `vin` is in, and the block might
     # have been from a while ago, so this call may not hit the cache.
-    vin_ctx = get_decoded_transaction(vin["hash"])
+    vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
 
     is_segwit = vin_ctx["segwit"]
     vout = vin_ctx["vout"][vin["n"]]

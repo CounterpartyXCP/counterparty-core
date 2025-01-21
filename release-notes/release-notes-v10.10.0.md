@@ -14,6 +14,7 @@
 - Retry ten times on telemetry request error
 - Return "no implemented" error when trying to get info about RPS transactions
 - Fix typo in `protocol_changes.json' for testnet4
+- Don't retry to get vin info when parsing mempool
 
 ## Codebase
 
