@@ -5,48 +5,44 @@ from counterpartycore.lib.messages import attach
 DUMMY_UTXO = 64 * "0" + ":1"
 
 
-def test_validate(ledger_db, addresses):
-    assert attach.validate(ledger_db, addresses[0], "XCP", 100) == []
-    assert attach.validate(ledger_db, addresses[0], "XCP", 100, 1) == []
+def test_validate(ledger_db, defaults):
+    address_0 = defaults["addresses"][0]
+    assert attach.validate(ledger_db, address_0, "XCP", 100) == []
+    assert attach.validate(ledger_db, address_0, "XCP", 100, 1) == []
     assert attach.validate(ledger_db, DUMMY_UTXO, "XCP", 100) == ["invalid source address"]
-    assert attach.validate(ledger_db, addresses[0], "XCP", 0) == [
-        "quantity must be greater than zero"
-    ]
-    assert attach.validate(ledger_db, addresses[0], "XCP", 99999999999999) == [
+    assert attach.validate(ledger_db, address_0, "XCP", 0) == ["quantity must be greater than zero"]
+    assert attach.validate(ledger_db, address_0, "XCP", 99999999999999) == [
         "insufficient funds for transfer and fee"
     ]
-    assert attach.validate(ledger_db, addresses[0], "DIVISIBLE", 99999999999999) == [
+    assert attach.validate(ledger_db, address_0, "DIVISIBLE", 99999999999999) == [
         "insufficient funds for transfer"
     ]
-    assert attach.validate(ledger_db, addresses[0], "BTC", 100) == ["cannot send bitcoins"]
-    assert attach.validate(ledger_db, addresses[0], "XCP", config.MAX_INT + 1) == [
-        "integer overflow"
-    ]
-    assert attach.validate(ledger_db, addresses[0], "XCP", "100") == [
-        "quantity must be in satoshis"
-    ]
-    assert attach.validate(ledger_db, addresses[0], "XCP", 100, -1) == [
+    assert attach.validate(ledger_db, address_0, "BTC", 100) == ["cannot send bitcoins"]
+    assert attach.validate(ledger_db, address_0, "XCP", config.MAX_INT + 1) == ["integer overflow"]
+    assert attach.validate(ledger_db, address_0, "XCP", "100") == ["quantity must be in satoshis"]
+    assert attach.validate(ledger_db, address_0, "XCP", 100, -1) == [
         "destination vout must be greater than or equal to zero"
     ]
-    assert attach.validate(ledger_db, addresses[0], "XCP", 100, "1") == [
+    assert attach.validate(ledger_db, address_0, "XCP", 100, "1") == [
         "if provided destination must be an integer"
     ]
 
 
-def test_compose(ledger_db, addresses):
-    assert attach.compose(ledger_db, addresses[0], "XCP", 100, None, 1) == (
-        addresses[0],
+def test_compose(ledger_db, defaults):
+    address_0 = defaults["addresses"][0]
+    assert attach.compose(ledger_db, address_0, "XCP", 100, None, 1) == (
+        address_0,
         [],
         b"eXCP|100|1",
     )
-    assert attach.compose(ledger_db, addresses[0], "XCP", 100, 666) == (
-        addresses[0],
-        [(addresses[0], 666)],
+    assert attach.compose(ledger_db, address_0, "XCP", 100, 666) == (
+        address_0,
+        [(address_0, 666)],
         b"eXCP|100|",
     )
-    assert attach.compose(ledger_db, addresses[0], "XCP", 100) == (
-        addresses[0],
-        [(addresses[0], 10000)],
+    assert attach.compose(ledger_db, address_0, "XCP", 100) == (
+        address_0,
+        [(address_0, 10000)],
         b"eXCP|100|",
     )
 
@@ -65,9 +61,10 @@ def test_unpack():
 
 
 def test_parse_without_destination(
-    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+    ledger_db, blockchain_mock, current_block_index, test_helpers, defaults
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, addresses[0])
+    address_0 = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, address_0)
     message = b"XCP|100|"
     attach.parse(ledger_db, tx, message)
 
@@ -78,7 +75,7 @@ def test_parse_without_destination(
             {
                 "table": "debits",
                 "values": {
-                    "address": addresses[0],
+                    "address": address_0,
                     "asset": "XCP",
                     "quantity": 100,
                     "event": tx["tx_hash"],
@@ -107,9 +104,9 @@ def test_parse_without_destination(
                     "tx_hash": tx["tx_hash"],
                     "block_index": tx["block_index"],
                     "status": "valid",
-                    "source": addresses[0],
+                    "source": address_0,
                     "destination": utxo,
-                    "destination_address": addresses[0],
+                    "destination_address": address_0,
                     "asset": "XCP",
                     "quantity": 100,
                     "fee_paid": 0,
@@ -127,12 +124,12 @@ def test_parse_without_destination(
                             "asset": "XCP",
                             "block_index": tx["block_index"],
                             "destination": utxo,
-                            "destination_address": addresses[0],
+                            "destination_address": address_0,
                             "fee_paid": 0,
                             "quantity": 100,
                             "msg_index": 1,
                             "send_type": "attach",
-                            "source": addresses[0],
+                            "source": address_0,
                             "status": "valid",
                             "tx_hash": tx["tx_hash"],
                             "tx_index": tx["tx_index"],
@@ -146,9 +143,10 @@ def test_parse_without_destination(
 
 
 def test_parse_with_destination(
-    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+    ledger_db, blockchain_mock, current_block_index, test_helpers, defaults
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, addresses[0], op_return_position=0)
+    address_0 = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, address_0, op_return_position=0)
     message = b"XCP|100|1"
     attach.parse(ledger_db, tx, message)
 
@@ -167,12 +165,12 @@ def test_parse_with_destination(
                             "asset": "XCP",
                             "block_index": tx["block_index"],
                             "destination": utxo,
-                            "destination_address": addresses[0],
+                            "destination_address": address_0,
                             "fee_paid": 0,
                             "quantity": 100,
                             "msg_index": 1,
                             "send_type": "attach",
-                            "source": addresses[0],
+                            "source": address_0,
                             "status": "valid",
                             "tx_hash": tx["tx_hash"],
                             "tx_index": tx["tx_index"],
@@ -186,9 +184,10 @@ def test_parse_with_destination(
 
 
 def test_parse_with_op_return_destination(
-    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+    ledger_db, blockchain_mock, current_block_index, test_helpers, defaults
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, addresses[0], op_return_position=1)
+    address_0 = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, address_0, op_return_position=1)
     message = b"XCP|100|1"
     attach.parse(ledger_db, tx, message)
 
@@ -219,9 +218,10 @@ def test_parse_with_op_return_destination(
 
 
 def test_parse_with_invalid_destination(
-    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+    ledger_db, blockchain_mock, current_block_index, test_helpers, defaults
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, addresses[0])
+    address_0 = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, address_0)
     message = b"XCP|100|3"
     attach.parse(ledger_db, tx, message)
 
@@ -252,10 +252,11 @@ def test_parse_with_invalid_destination(
 
 
 def test_parse_with_no_destination(
-    ledger_db, blockchain_mock, current_block_index, test_helpers, addresses
+    ledger_db, blockchain_mock, current_block_index, test_helpers, defaults
 ):
+    address_0 = defaults["addresses"][0]
     tx = blockchain_mock.dummy_tx(
-        ledger_db, addresses[0], utxo_destination="", outputs_count=1, op_return_position=0
+        ledger_db, address_0, utxo_destination="", outputs_count=1, op_return_position=0
     )
     message = b"XCP|100|"
     attach.parse(ledger_db, tx, message)

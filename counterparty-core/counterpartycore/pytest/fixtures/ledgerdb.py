@@ -1,6 +1,5 @@
 # Transactions executed to generate the database used by unit tests
 
-from .params import ADDR, MULTISIGADDR, P2SH_ADDR, P2WPKH_ADDR
 from .params import DEFAULT_PARAMS as DP
 
 # 3 or 4 elements by transaction:
@@ -12,7 +11,7 @@ UNITTEST_FIXTURE = [
     [
         "burn",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "quantity": DP["burn_quantity"],
             "overburn": False,
         },
@@ -21,7 +20,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "DIVISIBLE",
             "quantity": DP["quantity"] * 1000,
             "transfer_destination": None,
@@ -35,7 +34,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "NODIVISIBLE",
             "quantity": 1000,
             "transfer_destination": None,
@@ -49,7 +48,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "CALLABLE",
             "quantity": 1000,
             "transfer_destination": None,
@@ -63,7 +62,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "LOCKED",
             "quantity": 1000,
             "transfer_destination": None,
@@ -77,7 +76,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "LOCKED",
             "quantity": 0,
             "transfer_destination": None,
@@ -91,7 +90,7 @@ UNITTEST_FIXTURE = [
     [
         "order",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "give_asset": "XCP",
             "give_quantity": DP["quantity"],
             "get_asset": "DIVISIBLE",
@@ -104,8 +103,8 @@ UNITTEST_FIXTURE = [
     [
         "send",
         {
-            "source": ADDR[0],
-            "destination": ADDR[1],
+            "source": DP["addresses"][0],
+            "destination": DP["addresses"][1],
             "asset": "DIVISIBLE",
             "quantity": DP["quantity"],
         },
@@ -114,14 +113,19 @@ UNITTEST_FIXTURE = [
     ],
     [
         "send",
-        {"source": ADDR[0], "destination": ADDR[1], "asset": "XCP", "quantity": DP["quantity"]},
+        {
+            "source": DP["addresses"][0],
+            "destination": DP["addresses"][1],
+            "asset": "XCP",
+            "quantity": DP["quantity"],
+        },
         {"encoding": "multisig"},
         ["enhanced_sends"],
     ],
     [
         "order",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "give_asset": "XCP",
             "give_quantity": DP["quantity"],
             "get_asset": "DIVISIBLE",
@@ -134,7 +138,7 @@ UNITTEST_FIXTURE = [
     [
         "order",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "give_asset": "XCP",
             "give_quantity": DP["quantity"],
             "get_asset": "BTC",
@@ -147,7 +151,7 @@ UNITTEST_FIXTURE = [
     [
         "order",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "give_asset": "BTC",
             "give_quantity": round(DP["quantity"] / 150),
             "get_asset": "XCP",
@@ -160,8 +164,8 @@ UNITTEST_FIXTURE = [
     [
         "send",
         {
-            "source": ADDR[0],
-            "destination": MULTISIGADDR[0],
+            "source": DP["addresses"][0],
+            "destination": DP["p2ms_addresses"][0],
             "asset": "XCP",
             "quantity": DP["quantity"] * 3,
         },
@@ -171,8 +175,8 @@ UNITTEST_FIXTURE = [
     [
         "send",
         {
-            "source": ADDR[0],
-            "destination": MULTISIGADDR[0],
+            "source": DP["addresses"][0],
+            "destination": DP["p2ms_addresses"][0],
             "asset": "DIVISIBLE",
             "quantity": DP["quantity"] * 10,
         },
@@ -181,20 +185,30 @@ UNITTEST_FIXTURE = [
     ],
     [
         "send",
-        {"source": ADDR[0], "destination": ADDR[1], "asset": "NODIVISIBLE", "quantity": 5},
+        {
+            "source": DP["addresses"][0],
+            "destination": DP["addresses"][1],
+            "asset": "NODIVISIBLE",
+            "quantity": 5,
+        },
         {"encoding": "multisig"},
         ["enhanced_sends"],
     ],
     [
         "send",
-        {"source": ADDR[0], "destination": MULTISIGADDR[0], "asset": "NODIVISIBLE", "quantity": 10},
+        {
+            "source": DP["addresses"][0],
+            "destination": DP["p2ms_addresses"][0],
+            "asset": "NODIVISIBLE",
+            "quantity": 10,
+        },
         {"encoding": "multisig"},
         ["enhanced_sends"],
     ],
     [
         "issuance",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "MAXI",
             "quantity": 2**63 - 1,
             "transfer_destination": None,
@@ -208,7 +222,7 @@ UNITTEST_FIXTURE = [
     [
         "broadcast",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "timestamp": 1388000000,
             "value": 1,
             "fee_fraction": DP["fee_multiplier"],
@@ -219,7 +233,7 @@ UNITTEST_FIXTURE = [
     [
         "broadcast",
         {
-            "source": ADDR[2],
+            "source": DP["addresses"][2],
             "timestamp": 1288000000,
             "value": 1,
             "fee_fraction": 0.0,
@@ -230,8 +244,8 @@ UNITTEST_FIXTURE = [
     [
         "bet",
         {
-            "source": ADDR[0],
-            "feed_address": ADDR[0],
+            "source": DP["addresses"][0],
+            "feed_address": DP["addresses"][0],
             "bet_type": 1,
             "deadline": 1388000001,
             "wager_quantity": 9,
@@ -245,8 +259,8 @@ UNITTEST_FIXTURE = [
     [
         "bet",
         {
-            "source": ADDR[1],
-            "feed_address": ADDR[0],
+            "source": DP["addresses"][1],
+            "feed_address": DP["addresses"][0],
             "bet_type": 0,
             "deadline": 1388000001,
             "wager_quantity": 9,
@@ -261,8 +275,8 @@ UNITTEST_FIXTURE = [
     [
         "bet",
         {
-            "source": ADDR[1],
-            "feed_address": ADDR[0],
+            "source": DP["addresses"][1],
+            "feed_address": DP["addresses"][0],
             "bet_type": 3,
             "deadline": 1388000200,
             "wager_quantity": 10,
@@ -276,7 +290,7 @@ UNITTEST_FIXTURE = [
     [
         "broadcast",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "timestamp": 1388000002,
             "value": 1,
             "fee_fraction": DP["fee_multiplier"],
@@ -287,7 +301,7 @@ UNITTEST_FIXTURE = [
     [
         "burn",
         {
-            "source": ADDR[4],
+            "source": DP["addresses"][4],
             "quantity": DP["burn_quantity"],
         },
         {"encoding": "multisig"},
@@ -295,7 +309,7 @@ UNITTEST_FIXTURE = [
     [
         "burn",
         {
-            "source": ADDR[5],
+            "source": DP["addresses"][5],
             "quantity": DP["burn_quantity"],
         },
         {"encoding": "multisig"},
@@ -303,7 +317,7 @@ UNITTEST_FIXTURE = [
     [
         "burn",
         {
-            "source": ADDR[6],
+            "source": DP["addresses"][6],
             "quantity": DP["burn_quantity"],
         },
         {"encoding": "multisig"},
@@ -311,7 +325,7 @@ UNITTEST_FIXTURE = [
     [
         "burn",
         {
-            "source": ADDR[8],
+            "source": DP["addresses"][8],
             "quantity": DP["burn_verysmall_quantity"],
         },
         {"encoding": "multisig"},
@@ -319,7 +333,7 @@ UNITTEST_FIXTURE = [
     [
         "dispenser",
         {
-            "source": ADDR[5],
+            "source": DP["addresses"][5],
             "asset": "XCP",
             "give_quantity": 100,
             "escrow_quantity": 100,
@@ -331,7 +345,7 @@ UNITTEST_FIXTURE = [
     [
         "burn",
         {
-            "source": P2SH_ADDR[0],
+            "source": DP["p2sh_addresses"][0],
             "quantity": int(DP["burn_quantity"] / 2),
         },
         {"encoding": "opreturn"},
@@ -339,7 +353,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": P2SH_ADDR[0],
+            "source": DP["p2sh_addresses"][0],
             "asset": "PAYTOSCRIPT",
             "quantity": 1000,
             "transfer_destination": None,
@@ -348,22 +362,22 @@ UNITTEST_FIXTURE = [
             "reset": None,
             "description": "PSH issued asset",
         },
-        {"encoding": "multisig", "multisig_pubkey": DP["pubkey"][ADDR[0]]},
+        {"encoding": "multisig", "multisig_pubkey": DP["pubkey"][DP["addresses"][0]]},
     ],
     [
         "send",
         {
-            "source": ADDR[0],
-            "destination": P2SH_ADDR[0],
+            "source": DP["addresses"][0],
+            "destination": DP["p2sh_addresses"][0],
             "asset": "DIVISIBLE",
             "quantity": DP["quantity"],
         },
-        {"encoding": "multisig", "multisig_pubkey": DP["pubkey"][ADDR[0]]},
+        {"encoding": "multisig", "multisig_pubkey": DP["pubkey"][DP["addresses"][0]]},
     ],
     [
         "broadcast",
         {
-            "source": P2SH_ADDR[0],
+            "source": DP["p2sh_addresses"][0],
             "timestamp": 1388000002,
             "value": 1,
             "fee_fraction": DP["fee_multiplier"],
@@ -374,8 +388,8 @@ UNITTEST_FIXTURE = [
     [
         "bet",
         {
-            "source": P2SH_ADDR[0],
-            "feed_address": P2SH_ADDR[0],
+            "source": DP["p2sh_addresses"][0],
+            "feed_address": DP["p2sh_addresses"][0],
             "bet_type": 3,
             "deadline": 1388000200,
             "wager_quantity": 10,
@@ -390,7 +404,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[6],
+            "source": DP["addresses"][6],
             "asset": "LOCKEDPREV",
             "quantity": 1000,
             "transfer_destination": None,
@@ -404,7 +418,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[6],
+            "source": DP["addresses"][6],
             "asset": "LOCKEDPREV",
             "quantity": 0,
             "transfer_destination": None,
@@ -418,7 +432,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[6],
+            "source": DP["addresses"][6],
             "asset": "LOCKEDPREV",
             "quantity": 0,
             "transfer_destination": None,
@@ -429,14 +443,18 @@ UNITTEST_FIXTURE = [
         },
         {"encoding": "multisig"},
     ],
-    ["burn", {"source": P2WPKH_ADDR[0], "quantity": DP["burn_quantity"]}, {"encoding": "opreturn"}],
+    [
+        "burn",
+        {"source": DP["p2wpkh_address"][0], "quantity": DP["burn_quantity"]},
+        {"encoding": "opreturn"},
+    ],
     ["mine_empty_blocks", 480],
     # force 2 enhanced sends
     [
         "send",
         {
-            "source": ADDR[0],
-            "destination": ADDR[1],
+            "source": DP["addresses"][0],
+            "destination": DP["addresses"][1],
             "asset": "XCP",
             "quantity": DP["quantity"],
             "memo": "hello",
@@ -448,8 +466,8 @@ UNITTEST_FIXTURE = [
     [
         "send",
         {
-            "source": ADDR[1],
-            "destination": ADDR[0],
+            "source": DP["addresses"][1],
+            "destination": DP["addresses"][0],
             "asset": "XCP",
             "quantity": DP["quantity"],
             "memo": "fade0001",
@@ -462,7 +480,7 @@ UNITTEST_FIXTURE = [
     [
         "broadcast",
         {
-            "source": ADDR[4],
+            "source": DP["addresses"][4],
             "timestamp": 1388000000,
             "value": 1,
             "fee_fraction": DP["fee_multiplier"],
@@ -473,8 +491,8 @@ UNITTEST_FIXTURE = [
     [
         "bet",
         {
-            "source": ADDR[4],
-            "feed_address": ADDR[4],
+            "source": DP["addresses"][4],
+            "feed_address": DP["addresses"][4],
             "bet_type": 1,
             "deadline": 1388000001,
             "wager_quantity": 9,
@@ -489,7 +507,7 @@ UNITTEST_FIXTURE = [
     [
         "broadcast",
         {
-            "source": ADDR[4],
+            "source": DP["addresses"][4],
             "timestamp": 1388000002,
             "value": 1,
             "fee_fraction": 0.0,
@@ -501,7 +519,7 @@ UNITTEST_FIXTURE = [
     [
         "broadcast",
         {
-            "source": ADDR[4],
+            "source": DP["addresses"][4],
             "timestamp": 1388000003,
             "value": 1,
             "fee_fraction": 0.0,
@@ -513,7 +531,7 @@ UNITTEST_FIXTURE = [
     [
         "broadcast",
         {
-            "source": ADDR[6],
+            "source": DP["addresses"][6],
             "timestamp": 1388000004,
             "value": 1,
             "fee_fraction": 0.0,
@@ -526,7 +544,7 @@ UNITTEST_FIXTURE = [
     [
         "order",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "give_asset": "XCP",
             "give_quantity": DP["quantity"],
             "get_asset": "BTC",
@@ -539,7 +557,7 @@ UNITTEST_FIXTURE = [
     [
         "order",
         {
-            "source": ADDR[1],
+            "source": DP["addresses"][1],
             "give_asset": "BTC",
             "give_quantity": round(DP["quantity"] / 125),
             "get_asset": "XCP",
@@ -549,11 +567,15 @@ UNITTEST_FIXTURE = [
         },
         {"encoding": "multisig", "exact_fee": DP["fee_provided"]},
     ],
-    ["burn", {"source": ADDR[2], "quantity": DP["burn_quantity"]}, {"encoding": "multisig"}],
+    [
+        "burn",
+        {"source": DP["addresses"][2], "quantity": DP["burn_quantity"]},
+        {"encoding": "multisig"},
+    ],
     [
         "issuance",
         {
-            "source": ADDR[2],
+            "source": DP["addresses"][2],
             "asset": "DIVIDEND",
             "quantity": 100,
             "transfer_destination": None,
@@ -566,18 +588,28 @@ UNITTEST_FIXTURE = [
     ],
     [
         "send",
-        {"source": ADDR[2], "destination": ADDR[3], "asset": "DIVIDEND", "quantity": 10},
+        {
+            "source": DP["addresses"][2],
+            "destination": DP["addresses"][3],
+            "asset": "DIVIDEND",
+            "quantity": 10,
+        },
         {"encoding": "multisig"},
     ],
     [
         "send",
-        {"source": ADDR[2], "destination": ADDR[3], "asset": "XCP", "quantity": 92945878046},
+        {
+            "source": DP["addresses"][2],
+            "destination": DP["addresses"][3],
+            "asset": "XCP",
+            "quantity": 92945878046,
+        },
         {"encoding": "multisig"},
     ],
     [
         "issuance",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "PARENT",
             "quantity": DP["quantity"] * 1,
             "transfer_destination": None,
@@ -591,7 +623,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "PARENT.already.issued",
             "quantity": DP["quantity"] * 1,
             "transfer_destination": None,
@@ -605,7 +637,7 @@ UNITTEST_FIXTURE = [
     [
         "fairminter",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "FREEFAIRMIN",
             "asset_parent": "",
             "price": 0,
@@ -617,7 +649,7 @@ UNITTEST_FIXTURE = [
     [
         "fairminter",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "PAIDFAIRMIN",
             "asset_parent": "",
             "price": 10,
@@ -628,13 +660,13 @@ UNITTEST_FIXTURE = [
     ],
     [
         "fairmint",
-        {"source": ADDR[0], "asset": "FREEFAIRMIN", "quantity": 0},
+        {"source": DP["addresses"][0], "asset": "FREEFAIRMIN", "quantity": 0},
         {"encoding": "opreturn"},
     ],
     [
         "fairminter",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "RAIDFAIRMIN",
             "asset_parent": "",
             "price": 10,
@@ -648,7 +680,7 @@ UNITTEST_FIXTURE = [
     [
         "fairminter",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "QAIDFAIRMIN",
             "asset_parent": "",
             "price": 10,
@@ -667,7 +699,7 @@ UNITTEST_FIXTURE = [
     [
         "fairminter",
         {
-            "source": ADDR[1],
+            "source": DP["addresses"][1],
             "asset": "A160361285792733729",
             "asset_parent": "",
             "price": 10,
@@ -690,23 +722,23 @@ UNITTEST_FIXTURE = [
     ],
     [
         "fairmint",
-        {"source": ADDR[1], "asset": "A160361285792733729", "quantity": 10},
+        {"source": DP["addresses"][1], "asset": "A160361285792733729", "quantity": 10},
         {"encoding": "opreturn"},
     ],
     [
         "fairmint",
-        {"source": ADDR[1], "asset": "A160361285792733729", "quantity": 20},
+        {"source": DP["addresses"][1], "asset": "A160361285792733729", "quantity": 20},
         {"encoding": "opreturn"},
     ],
     [
         "attach",
-        {"source": ADDR[0], "asset": "XCP", "quantity": 100},
+        {"source": DP["addresses"][0], "asset": "XCP", "quantity": 100},
         {"encoding": "multisig"},
     ],
     [
         "attach",
         {
-            "source": ADDR[0],
+            "source": DP["addresses"][0],
             "asset": "DIVISIBLE",
             "quantity": 1,
         },
@@ -715,7 +747,7 @@ UNITTEST_FIXTURE = [
     [
         "issuance",
         {
-            "source": ADDR[5],
+            "source": DP["addresses"][5],
             "asset": "TESTDISP",
             "quantity": 1000,
             "transfer_destination": None,
@@ -729,7 +761,7 @@ UNITTEST_FIXTURE = [
     [
         "dispenser",
         {
-            "source": ADDR[5],
+            "source": DP["addresses"][5],
             "asset": "TESTDISP",
             "give_quantity": 100,
             "escrow_quantity": 100,

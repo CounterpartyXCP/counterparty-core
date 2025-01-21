@@ -1,11 +1,16 @@
 from counterpartycore.lib.messages import bet
 
 
-def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
+def test_validate(ledger_db, defaults):
+    address_0 = defaults["addresses"][0]
+    address_1 = defaults["addresses"][1]
+    address_2 = defaults["addresses"][2]
+    p2sh_address = defaults["p2sh_addresses"][0]
+
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         0,
         1488000100,
         defaults["small"],
@@ -18,8 +23,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         0,
         1488000100,
         2**32,
@@ -32,8 +37,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[0],
-        addresses[1],
+        address_0,
+        address_1,
         3,
         1388001000,
         defaults["small"],
@@ -46,8 +51,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         -1,
         1488000100,
         defaults["small"],
@@ -60,8 +65,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         2,
         1488000100,
         defaults["small"],
@@ -74,8 +79,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        p2sh_addresses[0],
-        addresses[0],
+        p2sh_address,
+        address_0,
         0,
         1488000100,
         2**32,
@@ -88,8 +93,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[0],
-        p2sh_addresses[0],
+        address_0,
+        p2sh_address,
         0,
         1488000100,
         2**32,
@@ -102,8 +107,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         3,
         1488000100,
         defaults["small"],
@@ -119,8 +124,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         defaults["small"],
@@ -133,8 +138,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         1.1 * defaults["small"],
@@ -147,8 +152,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         defaults["small"],
@@ -161,8 +166,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         defaults["small"],
@@ -175,8 +180,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         -1 * defaults["small"],
@@ -189,8 +194,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         defaults["small"],
@@ -203,8 +208,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[2],
+        address_1,
+        address_2,
         1,
         1488000100,
         defaults["small"],
@@ -217,8 +222,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         -1488000100,
         defaults["small"],
@@ -231,8 +236,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         defaults["small"],
@@ -245,8 +250,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         defaults["small"],
@@ -259,8 +264,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         2,
         1488000100,
         defaults["small"],
@@ -273,8 +278,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         defaults["small"],
@@ -287,8 +292,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         2**63,
@@ -301,8 +306,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         defaults["small"],
@@ -315,8 +320,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         2**63,
         1488000100,
         defaults["small"],
@@ -329,8 +334,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         1488000100,
         defaults["small"],
@@ -343,8 +348,8 @@ def test_validate(ledger_db, addresses, p2sh_addresses, defaults):
 
     assert bet.validate(
         ledger_db,
-        addresses[1],
-        addresses[0],
+        address_1,
+        address_0,
         1,
         2**63,
         defaults["small"],
