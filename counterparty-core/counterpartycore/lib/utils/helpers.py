@@ -85,8 +85,8 @@ class ApiJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def to_json(obj, indent=None):
-    return json.dumps(obj, cls=ApiJsonEncoder, indent=indent)
+def to_json(obj, indent=None, sort_keys=False):
+    return json.dumps(obj, cls=ApiJsonEncoder, indent=indent, sort_keys=sort_keys)
 
 
 def to_short_json(obj):

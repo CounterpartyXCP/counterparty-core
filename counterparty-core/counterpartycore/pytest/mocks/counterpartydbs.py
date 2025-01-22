@@ -10,7 +10,7 @@ from counterpartycore.lib.api import composer, dbbuilder
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, helpers
 
 from ..fixtures.defaults import DEFAULT_PARAMS
 from ..fixtures.ledgerdb import UNITTEST_FIXTURE
@@ -161,8 +161,8 @@ def check_record(ledger_db, record):
             last_record = cursor.execute(
                 f"SELECT {', '.join(fields)} FROM {record['table']} ORDER BY rowid DESC LIMIT 1"  # noqa: S608
             ).fetchone()
-            print("test output", json.dumps(last_record, sort_keys=True))
-            print("expected output", json.dumps(record["values"], sort_keys=True))
+            print("test output", helpers.to_json(last_record, sort_keys=True))
+            print("expected output", helpers.to_json(record["values"], sort_keys=True))
             assert ok, f"Record not found in {record['table']}: {record['values']}"
 
 
