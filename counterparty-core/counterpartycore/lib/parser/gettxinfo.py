@@ -4,7 +4,6 @@ import struct
 from io import BytesIO
 
 from arc4 import ARC4
-from bitcoinutils.keys import PublicKey
 
 from counterpartycore.lib import backend, config, exceptions, ledger
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
@@ -83,10 +82,7 @@ def decode_checkmultisig(asm, decoded_tx):
         chunk = chunk[1 : chunk_length + 1]
         destination, data = None, chunk[len(config.PREFIX) :]
     else:  # Destination
-        pubkeyhashes = [
-            PublicKey.from_hex(binascii.hexlify(pubkey).decode("utf-8")).get_address().to_string()
-            for pubkey in pubkeys
-        ]
+        pubkeyhashes = [p2sh.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
         destination, data = (
             multisig.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes)),
             None,
