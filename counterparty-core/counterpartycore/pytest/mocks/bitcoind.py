@@ -107,7 +107,7 @@ def list_unspent(source, allow_unconfirmed_inputs=True):
     return BlockchainMock().list_unspent(source, allow_unconfirmed_inputs)
 
 
-def get_vin_info(vin):
+def get_vin_info(vin, no_retry=False):
     return BlockchainMock().get_vin_info(vin)
 
 
