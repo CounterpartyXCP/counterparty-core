@@ -707,7 +707,8 @@ COMPOSER_VECTOR = {
                     {
                         "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
                         "vout": 0,
-                        "value": 999,
+                        "value": 99900000000,
+                        "amount": 999,
                     },
                     {
                         "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
@@ -1238,6 +1239,7 @@ COMPOSER_VECTOR = {
                         "sigops_count": 8,
                         "vsize": 258,
                     },
+                    "inputs_values": [199909140],
                 },
             },
             {
@@ -1255,6 +1257,7 @@ COMPOSER_VECTOR = {
                         "sigops_count": 8,
                         "vsize": 258,
                     },
+                    "inputs_values": [199909140],
                 },
             },
         ],
@@ -1270,6 +1273,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1286,6 +1290,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1305,6 +1310,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1324,6 +1330,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1343,6 +1350,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1416,7 +1424,7 @@ COMPOSER_VECTOR = {
                 ),
                 "out": (
                     {
-                        "sat_per_vbyte": 1,
+                        "sat_per_vbyte": 1023 / 1024,
                         "max_fee": 666,
                         "mutlisig_pubkey": DEFAULT_PARAMS["pubkey"][ADDR[0]],
                         "verbose": True,
@@ -1547,6 +1555,7 @@ COMPOSER_VECTOR = {
                     "btc_fee": 759,
                     "data": b"TESTXXXXeXCP|10|",
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "inputs_values": [199909140],
                     "signed_tx_estimated_size": {
                         "vsize": 253,
                         "adjusted_vsize": 253,
@@ -1583,6 +1592,7 @@ COMPOSER_VECTOR = {
                     "btc_fee": 759,
                     "data": b"TESTXXXXeXCP|10|",
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "inputs_values": [199909140],
                     "signed_tx_estimated_size": {
                         "vsize": 253,
                         "adjusted_vsize": 253,
@@ -1620,6 +1630,7 @@ COMPOSER_VECTOR = {
                     "btc_fee": 678,
                     "data": None,
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "inputs_values": [999999999],
                     "signed_tx_estimated_size": {
                         "vsize": 226,
                         "adjusted_vsize": 226,
@@ -1656,6 +1667,7 @@ COMPOSER_VECTOR = {
                     "btc_fee": 678,
                     "data": None,
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "inputs_values": [999999999],
                     "signed_tx_estimated_size": {
                         "vsize": 226,
                         "adjusted_vsize": 226,

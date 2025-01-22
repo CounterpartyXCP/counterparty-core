@@ -6,6 +6,7 @@ import string
 import sys
 import time
 from collections import OrderedDict
+from decimal import Decimal as D
 
 from arc4 import ARC4
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress, PublicKey
@@ -385,7 +386,6 @@ def complete_unspent_list(unspent_list):
                         utxo["amount"] = vout["value"]
         utxo["is_segwit"] = is_segwit_output(utxo["script_pub_key"])
         completed_unspent_list.append(utxo)
-
     return completed_unspent_list
 
 
@@ -478,7 +478,8 @@ def ensure_utxo_is_first(utxo, unspent_list):
             {
                 "txid": txid,
                 "vout": vout,
-                "value": value,
+                "value": int(value * config.UNIT),
+                "amount": value,
             },
         )
     return new_unspent_list
@@ -786,6 +787,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         needed_fee = sat_per_vbyte * adjusted_vsize
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
+        needed_fee = int(needed_fee)
         # if change is enough for needed fee, add change output and break
         if change_amount > needed_fee:
             change_amount = int(change_amount - needed_fee)
@@ -855,6 +857,7 @@ def construct(db, tx_info, construct_params):
     btc_out = sum(output.amount for output in outputs)
     btc_change = sum(change_output.amount for change_output in change_outputs)
     lock_scripts = [utxo["script_pub_key"] for utxo in selected_utxos]
+    inputs_values = [utxo["value"] for utxo in selected_utxos]
     tx = Transaction(inputs, outputs + change_outputs)
     unsigned_tx_hex = tx.serialize()
     adjusted_vsize, virtual_size, sigops_count = get_size_info(tx, selected_utxos)
@@ -867,6 +870,7 @@ def construct(db, tx_info, construct_params):
         "btc_fee": btc_in - btc_out - btc_change,
         "data": config.PREFIX + data if data else None,
         "lock_scripts": lock_scripts,
+        "inputs_values": inputs_values,
         "signed_tx_estimated_size": {
             "vsize": virtual_size,
             "adjusted_vsize": adjusted_vsize,
@@ -879,6 +883,11 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
     tx_hex = composed_tx["rawtransaction"]
     source, destinations, data = tx_info
     decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)
+
+    total_out = sum(out["value"] for out in decoded_tx["vout"])
+    assert total_out == composed_tx["btc_out"] + composed_tx["btc_change"]
+    assert composed_tx["btc_in"] == total_out + composed_tx["btc_fee"]
+    assert sum(composed_tx["inputs_values"]) == composed_tx["btc_in"]
 
     # check if source address matches the first input address
     first_utxo_txid = decoded_tx["vin"][0]["hash"]
@@ -935,7 +944,7 @@ CONSTRUCT_PARAMS = {
     "encoding": (str, "auto", "The encoding method to use"),
     "validate": (bool, True, "Validate the transaction"),
     # fee parameters
-    "sat_per_vbyte": (int, None, "The fee per vbyte in satoshis"),
+    "sat_per_vbyte": (float, None, "The fee per vbyte in satoshis"),
     "confirmation_target": (
         int,
         config.ESTIMATE_FEE_CONF_TARGET,
@@ -1023,11 +1032,17 @@ DEPRECATED_CONSTRUCT_PARAMS = [
 ]
 
 
+def fee_per_kb_to_sat_per_vbyte(fee_per_kb):
+    if fee_per_kb is None or fee_per_kb == 0:
+        return 0
+    return float(D(fee_per_kb) / D(1024))
+
+
 def prepare_construct_params(construct_params):
     cleaned_construct_params = construct_params.copy()
     # copy deprecated parameters to new ones
     for deprecated_param, new_param, copyer in [
-        ("fee_per_kb", "sat_per_vbyte", lambda x: max(x // 1024, 1)),
+        ("fee_per_kb", "sat_per_vbyte", fee_per_kb_to_sat_per_vbyte),
         ("fee_provided", "max_fee", lambda x: x),
         ("dust_return_pubkey", "mutlisig_pubkey", lambda x: x),
         ("return_psbt", "verbose", lambda x: x),

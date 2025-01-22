@@ -1061,7 +1061,7 @@ class RegtestNode:
                 "destination": self.addresses[1],
                 "quantity": 10,
                 "asset": "XCP",
-                "sat_per_vbyte": 2,
+                "sat_per_vbyte": 2.31,
                 "verbose": True,
                 "encoding": "multisig",
                 "validate": False,
@@ -1083,7 +1083,7 @@ class RegtestNode:
             unsigned_tx["signed_tx_estimated_size"]["vsize"],
             unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"],
         )
-        assert unsigned_tx["btc_fee"] == size * 2
+        assert unsigned_tx["btc_fee"] == int(size * 2.31)
 
         legacy_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "legacy").strip()
         self.send_transaction(
@@ -1129,6 +1129,26 @@ class RegtestNode:
             unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"],
         )
         assert size * 3 - 3 <= unsigned_tx["btc_fee"] <= size * 3 + 3
+
+        # check fees with detach
+        list_unspent = json.loads(
+            self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([self.addresses[0]])).strip()
+        )
+        sorted(list_unspent, key=lambda x: -x["amount"])
+        utxo = f"{list_unspent[0]['txid']}:{list_unspent[0]['vout']}"
+        value = int(list_unspent[0]["amount"] * 1e8)
+        unsigned_tx = self.compose(
+            utxo,
+            "detach",
+            {
+                "validate": False,
+                "verbose": True,
+                "exact_fee": 1,
+            },
+        )["result"]
+        transaction4 = Transaction.from_raw(unsigned_tx["rawtransaction"])
+        total_out = sum([output.amount for output in transaction4.outputs])
+        assert total_out == value - 1
 
     def test_rbf(self):
         self.start_and_wait_second_node()
