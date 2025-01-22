@@ -71,11 +71,13 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         op_return_position=1,
         utxo_source=None,
         utxo_destination=None,
+        use_first_tx=False,
     ):
         # we take an existing tx to avoid foreign key constraint errors
         cursor = ledger_db.cursor()
         tx = cursor.execute(
-            "SELECT * FROM transactions WHERE source = ? ORDER BY rowid DESC", (source,)
+            f"SELECT * FROM transactions WHERE source = ? ORDER BY rowid {'ASC' if use_first_tx else 'DESC'}",  # noqa S608
+            (source,),
         ).fetchone()
 
         utxos_info = [utxo_source or ""]
