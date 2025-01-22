@@ -552,3 +552,72 @@ def test_parse_bet_type_2(ledger_db, blockchain_mock, defaults, test_helpers):
             }
         ],
     )
+
+
+def test_get_fee_fraction(ledger_db, defaults):
+    assert bet.get_fee_fraction(ledger_db, defaults["addresses"][1]) == 0
+    assert bet.get_fee_fraction(ledger_db, defaults["p2sh_addresses"][0]) == 0.05
+    assert bet.get_fee_fraction(ledger_db, defaults["addresses"][0]) == 0.05
+    assert bet.get_fee_fraction(ledger_db, defaults["addresses"][2]) == 0
+
+
+def test_match(ledger_db):
+    assert bet.match(ledger_db, {"tx_index": 99999999, "tx_hash": "fakehash"}) is None
+
+    bets = ledger_db.execute("SELECT tx_index, tx_hash FROM bets WHERE status = 'open'").fetchall()
+    for last_bet in bets:
+        assert bet.match(ledger_db, last_bet) is None
+
+
+def test_cancel_bet(ledger_db, test_helpers, current_block_index):
+    bets = ledger_db.execute("SELECT * FROM bets WHERE status = 'open'").fetchall()
+    for last_bet in bets:
+        bet.cancel_bet(ledger_db, last_bet, "cancelled", current_block_index, last_bet["tx_index"])
+        test_helpers.check_records(
+            ledger_db,
+            [
+                {
+                    "table": "credits",
+                    "values": {
+                        "address": last_bet["source"],
+                        "asset": "XCP",
+                        "quantity": last_bet["wager_remaining"],
+                        "block_index": current_block_index,
+                        "event": last_bet["tx_hash"],
+                    },
+                }
+            ],
+        )
+
+
+def test_cancel_bet_match(ledger_db, test_helpers, current_block_index):
+    bet_match = ledger_db.execute("SELECT * FROM bet_matches ORDER BY rowid LIMIT 1").fetchone()
+    bet.cancel_bet_match(
+        ledger_db, bet_match, "filled", current_block_index, bet_match["tx0_index"]
+    )
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "credits",
+                "values": {
+                    "address": bet_match["tx0_address"],
+                    "asset": "XCP",
+                    "quantity": bet_match["forward_quantity"],
+                    "block_index": current_block_index,
+                    "event": bet_match["id"],
+                },
+            },
+            {
+                "table": "credits",
+                "values": {
+                    "address": bet_match["tx1_address"],
+                    "asset": "XCP",
+                    "quantity": bet_match["backward_quantity"],
+                    "block_index": current_block_index,
+                    "event": bet_match["id"],
+                },
+            },
+        ],
+    )
