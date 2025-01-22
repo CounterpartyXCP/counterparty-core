@@ -4,15 +4,10 @@ from counterpartycore.lib.messages import bet
 
 
 def test_validate(ledger_db, defaults, current_block_index):
-    address_0 = defaults["addresses"][0]
-    address_1 = defaults["addresses"][1]
-    address_2 = defaults["addresses"][2]
-    p2sh_address = defaults["p2sh_addresses"][0]
-
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         0,
         1488000100,
         defaults["small"],
@@ -25,8 +20,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         0,
         1488000100,
         2**32,
@@ -39,8 +34,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_0,
-        address_1,
+        defaults["addresses"][0],
+        defaults["addresses"][1],
         3,
         1388001000,
         defaults["small"],
@@ -53,8 +48,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         -1,
         1488000100,
         defaults["small"],
@@ -67,8 +62,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         2,
         1488000100,
         defaults["small"],
@@ -81,8 +76,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        p2sh_address,
-        address_0,
+        defaults["p2sh_addresses"][0],
+        defaults["addresses"][0],
         0,
         1488000100,
         2**32,
@@ -95,8 +90,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_0,
-        p2sh_address,
+        defaults["addresses"][0],
+        defaults["p2sh_addresses"][0],
         0,
         1488000100,
         2**32,
@@ -109,8 +104,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         3,
         1488000100,
         defaults["small"],
@@ -126,8 +121,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         defaults["small"],
@@ -140,8 +135,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         1.1 * defaults["small"],
@@ -154,8 +149,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         defaults["small"],
@@ -168,8 +163,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         defaults["small"],
@@ -182,8 +177,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         -1 * defaults["small"],
@@ -196,8 +191,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         defaults["small"],
@@ -210,8 +205,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_2,
+        defaults["addresses"][1],
+        defaults["addresses"][2],
         1,
         1488000100,
         defaults["small"],
@@ -224,8 +219,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         -1488000100,
         defaults["small"],
@@ -238,8 +233,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         defaults["small"],
@@ -252,8 +247,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         defaults["small"],
@@ -266,8 +261,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         2,
         1488000100,
         defaults["small"],
@@ -280,8 +275,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         defaults["small"],
@@ -294,8 +289,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         2**63,
@@ -308,8 +303,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         defaults["small"],
@@ -322,8 +317,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         2**63,
         1488000100,
         defaults["small"],
@@ -336,8 +331,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         1488000100,
         defaults["small"],
@@ -350,8 +345,8 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        address_1,
-        address_0,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
         1,
         2**63,
         defaults["small"],
@@ -414,9 +409,7 @@ def test_compose(ledger_db, defaults):
 
 
 def test_parse_bet_type_0(ledger_db, blockchain_mock, defaults, test_helpers):
-    address_0 = defaults["addresses"][0]
-    address_1 = defaults["addresses"][1]
-    tx = blockchain_mock.dummy_tx(ledger_db, address_1, address_0)
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1], defaults["addresses"][0])
     message = b"\x00\x00X\xb1\x14d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n"
     bet.parse(ledger_db, tx, message)
 
@@ -429,8 +422,8 @@ def test_parse_bet_type_0(ledger_db, blockchain_mock, defaults, test_helpers):
                     "tx_index": tx["tx_index"],
                     "tx_hash": tx["tx_hash"],
                     "block_index": tx["block_index"],
-                    "source": address_1,
-                    "feed_address": address_0,
+                    "source": defaults["addresses"][1],
+                    "feed_address": defaults["addresses"][0],
                     "bet_type": 0,
                     "deadline": 1488000100,
                     "wager_quantity": 50000000,
@@ -450,8 +443,7 @@ def test_parse_bet_type_0(ledger_db, blockchain_mock, defaults, test_helpers):
 
 
 def test_parse_invalid(ledger_db, blockchain_mock, defaults, test_helpers):
-    address_0 = defaults["addresses"][0]
-    tx = blockchain_mock.dummy_tx(ledger_db, address_0, address_0)
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], defaults["addresses"][0])
     message = b"\x00\x00X\xb1\x14\x00\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\xb0\x00\x00\x00\n"
     bet.parse(ledger_db, tx, message)
 
@@ -464,8 +456,8 @@ def test_parse_invalid(ledger_db, blockchain_mock, defaults, test_helpers):
                     "tx_index": tx["tx_index"],
                     "tx_hash": tx["tx_hash"],
                     "block_index": tx["block_index"],
-                    "source": address_0,
-                    "feed_address": address_0,
+                    "source": defaults["addresses"][0],
+                    "feed_address": defaults["addresses"][0],
                     "bet_type": 0,
                     "deadline": 1488000000,
                     "wager_quantity": 100000000,
@@ -485,8 +477,7 @@ def test_parse_invalid(ledger_db, blockchain_mock, defaults, test_helpers):
 
 
 def test_parse_p2sh_source(ledger_db, blockchain_mock, defaults, test_helpers):
-    address_0 = defaults["p2sh_addresses"][0]
-    tx = blockchain_mock.dummy_tx(ledger_db, address_0, address_0)
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], defaults["addresses"][0])
     message = b"\x00\x00X\xb1\x14d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n"
     bet.parse(ledger_db, tx, message)
 
@@ -499,8 +490,8 @@ def test_parse_p2sh_source(ledger_db, blockchain_mock, defaults, test_helpers):
                     "tx_index": tx["tx_index"],
                     "tx_hash": tx["tx_hash"],
                     "block_index": tx["block_index"],
-                    "source": address_0,
-                    "feed_address": address_0,
+                    "source": defaults["addresses"][0],
+                    "feed_address": defaults["addresses"][0],
                     "bet_type": 0,
                     "deadline": 1488000100,
                     "wager_quantity": 50000000,
@@ -520,8 +511,7 @@ def test_parse_p2sh_source(ledger_db, blockchain_mock, defaults, test_helpers):
 
 
 def test_parse_bet_type_2(ledger_db, blockchain_mock, defaults, test_helpers):
-    address_0 = defaults["addresses"][0]
-    tx = blockchain_mock.dummy_tx(ledger_db, address_0, address_0)
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], defaults["addresses"][0])
     message = b"\x00\x02R\xbb3\xc8\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\xb0\x00\x00\x03\xe8"
     bet.parse(ledger_db, tx, message)
 
@@ -534,8 +524,8 @@ def test_parse_bet_type_2(ledger_db, blockchain_mock, defaults, test_helpers):
                     "tx_index": tx["tx_index"],
                     "tx_hash": tx["tx_hash"],
                     "block_index": tx["block_index"],
-                    "source": address_0,
-                    "feed_address": address_0,
+                    "source": defaults["addresses"][0],
+                    "feed_address": defaults["addresses"][0],
                     "bet_type": 2,
                     "deadline": 1388000200,
                     "wager_quantity": 10,

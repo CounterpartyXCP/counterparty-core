@@ -67,6 +67,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         ledger_db,
         source,
         destination=None,
+        btc_amount=DEFAULT_PARAMS["quantity"],
         outputs_count=2,
         op_return_position=1,
         utxo_source=None,
@@ -96,6 +97,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
             "tx_hash": tx["tx_hash"],
             "utxos_info": utxos_info,
             "destination": destination,
+            "btc_amount": btc_amount,
         }
 
 
