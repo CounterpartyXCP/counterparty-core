@@ -7,6 +7,8 @@ This is a small release that includes numerous bug and stability fixes, as well 
 
 This release is not a protocol change and upgrading is not mandatory, but it is highly recommended.
 
+Important: if you are running a version lower than 10.9.0 you must first update to 10.9.0 and only then install v10.9.1.
+
 
 # ChangeLog
 
