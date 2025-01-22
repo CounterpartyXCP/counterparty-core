@@ -3,7 +3,7 @@ from counterpartycore.lib.messages import broadcast
 from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
-def test_validate(ledger_db, defaults):
+def test_validate(ledger_db, defaults, current_block_index):
     assert (
         broadcast.validate(
             ledger_db,
@@ -12,7 +12,7 @@ def test_validate(ledger_db, defaults):
             1,
             defaults["fee_multiplier"],
             "Unit Test",
-            defaults["default_block_index"],
+            current_block_index,
         )
         == []
     )
@@ -25,7 +25,7 @@ def test_validate(ledger_db, defaults):
             1,
             defaults["fee_multiplier"],
             "Unit Test",
-            defaults["default_block_index"],
+            current_block_index,
         )
         == []
     )
@@ -37,7 +37,7 @@ def test_validate(ledger_db, defaults):
         1,
         defaults["fee_multiplier"],
         "Unit Test",
-        defaults["default_block_index"],
+        current_block_index,
     ) == ["locked feed"]
 
     assert broadcast.validate(
@@ -47,7 +47,7 @@ def test_validate(ledger_db, defaults):
         1,
         4294967296,
         "Unit Test",
-        defaults["default_block_index"],
+        current_block_index,
     ) == ["fee fraction greater than or equal to 1"]
 
     assert broadcast.validate(
@@ -57,7 +57,7 @@ def test_validate(ledger_db, defaults):
         1,
         defaults["fee_multiplier"],
         "Unit Test",
-        defaults["default_block_index"],
+        current_block_index,
     ) == ["negative timestamp", "feed timestamps not monotonically increasing"]
 
     assert broadcast.validate(
@@ -67,7 +67,7 @@ def test_validate(ledger_db, defaults):
         1,
         defaults["fee_multiplier"],
         "Unit Test",
-        defaults["default_block_index"],
+        current_block_index,
     ) == ["null source address"]
 
     assert broadcast.validate(
@@ -77,7 +77,7 @@ def test_validate(ledger_db, defaults):
         1,
         defaults["fee_multiplier"],
         "OPTIONS %i" % (config.ADDRESS_OPTION_MAX_VALUE + 1),
-        defaults["default_block_index"],
+        current_block_index,
     ) == ["options out of range"]
 
     assert broadcast.validate(
@@ -87,7 +87,7 @@ def test_validate(ledger_db, defaults):
         1,
         defaults["fee_multiplier"],
         "OPTIONS -1",
-        defaults["default_block_index"],
+        current_block_index,
     ) == ["options integer overflow"]
 
     assert broadcast.validate(
@@ -97,7 +97,7 @@ def test_validate(ledger_db, defaults):
         1,
         defaults["fee_multiplier"],
         "OPTIONS XCP",
-        defaults["default_block_index"],
+        current_block_index,
     ) == ["options not an integer"]
 
 

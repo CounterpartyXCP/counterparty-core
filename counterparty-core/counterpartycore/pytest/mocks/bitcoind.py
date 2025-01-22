@@ -8,7 +8,7 @@ from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, check, deserialize
 from counterpartycore.lib.utils import helpers, multisig, script
 
-from ..fixtures.params import DEFAULT_PARAMS
+from ..fixtures.defaults import DEFAULT_PARAMS
 
 
 class BlockchainMock(metaclass=helpers.SingletonMeta):

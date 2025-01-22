@@ -6,6 +6,22 @@ UNIT = 100000000
 
 """This structure is used throughout the test suite to populate transactions with standardized and tested data."""
 
+DEFAULT_PARAMS = {
+    "quantity": UNIT,
+    "small": round(UNIT / 2),
+    "expiration": 10,
+    "fee_required": 900000,
+    "fee_provided": 1000000,
+    "fee_multiplier": 0.05,
+    "unspendable": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+    "burn_start": 310000,
+    "burn_end": 4017708,
+    "burn_quantity": int(0.62 * UNIT),
+    "burn_verysmall_quantity": int(0.0001 * UNIT),
+    "regular_dust_size": 5430,  # This was the default value used in a lot of tests historically
+}
+
+
 ADDRESSES = [
     [
         "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -57,24 +73,6 @@ ADDRESSES = [
         "033ae8ae93bca8a08043768879a623b05f352a64cd64e1b8de4291c4cc52778936",
     ],
 ]
-
-DEFAULT_PARAMS = {
-    "quantity": UNIT,
-    "small": round(UNIT / 2),
-    "expiration": 10,
-    "fee_required": 900000,
-    "fee_provided": 1000000,
-    "fee_multiplier": 0.05,
-    "unspendable": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
-    "burn_start": 310000,
-    "burn_end": 4017708,
-    "burn_quantity": int(0.62 * UNIT),
-    "burn_verysmall_quantity": int(0.0001 * UNIT),
-    "default_block_index": 310000 + 704,
-    "default_tx_index": 705,
-    "default_block_hash": "2d62095b10a709084b1854b262de77cb9f4f7cd76ba569657df8803990ffbfc6c12bca3c18a44edae9498e1f0f054072e16eef32dfa5e3dd4be149009115b4b8",
-    "regular_dust_size": 5430,  # This was the default value used in a lot of tests historically
-}
 
 DEFAULT_PARAMS["addresses"] = [a[0] for a in ADDRESSES]
 

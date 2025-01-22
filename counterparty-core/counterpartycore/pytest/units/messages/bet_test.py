@@ -3,7 +3,7 @@ from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import bet
 
 
-def test_validate(ledger_db, defaults):
+def test_validate(ledger_db, defaults, current_block_index):
     address_0 = defaults["addresses"][0]
     address_1 = defaults["addresses"][1]
     address_2 = defaults["addresses"][2]
@@ -20,7 +20,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == ([], 15120)
 
     assert bet.validate(
@@ -34,7 +34,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == ([], 15120)
 
     assert bet.validate(
@@ -48,7 +48,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         5040,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["feed doesn’t exist"], 5040)
 
     assert bet.validate(
@@ -62,7 +62,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["unknown bet type"], 15120)
 
     assert bet.validate(
@@ -76,7 +76,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["leverage used with Equal or NotEqual"], 15120)
 
     assert bet.validate(
@@ -90,7 +90,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == ([], 15120)
 
     assert bet.validate(
@@ -104,7 +104,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == ([], 15120)
 
     assert bet.validate(
@@ -118,7 +118,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         5000,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (
         ["leverage used with Equal or NotEqual", "leverage level too low"],
         5000,
@@ -149,7 +149,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["wager_quantity must be in satoshis"], 15120)
 
     assert bet.validate(
@@ -163,7 +163,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["counterwager_quantity must be in satoshis"], 15120)
 
     assert bet.validate(
@@ -177,7 +177,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         1.1 * defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["expiration must be expressed as an integer block delta"], 15120)
 
     assert bet.validate(
@@ -191,7 +191,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["non‐positive wager"], 15120)
 
     assert bet.validate(
@@ -205,7 +205,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["non‐positive counterwager"], 15120)
 
     assert bet.validate(
@@ -219,7 +219,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["feed is locked"], 15120)
 
     assert bet.validate(
@@ -233,7 +233,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["deadline in that feed’s past", "negative deadline"], 15120)
 
     assert bet.validate(
@@ -247,7 +247,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         -1 * defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["negative expiration"], 15120)
 
     assert bet.validate(
@@ -261,7 +261,7 @@ def test_validate(ledger_db, defaults):
         1.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["CFDs have no target value"], 15120)
 
     assert bet.validate(
@@ -275,7 +275,7 @@ def test_validate(ledger_db, defaults):
         -1.0,
         5040,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["negative target value"], 5040)
 
     assert bet.validate(
@@ -289,7 +289,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         8095,
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["expiration overflow"], 15120)
 
     assert bet.validate(
@@ -303,7 +303,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["integer overflow"], 15120)
 
     assert bet.validate(
@@ -317,7 +317,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["integer overflow"], 15120)
 
     assert bet.validate(
@@ -331,7 +331,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["integer overflow", "unknown bet type"], 15120)
 
     assert bet.validate(
@@ -345,7 +345,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         2**63,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["integer overflow"], 2**63)
 
     assert bet.validate(
@@ -359,7 +359,7 @@ def test_validate(ledger_db, defaults):
         0.0,
         15120,
         defaults["expiration"],
-        defaults["default_block_index"],
+        current_block_index,
     ) == (["integer overflow"], 15120)
 
 

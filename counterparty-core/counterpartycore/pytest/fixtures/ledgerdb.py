@@ -1,6 +1,6 @@
 # Transactions executed to generate the database used by unit tests
 
-from .params import DEFAULT_PARAMS as DP
+from .defaults import DEFAULT_PARAMS as DP
 
 # 3 or 4 elements by transaction:
 # 1. Transaction name

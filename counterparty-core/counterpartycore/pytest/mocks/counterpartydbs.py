@@ -12,8 +12,8 @@ from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database
 
+from ..fixtures.defaults import DEFAULT_PARAMS
 from ..fixtures.ledgerdb import UNITTEST_FIXTURE
-from ..fixtures.params import DEFAULT_PARAMS
 
 DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-pytest-data")
 
