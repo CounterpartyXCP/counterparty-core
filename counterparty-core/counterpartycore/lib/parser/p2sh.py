@@ -186,7 +186,6 @@ def decode_p2sh_input(asm, p2sh_is_segwit=False):
         datachunk = found_data
         redeem_script = asm[-1]  # asm[-2:]
     else:
-        # print('ASM:', len(asm))
         pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(
             asm[-1], p2sh_is_segwit
         )

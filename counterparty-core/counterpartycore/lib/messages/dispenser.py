@@ -59,7 +59,6 @@ def validate(
     block_index,
     oracle_address,
 ):
-    logger.warning("VALIDATE DISPENSER")
     problems = []
     order_match = None  # noqa: F841
     asset_id = None
@@ -83,8 +82,6 @@ def validate(
 
     cursor = db.cursor()
     available = ledger.balances.get_balance(db, source, asset, return_list=True)
-
-    print("Available: ", available)
 
     if len(available) == 0:
         problems.append(f"address doesn't have the asset {asset}")
