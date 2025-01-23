@@ -1,5 +1,7 @@
 import binascii
 
+import pytest
+from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import issuance
 from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -819,7 +821,7 @@ def test_valid_compose(ledger_db, defaults):
     assert issuance.compose(
         ledger_db, defaults["addresses"][0], "BSSET", 1000, None, True, False, None, ""
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
         b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
     )
@@ -827,7 +829,7 @@ def test_valid_compose(ledger_db, defaults):
     assert issuance.compose(
         ledger_db, defaults["addresses"][0], "BASSET", 1000, None, True, False, None, ""
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
         b"\x16\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
     )
@@ -851,7 +853,7 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "description much much much longer than 42 letters",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
         b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00description much much much longer than 42 letters",
     )
@@ -867,17 +869,17 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-        [("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", None)],
-        b"\x00\x00\x00\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+        defaults["addresses"][0],
+        [(defaults["addresses"][1], None)],
+        b"\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00",
     )
 
     assert issuance.compose(
         ledger_db, defaults["p2ms_addresses"][0], "BSSET", 1000, None, True, False, None, ""
     ) == (
-        "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+        defaults["p2ms_addresses"][0],
         [],
-        b"\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00",
+        b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
     )
 
     assert issuance.compose(
@@ -891,10 +893,10 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [
             (
-                "1_mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc_mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns_2",
+                defaults["p2ms_addresses"][0],
                 None,
             )
         ],
@@ -912,25 +914,25 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "Maximum quantity",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        b"\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00",
+        b"\x16\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00Maximum quantity",
     )
 
     assert issuance.compose(
         ledger_db, defaults["addresses"][0], f"A{2**64 - 1}", 1000, None, None, False, None, None
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        b"\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00",
+        b"\x16\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\xc0NULL",
     )
 
     assert issuance.compose(
         ledger_db, defaults["addresses"][0], "PARENT.child1", 100000000, None, True, False, None, ""
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        binascii.unhexlify("0000001701530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46"),
+        b"\x17\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LF",
     )
 
     assert issuance.compose(
@@ -944,19 +946,17 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "hello world",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        binascii.unhexlify(
-            "0000001701530821671b10010000000005f5e100010a57c6f36de23a1f5f4c4668656c6c6f20776f726c64"
-        ),
+        b"\x17\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LFhello world",
     )
 
     assert issuance.compose(
         ledger_db, defaults["addresses"][0], "PARENT.a.b.c", 1000, None, True, False, None, ""
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        binascii.unhexlify("0000001701530821671b100100000000000003e8010a014a74856171ca3c559f"),
+        b"\x17\x01S\x08!\xeb[\xcc\x88\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\n\x01Jt\x85aq\xca<U\x9f",
     )
     assert issuance.compose(
         ledger_db,
@@ -969,11 +969,9 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        binascii.unhexlify(
-            "0000001701530821671b100100000000000003e801108e90a57dba99d3a77b0a2470b1816edb"
-        ),
+        b"\x17\x01S\x08!\x8fXk\xb0\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x10\x8e\x90\xa5}\xba\x99\xd3\xa7{\n$p\xb1\x81n\xdb",
     )
 
     assert issuance.compose(
@@ -987,18 +985,18 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        b"\x00\x00\x00\x16\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+        b'\x16\x01S\x08"\x06\xe4c%\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00',
     )
 
     # "mock_protocol_changes": {"short_tx_type_id": True},
     assert issuance.compose(
         ledger_db, defaults["addresses"][0], "PARENT.child1", 100000000, None, True, False, None, ""
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        binascii.unhexlify("1701530821671b10010000000005f5e100010a57c6f36de23a1f5f4c46"),
+        b"\x17\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LF",
     )
 
     assert issuance.compose(
@@ -1012,9 +1010,9 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "description",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        b"\x00\x00\x00\x16\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x0b\xeb\xc2\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00description",
+        b"\x16\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x0b\xeb\xc2\x00\x01\x00\x00description",
     )
 
     assert issuance.compose(
@@ -1028,9 +1026,9 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "second divisible asset",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-        [("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", None)],
-        b"\x00\x00\x00\x16\x00\x00\x10}U\x15\xa8]\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00second divisible asset",
+        defaults["addresses"][0],
+        [(defaults["addresses"][1], None)],
+        b"\x16\x00\x00\x10}U\x15\xa8]\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00second divisible asset",
     )
 
     assert issuance.compose(
@@ -1044,7 +1042,571 @@ def test_valid_compose(ledger_db, defaults):
         None,
         "third divisible asset",
     ) == (
-        "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        defaults["addresses"][0],
         [],
-        b"\x00\x00\x00\x16\x00\x00\x10}U\x15\xa8^\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00third divisible asset",
+        b"\x16\x00\x00\x10}U\x15\xa8^\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00third divisible asset",
+    )
+
+
+def test_invalid_compose(ledger_db, defaults):
+    with pytest.raises(exceptions.AssetNameError, match="non‐numeric asset name starts with ‘A’"):
+        issuance.compose(
+            ledger_db, defaults["addresses"][0], "ASSET", 1000, None, True, False, None, ""
+        )
+
+    with pytest.raises(exceptions.AssetNameError, match=str(("invalid character:", "1"))):
+        issuance.compose(
+            ledger_db, defaults["addresses"][0], "BSSET1", 1000, None, True, False, None, ""
+        )
+
+    with pytest.raises(exceptions.AssetNameError, match="too short"):
+        issuance.compose(
+            ledger_db, defaults["addresses"][0], "SET", 1000, None, True, False, None, ""
+        )
+
+    # "mock_protocol_changes": {"allow_subassets_on_numerics": False},
+    with ProtocolChangesDisabled(["allow_subassets_on_numerics"]):
+        with pytest.raises(exceptions.AssetNameError, match="parent asset name starts with 'A'"):
+            issuance.compose(
+                ledger_db,
+                defaults["addresses"][0],
+                "A9542895.subasset",
+                1000,
+                None,
+                True,
+                False,
+                None,
+                "",
+            )
+
+    with pytest.raises(exceptions.ComposeError, match="parent asset not foun"):
+        issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "A95428956661682177.subasset",
+            1000,
+            None,
+            True,
+            False,
+            None,
+            "",
+        )
+
+    with pytest.raises(exceptions.AssetNameError, match="numeric asset name not in range"):
+        issuance.compose(
+            ledger_db, defaults["addresses"][0], f"A{2**64}", 1000, None, True, False, None, ""
+        )
+
+    with pytest.raises(exceptions.AssetNameError, match="numeric asset name not in range"):
+        issuance.compose(
+            ledger_db, defaults["addresses"][0], f"A{26**12}", 1000, None, True, False, None, ""
+        )
+
+    with pytest.raises(
+        exceptions.AssetNameError, match="parent asset name contains invalid character:"
+    ):
+        (
+            issuance.compose(
+                ledger_db,
+                defaults["addresses"][0],
+                "BADASSETx.child1",
+                1000,
+                None,
+                True,
+                False,
+                None,
+                "",
+            ),
+        )
+
+    with pytest.raises(exceptions.ComposeError, match="parent asset owned by another address"):
+        issuance.compose(
+            ledger_db, defaults["addresses"][1], "PARENT.child1", 1000, None, True, False, None, ""
+        )
+
+
+def test_parse_basset(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = b"\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00"
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "BASSET",
+                    "block_index": tx["block_index"],
+                    "description": "",
+                    "divisible": 1,
+                    "fee_paid": 50000000,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": 1000,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": 0,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                    "asset_longname": None,
+                },
+            },
+            {
+                "table": "credits",
+                "values": {
+                    "address": defaults["addresses"][0],
+                    "asset": "BASSET",
+                    "block_index": current_block_index,
+                    "calling_function": "issuance",
+                    "event": tx["tx_hash"],
+                    "quantity": 1000,
+                },
+            },
+            {
+                "table": "debits",
+                "values": {
+                    "action": "issuance fee",
+                    "address": defaults["addresses"][0],
+                    "asset": "XCP",
+                    "block_index": current_block_index,
+                    "event": tx["tx_hash"],
+                    "quantity": 50000000,
+                },
+            },
+        ],
+    )
+
+
+def test_parse_divisibleb(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = (
+        b"\x00\x00\x10}U\x15\xa8]\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00second divisible asset"
+    )
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "DIVISIBLEB",
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": "second divisible asset",
+                    "divisible": 1,
+                    "fee_paid": 50000000,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": 0,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": False,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            }
+        ],
+    )
+
+
+def test_parse_divisiblec(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = (
+        b"\x00\x00\x10}U\x15\xa8^\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00third divisible asset"
+    )
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "DIVISIBLEC",
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": "third divisible asset",
+                    "divisible": 1,
+                    "fee_paid": 50000000,
+                    "issuer": defaults["addresses"][0],
+                    "locked": True,
+                    "quantity": 0,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": False,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            }
+        ],
+    )
+
+
+def test_parse_bsset(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["p2ms_addresses"][0])
+    message = b"\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00"
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "BSSET",
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": "",
+                    "divisible": 1,
+                    "fee_paid": 50000000,
+                    "issuer": defaults["p2ms_addresses"][0],
+                    "locked": 0,
+                    "quantity": 1000,
+                    "source": defaults["p2ms_addresses"][0],
+                    "status": "valid",
+                    "transfer": 0,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            },
+            {
+                "table": "credits",
+                "values": {
+                    "address": defaults["p2ms_addresses"][0],
+                    "asset": "BSSET",
+                    "block_index": current_block_index,
+                    "calling_function": "issuance",
+                    "event": tx["tx_hash"],
+                    "quantity": 1000,
+                },
+            },
+            {
+                "table": "debits",
+                "values": {
+                    "action": "issuance fee",
+                    "address": defaults["p2ms_addresses"][0],
+                    "asset": "XCP",
+                    "block_index": current_block_index,
+                    "event": tx["tx_hash"],
+                    "quantity": 50000000,
+                },
+            },
+        ],
+    )
+
+
+def test_parse_divisible(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
+    tx = blockchain_mock.dummy_tx(
+        ledger_db, defaults["addresses"][0], defaults["p2ms_addresses"][0]
+    )
+    message = b"\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "DIVISIBLE",
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": "",
+                    "divisible": 1,
+                    "fee_paid": 0,
+                    "issuer": defaults["p2ms_addresses"][0],
+                    "locked": 0,
+                    "quantity": 0,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": True,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            },
+            {
+                "table": "debits",
+                "values": {
+                    "action": "issuance fee",
+                    "address": defaults["addresses"][0],
+                    "asset": "XCP",
+                    "block_index": current_block_index,
+                    "event": tx["tx_hash"],
+                    "quantity": 0,
+                },
+            },
+        ],
+    )
+
+
+def test_parse_maximum(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = (
+        b"\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00Maximum quantity"
+    )
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "MAXIMUM",
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": "Maximum quantity",
+                    "fee_paid": 50000000,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": 9223372036854775807,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": 0,
+                    "divisible": 1,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            },
+            {
+                "table": "credits",
+                "values": {
+                    "address": defaults["addresses"][0],
+                    "asset": "MAXIMUM",
+                    "block_index": current_block_index,
+                    "calling_function": "issuance",
+                    "event": tx["tx_hash"],
+                    "quantity": 9223372036854775807,
+                },
+            },
+            {
+                "table": "debits",
+                "values": {
+                    "action": "issuance fee",
+                    "address": defaults["addresses"][0],
+                    "asset": "XCP",
+                    "block_index": current_block_index,
+                    "event": tx["tx_hash"],
+                    "quantity": 50000000,
+                },
+            },
+        ],
+    )
+
+
+def test_parse_numeric(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = (
+        b"\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\xc0NULL"
+    )
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "A18446744073709551615",
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": "",
+                    "divisible": 1,
+                    "fee_paid": 0,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": 1000,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": 0,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            },
+            {
+                "table": "credits",
+                "values": {
+                    "address": defaults["addresses"][0],
+                    "asset": "A18446744073709551615",
+                    "block_index": current_block_index,
+                    "calling_function": "issuance",
+                    "event": tx["tx_hash"],
+                    "quantity": 1000,
+                },
+            },
+            {
+                "table": "debits",
+                "values": {
+                    "action": "issuance fee",
+                    "address": defaults["addresses"][0],
+                    "asset": "XCP",
+                    "block_index": current_block_index,
+                    "event": tx["tx_hash"],
+                    "quantity": 0,
+                },
+            },
+        ],
+    )
+
+
+def test_parse_too_short(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = binascii.unhexlify("00000000000002bf0000000005f5e10001")
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": None,
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": None,
+                    "fee_paid": 0,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": None,
+                    "source": defaults["addresses"][0],
+                    "status": "invalid: bad asset name",
+                    "transfer": 0,
+                    "divisible": None,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            }
+        ],
+    )
+
+
+def test_parse_paid_subasset(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = b"\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LF"
+    with ProtocolChangesDisabled(["free_subassets"]):
+        issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "A95428957660983173",
+                    "asset_longname": "PARENT.child1",
+                    "block_index": tx["block_index"],
+                    "description": "",
+                    "fee_paid": 25000000,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": 100000000,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": 0,
+                    "divisible": 1,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            },
+            {
+                "table": "credits",
+                "values": {
+                    "address": defaults["addresses"][0],
+                    "asset": "A95428957660983173",
+                    "block_index": current_block_index,
+                    "calling_function": "issuance",
+                    "event": tx["tx_hash"],
+                    "quantity": 100000000,
+                },
+            },
+            {
+                "table": "debits",
+                "values": {
+                    "action": "issuance fee",
+                    "address": defaults["addresses"][0],
+                    "asset": "XCP",
+                    "block_index": current_block_index,
+                    "event": tx["tx_hash"],
+                    "quantity": 25000000,
+                },
+            },
+            {
+                "table": "assets",
+                "values": {
+                    "asset_id": "95428957660983173",
+                    "asset_name": "A95428957660983173",
+                    "block_index": tx["block_index"],
+                    "asset_longname": "PARENT.child1",
+                },
+            },
+        ],
+    )
+
+
+def test_parse_paid_subasset_with_description(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = b"\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LFhello world"
+    with ProtocolChangesDisabled(["free_subassets"]):
+        issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "A95428957660983173",
+                    "asset_longname": "PARENT.child1",
+                    "block_index": tx["block_index"],
+                    "description": "hello world",
+                    "fee_paid": 25000000,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": 100000000,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": 0,
+                    "divisible": 1,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            },
+            {
+                "table": "credits",
+                "values": {
+                    "address": defaults["addresses"][0],
+                    "asset": "A95428957660983173",
+                    "block_index": current_block_index,
+                    "calling_function": "issuance",
+                    "event": tx["tx_hash"],
+                    "quantity": 100000000,
+                },
+            },
+            {
+                "table": "debits",
+                "values": {
+                    "action": "issuance fee",
+                    "address": defaults["addresses"][0],
+                    "asset": "XCP",
+                    "block_index": current_block_index,
+                    "event": tx["tx_hash"],
+                    "quantity": 25000000,
+                },
+            },
+            {
+                "table": "assets",
+                "values": {
+                    "asset_id": "95428957660983173",
+                    "asset_name": "A95428957660983173",
+                    "block_index": tx["block_index"],
+                    "asset_longname": "PARENT.child1",
+                },
+            },
+        ],
     )
