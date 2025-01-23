@@ -3,6 +3,7 @@ import logging
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import dispenser
+from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -175,6 +176,23 @@ def test_compose(ledger_db, defaults):
             False,
         )
 
+    assert dispenser.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "PARENT",
+        100,
+        1000000000,
+        0,
+        0,
+        None,
+        None,
+        True,
+    ) == (
+        defaults["addresses"][0],
+        [],
+        b"\x0c\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00;\x9a\xca\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+    )
+
 
 def test_parse_open_dispenser(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
@@ -273,6 +291,20 @@ def test_parse_not_source_address(ledger_db, blockchain_mock, defaults, caplog):
         dispenser.parse(ledger_db, tx, message)
         logger.propagate = False
     assert "invalid: address doesn't have the asset PARENT" in caplog.text
+
+
+def test_parse_debit_error(ledger_db, blockchain_mock, defaults, caplog):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = b"\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00;\x9a\xca\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    with caplog.at_level(6, logger=config.LOGGER_NAME):
+        logger.propagate = True
+        with ProtocolChangesDisabled(["dispenser_parsing_validation"]):
+            dispenser.parse(ledger_db, tx, message)
+        logger.propagate = False
+    assert (
+        f"Invalid dispenser transaction [{tx['tx_hash'][0:7]}] (invalid: insufficient funds)"
+        in caplog.text
+    )
 
 
 def test_is_dispensable(ledger_db, defaults):
