@@ -487,7 +487,7 @@ def parse(db, tx, message):
                                     action="open dispenser",
                                     event=tx["tx_hash"],
                                 )
-                        except ledger.other.DebitError as e:  # noqa: F841
+                        except exceptions.DebitError as e:  # noqa: F841
                             status = "invalid: insufficient funds"
 
                     if status == "valid":
@@ -604,7 +604,7 @@ def parse(db, tx, message):
                                     "Refilled dispenser for %(asset)s at %(source)s (%(tx_hash)s) [valid]",
                                     bindings_refill,
                                 )
-                            except ledger.other.DebitError:
+                            except exceptions.DebitError:
                                 status = "insufficient funds"
                     else:
                         status = "invalid: can only refill dispenser from source or origin"
