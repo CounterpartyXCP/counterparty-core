@@ -51,13 +51,7 @@ def build_dbs(bitcoind_mock):
 
     # initialise config variables
     parser = arg_parser(no_config_file=True)
-    args = parser.parse_args(
-        [
-            "--regtest",
-            "--data-dir",
-            DATA_DIR,
-        ]
-    )
+    args = parser.parse_args(["--regtest", "--data-dir", DATA_DIR, "-vv"])
     print("args", args)
     server.initialise_log_and_config(args)
 
