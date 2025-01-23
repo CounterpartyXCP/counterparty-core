@@ -1610,3 +1610,101 @@ def test_parse_paid_subasset_with_description(
             },
         ],
     )
+
+
+def test_parse_paid_subasset_before_activation(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = b"\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LFhello world"
+    with ProtocolChangesDisabled(["free_subassets", "subassets"]):
+        issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": None,
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": None,
+                    "fee_paid": 0,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": None,
+                    "source": defaults["addresses"][0],
+                    "status": "invalid: could not unpack",
+                    "transfer": 0,
+                    "divisible": None,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            }
+        ],
+    )
+
+
+def test_parse_paid_subasset_invalid_length(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = (
+        b"\x01S\x08!g\x1b\x10\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\xf0W\xc6\xf3m\xe2:\x1f_LF"
+    )
+    with ProtocolChangesDisabled(["free_subassets"]):
+        issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": None,
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": None,
+                    "fee_paid": 0,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": None,
+                    "source": defaults["addresses"][0],
+                    "status": "invalid: could not unpack",
+                    "transfer": 0,
+                    "divisible": None,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            }
+        ],
+    )
+
+
+def test_parse_paid_subasset_reissuance(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = b'\x01S\x08"\x06\xe4c%\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00'
+    with ProtocolChangesDisabled(["free_subassets"]):
+        issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "A95428959342453541",
+                    "asset_longname": "PARENT.already.issued",
+                    "block_index": tx["block_index"],
+                    "description": "",
+                    "fee_paid": 0,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": 1000,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": 0,
+                    "divisible": 1,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            }
+        ],
+    )
