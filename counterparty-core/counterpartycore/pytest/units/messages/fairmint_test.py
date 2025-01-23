@@ -1,10 +1,6 @@
-import logging
-
 import pytest
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import fairmint
-
-logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def test_validate(ledger_db, defaults):

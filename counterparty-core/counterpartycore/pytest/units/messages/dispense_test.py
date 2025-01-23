@@ -1,11 +1,7 @@
-import logging
-
 import pytest
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import dispense
 from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
-
-logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def test_compose(ledger_db, defaults):

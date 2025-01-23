@@ -1,9 +1,5 @@
-import logging
-
-from counterpartycore.lib import config, ledger
+from counterpartycore.lib import ledger
 from counterpartycore.lib.messages import dividend
-
-logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def test_validate(ledger_db, defaults, current_block_index):

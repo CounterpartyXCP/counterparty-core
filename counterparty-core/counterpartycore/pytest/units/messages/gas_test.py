@@ -1,9 +1,4 @@
-import logging
-
-from counterpartycore.lib import config
 from counterpartycore.lib.messages import gas
-
-logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def test_get_transaction_count_for_last_period(ledger_db):
