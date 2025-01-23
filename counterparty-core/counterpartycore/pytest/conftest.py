@@ -1,5 +1,9 @@
+import logging
+from contextlib import contextmanager
+
 import pytest
 
+from counterpartycore.lib import config
 from counterpartycore.lib.utils.helpers import to_short_json
 from counterpartycore.pytest.mocks.counterpartydbs import check_records
 
@@ -21,6 +25,16 @@ class TestHelper:
     @staticmethod
     def check_records(ledger_db, records):
         return check_records(ledger_db, records)
+
+    @staticmethod
+    @contextmanager
+    def capture_log(caplog, message):
+        logger = logging.getLogger(config.LOGGER_NAME)
+        caplog.at_level(6, logger=config.LOGGER_NAME)
+        logger.propagate = True
+        yield
+        logger.propagate = False
+        assert message in caplog.text
 
 
 @pytest.fixture

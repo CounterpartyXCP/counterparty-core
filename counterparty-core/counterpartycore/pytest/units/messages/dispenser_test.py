@@ -270,41 +270,32 @@ def test_parse_close_dispenser(
     )
 
 
-def test_parse_integer_overflow(ledger_db, blockchain_mock, defaults, caplog):
+def test_parse_integer_overflow(ledger_db, blockchain_mock, defaults, caplog, test_helpers):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][5])
     message = b"\x00\x00\x00\x00\x00\x00\x00\x01\x80\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00d\x00"
-    with caplog.at_level(6, logger=config.LOGGER_NAME):
-        logger.propagate = True
+
+    error = "invalid: address doesn't have enough balance of XCP (92949974273 < 9223372036854775809); integer overflow"
+    with test_helpers.capture_log(caplog, error):
         dispenser.parse(ledger_db, tx, message)
-        logger.propagate = False
-    assert (
-        "invalid: address doesn't have enough balance of XCP (92949974273 < 9223372036854775809); integer overflow"
-        in caplog.text
-    )
 
 
-def test_parse_not_source_address(ledger_db, blockchain_mock, defaults, caplog):
+def test_parse_not_source_address(ledger_db, blockchain_mock, defaults, caplog, test_helpers):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][5])
     message = b"\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00\x00\x00'\x10\x00\x00\x00\x00\x00\x00\t)\x00"
-    with caplog.at_level(6, logger=config.LOGGER_NAME):
-        logger.propagate = True
+
+    error = "invalid: address doesn't have the asset PARENT"
+    with test_helpers.capture_log(caplog, error):
         dispenser.parse(ledger_db, tx, message)
-        logger.propagate = False
-    assert "invalid: address doesn't have the asset PARENT" in caplog.text
 
 
-def test_parse_debit_error(ledger_db, blockchain_mock, defaults, caplog):
+def test_parse_debit_error(ledger_db, blockchain_mock, defaults, caplog, test_helpers):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     message = b"\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00;\x9a\xca\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-    with caplog.at_level(6, logger=config.LOGGER_NAME):
-        logger.propagate = True
+
+    error = f"Invalid dispenser transaction [{tx['tx_hash'][0:7]}] (invalid: insufficient funds)"
+    with test_helpers.capture_log(caplog, error):
         with ProtocolChangesDisabled(["dispenser_parsing_validation"]):
             dispenser.parse(ledger_db, tx, message)
-        logger.propagate = False
-    assert (
-        f"Invalid dispenser transaction [{tx['tx_hash'][0:7]}] (invalid: insufficient funds)"
-        in caplog.text
-    )
 
 
 def test_is_dispensable(ledger_db, defaults):
