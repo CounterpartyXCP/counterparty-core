@@ -7,24 +7,15 @@ import time
 import bitcoin as bitcoinlib
 import pytest
 
-# this is require near the top to do setup of the test suite
-from counterpartycore.test import (
-    conftest,  # noqa: F401
-    util_test,
-)
+from counterpartycore.lib import config
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.parser import deserialize, gettxinfo, p2sh
+from counterpartycore.lib.utils import script
+from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import ADDR
 from counterpartycore.test.util_test import CURR_DIR
 
 logger = logging.getLogger(__name__)
-
-from counterpartycore.lib import (  # noqa: E402
-    config,
-    deserialize,
-    gettxinfo,
-    p2sh,
-    script,
-    util,
-)
 
 FIXTURE_SQL_FILE = CURR_DIR + "/fixtures/scenarios/unittest_fixture.sql"
 FIXTURE_DB = tempfile.gettempdir() + "/fixtures.unittest_fixture.db"
@@ -46,7 +37,7 @@ def test_p2sh_encoding_composed(server_db):
             gettxinfo._get_tx_info(
                 server_db,
                 deserialize.deserialize_tx(datatxhex, parse_vouts=True),
-                util.CURRENT_BLOCK_INDEX,
+                CurrentState().current_block_index(),
             )
         )
         print("!!!!!!!!!!!!!!!!>1")

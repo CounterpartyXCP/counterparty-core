@@ -1,18 +1,15 @@
-#! /usr/bin/python3
-
 import logging
 import struct
 
 from counterpartycore.lib import (
-    address,
     config,
-    database,
     exceptions,
     ledger,
-    message_type,
-    util,
 )
 from counterpartycore.lib.exceptions import *  # noqa: F403
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.parser import messagetype, protocol
+from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -30,51 +27,12 @@ FLAG_BINARY_MEMO = 4
 FLAGS_ALL = FLAG_BINARY_MEMO | FLAG_BALANCES | FLAG_OWNERSHIP
 
 
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "block_index_idx",
-            "source_idx",
-            "destination_idx",
-            "memo_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS sweeps(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      flags INTEGER,
-                      status TEXT,
-                      memo BLOB,
-                      fee_paid INTEGER,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-
-    database.create_indexes(
-        cursor,
-        "sweeps",
-        [
-            ["block_index"],
-            ["source"],
-            ["destination"],
-            ["memo"],
-        ],
-    )
-
-
 def get_total_fee(db, source, block_index):
     total_fee = ANTISPAM_FEE
-    antispamfee = util.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
+    antispamfee = protocol.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
     if antispamfee > 0:
-        balances_count = ledger.get_balances_count(db, source)[0]["cnt"]
-        issuances_count = ledger.get_issuances_count(db, source)
+        balances_count = ledger.balances.get_balances_count(db, source)[0]["cnt"]
+        issuances_count = ledger.issuances.get_issuances_count(db, source)
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
     return total_fee
 
@@ -87,7 +45,7 @@ def validate(db, source, destination, flags, memo, block_index):
 
     cursor = db.cursor()
 
-    result = ledger.get_balance(db, source, "XCP")
+    result = ledger.balances.get_balance(db, source, "XCP")
 
     total_fee = get_total_fee(db, source, block_index)
 
@@ -120,14 +78,14 @@ def compose(
         memo = memo.encode("utf-8")
         memo = struct.pack(f">{len(memo)}s", memo)
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = CurrentState().current_block_index()
     problems, total_fee = validate(db, source, destination, flags, memo, block_index)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     short_address_bytes = address.pack(destination)
 
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
     data += struct.pack(FORMAT, short_address_bytes, flags)
     data += memo
 
@@ -198,11 +156,12 @@ def parse(db, tx, message):
     if status == "valid":
         try:
             antispamfee = (
-                util.get_value_by_block_index("sweep_antispam_fee", tx["block_index"]) * config.UNIT
+                protocol.get_value_by_block_index("sweep_antispam_fee", tx["block_index"])
+                * config.UNIT
             )
 
             if antispamfee > 0:
-                ledger.debit(
+                ledger.events.debit(
                     db,
                     tx["source"],
                     "XCP",
@@ -212,7 +171,7 @@ def parse(db, tx, message):
                     event=tx["tx_hash"],
                 )
             else:
-                ledger.debit(
+                ledger.events.debit(
                     db,
                     tx["source"],
                     "XCP",
@@ -226,11 +185,11 @@ def parse(db, tx, message):
             status = "invalid: insufficient balance for antispam fee for sweep"
 
     if status == "valid":
-        balances = ledger.get_address_balances(db, tx["source"])
+        balances = ledger.balances.get_address_balances(db, tx["source"])
 
         if flags & FLAG_BALANCES:
             for balance in balances:
-                ledger.debit(
+                ledger.events.debit(
                     db,
                     tx["source"],
                     balance["asset"],
@@ -239,7 +198,7 @@ def parse(db, tx, message):
                     action="sweep",
                     event=tx["tx_hash"],
                 )
-                ledger.credit(
+                ledger.events.credit(
                     db,
                     destination,
                     balance["asset"],
@@ -253,11 +212,11 @@ def parse(db, tx, message):
             sweep_pos = 0
 
             assets_issued = balances
-            if util.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
-                assets_issued = ledger.get_asset_issued(db, tx["source"])
+            if protocol.enabled("zero_balance_ownership_sweep_fix", tx["block_index"]):
+                assets_issued = ledger.issuances.get_asset_issued(db, tx["source"])
 
             for next_asset_issued in assets_issued:
-                issuances = ledger.get_issuances(
+                issuances = ledger.issuances.get_issuances(
                     db,
                     asset=next_asset_issued["asset"],
                     status="valid",
@@ -289,7 +248,7 @@ def parse(db, tx, message):
                             "reset": False,
                             "asset_events": "transfer",
                         }
-                        ledger.insert_record(db, "issuances", bindings, "ASSET_TRANSFER")
+                        ledger.events.insert_record(db, "issuances", bindings, "ASSET_TRANSFER")
                         sweep_pos += 1
 
         bindings = {
@@ -303,7 +262,7 @@ def parse(db, tx, message):
             "memo": memo_bytes,
             "fee_paid": total_fee if antispamfee > 0 else fee_paid,
         }
-        ledger.insert_record(db, "sweeps", bindings, "SWEEP")
+        ledger.events.insert_record(db, "sweeps", bindings, "SWEEP")
 
         logger.info("Sweep from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]", bindings)
 

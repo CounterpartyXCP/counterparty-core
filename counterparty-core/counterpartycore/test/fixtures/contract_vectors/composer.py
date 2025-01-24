@@ -32,7 +32,7 @@ MULTISIG_PAIRS = [
 OPRETURN_DATA = b"\x8a]\xda\x15\xfbo\x05b\xc2cr\x0b8B\xb2:\xa8h\x13\xc7\xd1"
 
 COMPOSER_VECTOR = {
-    "composer": {
+    "api.composer": {
         "address_to_script_pub_key": [
             {
                 "comment": "P2PKH address",
@@ -707,7 +707,8 @@ COMPOSER_VECTOR = {
                     {
                         "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
                         "vout": 0,
-                        "value": 999,
+                        "value": 99900000000,
+                        "amount": 999,
                     },
                     {
                         "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
@@ -1238,6 +1239,7 @@ COMPOSER_VECTOR = {
                         "sigops_count": 8,
                         "vsize": 258,
                     },
+                    "inputs_values": [199909140],
                 },
             },
             {
@@ -1255,6 +1257,7 @@ COMPOSER_VECTOR = {
                         "sigops_count": 8,
                         "vsize": 258,
                     },
+                    "inputs_values": [199909140],
                 },
             },
         ],
@@ -1270,6 +1273,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1286,6 +1290,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1305,6 +1310,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1324,6 +1330,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1343,6 +1350,7 @@ COMPOSER_VECTOR = {
                         "data": b"TESTXXXXHello, World!",
                         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                         "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a152a504df746f834422d58bbc1cbf0522d6c7a0911bf9258ea0b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                        "inputs_values": [199909140],
                     },
                     {"exact_fee": 1000},
                 ),
@@ -1397,7 +1405,52 @@ COMPOSER_VECTOR = {
                         "The `unspent_tx_hash` parameter is deprecated, use `inputs_set` instead",
                     ],
                 ),
-            }
+            },
+            {
+                "in": (
+                    {
+                        "fee_per_kb": 1023,
+                        "fee_provided": 666,
+                        "dust_return_pubkey": DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                        "return_psbt": True,
+                        "regular_dust_size": 357,
+                        "multisig_dust_size": 1200,
+                        "extended_tx_info": True,
+                        "old_style_api": True,
+                        "p2sh_pretx_txid": "aabbb",
+                        "segwit": True,
+                        "unspent_tx_hash": "aabbcc",
+                    },
+                ),
+                "out": (
+                    {
+                        "sat_per_vbyte": 1023 / 1024,
+                        "max_fee": 666,
+                        "mutlisig_pubkey": DEFAULT_PARAMS["pubkey"][ADDR[0]],
+                        "verbose": True,
+                        "regular_dust_size": 357,
+                        "multisig_dust_size": 1200,
+                        "extended_tx_info": True,
+                        "old_style_api": True,
+                        "p2sh_pretx_txid": "aabbb",
+                        "segwit": True,
+                        "unspent_tx_hash": "aabbcc",
+                    },
+                    [
+                        "The `fee_per_kb` parameter is deprecated, use `sat_per_vbyte` instead",
+                        "The `fee_provided` parameter is deprecated, use `max_fee` instead",
+                        "The `dust_return_pubkey` parameter is deprecated, use `mutlisig_pubkey` instead",
+                        "The `return_psbt` parameter is deprecated, use `verbose` instead",
+                        "The `regular_dust_size` parameter is deprecated, automatically calculated",
+                        "The `multisig_dust_size` parameter is deprecated, automatically calculated",
+                        "The `extended_tx_info` parameter is deprecated (api v1 only), use api v2 instead",
+                        "The `old_style_api` parameter is deprecated (api v1 only), use api v2 instead",
+                        "The `p2sh_pretx_txid` parameter is ignored, p2sh disabled",
+                        "The `segwit` parameter is ignored, segwit automatically detected",
+                        "The `unspent_tx_hash` parameter is deprecated, use `inputs_set` instead",
+                    ],
+                ),
+            },
         ],
         "compose_transaction": [
             {
@@ -1502,6 +1555,7 @@ COMPOSER_VECTOR = {
                     "btc_fee": 759,
                     "data": b"TESTXXXXeXCP|10|",
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "inputs_values": [199909140],
                     "signed_tx_estimated_size": {
                         "vsize": 253,
                         "adjusted_vsize": 253,
@@ -1538,6 +1592,7 @@ COMPOSER_VECTOR = {
                     "btc_fee": 759,
                     "data": b"TESTXXXXeXCP|10|",
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "inputs_values": [199909140],
                     "signed_tx_estimated_size": {
                         "vsize": 253,
                         "adjusted_vsize": 253,
@@ -1575,6 +1630,7 @@ COMPOSER_VECTOR = {
                     "btc_fee": 678,
                     "data": None,
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "inputs_values": [999999999],
                     "signed_tx_estimated_size": {
                         "vsize": 226,
                         "adjusted_vsize": 226,
@@ -1611,6 +1667,7 @@ COMPOSER_VECTOR = {
                     "btc_fee": 678,
                     "data": None,
                     "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                    "inputs_values": [999999999],
                     "signed_tx_estimated_size": {
                         "vsize": 226,
                         "adjusted_vsize": 226,

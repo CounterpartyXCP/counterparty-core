@@ -4,12 +4,12 @@ import tempfile
 import pytest
 import requests
 
-from counterpartycore.lib import util
 from counterpartycore.lib.api import routes
 
 # this is require near the top to do setup of the test suite
 from counterpartycore.test import (
     conftest,  # noqa: F401
+    util_test,
 )
 from counterpartycore.test.fixtures.params import ADDR
 from counterpartycore.test.util_test import CURR_DIR
@@ -20,7 +20,7 @@ API_V2_FIXTURES = CURR_DIR + "/fixtures/api_v2_fixtures.json"
 API_ROOT = "http://localhost:10009"
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_api_v2(request):
     block_index = 310491
     address = "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc"
@@ -127,7 +127,7 @@ def test_api_v2(request):
             f.write(json.dumps(results, indent=4))
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_api_v2_unpack(request, server_db):
     with open(CURR_DIR + "/fixtures/api_v2_unpack_fixtures.json", "r") as f:
         datas = json.load(f)
@@ -136,10 +136,12 @@ def test_api_v2_unpack(request, server_db):
     for data in datas:
         result = requests.get(url, params={"datahex": data["datahex"]})  # noqa: S113
         assert result.status_code == 200
+        print("test output", result.json())
+        print("fixture output", data["result"])
         assert result.json()["result"] == data["result"]
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_new_get_balances_by_address():
     alice = ADDR[0]
     url = f"{API_ROOT}/v2/addresses/{alice}/balances"
@@ -250,7 +252,7 @@ def test_new_get_balances_by_address():
         assert balance in expected_result
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_new_get_balances_by_asset():
     asset = "XCP"
     url = f"{API_ROOT}/v2/assets/{asset}/balances"
@@ -352,13 +354,13 @@ def test_new_get_balances_by_asset():
         assert balance in expected_result
 
 
-@pytest.mark.usefixtures("api_server")
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_new_get_balances_vs_old():
     asset = "XCP"
     url = f"{API_ROOT}/v2/assets/{asset}/balances"
     new_balances = requests.get(url).json()["result"]  # noqa: S113
-    old_balance = util.api(
+    old_balance = util_test.api(
         "get_balances",
         {
             "filters": [
@@ -381,7 +383,7 @@ def test_new_get_balances_vs_old():
         assert new_balance["quantity"] == old_balance["quantity"]
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_new_get_asset_info():
     asset = "NODIVISIBLE"
     url = f"{API_ROOT}/v2/assets/{asset}"
@@ -403,7 +405,7 @@ def test_new_get_asset_info():
     }
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_new_get_asset_orders():
     asset = "XCP"
     url = f"{API_ROOT}/v2/assets/{asset}/orders"
@@ -432,7 +434,7 @@ def test_new_get_asset_orders():
     }
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_new_get_order_info():
     tx_hash = "b6c0ce5991e1ab4b46cdd25f612cda202d123872c6250831bc0f510a90c1238e"
     url = f"{API_ROOT}/v2/orders/{tx_hash}"
@@ -460,7 +462,7 @@ def test_new_get_order_info():
     }
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_new_get_order_matches():
     tx_hash = "65e649d58b95602b04172375dbd86783b7379e455a2bc801338d9299d10425a5"
     url = f"{API_ROOT}/v2/orders/{tx_hash}/matches"
@@ -490,7 +492,7 @@ def test_new_get_order_matches():
     }
 
 
-@pytest.mark.usefixtures("api_server_v2")
+@pytest.mark.usefixtures("apiserver_v2")
 def test_asset_dispensers():
     asset = "XCP"
 
@@ -551,3 +553,14 @@ def test_asset_dispensers():
             "close_block_index": None,
         }
     ]
+
+
+@pytest.mark.usefixtures("apiserver_v2")
+def test_invalid_hash():
+    tx_hash = "65e649d58b95602b04172375dbd86783b7379e455a2bc801338d9299d10425a"
+    url = f"{API_ROOT}/v2/orders/{tx_hash}/matches"
+    result = requests.get(url).json()  # noqa: S113
+    assert (
+        result["error"]
+        == "Invalid transaction hash: 65e649d58b95602b04172375dbd86783b7379e455a2bc801338d9299d10425a"
+    )

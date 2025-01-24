@@ -3,17 +3,15 @@ import decimal
 
 from counterpartycore.lib import (
     backend,
-    composer,
     config,
-    deserialize,
     exceptions,
-    gas,
-    gettxinfo,
-    message_type,
     messages,
-    util,
 )
+from counterpartycore.lib.api import composer
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
+from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
 
 D = decimal.Decimal
 
@@ -188,7 +186,7 @@ def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa
     :param address: The address that will be issuing the dividend (e.g. $ADDRESS_1)
     :param asset: The asset or subasset that the dividends are being rewarded on (e.g. MYASSETA)
     """
-    return messages.dividend.get_estimate_xcp_fee(db, asset, util.CURRENT_BLOCK_INDEX)
+    return messages.dividend.get_estimate_xcp_fee(db, asset, CurrentState().current_block_index())
 
 
 def compose_issuance(
@@ -325,6 +323,7 @@ def compose_send(
     memo: str = None,
     memo_is_hex: bool = False,
     use_enhanced_send: bool = True,
+    no_dispense: bool = False,
     **construct_params,
 ):
     """
@@ -336,6 +335,7 @@ def compose_send(
     :param memo: The Memo associated with this transaction
     :param memo_is_hex: Whether the memo field is a hexadecimal string
     :param use_enhanced_send: If this is false, the construct a legacy transaction sending bitcoin dust
+    :param no_dispense: don't compose a dispense transaction even if the destination is a dispenser
     """
     params = {
         "source": address,
@@ -345,6 +345,7 @@ def compose_send(
         "memo": memo,
         "memo_is_hex": memo_is_hex,
         "use_enhanced_send": use_enhanced_send,
+        "no_dispense": no_dispense,
     }
     return composer.compose_transaction(db, "send", params, construct_params)
 
@@ -396,7 +397,7 @@ def get_sweep_estimate_xcp_fee(db, address: str):
     Returns the estimated fee for sweeping all assets and/or transfer ownerships to a destination address.
     :param address: The address that will be sweeping (e.g. $ADDRESS_1)
     """
-    return messages.sweep.get_total_fee(db, address, util.CURRENT_BLOCK_INDEX)
+    return messages.sweep.get_total_fee(db, address, CurrentState().current_block_index())
 
 
 def compose_fairminter(
@@ -509,7 +510,7 @@ def get_attach_estimate_xcp_fee(db, address: str = None):  # noqa
     Returns the estimated fee for attaching assets to a UTXO.
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
     """
-    return gas.get_transaction_fee(db, UTXO_ID, util.CURRENT_BLOCK_INDEX)
+    return gas.get_transaction_fee(db, UTXO_ID, CurrentState().current_block_index())
 
 
 def compose_detach(
@@ -577,7 +578,7 @@ def info(db, rawtransaction: str, block_index: int = None):
             gettxinfo.get_tx_info(
                 db,
                 decoded_tx,
-                block_index=block_index or util.CURRENT_BLOCK_INDEX,
+                block_index=block_index or CurrentState().current_block_index(),
             )
         )
     except exceptions.BitcoindRPCError:
@@ -588,12 +589,14 @@ def info(db, rawtransaction: str, block_index: int = None):
         "destination": destination if destination else None,
         "btc_amount": btc_amount,
         "fee": fee,
-        "data": util.hexlify(data) if data else "",
         "decoded_tx": decoded_tx,
     }
     if data:
-        result["data"] = util.hexlify(data)
+        result["data"] = binascii.hexlify(data).decode("ascii")
         result["unpacked_data"] = unpack(db, result["data"], block_index)
+    else:
+        result["data"] = None
+        result["unpacked_data"] = None
     return result
 
 
@@ -610,8 +613,8 @@ def unpack(db, datahex: str, block_index: int = None):
 
     if data[: len(config.PREFIX)] == config.PREFIX:
         data = data[len(config.PREFIX) :]
-    message_type_id, message = message_type.unpack(data)
-    block_index = block_index or util.CURRENT_BLOCK_INDEX
+    message_type_id, message = messagetype.unpack(data)
+    block_index = block_index or CurrentState().current_block_index()
 
     issuance_ids = [
         messages.issuance.ID,
@@ -670,9 +673,9 @@ def unpack(db, datahex: str, block_index: int = None):
             message_type_name = "send"
             message_data = messages.send.unpack(db, message, block_index)
         # Enhanced send
-        elif message_type_id == messages.versions.enhanced_send.ID:
+        elif message_type_id == messages.versions.enhancedsend.ID:
             message_type_name = "enhanced_send"
-            message_data = messages.versions.enhanced_send.unpack(message, block_index)
+            message_data = messages.versions.enhancedsend.unpack(message, block_index)
         # MPMA send
         elif message_type_id == messages.versions.mpma.ID:
             message_type_name = "mpma_send"
@@ -691,11 +694,11 @@ def unpack(db, datahex: str, block_index: int = None):
         # RPS
         elif message_type_id == messages.rps.ID:
             message_type_name = "rps"
-            message_data = messages.rps.unpack(message, return_dict=True)
+            message_data = {"error": "RPS messages decoding is not implemented"}
         # RPS Resolve
         elif message_type_id == messages.rpsresolve.ID:
             message_type_name = "rpsresolve"
-            message_data = messages.rpsresolve.unpack(message, return_dict=True)
+            message_data = {"error": "RPS Resolve messages decoding is not implemented"}
         # Sweep
         elif message_type_id == messages.sweep.ID:
             message_type_name = "sweep"

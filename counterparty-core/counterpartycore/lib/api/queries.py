@@ -2,8 +2,9 @@ import json
 import typing
 from typing import Literal
 
-from counterpartycore.lib.api.util import divide
 from sentry_sdk import start_span as start_sentry_span
+
+from counterpartycore.lib.utils.helpers import divide
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
@@ -943,17 +944,21 @@ def get_mempool_events_by_tx_hash(
 
 
 def get_mempool_events_by_addresses(
-    ledger_db, addresses: str, cursor: str = None, limit: int = 100
+    ledger_db, addresses: str, event_name: str = None, cursor: str = None, limit: int = 100
 ):
     """
     Returns the mempool events of a list of addresses
     :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_3,$ADDRESS_4)
+    :param str event_name: Comma separated list of events to return
     :param str cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     """
     where = []
     for address in addresses.split(","):
-        where.append({"addresses__like": f"%{address}%"})
+        where_address = {"addresses__like": f"%{address}%"}
+        if event_name:
+            where_address["event__in"] = event_name.split(",")
+        where.append(where_address)
     select = "tx_hash, event, bindings AS params, timestamp"
     result = select_rows(
         ledger_db,

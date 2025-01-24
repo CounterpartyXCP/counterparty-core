@@ -14,18 +14,36 @@ import os
 import pprint
 import re
 import sys
-import tempfile  # noqa: F401
 import time
 
 import appdirs
 import apsw
 import bitcoin as bitcoinlib
 import pycoin
+import pycoin.coins.bitcoin.Tx  # noqa: F401
 import pytest
+import requests
 from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import TxInput, TxOutput, TxWitnessInput
-from pycoin.coins.bitcoin import Tx  # noqa: F401
+
+from counterpartycore.lib import (
+    config,
+    exceptions,
+    ledger,
+    messages,
+)
+from counterpartycore.lib.api import composer
+from counterpartycore.lib.cli import server
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
+from counterpartycore.lib.parser import blocks, check, deserialize, gettxinfo
+from counterpartycore.lib.utils import database, helpers
+from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP
+from counterpartycore.test.fixtures.scenarios import (
+    INTEGRATION_SCENARIOS,
+    standard_scenarios_params,
+)
 
 setup("testnet")
 
@@ -34,27 +52,6 @@ CURR_DIR = os.path.dirname(
 )
 sys.path.append(os.path.normpath(os.path.join(CURR_DIR, "..")))
 
-from counterpartycore import server  # noqa: E402
-from counterpartycore.lib import (  # noqa: E402
-    blocks,
-    check,
-    composer,  # noqa
-    config,
-    database,
-    deserialize,
-    exceptions,
-    gettxinfo,
-    ledger,
-    messages,
-    util,
-)
-from counterpartycore.lib.api.util import to_json  # noqa: E402
-from counterpartycore.lib.messages import dispenser, fairminter, utxo  # noqa
-from counterpartycore.test.fixtures.params import DEFAULT_PARAMS as DP  # noqa: E402
-from counterpartycore.test.fixtures.scenarios import (  # noqa: E402
-    INTEGRATION_SCENARIOS,
-    standard_scenarios_params,
-)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -88,10 +85,9 @@ def init_database(sqlfile, dbfile, options=None):
     server.initialise(database_file=dbfile, testnet=True, verbose=True, **kwargs)
 
     restore_database(config.DATABASE, sqlfile)
+    database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
     db = database.get_connection(read_only=False)  # reinit the DB to deal with the restoring
-    blocks.create_views(db)
     database.update_version(db)
-    util.FIRST_MULTISIG_BLOCK_TESTNET = 1
 
     return db
 
@@ -101,10 +97,10 @@ def reset_current_block_index(db):
     latest_block = list(
         cursor.execute("""SELECT * FROM blocks ORDER BY block_index DESC LIMIT 1""")
     )[0]
-    util.CURRENT_BLOCK_INDEX = latest_block["block_index"]
+    CurrentState().set_current_block_index(latest_block["block_index"])
     cursor.close()
 
-    return util.CURRENT_BLOCK_INDEX
+    return CurrentState().current_block_index()
 
 
 def dump_database(db):
@@ -153,7 +149,7 @@ def remove_database_files(database_filename):
 
 def insert_block(db, block_index, parse_block=True):
     """Add blocks to the blockchain."""
-    block_hash = util.dhash_string(chr(block_index))
+    block_hash = check.dhash_string(chr(block_index))
     block_time = block_index * 1000
     bindings = {
         "block_index": block_index,
@@ -164,8 +160,8 @@ def insert_block(db, block_index, parse_block=True):
         "previous_block_hash": None,
         "difficulty": None,
     }
-    util.CURRENT_BLOCK_INDEX = block_index  # TODO: Correct?!
-    ledger.insert_record(db, "blocks", bindings, "NEW_BLOCK")
+    CurrentState().set_current_block_index(block_index)
+    ledger.events.insert_record(db, "blocks", bindings, "NEW_BLOCK")
 
     if parse_block:
         blocks.parse_block(db, block_index, block_time)
@@ -230,7 +226,7 @@ def insert_raw_transaction(raw_transaction, db):
             "supported": True,
             "utxos_info": " ".join(utxos_info),
         }
-        ledger.insert_record(db, "transactions", bindings, "NEW_TRANSACTION")
+        ledger.events.insert_record(db, "transactions", bindings, "NEW_TRANSACTION")
 
         tx = list(cursor.execute("""SELECT * FROM transactions WHERE tx_index = ?""", (tx_index,)))[
             0
@@ -242,7 +238,7 @@ def insert_raw_transaction(raw_transaction, db):
 
     MOCK_UTXO_SET.add_raw_transaction(raw_transaction, tx_id=tx_hash, confirmations=1)
 
-    util.CURRENT_BLOCK_INDEX = block_index
+    CurrentState().set_current_block_index(block_index)
     blocks.parse_block(db, block_index, block_time)
     return tx_hash, tx
 
@@ -265,7 +261,7 @@ def insert_unconfirmed_raw_transaction(raw_transaction, db):
         raw_transaction, parse_vouts=True, block_index=config.MEMPOOL_BLOCK_INDEX
     )
     source, destination, btc_amount, fee, data, extra = gettxinfo._get_tx_info(
-        db, deserialized_tx, util.CURRENT_BLOCK_INDEX, composing=True
+        db, deserialized_tx, CurrentState().current_block_index(), composing=True
     )
     utxos_info = gettxinfo.get_utxos_info(db, deserialized_tx)
     tx = {
@@ -339,8 +335,8 @@ def insert_transaction(transaction, db):
         "previous_block_hash": None,
         "difficulty": None,
     }
-    ledger.insert_record(db, "blocks", block_bindings, "NEW_BLOCK")
-    ledger.insert_record(db, "transactions", transaction, "NEW_TRANSACTION")
+    ledger.events.insert_record(db, "blocks", block_bindings, "NEW_BLOCK")
+    ledger.events.insert_record(db, "transactions", transaction, "NEW_TRANSACTION")
 
     # `dispenser.dispense()` needs some vouts. Let's say one vout per transaction.
     transaction_outputs_bindings = {
@@ -351,11 +347,11 @@ def insert_transaction(transaction, db):
         "destination": transaction["destination"],
         "btc_amount": transaction["btc_amount"],
     }
-    ledger.insert_record(
+    ledger.events.insert_record(
         db, "transaction_outputs", transaction_outputs_bindings, "NEW_TRANSACTION_OUTPUT"
     )
 
-    util.CURRENT_BLOCK_INDEX = transaction["block_index"]
+    CurrentState().set_current_block_index(transaction["block_index"])
 
 
 def initialise_rawtransactions_db(db):
@@ -553,7 +549,7 @@ def extract_addresses_from_txlist(tx_hashes_tx, _getrawtransaction_batch):
         tx_inputs_hashes.update([vin["txid"] for vin in tx["vin"]])
 
     # chunk txs to avoid huge memory spikes
-    for tx_inputs_hashes_chunk in util.chunkify(
+    for tx_inputs_hashes_chunk in helpers.chunkify(
         list(tx_inputs_hashes), config.BACKEND_RAW_TRANSACTIONS_CACHE_SIZE
     ):
         raw_transactions = _getrawtransaction_batch(tx_inputs_hashes_chunk, verbose=True)
@@ -621,15 +617,14 @@ def get_history(db, address, unconfirmed=False):
 
 def initialise_db(db):
     """Initialise blockchain in the db and insert first block."""
-    blocks.initialise(db)
     insert_block(db, config.BLOCK_FIRST - 1, parse_block=True)
+    CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
 
 
 def run_scenario(scenario):
     """Execute a scenario for integration test, returns a dump of the db, a json with raw transactions and the full log."""
     server.initialise(database_file=":memory:", testnet=True, **COUNTERPARTYD_OPTIONS)
     config.PREFIX = b"TESTXXXX"
-    util.FIRST_MULTISIG_BLOCK_TESTNET = 1
     checkpoints = dict(check.CHECKPOINTS_TESTNET)
     check.CHECKPOINTS_TESTNET = {}
 
@@ -647,9 +642,13 @@ def run_scenario(scenario):
     asyncio_log.setLevel(logging.ERROR)
 
     db = database.get_connection(read_only=False)
+    with open(
+        os.path.join(config.LEDGER_DB_MIGRATIONS_DIR, "0001.initial_migration.sql"), "r"
+    ) as sql_file:
+        db.execute(sql_file.read())
     initialise_db(db)
 
-    ledger.AssetCache(db).init(db)
+    ledger.caches.AssetCache(db).init(db)
 
     raw_transactions = []
 
@@ -730,7 +729,7 @@ def check_record(record, server_db, pytest_config):
         value = cursor.execute(sql).fetchall()[0][field]
         assert value == record["value"]
     else:
-        sql = f"""SELECT COUNT(*) AS c FROM {record['table']} """  # noqa: S608
+        sql = f"""SELECT COUNT(*) AS c FROM {record["table"]} """  # noqa: S608
         sql += """WHERE """
         bindings = []
         conditions = []
@@ -751,7 +750,7 @@ def check_record(record, server_db, pytest_config):
                     f"SELECT * FROM {record['table']} WHERE block_index = {record['values']['block_index']}: "  # noqa: S608
                 )
                 pprint.PrettyPrinter(indent=4).pprint(
-                    list(cursor.execute(f"""SELECT * FROM {record['table']}"""))  # noqa: S608
+                    list(cursor.execute(f"""SELECT * FROM {record["table"]}"""))  # noqa: S608
                 )
 
             raise AssertionError(
@@ -797,30 +796,71 @@ def vector_to_args(vector, functions=[], pytest_config=None):  # noqa: B006
     return args
 
 
+def api(method, params):
+    """Poll API via JSON-RPC."""
+    headers = {"content-type": "application/json"}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+
+    response = requests.post(config.RPC, data=json.dumps(payload), headers=headers, timeout=10)
+    if response == None:  # noqa: E711
+        raise exceptions.RPCError(f"Cannot communicate with {config.XCP_NAME} server.")
+    elif response.status_code != 200:
+        if response.status_code == 500:
+            raise exceptions.RPCError("Malformed API call.")
+        else:
+            raise exceptions.RPCError(str(response.status_code) + " " + response.reason)
+
+    response_json = response.json()
+    if "error" not in response_json.keys() or response_json["error"] == None:  # noqa: E711
+        try:
+            return response_json["result"]
+        except KeyError:
+            raise exceptions.RPCError(response_json)  # noqa: B904
+    else:
+        raise exceptions.RPCError(
+            f"{response_json['error']['message']} ({response_json['error']['code']})"
+        )
+
+
 def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
     """Execute tested_method within context and arguments."""
+    if method == "test_rpc":
+        return api(inputs[0], inputs[1])
     if tx_name == "transaction" and method == "construct":
         return tested_method(server_db, inputs[0], **inputs[1])
-    elif (
+    if (
         (
             tx_name == "util"
             and (
                 method
                 in [
                     "api",
-                    "date_passed",
-                    "dhash_string",
                     "get_url",
                     "hexlify",
                     "parse_subasset_from_asset_name",
                     "compact_subasset_longname",
                     "expand_subasset_longname",
-                    "enabled",
                 ]
             )
         )
         or (
-            tx_name == "ledger"
+            tx_name == "utils.assetnames"
+            and (
+                method
+                in [
+                    "parse_subasset_from_asset_name",
+                    "compact_subasset_longname",
+                    "expand_subasset_longname",
+                ]
+            )
+        )
+        or (
+            tx_name == "ledger.issuances"
             and (
                 method
                 in [
@@ -832,25 +872,30 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
         )
         or method
         in [
+            "dhash_string",
+            "enabled",
             "get_tx_info_legacy",
             "select_utxo_destination",
             "collect_sighash_flags",
             "get_der_signature_sighash_flag",
             "get_schnorr_signature_sighash_flag",
             "check_signatures_sighash_flag",
+            "is_valid_tx_hash",
         ]
         or tx_name
         in [
             "script",
+            "utils.multisig",
+            "utils.base58",
             "transaction",
             "transaction_helper.common_serializer",
             "transaction_helper.transaction_outputs",
             "backend",
-            "message_type",
-            "address",
+            "parser.messagetype",
+            "utils.address",
         ]
         or (
-            tx_name == "composer"
+            tx_name == "api.composer"
             and method
             not in [
                 "compose_transaction",
@@ -868,7 +913,7 @@ def exec_tested_method(tx_name, method, tested_method, inputs, server_db):
                 "fairminter",
                 "fairmint",
                 "utxo",
-                "versions.enhanced_send",
+                "versions.enhancedsend",
                 "versions.mpma",
                 "sweep",
                 "attach",
@@ -901,14 +946,17 @@ def check_outputs(
 ):
     """Check actual and expected outputs of a particular function."""
 
-    try:
-        tested_module = sys.modules[f"counterpartycore.lib.{tx_name}"]
-    except KeyError:  # TODO: hack
-        if tx_name == "api_v1":
-            tested_module = sys.modules["counterpartycore.lib.api.api_v1"]
-        else:
-            tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
-    tested_method = getattr(tested_module, method)
+    if method == "test_rpc":
+        tested_method = api
+    else:
+        try:
+            tested_module = sys.modules[f"counterpartycore.lib.{tx_name}"]
+        except KeyError:  # TODO: hack
+            if tx_name == "apiv1":
+                tested_module = sys.modules["counterpartycore.lib.api.apiv1"]
+            else:
+                tested_module = sys.modules[f"counterpartycore.lib.messages.{tx_name}"]
+        tested_method = getattr(tested_module, method)
 
     default_protocol_changes = mock_protocol_changes or {}
     if method in ["compose", "pack"] and "short_tx_type_id" not in default_protocol_changes:
@@ -981,7 +1029,7 @@ def check_outputs(
                     )
                 else:
                     msg = f"expected outputs don't match test_outputs: expected_outputs={outputs} test_outputs={test_outputs}"
-                print(to_json(test_outputs))
+                print(helpers.to_json(test_outputs))
                 raise Exception(msg)  # noqa: B904
         if records is not None:
             for record in records:
@@ -998,7 +1046,7 @@ def compare_strings(string1, string2):
 
 
 def get_block_ledger(db, block_index):
-    """Return the block's ledger."""
+    """Return the block's ledger.other."""
     cursor = db.cursor()
     debits = list(cursor.execute("""SELECT * FROM debits WHERE block_index = ?""", (block_index,)))
     credits = list(
@@ -1120,9 +1168,6 @@ def reparse(testnet=True, checkpoint_count=5):
     # we start one block after the checkpoint before the first one we want to check
     block_index = sorted(list(CHECKPOINTS.keys()))[-checkpoint_count - 1]
     print(f"Checking from block {block_index}")
-
-    # Initialise missing tables
-    blocks.initialise(memory_db)
 
     try:
         blocks.reparse(memory_db, block_index)

@@ -1,7 +1,7 @@
 import time
 
 import hypothesis
-from counterpartycore.lib import util
+from counterpartycore.lib.parser import utxosinfo
 from hypothesis import given
 from regtestnode import RegtestNodeThread
 
@@ -52,12 +52,12 @@ class PropertyTestNode:
         self.balances.append([address_or_utxo, asset, quantity, utxo_address])
 
     def get_utxos_balances(self):
-        return [balance for balance in self.balances if util.is_utxo_format(balance[0])]
+        return [balance for balance in self.balances if utxosinfo.is_utxo_format(balance[0])]
 
     def check_balance(self, balance):
         address_or_utxo, asset, quantity, utxo_address = balance
 
-        if util.is_utxo_format(address_or_utxo):
+        if utxosinfo.is_utxo_format(address_or_utxo):
             field_name = "utxo"
         else:
             field_name = "address"

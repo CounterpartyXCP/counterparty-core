@@ -15,13 +15,16 @@ import bitcoin as bitcoinlib
 import pycoin
 import pytest
 import requests
-from pycoin.coins.bitcoin import Tx  # noqa: F401
+from bitcoinutils.keys import PublicKey
 
-from counterpartycore import server
-from counterpartycore.lib import config, database, exceptions, ledger, log, script, util
-from counterpartycore.lib.api import api_server as api_v2
-from counterpartycore.lib.api import api_v1 as api
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.api import apiserver as api_v2
+from counterpartycore.lib.api import apiv1 as api
 from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.cli import log, server
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.parser import gettxinfo, protocol, utxosinfo
+from counterpartycore.lib.utils import assetnames, base58, database, multisig, opcodes, script
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
@@ -70,7 +73,7 @@ ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK = (
     False  # if true, always check MOCK_PROTOCOL_CHANGES_AT_BLOCK
 )
 ALWAYS_LATEST_PROTOCOL_CHANGES = False  # Even when this is true, this can be overridden if allow_always_latest is False in MOCK_PROTOCOL_CHANGES_AT_BLOCK
-_enabled = util.enabled
+_enabled = protocol.enabled
 
 
 def enabled(change_name, block_index=None):
@@ -82,7 +85,7 @@ def enabled(change_name, block_index=None):
     if shouldCheckForMockProtocolChangesAtBlock(change_name):
         _block_index = block_index
         if _block_index is None:
-            _block_index = util.CURRENT_BLOCK_INDEX
+            _block_index = CurrentState().current_block_index()
         if _block_index >= MOCK_PROTOCOL_CHANGES_AT_BLOCK[change_name]["block_index"]:
             return True
         return False
@@ -90,17 +93,15 @@ def enabled(change_name, block_index=None):
     # used to force unit tests to always run against latest protocol changes
     if ALWAYS_LATEST_PROTOCOL_CHANGES:
         # KeyError to mimic real util.enabled
-        if change_name not in util.PROTOCOL_CHANGES:
+        if change_name not in protocol.PROTOCOL_CHANGES:
             raise KeyError(change_name)
 
-        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or util.CURRENT_BLOCK_INDEX} enabled: True")
         return True
     else:
-        # print(f"ALWAYS_LATEST_PROTOCOL_CHANGES {change_name} {block_index or util.CURRENT_BLOCK_INDEX} enabled: {_enabled(change_name, block_index)}")
         return _enabled(change_name, block_index)
 
 
-util.enabled = enabled
+protocol.enabled = enabled
 
 
 # This is true if ENABLE_MOCK_PROTOCOL_CHANGES_AT_BLOCK is set
@@ -120,7 +121,7 @@ def shouldCheckForMockProtocolChangesAtBlock(change_name):
 
 
 RANDOM_ASSET_INT = None
-_generate_random_asset = util.generate_random_asset
+_generate_random_asset = assetnames.generate_random_asset
 
 
 def generate_random_asset(subasset_longname=None):
@@ -130,7 +131,7 @@ def generate_random_asset(subasset_longname=None):
         return "A" + str(RANDOM_ASSET_INT)
 
 
-util.generate_random_asset = generate_random_asset
+assetnames.generate_random_asset = generate_random_asset
 
 DISABLE_ARC4_MOCKING = False
 
@@ -220,7 +221,7 @@ def rawtransactions_db(request):
 
 
 @pytest.fixture(scope="function")
-def server_db(request, cp_server, api_server):
+def server_db(request, cp_server, apiserver):
     """Enable database access for unit test vectors."""
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
@@ -236,9 +237,9 @@ def server_db(request, cp_server, api_server):
 
 
 @pytest.fixture(scope="module")
-def api_server(request, cp_server):
+def apiserver(request, cp_server):
     """
-    api_server fixture, for each module we bind it to a different port because we're unable to kill it
+    apiserver fixture, for each module we bind it to a different port because we're unable to kill it
     also `server_db` will inject itself into APIServer for each function
     """
 
@@ -248,14 +249,14 @@ def api_server(request, cp_server):
     server.configure_rpc(config.RPC_PASSWORD)
     config.CACHE_DIR = os.path.dirname(request.module.FIXTURE_DB)
 
-    print("api_server", config.DATABASE, config.STATE_DATABASE)
+    print("apiserver", config.DATABASE, config.STATE_DATABASE)
 
     # start RPC server and wait for server to be ready
-    api_server = api.APIServer()
-    api_server.daemon = True
-    api_server.start()
+    apiserver = api.APIServer()
+    apiserver.daemon = True
+    apiserver.start()
     for attempt in range(5000):  # wait until server is ready.
-        if api_server.is_ready:
+        if apiserver.is_ready:
             time.sleep(0.5)  # extra time window
             break
         elif attempt == 4999:
@@ -265,13 +266,13 @@ def api_server(request, cp_server):
                 0.001
             )  # attempt to query the current block_index if possible (scenarios start with empty DB so it's not always possible)
 
-    return api_server
+    return apiserver
 
 
 @pytest.fixture(scope="module")
-def api_server_v2(request, cp_server):
+def apiserver_v2(request, cp_server):
     default_config = {
-        "testnet": False,
+        "testnet": True,
         "testnet4": False,
         "regtest": False,
         "api_limit_rows": 1000,
@@ -349,16 +350,20 @@ def api_server_v2(request, cp_server):
 
     dbbuilder.build_state_db()
 
+    # set WAL mode to on, need write access
+    ledger_db = database.get_db_connection(config.DATABASE, read_only=False, check_wal=False)
+    api_db = database.get_db_connection(config.STATE_DATABASE, read_only=False, check_wal=False)
+    ledger_db.close()
+    api_db.close()
+
     def is_server_ready():
         return True
-
-    util.CURRENT_BACKEND_HEIGHT = 0
 
     api_v2.is_server_ready = is_server_ready
 
     args = argparse.Namespace(**server_config)
-    api_server = api_v2.APIServer(None)
-    api_server.start(args)
+    apiserver = api_v2.APIServer(None)
+    apiserver.start(args)
 
     # wait for server to be ready
     while True:
@@ -378,9 +383,9 @@ def api_server_v2(request, cp_server):
             time.sleep(1)
             pass
 
-    request.addfinalizer(lambda: api_server.stop())
+    request.addfinalizer(lambda: apiserver.stop())
 
-    return api_server
+    return apiserver
 
 
 @pytest.fixture(scope="module")
@@ -399,6 +404,37 @@ def cp_server(request):
     request.addfinalizer(lambda: util_test.remove_database_files(dbfile))
 
     return db
+
+
+def scriptpubkey_to_address(scriptpubkey):
+    asm = script.script_to_asm(bytes(scriptpubkey))
+
+    if asm[-1] == opcodes.OP_CHECKSIG:  # noqa: F405
+        try:
+            checksig = gettxinfo.get_checksig(asm)
+        except exceptions.DecodeError:  # coinbase
+            return None
+
+        return base58.base58_check_encode(
+            binascii.hexlify(checksig).decode("utf-8"), config.ADDRESSVERSION
+        )
+
+    elif asm[-1] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
+        pubkeys, signatures_required = gettxinfo.get_checkmultisig(asm)
+        pubkeyhashes = [
+            PublicKey.from_hex(binascii.hexlify(pubkey).decode("utf-8"))
+            .get_address(compressed=True)
+            .to_string()
+            for pubkey in pubkeys
+        ]
+        return multisig.construct_array(signatures_required, pubkeyhashes, len(pubkeyhashes))
+
+    elif len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:  # noqa: F405
+        return base58.base58_check_encode(
+            binascii.hexlify(asm[1]).decode("utf-8"), config.P2SH_ADDRESSVERSION
+        )
+
+    return None
 
 
 class MockUTXOSet(object):
@@ -484,9 +520,7 @@ class MockUTXOSet(object):
             script_pub_key = binascii.hexlify(txout.script).decode("ascii")
             txouts.append(
                 {
-                    "address": script.scriptpubkey_to_address(
-                        bitcoinlib.core.CScript(txout.script)
-                    ),
+                    "address": scriptpubkey_to_address(bitcoinlib.core.CScript(txout.script)),
                     "confirmations": int(confirmations),
                     "amount": txout.coin_value / 1e8,
                     "value": txout.coin_value,
@@ -584,7 +618,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         pubkeys = [DEFAULT_PARAMS["pubkey"][pubkeyhash] for pubkeyhash in pubkeyhashes]
         return pubkeys[0]
 
-    def mocked_getrawtransaction(tx_hash, verbose=False, block_index=None):
+    def mocked_getrawtransaction(tx_hash, verbose=False, block_index=None, no_retry=False):
         return util_test.getrawtransaction(
             rawtransactions_db, tx_hash, verbose=verbose, block_index=block_index
         )
@@ -602,7 +636,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         pass
 
     def is_valid_utxo(value):
-        return util.is_utxo_format(value)
+        return utxosinfo.is_utxo_format(value)
 
     def get_utxo_address_and_value(value):
         return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 100
@@ -637,10 +671,10 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         return tx_hex
 
     monkeypatch.setattr("counterpartycore.lib.backend.electrs.get_utxos", get_utxos)
-    monkeypatch.setattr("counterpartycore.lib.log.isodt", isodt)
-    monkeypatch.setattr("counterpartycore.lib.ledger.curr_time", curr_time)
-    monkeypatch.setattr("counterpartycore.lib.util.date_passed", date_passed)
-    monkeypatch.setattr("counterpartycore.lib.api.util.init_api_access_log", init_api_access_log)
+    monkeypatch.setattr("counterpartycore.lib.cli.log.isodt", isodt)
+    monkeypatch.setattr("counterpartycore.lib.ledger.events.curr_time", curr_time)
+    monkeypatch.setattr("counterpartycore.lib.messages.bet.date_passed", date_passed)
+    monkeypatch.setattr("counterpartycore.lib.cli.log.init_api_access_log", init_api_access_log)
     if hasattr(config, "PREFIX"):
         monkeypatch.setattr("counterpartycore.lib.config.PREFIX", b"TESTXXXX")
     monkeypatch.setattr(
@@ -666,32 +700,30 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
         search_pubkey,
     )
 
-    monkeypatch.setattr("counterpartycore.lib.database.check_wal_file", check_wal_file)
+    monkeypatch.setattr("counterpartycore.lib.utils.database.check_wal_file", check_wal_file)
     monkeypatch.setattr("counterpartycore.lib.messages.rps.expire", rps_expire)
 
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.get_matching_orders", ledger.get_matching_orders_no_cache
+        "counterpartycore.lib.ledger.markets.get_matching_orders",
+        ledger.markets.get_matching_orders_no_cache,
     )
 
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.get_utxo_value", mocked_get_utxo_value
     )
-    # monkeypatch.setattr("counterpartycore.lib.composer.determine_encoding", determine_encoding)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.satoshis_per_vbyte", satoshis_per_vbyte
     )
 
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.asset_issued_total", ledger.asset_issued_total_no_cache
+        "counterpartycore.lib.ledger.supplies.asset_issued_total",
+        ledger.supplies.asset_issued_total_no_cache,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.get_last_issuance", ledger.get_last_issuance_no_cache
+        "counterpartycore.lib.ledger.issuances.get_last_issuance",
+        ledger.issuances.get_last_issuance_no_cache,
     )
     monkeypatch.setattr(
-        "counterpartycore.lib.ledger.asset_destroyed_total", ledger.asset_destroyed_total_no_cache
+        "counterpartycore.lib.ledger.supplies.asset_destroyed_total",
+        ledger.supplies.asset_destroyed_total_no_cache,
     )
-
-    class MockSingletonMeta:
-        pass
-
-    monkeypatch.setattr("counterpartycore.lib.util.SingletonMeta", MockSingletonMeta)

@@ -5,7 +5,8 @@ from io import BytesIO
 
 import bitcoin
 
-from counterpartycore.lib import composer, exceptions
+from counterpartycore.lib import exceptions
+from counterpartycore.lib.api import composer
 from counterpartycore.test import (
     conftest,  # noqa: F401
 )

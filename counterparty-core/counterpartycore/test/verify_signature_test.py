@@ -1,6 +1,6 @@
 import os
 
-from counterpartycore.lib.bootstrap import verify_signature
+from counterpartycore.lib.cli.bootstrap import verify_signature
 
 
 def test_verify_signature():

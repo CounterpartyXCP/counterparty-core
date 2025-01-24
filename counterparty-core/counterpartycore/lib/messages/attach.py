@@ -1,7 +1,11 @@
 import logging
 import struct
 
-from counterpartycore.lib import config, exceptions, gas, ledger, script, util
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.messages import gas
+from counterpartycore.lib.parser import utxosinfo
+from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -31,7 +35,7 @@ def validate_asset_and_quantity(asset, quantity):
 def validate_balance(db, source, asset, quantity, fee=0):
     problems = []
     # check if source has enough funds
-    asset_balance = ledger.get_balance(db, source, asset)
+    asset_balance = ledger.balances.get_balance(db, source, asset)
     if asset == config.XCP:
         # fee is always paid in XCP
         if asset_balance < quantity + fee:
@@ -40,7 +44,7 @@ def validate_balance(db, source, asset, quantity, fee=0):
         if asset_balance < quantity:
             problems.append("insufficient funds for transfer")
         if fee > 0:
-            xcp_balance = ledger.get_balance(db, source, config.XCP)
+            xcp_balance = ledger.balances.get_balance(db, source, config.XCP)
             if xcp_balance < fee:
                 problems.append("insufficient funds for fee")
     return problems
@@ -51,8 +55,8 @@ def validate(db, source, asset, quantity, destination_vout=None, block_index=Non
 
     # check if source is an address
     try:
-        script.validate(source)
-    except script.AddressError:
+        address.validate(source)
+    except exceptions.AddressError:
         problems.append("invalid source address")
 
     # validate asset and quantity
@@ -63,7 +67,7 @@ def validate(db, source, asset, quantity, destination_vout=None, block_index=Non
         return problems
 
     # attach needs fee
-    fee = gas.get_transaction_fee(db, ID, block_index or util.CURRENT_BLOCK_INDEX)
+    fee = gas.get_transaction_fee(db, ID, block_index or CurrentState().current_block_index())
 
     # check balances
     problems += validate_balance(db, source, asset, quantity, fee)
@@ -138,7 +142,7 @@ def unpack(message, return_dict=False):
 
 def pay_fee(db, tx, source, fee):
     # debit fee from the fee payer
-    ledger.debit(
+    ledger.events.debit(
         db,
         source,
         config.XCP,
@@ -158,7 +162,7 @@ def pay_fee(db, tx, source, fee):
         "tag": "attach to utxo fee",
         "status": "valid",
     }
-    ledger.insert_record(db, "destructions", destroy_bindings, "ASSET_DESTRUCTION")
+    ledger.events.insert_record(db, "destructions", destroy_bindings, "ASSET_DESTRUCTION")
 
 
 def parse(db, tx, message):
@@ -170,17 +174,17 @@ def parse(db, tx, message):
     # determine destination
     if destination_vout is None:
         # if no destination_vout is provided, we use the first non-OPT_RETURN output
-        destination = util.get_destination_from_utxos_info(tx["utxos_info"])
+        destination = utxosinfo.get_destination_from_utxos_info(tx["utxos_info"])
         if not destination:
             problems.append("no UTXO to attach to")
     else:
         # check if destination_vout is valid
-        outputs_count = util.get_outputs_count_from_utxos_info(tx["utxos_info"])
+        outputs_count = utxosinfo.get_outputs_count_from_utxos_info(tx["utxos_info"])
         if outputs_count and destination_vout > outputs_count - 1:
             problems.append("destination vout is greater than the number of outputs")
 
         # check if destination_vout is an OP_RETURN output
-        op_return_output = util.get_op_return_output_from_utxos_info(tx["utxos_info"])
+        op_return_output = utxosinfo.get_op_return_output_from_utxos_info(tx["utxos_info"])
         if op_return_output and destination_vout == op_return_output:
             problems.append("destination vout is an OP_RETURN output")
 
@@ -193,12 +197,12 @@ def parse(db, tx, message):
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
-            "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
+            "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
             "block_index": tx["block_index"],
             "status": status,
             "send_type": "attach",
         }
-        ledger.insert_record(db, "sends", bindings, "ATTACH_TO_UTXO")
+        ledger.events.insert_record(db, "sends", bindings, "ATTACH_TO_UTXO")
         # return here to avoid further processing
         return
 
@@ -211,8 +215,10 @@ def parse(db, tx, message):
 
     # debit asset from source and credit to recipient
     action = "attach to utxo"
-    ledger.debit(db, source, asset, quantity, tx["tx_index"], action=action, event=tx["tx_hash"])
-    destination_address = ledger.credit(
+    ledger.events.debit(
+        db, source, asset, quantity, tx["tx_index"], action=action, event=tx["tx_hash"]
+    )
+    destination_address = ledger.events.credit(
         db,
         destination,
         asset,
@@ -224,7 +230,7 @@ def parse(db, tx, message):
     bindings = {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
-        "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
+        "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
         "block_index": tx["block_index"],
         "status": "valid",
         "source": source,
@@ -235,7 +241,7 @@ def parse(db, tx, message):
         "fee_paid": fee,
         "send_type": "attach",
     }
-    ledger.insert_record(db, "sends", bindings, "ATTACH_TO_UTXO")
+    ledger.events.insert_record(db, "sends", bindings, "ATTACH_TO_UTXO")
 
     logger.info(
         "Attach %(asset)s from %(source)s to utxo: %(destination)s (%(tx_hash)s) [%(status)s]",

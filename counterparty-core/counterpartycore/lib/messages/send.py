@@ -1,202 +1,13 @@
 import logging
-import time
 
-from counterpartycore.lib import config, database, exceptions, util
-from counterpartycore.lib.messages.versions import enhanced_send, mpma, send1
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.messages.versions import enhancedsend, mpma, send1
+from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import helpers
 
 ID = send1.ID
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-
-def initialise(db):
-    cursor = db.cursor()
-
-    # remove misnamed indexes
-    database.drop_indexes(
-        cursor,
-        [
-            "block_index_idx",
-            "source_idx",
-            "destination_idx",
-            "asset_idx",
-            "memo_idx",
-        ],
-    )
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS sends(
-                      tx_index INTEGER PRIMARY KEY,
-                      tx_hash TEXT UNIQUE,
-                      block_index INTEGER,
-                      source TEXT,
-                      destination TEXT,
-                      asset TEXT,
-                      quantity INTEGER,
-                      status TEXT,
-                      FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index))
-                   """)
-    columns = [column["name"] for column in cursor.execute("""PRAGMA table_info(sends)""")]
-
-    # If CIP10 activated, Create Sends copy, copy old data, drop old table, rename new table, recreate indexes
-    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS` nor can drop UNIQUE constraints
-    if "msg_index" not in columns:
-        if "memo" not in columns:
-            cursor.execute("""CREATE TABLE IF NOT EXISTS new_sends(
-                              tx_index INTEGER,
-                              tx_hash TEXT,
-                              block_index INTEGER,
-                              source TEXT,
-                              destination TEXT,
-                              asset TEXT,
-                              quantity INTEGER,
-                              status TEXT,
-                              msg_index INTEGER DEFAULT 0,
-                              PRIMARY KEY (tx_index, msg_index),
-                              FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                              UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL)
-                           """)
-            cursor.execute(
-                """INSERT INTO new_sends(tx_index, tx_hash, block_index, source, destination, asset, quantity, status)
-                SELECT tx_index, tx_hash, block_index, source, destination, asset, quantity, status
-                FROM sends""",
-                {},
-            )
-        else:
-            cursor.execute("""CREATE TABLE IF NOT EXISTS new_sends(
-                  tx_index INTEGER,
-                  tx_hash TEXT,
-                  block_index INTEGER,
-                  source TEXT,
-                  destination TEXT,
-                  asset TEXT,
-                  quantity INTEGER,
-                  status TEXT,
-                  memo BLOB,
-                  msg_index INTEGER DEFAULT 0,
-                  PRIMARY KEY (tx_index, msg_index),
-                  FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
-                  UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL)
-               """)
-            cursor.execute(
-                """INSERT INTO new_sends (tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo)
-                SELECT tx_index, tx_hash, block_index, source, destination, asset, quantity, status, memo
-                FROM sends""",
-                {},
-            )
-
-        cursor.execute("DROP TABLE sends")
-        cursor.execute("ALTER TABLE new_sends RENAME TO sends")
-
-    # Adds a memo to sends
-    #   SQLite can’t do `ALTER TABLE IF COLUMN NOT EXISTS`.
-
-    if "memo" not in columns:
-        cursor.execute("""ALTER TABLE sends ADD COLUMN memo BLOB""")
-
-    if "fee_paid" not in columns:
-        cursor.execute("""ALTER TABLE sends ADD COLUMN fee_paid INTEGER DEFAULT 0""")
-
-    if "send_type" not in columns:
-        logger.info("Adding `send_type` column to `sends` table")
-        start_time = time.time()
-        with db:
-            database.unlock_update(db, "sends")
-            cursor.execute("""ALTER TABLE sends ADD COLUMN send_type TEXT""")
-            utxo_support_start = util.get_change_block_index("utxo_support")
-            cursor.execute(
-                """
-                UPDATE sends SET send_type = ? WHERE block_index < ?
-            """,
-                (
-                    "send",
-                    utxo_support_start,
-                ),
-            )
-            cursor.execute(
-                """
-                UPDATE sends SET send_type = ? WHERE block_index >= ?
-                AND source NOT LIKE '%:%' AND destination NOT LIKE '%:%'
-            """,
-                (
-                    "send",
-                    utxo_support_start,
-                ),
-            )
-            cursor.execute(
-                """
-                UPDATE sends SET send_type = ? WHERE block_index >= ?
-                AND source NOT LIKE '%:%' AND destination LIKE '%:%'
-            """,
-                (
-                    "attach",
-                    utxo_support_start,
-                ),
-            )
-            cursor.execute(
-                """
-                UPDATE sends SET send_type = ? WHERE block_index >= ?
-                AND source LIKE '%:%' AND destination NOT LIKE '%:%'
-            """,
-                (
-                    "detach",
-                    utxo_support_start,
-                ),
-            )
-            cursor.execute(
-                """
-                UPDATE sends SET send_type = ? WHERE block_index >= ?
-                AND source LIKE '%:%' AND destination LIKE '%:%'
-            """,
-                (
-                    "move",
-                    utxo_support_start,
-                ),
-            )
-            database.lock_update(db, "sends")
-        logger.info(
-            f"Added `send_type` column to `sends` table in {time.time() - start_time:.2f} seconds"
-        )
-
-    if "source_address" not in columns:
-        logger.info("Adding `source_address` and `destination_address` column to `sends` table")
-        start_time = time.time()
-        with db:
-            database.unlock_update(db, "sends")
-            cursor.execute("""ALTER TABLE sends ADD COLUMN source_address TEXT""")
-            cursor.execute("""ALTER TABLE sends ADD COLUMN destination_address TEXT""")
-
-            cursor.execute("""
-                UPDATE sends SET source_address = (
-                    SELECT utxo_address FROM balances WHERE balances.utxo = sends.source LIMIT 1
-                )
-                WHERE sends.send_type in ('move', 'detach')
-            """)
-
-            cursor.execute("""
-                UPDATE sends SET destination_address = (
-                    SELECT utxo_address FROM balances WHERE balances.utxo = sends.destination LIMIT 1
-                )
-                WHERE sends.send_type in ('move', 'attach')
-            """)
-
-            database.lock_update(db, "sends")
-        logger.info(
-            f"Added `source_address` and `destination_address` column to `sends` table in {time.time() - start_time:.2f} seconds"
-        )
-
-    database.create_indexes(
-        cursor,
-        "sends",
-        [
-            ["block_index", "send_type"],
-            ["source"],
-            ["destination"],
-            ["asset", "send_type"],
-            ["memo"],
-            ["status"],
-            ["send_type"],
-        ],
-    )
 
 
 def unpack(db, message, block_index):
@@ -217,13 +28,14 @@ def compose(
     memo_is_hex: bool = False,
     use_enhanced_send: bool = None,
     skip_validation: bool = False,
+    no_dispense: bool = False,
 ):
     # special case - enhanced_send replaces send by default when it is enabled
     #   but it can be explicitly disabled with an API parameter
-    if util.enabled("enhanced_sends"):
+    if protocol.enabled("enhanced_sends"):
         # Another special case, if destination, asset and quantity are arrays, it's an MPMA send
         if isinstance(destination, list) and isinstance(asset, list) and isinstance(quantity, list):
-            if util.enabled("mpma_sends"):
+            if protocol.enabled("mpma_sends"):
                 if len(destination) == len(asset) and len(asset) == len(quantity):
                     # Sending memos in a MPMA message can be done by several approaches:
                     # 1. Send a list of memos, there must be one for each send and they correspond to the sends by index
@@ -252,7 +64,7 @@ def compose(
                         return mpma.compose(
                             db,
                             source,
-                            util.flat(zip(asset, destination, quantity, memo, memo_is_hex)),
+                            helpers.flat(zip(asset, destination, quantity, memo, memo_is_hex)),
                             None,
                             None,
                             skip_validation,
@@ -280,7 +92,7 @@ def compose(
                         return mpma.compose(
                             db,
                             source,
-                            util.flat(
+                            helpers.flat(
                                 zip(asset, destination, quantity, memo["list"], memo_is_hex["list"])
                             ),
                             memo["msg_wide"],
@@ -292,7 +104,7 @@ def compose(
                         return mpma.compose(
                             db,
                             source,
-                            util.flat(zip(asset, destination, quantity)),
+                            helpers.flat(zip(asset, destination, quantity)),
                             memo,
                             memo_is_hex,
                             skip_validation,
@@ -304,13 +116,21 @@ def compose(
             else:
                 raise exceptions.ComposeError("mpma sends are not enabled")
         elif use_enhanced_send is None or use_enhanced_send == True:  # noqa: E712
-            return enhanced_send.compose(
-                db, source, destination, asset, quantity, memo, memo_is_hex, skip_validation
+            return enhancedsend.compose(
+                db,
+                source,
+                destination,
+                asset,
+                quantity,
+                memo,
+                memo_is_hex,
+                skip_validation,
+                no_dispense,
             )
     elif memo is not None or use_enhanced_send == True:  # noqa: E712
         raise exceptions.ComposeError("enhanced sends are not enabled")
 
-    return send1.compose(db, source, destination, asset, quantity, skip_validation)
+    return send1.compose(db, source, destination, asset, quantity, skip_validation, no_dispense)
 
 
 def parse(db, tx, message):  # TODO: *args

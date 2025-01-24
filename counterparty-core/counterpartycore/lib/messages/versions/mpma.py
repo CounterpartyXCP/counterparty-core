@@ -1,23 +1,32 @@
-#! /usr/bin/python3
-
-import binascii  # noqa: F401
-import json  # noqa: F401
 import logging
-import math  # noqa: F401
 import struct
 from functools import reduce
 from itertools import groupby
 
-from bitcoin.core import key  # noqa: F401
 from bitstring import ReadError
 
-from counterpartycore.lib import config, exceptions, ledger, message_type, util
-
-from .mpma_util.internals import _decode_mpma_send_decode, _encode_mpma_send
+from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.parser import messagetype, protocol
+from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils.mpmaencoding import (
+    _decode_mpma_send_decode,
+    _encode_mpma_send,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 ID = 3  # 0x03 is this specific message type
+
+
+def py34_tuple_append(first_elem, t):
+    # Had to do it this way to support python 3.4, if we start
+    # using the 3.5 runtime this can be replaced by:
+    #  (first_elem, *t)
+
+    l = list(t)  # noqa: E741
+    l.insert(0, first_elem)
+    return tuple(l)
 
 
 ## expected functions for message version
@@ -82,8 +91,8 @@ def validate(db, source, asset_dest_quant_list, block_index):
         if not destination:
             problems.append(f"destination is required for {asset}")
 
-        if util.enabled("options_require_memo"):
-            results = ledger.get_addresses(db, address=destination) if destination else None
+        if protocol.enabled("options_require_memo"):
+            results = ledger.other.get_addresses(db, address=destination) if destination else None
             if results:
                 result = results[0]
                 if (
@@ -121,20 +130,20 @@ def compose(
     if memo_is_hex and not isinstance(memo_is_hex, bool):
         raise exceptions.ComposeError("`memo_is_hex` must be a boolean")
 
-    out_balances = util.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
+    out_balances = helpers.accumulate([(t[0], t[2]) for t in asset_dest_quant_list])
     for asset, quantity in out_balances:
-        if util.enabled("mpma_subasset_support"):
+        if protocol.enabled("mpma_subasset_support"):
             # resolve subassets
-            asset = ledger.resolve_subasset_longname(db, asset)  # noqa: PLW2901
+            asset = ledger.issuances.resolve_subasset_longname(db, asset)  # noqa: PLW2901
 
         if not isinstance(quantity, int):
             raise exceptions.ComposeError(f"quantities must be an int (in satoshis) for {asset}")
 
-        balance = ledger.get_balance(db, source, asset)
+        balance = ledger.balances.get_balance(db, source, asset)
         if balance < quantity and not skip_validation:
             raise exceptions.ComposeError(f"insufficient funds for {asset}")
 
-    block_index = util.CURRENT_BLOCK_INDEX
+    block_index = CurrentState().current_block_index()
 
     cursor.close()
 
@@ -142,7 +151,7 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    data = message_type.pack(ID)
+    data = messagetype.pack(ID)
 
     try:
         data += _encode_mpma_send(
@@ -173,12 +182,12 @@ def parse(db, tx, message):
     if status == "valid":
         for asset_id in unpacked:
             try:
-                asset = ledger.get_asset_name(db, asset_id, tx["block_index"])  # noqa: F841
+                asset = ledger.issuances.get_asset_name(db, asset_id, tx["block_index"])  # noqa: F841
             except exceptions.AssetNameError as e:  # noqa: F841
                 status = f"invalid: asset {asset_id} invalid at block index {tx['block_index']}"
                 break
 
-            balance = ledger.get_balance(db, tx["source"], asset_id)
+            balance = ledger.balances.get_balance(db, tx["source"], asset_id)
             if not balance:
                 status = f"invalid: insufficient funds for asset {asset_id}, address {tx['source']} has no balance"
                 break
@@ -192,7 +201,7 @@ def parse(db, tx, message):
                 break
 
             if status == "valid":
-                plain_sends += map(lambda t: util.py34_tuple_append(asset_id, t), credits)
+                plain_sends += map(lambda t: py34_tuple_append(asset_id, t), credits)
                 all_credits += map(
                     lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]}, credits
                 )
@@ -206,7 +215,7 @@ def parse(db, tx, message):
 
     if status == "valid":
         for op in all_credits:
-            ledger.credit(
+            ledger.events.credit(
                 db,
                 op["destination"],
                 op["asset"],
@@ -217,7 +226,7 @@ def parse(db, tx, message):
             )
 
         for op in all_debits:
-            ledger.debit(
+            ledger.events.debit(
                 db,
                 tx["source"],
                 op["asset"],
@@ -245,11 +254,11 @@ def parse(db, tx, message):
                 "quantity": op[2],
                 "status": status,
                 "memo": memo_bytes,
-                "msg_index": ledger.get_send_msg_index(db, tx["tx_hash"]),
+                "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
                 "send_type": "send",
             }
 
-            ledger.insert_record(db, "sends", bindings, "MPMA_SEND")
+            ledger.events.insert_record(db, "sends", bindings, "MPMA_SEND")
 
             logger.info(
                 "Send (MPMA) %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]",

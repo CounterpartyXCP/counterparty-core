@@ -1,7 +1,8 @@
 import binascii
 
-from counterpartycore.lib import config, deserialize, exceptions
-from counterpartycore.lib.gettxinfo import SighashFlagError
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.parser import deserialize
+from counterpartycore.lib.parser.gettxinfo import SighashFlagError
 
 from ..params import DEFAULT_PARAMS as DP
 
@@ -9,7 +10,40 @@ config.NETWORK_NAME = "testnet"
 config.PREFIX = b"TESTXXXX"
 
 GETTXINFO_VECTOR = {
-    "gettxinfo": {
+    "parser.gettxinfolegacy": {
+        "get_tx_info_legacy": [
+            # data in OP_CHECKSIG script
+            {
+                "in": (
+                    deserialize.deserialize_tx(
+                        "0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0636150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac36150000000000001976a9147da51ea175f108a1c63588683dc4c43a7146c46788ac36150000000000001976a9147da51ea175f108a1c6358868173e34e8ca75a06788ac36150000000000001976a9147da51ea175f108a1c637729895c4c468ca75a06788ac36150000000000001976a9147fa51ea175f108a1c63588682ed4c468ca7fa06788ace24ff505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",
+                        parse_vouts=True,
+                        block_index=DP["default_block_index"],
+                    ),
+                    DP["default_block_index"],
+                ),
+                "out": (
+                    "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+                    "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+                    5430,
+                    10000,
+                    b"\x00\x00\x00(\x00\x00R\xbb3d\x00TESTXXXX\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00TESTXXXX\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00TESTXXXX\x00\x00\x00;\x10\x00\x00\x00\n\x9b\xb3Q\x92(6\xc8\x86\x81i\x87\xe1\x0b\x03\xb8_8v\x8b",
+                    [],
+                ),
+            },
+            # # data in OP_CHECKMULTISIG script, unsupported by get_tx_info1
+            # {
+            #     'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e000000000000695121035ca51ea175f108a1c63588683dc4c43a7146c46799f864a300263c0813f5fe352102309a14a1a30202f2e76f46acdb2917752371ca42b97460f7928ade8ecb02ea17210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae4286f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000', DP['default_block_index']),
+            #     'error': (exceptions.DecodeError, 'no prefix')
+            # },
+            # # data in OP_CHECKSIG script, destination = p2sh, unsupported by get_tx_info1
+            # {
+            #     'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff06361500000000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8736150000000000001976a9147da51ea175f108a1c63588683dc4c43a7146c46788ac36150000000000001976a9147da51ea175f108a1c6358868173e34e8ca75a06788ac36150000000000001976a9147da51ea175f108a1c637729895c4c468ca75a06788ac36150000000000001976a9147fa51ea175f108a1c63588682ed4c468ca7fa06788ace24ff505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000', DP['default_block_index']),
+            #     'error': (exceptions.DecodeError, 'no prefix')
+            # }
+        ],
+    },
+    "parser.gettxinfo": {
         "get_tx_info": [
             # data in OP_CHECKSIG script
             {
@@ -143,37 +177,6 @@ GETTXINFO_VECTOR = {
                     ],
                 ),
             },
-        ],
-        "get_tx_info_legacy": [
-            # data in OP_CHECKSIG script
-            {
-                "in": (
-                    deserialize.deserialize_tx(
-                        "0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0636150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac36150000000000001976a9147da51ea175f108a1c63588683dc4c43a7146c46788ac36150000000000001976a9147da51ea175f108a1c6358868173e34e8ca75a06788ac36150000000000001976a9147da51ea175f108a1c637729895c4c468ca75a06788ac36150000000000001976a9147fa51ea175f108a1c63588682ed4c468ca7fa06788ace24ff505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",
-                        parse_vouts=True,
-                        block_index=DP["default_block_index"],
-                    ),
-                    DP["default_block_index"],
-                ),
-                "out": (
-                    "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-                    "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-                    5430,
-                    10000,
-                    b"\x00\x00\x00(\x00\x00R\xbb3d\x00TESTXXXX\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00TESTXXXX\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00TESTXXXX\x00\x00\x00;\x10\x00\x00\x00\n\x9b\xb3Q\x92(6\xc8\x86\x81i\x87\xe1\x0b\x03\xb8_8v\x8b",
-                    [],
-                ),
-            },
-            # # data in OP_CHECKMULTISIG script, unsupported by get_tx_info1
-            # {
-            #     'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff0336150000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac781e000000000000695121035ca51ea175f108a1c63588683dc4c43a7146c46799f864a300263c0813f5fe352102309a14a1a30202f2e76f46acdb2917752371ca42b97460f7928ade8ecb02ea17210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae4286f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000', DP['default_block_index']),
-            #     'error': (exceptions.DecodeError, 'no prefix')
-            # },
-            # # data in OP_CHECKSIG script, destination = p2sh, unsupported by get_tx_info1
-            # {
-            #     'in': (b'0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff06361500000000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8736150000000000001976a9147da51ea175f108a1c63588683dc4c43a7146c46788ac36150000000000001976a9147da51ea175f108a1c6358868173e34e8ca75a06788ac36150000000000001976a9147da51ea175f108a1c637729895c4c468ca75a06788ac36150000000000001976a9147fa51ea175f108a1c63588682ed4c468ca7fa06788ace24ff505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000', DP['default_block_index']),
-            #     'error': (exceptions.DecodeError, 'no prefix')
-            # }
         ],
         "get_tx_info_new": [
             # data in OP_CHECKSIG script

@@ -8,13 +8,16 @@ import threading
 import gunicorn.app.base
 import waitress
 import waitress.server
-from counterpartycore.lib import config, database, ledger, log, util
-from counterpartycore.lib.api import api_watcher
-from counterpartycore.lib.api.util import BackendHeight
 from gunicorn import util as gunicorn_util
 from gunicorn.arbiter import Arbiter
 from gunicorn.errors import AppImportError
 from werkzeug.serving import make_server
+
+from counterpartycore.lib import config
+from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.cli import log
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.utils import database
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -22,25 +25,18 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def refresh_current_state(ledger_db, state_db):
-    util.CURRENT_BLOCK_INDEX = api_watcher.get_last_block_parsed(state_db)
-    util.CURRENT_BACKEND_HEIGHT = BackendHeight().get()
-    if util.CURRENT_BLOCK_INDEX:
-        last_block = ledger.get_block(ledger_db, util.CURRENT_BLOCK_INDEX)
-        if last_block:
-            util.CURRENT_BLOCK_TIME = last_block["block_time"]
-        else:
-            util.CURRENT_BLOCK_TIME = 0
-    else:
-        util.CURRENT_BLOCK_TIME = 0
-        util.CURRENT_BLOCK_INDEX = 0
+    CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
 
-    if util.CURRENT_BACKEND_HEIGHT > util.CURRENT_BLOCK_INDEX:
+    current_block_index = CurrentState().current_block_index()
+    current_backend_height = CurrentState().current_backend_height()
+
+    if current_backend_height > current_block_index:
         logger.debug(
-            f"Counterparty is currently behind Bitcoin Core. ({util.CURRENT_BLOCK_INDEX} < {util.CURRENT_BACKEND_HEIGHT})"
+            f"Counterparty is currently behind Bitcoin Core. ({current_block_index} < {current_backend_height})"
         )
-    elif util.CURRENT_BACKEND_HEIGHT < util.CURRENT_BLOCK_INDEX:
+    elif current_backend_height < current_block_index:
         logger.debug(
-            f"Bitcoin Core is currently behind the network. ({util.CURRENT_BLOCK_INDEX} > {util.CURRENT_BACKEND_HEIGHT})"
+            f"Bitcoin Core is currently behind the network. ({current_block_index} > {current_backend_height})"
         )
 
 

@@ -2,7 +2,7 @@ import tempfile
 
 from bitcoinutils.transactions import Transaction
 
-from counterpartycore.lib import composer
+from counterpartycore.lib.api import composer
 from counterpartycore.test.fixtures.params import ADDR, DP  # noqa: F401
 from counterpartycore.test.util_test import CURR_DIR
 
