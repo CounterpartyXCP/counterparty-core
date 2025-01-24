@@ -35,11 +35,15 @@ def test_unpack(defaults):
     }
 
 
-def test_parse_detach_to_destination(ledger_db, blockchain_mock, defaults, test_helpers):
-    utxo = ledger_db.execute(
+def get_utxo(ledger_db, address):
+    return ledger_db.execute(
         "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
-        (defaults["addresses"][0],),
+        (address,),
     ).fetchone()["utxo"]
+
+
+def test_parse_detach_to_destination(ledger_db, blockchain_mock, defaults, test_helpers):
+    utxo = get_utxo(ledger_db, defaults["addresses"][0])
 
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], utxo_source=utxo)
     message = bytes(defaults["addresses"][1], "utf-8")
@@ -69,10 +73,7 @@ def test_parse_detach_to_destination(ledger_db, blockchain_mock, defaults, test_
 
 
 def test_parse_detach_no_destination(ledger_db, blockchain_mock, defaults, test_helpers):
-    utxo = ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
-        (defaults["addresses"][0],),
-    ).fetchone()["utxo"]
+    utxo = get_utxo(ledger_db, defaults["addresses"][0])
 
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], utxo_source=utxo)
     message = b"0"
@@ -102,10 +103,7 @@ def test_parse_detach_no_destination(ledger_db, blockchain_mock, defaults, test_
 
 
 def test_parse_detach_invalid_destination(ledger_db, blockchain_mock, defaults, test_helpers):
-    utxo = ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
-        (defaults["addresses"][0],),
-    ).fetchone()["utxo"]
+    utxo = get_utxo(ledger_db, defaults["addresses"][0])
 
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], utxo_source=utxo)
     message = bytes("invalidadress", "utf-8")

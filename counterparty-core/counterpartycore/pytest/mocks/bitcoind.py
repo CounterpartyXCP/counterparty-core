@@ -47,6 +47,9 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         return value, script_pub_key, is_segwit
 
     def get_utxo_address_and_value(self, utxo):
+        print("get_utxo_address_and_value", utxo)
+        if utxo == "0000000000000000000000000000000000000000000000000000000000000000:0":
+            return list(self.source_by_txid.values())[0], int(10 * config.UNIT)
         txid, vout = utxo.split(":")
         return self.address_and_value_by_utxo[f"{txid}:0"]
 
