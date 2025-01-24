@@ -149,7 +149,6 @@ def check_record(ledger_db, record):
                 conditions.append(f"{field} = ?")
                 bindings.append(record["values"][field])
         sql += " AND ".join(conditions)
-        print("sql", sql, "bindings", bindings)
         count = cursor.execute(sql, tuple(bindings)).fetchone()["count"]
         ok = (record.get("not", False) and count == 0) or count == 1
         if not ok:
