@@ -97,7 +97,7 @@ DEFAULT_PARAMS["p2sh_addresses"] = [
     "2N6P6d3iypnnud4YJDfHZ6kc513N8ezWmPx",  # 2of3 mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns mnfAHmddVibnZNSkh8DvKaQoiEfNsxjXzH
 ]
 
-DEFAULT_PARAMS["p2wpkh_address"] = ["bcrt1qfaw3f6ryl9jn4f5l0x7qdccxyl82snmwkrcfh9"]
+DEFAULT_PARAMS["p2wpkh_addresses"] = ["bcrt1qfaw3f6ryl9jn4f5l0x7qdccxyl82snmwkrcfh9"]
 
 DEFAULT_PARAMS["privkey"] = {addr: priv for (addr, pubkeyhash, priv, pub) in ADDRESSES}
 DEFAULT_PARAMS["pubkey"] = {addr: pub for (addr, pubkeyhash, priv, pub) in ADDRESSES}

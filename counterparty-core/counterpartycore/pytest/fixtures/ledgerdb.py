@@ -445,7 +445,7 @@ UNITTEST_FIXTURE = [
     ],
     [
         "burn",
-        {"source": DP["p2wpkh_address"][0], "quantity": DP["burn_quantity"]},
+        {"source": DP["p2wpkh_addresses"][0], "quantity": DP["burn_quantity"]},
         {"encoding": "opreturn"},
     ],
     ["mine_empty_blocks", 480],
