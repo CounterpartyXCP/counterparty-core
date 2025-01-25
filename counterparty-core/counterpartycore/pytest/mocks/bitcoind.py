@@ -77,6 +77,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         utxo_destination=None,
         use_first_tx=False,
         fee=2000,
+        data=None,
     ):
         # we take an existing tx to avoid foreign key constraint errors
         cursor = ledger_db.cursor()
@@ -105,6 +106,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
             "destination": destination,
             "btc_amount": btc_amount,
             "fee": fee,
+            "data": data,
         }
 
 
