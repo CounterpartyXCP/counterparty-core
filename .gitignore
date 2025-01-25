@@ -46,3 +46,6 @@ test-results/
 
 # cursor
 ._*
+
+.hypothesis/
+.coverage*
