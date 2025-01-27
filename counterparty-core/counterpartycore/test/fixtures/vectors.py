@@ -39,7 +39,7 @@ from .contract_vectors.messagetype import MESSAGE_TYPE_VECTOR
 from .contract_vectors.script import SCRIPT_VECTOR
 from .contract_vectors.util import UTIL_VECTOR
 
-# UNITTEST_VECTOR = COMPOSER_VECTOR
+# UNITTEST_VECTOR = GETTXINFO_VECTOR
 
 UNITTEST_VECTOR = (
     ADDRESS_VECTOR

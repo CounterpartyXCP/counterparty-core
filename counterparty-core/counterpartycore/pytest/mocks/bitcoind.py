@@ -2,7 +2,7 @@ import sys
 import time
 
 import pytest
-from counterpartycore.lib import config
+from counterpartycore.lib import config, parser
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, check, deserialize
@@ -172,6 +172,9 @@ def monkeymodule():
     mpatch = MonkeyPatch()
     yield mpatch
     mpatch.undo()
+
+
+original_is_valid_der = parser.gettxinfo.is_valid_der
 
 
 @pytest.fixture(scope="session")
