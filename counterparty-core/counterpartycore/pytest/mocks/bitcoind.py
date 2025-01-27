@@ -33,7 +33,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
             {
                 "txid": txid,
                 "vout": 0,
-                "amount": int(10 * config.UNIT),
+                "amount": 10,
                 "value": int(10 * config.UNIT),
                 "script_pub_key": script_pub_key,
             }
@@ -122,7 +122,7 @@ def get_utxo_address_and_value(utxo):
     return BlockchainMock().get_utxo_address_and_value(utxo)
 
 
-def satoshis_per_vbyte():
+def satoshis_per_vbyte(confirmation_target=None):
     return 2
 
 
@@ -182,12 +182,14 @@ def bitcoind_mock(monkeymodule):
     monkeymodule.setattr(f"{bitcoind_module}.list_unspent", list_unspent)
     monkeymodule.setattr(f"{bitcoind_module}.satoshis_per_vbyte", satoshis_per_vbyte)
     monkeymodule.setattr(f"{bitcoind_module}.get_vin_info", get_vin_info)
+    monkeymodule.setattr(f"{bitcoind_module}.convert_to_psbt", lambda x: x)
     monkeymodule.setattr(
         f"{bitcoind_module}.get_utxo_address_and_value", get_utxo_address_and_value
     )
     monkeymodule.setattr(f"{gettxinfo_module}.is_valid_der", is_valid_der)
     monkeymodule.setattr(f"{backend_module}.search_pubkey", search_pubkey)
     monkeymodule.setattr("counterpartycore.lib.messages.bet.date_passed", lambda x: False)
+
     return sys.modules[__name__]
 
 
