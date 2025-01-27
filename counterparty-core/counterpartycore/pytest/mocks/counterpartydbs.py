@@ -108,6 +108,10 @@ def get_tmp_connection(db_name):
     fixture_db_path = config.DATABASE if db_name == "counterparty" else config.STATE_DATABASE
     shutil.copyfile(fixture_db_path, database_path)
 
+    if db_name == "counterparty":
+        config.DATABASE = database_path
+    else:
+        config.STATE_DATABASE = database_path
     db = database.get_db_connection(database_path, read_only=False)
 
     return db, tmpdir
