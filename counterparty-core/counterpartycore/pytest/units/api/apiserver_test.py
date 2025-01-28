@@ -34,7 +34,7 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
         (current_block_index,),
     ).fetchone()
     last_tx = db.execute(
-        "SELECT tx_hash, tx_index FROM transactions ORDER BY rowid DESC LIMIT 1"
+        "SELECT tx_hash, tx_index, block_index FROM transactions ORDER BY rowid DESC LIMIT 1"
     ).fetchone()
     utxo_with_balance = db.execute(
         "SELECT * FROM balances WHERE utxo IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
@@ -53,7 +53,7 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
     asset, asset1, asset2 = "XCP", "XCP", "DIVISIBLE"
     datahex = "00000014000000a25be34b66000000174876e800010000000000000000000f446976697369626c65206173736574"
 
-    url = route.replace("<int:block_index>", str(current_block_index))
+    url = route.replace("<int:block_index>", str(last_tx["block_index"]))
     url = url.replace("<block_hash>", last_block["block_hash"])
     url = url.replace("<order_hash>", last_order["tx_hash"])
     url = url.replace("<dispenser_hash>", last_dispenser["tx_hash"])
@@ -133,3 +133,6 @@ def test_all_routes(
         if url is not None:
             response = apiv2_client.get(url)
             assert response.status_code == 200
+            assert "result" in response.json
+            result = response.json["result"]
+            assert isinstance(result, dict) or isinstance(result, list)
