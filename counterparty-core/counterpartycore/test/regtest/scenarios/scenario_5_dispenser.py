@@ -150,7 +150,24 @@ SCENARIO = [
                         "tx_hash": "$TX_HASH",
                     },
                 ],
-            }
+            },
+            {
+                "url": "assets/XCP/dispenses?block_index=$BLOCK_INDEX",
+                "result": [
+                    {
+                        "asset": "XCP",
+                        "block_index": "$BLOCK_INDEX",
+                        "btc_amount": 6000,
+                        "destination": "$ADDRESS_2",
+                        "dispense_index": 0,
+                        "dispense_quantity": 6000,
+                        "dispenser_tx_hash": "$DISPENSER_1_TX_HASH",
+                        "source": "$ADDRESS_1",
+                        "tx_hash": "$TX_HASH",
+                        "tx_index": "$TX_INDEX",
+                    }
+                ],
+            },
         ],
     },
     {
