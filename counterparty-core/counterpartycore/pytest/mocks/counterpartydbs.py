@@ -97,40 +97,41 @@ def build_dbs(bitcoind_mock):
 
     dbbuilder.build_state_db()
 
+    backup_dir = os.path.join(DATA_DIR, "backup_dir")
+    if os.path.exists(backup_dir):
+        shutil.rmtree(backup_dir)
+    os.makedirs(backup_dir)
+    for db_name in ["counterparty", "state"]:
+        os.rename(
+            os.path.join(DATA_DIR, f"{db_name}.regtest.db"),
+            os.path.join(backup_dir, f"{db_name}.regtest.db"),
+        )
+
 
 def get_tmp_connection(db_name):
-    tmpdir = os.path.join(DATA_DIR, f"tmp-{db_name}")
-    if os.path.exists(tmpdir):
-        shutil.rmtree(tmpdir)
-    os.makedirs(tmpdir)
+    backup_dir = os.path.join(DATA_DIR, "backup_dir")
+    backup_path = os.path.join(backup_dir, f"{db_name}.regtest.db")
+    database_path = config.DATABASE if db_name == "counterparty" else config.STATE_DATABASE
 
-    database_path = os.path.join(tmpdir, f"{db_name}.regtest.db")
-    fixture_db_path = config.DATABASE if db_name == "counterparty" else config.STATE_DATABASE
-    shutil.copyfile(fixture_db_path, database_path)
-
-    if db_name == "counterparty":
-        config.DATABASE = database_path
-    else:
-        config.STATE_DATABASE = database_path
+    shutil.copyfile(backup_path, database_path)
     db = database.get_db_connection(database_path, read_only=False)
-
-    return db, tmpdir
+    return db
 
 
 @pytest.fixture(scope="function")
 def ledger_db(build_dbs):
-    db, tmpdir = get_tmp_connection("counterparty")
+    db = get_tmp_connection("counterparty")
     yield db
     db.close()
-    shutil.rmtree(tmpdir)
+    os.remove(config.DATABASE)
 
 
 @pytest.fixture(scope="function")
 def state_db(build_dbs):
-    db, tmpdir = get_tmp_connection("state")
+    db = get_tmp_connection("state")
     yield db
     db.close()
-    shutil.rmtree(tmpdir)
+    os.remove(config.STATE_DATABASE)
 
 
 def check_record(ledger_db, record):
