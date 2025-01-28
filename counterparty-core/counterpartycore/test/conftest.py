@@ -28,7 +28,6 @@ from counterpartycore.lib.utils import assetnames, base58, database, multisig, o
 from counterpartycore.test import util_test
 from counterpartycore.test.fixtures.params import DEFAULT_PARAMS
 from counterpartycore.test.fixtures.scenarios import INTEGRATION_SCENARIOS
-from counterpartycore.test.fixtures.vectors import UNITTEST_VECTOR
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -138,15 +137,7 @@ DISABLE_ARC4_MOCKING = False
 
 def pytest_generate_tests(metafunc):
     """Generate all py.test cases. Checks for different types of tests and creates proper context."""
-    if metafunc.function.__name__ == "test_vector":
-        args = util_test.vector_to_args(
-            UNITTEST_VECTOR, metafunc.config.getoption("function"), metafunc.config
-        )
-        metafunc.parametrize(
-            "tx_name, method, inputs, outputs, error, records, comment, mock_protocol_changes, config_context, pytest_config",
-            args,
-        )
-    elif metafunc.function.__name__ == "test_scenario":
+    if metafunc.function.__name__ == "test_scenario":
         args = []
         for scenario_name in INTEGRATION_SCENARIOS:
             if metafunc.config.getoption(
