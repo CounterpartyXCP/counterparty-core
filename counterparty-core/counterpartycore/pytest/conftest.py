@@ -7,7 +7,7 @@ from counterpartycore.lib import config
 from counterpartycore.lib.utils.helpers import to_short_json
 from counterpartycore.pytest.mocks.counterpartydbs import check_records
 
-from .mocks.apiv1 import apiv1_app, apiv1_client
+from .mocks.apis import apiv1_app, apiv1_client, apiv2_app, apiv2_client
 from .mocks.bitcoind import bitcoind_mock, blockchain_mock, monkeymodule
 from .mocks.counterpartydbs import (
     build_dbs,
@@ -45,6 +45,8 @@ def test_helpers():
 
 __all__ = [
     "apiv1_app",
+    "apiv2_app",
+    "apiv2_client",
     "apiv1_client",
     "bitcoind_mock",
     "blockchain_mock",
