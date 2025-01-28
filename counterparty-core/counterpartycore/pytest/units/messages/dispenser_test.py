@@ -240,7 +240,8 @@ def test_parse_close_dispenser(
                 FROM dispensers
                 GROUP BY tx_hash
             ) WHERE status = 0"""
-    ).fetchone()
+    ).fetchall()
+    open_dispenser = open_dispenser[0]
 
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][5])
     message = b"\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n"
@@ -252,13 +253,11 @@ def test_parse_close_dispenser(
             {
                 "table": "dispensers",
                 "values": {
-                    "tx_index": open_dispenser["tx_index"],
-                    "last_status_tx_hash": tx["tx_hash"],
+                    "last_status_tx_hash": open_dispenser["tx_hash"],
                     "block_index": current_block_index,
                     "last_status_tx_source": defaults["addresses"][5],
                     "source": defaults["addresses"][5],
                     "asset": "XCP",
-                    "tx_hash": open_dispenser["tx_hash"],
                     "status": 11,
                 },
             },

@@ -52,7 +52,6 @@ def build_dbs(bitcoind_mock):
     # initialise config variables
     parser = arg_parser(no_config_file=True)
     args = parser.parse_args(["--regtest", "--data-dir", DATA_DIR, "-vv"])
-    print("args", args)
     server.initialise_log_and_config(args)
 
     # initialise database
@@ -66,7 +65,6 @@ def build_dbs(bitcoind_mock):
     bitcoind_mock.mine_block(db, [])
 
     for tx_params in UNITTEST_FIXTURE:
-        # print("tx_params", tx_params)
         if isinstance(tx_params[1], tuple):
             return db
 
@@ -95,6 +93,7 @@ def build_dbs(bitcoind_mock):
         # re-enable all protocol changes
         enable_all_protocol_changes()
 
+    db.close()
     dbbuilder.build_state_db()
 
     backup_dir = os.path.join(DATA_DIR, "backup_dir")

@@ -3,7 +3,7 @@ from counterpartycore.lib.api import apiv1
 
 
 @pytest.fixture()
-def apiv1_app(ledger_db, state_db):
+def apiv1_app():
     app = apiv1.create_app()
     app.config.update(
         {
@@ -27,7 +27,7 @@ def rpc_call(client, method, params):
 
 
 @pytest.fixture()
-def apiv1_client(apiv1_app):
+def apiv1_client(apiv1_app, ledger_db, state_db):
     def call(method, params):
         return rpc_call(apiv1_app.test_client(), method, params)
 

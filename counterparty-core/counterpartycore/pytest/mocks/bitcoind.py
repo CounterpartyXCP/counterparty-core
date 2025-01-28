@@ -1,5 +1,6 @@
 import sys
 import time
+import traceback
 
 import pytest
 from counterpartycore.lib import config, parser
@@ -15,6 +16,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.source_by_txid = {}
         self.address_and_value_by_utxo = {}
+        self.count_by_caller = {}
 
     def list_unspent(self, source, allow_unconfirmed_inputs=True):
         construct_params = {}
@@ -26,9 +28,15 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         script_pub_key = composer.address_to_script_pub_key(source, network="regtest").to_hex()
 
         # deterministic txid from the source
-        txid = check.dhash_string(f"{source}{list(self.source_by_txid.values()).count(source)}")
-        self.source_by_txid[txid] = source
+        caller = [
+            tr for tr in traceback.extract_stack() if "/counterpartycore/pytest/" in tr.filename
+        ][0]
+        string_hash = f"{source}{caller.filename}:{caller.name}"
+        self.count_by_caller[string_hash] = self.count_by_caller.get(string_hash, 0) + 1
+        string_hash += f":{self.count_by_caller[string_hash]}"
 
+        txid = check.dhash_string(string_hash)
+        self.source_by_txid[txid] = source
         return [
             {
                 "txid": txid,

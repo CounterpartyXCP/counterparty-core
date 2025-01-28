@@ -921,7 +921,7 @@ def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
     # Test case 1: Basic case
     assert composer.prepare_unspent_list(ledger_db, defaults["addresses"][0], {}) == [
         {
-            "txid": "0d1e9da1b11b0bd714a16970584d038ee991effa904edaa936463a841a99b161",
+            "txid": "5dd47b76f2f4c4d5453b71eb5f57457eb4f4ca0bd8e70d7b3ab17dfb2d23062b",
             "vout": 0,
             "value": 1000000000,
             "amount": 10,
@@ -953,12 +953,11 @@ def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
             f"No UTXOs found for {defaults['addresses'][0]}, provide UTXOs with the `inputs_set` parameter"
         ),
     ):
-        result = composer.prepare_unspent_list(
+        composer.prepare_unspent_list(
             ledger_db,
             defaults["addresses"][0],
-            {"exclude_utxos": "5f23858dda5c105aa061dae06e54cdc969828312d72da41f9fe8817fdf0fd059:0"},
+            {"exclude_utxos": "af0c7a06e5e610f00b082de51c5cccd641fd925f113c142120da2b2b10897b8c:0"},
         )
-        print(result)
 
     # Test case 4: With unspent_tx_hash parameter
     with pytest.raises(
@@ -1269,7 +1268,7 @@ def test_construct(ledger_db, defaults):
         "btc_out": 666,
         "data": b"CNTRPRTYHello, World!",
         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
-        "rawtransaction": "0200000001d63bb152ead2d1780d53ab03d1607dd1c77791a8b0434c44ffac83742ec8de610000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a15fe22557010ad18704d300ad186ab42a158ffecb58562c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "02000000019bce2dde4009a982fc2b56013f9ff51a8ca2ff955a61414e746d78984aade08f0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a1506be63513fbe7892e68f2c4bd5eb064ea674b0545d62c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "signed_tx_estimated_size": {
             "adjusted_vsize": 258,
             "sigops_count": 8,
@@ -1291,7 +1290,7 @@ def test_construct(ledger_db, defaults):
         "btc_out": 666,
         "data": b"CNTRPRTYHello, World!",
         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
-        "rawtransaction": "020000000162cfa1417799553e305c053c5c92a8bdcccfcf5ee01d2aeabf0450e06fcabd070000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a15d59bb23339e70a3709c14a8db5ae9927cb1140b78f7ec39a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "0200000001fdb01ccb92813426315c01b1bddc0f8a6ac5a745afdabfae4ed05988f5b628be0000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a15239838415c13a8c64dfecc8d17396a555318d194b77ec39a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "signed_tx_estimated_size": {
             "adjusted_vsize": 258,
             "sigops_count": 8,
@@ -1495,7 +1494,7 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
     construct_params = {"encoding": "multisig", "fee_provided": defaults["fee_provided"]}
 
     expected = {
-        "rawtransaction": "0200000001c3e7ef7585bb91afe9965c2e596018f38a41d813b72fb5c0a935c61cbf645be30000000000ffffffff02e803000000000000695121026f229995e23fd25c3ad29816477a3fcefc8b7018f4c187f3938ccd5c78b4290b2103f4285bfc86923d66f62516daa64ceda156ca8438d68905df37c62ebc9f9afb86210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed0c29a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "02000000012bcf50aeef3c40f99a12b4d8fbbb44c5fc5b8be41ca7285961c8dcd51d0662050000000000ffffffff02e8030000000000006951210231590b2a3519b6e6d491c3d386fb6df1d8ec0d29f374c92ca76427fb3c0ca90e21038868d0e45b46abe2661b5bd940daa02115b551d7edcde32becdc89393ffd03b0210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed0c29a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "warnings": ["The `fee_provided` parameter is deprecated, use `max_fee` instead"],
     }
 
@@ -1512,7 +1511,7 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
     }
 
     expected = {
-        "rawtransaction": "02000000019fdfff35e2ef617c9dbc21b5c319898ff8625c3f4d495edb340928000dde1c0f0000000000ffffffff020000000000000000356a3398b533453a090463a46be77880b99c0ad8feb6ee4fbb85df46fed6e6064acd51e6472460c62064713c53f7354c7d9b9e59c7ca04c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        "rawtransaction": "02000000015b798032404ccc61fe2f11cb6d9c840263cd4793a244bfbdb2013fbf8d3addde0000000000ffffffff020000000000000000356a33fe7270fdddb64c2b53d02d679eddf371b4bb315338af8739d36f6711db76fb4e88a26b439970cc8287433f54625855e015d09c04c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     }
 
     result = composer.compose_transaction(ledger_db, "send", params, {})
@@ -1525,7 +1524,7 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
     }
 
     expected = {
-        "rawtransaction": "020000000115232a7f532c7f012d81047c4f92953a6f4fd9e5c198610c3cf58695add6b13e0000000000ffffffff0310270000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a10029b77d3b9751c8157ded2169fd7f0b9f6a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "02000000015bb36cf251b75a6d085839ad91c858fd65cf3537603053649fb3ee3370a4a7910000000000ffffffff0310270000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a103cc66cc99089349dd3c3b0f1c09e82ecf6a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "btc_in": 1000000000,
         "btc_out": 10000,
         "btc_change": 999989494,
@@ -1538,7 +1537,7 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
             "adjusted_vsize": 253,
             "sigops_count": 8,
         },
-        "psbt": "020000000115232a7f532c7f012d81047c4f92953a6f4fd9e5c198610c3cf58695add6b13e0000000000ffffffff0310270000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a10029b77d3b9751c8157ded2169fd7f0b9f6a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "psbt": "02000000015bb36cf251b75a6d085839ad91c858fd65cf3537603053649fb3ee3370a4a7910000000000ffffffff0310270000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a103cc66cc99089349dd3c3b0f1c09e82ecf6a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "params": {
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
@@ -1564,7 +1563,7 @@ def test_compose_send(ledger_db, defaults):
     }
 
     expected = {
-        "rawtransaction": "0200000001669f368695a7c1a5fa4e45d411d98eab7f8c6423b4b69f5f5afe5c7b33b60e600000000000ffffffff020000000000000000306a2e52db7f46a2bef833534eb17c9aaca69f6b35da7d64045156284473f6765485dea5d550271cc9c3d3af9f421dd0540ec89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        "rawtransaction": "02000000010ca08a26c41f6a9b497240bc5711739bb36db8229587a48b4fddf2c99b1ebfe90000000000ffffffff020000000000000000306a2eeb96319326aa064443d65ad19271864fbd4370bee64234c8b5ff7477aaaccfd02fff53f7af5db276d900ba3479c10ec89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     }
 
     result = composer.compose_transaction(ledger_db, "send", params, {})
@@ -1577,10 +1576,10 @@ def test_compose_burn(ledger_db, defaults):
         "quantity": defaults["burn_quantity"],
     }
 
-    construct_params = {"encoding": "multisig"}
+    construct_params = {"encoding": "multisig", "disable_utxo_locks": True}
 
     expected = {
-        "rawtransaction": "0200000001c5c9b5c88b6c5e28fe4a4fd8b6792f2980c5cacc0cca959eff213818be01e0a80000000000ffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88acbcbce837000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000"
+        "rawtransaction": "020000000164caf0bf9b5dac8f475262b387846ea4aa5882b0bea0c52b84f76671dde023bc0000000000ffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88acbcbce837000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000"
     }
 
     result = composer.compose_transaction(ledger_db, "burn", params, construct_params)
@@ -1600,7 +1599,7 @@ def test_compose_issuance(ledger_db, defaults):
     construct_params = {"encoding": "multisig"}
 
     expected = {
-        "rawtransaction": "020000000197d6b198a26c39e91f5fda7479df23cbef05f87588a7a9b5b5965f295cd5ec1b0000000000ffffffff02e8030000000000006951210302dabd3fed7292bba4a09b5cc7cf36a08a750c37da3b9303809135e00618d5ca2102db6b954f4fa34d38931cbc85f6f84d2d6378b67e52f854c8c1b84b34da64576a210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed0c29a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        "rawtransaction": "02000000013017424ffd15ffcd2903dffb9b314ab2e4b38ccc40d43a70a687337c19628f940000000000ffffffff02e803000000000000695121021c5923d86d0a0f96778ff7bfa06980bcccdfd820eb7e07ed006ff97165f3842d2103257bb6b8c1206e06c36796ef3467d8b4a84af369c83784474dcbe8f01ef9b844210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed0c29a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     }
 
     result = composer.compose_transaction(ledger_db, "issuance", params, construct_params)
@@ -1618,7 +1617,7 @@ def test_compose_enhanced_send(ledger_db, defaults, monkeypatch):
     }
 
     expected = {
-        "rawtransaction": "0200000001148a8964b7bdbc985390692bbd969d06112f7a9d8e31d71b0b2784f950550f560000000000ffffffff020000000000000000356a33dfd6b3d5c471afb427d75f1e5366fdeffc888fc9c8dfeda1c66092f89816dc772f3024e15778dc177c070d61acaf0594d9e2f404c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        "rawtransaction": "0200000001c50cd6f19c1ef5fca06e3df19639102c2c003d4473e4ad03e74ad32b6395688d0000000000ffffffff020000000000000000356a33f491bf12f92e5bdd71a8470868018cdea73404c3506158d16e76d5e8ab7d7fcf514ea09ec71de638e0cdaf544897caaef4aec204c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     }
 
     result = composer.compose_transaction(ledger_db, "send", params, {})
@@ -1642,7 +1641,7 @@ def test_compose_move(ledger_db, defaults):
     }
 
     expected = {
-        "rawtransaction": "02000000011433dba846aaeba8ab2a3d68ced744ef58ebdf213def9bd0a92e94d2d4aa3bd00000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac2ba19a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "0200000001337752c7b25ac513939f56bbdd5b2d227e5cc89df56aba5e8a817fb98030d81c0000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac2ba19a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "btc_in": 999999999,
         "btc_out": 10000,
         "btc_change": 999989547,
@@ -1655,7 +1654,7 @@ def test_compose_move(ledger_db, defaults):
             "adjusted_vsize": 226,
             "sigops_count": 8,
         },
-        "psbt": "02000000011433dba846aaeba8ab2a3d68ced744ef58ebdf213def9bd0a92e94d2d4aa3bd00000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac2ba19a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "psbt": "0200000001337752c7b25ac513939f56bbdd5b2d227e5cc89df56aba5e8a817fb98030d81c0000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac2ba19a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "params": {
             "source": utxo_with_balance,
             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1676,7 +1675,7 @@ def test_compose_move(ledger_db, defaults):
     }
 
     expected = {
-        "rawtransaction": "02000000011433dba846aaeba8ab2a3d68ced744ef58ebdf213def9bd0a92e94d2d4aa3bd00000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88aca1c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "0200000001337752c7b25ac513939f56bbdd5b2d227e5cc89df56aba5e8a817fb98030d81c0000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88aca1c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "btc_in": 999999999,
         "btc_out": 666,
         "btc_change": 999998881,
@@ -1689,7 +1688,7 @@ def test_compose_move(ledger_db, defaults):
             "adjusted_vsize": 226,
             "sigops_count": 8,
         },
-        "psbt": "02000000011433dba846aaeba8ab2a3d68ced744ef58ebdf213def9bd0a92e94d2d4aa3bd00000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88aca1c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "psbt": "0200000001337752c7b25ac513939f56bbdd5b2d227e5cc89df56aba5e8a817fb98030d81c0000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88aca1c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "params": {
             "source": utxo_with_balance,
             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
