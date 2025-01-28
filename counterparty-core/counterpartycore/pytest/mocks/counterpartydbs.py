@@ -122,6 +122,7 @@ def ledger_db(build_dbs):
     db = get_tmp_connection("counterparty")
     yield db
     db.close()
+    database.LedgerDBConnectionPool().close()
     os.remove(config.DATABASE)
 
 
@@ -130,6 +131,7 @@ def state_db(build_dbs):
     db = get_tmp_connection("state")
     yield db
     db.close()
+    database.StateDBConnectionPool().close()
     os.remove(config.STATE_DATABASE)
 
 
