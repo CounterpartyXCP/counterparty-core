@@ -3004,7 +3004,7 @@ def get_order_matches_by_order(
     """
     other_cond = {"block_index": block_index} if block_index else {}
     where = prepare_order_matches_where(
-        status, {"tx0_hash": order_hash | other_cond}
+        status, {"tx0_hash": order_hash} | other_cond
     ) + prepare_order_matches_where(status, {"tx1_hash": order_hash} | other_cond)
     return select_rows(
         state_db,

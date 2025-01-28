@@ -17699,6 +17699,13 @@
                         "description": "The backward asset to return"
                     },
                     {
+                        "name": "block_index",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The block index of the order matches to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -18222,6 +18229,13 @@
                         "description": "The asset to return (e.g. XCP)"
                     },
                     {
+                        "name": "block_index",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The index of the block to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -18533,6 +18547,13 @@
                         "description": "The status of the order matches to return"
                     },
                     {
+                        "name": "block_index",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The block index of the order matches to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -18706,6 +18727,13 @@
                         "description": "The status of the order matches to return"
                     },
                     {
+                        "name": "block_index",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The block index of the order matches to return"
+                    },
+                    {
                         "name": "cursor",
                         "default": null,
                         "required": false,
@@ -18758,6 +18786,13 @@
                             "expired"
                         ],
                         "description": "The status of the order matches to return"
+                    },
+                    {
+                        "name": "block_index",
+                        "default": null,
+                        "required": false,
+                        "type": "int",
+                        "description": "The block index of the order matches to return"
                     },
                     {
                         "name": "cursor",
