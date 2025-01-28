@@ -162,6 +162,10 @@ def is_valid_der(der):
 
 
 def search_pubkey(source, tx_hashes):
+    if "_" in source:
+        return DEFAULT_PARAMS["pubkey"][source.split("_")[2]]
+    if source not in DEFAULT_PARAMS["pubkey"]:
+        raise ValueError(f"Pubkey not found for {source}")
     return DEFAULT_PARAMS["pubkey"][source]
 
 
