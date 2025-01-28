@@ -5,6 +5,21 @@ from counterpartycore.lib import exceptions
 from counterpartycore.lib.api import apiv1
 
 
+def test_create_burn(apiv1_client, defaults):
+    result = apiv1_client(
+        "create_burn",
+        {
+            "source": defaults["addresses"][1],
+            "quantity": defaults["burn_quantity"],
+            "encoding": "multisig",
+        },
+    ).json
+    assert (
+        result["result"]
+        == "0200000001c5c9b5c88b6c5e28fe4a4fd8b6792f2980c5cacc0cca959eff213818be01e0a80000000000ffffffff02800bb203000000001976a914a11b66a67b3ff69671c8f82254099faf374b800e88acbcbce837000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000"
+    )
+
+
 def test_get_rows(ledger_db, state_db, monkeypatch):
     # print(json.dumps(apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 1, 0, True), indent=4))
 
