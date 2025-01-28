@@ -1671,19 +1671,28 @@ def get_dispenses_by_destination(
 
 
 def get_dispenses_by_asset(
-    ledger_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    asset: str,
+    block_index: int = None,
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the dispenses of an asset
     :param str asset: The asset to return (e.g. XCP)
+    :param int block_index: The index of the block to return
     :param str cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"asset": asset.upper()}
+    if block_index:
+        where["block_index"] = block_index
     return select_rows(
         ledger_db,
         "dispenses",
-        where={"asset": asset.upper()},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
