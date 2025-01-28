@@ -525,6 +525,736 @@ class APIStatusPoller(threading.Thread):
             self.stop_event.wait(timeout=0.5)
 
 
+def create_app():
+    app = flask.Flask(__name__)
+    auth = HTTPBasicAuth()
+
+    @auth.get_password
+    def get_pw(username):
+        if username == config.RPC_USER:
+            return config.RPC_PASSWORD
+        return None
+
+    ######################
+    # READ API
+
+    # Generate dynamically get_{table} methods
+    def generate_get_method(table):
+        def get_method(**kwargs):
+            try:
+                return get_rows(table=table, **kwargs)
+            except TypeError as e:  # TODO: generalise for all API methods
+                raise exceptions.APIError(str(e))  # noqa: B904
+
+        return get_method
+
+    for table in API_TABLES:
+        new_method = generate_get_method(table)
+        new_method.__name__ = f"get_{table}"
+        dispatcher.add_method(new_method)
+
+    @dispatcher.add_method
+    def sql(query, bindings=None):
+        if bindings == None:  # noqa: E711
+            bindings = []
+        with LedgerDBConnectionPool().connection() as db:
+            return db_query(db, query, tuple(bindings))
+
+    ######################
+    # WRITE/ACTION API
+
+    # Generate dynamically create_{transaction} methods
+    def generate_create_method(tx):
+        def create_method(**kwargs):
+            transaction_args, common_args, private_key_wif = split_compose_params(**kwargs)
+            extended_tx_info = old_style_api = False
+            if "extended_tx_info" in common_args:
+                extended_tx_info = common_args["extended_tx_info"]
+                del common_args["extended_tx_info"]
+            if "old_style_api" in common_args:
+                old_style_api = common_args["old_style_api"]
+                del common_args["old_style_api"]
+            for v2_arg in ["return_only_data", "return_psbt"]:
+                common_args.pop(v2_arg, None)
+            if "fee" in transaction_args and "exact_fee" not in common_args:
+                common_args["exact_fee"] = transaction_args.pop("fee")
+            common_args["accept_missing_params"] = True
+            try:
+                with LedgerDBConnectionPool().connection() as db:
+                    transaction_info = composer.compose_transaction(
+                        db,
+                        tx,
+                        transaction_args,
+                        common_args,
+                    )
+                    if extended_tx_info:
+                        transaction_info["tx_hex"] = transaction_info["rawtransaction"]
+                        del transaction_info["rawtransaction"]
+                        return transaction_info
+                    tx_hexes = list(
+                        filter(
+                            None,
+                            [
+                                transaction_info["rawtransaction"],
+                            ],
+                        )
+                    )  # filter out None
+                    if old_style_api:
+                        if len(tx_hexes) != 1:
+                            raise Exception("Can't do 2 TXs with old_style_api")
+                        return tx_hexes[0]
+                    else:
+                        if len(tx_hexes) == 1:
+                            return tx_hexes[0]
+                        else:
+                            return tx_hexes
+            except (
+                TypeError,
+                exceptions.AddressError,
+                exceptions.ComposeError,
+                exceptions.TransactionError,
+                exceptions.BalanceError,
+            ) as error:
+                # TypeError happens when unexpected keyword arguments are passed in
+                error_msg = f"Error composing {tx} transaction via API: {str(error)}"
+                logger.trace(error_msg)
+                raise JSONRPCDispatchException(  # noqa: B904
+                    code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg
+                )
+
+        return create_method
+
+    for tx in COMPOSABLE_TRANSACTIONS:
+        create_method = generate_create_method(tx)
+        create_method.__name__ = f"create_{tx}"
+        dispatcher.add_method(create_method)
+
+    @dispatcher.add_method
+    def get_messages(block_index):
+        if not isinstance(block_index, int):
+            raise exceptions.APIError("block_index must be an integer.")
+        with LedgerDBConnectionPool().connection() as db:
+            messages = ledger.events.get_messages(db, block_index=block_index)
+        return messages
+
+    @dispatcher.add_method
+    def get_messages_by_index(message_indexes):
+        """Get specific messages from the feed, based on the message_index.
+
+        @param message_index: A single index, or a list of one or more message indexes to retrieve.
+        """
+        if not isinstance(message_indexes, list):
+            message_indexes = [
+                message_indexes,
+            ]
+        for idx in message_indexes:  # make sure the data is clean
+            if not isinstance(idx, int):
+                raise exceptions.APIError("All items in message_indexes are not integers")
+        with LedgerDBConnectionPool().connection() as db:
+            messages = ledger.events.get_messages(db, message_index_in=message_indexes)
+        return messages
+
+    @dispatcher.add_method
+    def get_supply(asset):
+        with LedgerDBConnectionPool().connection() as db:
+            if asset == "BTC":
+                return backend.bitcoind.get_btc_supply(normalize=False)
+            elif asset == "XCP":
+                return ledger.supplies.xcp_supply(db)
+            else:
+                asset = ledger.issuances.resolve_subasset_longname(db, asset)
+                return ledger.supplies.asset_supply(db, asset)
+
+    @dispatcher.add_method
+    def get_xcp_supply():
+        logger.warning("Deprecated method: `get_xcp_supply`")
+        with LedgerDBConnectionPool().connection() as db:
+            return ledger.supplies.xcp_supply(db)
+
+    @dispatcher.add_method
+    def get_asset_info(assets=None, asset=None):
+        if asset is not None:
+            assets = [asset]
+
+        if not isinstance(assets, list):
+            raise exceptions.APIError(
+                "assets must be a list of asset names, even if it just contains one entry"
+            )
+        assets_info = []
+        with LedgerDBConnectionPool().connection() as db:
+            for asset in assets:
+                asset = ledger.issuances.resolve_subasset_longname(db, asset)  # noqa: PLW2901
+
+                # BTC and XCP.
+                if asset in [config.BTC, config.XCP]:
+                    if asset == config.BTC:
+                        supply = backend.bitcoind.get_btc_supply(normalize=False)
+                    else:
+                        supply = ledger.supplies.xcp_supply(db)
+
+                    assets_info.append(
+                        {
+                            "asset": asset,
+                            "asset_longname": None,
+                            "owner": None,
+                            "divisible": True,
+                            "locked": False,
+                            "supply": supply,
+                            "description": "",
+                            "issuer": None,
+                        }
+                    )
+                    continue
+
+                # User‐created asset.
+                cursor = db.cursor()
+                issuances = ledger.issuances.get_issuances(
+                    db, asset=asset, status="valid", first=True
+                )
+                cursor.close()
+                if not issuances:
+                    continue  # asset not found, most likely
+                else:
+                    last_issuance = issuances[-1]
+                locked = False
+                for e in issuances:
+                    if e["locked"]:
+                        locked = True
+                assets_info.append(
+                    {
+                        "asset": asset,
+                        "asset_longname": last_issuance["asset_longname"],
+                        "owner": last_issuance["issuer"],
+                        "divisible": bool(last_issuance["divisible"]),
+                        "locked": locked,
+                        "supply": ledger.supplies.asset_supply(db, asset),
+                        "description": last_issuance["description"],
+                        "issuer": last_issuance["issuer"],
+                    }
+                )
+        return assets_info
+
+    @dispatcher.add_method
+    def get_block_info(block_index):
+        assert isinstance(block_index, int)
+        with LedgerDBConnectionPool().connection() as db:
+            cursor = db.cursor()
+            cursor.execute("""SELECT * FROM blocks WHERE block_index = ?""", (block_index,))
+            blocks = list(cursor)  # noqa: F811
+            if len(blocks) == 1:
+                block = blocks[0]
+            elif len(blocks) == 0:
+                raise exceptions.DatabaseError("No blocks found.")
+            else:
+                assert False  # noqa: B011
+            cursor.close()
+            return block
+
+    @dispatcher.add_method
+    def fee_per_kb(conf_target=config.ESTIMATE_FEE_CONF_TARGET, mode=config.ESTIMATE_FEE_MODE):
+        return backend.bitcoind.fee_per_kb(conf_target, mode)
+
+    @dispatcher.add_method
+    def get_blocks(block_indexes, min_message_index=None):
+        """fetches block info and messages for the specified block indexes
+        @param min_message_index: Retrieve blocks from the message feed on or after this specific message index
+            (useful since blocks may appear in the message feed more than once, if a reorg occurred). Note that
+            if this parameter is not specified, the messages for the first block will be returned.
+        """
+
+        must_be_non_empty_list_int = "block_indexes must be a non-empty list of integers"
+
+        if not isinstance(block_indexes, (list, tuple)):
+            raise exceptions.APIError(must_be_non_empty_list_int)
+
+        if len(block_indexes) == 0:
+            raise exceptions.APIError(must_be_non_empty_list_int)
+
+        if len(block_indexes) >= 250:
+            raise exceptions.APIError("can only specify up to 250 indexes at a time.")
+        for block_index in block_indexes:
+            if not isinstance(block_index, int):
+                raise exceptions.APIError(must_be_non_empty_list_int)
+
+        with LedgerDBConnectionPool().connection() as db:
+            cursor = db.cursor()
+
+            block_indexes_placeholder = f"{','.join(['?'] * len(block_indexes))}"
+            # no sql injection here
+            cursor.execute(
+                f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608
+                block_indexes,
+            )
+            blocks = cursor.fetchall()  # noqa: F811
+
+            messages = collections.deque(
+                ledger.events.get_messages(db, block_index_in=block_indexes)
+            )
+
+            # Discard any messages less than min_message_index
+            if min_message_index:
+                while len(messages) and messages[0]["message_index"] < min_message_index:
+                    messages.popleft()
+
+            # Packages messages into their appropriate block in the data structure to be returned
+            for block in blocks:
+                block["_messages"] = []
+                while len(messages) and messages[0]["block_index"] == block["block_index"]:
+                    block["_messages"].append(messages.popleft())
+            # NOTE: if len(messages), then we're only returning the messages for the first set of blocks before the reorg
+
+            cursor.close()
+        return blocks
+
+    @dispatcher.add_method
+    def get_running_info():
+        latest_block_index = backend.bitcoind.getblockcount()
+        with LedgerDBConnectionPool().connection() as db:
+            try:
+                healthz.check_last_parsed_block(db, latest_block_index)
+            except exceptions.DatabaseError:
+                caught_up = False
+            else:
+                caught_up = True
+
+            last_block = ledger.blocks.get_last_block(db)
+
+            try:
+                last_message = ledger.events.last_message(db)
+            except:  # noqa: E722
+                last_message = None
+
+        try:
+            bitcoind_blocks_behind = backend.bitcoind.get_blocks_behind()
+        except:  # noqa: E722
+            bitcoind_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
+        bitcoind_caught_up = bitcoind_blocks_behind <= 1
+
+        server_ready = caught_up and bitcoind_caught_up
+
+        return {
+            "server_ready": server_ready,
+            "db_caught_up": caught_up,
+            "bitcoin_block_count": latest_block_index,
+            "last_block": last_block,
+            "bitcoind_caught_up": bitcoind_caught_up,
+            "bitcoind_blocks_behind": bitcoind_blocks_behind,
+            "last_message_index": (last_message["message_index"] if last_message else -1),
+            "api_limit_rows": config.API_LIMIT_ROWS,
+            "running_testnet": config.TESTNET,
+            "running_testnet4": config.TESTNET4,
+            "running_regtest": config.REGTEST,
+            "version_major": config.VERSION_MAJOR,
+            "version_minor": config.VERSION_MINOR,
+            "version_revision": config.VERSION_REVISION,
+            "uptime": int(get_uptime()),
+            "dockerized": is_docker(),
+            "force_enabled": is_force_enabled(),
+        }
+
+    @dispatcher.add_method
+    def get_element_counts():
+        with LedgerDBConnectionPool().connection() as db:
+            counts = {}
+            cursor = db.cursor()
+            for element in [
+                "transactions",
+                "blocks",
+                "debits",
+                "credits",
+                "balances",
+                "sends",
+                "orders",
+                "order_matches",
+                "btcpays",
+                "issuances",
+                "broadcasts",
+                "bets",
+                "bet_matches",
+                "dividends",
+                "burns",
+                "cancels",
+                "order_expirations",
+                "bet_expirations",
+                "order_match_expirations",
+                "bet_match_expirations",
+                "messages",
+                "destructions",
+            ]:
+                # no sql injection here, element is hardcoded
+                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608  # noqa: S608
+                count_list = cursor.fetchall()
+                assert len(count_list) == 1
+                counts[element] = count_list[0]["count"]
+            cursor.close()
+            return counts
+
+    @dispatcher.add_method
+    def get_asset_names(longnames=False):
+        with LedgerDBConnectionPool().connection() as db:
+            all_assets = ledger.other.get_valid_assets(db)
+        if longnames:
+            names = [
+                {"asset": row["asset"], "asset_longname": row["asset_longname"]}
+                for row in all_assets
+            ]
+        else:
+            names = [row["asset"] for row in all_assets]
+        return names
+
+    @dispatcher.add_method
+    def get_asset_longnames():
+        return get_asset_names(longnames=True)
+
+    @dispatcher.add_method
+    def get_holder_count(asset):
+        with LedgerDBConnectionPool().connection() as db:
+            asset = ledger.issuances.resolve_subasset_longname(db, asset)
+            holders = ledger.supplies.holders(db, asset, True)
+        addresses = []
+        for holder in holders:
+            addresses.append(holder["address"])
+        return {asset: len(set(addresses))}
+
+    @dispatcher.add_method
+    def get_holders(asset):
+        with LedgerDBConnectionPool().connection() as db:
+            asset = ledger.issuances.resolve_subasset_longname(db, asset)
+            holders = ledger.supplies.holders(db, asset, True)
+        return holders
+
+    @dispatcher.add_method
+    def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
+        return backend.electrs.get_history(
+            address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes
+        )
+
+    @dispatcher.add_method
+    def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
+        results = backend.electrs.get_utxos(
+            address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash
+        )
+        if order_by is None:
+            return results
+        else:
+            order_key = order_by
+            reverse = False
+            if order_key.startswith("-"):
+                order_key = order_key[1:]
+                reverse = True
+            return sorted(results, key=lambda x: x[order_key], reverse=reverse)
+
+    @dispatcher.add_method
+    def getrawtransaction(tx_hash, verbose=False):
+        return backend.bitcoind.getrawtransaction(tx_hash, verbose=verbose)
+
+    @dispatcher.add_method
+    def getrawtransaction_batch(txhash_list, verbose=False):
+        return backend.bitcoind.getrawtransaction_batch(
+            txhash_list, verbose=verbose, return_dict=True
+        )
+
+    @dispatcher.add_method
+    def get_tx_info(tx_hex, block_index=None):
+        # block_index mandatory for transactions before block 335000
+        with LedgerDBConnectionPool().connection() as db:
+            decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)
+            source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
+                gettxinfo.get_tx_info(
+                    db,
+                    decoded_tx,
+                    block_index=block_index,
+                    composing=True,
+                )
+            )
+        return (
+            source,
+            destination,
+            btc_amount,
+            fee,
+            binascii.hexlify(data).decode("ascii") if data else "",
+        )
+
+    @dispatcher.add_method
+    def unpack(data_hex):
+        data = binascii.unhexlify(data_hex)
+        message_type_id, message = messagetype.unpack(data)
+
+        # TODO: Enabled only for `send`.
+        if message_type_id == send.ID:
+            with LedgerDBConnectionPool().connection() as db:
+                unpacked = send.unpack(db, message, CurrentState().current_block_index())
+        elif message_type_id == enhancedsend.ID:
+            unpacked = enhancedsend.unpack(message, CurrentState().current_block_index())
+        else:
+            raise exceptions.APIError("unsupported message type")
+        return message_type_id, unpacked
+
+    @dispatcher.add_method
+    # TODO: Rename this method.
+    def search_pubkey(pubkeyhash, provided_pubkeys=None):
+        return backend.electrs.search_pubkey(pubkeyhash)
+
+    @dispatcher.add_method
+    def get_dispenser_info(tx_hash=None, tx_index=None):
+        if tx_hash is None and tx_index is None:
+            raise exceptions.APIError("You must provided a tx hash or a tx index")
+
+        dispensers = []
+        with LedgerDBConnectionPool().connection() as db:
+            if tx_hash is not None:
+                dispensers = ledger.markets.get_dispenser_info(db, tx_hash=tx_hash)
+            else:
+                dispensers = ledger.markets.get_dispenser_info(db, tx_index=tx_index)
+
+            if len(dispensers) == 1:
+                dispenser = dispensers[0]
+                oracle_price = ""
+                satoshi_price = ""
+                fiat_price = ""
+                oracle_price_last_updated = ""
+                oracle_fiat_label = ""
+
+                if dispenser["oracle_address"] != None:  # noqa: E711
+                    fiat_price = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
+                    (
+                        oracle_price,
+                        oracle_fee,
+                        oracle_fiat_label,
+                        oracle_price_last_updated,
+                    ) = ledger.other.get_oracle_last_price(
+                        db, dispenser["oracle_address"], CurrentState().current_block_index()
+                    )
+
+                    if oracle_price > 0:
+                        satoshi_price = math.ceil((fiat_price / oracle_price) * config.UNIT)
+                    else:
+                        raise exceptions.APIError("Last oracle price is zero")
+
+                return {
+                    "tx_index": dispenser["tx_index"],
+                    "tx_hash": dispenser["tx_hash"],
+                    "block_index": dispenser["block_index"],
+                    "source": dispenser["source"],
+                    "asset": dispenser["asset"],
+                    "give_quantity": dispenser["give_quantity"],
+                    "escrow_quantity": dispenser["escrow_quantity"],
+                    "mainchainrate": dispenser["satoshirate"],
+                    "fiat_price": fiat_price,
+                    "fiat_unit": oracle_fiat_label,
+                    "oracle_price": oracle_price,
+                    "satoshi_price": satoshi_price,
+                    "status": dispenser["status"],
+                    "give_remaining": dispenser["give_remaining"],
+                    "oracle_address": dispenser["oracle_address"],
+                    "oracle_price_last_updated": oracle_price_last_updated,
+                    "asset_longname": dispenser["asset_longname"],
+                }
+
+        return {}
+
+    def _set_cors_headers(response):
+        if not config.RPC_NO_ALLOW_CORS:
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = (
+                "DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+            )
+
+    ##### REST ROUTES #####
+
+    @app.route("/healthz", methods=["GET"])
+    def handle_healthz():
+        with configure_sentry_scope() as scope:
+            scope.set_transaction_name("healthcheck")
+        check_type = request.args.get("type", "light")
+        with LedgerDBConnectionPool().connection() as db:
+            return healthz.handle_healthz_route(db, check_type)
+
+    @app.route("/", defaults={"args_path": ""}, methods=["GET", "POST", "OPTIONS"])
+    @app.route("/<path:args_path>", methods=["GET", "POST", "OPTIONS"])
+    # Only require authentication if RPC_PASSWORD is set.
+    @conditional_decorator(auth.login_required, hasattr(config, "RPC_PASSWORD"))
+    def handle_root(args_path):
+        """Handle all paths, decide where to forward the query."""
+        request_path = args_path.lower()
+        if (
+            request_path == ""
+            or request_path.startswith("api/")
+            or request_path.startswith("rpc/")
+            or request_path.startswith("v1/")
+        ):
+            if flask.request.method == "POST":
+                # Need to get those here because it might not be available in this aux function.
+                request_json = flask.request.get_data().decode("utf-8")
+                response = handle_rpc_post(request_json)
+                return response
+            elif flask.request.method == "OPTIONS":
+                response = handle_rpc_options()
+                return response
+            else:
+                error = "Invalid method."
+                return flask.Response(error, 405, mimetype="application/json")
+        elif request_path.startswith("v1/rest/"):
+            if flask.request.method == "GET" or flask.request.method == "POST":
+                # Pass the URL path without /REST/ part and Flask request object.
+                rest_path = args_path.split("/", 1)[1]
+                response = handle_rest(rest_path, flask.request)
+                return response
+            else:
+                error = "Invalid method."
+                return flask.Response(error, 405, mimetype="application/json")
+        else:
+            # Not found
+            return flask.Response(None, 404, mimetype="application/json")
+
+    ######################
+    # JSON-RPC API
+    ######################
+    def handle_rpc_options():
+        response = flask.Response("", 204)
+        _set_cors_headers(response)
+        # response.headers["X-API-WARN"] = "Deprecated API"
+        return response
+
+    def handle_rpc_post(request_json):
+        """Handle /API/ POST route. Call relevant get_rows/create_transaction wrapper."""
+        # Check for valid request format.
+        try:
+            request_data = json.loads(request_json)
+            assert (
+                "id" in request_data and request_data["jsonrpc"] == "2.0" and request_data["method"]
+            )
+            # params may be omitted
+        except Exception:  # noqa: E722
+            obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
+                data="Invalid JSON-RPC 2.0 request format"
+            )
+            return flask.Response(obj_error.json.encode(), 400, mimetype="application/json")
+
+        with configure_sentry_scope() as scope:
+            scope.set_transaction_name(request_data["method"])
+
+        # Only arguments passed as a `dict` are supported.
+        if request_data.get("params", None) and not isinstance(request_data["params"], dict):
+            error_message = "Arguments must be passed as a JSON object (list of unnamed arguments not supported)"
+            obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(data=error_message)
+            return flask.Response(obj_error.json.encode(), 400, mimetype="application/json")
+
+        # Return an error if the API Status Poller checks fail.
+        if not config.FORCE and CURRENT_API_STATUS_CODE:
+            return flask.Response(
+                CURRENT_API_STATUS_RESPONSE_JSON, 503, mimetype="application/json"
+            )
+
+        # Answer request normally.
+        # NOTE: `UnboundLocalError: local variable 'output' referenced before assignment` means the method doesn’t return anything.
+        jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
+
+        response = flask.Response(
+            helpers.to_json(jsonrpc_response.data), 200, mimetype="application/json"
+        )
+        _set_cors_headers(response)
+        # response.headers["X-API-WARN"] = "Deprecated API"
+        # logger.warning(
+        #    "API v1 is deprecated and should be removed soon. Please migrate to REST API."
+        # )
+        return response
+
+    ######################
+    # HTTP REST API
+    ######################
+    def handle_rest(path_args, flask_request):
+        """Handle /REST/ route. Query the database using get_rows or create transaction using compose_transaction."""
+        url_action = flask_request.path.split("/")[-1]
+        if url_action == "compose":
+            compose = True
+        elif url_action == "get":
+            compose = False
+        else:
+            error = f'Invalid action "{url_action}".'
+            return flask.Response(error, 400, mimetype="application/json")
+
+        # Get all arguments passed via URL.
+        url_args = path_args.split("/")
+        try:
+            query_type = url_args.pop(0).lower()
+        except IndexError:
+            error = "No query_type provided."
+            return flask.Response(error, 400, mimetype="application/json")
+        # Check if message type or table name are valid.
+        if (compose and query_type not in COMPOSABLE_TRANSACTIONS) or (
+            not compose and query_type not in API_TABLES
+        ):
+            error = f'No such query type in supported queries: "{query_type}".'
+            return flask.Response(error, 400, mimetype="application/json")
+
+        # Parse the additional arguments.
+        extra_args = flask_request.args.items()
+        query_data = {}
+
+        if compose:
+            transaction_args, common_args, private_key_wif = split_compose_params(**extra_args)
+
+            # Must have some additional transaction arguments.
+            if not len(transaction_args):
+                error = "No transaction arguments provided."
+                return flask.Response(error, 400, mimetype="application/json")
+
+            # Compose the transaction.
+            try:
+                with LedgerDBConnectionPool().connection() as db:
+                    query_data, data = composer.compose_transaction(
+                        db, query_type, transaction_args, common_args
+                    )
+            except (
+                exceptions.AddressError,
+                exceptions.ComposeError,
+                exceptions.TransactionError,
+                exceptions.BalanceError,
+            ) as error:
+                error_msg = logger.trace(
+                    f"{error.__class__.__name__} -- error composing {query_type} transaction via API: {error}"
+                )
+                return flask.Response(error_msg, 400, mimetype="application/json")
+        else:
+            # Need to de-generate extra_args to pass it through.
+            query_args = dict([item for item in extra_args])
+            operator = query_args.pop("op", "AND")
+            # Put the data into specific dictionary format.
+            data_filter = [
+                {"field": key, "op": "==", "value": value} for (key, value) in query_args.items()
+            ]
+
+            # Run the query.
+            try:
+                query_data = get_rows(
+                    table=query_type,
+                    filters=data_filter,
+                    filterop=operator,
+                )
+            except exceptions.APIError as error:  # noqa: F841
+                return flask.Response("API Error", 400, mimetype="application/json")
+
+        # See which encoding to choose from.
+        file_format = flask_request.headers["Accept"]
+        # JSON as default.
+        if file_format == "application/json" or file_format == "*/*":
+            response_data = json.dumps(query_data)
+        elif file_format == "application/xml":
+            # Add document root for XML. Note when xmltodict encounters a list, it produces separate tags for every item.
+            # Hence we end up with multiple query_type roots. To combat this we put it in a separate item dict.
+            response_data = serialize_to_xml({query_type: {"item": query_data}})
+        else:
+            error = f'Invalid file format: "{file_format}".'
+            return flask.Response(error, 400, mimetype="application/json")
+
+        response = flask.Response(response_data, 200, mimetype=file_format)
+        return response
+
+    return app
+
+
 class APIServer(threading.Thread):
     """Handle JSON-RPC API calls."""
 
@@ -544,735 +1274,7 @@ class APIServer(threading.Thread):
 
     def run(self):
         logger.info("Starting API Server v1 thread...")
-        app = flask.Flask(__name__)
-        auth = HTTPBasicAuth()
-
-        @auth.get_password
-        def get_pw(username):
-            if username == config.RPC_USER:
-                return config.RPC_PASSWORD
-            return None
-
-        ######################
-        # READ API
-
-        # Generate dynamically get_{table} methods
-        def generate_get_method(table):
-            def get_method(**kwargs):
-                try:
-                    return get_rows(table=table, **kwargs)
-                except TypeError as e:  # TODO: generalise for all API methods
-                    raise exceptions.APIError(str(e))  # noqa: B904
-
-            return get_method
-
-        for table in API_TABLES:
-            new_method = generate_get_method(table)
-            new_method.__name__ = f"get_{table}"
-            dispatcher.add_method(new_method)
-
-        @dispatcher.add_method
-        def sql(query, bindings=None):
-            if bindings == None:  # noqa: E711
-                bindings = []
-            with LedgerDBConnectionPool().connection() as db:
-                return db_query(db, query, tuple(bindings))
-
-        ######################
-        # WRITE/ACTION API
-
-        # Generate dynamically create_{transaction} methods
-        def generate_create_method(tx):
-            def create_method(**kwargs):
-                transaction_args, common_args, private_key_wif = split_compose_params(**kwargs)
-                extended_tx_info = old_style_api = False
-                if "extended_tx_info" in common_args:
-                    extended_tx_info = common_args["extended_tx_info"]
-                    del common_args["extended_tx_info"]
-                if "old_style_api" in common_args:
-                    old_style_api = common_args["old_style_api"]
-                    del common_args["old_style_api"]
-                for v2_arg in ["return_only_data", "return_psbt"]:
-                    common_args.pop(v2_arg, None)
-                if "fee" in transaction_args and "exact_fee" not in common_args:
-                    common_args["exact_fee"] = transaction_args.pop("fee")
-                common_args["accept_missing_params"] = True
-                try:
-                    with LedgerDBConnectionPool().connection() as db:
-                        transaction_info = composer.compose_transaction(
-                            db,
-                            tx,
-                            transaction_args,
-                            common_args,
-                        )
-                        if extended_tx_info:
-                            transaction_info["tx_hex"] = transaction_info["rawtransaction"]
-                            del transaction_info["rawtransaction"]
-                            return transaction_info
-                        tx_hexes = list(
-                            filter(
-                                None,
-                                [
-                                    transaction_info["rawtransaction"],
-                                ],
-                            )
-                        )  # filter out None
-                        if old_style_api:
-                            if len(tx_hexes) != 1:
-                                raise Exception("Can't do 2 TXs with old_style_api")
-                            return tx_hexes[0]
-                        else:
-                            if len(tx_hexes) == 1:
-                                return tx_hexes[0]
-                            else:
-                                return tx_hexes
-                except (
-                    TypeError,
-                    exceptions.AddressError,
-                    exceptions.ComposeError,
-                    exceptions.TransactionError,
-                    exceptions.BalanceError,
-                ) as error:
-                    # TypeError happens when unexpected keyword arguments are passed in
-                    error_msg = f"Error composing {tx} transaction via API: {str(error)}"
-                    logger.trace(error_msg)
-                    raise JSONRPCDispatchException(  # noqa: B904
-                        code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg
-                    )
-
-            return create_method
-
-        for tx in COMPOSABLE_TRANSACTIONS:
-            create_method = generate_create_method(tx)
-            create_method.__name__ = f"create_{tx}"
-            dispatcher.add_method(create_method)
-
-        @dispatcher.add_method
-        def get_messages(block_index):
-            if not isinstance(block_index, int):
-                raise exceptions.APIError("block_index must be an integer.")
-            with LedgerDBConnectionPool().connection() as db:
-                messages = ledger.events.get_messages(db, block_index=block_index)
-            return messages
-
-        @dispatcher.add_method
-        def get_messages_by_index(message_indexes):
-            """Get specific messages from the feed, based on the message_index.
-
-            @param message_index: A single index, or a list of one or more message indexes to retrieve.
-            """
-            if not isinstance(message_indexes, list):
-                message_indexes = [
-                    message_indexes,
-                ]
-            for idx in message_indexes:  # make sure the data is clean
-                if not isinstance(idx, int):
-                    raise exceptions.APIError("All items in message_indexes are not integers")
-            with LedgerDBConnectionPool().connection() as db:
-                messages = ledger.events.get_messages(db, message_index_in=message_indexes)
-            return messages
-
-        @dispatcher.add_method
-        def get_supply(asset):
-            with LedgerDBConnectionPool().connection() as db:
-                if asset == "BTC":
-                    return backend.bitcoind.get_btc_supply(normalize=False)
-                elif asset == "XCP":
-                    return ledger.supplies.xcp_supply(db)
-                else:
-                    asset = ledger.issuances.resolve_subasset_longname(db, asset)
-                    return ledger.supplies.asset_supply(db, asset)
-
-        @dispatcher.add_method
-        def get_xcp_supply():
-            logger.warning("Deprecated method: `get_xcp_supply`")
-            with LedgerDBConnectionPool().connection() as db:
-                return ledger.supplies.xcp_supply(db)
-
-        @dispatcher.add_method
-        def get_asset_info(assets=None, asset=None):
-            if asset is not None:
-                assets = [asset]
-
-            if not isinstance(assets, list):
-                raise exceptions.APIError(
-                    "assets must be a list of asset names, even if it just contains one entry"
-                )
-            assets_info = []
-            with LedgerDBConnectionPool().connection() as db:
-                for asset in assets:
-                    asset = ledger.issuances.resolve_subasset_longname(db, asset)  # noqa: PLW2901
-
-                    # BTC and XCP.
-                    if asset in [config.BTC, config.XCP]:
-                        if asset == config.BTC:
-                            supply = backend.bitcoind.get_btc_supply(normalize=False)
-                        else:
-                            supply = ledger.supplies.xcp_supply(db)
-
-                        assets_info.append(
-                            {
-                                "asset": asset,
-                                "asset_longname": None,
-                                "owner": None,
-                                "divisible": True,
-                                "locked": False,
-                                "supply": supply,
-                                "description": "",
-                                "issuer": None,
-                            }
-                        )
-                        continue
-
-                    # User‐created asset.
-                    cursor = db.cursor()
-                    issuances = ledger.issuances.get_issuances(
-                        db, asset=asset, status="valid", first=True
-                    )
-                    cursor.close()
-                    if not issuances:
-                        continue  # asset not found, most likely
-                    else:
-                        last_issuance = issuances[-1]
-                    locked = False
-                    for e in issuances:
-                        if e["locked"]:
-                            locked = True
-                    assets_info.append(
-                        {
-                            "asset": asset,
-                            "asset_longname": last_issuance["asset_longname"],
-                            "owner": last_issuance["issuer"],
-                            "divisible": bool(last_issuance["divisible"]),
-                            "locked": locked,
-                            "supply": ledger.supplies.asset_supply(db, asset),
-                            "description": last_issuance["description"],
-                            "issuer": last_issuance["issuer"],
-                        }
-                    )
-            return assets_info
-
-        @dispatcher.add_method
-        def get_block_info(block_index):
-            assert isinstance(block_index, int)
-            with LedgerDBConnectionPool().connection() as db:
-                cursor = db.cursor()
-                cursor.execute("""SELECT * FROM blocks WHERE block_index = ?""", (block_index,))
-                blocks = list(cursor)  # noqa: F811
-                if len(blocks) == 1:
-                    block = blocks[0]
-                elif len(blocks) == 0:
-                    raise exceptions.DatabaseError("No blocks found.")
-                else:
-                    assert False  # noqa: B011
-                cursor.close()
-                return block
-
-        @dispatcher.add_method
-        def fee_per_kb(conf_target=config.ESTIMATE_FEE_CONF_TARGET, mode=config.ESTIMATE_FEE_MODE):
-            return backend.bitcoind.fee_per_kb(conf_target, mode)
-
-        @dispatcher.add_method
-        def get_blocks(block_indexes, min_message_index=None):
-            """fetches block info and messages for the specified block indexes
-            @param min_message_index: Retrieve blocks from the message feed on or after this specific message index
-              (useful since blocks may appear in the message feed more than once, if a reorg occurred). Note that
-              if this parameter is not specified, the messages for the first block will be returned.
-            """
-
-            must_be_non_empty_list_int = "block_indexes must be a non-empty list of integers"
-
-            if not isinstance(block_indexes, (list, tuple)):
-                raise exceptions.APIError(must_be_non_empty_list_int)
-
-            if len(block_indexes) == 0:
-                raise exceptions.APIError(must_be_non_empty_list_int)
-
-            if len(block_indexes) >= 250:
-                raise exceptions.APIError("can only specify up to 250 indexes at a time.")
-            for block_index in block_indexes:
-                if not isinstance(block_index, int):
-                    raise exceptions.APIError(must_be_non_empty_list_int)
-
-            with LedgerDBConnectionPool().connection() as db:
-                cursor = db.cursor()
-
-                block_indexes_placeholder = f"{','.join(['?'] * len(block_indexes))}"
-                # no sql injection here
-                cursor.execute(
-                    f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608
-                    block_indexes,
-                )
-                blocks = cursor.fetchall()  # noqa: F811
-
-                messages = collections.deque(
-                    ledger.events.get_messages(db, block_index_in=block_indexes)
-                )
-
-                # Discard any messages less than min_message_index
-                if min_message_index:
-                    while len(messages) and messages[0]["message_index"] < min_message_index:
-                        messages.popleft()
-
-                # Packages messages into their appropriate block in the data structure to be returned
-                for block in blocks:
-                    block["_messages"] = []
-                    while len(messages) and messages[0]["block_index"] == block["block_index"]:
-                        block["_messages"].append(messages.popleft())
-                # NOTE: if len(messages), then we're only returning the messages for the first set of blocks before the reorg
-
-                cursor.close()
-            return blocks
-
-        @dispatcher.add_method
-        def get_running_info():
-            latest_block_index = backend.bitcoind.getblockcount()
-            with LedgerDBConnectionPool().connection() as db:
-                try:
-                    healthz.check_last_parsed_block(db, latest_block_index)
-                except exceptions.DatabaseError:
-                    caught_up = False
-                else:
-                    caught_up = True
-
-                last_block = ledger.blocks.get_last_block(db)
-
-                try:
-                    last_message = ledger.events.last_message(db)
-                except:  # noqa: E722
-                    last_message = None
-
-            try:
-                bitcoind_blocks_behind = backend.bitcoind.get_blocks_behind()
-            except:  # noqa: E722
-                bitcoind_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
-            bitcoind_caught_up = bitcoind_blocks_behind <= 1
-
-            server_ready = caught_up and bitcoind_caught_up
-
-            return {
-                "server_ready": server_ready,
-                "db_caught_up": caught_up,
-                "bitcoin_block_count": latest_block_index,
-                "last_block": last_block,
-                "bitcoind_caught_up": bitcoind_caught_up,
-                "bitcoind_blocks_behind": bitcoind_blocks_behind,
-                "last_message_index": (last_message["message_index"] if last_message else -1),
-                "api_limit_rows": config.API_LIMIT_ROWS,
-                "running_testnet": config.TESTNET,
-                "running_testnet4": config.TESTNET4,
-                "running_regtest": config.REGTEST,
-                "version_major": config.VERSION_MAJOR,
-                "version_minor": config.VERSION_MINOR,
-                "version_revision": config.VERSION_REVISION,
-                "uptime": int(get_uptime()),
-                "dockerized": is_docker(),
-                "force_enabled": is_force_enabled(),
-            }
-
-        @dispatcher.add_method
-        def get_element_counts():
-            with LedgerDBConnectionPool().connection() as db:
-                counts = {}
-                cursor = db.cursor()
-                for element in [
-                    "transactions",
-                    "blocks",
-                    "debits",
-                    "credits",
-                    "balances",
-                    "sends",
-                    "orders",
-                    "order_matches",
-                    "btcpays",
-                    "issuances",
-                    "broadcasts",
-                    "bets",
-                    "bet_matches",
-                    "dividends",
-                    "burns",
-                    "cancels",
-                    "order_expirations",
-                    "bet_expirations",
-                    "order_match_expirations",
-                    "bet_match_expirations",
-                    "messages",
-                    "destructions",
-                ]:
-                    # no sql injection here, element is hardcoded
-                    cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608  # noqa: S608
-                    count_list = cursor.fetchall()
-                    assert len(count_list) == 1
-                    counts[element] = count_list[0]["count"]
-                cursor.close()
-                return counts
-
-        @dispatcher.add_method
-        def get_asset_names(longnames=False):
-            with LedgerDBConnectionPool().connection() as db:
-                all_assets = ledger.other.get_valid_assets(db)
-            if longnames:
-                names = [
-                    {"asset": row["asset"], "asset_longname": row["asset_longname"]}
-                    for row in all_assets
-                ]
-            else:
-                names = [row["asset"] for row in all_assets]
-            return names
-
-        @dispatcher.add_method
-        def get_asset_longnames():
-            return get_asset_names(longnames=True)
-
-        @dispatcher.add_method
-        def get_holder_count(asset):
-            with LedgerDBConnectionPool().connection() as db:
-                asset = ledger.issuances.resolve_subasset_longname(db, asset)
-                holders = ledger.supplies.holders(db, asset, True)
-            addresses = []
-            for holder in holders:
-                addresses.append(holder["address"])
-            return {asset: len(set(addresses))}
-
-        @dispatcher.add_method
-        def get_holders(asset):
-            with LedgerDBConnectionPool().connection() as db:
-                asset = ledger.issuances.resolve_subasset_longname(db, asset)
-                holders = ledger.supplies.holders(db, asset, True)
-            return holders
-
-        @dispatcher.add_method
-        def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-            return backend.electrs.get_history(
-                address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes
-            )
-
-        @dispatcher.add_method
-        def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
-            results = backend.electrs.get_utxos(
-                address, unconfirmed=unconfirmed, unspent_tx_hash=unspent_tx_hash
-            )
-            if order_by is None:
-                return results
-            else:
-                order_key = order_by
-                reverse = False
-                if order_key.startswith("-"):
-                    order_key = order_key[1:]
-                    reverse = True
-                return sorted(results, key=lambda x: x[order_key], reverse=reverse)
-
-        @dispatcher.add_method
-        def getrawtransaction(tx_hash, verbose=False):
-            return backend.bitcoind.getrawtransaction(tx_hash, verbose=verbose)
-
-        @dispatcher.add_method
-        def getrawtransaction_batch(txhash_list, verbose=False):
-            return backend.bitcoind.getrawtransaction_batch(
-                txhash_list, verbose=verbose, return_dict=True
-            )
-
-        @dispatcher.add_method
-        def get_tx_info(tx_hex, block_index=None):
-            # block_index mandatory for transactions before block 335000
-            with LedgerDBConnectionPool().connection() as db:
-                decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)
-                source, destination, btc_amount, fee, data, _dispensers_outs, _utxos_info = (
-                    gettxinfo.get_tx_info(
-                        db,
-                        decoded_tx,
-                        block_index=block_index,
-                        composing=True,
-                    )
-                )
-            return (
-                source,
-                destination,
-                btc_amount,
-                fee,
-                binascii.hexlify(data).decode("ascii") if data else "",
-            )
-
-        @dispatcher.add_method
-        def unpack(data_hex):
-            data = binascii.unhexlify(data_hex)
-            message_type_id, message = messagetype.unpack(data)
-
-            # TODO: Enabled only for `send`.
-            if message_type_id == send.ID:
-                with LedgerDBConnectionPool().connection() as db:
-                    unpacked = send.unpack(db, message, CurrentState().current_block_index())
-            elif message_type_id == enhancedsend.ID:
-                unpacked = enhancedsend.unpack(message, CurrentState().current_block_index())
-            else:
-                raise exceptions.APIError("unsupported message type")
-            return message_type_id, unpacked
-
-        @dispatcher.add_method
-        # TODO: Rename this method.
-        def search_pubkey(pubkeyhash, provided_pubkeys=None):
-            return backend.electrs.search_pubkey(pubkeyhash)
-
-        @dispatcher.add_method
-        def get_dispenser_info(tx_hash=None, tx_index=None):
-            if tx_hash is None and tx_index is None:
-                raise exceptions.APIError("You must provided a tx hash or a tx index")
-
-            dispensers = []
-            with LedgerDBConnectionPool().connection() as db:
-                if tx_hash is not None:
-                    dispensers = ledger.markets.get_dispenser_info(db, tx_hash=tx_hash)
-                else:
-                    dispensers = ledger.markets.get_dispenser_info(db, tx_index=tx_index)
-
-                if len(dispensers) == 1:
-                    dispenser = dispensers[0]
-                    oracle_price = ""
-                    satoshi_price = ""
-                    fiat_price = ""
-                    oracle_price_last_updated = ""
-                    oracle_fiat_label = ""
-
-                    if dispenser["oracle_address"] != None:  # noqa: E711
-                        fiat_price = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
-                        (
-                            oracle_price,
-                            oracle_fee,
-                            oracle_fiat_label,
-                            oracle_price_last_updated,
-                        ) = ledger.other.get_oracle_last_price(
-                            db, dispenser["oracle_address"], CurrentState().current_block_index()
-                        )
-
-                        if oracle_price > 0:
-                            satoshi_price = math.ceil((fiat_price / oracle_price) * config.UNIT)
-                        else:
-                            raise exceptions.APIError("Last oracle price is zero")
-
-                    return {
-                        "tx_index": dispenser["tx_index"],
-                        "tx_hash": dispenser["tx_hash"],
-                        "block_index": dispenser["block_index"],
-                        "source": dispenser["source"],
-                        "asset": dispenser["asset"],
-                        "give_quantity": dispenser["give_quantity"],
-                        "escrow_quantity": dispenser["escrow_quantity"],
-                        "mainchainrate": dispenser["satoshirate"],
-                        "fiat_price": fiat_price,
-                        "fiat_unit": oracle_fiat_label,
-                        "oracle_price": oracle_price,
-                        "satoshi_price": satoshi_price,
-                        "status": dispenser["status"],
-                        "give_remaining": dispenser["give_remaining"],
-                        "oracle_address": dispenser["oracle_address"],
-                        "oracle_price_last_updated": oracle_price_last_updated,
-                        "asset_longname": dispenser["asset_longname"],
-                    }
-
-            return {}
-
-        def _set_cors_headers(response):
-            if not config.RPC_NO_ALLOW_CORS:
-                response.headers["Access-Control-Allow-Origin"] = "*"
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-                response.headers["Access-Control-Allow-Headers"] = (
-                    "DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
-                )
-
-        ##### REST ROUTES #####
-
-        @app.route("/healthz", methods=["GET"])
-        def handle_healthz():
-            with configure_sentry_scope() as scope:
-                scope.set_transaction_name("healthcheck")
-            check_type = request.args.get("type", "light")
-            with LedgerDBConnectionPool().connection() as db:
-                return healthz.handle_healthz_route(db, check_type)
-
-        @app.route("/", defaults={"args_path": ""}, methods=["GET", "POST", "OPTIONS"])
-        @app.route("/<path:args_path>", methods=["GET", "POST", "OPTIONS"])
-        # Only require authentication if RPC_PASSWORD is set.
-        @conditional_decorator(auth.login_required, hasattr(config, "RPC_PASSWORD"))
-        def handle_root(args_path):
-            """Handle all paths, decide where to forward the query."""
-            request_path = args_path.lower()
-            if (
-                request_path == ""
-                or request_path.startswith("api/")
-                or request_path.startswith("rpc/")
-                or request_path.startswith("v1/")
-            ):
-                if flask.request.method == "POST":
-                    # Need to get those here because it might not be available in this aux function.
-                    request_json = flask.request.get_data().decode("utf-8")
-                    response = handle_rpc_post(request_json)
-                    return response
-                elif flask.request.method == "OPTIONS":
-                    response = handle_rpc_options()
-                    return response
-                else:
-                    error = "Invalid method."
-                    return flask.Response(error, 405, mimetype="application/json")
-            elif request_path.startswith("v1/rest/"):
-                if flask.request.method == "GET" or flask.request.method == "POST":
-                    # Pass the URL path without /REST/ part and Flask request object.
-                    rest_path = args_path.split("/", 1)[1]
-                    response = handle_rest(rest_path, flask.request)
-                    return response
-                else:
-                    error = "Invalid method."
-                    return flask.Response(error, 405, mimetype="application/json")
-            else:
-                # Not found
-                return flask.Response(None, 404, mimetype="application/json")
-
-        ######################
-        # JSON-RPC API
-        ######################
-        def handle_rpc_options():
-            response = flask.Response("", 204)
-            _set_cors_headers(response)
-            # response.headers["X-API-WARN"] = "Deprecated API"
-            return response
-
-        def handle_rpc_post(request_json):
-            """Handle /API/ POST route. Call relevant get_rows/create_transaction wrapper."""
-            # Check for valid request format.
-            try:
-                request_data = json.loads(request_json)
-                assert (
-                    "id" in request_data
-                    and request_data["jsonrpc"] == "2.0"
-                    and request_data["method"]
-                )
-                # params may be omitted
-            except Exception:  # noqa: E722
-                obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
-                    data="Invalid JSON-RPC 2.0 request format"
-                )
-                return flask.Response(obj_error.json.encode(), 400, mimetype="application/json")
-
-            with configure_sentry_scope() as scope:
-                scope.set_transaction_name(request_data["method"])
-
-            # Only arguments passed as a `dict` are supported.
-            if request_data.get("params", None) and not isinstance(request_data["params"], dict):
-                error_message = "Arguments must be passed as a JSON object (list of unnamed arguments not supported)"
-                obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(data=error_message)
-                return flask.Response(obj_error.json.encode(), 400, mimetype="application/json")
-
-            # Return an error if the API Status Poller checks fail.
-            if not config.FORCE and CURRENT_API_STATUS_CODE:
-                return flask.Response(
-                    CURRENT_API_STATUS_RESPONSE_JSON, 503, mimetype="application/json"
-                )
-
-            # Answer request normally.
-            # NOTE: `UnboundLocalError: local variable 'output' referenced before assignment` means the method doesn’t return anything.
-            jsonrpc_response = jsonrpc.JSONRPCResponseManager.handle(request_json, dispatcher)
-
-            response = flask.Response(
-                helpers.to_json(jsonrpc_response.data), 200, mimetype="application/json"
-            )
-            _set_cors_headers(response)
-            # response.headers["X-API-WARN"] = "Deprecated API"
-            # logger.warning(
-            #    "API v1 is deprecated and should be removed soon. Please migrate to REST API."
-            # )
-            return response
-
-        ######################
-        # HTTP REST API
-        ######################
-        def handle_rest(path_args, flask_request):
-            """Handle /REST/ route. Query the database using get_rows or create transaction using compose_transaction."""
-            url_action = flask_request.path.split("/")[-1]
-            if url_action == "compose":
-                compose = True
-            elif url_action == "get":
-                compose = False
-            else:
-                error = f'Invalid action "{url_action}".'
-                return flask.Response(error, 400, mimetype="application/json")
-
-            # Get all arguments passed via URL.
-            url_args = path_args.split("/")
-            try:
-                query_type = url_args.pop(0).lower()
-            except IndexError:
-                error = "No query_type provided."
-                return flask.Response(error, 400, mimetype="application/json")
-            # Check if message type or table name are valid.
-            if (compose and query_type not in COMPOSABLE_TRANSACTIONS) or (
-                not compose and query_type not in API_TABLES
-            ):
-                error = f'No such query type in supported queries: "{query_type}".'
-                return flask.Response(error, 400, mimetype="application/json")
-
-            # Parse the additional arguments.
-            extra_args = flask_request.args.items()
-            query_data = {}
-
-            if compose:
-                transaction_args, common_args, private_key_wif = split_compose_params(**extra_args)
-
-                # Must have some additional transaction arguments.
-                if not len(transaction_args):
-                    error = "No transaction arguments provided."
-                    return flask.Response(error, 400, mimetype="application/json")
-
-                # Compose the transaction.
-                try:
-                    with LedgerDBConnectionPool().connection() as db:
-                        query_data, data = composer.compose_transaction(
-                            db, query_type, transaction_args, common_args
-                        )
-                except (
-                    exceptions.AddressError,
-                    exceptions.ComposeError,
-                    exceptions.TransactionError,
-                    exceptions.BalanceError,
-                ) as error:
-                    error_msg = logger.trace(
-                        f"{error.__class__.__name__} -- error composing {query_type} transaction via API: {error}"
-                    )
-                    return flask.Response(error_msg, 400, mimetype="application/json")
-            else:
-                # Need to de-generate extra_args to pass it through.
-                query_args = dict([item for item in extra_args])
-                operator = query_args.pop("op", "AND")
-                # Put the data into specific dictionary format.
-                data_filter = [
-                    {"field": key, "op": "==", "value": value}
-                    for (key, value) in query_args.items()
-                ]
-
-                # Run the query.
-                try:
-                    query_data = get_rows(
-                        table=query_type,
-                        filters=data_filter,
-                        filterop=operator,
-                    )
-                except exceptions.APIError as error:  # noqa: F841
-                    return flask.Response("API Error", 400, mimetype="application/json")
-
-            # See which encoding to choose from.
-            file_format = flask_request.headers["Accept"]
-            # JSON as default.
-            if file_format == "application/json" or file_format == "*/*":
-                response_data = json.dumps(query_data)
-            elif file_format == "application/xml":
-                # Add document root for XML. Note when xmltodict encounters a list, it produces separate tags for every item.
-                # Hence we end up with multiple query_type roots. To combat this we put it in a separate item dict.
-                response_data = serialize_to_xml({query_type: {"item": query_data}})
-            else:
-                error = f'Invalid file format: "{file_format}".'
-                return flask.Response(error, 400, mimetype="application/json")
-
-            response = flask.Response(response_data, 200, mimetype=file_format)
-            return response
-
+        app = create_app()
         # Init the HTTP Server.
         self.is_ready = True
         self.server = make_server(config.RPC_HOST, config.RPC_PORT, app, threaded=True)
