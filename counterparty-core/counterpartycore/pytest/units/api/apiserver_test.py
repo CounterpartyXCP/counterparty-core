@@ -136,3 +136,52 @@ def test_all_routes(
             assert "result" in response.json
             result = response.json["result"]
             assert isinstance(result, dict) or isinstance(result, list)
+
+
+def test_new_get_balances_vs_old(apiv1_client, apiv2_client):
+    asset = "XCP"
+    url = f"/v2/assets/{asset}/balances"
+    new_balances = apiv2_client.get(url).json["result"]  # noqa: S113
+
+    old_balance = apiv1_client(
+        "get_balances",
+        {
+            "filters": [
+                {"field": "asset", "op": "==", "value": asset},
+                {"field": "quantity", "op": "!=", "value": 0},
+            ],
+        },
+    ).json["result"]
+
+    new_balances = sorted(
+        new_balances, key=lambda x: (x["address"] or x["utxo"], x["asset"], x["quantity"])
+    )
+    old_balance = sorted(
+        old_balance, key=lambda x: (x["address"] or x["utxo"], x["asset"], x["quantity"])
+    )
+    assert len(new_balances) == len(old_balance)
+    for new_balance, old_balance in zip(new_balances, old_balance):  # noqa: B020
+        assert new_balance["address"] == old_balance["address"]
+        assert new_balance["utxo"] == old_balance["utxo"]
+        assert new_balance["asset"] == old_balance["asset"]
+        assert new_balance["quantity"] == old_balance["quantity"]
+
+
+def test_new_get_asset_info(apiv2_client):
+    url = "/v2/assets/NODIVISIBLE"
+    result = apiv2_client.get(url).json["result"]
+
+    assert result == {
+        "asset": "NODIVISIBLE",
+        "asset_longname": None,
+        "description": "No divisible asset",
+        "description_locked": False,
+        "divisible": False,
+        "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        "locked": False,
+        "first_issuance_block_index": 104,
+        "last_issuance_block_index": 104,
+        "asset_id": "1911882621324134",
+        "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        "supply": 1000,
+    }
