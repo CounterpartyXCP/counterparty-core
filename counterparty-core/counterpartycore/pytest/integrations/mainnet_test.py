@@ -3,9 +3,7 @@ import time
 
 import pytest
 import requests
-
 from counterpartycore.lib.utils import database
-from counterpartycore.test import conftest  # noqa: F401
 
 LOCAL_API_URL = "http://localhost:4000"
 
@@ -97,11 +95,8 @@ def get_block_hashes_api_wtf(api_url, block_index):
     return response["block"][0]["ledger_hash"], response["block"][0]["txlist_hash"]
 
 
-def test_compare_hashes(skip):
-    if skip:
-        pytest.skip("Skipping compare hashes test.")
-        return
-
+@pytest.mark.skip()
+def test_compare_hashes():
     # get last blocks
     local_block_index, _ = get_last_block_api_v2(LOCAL_API_URL)
     print(f"Local block index: {local_block_index}")
@@ -158,11 +153,8 @@ MAINNET_DB_DIR = "/home/ouziel/snap/docker/2932/.local/share/counterparty-docker
 # MAINNET_DB_DIR = "/home/ouziel/.local/share/counterparty/"
 
 
-def test_mainnet_api_db(skip):
-    if skip:
-        pytest.skip("Skipping mainnet API database test.")
-        return
-
+@pytest.mark.skip()
+def test_mainnet_api_db():
     ledger_db = database.get_db_connection(
         f"{MAINNET_DB_DIR}counterparty.db", read_only=True, check_wal=False
     )
@@ -206,11 +198,8 @@ def test_mainnet_api_db(skip):
     print(f"Checked {i} balances")
 
 
-def test_mainnet_healthz(skip):
-    if skip:
-        pytest.skip("Skipping healthz test.")
-        return
-
+@pytest.mark.skip()
+def test_mainnet_healthz():
     response = requests.get(f"{LOCAL_API_URL}/healthz", timeout=10)
     print(response.json())
     assert response.status_code == 200

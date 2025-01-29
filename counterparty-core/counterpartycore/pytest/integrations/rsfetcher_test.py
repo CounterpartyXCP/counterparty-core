@@ -3,7 +3,6 @@ from time import sleep
 
 import pytest
 from counterparty_rs import indexer
-
 from counterpartycore.lib.backend import rsfetcher
 
 TEST_DB_PATH = "/tmp/counterparty_test_db"  # noqa: S108
