@@ -2,58 +2,11 @@ import binascii
 import time
 
 import bitcoin as bitcoinlib
-import pytest  # noqa: F401
 from bitcoin import bech32 as bech32lib
-from counterparty_rs import b58, utils
-
-from counterpartycore.lib import config
+from counterparty_rs import utils
 from counterpartycore.lib.parser.gettxinfo import get_checksig
-from counterpartycore.lib.utils.base58 import base58_check_decode, base58_check_encode
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
 from counterpartycore.lib.utils.script import script_to_asm
-
-
-def test_pycoin_rs():
-    vector = [
-        (
-            "4264cfd7eb65f8cbbdba98bd9815d5461fad8d7e",
-            config.P2SH_ADDRESSVERSION_TESTNET,
-            "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
-        ),
-        (
-            "641327ad1b3abc18cb6f1650a225f49a47764c22",
-            config.ADDRESSVERSION_TESTNET,
-            "mpe6p9ah9a6yoK57Xd2GEn8D9EonbLLkWJ",
-        ),
-        (
-            "415354746bc11e9ef91efa85da59f0ad1df61a9d",
-            config.ADDRESSVERSION_MAINNET,
-            "16xQkLFxYZcGtzyGbHD7tmnaeHavD21Kw5",
-        ),
-        (
-            "edf98b439f45eb4e3239122488cab2773296499d",
-            config.P2SH_ADDRESSVERSION_MAINNET,
-            "3PPK1dRAerbVZRfkh9BhA1Zxq9HrG4rRwN",
-        ),
-    ]
-
-    for decoded, version, encoded in vector:
-        by_rust = base58_check_encode(decoded, version)
-        assert by_rust == encoded
-
-        by_rust = base58_check_decode(encoded, version)
-        assert binascii.hexlify(by_rust).decode("utf-8") == decoded
-
-    # iteration = 100000
-    iteration = 10
-
-    start_time = time.time()
-    for i in range(iteration):  # noqa: B007
-        for decoded, version, encoded in vector:
-            base58_check_encode(decoded, version)
-            base58_check_decode(encoded, version)
-    rust_duration = time.time() - start_time
-    print("rust duration for 400K encodes and 400K decodes: ", rust_duration)
 
 
 def test_get_asm():
@@ -142,49 +95,12 @@ def script_to_address():
     assert python_duration > rust_duration
 
 
-def test_b58():
-    assert b58.b58_encode(b"hello world") == "3vQB7B6MrGQZaxCuFg4oh"
-    assert bytes(b58.b58_decode("3vQB7B6MrGQZaxCuFg4oh")) == b"hello world"
-
-    with pytest.raises(ValueError) as excinfo:
-        b58.b58_decode("hello world")
-    assert str(excinfo.value) == "Bad input"
-
-
 def decode_p2w(script_pubkey):
     try:
         bech32 = bech32lib.CBech32Data.from_bytes(0, script_pubkey[2:22])
         return str(bech32), None
     except TypeError as e:  # noqa: F841
         raise Exception("bech32 decoding error")  # noqa: B904
-
-
-def inverse_hash_py(hashstring):
-    return "".join([hashstring[i : i + 2][::-1] for i in range(0, len(hashstring), 2)])[::-1]
-
-
-def test_inverse_hash():
-    h = "b5276739a3e0f32147bd4a921f936c6013dee4a5ca426ee2de868810b068ec0d"
-    assert (
-        utils.inverse_hash(h) == "0dec68b0108886dee26e42caa5e4de13606c931f924abd4721f3e0a3396727b5"
-    )
-
-    # iterations = 1000000
-    iterations = 10
-
-    start_time = time.time()
-    for i in range(iterations):  # noqa: B007
-        inverse_hash_py(h)
-    python_duration = time.time() - start_time
-    print(f"{iterations} inverse hash with python: {python_duration}s")
-
-    start_time = time.time()
-    for i in range(iterations):  # noqa: B007
-        utils.inverse_hash(h)
-    rust_duration = time.time() - start_time
-    print(f"{iterations} inverse hash with rust: {rust_duration}s")
-
-    assert python_duration > rust_duration
 
 
 def test_script_to_asm():

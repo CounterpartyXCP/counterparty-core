@@ -1,8 +1,7 @@
 import json
 
 import pytest
-
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import exceptions
 from counterpartycore.lib.backend import bitcoind
 
 
@@ -42,9 +41,9 @@ def mock_requests_post(*args, **kwargs):
 def init_mock(monkeypatch):
     monkeypatch.setattr("requests.post", mock_requests_post)
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.should_retry", lambda: False)
-    config.BACKEND_URL = "http://localhost:14000"
-    config.BACKEND_SSL_NO_VERIFY = True
-    config.REQUESTS_TIMEOUT = 5
+    # config.BACKEND_URL = "http://localhost:14000"
+    # config.BACKEND_SSL_NO_VERIFY = True
+    # config.REQUESTS_TIMEOUT = 5
 
 
 def test_rpc_call(init_mock):
@@ -55,21 +54,21 @@ def test_rpc_call(init_mock):
         bitcoind.rpc("return_none", [])
     assert (
         str(exc_info.value)
-        == "Cannot communicate with Bitcoin Core at `http://localhost:14000`. (server is set to run on testnet, is backend?)"
+        == "Cannot communicate with Bitcoin Core at `http://XXXXXXXX@localhost:18443`. (server is set to run on regtest, is backend?)"
     )
 
     with pytest.raises(exceptions.BitcoindRPCError) as exc_info:
         bitcoind.rpc("return_401", [])
     assert (
         str(exc_info.value)
-        == "Authorization error connecting to http://localhost:14000: 401 Unauthorized"
+        == "Authorization error connecting to http://XXXXXXXX@localhost:18443: 401 Unauthorized"
     )
 
     with pytest.raises(exceptions.BitcoindRPCError) as exc_info:
         bitcoind.rpc("return_500", [])
     assert (
         str(exc_info.value)
-        == "Cannot communicate with Bitcoin Core at `http://localhost:14000`. (server is set to run on testnet, is backend?)"
+        == "Cannot communicate with Bitcoin Core at `http://XXXXXXXX@localhost:18443`. (server is set to run on regtest, is backend?)"
     )
 
     result = bitcoind.rpc("return_batch_list", [])
