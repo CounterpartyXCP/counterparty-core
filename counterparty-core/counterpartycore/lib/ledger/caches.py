@@ -10,12 +10,12 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 class AssetCache(metaclass=helpers.SingletonMeta):
     def __init__(self, db) -> None:
-        self.assets = {}
-        self.assets_total_issued = {}
-        self.assets_total_destroyed = {}
         self.init(db)
 
     def init(self, db):
+        self.assets = {}
+        self.assets_total_issued = {}
+        self.assets_total_destroyed = {}
         start = time.time()
         logger.debug("Initialising asset cache...")
         # asset info
@@ -84,6 +84,9 @@ class AssetCache(metaclass=helpers.SingletonMeta):
 
 class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
     def __init__(self, db):
+        self.init(db)
+
+    def init(self, db):
         logger.debug("Initialising utxo balances cache...")
         sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
         cursor = db.cursor()
@@ -104,7 +107,10 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
 
 
 class OrdersCache(metaclass=helpers.SingletonMeta):
-    def __init__(self, db):
+    def __init__(self, db) -> None:
+        self.init(db)
+
+    def init(self, db):
         logger.debug("Initialising orders cache...")
         self.last_cleaning_block_index = 0
         self.cache_db = database.get_db_connection(":memory:", read_only=False, check_wal=False)
@@ -209,3 +215,9 @@ class OrdersCache(metaclass=helpers.SingletonMeta):
         }
         cursor.execute(query, bindings)
         return cursor.fetchall()
+
+
+def init_caches(db):
+    AssetCache(db).init(db)
+    OrdersCache(db).init(db)
+    UTXOBalancesCache(db).init(db)

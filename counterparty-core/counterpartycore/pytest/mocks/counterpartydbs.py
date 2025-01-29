@@ -9,6 +9,7 @@ from counterpartycore.lib import config
 from counterpartycore.lib.api import composer, dbbuilder
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.cli.main import arg_parser
+from counterpartycore.lib.ledger import caches
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database, helpers
 
@@ -41,9 +42,7 @@ class ProtocolChangesDisabled:
         enable_all_protocol_changes()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def build_dbs(bitcoind_mock):
-    print("Building databases...")
+def initialise_config():
     # prepare empty directory
     if os.path.exists(DATA_DIR):
         shutil.rmtree(DATA_DIR)
@@ -54,6 +53,8 @@ def build_dbs(bitcoind_mock):
     args = parser.parse_args(["--regtest", "--data-dir", DATA_DIR, "-vv"])
     server.initialise_log_and_config(args)
 
+
+def prepare_empty_database(bitcoind_mock):
     # initialise database
     db = database.get_db_connection(config.DATABASE, read_only=False)
     db.close()
@@ -63,15 +64,16 @@ def build_dbs(bitcoind_mock):
     # mine first block
     CurrentState().set_current_block_index(config.BLOCK_FIRST - 1)
     bitcoind_mock.mine_block(db, [])
+    db.close()
 
-    for tx_params in UNITTEST_FIXTURE:
+
+def run_scenario(db, bitcoind_mock, scenario):
+    for tx_params in scenario:
         if isinstance(tx_params[1], tuple):
             return db
-
         if tx_params[0] == "mine_empty_blocks":
             bitcoind_mock.mine_empty_blocks(db, tx_params[1])
             continue
-
         name, params, construct_params = tx_params[0:3]
         # disable protocol changes if needed
         if len(tx_params) > 3:
@@ -93,10 +95,9 @@ def build_dbs(bitcoind_mock):
         # re-enable all protocol changes
         enable_all_protocol_changes()
 
-    db.close()
-    dbbuilder.build_state_db()
 
-    backup_dir = os.path.join(DATA_DIR, "backup_dir")
+def backup_databases(backup_name):
+    backup_dir = os.path.join(DATA_DIR, backup_name)
     if os.path.exists(backup_dir):
         shutil.rmtree(backup_dir)
     os.makedirs(backup_dir)
@@ -107,8 +108,24 @@ def build_dbs(bitcoind_mock):
         )
 
 
-def get_tmp_connection(db_name):
-    backup_dir = os.path.join(DATA_DIR, "backup_dir")
+@pytest.fixture(scope="session", autouse=True)
+def build_dbs(bitcoind_mock):
+    print("Building databases...")
+    initialise_config()
+    prepare_empty_database(bitcoind_mock)
+    db = database.get_db_connection(config.DATABASE, read_only=False)
+    run_scenario(db, bitcoind_mock, UNITTEST_FIXTURE)
+    db.close()
+    dbbuilder.build_state_db()
+    backup_databases("backup_dir")
+
+    prepare_empty_database(bitcoind_mock)
+    dbbuilder.build_state_db()
+    backup_databases("backup_empties_dir")
+
+
+def get_tmp_connection(db_name, backup_name):
+    backup_dir = os.path.join(DATA_DIR, backup_name)
     backup_path = os.path.join(backup_dir, f"{db_name}.regtest.db")
     database_path = config.DATABASE if db_name == "counterparty" else config.STATE_DATABASE
 
@@ -119,7 +136,12 @@ def get_tmp_connection(db_name):
 
 @pytest.fixture(scope="function")
 def ledger_db(build_dbs):
-    db = get_tmp_connection("counterparty")
+    db = get_tmp_connection("counterparty", "backup_dir")
+    current_block_index = db.execute(
+        "SELECT MAX(block_index) AS block_index FROM blocks"
+    ).fetchone()["block_index"]
+    CurrentState().set_current_block_index(current_block_index)
+    caches.init_caches(db)
     yield db
     db.close()
     database.LedgerDBConnectionPool().close()
@@ -128,11 +150,22 @@ def ledger_db(build_dbs):
 
 @pytest.fixture(scope="function")
 def state_db(build_dbs):
-    db = get_tmp_connection("state")
+    db = get_tmp_connection("state", "backup_dir")
+    caches.init_caches(db)
     yield db
     db.close()
     database.StateDBConnectionPool().close()
     os.remove(config.STATE_DATABASE)
+
+
+@pytest.fixture(scope="function")
+def empty_ledger_db(build_dbs):
+    db = get_tmp_connection("counterparty", "backup_empties_dir")
+    caches.init_caches(db)
+    yield db
+    db.close()
+    database.LedgerDBConnectionPool().close()
+    os.remove(config.DATABASE)
 
 
 def check_record(ledger_db, record):

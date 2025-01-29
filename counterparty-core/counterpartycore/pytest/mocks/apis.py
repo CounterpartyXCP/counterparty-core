@@ -51,5 +51,5 @@ def apiv1_client(apiv1_app, ledger_db, state_db):
 
 
 @pytest.fixture()
-def apiv2_client(apiv2_app):
+def apiv2_client(apiv2_app, ledger_db, state_db):
     return apiv2_app.test_client()

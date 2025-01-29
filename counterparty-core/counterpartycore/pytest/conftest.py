@@ -13,6 +13,7 @@ from .mocks.counterpartydbs import (
     build_dbs,
     current_block_index,
     defaults,
+    empty_ledger_db,
     ledger_db,
     state_db,
 )
@@ -57,4 +58,5 @@ __all__ = [
     "monkeymodule",
     "state_db",
     "test_helpers",
+    "empty_ledger_db",
 ]
