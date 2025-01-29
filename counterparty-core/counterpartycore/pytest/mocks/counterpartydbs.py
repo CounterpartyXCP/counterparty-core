@@ -162,7 +162,6 @@ def ledger_db(build_dbs):
 @pytest.fixture(scope="function")
 def state_db(build_dbs):
     db = get_tmp_connection("state", "backup_dir")
-    caches.init_caches(db)
     yield db
     db.close()
     database.StateDBConnectionPool().close()
