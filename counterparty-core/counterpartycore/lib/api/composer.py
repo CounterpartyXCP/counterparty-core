@@ -611,7 +611,7 @@ def get_dummy_script_sig(script_pub_key):
     elif output_type == "P2MS":
         asm = script.script_to_asm(script_pub_key)
         required_signatures = asm[0]
-        script_sig = OP_0 + (required_signatures * DUMMY_DER_SIG)
+        script_sig = OP_0 + (required_signatures * (OP_PUSHBYTES_72 + DUMMY_DER_SIG))
     elif output_type == "P2SH":
         script_sig = OP_0 + OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_73 + DUMMY_REEDEM_SCRIPT
     if script_sig is not None:
