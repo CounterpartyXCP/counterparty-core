@@ -1,4 +1,7 @@
+from counterpartycore.lib.parser import protocol
+
 from .fixtures import ledgerdb
+from .mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_ledger_db(ledger_db):
@@ -56,3 +59,12 @@ def test_state_db_2(state_db):
         "SELECT asset, SUM(quantity) AS quantity FROM balances GROUP BY asset"
     ).fetchall()
     assert len(balances) == 16
+
+
+def test_protocol_changes_disabled():
+    assert protocol.enabled("multisig_addresses")
+
+    with ProtocolChangesDisabled(["multisig_addresses"]):
+        assert not protocol.enabled("multisig_addresses")
+
+    assert protocol.enabled("multisig_addresses")

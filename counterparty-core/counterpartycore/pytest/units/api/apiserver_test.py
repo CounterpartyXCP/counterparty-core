@@ -185,3 +185,13 @@ def test_new_get_asset_info(apiv2_client):
         "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "supply": 1000,
     }
+
+
+def test_invalid_hash(apiv2_client):
+    tx_hash = "65e649d58b95602b04172375dbd86783b7379e455a2bc801338d9299d10425a"
+    url = f"/v2/orders/{tx_hash}/matches"
+    result = apiv2_client.get(url).json
+    assert (
+        result["error"]
+        == "Invalid transaction hash: 65e649d58b95602b04172375dbd86783b7379e455a2bc801338d9299d10425a"
+    )

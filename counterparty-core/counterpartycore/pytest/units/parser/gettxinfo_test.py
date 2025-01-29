@@ -763,3 +763,29 @@ def test_sighash_flag(monkeymodule, bitcoind_mock):
         )
 
     gettxinfo.is_valid_der = mocked_is_valid_der
+
+
+def test_decode_checkmultisig():
+    # tx_hash mainnet: 3b1f71fb0a3905d8462db52171763c76ea1261d55a2c8b12ef5db0eb76be59a5
+    asm = [
+        2,
+        b"\x04'\xdb@Y\xd2K\xab\x05\xdf?k\xccv\x8f\xb0\x1b\xd9v\xb9s\xf9>r\xcc\xe2\xdf\xbf\xbe\xd5\xa3 V\xc9\x04\n,.\xa4\xc1\x0c\x81*T\xfe\xd7\xff.j\x91}\xbc\x843b\xd3\x98\xf6\xac\xe4\x00\x0f\xaf\xa5\xc6",
+        b"\x04>\x12\xa6\xcb\x1c|\x15ox\x91\x10\xab\xf89{q@GAKZ2\xc7B\xf1|\xcf\x93\xff#\xbd\xf3\x12\x8f\x94b\x07\x08k\xce\xf0\x12U\x82@\xcd\x16\x18,t\x11#\xe9>\xd1\x83'\xc4\xcdn\xba\xc6h\xa9",
+        b'\x04\xe4\x16\x8c\x17"\x83\xc7\xdf\xaa\x85\xd2\x00Ov:(\xbfm\x0f\x16\x02\xfc\x14R\xcc\xecb\xa7\xc8\xa6nB*\xf1A\x0f\xbf$\xa4sU\xdd\xc4=\xfe4\x91\xcb\x1b\x80et\xcc\xd1\xc44h\x04f\xdc\xff\x92o\x01',
+        3,
+        b"\xae",
+    ]
+    decoded_tx = {
+        "vin": [
+            {
+                "hash": binascii.hexlify(
+                    b"H\x1b:T<\x05\x96\x1c\x0c!\x9b\xfd>;\xfb\xb0;\xdb\x9c\xcf\xf3\xd5=\n\x9b\xaa\xeeqw\xa8P\x05"
+                )
+            }
+        ]
+    }
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    assert gettxinfo.decode_checkmultisig(asm, decoded_tx) == (
+        "2_16KsHvVQj6aGvVQpAUgRcfpVug3regjiUs_17yjtboB7RjK2BoQ78k51NtJ4cDQGYZQyb_1NNXBUF3rqXtFbWhK5nujSpvt9yApsRUT7_3",
+        None,
+    )

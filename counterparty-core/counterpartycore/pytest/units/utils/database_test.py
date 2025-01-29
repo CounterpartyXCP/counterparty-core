@@ -1,4 +1,6 @@
-from counterpartycore.lib import config
+import pytest
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.parser import check
 from counterpartycore.lib.utils import database
 
 
@@ -18,3 +20,12 @@ def test_version(ledger_db, test_helpers):
     )
 
     assert database.version(ledger_db) == (config.VERSION_MAJOR, config.VERSION_MINOR)
+
+    check.database_version(ledger_db)
+
+    config.VERSION_MAJOR += 1
+    with pytest.raises(exceptions.VersionError) as exception:
+        check.database_version(ledger_db)
+    assert exception.value.from_block_index == config.BLOCK_FIRST
+    assert exception.value.required_action == "rollback"
+    config.VERSION_MAJOR -= 1
