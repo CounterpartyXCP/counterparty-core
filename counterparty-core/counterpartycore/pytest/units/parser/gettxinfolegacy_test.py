@@ -5,6 +5,8 @@ from counterpartycore.lib.parser import deserialize, gettxinfolegacy
 def test_get_tx_info(current_block_index, blockchain_mock):
     original_prefix = config.PREFIX
     config.PREFIX = b"TESTXXXX"
+    config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
+
     blockchain_mock.source_by_txid[
         "e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb"
     ] = "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns"
