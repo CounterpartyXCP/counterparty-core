@@ -1,13 +1,15 @@
+import binascii
 import sys
 import time
 import traceback
 
 import pytest
+from bitcoinutils.keys import PublicKey
 from counterpartycore.lib import config, parser
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, check, deserialize
-from counterpartycore.lib.utils import helpers, multisig, script
+from counterpartycore.lib.utils import helpers, multisig, opcodes, script
 
 from ..fixtures.defaults import DEFAULT_PARAMS
 
@@ -55,14 +57,23 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         return value, script_pub_key, is_segwit
 
     def get_utxo_address_and_value(self, utxo):
-        print("get_utxo_address_and_value", utxo)
         if utxo == "0000000000000000000000000000000000000000000000000000000000000000:0":
             return list(self.source_by_txid.values())[0], int(10 * config.UNIT)
         txid, vout = utxo.split(":")
         return self.address_and_value_by_utxo[f"{txid}:0"]
 
     def save_address_and_value(self, decoded_tx):
-        address = script.script_to_address2(decoded_tx["vout"][-1]["script_pub_key"])
+        asm = script.script_to_asm(decoded_tx["vout"][-1]["script_pub_key"])
+        if asm[-1] == opcodes.OP_CHECKMULTISIG:
+            pubkeys = [binascii.hexlify(pubkey).decode("utf-8") for pubkey in asm[1:-2]]
+            signatures_required = asm[0]
+            addresses = [
+                PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
+                for pubkey in pubkeys
+            ]
+            address = f"{signatures_required}_{'_'.join(addresses)}_{len(addresses)}"
+        else:
+            address = script.script_to_address2(decoded_tx["vout"][-1]["script_pub_key"])
         value = decoded_tx["vout"][-1]["value"]
         utxo = f"{decoded_tx['tx_id']}:0"
         self.address_and_value_by_utxo[utxo] = (address, value)

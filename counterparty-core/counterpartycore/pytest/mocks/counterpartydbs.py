@@ -31,6 +31,14 @@ def enable_all_protocol_changes():
         os.remove(regtest_protocole_file)
 
 
+def get_disabled_protocol_changes():
+    regtest_protocole_file = os.path.join(DATA_DIR, "regtest_disabled_changes.json")
+    if os.path.exists(regtest_protocole_file):
+        with open(regtest_protocole_file) as f:
+            return json.load(f)
+    return []
+
+
 class ProtocolChangesDisabled:
     def __init__(self, change_names):
         self.disabled_changes = change_names
@@ -76,6 +84,7 @@ def run_scenario(db, bitcoind_mock, scenario):
             continue
         name, params, construct_params = tx_params[0:3]
         # disable protocol changes if needed
+        disabled_change_before = get_disabled_protocol_changes()
         if len(tx_params) > 3:
             disable_protocol_changes(tx_params[3])
         # complete params
@@ -94,6 +103,8 @@ def run_scenario(db, bitcoind_mock, scenario):
         bitcoind_mock.sendrawtransaction(db, signed_tx)
         # re-enable all protocol changes
         enable_all_protocol_changes()
+        if len(disabled_change_before) > 0:
+            disable_protocol_changes(disabled_change_before)
 
 
 def backup_databases(backup_name):
@@ -161,6 +172,10 @@ def state_db(build_dbs):
 @pytest.fixture(scope="function")
 def empty_ledger_db(build_dbs):
     db = get_tmp_connection("counterparty", "backup_empties_dir")
+    current_block_index = db.execute(
+        "SELECT MAX(block_index) AS block_index FROM blocks"
+    ).fetchone()["block_index"]
+    CurrentState().set_current_block_index(current_block_index)
     caches.init_caches(db)
     yield db
     db.close()
