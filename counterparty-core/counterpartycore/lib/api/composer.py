@@ -9,7 +9,7 @@ from collections import OrderedDict
 from decimal import Decimal as D
 
 from arc4 import ARC4
-from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress, PublicKey
+from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2trAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 
@@ -91,6 +91,8 @@ def address_to_script_pub_key(address, unspent_list, construct_params):
         return multisig_script
     try:
         return P2wpkhAddress(address).to_script_pub_key()
+    except TypeError:
+        return P2trAddress(address).to_script_pub_key()
     except ValueError:
         pass
     try:
