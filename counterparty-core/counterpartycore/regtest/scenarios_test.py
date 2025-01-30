@@ -70,9 +70,9 @@ SCENARIOS += scenario_25_issuance.SCENARIO
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-BASE_DIR = os.path.join(CURR_DIR, "../../../../")
+BASE_DIR = os.path.join(CURR_DIR, "../../../")
 
-# SCENARIOS = scenario_25_issuance.SCENARIO
+SCENARIOS = scenario_25_issuance.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -396,7 +396,7 @@ def check_api_v1(node):
 
 def run_scenarios(serve=False, wsgi_server="waitress"):
     try:
-        regtest_node_thread = RegtestNodeThread(wsgi_server=wsgi_server)
+        regtest_node_thread = RegtestNodeThread(wsgi_server=wsgi_server, datadir="regtest-node")
         regtest_node_thread.start()
 
         while not regtest_node_thread.ready():
@@ -404,7 +404,7 @@ def run_scenarios(serve=False, wsgi_server="waitress"):
 
         context = {}
 
-        # check_api_v1(regtest_node_thread.node)
+        check_api_v1(regtest_node_thread.node)
 
         # run all scenarios
         for item in SCENARIOS:
@@ -419,23 +419,28 @@ def run_scenarios(serve=False, wsgi_server="waitress"):
                 )
                 time.sleep(1)
         else:
+            regtest_node_thread.node.test_asset_conservation()
+            regtest_node_thread.node.reparse()
+
             print("Generating API documentation...")
             if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
                 os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
+            print("DATA DIR", os.path.abspath("regtest-node"))
             sh.python3(
                 os.path.join(CURR_DIR, "genapidoc.py"),
-                os.path.abspath("regtestnode"),
+                os.path.abspath("regtest-node"),
                 _out=sys.stdout,
                 _err_to_out=True,
                 _cwd=CURR_DIR,
             )
-            return
+
             print("Running Dredd...")
             sh.dredd(
                 _cwd=BASE_DIR,
                 _out=sys.stdout,
                 _err_to_out=True,
             )
+
             print("Testing invalid detach...")
             regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")

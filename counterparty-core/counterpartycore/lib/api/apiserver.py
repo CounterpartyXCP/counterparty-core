@@ -610,12 +610,15 @@ class APIServer(object):
     def start(self, args, log_stream):
         if self.process is not None:
             raise Exception("API Server is already running")
+        logger.warning("Starting API Server1...")
         self.process = Process(
             name="API",
             target=run_apiserver,
             args=(vars(args), self.server_ready_value, self.stop_event, os.getpid(), log_stream),
         )
+        logger.warning("Starting API Server2...")
         self.process.start()
+        logger.warning("Starting API Server3...")
         return self.process
 
     def is_ready(self):

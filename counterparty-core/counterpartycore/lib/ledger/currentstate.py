@@ -74,6 +74,12 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def block_parser_status(self):
         return self.state.get("BLOCK_PARSER_STATUS", "starting")
 
+    def set_stopping(self, stopping):
+        self.state["STOPPING"] = stopping
+
+    def stopping(self):
+        return self.state.get("STOPPING", False)
+
 
 class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):
     def __init__(self):

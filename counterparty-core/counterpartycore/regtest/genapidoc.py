@@ -11,8 +11,8 @@ from counterpartycore.lib.api.composer import DEPRECATED_CONSTRUCT_PARAMS
 from counterpartycore.lib.utils import database
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../apiary.apib")
-DREDD_FILE = os.path.join(CURR_DIR, "../../../../dredd.yml")
+API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../apiary.apib")
+DREDD_FILE = os.path.join(CURR_DIR, "../../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apidoc", "apicache.json")
 API_ROOT = "http://localhost:24000"
 
@@ -126,7 +126,7 @@ EVENT_LIST = [
 DREDD_CONFIG = {
     "loglevel": "error",
     "language": "python",
-    "hookfiles": "./counterparty-core/counterpartycore/test/regtest/dreddhooks.py",
+    "hookfiles": "./counterparty-core/counterpartycore/regtest/dreddhooks.py",
     "path": [],
     "blueprint": "apiary.apib",
     "endpoint": "http://127.0.0.1:24000",
@@ -626,6 +626,9 @@ if __name__ == "__main__":
     print("Generating API documentation...")
     data_dir = sys.argv[1] if len(sys.argv) > 1 else "regtestnode"
     print(f"Using data directory: {data_dir}")
+    assert os.path.exists(
+        f"{data_dir}/counterparty.regtest.db"
+    ), f"Data directory {data_dir} does not exist."
     db = database.get_db_connection(
         f"{data_dir}/counterparty.regtest.db", read_only=True, check_wal=False
     )
