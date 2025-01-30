@@ -11,6 +11,8 @@
 
 ## Bugfixes
 
+- Fix composition with P2TR addresses
+
 ## Codebase
 
 ## API
