@@ -503,7 +503,7 @@ def check_database_version(state_db):
         database.update_version(state_db)
 
 
-def run_apiserver(args, server_ready_value, stop_event, parent_pid):
+def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(signum, frame):
@@ -521,7 +521,9 @@ def run_apiserver(args, server_ready_value, stop_event, parent_pid):
 
         # Initialize Sentry, logging, config, etc.
         sentry.init()
-        server.initialise_log_and_config(argparse.Namespace(**args), api=True)
+        server.initialise_log_and_config(
+            argparse.Namespace(**args), api=True, log_stream=log_stream
+        )
 
         database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
 
@@ -605,13 +607,13 @@ class APIServer(object):
         self.server_ready_value = Value("I", 0)
         self.stop_event = stop_event
 
-    def start(self, args):
+    def start(self, args, log_stream):
         if self.process is not None:
             raise Exception("API Server is already running")
         self.process = Process(
             name="API",
             target=run_apiserver,
-            args=(vars(args), self.server_ready_value, self.stop_event, os.getpid()),
+            args=(vars(args), self.server_ready_value, self.stop_event, os.getpid(), log_stream),
         )
         self.process.start()
         return self.process

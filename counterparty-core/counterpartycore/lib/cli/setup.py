@@ -2,6 +2,7 @@
 import argparse
 import codecs
 import configparser
+import copy
 import logging
 import os
 import platform
@@ -154,7 +155,9 @@ def read_config_file(default_config_file, config_file_path=None):
 
 
 def add_config_arguments(parser, args, configfile, add_default=False):
-    for arg in args:
+    arguments = copy.deepcopy(args)
+    for argument in arguments:
+        arg = argument
         if add_default:
             key = arg[0][-1].replace("--", "")
             if (

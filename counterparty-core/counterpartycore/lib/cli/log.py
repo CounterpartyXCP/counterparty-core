@@ -184,6 +184,7 @@ def set_up(
     json_logs=False,
     max_log_file_size=40 * 1024 * 1024,
     max_log_file_rotations=20,
+    log_stream=None,
 ):
     logging.Logger.trace = trace
     logging.Logger.event = event
@@ -236,7 +237,10 @@ def set_up(
         logger.addHandler(fileh)
 
     if config.LOG_IN_CONSOLE:
-        console = logging.StreamHandler()
+        if log_stream:
+            console = logging.StreamHandler(log_stream)
+        else:
+            console = logging.StreamHandler()
         console.setLevel(log_level)
         if json_logs:
             console.setFormatter(CustomisedJSONFormatter())

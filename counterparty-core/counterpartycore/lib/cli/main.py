@@ -412,13 +412,14 @@ def welcome_message(action, server_configfile):
     cprint(f"\n{'-' * 30} {action.upper()} {'-' * 30}\n", "green")
 
 
-def arg_parser(no_config_file=False):
+def arg_parser(no_config_file=False, app_name=APP_NAME):
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
-        prog=APP_NAME,
+        prog=app_name,
         description=f"Server for the {config.XCP_NAME} protocol",
         add_help=False,
         exit_on_error=False,
+        conflict_handler="resolve",
     )
     parser.add_argument(
         "-h", "--help", dest="help", action="store_true", help="show this help message and exit"
