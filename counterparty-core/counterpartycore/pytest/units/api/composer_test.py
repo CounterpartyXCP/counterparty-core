@@ -9,6 +9,7 @@ from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
+from counterpartycore.lib.utils import helpers
 from counterpartycore.pytest.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
 
 PROVIDED_PUBKEYS = ",".join(
@@ -57,6 +58,15 @@ def test_address_to_script_pub_key(defaults):
             "OP_CHECKMULTISIG",
         ]
     )
+    original_network = config.NETWORK_NAME
+    config.NETWORK_NAME = "mainnet"
+
+    assert composer.address_to_script_pub_key(
+        "bc1prkn4gm5crk3m4c3489zlllnrsrxmznnymh3vncnae44g7llnc36ssj07ew", [], {}
+    ) == Script(["OP_1", "1da7546e981da3bae2353945fffe6380cdb14e64dde2c9e27dcd6a8f7ff3c475"])
+
+    config.NETWORK_NAME = original_network
+    helpers.setup_bitcoinutils(config.NETWORK_NAME)
 
 
 def test_create_tx_output(defaults):
