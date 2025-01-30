@@ -90,10 +90,12 @@ def address_to_script_pub_key(address, unspent_list=[], construct_params={}, net
         )
         return multisig_script
     try:
-        return P2wpkhAddress(address).to_script_pub_key()
-    except TypeError:
         return P2trAddress(address).to_script_pub_key()
-    except ValueError:
+    except (ValueError, TypeError):
+        pass
+    try:
+        return P2wpkhAddress(address).to_script_pub_key()
+    except (ValueError, TypeError):
         pass
     try:
         return P2pkhAddress(address).to_script_pub_key()

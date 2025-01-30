@@ -504,6 +504,7 @@ def check_database_version(state_db):
 
 
 def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
+    print("API PROCESSES")
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(signum, frame):
@@ -616,9 +617,15 @@ class APIServer(object):
             target=run_apiserver,
             args=(vars(args), self.server_ready_value, self.stop_event, os.getpid(), log_stream),
         )
-        logger.warning("Starting API Server2...")
-        self.process.start()
-        logger.warning("Starting API Server3...")
+
+        try:
+            logger.warning("Starting API Server2...")
+            self.process.start()
+            logger.info("API PID: %s", self.process.pid)
+            logger.warning("Starting API Server3...")
+        except Exception as e:
+            logger.error(f"Error starting API Server: {e}")
+            raise e
         return self.process
 
     def is_ready(self):

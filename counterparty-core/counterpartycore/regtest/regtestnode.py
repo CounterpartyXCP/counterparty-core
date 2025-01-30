@@ -53,13 +53,16 @@ class CounterpartyNode(threading.Thread):
     def stop(self):
         print("ASK TO STOP")
         CurrentState().set_stopping(True)
+        # api_pid = self.log_stream.getvalue().split("API PID: ")[1].split("\n")[0]
         while True:
             if "Shutdown complete." in self.log_stream.getvalue():
                 print("Server stopped")
                 time.sleep(2)
-                return
+                break
             print("Waiting for counterparty server to stop...")
             time.sleep(1)
+        # os.kill(int(api_pid), signal.SIGTERM)
+        time.sleep(1)
 
     def command(self, action, arg=None):
         if action == "reparse":
@@ -330,6 +333,7 @@ class RegtestNode:
             time.sleep(2)
 
     def wait_for_counterparty_watcher(self):
+        return
         while True:
             if "Catch up completed." in self.server_out.getvalue():
                 print("Server ready")

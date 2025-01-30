@@ -9,7 +9,6 @@ from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
-from counterpartycore.lib.utils import helpers
 from counterpartycore.pytest.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
 
 PROVIDED_PUBKEYS = ",".join(
@@ -58,6 +57,11 @@ def test_address_to_script_pub_key(defaults):
             "OP_CHECKMULTISIG",
         ]
     )
+
+    assert composer.address_to_script_pub_key(defaults["p2tr_addresses"][0], [], {}) == Script(
+        ["OP_1", "8790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad44264156"]
+    )
+
     original_network = config.NETWORK_NAME
     config.NETWORK_NAME = "mainnet"
 
@@ -66,7 +70,6 @@ def test_address_to_script_pub_key(defaults):
     ) == Script(["OP_1", "1da7546e981da3bae2353945fffe6380cdb14e64dde2c9e27dcd6a8f7ff3c475"])
 
     config.NETWORK_NAME = original_network
-    helpers.setup_bitcoinutils(config.NETWORK_NAME)
 
 
 def test_create_tx_output(defaults):
@@ -1627,13 +1630,16 @@ def test_compose_enhanced_send(ledger_db, defaults, monkeypatch):
         "asset": "XCP",
         "quantity": defaults["small"],
     }
-
     expected = {
         "rawtransaction": "0200000001c50cd6f19c1ef5fca06e3df19639102c2c003d4473e4ad03e74ad32b6395688d0000000000ffffffff020000000000000000356a33f491bf12f92e5bdd71a8470868018cdea73404c3506158d16e76d5e8ab7d7fcf514ea09ec71de638e0cdaf544897caaef4aec204c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     }
-
     result = composer.compose_transaction(ledger_db, "send", params, {})
     assert result == expected
+
+    params["source"] = defaults["p2tr_addresses"][0]
+    expected = {"rawtransaction": ""}
+    # result = composer.compose_transaction(ledger_db, "send", params, {"validate": False})
+    # assert result == expected
 
 
 def test_compose_move(ledger_db, defaults):
