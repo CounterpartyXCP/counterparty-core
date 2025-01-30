@@ -18,11 +18,36 @@ from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.cli import main, server
 from counterpartycore.lib.utils import database
 
 setup("regtest")
 
 WALLET_NAME = "xcpwallet"
+
+
+class CounterpartyNode(threading.Thread):
+    def __init__(self, datadir, log_stream):
+        threading.Thread.__init__(self)
+        parser = main.arg_parser(no_config_file=True)
+        self.args = parser.parse_args(
+            [
+                "--regtest",
+                f"--data-dir={datadir}",
+                "--wsgi-server=waitress",
+                "--gunicorn-workers=2",
+                "--no-telemetry",
+                "--electrs-url=http://localhost:3002",
+                "start",
+                "-vv",
+            ]
+        )
+        self.log_stream = log_stream
+        print(self.args)
+        server.initialise_log_and_config(self.args, log_stream=self.log_stream)
+
+    def run(self):
+        server.start_all(self.args, self.log_stream)
 
 
 class RegtestNode:
@@ -72,6 +97,9 @@ class RegtestNode:
         self.electrs_process_pid = None
         self.electrs_process_2_pid = None
         self.second_node_started = False
+
+    def start_counterparty_server(self):
+        self.counterparty_node = CounterpartyNode(self.datadir, self.server_out).start()
 
     def api_call(self, url):
         result = sh.curl(f"http://localhost:24000/v2/{url}").strip()
@@ -444,14 +472,15 @@ class RegtestNode:
 
         # print(self.bitcoin_cli("listreceivedbyaddress"))
 
-        self.server_out = StringIO()
-        self.counterparty_server_process = self.counterparty_server(
-            "start",
-            _bg=True,
-            _out=self.server_out,
-            _err_to_out=True,
-            _bg_exc=False,
-        )
+        self.server_out = StringIO("")
+        # self.counterparty_server_process = self.counterparty_server(
+        #    "start",
+        #    _bg=True,
+        #    _out=self.server_out,
+        #    _err_to_out=True,
+        #    _bg_exc=False,
+        # )
+        self.start_counterparty_server()
         self.wait_for_counterparty_follower()
 
         self.generate_xcp()
@@ -493,9 +522,10 @@ class RegtestNode:
 
     def stop_counterparty_server(self):
         try:
-            self.counterparty_server_process.terminate()
-            self.counterparty_server_process.wait()
-            self.kill_gunicorn_workers()
+            # self.counterparty_server_process.terminate()
+            # self.counterparty_server_process.wait()
+            # self.kill_gunicorn_workers()
+            pass
         except Exception as e:
             print(e)
             pass
