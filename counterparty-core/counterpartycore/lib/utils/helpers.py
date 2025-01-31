@@ -56,6 +56,11 @@ class SingletonMeta(type):
             cls._instances[cls] = instance
         return cls._instances[cls]
 
+    def reset_instance(cls):
+        """Force reinitialization of the singleton instance."""
+        if cls in cls._instances:
+            del cls._instances[cls]
+
 
 def format_duration(seconds):
     duration_seconds = int(seconds)

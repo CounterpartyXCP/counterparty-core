@@ -478,5 +478,9 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             self.minters.append(source)
 
 
+def test_utxo_support():
+    UTXOSupportPropertyTest()
+
+
 if __name__ == "__main__":
     UTXOSupportPropertyTest()

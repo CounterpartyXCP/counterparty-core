@@ -5,7 +5,6 @@
 import fractions
 import logging
 from decimal import Decimal as D
-from decimal import getcontext
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.caches import AssetCache
@@ -202,16 +201,15 @@ def value_input(quantity, asset, divisible):
         return round(quantity)
 
 
-def value_output(quantity, asset, divisible):
-    def norm(num, places):
-        """Round only if necessary."""
-        getcontext().prec = 8
-        num = round(num, places)
-        fmt = "{:." + str(places) + "f}"
-        # pylint: disable=C0209
-        num = fmt.format(num)
-        return num.rstrip("0") + "0" if num.rstrip("0")[-1] == "." else num.rstrip("0")
+def norm(num, places):
+    """Round only if necessary."""
+    num = round(num, places)
+    fmt = "{:." + str(places) + "f}"
+    num = fmt.format(num)
+    return num.rstrip("0") + "0" if num.rstrip("0")[-1] == "." else num.rstrip("0")
 
+
+def value_output(quantity, asset, divisible):
     if asset == "fraction":
         return str(norm(D(quantity) * D(100), 6)) + "%"
 

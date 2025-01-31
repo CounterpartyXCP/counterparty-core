@@ -70,7 +70,7 @@ SCENARIOS += scenario_25_issuance.SCENARIO
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-BASE_DIR = os.path.join(CURR_DIR, "../../../")
+BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
 # SCENARIOS = scenario_25_issuance.SCENARIO
 
@@ -365,7 +365,6 @@ def rpc_call(command, params=None):
         "id": 0,
     }
     result = json.loads(curl_client(json.dumps(query)).strip())
-    print(f"RPC call {command}: {result}")
     return result
 
 
@@ -394,9 +393,9 @@ def check_api_v1(node):
     int(tx["result"], 16)
 
 
-def run_scenarios(serve=False, wsgi_server="waitress"):
+def run_scenarios(serve=False, wsgi_server="gunicorn"):
     try:
-        regtest_node_thread = RegtestNodeThread(wsgi_server=wsgi_server, datadir="regtest-node")
+        regtest_node_thread = RegtestNodeThread(wsgi_server=wsgi_server)
         regtest_node_thread.start()
 
         while not regtest_node_thread.ready():
@@ -419,33 +418,35 @@ def run_scenarios(serve=False, wsgi_server="waitress"):
                 )
                 time.sleep(1)
         else:
-            print("Tesing reparse...")
-            regtest_node_thread.node.reparse()
-
             if True:
                 print("Generating API documentation...")
                 if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
                     os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
-                print("DATA DIR", os.path.abspath("regtest-node"))
                 sh.python3(
                     os.path.join(CURR_DIR, "genapidoc.py"),
-                    os.path.abspath("regtest-node"),
+                    os.path.abspath("regtestnode"),
                     _out=sys.stdout,
                     _err_to_out=True,
                     _cwd=CURR_DIR,
                 )
-
                 print("Running Dredd...")
                 sh.dredd(
                     _cwd=BASE_DIR,
                     _out=sys.stdout,
                     _err_to_out=True,
                 )
-
             print("Testing invalid detach...")
             regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")
             regtest_node_thread.node.test_transaction_chaining()
+            print("Tesing asset conservation checking...")
+            regtest_node_thread.node.test_asset_conservation()
+            print("Tesing reparse...")
+            regtest_node_thread.node.reparse()
+            print("Testing rollback...")
+            regtest_node_thread.node.rollback()
+            print("Testing interrupted reparse...")
+            regtest_node_thread.node.test_empty_ledger_hash()
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
             print("Testing Electrs...")
@@ -454,15 +455,6 @@ def run_scenarios(serve=False, wsgi_server="waitress"):
             regtest_node_thread.node.test_fee_calculation()
             print("Testing RBF...")
             regtest_node_thread.node.test_rbf()
-
-            print("Tesing asset conservation checking...")
-            regtest_node_thread.node.test_asset_conservation()
-
-            print("Testing rollback...")
-            regtest_node_thread.node.rollback()
-            print("Testing interrupted reparse...")
-            regtest_node_thread.node.test_empty_ledger_hash()
-
     except KeyboardInterrupt:
         print(regtest_node_thread.node.server_out.getvalue())
         pass
@@ -474,8 +466,8 @@ def run_scenarios(serve=False, wsgi_server="waitress"):
 
 
 def test_scenarios():
-    run_scenarios()
+    run_scenarios(serve=False, wsgi_server="waitress")
 
 
 if __name__ == "__main__":
-    run_scenarios()
+    test_scenarios()

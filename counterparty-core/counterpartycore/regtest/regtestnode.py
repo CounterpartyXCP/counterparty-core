@@ -18,77 +18,11 @@ from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.cli import main, server
-from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.parser import blocks, check
 from counterpartycore.lib.utils import database
 
 setup("regtest")
 
 WALLET_NAME = "xcpwallet"
-
-
-class CounterpartyNode(threading.Thread):
-    def __init__(self, datadir, log_stream):
-        threading.Thread.__init__(self)
-        parser = main.arg_parser(no_config_file=True)
-        self.args = parser.parse_args(
-            [
-                "--regtest",
-                f"--data-dir={datadir}",
-                "--wsgi-server=waitress",
-                "--gunicorn-workers=2",
-                "--no-telemetry",
-                "--electrs-url=http://localhost:3002",
-                "-vv",
-                "start",
-            ]
-        )
-        print("ARGS:", self.args)
-        self.log_stream = log_stream
-
-    def run(self):
-        server.initialise_log_and_config(self.args, log_stream=self.log_stream)
-        server.start_all(self.args, self.log_stream)
-
-    def stop(self):
-        print("SKIP ASK TO STOP")
-        CurrentState().set_stopping(True)
-        api_pid = self.log_stream.getvalue().split("API PID: ")[1].split("\n")[0]
-        while True:
-            if "Shutdown complete." in self.log_stream.getvalue():
-                print("Server stopped")
-                time.sleep(2)
-                break
-            print("Waiting for counterparty server to stop...")
-            time.sleep(1)
-        print("Killing API process...", api_pid)
-        try:
-            os.kill(int(api_pid), signal.SIGTERM)
-        except ProcessLookupError:
-            pass
-        time.sleep(1)
-
-    def command(self, node, action, arg=None):
-        if action == "reparse":
-            print("Reparse...")
-            blocks.reparse(CurrentState().current_db_connection(), block_index=arg)
-            # with database.StateDBConnectionPool().connection() as state_db:
-            #    dbbuilder.rollback_state_db(state_db, block_index=arg)
-            # server.reparse(block_index=arg)
-            print("Reparse done")
-        elif action == "rollback":
-            blocks.rollback(CurrentState().current_db_connection(), block_index=arg)
-            blocks.catch_up(CurrentState().current_db_connection())
-            node.wait_for_counterparty_server()
-            # with database.StateDBConnectionPool().connection() as state_db:
-            #    dbbuilder.rollback_state_db(state_db, arg)
-            # follow.NotSupportedTransactionsCache().clear()
-        elif action == "check-db":
-            with database.LedgerDBConnectionPool().connection() as ledger_db:
-                check.asset_conservation(ledger_db)
-                database.check_foreign_keys(ledger_db)
-                database.intergrity_check(ledger_db)
 
 
 class RegtestNode:
@@ -123,25 +57,21 @@ class RegtestNode:
         self.tx_index = -1
         self.ready = False
         self.show_output = show_output
-        # self.counterparty_server = sh.counterparty_server.bake(
-        #    "--regtest",
-        #    f"--data-dir={self.datadir}",
-        #    f"--wsgi-server={wsgi_server}",
-        #    "--gunicorn-workers=2",
-        #    "--no-telemetry",
-        #    "--electrs-url=http://localhost:3002",
-        #    "-vv",
-        # )
+        self.counterparty_server = sh.counterparty_server.bake(
+            "--regtest",
+            f"--data-dir={self.datadir}",
+            f"--wsgi-server={wsgi_server}",
+            "--gunicorn-workers=2",
+            "--no-telemetry",
+            "--electrs-url=http://localhost:3002",
+            "-vv",
+        )
         self.burn_in_one_block = burn_in_one_block
         self.electrs_process = None
         self.electrs_process_2 = None
         self.electrs_process_pid = None
         self.electrs_process_2_pid = None
         self.second_node_started = False
-
-    def start_counterparty_server(self):
-        self.counterparty_node = CounterpartyNode(self.datadir, self.server_out)
-        self.counterparty_node.start()
 
     def api_call(self, url):
         result = sh.curl(f"http://localhost:24000/v2/{url}").strip()
@@ -349,9 +279,8 @@ class RegtestNode:
             time.sleep(2)
 
     def wait_for_counterparty_watcher(self):
-        return
         while True:
-            if "Catch up completed." in self.server_out.getvalue():
+            if "API.Watcher - Catch up completed." in self.server_out.getvalue():
                 print("Server ready")
                 return
             print("Waiting for counterparty server...")
@@ -515,15 +444,14 @@ class RegtestNode:
 
         # print(self.bitcoin_cli("listreceivedbyaddress"))
 
-        self.server_out = StringIO("")
-        # self.counterparty_server_process = self.counterparty_server(
-        #    "start",
-        #    _bg=True,
-        #    _out=self.server_out,
-        #    _err_to_out=True,
-        #    _bg_exc=False,
-        # )
-        self.start_counterparty_server()
+        self.server_out = StringIO()
+        self.counterparty_server_process = self.counterparty_server(
+            "start",
+            _bg=True,
+            _out=self.server_out,
+            _err_to_out=True,
+            _bg_exc=False,
+        )
         self.wait_for_counterparty_follower()
 
         self.generate_xcp()
@@ -565,7 +493,9 @@ class RegtestNode:
 
     def stop_counterparty_server(self):
         try:
-            self.counterparty_node.stop()
+            self.counterparty_server_process.terminate()
+            self.counterparty_server_process.wait()
+            self.kill_gunicorn_workers()
         except Exception as e:
             print(e)
             pass
@@ -580,14 +510,14 @@ class RegtestNode:
             pass
 
     def stop(self):
-        print("Stopping counterparty-server...")
-        self.stop_counterparty_server()
         print("Stopping electrs...")
         self.stop_electrs()
         print("Stopping bitcoin node 1...")
         self.stop_bitcoin_node()
         print("Stopping bitcoin node 2...")
         self.stop_bitcoin_node(node=2)
+        print("Stopping counterparty-server...")
+        self.stop_counterparty_server()
 
     def get_node_state(self):
         try:
@@ -595,19 +525,22 @@ class RegtestNode:
                 "last_block": self.api_call("blocks/last")["result"],
                 "last_event": self.api_call("events?limit=1")["result"],
             }
-        except Exception:
+        except KeyError:
             print("Error getting node state, retrying in 2 seconds...")
             time.sleep(2)
             return self.get_node_state()
 
     def check_node_state(self, command, previous_state):
-        print(f"Checking node state after {command}...")
-        print(self.server_out.getvalue())
-        print(("---------------------------------"))
-        # self.server_out = StringIO()
-        # self.start_counterparty_server()
-        # self.wait_for_counterparty_follower()
-        # self.wait_for_counterparty_watcher()
+        self.server_out = StringIO()
+        self.counterparty_server_process = self.counterparty_server(
+            "start",
+            _bg=True,
+            _out=self.server_out,
+            _err_to_out=True,
+            _bg_exc=False,
+        )
+        self.wait_for_counterparty_follower()
+        self.wait_for_counterparty_watcher()
         time.sleep(2)
         state = self.get_node_state()
         if state["last_block"] != previous_state["last_block"]:
@@ -617,15 +550,22 @@ class RegtestNode:
 
     def test_command(self, command):
         state_before = self.get_node_state()
-        # self.stop_counterparty_server()
+        self.stop_counterparty_server()
         print(f"Running `{command}`...")
         if command == "check-db":
-            self.counterparty_node.command(self, command)
-        else:
-            self.counterparty_node.command(
-                self,
+            self.counterparty_server(
                 command,
-                200,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
+                _out=sys.stdout,
+                _err_to_out=True,
+                _bg_exc=False,
+            )
+        else:
+            self.counterparty_server(
+                command,
+                150,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
+                _out=sys.stdout,
+                _err_to_out=True,
+                _bg_exc=False,
             )
         self.check_node_state(command, state_before)
         print(f"`{command}` successful")
@@ -633,11 +573,13 @@ class RegtestNode:
     def test_empty_ledger_hash(self):
         print("Test empty ledger hash...")
         state_before = self.get_node_state()
-        # self.stop_counterparty_server()
+        self.stop_counterparty_server()
         # delete some ledger hash
-        db = CurrentState().current_db_connection()
+        db = database.get_db_connection(
+            f"{self.datadir}/counterparty.regtest.db", read_only=False, check_wal=False
+        )
         db.execute("UPDATE blocks SET ledger_hash = NULL WHERE block_index > 150")
-        blocks.catch_up(db)
+        db.close()
         self.check_node_state("auto-rollback", state_before)
         print("Empty ledger hash test successful")
 
@@ -1273,19 +1215,16 @@ class RegtestNode:
 
 
 class RegtestNodeThread(threading.Thread):
-    def __init__(self, wsgi_server="waitress", burn_in_one_block=True, datadir="regtestnode"):
+    def __init__(self, wsgi_server="waitress", burn_in_one_block=True):
         threading.Thread.__init__(self)
         self.wsgi_server = wsgi_server
         self.burn_in_one_block = burn_in_one_block
         self.daemon = True
         self.node = None
-        self.datadir = datadir
 
     def run(self):
         self.node = RegtestNode(
-            wsgi_server=self.wsgi_server,
-            burn_in_one_block=self.burn_in_one_block,
-            datadir=self.datadir,
+            wsgi_server=self.wsgi_server, burn_in_one_block=self.burn_in_one_block
         )
         self.node.start()
 

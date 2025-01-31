@@ -152,7 +152,7 @@ def ledger_db(build_dbs):
         "SELECT MAX(block_index) AS block_index FROM blocks"
     ).fetchone()["block_index"]
     CurrentState().set_current_block_index(current_block_index)
-    caches.init_caches(db)
+    caches.reset_caches()
     yield db
     db.close()
     database.LedgerDBConnectionPool().close()
@@ -175,7 +175,7 @@ def empty_ledger_db(build_dbs):
         "SELECT MAX(block_index) AS block_index FROM blocks"
     ).fetchone()["block_index"]
     CurrentState().set_current_block_index(current_block_index)
-    caches.init_caches(db)
+    caches.reset_caches()
     yield db
     db.close()
     database.LedgerDBConnectionPool().close()
