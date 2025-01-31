@@ -466,7 +466,3 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
 
 def test_scenarios():
     run_scenarios(serve=False, wsgi_server="waitress")
-
-
-if __name__ == "__main__":
-    test_scenarios()

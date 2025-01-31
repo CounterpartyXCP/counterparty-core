@@ -31,10 +31,11 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y libgirepository1.0-dev libleveldb-dev nodejs npm
         python -m pip install --upgrade pip
+        pip install pytest hatchling==1.25.0 hatch==1.13.0
         pip install maturin sh rich pyyaml
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
-        pip install evdev
+        pip install evdev 
         wget https://bitcoincore.org/bin/bitcoin-core-28.0/bitcoin-28.0-x86_64-linux-gnu.tar.gz
         tar -xvf bitcoin-28.0-x86_64-linux-gnu.tar.gz
         sudo cp bitcoin-28.0/bin/bitcoin-cli /usr/local/bin/bitcoin-cli
@@ -44,4 +45,4 @@ jobs:
     - name: Run regtest tests
       run: |
         cd counterparty-core
-        python3 counterpartycore/test/regtest/utxosupport_propertytest.py
+        hatch run pytest counterpartycore/regtest/utxosupport_propertytest.py
