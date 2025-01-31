@@ -258,11 +258,11 @@ def getrawmempool(verbose=False):
 
 
 @functools.lru_cache(maxsize=1000)
-def get_utxo_address_and_value(utxo):
+def get_utxo_address_and_value(utxo, no_retry=False):
     tx_hash = utxo.split(":")[0]
     vout = int(utxo.split(":")[1])
     try:
-        transaction = getrawtransaction(tx_hash, True)
+        transaction = getrawtransaction(tx_hash, True, no_retry=no_retry)
     except exceptions.BitcoindRPCError as e:
         raise exceptions.InvalidUTXOError(f"Could not find UTXO {utxo}") from e
     if vout >= len(transaction["vout"]):
@@ -274,7 +274,7 @@ def get_utxo_address_and_value(utxo):
 
 def safe_get_utxo_address(utxo):
     try:
-        return get_utxo_address_and_value(utxo)[0]
+        return get_utxo_address_and_value(utxo, no_retry=True)[0]
     except exceptions.InvalidUTXOError:
         return "unknown"
 

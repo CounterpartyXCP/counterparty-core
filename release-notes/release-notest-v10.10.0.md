@@ -11,6 +11,8 @@
 
 ## Bugfixes
 
+- Don't retry RPC calls in `safe_get_utxo_address()`
+
 ## Codebase
 
 ## API

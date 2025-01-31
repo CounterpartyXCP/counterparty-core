@@ -638,7 +638,7 @@ def init_mock_functions(request, monkeypatch, mock_utxos, rawtransactions_db):
     def is_valid_utxo(value):
         return utxosinfo.is_utxo_format(value)
 
-    def get_utxo_address_and_value(value):
+    def get_utxo_address_and_value(value, no_retry=False):
         return "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", 100
 
     def get_transaction_fee(db, transaction_type, block_index):
