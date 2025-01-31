@@ -72,7 +72,7 @@ SCENARIOS += scenario_last_mempool.SCENARIO
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../")
 
-SCENARIOS = scenario_25_issuance.SCENARIO
+# SCENARIOS = scenario_25_issuance.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -419,7 +419,10 @@ def run_scenarios(serve=False, wsgi_server="waitress"):
                 )
                 time.sleep(1)
         else:
-            if False:
+            print("Tesing reparse...")
+            regtest_node_thread.node.reparse()
+
+            if True:
                 print("Generating API documentation...")
                 if os.path.exists(os.path.join(CURR_DIR, "apidoc/apicache.json")):
                     os.unlink(os.path.join(CURR_DIR, "apidoc/apicache.json"))
@@ -440,17 +443,9 @@ def run_scenarios(serve=False, wsgi_server="waitress"):
                 )
 
             print("Testing invalid detach...")
-            # regtest_node_thread.node.test_invalid_detach()
+            regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")
             regtest_node_thread.node.test_transaction_chaining()
-            print("Tesing asset conservation checking...")
-            regtest_node_thread.node.test_asset_conservation()
-            print("Tesing reparse...")
-            regtest_node_thread.node.reparse()
-            print("Testing rollback...")
-            regtest_node_thread.node.rollback()
-            print("Testing interrupted reparse...")
-            regtest_node_thread.node.test_empty_ledger_hash()
             print("Testing reorg...")
             regtest_node_thread.node.test_reorg()
             print("Testing Electrs...")
@@ -459,6 +454,15 @@ def run_scenarios(serve=False, wsgi_server="waitress"):
             regtest_node_thread.node.test_fee_calculation()
             print("Testing RBF...")
             regtest_node_thread.node.test_rbf()
+
+            print("Tesing asset conservation checking...")
+            regtest_node_thread.node.test_asset_conservation()
+
+            print("Testing rollback...")
+            regtest_node_thread.node.rollback()
+            print("Testing interrupted reparse...")
+            regtest_node_thread.node.test_empty_ledger_hash()
+
     except KeyboardInterrupt:
         print(regtest_node_thread.node.server_out.getvalue())
         pass

@@ -674,6 +674,7 @@ def start_all(args, log_stream=None):
         ledger.caches.init_caches(db)
         blocks.check_database_version(db)
         database.optimize(db)
+        CurrentState().set_current_db_connection(db)
 
         if args.rebuild_state_db:
             dbbuilder.build_state_db()

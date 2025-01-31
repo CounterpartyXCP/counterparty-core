@@ -5,6 +5,7 @@
 import fractions
 import logging
 from decimal import Decimal as D
+from decimal import getcontext
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.caches import AssetCache
@@ -204,7 +205,8 @@ def value_input(quantity, asset, divisible):
 def value_output(quantity, asset, divisible):
     def norm(num, places):
         """Round only if necessary."""
-        num = round(float(num), places)
+        getcontext().prec = 8
+        num = round(num, places)
         fmt = "{:." + str(places) + "f}"
         # pylint: disable=C0209
         num = fmt.format(num)

@@ -20,6 +20,7 @@ from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.cli import main, server
 from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.parser import blocks, check
 from counterpartycore.lib.utils import database
 
 setup("regtest")
@@ -45,17 +46,15 @@ class CounterpartyNode(threading.Thread):
         )
         print("ARGS:", self.args)
         self.log_stream = log_stream
-        server.initialise_log_and_config(self.args, log_stream=self.log_stream)
 
     def run(self):
-        database.LedgerDBConnectionPool().close()
-        database.StateDBConnectionPool().close()
+        server.initialise_log_and_config(self.args, log_stream=self.log_stream)
         server.start_all(self.args, self.log_stream)
 
     def stop(self):
-        print("ASK TO STOP")
+        print("SKIP ASK TO STOP")
         CurrentState().set_stopping(True)
-        # api_pid = self.log_stream.getvalue().split("API PID: ")[1].split("\n")[0]
+        api_pid = self.log_stream.getvalue().split("API PID: ")[1].split("\n")[0]
         while True:
             if "Shutdown complete." in self.log_stream.getvalue():
                 print("Server stopped")
@@ -63,18 +62,33 @@ class CounterpartyNode(threading.Thread):
                 break
             print("Waiting for counterparty server to stop...")
             time.sleep(1)
-        # os.kill(int(api_pid), signal.SIGTERM)
+        print("Killing API process...", api_pid)
+        try:
+            os.kill(int(api_pid), signal.SIGTERM)
+        except ProcessLookupError:
+            pass
         time.sleep(1)
 
-    def command(self, action, arg=None):
+    def command(self, node, action, arg=None):
         if action == "reparse":
             print("Reparse...")
-            server.reparse(block_index=arg)
+            blocks.reparse(CurrentState().current_db_connection(), block_index=arg)
+            # with database.StateDBConnectionPool().connection() as state_db:
+            #    dbbuilder.rollback_state_db(state_db, block_index=arg)
+            # server.reparse(block_index=arg)
             print("Reparse done")
         elif action == "rollback":
-            server.rollback(block_index=arg)
+            blocks.rollback(CurrentState().current_db_connection(), block_index=arg)
+            blocks.catch_up(CurrentState().current_db_connection())
+            node.wait_for_counterparty_server()
+            # with database.StateDBConnectionPool().connection() as state_db:
+            #    dbbuilder.rollback_state_db(state_db, arg)
+            # follow.NotSupportedTransactionsCache().clear()
         elif action == "check-db":
-            server.check_database()
+            with database.LedgerDBConnectionPool().connection() as ledger_db:
+                check.asset_conservation(ledger_db)
+                database.check_foreign_keys(ledger_db)
+                database.intergrity_check(ledger_db)
 
 
 class RegtestNode:
@@ -581,8 +595,7 @@ class RegtestNode:
                 "last_block": self.api_call("blocks/last")["result"],
                 "last_event": self.api_call("events?limit=1")["result"],
             }
-        except Exception as e:
-            print(e)
+        except Exception:
             print("Error getting node state, retrying in 2 seconds...")
             time.sleep(2)
             return self.get_node_state()
@@ -591,10 +604,10 @@ class RegtestNode:
         print(f"Checking node state after {command}...")
         print(self.server_out.getvalue())
         print(("---------------------------------"))
-        self.server_out = StringIO()
-        self.start_counterparty_server()
-        self.wait_for_counterparty_follower()
-        self.wait_for_counterparty_watcher()
+        # self.server_out = StringIO()
+        # self.start_counterparty_server()
+        # self.wait_for_counterparty_follower()
+        # self.wait_for_counterparty_watcher()
         time.sleep(2)
         state = self.get_node_state()
         if state["last_block"] != previous_state["last_block"]:
@@ -604,12 +617,13 @@ class RegtestNode:
 
     def test_command(self, command):
         state_before = self.get_node_state()
-        self.stop_counterparty_server()
+        # self.stop_counterparty_server()
         print(f"Running `{command}`...")
         if command == "check-db":
-            self.counterparty_node.command(command)
+            self.counterparty_node.command(self, command)
         else:
             self.counterparty_node.command(
+                self,
                 command,
                 200,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
             )
@@ -619,13 +633,11 @@ class RegtestNode:
     def test_empty_ledger_hash(self):
         print("Test empty ledger hash...")
         state_before = self.get_node_state()
-        self.stop_counterparty_server()
+        # self.stop_counterparty_server()
         # delete some ledger hash
-        db = database.get_db_connection(
-            f"{self.datadir}/counterparty.regtest.db", read_only=False, check_wal=False
-        )
+        db = CurrentState().current_db_connection()
         db.execute("UPDATE blocks SET ledger_hash = NULL WHERE block_index > 150")
-        db.close()
+        blocks.catch_up(db)
         self.check_node_state("auto-rollback", state_before)
         print("Empty ledger hash test successful")
 
