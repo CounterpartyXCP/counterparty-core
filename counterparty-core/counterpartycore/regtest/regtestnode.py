@@ -48,6 +48,8 @@ class CounterpartyNode(threading.Thread):
         server.initialise_log_and_config(self.args, log_stream=self.log_stream)
 
     def run(self):
+        database.LedgerDBConnectionPool().close()
+        database.StateDBConnectionPool().close()
         server.start_all(self.args, self.log_stream)
 
     def stop(self):
@@ -579,7 +581,8 @@ class RegtestNode:
                 "last_block": self.api_call("blocks/last")["result"],
                 "last_event": self.api_call("events?limit=1")["result"],
             }
-        except KeyError:
+        except Exception as e:
+            print(e)
             print("Error getting node state, retrying in 2 seconds...")
             time.sleep(2)
             return self.get_node_state()
@@ -608,7 +611,7 @@ class RegtestNode:
         else:
             self.counterparty_node.command(
                 command,
-                150,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
+                200,  # avoid tx using `disable_protocol_changes` params (scenario_6_dispenser.py)
             )
         self.check_node_state(command, state_before)
         print(f"`{command}` successful")

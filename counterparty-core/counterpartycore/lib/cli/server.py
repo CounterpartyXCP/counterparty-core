@@ -671,6 +671,7 @@ def start_all(args, log_stream=None):
         database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
         db = database.initialise_db()
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
+        ledger.caches.init_caches(db)
         blocks.check_database_version(db)
         database.optimize(db)
 

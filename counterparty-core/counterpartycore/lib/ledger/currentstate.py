@@ -25,6 +25,9 @@ def get_backend_height():
 
 class CurrentState(metaclass=helpers.SingletonMeta):
     def __init__(self):
+        self.init()
+
+    def init(self):
         self.state = {}
         self.last_update = 0
 

@@ -1005,7 +1005,7 @@ def asset_conservation(db, stop_event=None):
                 )
             logger.trace(
                 "{} has been conserved ({} {} both issued and held)".format(
-                    asset, ledger.issuances.value_out(db, int(asset_issued), asset), asset
+                    asset, ledger.issuances.value_out(db, asset_issued, asset), asset
                 )
             )
     logger.debug("All assets have been conserved.")

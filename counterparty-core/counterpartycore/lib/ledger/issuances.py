@@ -204,7 +204,7 @@ def value_input(quantity, asset, divisible):
 def value_output(quantity, asset, divisible):
     def norm(num, places):
         """Round only if necessary."""
-        num = round(num, places)
+        num = round(float(num), places)
         fmt = "{:." + str(places) + "f}"
         # pylint: disable=C0209
         num = fmt.format(num)
