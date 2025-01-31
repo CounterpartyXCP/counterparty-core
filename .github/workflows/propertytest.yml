@@ -45,4 +45,4 @@ jobs:
     - name: Run regtest tests
       run: |
         cd counterparty-core
-        hatch run pytest counterpartycore/regtest/utxosupport_propertytest.py
+        hatch run pytest counterpartycore/regtest/property_test.py
