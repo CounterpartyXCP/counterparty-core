@@ -126,7 +126,7 @@ EVENT_LIST = [
 DREDD_CONFIG = {
     "loglevel": "error",
     "language": "python",
-    "hookfiles": "./counterparty-core/counterpartycore/regtest/dreddhooks.py",
+    "hookfiles": "./counterparty-core/counterpartycore/pytest/integrations/regtest/dreddhooks.py",
     "path": [],
     "blueprint": "apiary.apib",
     "endpoint": "http://127.0.0.1:24000",

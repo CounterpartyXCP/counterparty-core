@@ -1,6 +1,6 @@
 blueprint: apiary.apib
 endpoint: http://127.0.0.1:24000
-hookfiles: ./counterparty-core/counterpartycore/regtest/dreddhooks.py
+hookfiles: ./counterparty-core/counterpartycore/pytest/integrations/regtest/dreddhooks.py
 language: python
 loglevel: error
 only:
