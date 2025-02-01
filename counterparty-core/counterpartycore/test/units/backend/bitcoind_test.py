@@ -37,7 +37,7 @@ def mock_requests_post(*args, **kwargs):
         return MockResponse(200, {"error": {"message": "Error 30", "code": -30}})
     if payload["method"] == "return_none_error":
         return MockResponse(200, {"error": None})
-    if payload["method"] == "return_resul_and_error":
+    if payload["method"] == "return_result_and_error":
         return MockResponse(200, {"result": "ok", "error": {"message": "Error 30", "code": -30}})
     if payload["method"] == "return_none_result":
         return MockResponse(200, {"result": None})
@@ -121,7 +121,7 @@ def test_rpc_safe(init_mock):
     result = bitcoind.safe_rpc("return_200", [])
     assert result == "ok"
 
-    result = bitcoind.safe_rpc("return_resul_and_error", [])
+    result = bitcoind.safe_rpc("return_result_and_error", [])
     assert result == "ok"
 
     with pytest.raises(exceptions.BitcoindRPCError, match="Error 30"):
