@@ -412,17 +412,14 @@ def welcome_message(action, server_configfile):
     cprint(f"\n{'-' * 30} {action.upper()} {'-' * 30}\n", "green")
 
 
-def main():
-    sentry.init()
-    # Post installation tasks
-    server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
-
+def arg_parser(no_config_file=False, app_name=APP_NAME):
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
-        prog=APP_NAME,
+        prog=app_name,
         description=f"Server for the {config.XCP_NAME} protocol",
         add_help=False,
         exit_on_error=False,
+        conflict_handler="resolve",
     )
     parser.add_argument(
         "-h", "--help", dest="help", action="store_true", help="show this help message and exit"
@@ -433,11 +430,13 @@ def main():
         action="version",
         version=f"{APP_NAME} v{APP_VERSION}; counterparty-core v{config.VERSION_STRING}",
     )
-    parser.add_argument("--config-file", help="the path to the configuration file")
-
-    cmd_args = parser.parse_known_args()[0]
-    config_file_path = getattr(cmd_args, "config_file", None)
-    configfile = setup.read_config_file("server.conf", config_file_path)
+    if not no_config_file:
+        parser.add_argument("--config-file", help="the path to the configuration file")
+        cmd_args = parser.parse_known_args()[0]
+        config_file_path = getattr(cmd_args, "config_file", None)
+        configfile = setup.read_config_file("server.conf", config_file_path)
+    else:
+        configfile = {"Default": {}}
 
     setup.add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
 
@@ -490,6 +489,15 @@ def main():
     )
     setup.add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
 
+    return parser
+
+
+def main():
+    sentry.init()
+    # Post installation tasks
+    server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
+
+    parser = arg_parser()
     args = parser.parse_args()
 
     # Help message

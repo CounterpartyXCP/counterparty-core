@@ -25,6 +25,9 @@ def get_backend_height():
 
 class CurrentState(metaclass=helpers.SingletonMeta):
     def __init__(self):
+        self.init()
+
+    def init(self):
         self.state = {}
         self.last_update = 0
 
@@ -73,6 +76,18 @@ class CurrentState(metaclass=helpers.SingletonMeta):
 
     def block_parser_status(self):
         return self.state.get("BLOCK_PARSER_STATUS", "starting")
+
+    def set_stopping(self, stopping):
+        self.state["STOPPING"] = stopping
+
+    def stopping(self):
+        return self.state.get("STOPPING", False)
+
+    def set_current_db_connection(self, db_connection):
+        self.state["CURRENT_DB_CONNECTION"] = db_connection
+
+    def current_db_connection(self):
+        return self.state.get("CURRENT_DB_CONNECTION")
 
 
 class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):

@@ -56,6 +56,11 @@ class SingletonMeta(type):
             cls._instances[cls] = instance
         return cls._instances[cls]
 
+    def reset_instance(cls):
+        """Force reinitialization of the singleton instance."""
+        if cls in cls._instances:
+            del cls._instances[cls]
+
 
 def format_duration(seconds):
     duration_seconds = int(seconds)
@@ -85,8 +90,12 @@ class ApiJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def to_json(obj, indent=None):
-    return json.dumps(obj, cls=ApiJsonEncoder, indent=indent)
+def to_json(obj, indent=None, sort_keys=False):
+    return json.dumps(obj, cls=ApiJsonEncoder, indent=indent, sort_keys=sort_keys)
+
+
+def to_short_json(obj):
+    return json.dumps(obj, cls=ApiJsonEncoder, indent=None, sort_keys=True, separators=(",", ":"))
 
 
 def divide(value1, value2):

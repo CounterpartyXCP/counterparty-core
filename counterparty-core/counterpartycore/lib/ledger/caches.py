@@ -13,9 +13,6 @@ class AssetCache(metaclass=helpers.SingletonMeta):
         self.assets = {}
         self.assets_total_issued = {}
         self.assets_total_destroyed = {}
-        self.init(db)
-
-    def init(self, db):
         start = time.time()
         logger.debug("Initialising asset cache...")
         # asset info
@@ -104,7 +101,7 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
 
 
 class OrdersCache(metaclass=helpers.SingletonMeta):
-    def __init__(self, db):
+    def __init__(self, db) -> None:
         logger.debug("Initialising orders cache...")
         self.last_cleaning_block_index = 0
         self.cache_db = database.get_db_connection(":memory:", read_only=False, check_wal=False)
@@ -209,3 +206,9 @@ class OrdersCache(metaclass=helpers.SingletonMeta):
         }
         cursor.execute(query, bindings)
         return cursor.fetchall()
+
+
+def reset_caches():
+    AssetCache.reset_instance()
+    OrdersCache.reset_instance()
+    UTXOBalancesCache.reset_instance()

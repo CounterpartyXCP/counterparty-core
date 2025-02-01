@@ -561,7 +561,7 @@ def catch_up(ledger_db, state_db, watcher=None):
         start_time = time.time()
         event_parsed = 0
         next_event = get_next_event_to_parse(ledger_db, state_db)
-        while next_event and not watcher.stop_event.is_set():
+        while next_event and (watcher is None or not watcher.stop_event.is_set()):
             parse_event(state_db, next_event)
             event_parsed += 1
             if event_parsed % 50000 == 0:
@@ -570,7 +570,7 @@ def catch_up(ledger_db, state_db, watcher=None):
                     f"{event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
                 )
             next_event = get_next_event_to_parse(ledger_db, state_db)
-        if not watcher.stop_event.is_set():
+        if watcher is None or not watcher.stop_event.is_set():
             duration = time.time() - start_time
             logger.info(f"Catch up completed. ({format_duration(duration)})")
     else:

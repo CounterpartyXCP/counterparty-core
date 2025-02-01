@@ -181,9 +181,21 @@ def safe_rpc(method, params):
             headers={"content-type": "application/json"},
             verify=(not config.BACKEND_SSL_NO_VERIFY),
             timeout=config.REQUESTS_TIMEOUT,
-        ).json()
-        if "error" in response:
-            raise exceptions.BitcoindRPCError(response["error"]["message"])
+        )
+        if response is None:
+            raise exceptions.BitcoindRPCError(
+                f"Cannot communicate with Bitcoin Core at `{clean_url_for_log(config.BACKEND_URL)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
+            )
+        response = response.json()
+        print(response)
+        if "result" not in response and "error" in response:
+            if response["error"] is None or "message" not in response["error"]:
+                message = "Unknown error"
+            else:
+                message = response["error"]["message"]
+            raise exceptions.BitcoindRPCError(message)
+        if response["result"] is None:
+            raise exceptions.BitcoindRPCError("No result returned")
         return response["result"]
     except (requests.exceptions.RequestException, json.decoder.JSONDecodeError, KeyError) as e:
         raise exceptions.BitcoindRPCError(f"Error calling {method}: {str(e)}") from e

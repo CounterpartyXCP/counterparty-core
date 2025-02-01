@@ -529,7 +529,7 @@ def initialise_config(
             config.ELECTRS_URL = None
 
 
-def initialise_log_and_config(args, api=False):
+def initialise_log_and_config(args, api=False, log_stream=None):
     # Configuration
     init_args = {
         "data_dir": args.data_dir,
@@ -600,6 +600,7 @@ def initialise_log_and_config(args, api=False):
         json_logs=config.JSON_LOGS,
         max_log_file_size=config.MAX_LOG_FILE_SIZE,
         max_log_file_rotations=config.MAX_LOG_FILE_ROTATIONS,
+        log_stream=log_stream,
     )
     initialise_config(**init_args)
 
@@ -641,7 +642,7 @@ class AssetConservationChecker(threading.Thread):
         self.join()
 
 
-def start_all(args):
+def start_all(args, log_stream=None):
     api_status_poller = None
     apiserver_v1 = None
     apiserver_v2 = None
@@ -686,7 +687,7 @@ def start_all(args):
         # API Server v2
         api_stop_event = multiprocessing.Event()
         apiserver_v2 = api_v2.APIServer(api_stop_event)
-        apiserver_v2.start(args)
+        apiserver_v2.start(args, log_stream)
         while not apiserver_v2.is_ready() and not apiserver_v2.has_stopped():
             logger.trace("Waiting for API server to start...")
             time.sleep(0.1)

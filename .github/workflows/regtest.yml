@@ -31,6 +31,7 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y libgirepository1.0-dev libleveldb-dev nodejs npm
         python -m pip install --upgrade pip
+        pip install pytest hatchling==1.25.0 hatch==1.13.0
         pip install maturin sh rich pyyaml
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
@@ -46,4 +47,4 @@ jobs:
     - name: Run regtest tests
       run: |
         cd counterparty-core
-        python3 counterpartycore/test/regtest/testscenarios.py
+        hatch run pytest counterpartycore/test/integrations/regtest/scenarios_test.py
