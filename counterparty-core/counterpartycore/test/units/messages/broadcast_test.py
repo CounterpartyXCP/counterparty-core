@@ -1,6 +1,6 @@
 from counterpartycore.lib import config
 from counterpartycore.lib.messages import broadcast
-from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_validate(ledger_db, defaults, current_block_index):

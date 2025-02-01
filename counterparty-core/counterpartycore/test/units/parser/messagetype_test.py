@@ -2,7 +2,7 @@ import binascii
 
 from counterpartycore.lib import config
 from counterpartycore.lib.parser import messagetype
-from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_unpack():

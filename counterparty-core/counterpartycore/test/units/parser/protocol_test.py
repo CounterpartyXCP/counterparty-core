@@ -1,7 +1,7 @@
 import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.parser import protocol
-from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_enabled():

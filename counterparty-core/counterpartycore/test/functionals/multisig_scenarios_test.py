@@ -1,4 +1,4 @@
-from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled, run_scenario
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled, run_scenario
 
 
 def check_standard_scenario(

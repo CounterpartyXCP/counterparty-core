@@ -9,7 +9,7 @@ from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
-from counterpartycore.pytest.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
+from counterpartycore.test.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
 
 PROVIDED_PUBKEYS = ",".join(
     [DEFAULTS["pubkey"][DEFAULTS["addresses"][0]], DEFAULTS["pubkey"][DEFAULTS["addresses"][1]]]

@@ -3,7 +3,7 @@ import re
 import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.api import apiv1
-from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_create_burn(apiv1_client, defaults):

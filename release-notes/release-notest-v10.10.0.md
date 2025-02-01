@@ -15,6 +15,8 @@
 
 ## Codebase
 
+- Complete rewrite of the test suite. See comments in `test/mocks/conftest.py`.
+
 ## API
 
 - Add `block_index` filter for get order matches endpoints

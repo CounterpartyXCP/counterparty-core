@@ -1,7 +1,7 @@
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import dispenser
-from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_validate(ledger_db, defaults):

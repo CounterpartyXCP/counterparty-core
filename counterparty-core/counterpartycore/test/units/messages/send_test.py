@@ -4,7 +4,7 @@ import pytest
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import send
 from counterpartycore.lib.messages.versions import enhancedsend, send1
-from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def insert_required_option(ledger_db, current_block_index, defaults):

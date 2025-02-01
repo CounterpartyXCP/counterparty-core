@@ -1,6 +1,6 @@
 from counterpartycore.lib.parser import protocol
-from counterpartycore.pytest.fixtures import ledgerdb
-from counterpartycore.pytest.mocks.counterpartydbs import ProtocolChangesDisabled
+from counterpartycore.test.fixtures import ledgerdb
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_ledger_db(ledger_db):
