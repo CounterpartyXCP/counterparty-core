@@ -19,7 +19,7 @@ def test_compose(ledger_db, defaults):
     assert cancel.compose(ledger_db, open_order["source"], open_order["tx_hash"]) == (
         open_order["source"],
         [],
-        b"F\xc0\x14\xd6\\G\xa9|\xd2\x08w\x15\xd6\xe3u5\x02\xa9;\\\xe0\xf8\xb1\xde\x04\x01\xe1\xbe\xe8\xf1$IN",
+        b"F\xfd\xcd]\xdf\x084\xb1\xf6\xe7\xd7\xe4\xb9^\x92=\xd5\x1a:\xd4\xdaW\x95\xc0\xf5\xf2q\xa5\x1f\xc3\xab\xb4.",
     )
 
     with pytest.raises(exceptions.ComposeError, match="no open offer with that hash"):
@@ -40,7 +40,7 @@ def test_compose(ledger_db, defaults):
 def test_parse_cancel_order(ledger_db, blockchain_mock, test_helpers, current_block_index):
     open_order = get_open_order(ledger_db)
     tx = blockchain_mock.dummy_tx(ledger_db, open_order["source"])
-    message = b"\xc0\x14\xd6\\G\xa9|\xd2\x08w\x15\xd6\xe3u5\x02\xa9;\\\xe0\xf8\xb1\xde\x04\x01\xe1\xbe\xe8\xf1$IN"
+    message = b"\xfd\xcd]\xdf\x084\xb1\xf6\xe7\xd7\xe4\xb9^\x92=\xd5\x1a:\xd4\xdaW\x95\xc0\xf5\xf2q\xa5\x1f\xc3\xab\xb4."
 
     cancel.parse(ledger_db, tx, message)
     test_helpers.check_records(

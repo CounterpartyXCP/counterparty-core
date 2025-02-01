@@ -106,29 +106,29 @@ def test_supplies_functions(ledger_db):
         },
         {"address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef", "address_quantity": 0, "escrow": None},
         {
-            "address": "55e839189f020ed270ff5152929cda11888966d927481c41faff90751f24c35b:0",
+            "address": "5cd7678988dba9e7c9bac246de1393b10f1315fbc51c305a0b073c8ca69c9ada:0",
             "address_quantity": 100,
             "escrow": None,
         },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "address_quantity": 100000000,
-            "escrow": "90b3fead6eea83f245478958aec0a4c81ecce20c9299a4a10b4cbd224dae2f7e",
+            "escrow": "fdcd5ddf0834b1f6e7d7e4b95e923dd51a3ad4da5795c0f5f271a51fc3abb42e",
         },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "address_quantity": 100000000,
-            "escrow": "271bab798ef940c345794396d7045bb0f544413fd20dca7bd4614e4fdaf35464",
+            "escrow": "c468756975a0e57427849092f52be0ec30ea083d97121e1163a52a1575185b61",
         },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "address_quantity": 100000000,
-            "escrow": "c014d65c47a97cd2087715d6e3753502a93b5ce0f8b1de0401e1bee8f124494e",
+            "escrow": "dee16688ddbd3b664ef213fe9b7ee1fd11e01884455be214a3fc1a869db61827",
         },
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "address_quantity": 100000000,
-            "escrow": "2cac216cee2461f8fcd8269ec0299d1dfe7144694cbd32d68efd42ead74b1d89",
+            "escrow": "fc504d4f75c1c0bd98618c6f59c99ba61dad9b6a88e7b0009f9bb42f3e7e6730",
         },
         {"address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b", "address_quantity": 100, "escrow": None},
     ]
@@ -155,7 +155,7 @@ def test_supplies_functions(ledger_db):
             "escrow": None,
         },
         {
-            "address": "1cd83080b97f818a5eba6af59dc85c7e222d5bddbb569f9313c55ab2c7527733:0",
+            "address": "a0c47533af5b7cfbc3a062890251317ff542490e39ae29287f7b1b58cabfc185:0",
             "address_quantity": 1,
             "escrow": None,
         },

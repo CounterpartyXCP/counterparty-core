@@ -33,7 +33,8 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         caller = [
             tr for tr in traceback.extract_stack() if "/counterpartycore/pytest/" in tr.filename
         ][0]
-        string_hash = f"{source}{caller.filename}:{caller.name}"
+        caller_filename = caller.filename.split("/counterpartycore/pytest/").pop()
+        string_hash = f"{source}{caller_filename}:{caller.name}"
         self.count_by_caller[string_hash] = self.count_by_caller.get(string_hash, 0) + 1
         string_hash += f":{self.count_by_caller[string_hash]}"
 

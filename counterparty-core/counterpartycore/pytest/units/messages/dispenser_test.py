@@ -244,8 +244,10 @@ def test_parse_close_dispenser(
     open_dispenser = open_dispenser[0]
 
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][5])
-    message = b"\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n"
-    dispenser.parse(ledger_db, tx, message)
+    source, destination, data = dispenser.compose(
+        ledger_db, open_dispenser["source"], "XCP", 0, 0, 0, 10
+    )
+    dispenser.parse(ledger_db, tx, data[1:])
 
     test_helpers.check_records(
         ledger_db,
@@ -253,7 +255,7 @@ def test_parse_close_dispenser(
             {
                 "table": "dispensers",
                 "values": {
-                    "last_status_tx_hash": open_dispenser["tx_hash"],
+                    "last_status_tx_hash": tx["tx_hash"],
                     "block_index": current_block_index,
                     "last_status_tx_source": defaults["addresses"][5],
                     "source": defaults["addresses"][5],
