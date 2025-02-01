@@ -49,5 +49,4 @@ IMPORTANT:
 # Credits
 
 - Ouziel Slama
-- Warren Puffet
 - Adam Krellenstein

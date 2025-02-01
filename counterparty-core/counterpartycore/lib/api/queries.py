@@ -1671,19 +1671,28 @@ def get_dispenses_by_destination(
 
 
 def get_dispenses_by_asset(
-    ledger_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db,
+    asset: str,
+    block_index: int = None,
+    cursor: str = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns the dispenses of an asset
     :param str asset: The asset to return (e.g. XCP)
+    :param int block_index: The index of the block to return
     :param str cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = {"asset": asset.upper()}
+    if block_index:
+        where["block_index"] = block_index
     return select_rows(
         ledger_db,
         "dispenses",
-        where={"asset": asset.upper()},
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2945,6 +2954,7 @@ def get_order(state_db, order_hash: str):
 def get_all_order_matches(
     state_db,
     status: OrderMatchesStatus = "all",
+    block_index: int = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2953,15 +2963,17 @@ def get_all_order_matches(
     """
     Returns all the order matches
     :param str status: The status of the order matches to return
+    :param int block_index: The block index of the order matches to return
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
+    other_cond = {"block_index": block_index} if block_index else {}
     return select_rows(
         state_db,
         "order_matches",
-        where=prepare_order_matches_where(status),
+        where=prepare_order_matches_where(status, other_cond),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -2974,6 +2986,7 @@ def get_order_matches_by_order(
     state_db,
     order_hash: str,
     status: OrderMatchesStatus = "all",
+    block_index: int = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2983,14 +2996,16 @@ def get_order_matches_by_order(
     Returns the order matches of an order
     :param str order_hash: The hash of the transaction that created the order (e.g. $ORDER_WITH_MATCH_HASH)
     :param str status: The status of the order matches to return
+    :param int block_index: The block index of the order matches to return
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
+    other_cond = {"block_index": block_index} if block_index else {}
     where = prepare_order_matches_where(
-        status, {"tx0_hash": order_hash}
-    ) + prepare_order_matches_where(status, {"tx1_hash": order_hash})
+        status, {"tx0_hash": order_hash} | other_cond
+    ) + prepare_order_matches_where(status, {"tx1_hash": order_hash} | other_cond)
     return select_rows(
         state_db,
         "order_matches",
@@ -3009,6 +3024,7 @@ def get_order_matches_by_asset(
     status: OrderMatchesStatus = "all",
     forward_asset: str = None,
     backward_asset: str = None,
+    block_index: int = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -3020,23 +3036,27 @@ def get_order_matches_by_asset(
     :param str status: The status of the order matches to return
     :param str forward_asset: The forward asset to return
     :param str backward_asset: The backward asset to return
+    :param int block_index: The block index of the order matches to return
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
+    other_cond = {"block_index": block_index} if block_index else {}
     if forward_asset:
         where = prepare_order_matches_where(
-            status, {"forward_asset": forward_asset.upper(), "backward_asset": asset.upper()}
+            status,
+            {"forward_asset": forward_asset.upper(), "backward_asset": asset.upper()} | other_cond,
         )
     elif backward_asset:
         where = prepare_order_matches_where(
-            status, {"forward_asset": asset.upper(), "backward_asset": backward_asset.upper()}
+            status,
+            {"forward_asset": asset.upper(), "backward_asset": backward_asset.upper()} | other_cond,
         )
     else:
         where = prepare_order_matches_where(
-            status, {"forward_asset": asset.upper()}
-        ) + prepare_order_matches_where(status, {"backward_asset": asset.upper()})
+            status, {"forward_asset": asset.upper()} | other_cond
+        ) + prepare_order_matches_where(status, {"backward_asset": asset.upper()} | other_cond)
 
     return select_rows(
         state_db,
@@ -3055,6 +3075,7 @@ def get_order_matches_by_two_assets(
     asset1: str,
     asset2: str,
     status: OrderMatchesStatus = "all",
+    block_index: int = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -3065,15 +3086,17 @@ def get_order_matches_by_two_assets(
     :param str asset1: The first asset to return (e.g. BTC)
     :param str asset2: The second asset to return (e.g. XCP)
     :param str status: The status of the order matches to return
+    :param int block_index: The block index of the order matches to return
     :param str cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
     """
+    other_cond = {"block_index": block_index} if block_index else {}
     where = prepare_order_matches_where(
-        status, {"forward_asset": asset1.upper(), "backward_asset": asset2.upper()}
+        status, {"forward_asset": asset1.upper(), "backward_asset": asset2.upper()} | other_cond
     ) + prepare_order_matches_where(
-        status, {"forward_asset": asset2.upper(), "backward_asset": asset1.upper()}
+        status, {"forward_asset": asset2.upper(), "backward_asset": asset1.upper()} | other_cond
     )
     query_result = select_rows(
         state_db,
