@@ -35,6 +35,14 @@ def mock_requests_post(*args, **kwargs):
         return MockResponse(200, {"error": {"message": "Error 5", "code": -5}})
     if payload["method"] == "return_code_30":
         return MockResponse(200, {"error": {"message": "Error 30", "code": -30}})
+    if payload["method"] == "return_none_error":
+        return MockResponse(200, {"error": None})
+    if payload["method"] == "return_resul_and_error":
+        return MockResponse(200, {"result": "ok", "error": {"message": "Error 30", "code": -30}})
+    if payload["method"] == "return_none_result":
+        return MockResponse(200, {"result": None})
+    if payload["method"] == "return_empty":
+        return MockResponse(200, {})
 
 
 @pytest.fixture(scope="function")
@@ -94,3 +102,36 @@ def test_rpc_call(init_mock):
     with pytest.raises(exceptions.BitcoindRPCError) as exc_info:
         bitcoind.rpc("return_code_30", [])
     assert str(exc_info.value) == "Error 30"
+
+
+def test_rpc_safe(init_mock):
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.safe_rpc("getblockhash", [1])
+
+    with pytest.raises(exceptions.BitcoindRPCError) as exc_info:
+        bitcoind.safe_rpc("return_none", [])
+    assert (
+        str(exc_info.value)
+        == "Cannot communicate with Bitcoin Core at `http://XXXXXXXX@localhost:18443`. (server is set to run on regtest, is backend?)"
+    )
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Unknown error"):
+        bitcoind.safe_rpc("return_none_error", [])
+
+    result = bitcoind.safe_rpc("return_200", [])
+    assert result == "ok"
+
+    result = bitcoind.safe_rpc("return_resul_and_error", [])
+    assert result == "ok"
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Error 30"):
+        bitcoind.safe_rpc("return_code_30", [])
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="No result returned"):
+        bitcoind.safe_rpc("return_none_result", [])
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Error 28"):
+        bitcoind.safe_rpc("return_code_28", [])
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Error calling return_empty: 'result'"):
+        bitcoind.safe_rpc("return_empty", [])
