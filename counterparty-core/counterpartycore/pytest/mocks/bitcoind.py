@@ -57,7 +57,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         is_segwit = composer.is_segwit_output(script_pub_key)
         return value, script_pub_key, is_segwit
 
-    def get_utxo_address_and_value(self, utxo):
+    def get_utxo_address_and_value(self, utxo, no_retry=False):
         if utxo == "0000000000000000000000000000000000000000000000000000000000000000:0":
             return list(self.source_by_txid.values())[0], int(10 * config.UNIT)
         txid, vout = utxo.split(":")
@@ -138,7 +138,7 @@ def get_vin_info(vin, no_retry=False):
     return BlockchainMock().get_vin_info(vin)
 
 
-def get_utxo_address_and_value(utxo):
+def get_utxo_address_and_value(utxo, no_retry=False):
     return BlockchainMock().get_utxo_address_and_value(utxo)
 
 
