@@ -70,7 +70,7 @@ SCENARIOS += scenario_25_issuance.SCENARIO
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-BASE_DIR = os.path.join(CURR_DIR, "../../../")
+BASE_DIR = os.path.join(CURR_DIR, "../../../../../")
 
 # SCENARIOS = scenario_25_issuance.SCENARIO
 

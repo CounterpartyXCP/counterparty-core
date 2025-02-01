@@ -65,7 +65,8 @@ jobs:
       - name: Run counterparty-core tests
         run: |
           cd counterparty-core
-          hatch run pytest counterpartycore/pytest
+          hatch run pytest counterpartycore/pytest/units
+          hatch run pytest counterpartycore/pytest/functionals
 
       # Upload wheels
 
@@ -128,7 +129,8 @@ jobs:
       - name: Run counterparty-core tests
         run: |
           cd counterparty-core
-          pytest counterpartycore/pytest
+          pytest counterpartycore/pytest/units
+          pytest counterpartycore/pytest/functionals
 
       # Upload wheels
 

@@ -11,8 +11,8 @@ from counterpartycore.lib.api.composer import DEPRECATED_CONSTRUCT_PARAMS
 from counterpartycore.lib.utils import database
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../apiary.apib")
-DREDD_FILE = os.path.join(CURR_DIR, "../../../dredd.yml")
+API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../../apiary.apib")
+DREDD_FILE = os.path.join(CURR_DIR, "../../../../../dredd.yml")
 CACHE_FILE = os.path.join(CURR_DIR, "apidoc", "apicache.json")
 API_ROOT = "http://localhost:24000"
 
