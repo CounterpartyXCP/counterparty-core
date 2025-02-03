@@ -1945,3 +1945,46 @@ def test_utxolocks_custom_input(ledger_db):
         return
 
     raise Exception("Should have raised a BalanceError")
+
+
+def test_compose_attach(ledger_db, defaults):
+    utxo_with_balance = ledger_db.execute("""
+        SELECT utxo FROM balances WHERE quantity > 0 AND utxo IS NOT NULL ORDER BY rowid DESC LIMIT 1
+    """).fetchone()["utxo"]
+    # Test basic move
+    params = {
+        "source": utxo_with_balance,
+        "destination": defaults["addresses"][1],
+    }
+
+    construct_params = {
+        "verbose": True,
+        "inputs_set": f"{utxo_with_balance}:546:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+        "disable_utxo_locks": True,
+    }
+
+    expected = {
+        "rawtransaction": "02000000016140ecf663b2c8091eb8699fd8c0363fc177dc64dd869331a16fbeac20b671270000000000ffffffff0100000000000000002d6a2b3e469c1362a96b89affa189049413129c8c5352c1cab3e99a708b7a8d7b8bfd11f3fc66d86a5bd1885b6c000000000",
+        "btc_in": 546,
+        "btc_out": 0,
+        "btc_change": 0,
+        "btc_fee": 546,
+        "data": b"CNTRPRTYfmtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+        "inputs_values": [546],
+        "signed_tx_estimated_size": {
+            "vsize": 212,
+            "adjusted_vsize": 212,
+            "sigops_count": 0,
+        },
+        "psbt": "02000000016140ecf663b2c8091eb8699fd8c0363fc177dc64dd869331a16fbeac20b671270000000000ffffffff0100000000000000002d6a2b3e469c1362a96b89affa189049413129c8c5352c1cab3e99a708b7a8d7b8bfd11f3fc66d86a5bd1885b6c000000000",
+        "params": {
+            "source": utxo_with_balance,
+            "destination": defaults["addresses"][1],
+            "skip_validation": False,
+        },
+        "name": "detach",
+    }
+
+    result = composer.compose_transaction(ledger_db, "detach", params, construct_params)
+    assert result == expected
