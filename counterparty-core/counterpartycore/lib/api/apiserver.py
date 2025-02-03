@@ -370,6 +370,7 @@ def handle_route(**kwargs):
             exceptions.AddressError,
             exceptions.ElectrsError,
             OverflowError,
+            TypeError,
         ) as e:
             # import traceback
             # print(traceback.format_exc())
