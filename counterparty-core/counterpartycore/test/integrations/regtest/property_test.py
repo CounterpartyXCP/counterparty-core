@@ -163,6 +163,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "asset": asset,
                 "quantity": attach_quantity,
                 "exact_fee": 0,
+                "utxo_value": 10000,
             },
         )
         self.upsert_balance(source, asset, -attach_quantity, None)
@@ -181,6 +182,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "destination": destination,
                 "exact_fee": 0,
                 "inputs_source": utxo_address,
+                "utxo_value": 10000,
             },
         )
         self.upsert_balance(source, asset, -quantity, utxo_address)
@@ -229,6 +231,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             {
                 "asset": asset_name,
                 "quantity": quantity,
+                "utxo_value": 10000,
                 "exact_fee": 0,
                 "validate": False,
                 "inputs_set": f"{tx_hash}:1",
@@ -239,6 +242,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             "movetoutxo",
             {
                 "destination": source,
+                "utxo_value": 10000,
                 "exact_fee": 0,
                 "validate": False,
                 "inputs_set": f"{tx_hash}:0",
@@ -249,6 +253,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             "movetoutxo",
             {
                 "destination": source,
+                "utxo_value": 10000,
                 "exact_fee": 0,
                 "validate": False,
                 "inputs_set": f"{tx_hash}:0",
@@ -326,6 +331,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "exact_fee": 0,
                 "inputs_set": f"{tx_hash}:1",
                 "use_utxos_with_balances": True,
+                "utxo_value": 10000,
             },
         )
         tx_hash = self.send_transaction(
