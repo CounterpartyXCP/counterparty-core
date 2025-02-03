@@ -796,8 +796,9 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
         needed_fee = int(needed_fee)
+
         # if change is enough for needed fee, add change output and break
-        if change_amount > needed_fee:
+        if change_amount >= needed_fee:
             change_amount = int(change_amount - needed_fee)
             if change_amount > dust_size(change_address, construct_params):
                 change_outputs.append(

@@ -1947,7 +1947,7 @@ def test_utxolocks_custom_input(ledger_db):
     raise Exception("Should have raised a BalanceError")
 
 
-def test_compose_attach(ledger_db, defaults):
+def test_compose_detach(ledger_db, defaults):
     utxo_with_balance = ledger_db.execute("""
         SELECT utxo FROM balances WHERE quantity > 0 AND utxo IS NOT NULL ORDER BY rowid DESC LIMIT 1
     """).fetchone()["utxo"]
@@ -1988,3 +1988,62 @@ def test_compose_attach(ledger_db, defaults):
 
     result = composer.compose_transaction(ledger_db, "detach", params, construct_params)
     assert result == expected
+
+
+def test_compose_attach(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "asset": "XCP",
+        "quantity": 10,
+    }
+
+    expected = {
+        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0222020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a103d5b4af14ef23843006594fdd8ed420600000000",
+        "btc_in": 1052,
+        "btc_out": 546,
+        "btc_change": 0,
+        "btc_fee": 506,
+        "data": b"CNTRPRTYeXCP|10|",
+        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+        "inputs_values": [1052],
+        "signed_tx_estimated_size": {
+            "vsize": 219,
+            "adjusted_vsize": 219,
+            "sigops_count": 4,
+        },
+        "psbt": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0222020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a103d5b4af14ef23843006594fdd8ed420600000000",
+        "params": {
+            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "XCP",
+            "quantity": 10,
+            "utxo_value": None,
+            "destination_vout": None,
+            "skip_validation": False,
+        },
+        "name": "attach",
+    }
+
+    result = composer.compose_transaction(
+        ledger_db,
+        "attach",
+        params,
+        {
+            "verbose": True,
+            "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:1052:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+            "disable_utxo_locks": True,
+        },
+    )
+    assert result == expected
+
+    with pytest.raises(
+        exceptions.ComposeError, match="Insufficient funds for the target amount: 546 < 1052"
+    ):
+        composer.compose_transaction(
+            ledger_db,
+            "attach",
+            params,
+            {
+                "verbose": True,
+                "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:546:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+            },
+        )
