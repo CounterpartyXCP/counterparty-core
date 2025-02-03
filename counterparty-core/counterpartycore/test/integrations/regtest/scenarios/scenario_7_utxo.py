@@ -94,6 +94,7 @@ SCENARIO = [
         "params": {
             "asset": "MYASSETA",
             "quantity": 10 * 10**8,
+            "utxo_value": 10000,
         },
         "set_variables": {
             "UTXO_ATTACH_1_TX_HASH": "$TX_HASH",
@@ -175,6 +176,7 @@ SCENARIO = [
             "destination": "$ADDRESS_4",
             "exact_fee": 0,
             "inputs_source": "$ADDRESS_1",
+            "utxo_value": 10000,
         },
         "set_variables": {
             "UTXO_MOVE_1_TX_HASH": "$TX_HASH",
@@ -362,6 +364,7 @@ SCENARIO = [
         "params": {
             "asset": "MYASSETA",
             "quantity": 10 * 10**8,
+            "utxo_value": 10000,
         },
         "set_variables": {
             "UTXO_ATTACH_2_TX_HASH": "$TX_HASH",
@@ -442,6 +445,7 @@ SCENARIO = [
         "params": {
             "asset": "MYASSETA",
             "quantity": 10 * 10**8,
+            "utxo_value": 10000,
         },
         "set_variables": {
             "UTXO_ATTACH_3_TX_HASH": "$TX_HASH",
@@ -524,6 +528,7 @@ SCENARIO = [
             "inputs_set": "$UTXO_ATTACH_2_TX_HASH:0,$UTXO_ATTACH_2_TX_HASH:2",
             "use_utxos_with_balances": True,
             "use_all_inputs_set": True,
+            "utxo_value": 10000,
         },
         "set_variables": {
             "UTXO_MOVE_2_TX_HASH": "$TX_HASH",
