@@ -667,7 +667,7 @@ def test_complete_unspent_list(defaults, monkeypatch):
                     },
                 }
             ]
-        }
+        },
     }
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction_batch", lambda *args, **kwargs: txs
@@ -703,6 +703,21 @@ def test_complete_unspent_list(defaults, monkeypatch):
                 {
                     "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2",
                     "vout": 0,
+                }
+            ]
+        )
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:1: script_pub_key not found, you can provide it with the `inputs_set` parameter, using <txid>:<vout>:<value>:<script_pub_key> format"
+        ),
+    ):
+        composer.complete_unspent_list(
+            [
+                {
+                    "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                    "vout": 1,
                 }
             ]
         )

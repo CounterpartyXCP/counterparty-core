@@ -388,6 +388,10 @@ def complete_unspent_list(unspent_list):
                     if "value" not in utxo:
                         utxo["value"] = int(vout["value"] * config.UNIT)
                         utxo["amount"] = vout["value"]
+        if "script_pub_key" not in utxo:
+            raise exceptions.ComposeError(
+                f"invalid UTXOs: {utxo['txid']}:{utxo['vout']}: script_pub_key not found, you can provide it with the `inputs_set` parameter, using <txid>:<vout>:<value>:<script_pub_key> format"
+            )
         utxo["is_segwit"] = is_segwit_output(utxo["script_pub_key"])
         completed_unspent_list.append(utxo)
     return completed_unspent_list
