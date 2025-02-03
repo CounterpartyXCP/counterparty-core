@@ -65,13 +65,13 @@ def test_get_transaction_type(monkeypatch, current_block_index):
     )
     assert (
         messagetype.get_transaction_type(
-            None, config.UNSPENDABLE_TESTNET, [""], config.BURN_END - 1
+            None, config.UNSPENDABLE_TESTNET3, [""], config.BURN_END - 1
         )
         == "burn"
     )
     assert (
         messagetype.get_transaction_type(
-            None, config.UNSPENDABLE_TESTNET, [""], config.BURN_END + 1
+            None, config.UNSPENDABLE_TESTNET3, [""], config.BURN_END + 1
         )
         == "unknown"
     )

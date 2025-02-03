@@ -53,12 +53,12 @@ def test_pycoin_rs():
     vector = [
         (
             "4264cfd7eb65f8cbbdba98bd9815d5461fad8d7e",
-            config.P2SH_ADDRESSVERSION_TESTNET,
+            config.P2SH_ADDRESSVERSION_TESTNET3,
             "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
         ),
         (
             "641327ad1b3abc18cb6f1650a225f49a47764c22",
-            config.ADDRESSVERSION_TESTNET,
+            config.ADDRESSVERSION_TESTNET3,
             "mpe6p9ah9a6yoK57Xd2GEn8D9EonbLLkWJ",
         ),
         (

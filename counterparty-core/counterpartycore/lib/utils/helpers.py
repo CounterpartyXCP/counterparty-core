@@ -106,13 +106,10 @@ def divide(value1, value2):
 
 
 def setup_bitcoinutils(network=None):
-    if network is not None:
-        setup(network)
-        return
-    if config.NETWORK_NAME == "testnet4":
-        setup("testnet")
-    else:
-        setup(config.NETWORK_NAME)
+    current_network = network or config.NETWORK_NAME
+    if current_network.startswith("testnet"):
+        current_network = "testnet"
+    setup(current_network)
 
 
 def is_valid_tx_hash(tx_hash):

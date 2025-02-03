@@ -67,7 +67,7 @@ def script_to_address():
         return str(bech32), None
 
     script_pubkey = b"\x00\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6"
-    bech32 = utils.script_to_address(script_pubkey, "testnet")
+    bech32 = utils.script_to_address(script_pubkey, "testnet3")
     assert bech32 == "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"
 
     bech32 = utils.script_to_address(script_pubkey, "mainnet")
@@ -87,7 +87,7 @@ def script_to_address():
 
     start_time = time.time()
     for i in range(iterations):  # noqa: B007
-        bech32 = utils.script_to_address(script_pubkey, "testnet")
+        bech32 = utils.script_to_address(script_pubkey, "testnet3")
         assert bech32 == "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"
     rust_duration = time.time() - start_time
     print(f"{iterations} decode_p2w with rust: {rust_duration}s")
@@ -135,7 +135,7 @@ def test_script_to_asm():
 
 def test_decode_p2w():
     script_pubkey = b"\x00\x14u\x1ev\xe8\x19\x91\x96\xd4T\x94\x1cE\xd1\xb3\xa3#\xf1C;\xd6"
-    bech32 = utils.script_to_address(script_pubkey, "testnet")
+    bech32 = utils.script_to_address(script_pubkey, "testnet3")
     assert bech32 == "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx"
 
     bech32 = utils.script_to_address(script_pubkey, "mainnet")
@@ -156,5 +156,3 @@ def test_decode_p2w():
     )
     assert decode_p2w(script_pubkey) == ("bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6", None)
     assert decode_p2w(script_pubkey)[0] == utils.script_to_address(script_pubkey, "mainnet")
-
-    bitcoinlib.SelectParams("testnet")

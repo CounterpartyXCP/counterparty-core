@@ -58,7 +58,7 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--testnet",),
+        ("--testnet3",),
         {
             "action": "store_true",
             "default": False,

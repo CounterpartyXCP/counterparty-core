@@ -20,7 +20,7 @@ def test_argparser():
         "verbose": 2,
         "quiet": False,
         "mainnet": True,
-        "testnet": False,
+        "testnet3": False,
         "testnet4": False,
         "regtest": True,
         "api_limit_rows": 1000,
