@@ -51,7 +51,7 @@ impl<'source> FromPyObject<'source> for LogLevel {
 #[derive(Debug, Clone)]
 pub enum Network {
     Mainnet,
-    Testnet,
+    Testnet3,
     Testnet4,
     Regtest,
 }
@@ -61,7 +61,7 @@ impl<'source> FromPyObject<'source> for Network {
         let network_str: String = obj.extract()?;
         match network_str.trim().to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
-            "testnet" => Ok(Network::Testnet),
+            "testnet3" => Ok(Network::Testnet3),
             "testnet4" => Ok(Network::Testnet4),
             "regtest" => Ok(Network::Regtest),
             _ => Err(PyErr::new::<PyValueError, _>(
@@ -75,7 +75,7 @@ impl Display for Network {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             Network::Mainnet => "mainnet",
-            Network::Testnet => "testnet",
+            Network::Testnet3 => "testnet3",
             Network::Testnet4 => "testnet4",
             Network::Regtest => "regtest",
         };
@@ -102,7 +102,7 @@ impl Heights {
                 correct_segwit_txids: 662000,
                 multisig_addresses: 333500,
             },
-            Network::Testnet => Heights {
+            Network::Testnet3 => Heights {
                 segwit: 1440200,
                 p2sh_addresses: 0,
                 p2sh_dispensers: 2163328,
@@ -171,7 +171,7 @@ impl Config {
     pub fn unspendable(&self) -> String {
         match self.network {
             Network::Mainnet => "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
-            Network::Testnet => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+            Network::Testnet3 => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
             Network::Testnet4 => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
             Network::Regtest => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
         }
@@ -249,7 +249,7 @@ impl<'source> FromPyObject<'source> for Config {
             Ok(Some(item)) => item.extract::<Vec<u8>>()?,
             _ => match network {
                 Network::Mainnet => vec![0x00],
-                Network::Testnet => vec![0x6F],
+                Network::Testnet3 => vec![0x6F],
                 Network::Testnet4 => vec![0x6F],
                 Network::Regtest => vec![0x6F],
             },
@@ -259,7 +259,7 @@ impl<'source> FromPyObject<'source> for Config {
             Ok(Some(item)) => item.extract::<Vec<u8>>()?,
             _ => match network {
                 Network::Mainnet => vec![0x05],
-                Network::Testnet => vec![0xC4],
+                Network::Testnet3 => vec![0xC4],
                 Network::Testnet4 => vec![0xC4],
                 Network::Regtest => vec![0xC4],
             },
