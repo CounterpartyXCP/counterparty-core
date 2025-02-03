@@ -68,13 +68,6 @@ jobs:
           hatch run pytest counterpartycore/test/units
           hatch run pytest counterpartycore/test/functionals
 
-      # Upload wheels
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-m1-wheels
-          path: dist
 
   ubuntu-22-04:
     runs-on: ubuntu-22.04
@@ -132,13 +125,6 @@ jobs:
           pytest counterpartycore/test/units
           pytest counterpartycore/test/functionals
 
-      # Upload wheels
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: ubuntu-22-04-wheels
-          path: dist
 
   ubuntu-22-04-python3-12:
     runs-on: ubuntu-22.04
@@ -196,10 +182,3 @@ jobs:
           pytest counterpartycore/test/units
           pytest counterpartycore/test/functionals
 
-      # Upload wheels
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: ubuntu-22-04-python3-13-wheels
-          path: dist
