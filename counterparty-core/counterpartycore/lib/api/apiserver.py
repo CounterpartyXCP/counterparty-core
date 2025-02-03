@@ -505,7 +505,6 @@ def check_database_version(state_db):
 
 
 def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
-    print("API PROCESSES")
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(signum, frame):
@@ -550,8 +549,8 @@ def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
 
         wsgi_server.run()
 
-    except KeyboardInterrupt as e:
-        print("API Server KeyboardInterrupt", e)
+    except KeyboardInterrupt:
+        pass
 
     finally:
         logger.info("Stopping API Server...")
@@ -612,7 +611,6 @@ class APIServer(object):
     def start(self, args, log_stream):
         if self.process is not None:
             raise Exception("API Server is already running")
-        logger.warning("Starting API Server1...")
         self.process = Process(
             name="API",
             target=run_apiserver,
@@ -620,10 +618,8 @@ class APIServer(object):
         )
 
         try:
-            logger.warning("Starting API Server2...")
             self.process.start()
             logger.info("API PID: %s", self.process.pid)
-            logger.warning("Starting API Server3...")
         except Exception as e:
             logger.error(f"Error starting API Server: {e}")
             raise e
