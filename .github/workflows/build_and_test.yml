@@ -139,3 +139,67 @@ jobs:
         with:
           name: ubuntu-22-04-wheels
           path: dist
+
+  ubuntu-22-04-python3-12:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install dependencies
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install leveldb
+        run: |
+          sudo apt-get install -y libleveldb-dev
+
+      - name: Install pytest and build module
+        run: |
+          pip install pytest hatchling==1.25.0 hatch==1.13.0
+          python -m pip install --upgrade build
+
+      # Build counterparty packages
+
+      - name: Test counterparty-rs
+        run: |
+          cd ${{ env.COUNTERPARTY_RS_DIR }}
+          cargo test
+
+      - name: Build counterparty-rs
+        uses: messense/maturin-action@v1
+        with:
+          args: --release --out dist --sdist -m ${{ env.COUNTERPARTY_RS_DIR }}/Cargo.toml
+
+      - name: Build counterparty-core
+        run: |
+          cd counterparty-core && hatch build ../dist
+
+      # Install counterparty packages
+
+      - name: Install wheels
+        run: |
+          pip install dist/*.whl --force-reinstall
+
+      # Run counterparty-core tests
+
+      - name: Run counterparty-core tests
+        run: |
+          cd counterparty-core
+          pytest counterpartycore/test/units
+          pytest counterpartycore/test/functionals
+
+      # Upload wheels
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-22-04-wheels
+          path: dist

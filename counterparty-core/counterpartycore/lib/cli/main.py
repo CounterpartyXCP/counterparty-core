@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import sys
 from urllib.parse import quote_plus as urlencode
 
 from termcolor import cprint
@@ -408,6 +409,8 @@ def welcome_message(action, server_configfile):
         cprint(f"API Access Log: {config.API_LOG}", "light_grey")
     else:
         cprint("Warning: API access log disabled", "yellow")
+
+    cprint(f"Python version: {sys.version}", "light_grey")
 
     cprint(f"\n{'-' * 30} {action.upper()} {'-' * 30}\n", "green")
 
