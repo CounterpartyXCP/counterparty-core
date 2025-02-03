@@ -40,7 +40,8 @@ def test_docker_compose():
     sh.docker("system", "prune", "--all", "--force", _out=sys.stdout, _err_to_out=True)
 
     try:
-        DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-docker-data")
+        TMP_DIR = tempfile.gettempdir()
+        DATA_DIR = os.path.join(TMP_DIR, "counterparty-docker-data")
         print(f"DATA_DIR: {DATA_DIR}")
         if os.path.exists(DATA_DIR):
             with sh.contrib.sudo(password="", _with=True):
@@ -56,17 +57,20 @@ def test_docker_compose():
             _bg=True,
             _out=out,
             _err_to_out=True,
-            _env={"COUNTERPARTY_DOCKER_DATA": DATA_DIR},
+            _env={"COUNTERPARTY_DOCKER_DATA": TMP_DIR},
         )
         printed_line_count = 0
         start_time = time.time()
         while True:
             printed_line_count, printed_line = print_docker_output(out, printed_line_count)
             if "Ledger.Main - Watching for new blocks..." in printed_line:
+                result = requests.get("http://localhost:24000/v2/", timeout=30).json
+                assert result["result"]["server_ready"]
+                assert result["result"]["network"] == "regtest"
                 break
             if time.time() - start_time > 60 * 20:
                 raise Exception("Timeout: not ready after 5 minutes")
-            time.sleep(0.1)
+            time.sleep(1)
     finally:
         try:
             sh.docker("compose", "--profile", "regtest", "stop", _out=sys.stdout, _err_to_out=True)
