@@ -228,7 +228,7 @@ LOG_IN_CONSOLE = False
 
 DEFAULT_DB_CONNECTION_POOL_SIZE = 10
 
-DEFAULT_UTXO_VALUE = 10000
+DEFAULT_UTXO_VALUE = 546
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 LEDGER_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "ledger", "migrations")
