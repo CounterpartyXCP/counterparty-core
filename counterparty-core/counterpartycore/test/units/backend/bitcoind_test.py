@@ -3,6 +3,8 @@ import json
 import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.backend import bitcoind
+from counterpartycore.lib.utils import helpers
+from counterpartycore.test.fixtures import decodedtxs
 
 
 class MockResponse:
@@ -135,3 +137,27 @@ def test_rpc_safe(init_mock):
 
     with pytest.raises(exceptions.BitcoindRPCError, match="Error calling return_empty: 'result'"):
         bitcoind.safe_rpc("return_empty", [])
+
+
+def test_search_pubkey_in_transactions(monkeypatch):
+    helpers.setup_bitcoinutils("mainnet")
+
+    # mainnet tx
+    txhashes = ["db9f87cdc32a09f58e129d89f5f1d466e3ae0bae6f7d919d0a620385dc2f9070"]
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction",
+        lambda x, y: decodedtxs.DECODED_TX_1,
+    )
+
+    assert (
+        bitcoind.search_pubkey_in_transactions("1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev", txhashes)
+        is None
+    )
+
+    assert (
+        bitcoind.search_pubkey_in_transactions("17V7DyAbwt1CEM2WT3FPm1b9RpPmLRy1oY", txhashes)
+        == "033b3ca7e4ef960cd8346e291524dacc93f6647d9df37ae5eedbb92b0f7b53b28d"
+    )
+
+    helpers.setup_bitcoinutils("regtest")
