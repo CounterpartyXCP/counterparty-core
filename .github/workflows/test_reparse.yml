@@ -1,4 +1,4 @@
-name: Testnet Test Book
+name: Testnet4 Reparse Test
 
 on:
   push:
@@ -30,10 +30,7 @@ jobs:
         pip install pylint maturin pytest
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
-    - name: Bootstrap testnet database
-      run: |
-        counterparty-server --testnet3 bootstrap --no-confirm
     - name: Run tests
       run: |
         cd counterparty-core
-        # pytest counterpartycore/test/book_test.py --testbook -s
+        pytest counterpartycore/test/integrations/reparse_test.py
