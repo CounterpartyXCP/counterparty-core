@@ -211,6 +211,7 @@ services:
       - "--backend-connect=bitcoind-regtest"
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
+      - "-vv"
 
 
 volumes: 
