@@ -14,10 +14,14 @@ def test_currentstate(ledger_db, current_block_index, monkeypatch):
     assert currentstate.CurrentState().parsing_mempool() is None
     currentstate.CurrentState().set_parsing_mempool(True)
     assert currentstate.CurrentState().parsing_mempool() is True
+    currentstate.CurrentState().set_parsing_mempool(False)
+    assert not currentstate.CurrentState().parsing_mempool()
 
     assert currentstate.CurrentState().block_parser_status() == "starting"
     currentstate.CurrentState().set_block_parser_status("running")
     assert currentstate.CurrentState().block_parser_status() == "running"
+    currentstate.CurrentState().set_block_parser_status("starting")
+    assert currentstate.CurrentState().block_parser_status() == "starting"
 
     currentstate.CurrentState().set("toto", "tata")
     assert currentstate.CurrentState().get("toto") == "tata"

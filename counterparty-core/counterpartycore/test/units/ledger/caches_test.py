@@ -44,12 +44,12 @@ def test_asset_cache(ledger_db, defaults):
     caches.AssetCache().add_destroyed(
         {
             "rowid": 1,
-            "asset": "foobar",
+            "asset": "foobaz",
             "asset_longname": "longfoobar",
             "quantity": 500,
         }
     )
-    assert caches.AssetCache().assets_total_destroyed["foobar"] == 2000
+    assert caches.AssetCache().assets_total_destroyed["foobaz"] == 500
 
 
 def test_orders_cache(ledger_db):

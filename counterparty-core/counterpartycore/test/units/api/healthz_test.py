@@ -9,7 +9,11 @@ def set_mainnet_network(monkeypatch, block_index=400000):
     bitcoinlib.SelectParams("mainnet")
     config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
     CurrentState().set_current_block_index(block_index)
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.getblockcount", lambda: block_index)
+    monkeypatch.setattr(
+        "counterpartycore.lib.ledger.currentstate.get_backend_height", lambda: block_index
+    )
+    CurrentState().last_update = 0
+    assert CurrentState().current_backend_height() == block_index
 
 
 def restore_network():
@@ -19,7 +23,7 @@ def restore_network():
     config.ADDRESSVERSION = config.ADDRESSVERSION_REGTEST
 
 
-def test_healthz_light(apiv2_client, monkeypatch):
+def test_healthz_light(apiv2_client, monkeypatch, current_block_index):
     set_mainnet_network(monkeypatch)
     assert apiv2_client.get("/healthz").json == {"result": {"status": "Healthy"}}
     assert apiv2_client.get("/healthz?check_type=heavy").json == {"result": {"status": "Healthy"}}

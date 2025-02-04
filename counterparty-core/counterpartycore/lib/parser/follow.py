@@ -290,9 +290,6 @@ class BlockchainWatcher:
 
                 # Yield control to the event loop to allow other tasks to run
                 await asyncio.sleep(0)
-                if CurrentState().stopping():
-                    raise Exception("Stopping blockchain watcher...")
-                    break
             except asyncio.CancelledError:
                 logger.debug("BlockchainWatcher.handle() was cancelled.")
                 break  # Exit the loop if the task is cancelled

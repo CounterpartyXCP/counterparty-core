@@ -19,7 +19,6 @@ def get_block(db, block_index: int):
 def last_db_index(db):
     cursor = db.cursor()
     query = "SELECT name FROM sqlite_master WHERE type='table' AND name='blocks'"
-    print("blocexists", list(cursor.execute(query)))
     if len(list(cursor.execute(query))) == 0:
         return 0
 
