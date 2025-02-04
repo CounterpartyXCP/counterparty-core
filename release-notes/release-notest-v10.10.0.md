@@ -46,7 +46,7 @@ counterparty-server start
 - Add support for Python 3.12 and 3.13
 - Rename everywhere `testnet` to `testnet3`
 - Add `testnet4` and `regtest` profile in `docker-compose.yaml`
-- Restore Docker Composer and Compare Hashes tests
+- Restore Docker Composer, Compare Hashes and Tesnet4 Reparse tests
 
 ## API
 
