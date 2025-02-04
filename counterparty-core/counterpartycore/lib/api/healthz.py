@@ -43,10 +43,14 @@ def healthz_heavy(db):
             "source": config.UNSPENDABLE,
             "destination": config.UNSPENDABLE,
             "asset": config.XCP,
-            "quantity": 100000000,
+            "quantity": 600,
         },
-        allow_unconfirmed_inputs=True,
-        exact_fee=1000,
+        construct_parameters={
+            "validate": False,
+            "allow_unconfirmed_inputs": True,
+            "exact_fee": 300,
+            "inputs_set": "15d26ce17ef81cf6a12bf5fc0a62940eda3c1f82bd14adcc1e7b668fa3b67487:0:600:76a914818895f3dc2c178629d3d2d8fa3ec4a3f817982188ac",
+        },
     )
 
 
@@ -58,7 +62,7 @@ def healthz(db, check_type: str = "light"):
         else:
             healthz_light(db)
     except Exception as e:
-        # logger.exception(e)
+        logger.exception(e)
         logger.error(f"Health check failed: {e}")
         return False
     return True

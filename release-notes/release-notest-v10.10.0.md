@@ -38,6 +38,7 @@ counterparty-server start
 - Return 400 error on TypeError when composing a transaction
 - Fix `bitcoind.search_pubkey_in_transactions()`
 - Don't force output change
+- Fix heavy healthz check
 
 ## Codebase
 
