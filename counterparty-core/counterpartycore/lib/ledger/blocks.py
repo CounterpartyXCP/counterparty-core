@@ -19,6 +19,7 @@ def get_block(db, block_index: int):
 def last_db_index(db):
     cursor = db.cursor()
     query = "SELECT name FROM sqlite_master WHERE type='table' AND name='blocks'"
+    print("blocexists", list(cursor.execute(query)))
     if len(list(cursor.execute(query))) == 0:
         return 0
 
@@ -107,7 +108,10 @@ def get_transactions(db, tx_hash=None, tx_index=None):
         where.append("tx_index = ?")
         bindings.append(tx_index)
     # no sql injection here
-    query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    if len(where) > 0:
+        query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    else:
+        query = "SELECT * FROM transactions"
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

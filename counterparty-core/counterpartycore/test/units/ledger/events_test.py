@@ -33,3 +33,19 @@ def test_events_functions(ledger_db, defaults):
 
     with pytest.raises(exceptions.CreditError, match="Quantity must be an integer."):
         events.credit(ledger_db, defaults["addresses"][0], "BTC", 1.1 * defaults["quantity"], 0)
+
+
+def test_insert_record(ledger_db, defaults):
+    events.insert_record(
+        ledger_db,
+        "destructions",
+        {
+            "asset": "foobar",
+            "source": defaults["addresses"][0],
+            "quantity": 500,
+        },
+        "ASSET_DESTRUCTION",
+        event_info={"key": "value"},
+    )
+    last_record = ledger_db.execute("SELECT * FROM destructions WHERE asset = 'foobar'").fetchone()
+    assert last_record["asset"] == "foobar"
