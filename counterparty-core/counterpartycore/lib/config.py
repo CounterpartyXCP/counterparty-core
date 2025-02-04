@@ -209,6 +209,16 @@ BOOTSTRAP_URLS = {
             "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.sig",
         ),
     ],
+    "testnet4": [
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.sig",
+        ),
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.sig",
+        ),
+    ],
 }
 
 API_MAX_LOG_SIZE = (

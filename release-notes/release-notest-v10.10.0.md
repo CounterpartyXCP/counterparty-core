@@ -56,6 +56,7 @@ counterparty-server start
 ## CLI
 
 - rename `--testnet` flag to `--testnet3`
+- Add Testnet4 bootstrap database
 
 # Credits
 
