@@ -27,4 +27,4 @@ jobs:
     - name: Run compare hashes tests
       run: |
         cd counterparty-core
-        hatch run pytest counterpartycore/test/integrations/comparehashes_test.py
+        pytest counterpartycore/test/integrations/comparehashes_test.py
