@@ -29,6 +29,7 @@ psutil==5.9.8
 influxdb-client==1.42.0
 python-gnupg==0.5.2
 pyzmq==26.0.3
+gevent==24.11.1
 JSON-log-formatter==1.0
 yoyo-migrations==8.2.0
 gunicorn==23.0.0

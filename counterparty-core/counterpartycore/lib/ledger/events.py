@@ -177,7 +177,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
     ConsensusHashBuilder().append_to_block_journal(f"{command}{category}{bindings_string}")
 
-    log.log_event(db, block_index, message_index, event, items)
+    log.log_event(block_index, message_index, event, items)
 
 
 def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=None):
