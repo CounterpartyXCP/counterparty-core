@@ -64,7 +64,7 @@ def test_docker_compose():
         while True:
             printed_line_count, printed_line = print_docker_output(out, printed_line_count)
             if "Ledger.Main - Watching for new blocks..." in printed_line:
-                result = requests.get("http://localhost:24000/v2/", timeout=30).json
+                result = requests.get("http://localhost:24000/v2/", timeout=30).json()
                 assert result["result"]["server_ready"]
                 assert result["result"]["network"] == "regtest"
                 break
