@@ -33,4 +33,4 @@ jobs:
     - name: Run tests
       run: |
         cd counterparty-core
-        pytest counterpartycore/test/integrations/reparse_test.py
+        pytest counterpartycore/test/integrations/reparse_test.py -s -vv
