@@ -34,10 +34,19 @@ counterparty-server start
 
 - Don't retry RPC calls in `safe_get_utxo_address()`
 - Fix error handling in `safe_rpc()`
+- Raise `ValueError` instead of `PanicException` when an error occurs in Rust deserialization
+- Return 400 error on TypeError when composing a transaction
+- Fix `bitcoind.search_pubkey_in_transactions()`
+- Don't force output change
 
 ## Codebase
 
-- Complete rewrite of the test suite. See comments in `test/mocks/conftest.py`.
+- Complete rewrite of the test suite. See comments in `test/mocks/conftest.py`
+- Change default value for `attach` and `move` to 546
+- Add support for Python 3.12 and 3.13
+- Rename everywhere `testnet` to `testnet3`
+- Add `testnet4` and `regtest` profile in `docker-compose.yaml`
+- Restore Docker Composer and Compare Hashes tests
 
 ## API
 
@@ -46,6 +55,7 @@ counterparty-server start
 
 ## CLI
 
+- rename `--testnet` flag to `--testnet3`
 
 # Credits
 
