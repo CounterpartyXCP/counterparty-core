@@ -190,6 +190,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
     cursor.execute(select_query, select_bindings)
     for order in cursor:
         update_data = {"status": "filled"}
+        print("Inserting filled order", order["tx_hash"])
         insert_update(
             db,
             "orders",
@@ -229,12 +230,19 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
         where.append("tx_index = ?")
         bindings.append(tx_index)
     # no sql injection here
-    query = f"""
-        SELECT *
-        FROM dispensers
-        WHERE ({" AND ".join(where)})
-        ORDER BY rowid DESC LIMIT 1
-    """  # nosec B608  # noqa: S608
+    if len(where) == 0:
+        query = """
+            SELECT *
+            FROM dispensers
+            ORDER BY rowid DESC LIMIT 1
+        """
+    else:
+        query = f"""
+            SELECT *
+            FROM dispensers
+            WHERE ({" AND ".join(where)})
+            ORDER BY rowid DESC LIMIT 1
+        """  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
