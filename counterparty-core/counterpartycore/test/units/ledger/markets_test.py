@@ -46,6 +46,16 @@ def test_markets(ledger_db, defaults):
 
     assert order_filled_count_before + 2 == order_filled_count_after
 
+    markets.mark_order_as_filled(
+        ledger_db, open_orders[0]["tx_hash"], open_orders[1]["tx_hash"], source="source"
+    )
+
+    order_filled_count_after = ledger_db.execute(
+        "SELECT COUNT(*) AS count FROM orders WHERE status = ?", ("filled",)
+    ).fetchone()["count"]
+
+    assert order_filled_count_before + 2 == order_filled_count_after
+
     dispensers = ledger_db.execute(
         "SELECT * FROM dispensers ORDER BY rowid DESC LIMIT 1"
     ).fetchall()
@@ -64,3 +74,12 @@ def test_markets(ledger_db, defaults):
     result = markets.get_dispensers_info(ledger_db, [dispensers[0]["tx_hash"]])
     assert isinstance(result[dispensers[0]["tx_hash"]], dict)
     assert result[dispensers[0]["tx_hash"]]["tx_index"] == dispensers[0]["tx_index"]
+
+    assert (
+        markets.get_dispensers_count(
+            ledger_db, dispensers[0]["source"], dispensers[0]["status"], dispensers[0]["origin"]
+        )
+        == 2
+    )
+    assert len(markets.get_dispensers(ledger_db, source_in=[dispensers[0]["source"]])) == 2
+    assert len(markets.get_dispensers(ledger_db, origin=dispensers[0]["origin"])) == 2
