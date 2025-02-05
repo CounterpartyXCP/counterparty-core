@@ -190,7 +190,6 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
     cursor.execute(select_query, select_bindings)
     for order in cursor:
         update_data = {"status": "filled"}
-        print("Inserting filled order", order["tx_hash"])
         insert_update(
             db,
             "orders",

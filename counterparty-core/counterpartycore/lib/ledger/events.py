@@ -181,7 +181,6 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
 
 def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=None):
-    print("remove_from_balance")
     balance_cursor = db.cursor()
 
     no_balance = False
@@ -200,10 +199,6 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
 
     balance_address = address
     utxo = None
-    print("protocol.enabled('utxo_support')", protocol.enabled("utxo_support"))
-    print("utxosinfo.is_utxo_format(address)", utxosinfo.is_utxo_format(address))
-    print("parse_mempool", CurrentState().parsing_mempool())
-    print("balance", balance)
     if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         balance_address = None
         utxo = address

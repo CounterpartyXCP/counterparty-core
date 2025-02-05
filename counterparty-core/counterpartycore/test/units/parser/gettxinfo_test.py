@@ -1,8 +1,12 @@
 import binascii
 
 import pytest
+from arc4 import ARC4
 from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.ledger import markets
 from counterpartycore.lib.parser import deserialize, gettxinfo
+from counterpartycore.lib.utils import opcodes
+from counterpartycore.test.mocks.bitcoind import original_is_valid_der
 
 
 def test_get_tx_info(ledger_db, current_block_index, blockchain_mock):
@@ -236,25 +240,6 @@ def test_get_tx_info_new(ledger_db, current_block_index, blockchain_mock):
     ) == (
         "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-        5430,
-        900010000,
-        b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
-        [],
-    )
-
-    assert gettxinfo.get_tx_info_new(
-        ledger_db,
-        deserialize.deserialize_tx(
-            "0100000001ebe3111881a8733ace02271dcf606b7450c41a48c1cb21fd73f4ba787b353ce4000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88acffffffff03361500000000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e87781e000000000000695121035ca51ea175f108a1c63588683dc4c43a7146c46799f864a300263c0813f5fe352102309a14a1a30202f2e76f46acdb2917752371ca42b97460f7928ade8ecb02ea17210319f6e07b0b8d756156394b9dcf3b011fe9ac19f2700bd6b69a6a1783dbb8b97753ae4286f505000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac00000000",
-            parse_vouts=True,
-            block_index=current_block_index,
-        ),
-        current_block_index,
-        None,
-        True,
-    ) == (
-        "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
-        "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
         5430,
         900010000,
         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
@@ -552,40 +537,6 @@ def test_sighash_flag(monkeymodule, bitcoind_mock):
         gettxinfo.check_signatures_sighash_flag(
             {
                 "tx_id": "tx_id",
-                "segwit": False,
-                "vin": [
-                    {
-                        "script_sig": binascii.unhexlify(
-                            "00483045022100af204ef91b8dba5884df50f87219ccef22014c21dd05aa44470d4ed800b7f6e40220428fe058684db1bb2bfb6061bff67048592c574effc217f0d150daedcf36787601483045022100e8547aa2c2a2761a5a28806d3ae0d1bbf0aeff782f9081dfea67b86cacb321340220771a166929469c34959daf726a2ac0c253f9aff391e58a3c7cb46d8b7e0fdc4801"
-                        ),
-                    }
-                ],
-            },
-        )
-        is None
-    )
-
-    with pytest.raises(
-        gettxinfo.SighashFlagError, match="invalid SIGHASH flag for transaction tx_id"
-    ):
-        gettxinfo.check_signatures_sighash_flag(
-            {
-                "tx_id": "tx_id",
-                "segwit": False,
-                "vin": [
-                    {
-                        "script_sig": binascii.unhexlify(
-                            "00483045022100af204ef91b8dba5884df50f87219ccef22014c21dd05aa44470d4ed800b7f6e40220428fe058684db1bb2bfb6061bff67048592c574effc217f0d150daedcf36787601483045022100e8547aa2c2a2761a5a28806d3ae0d1bbf0aeff782f9081dfea67b86cacb321340220771a166929469c34959daf726a2ac0c253f9aff391e58a3c7cb46d8b7e0fdc4883"
-                        ),
-                    }
-                ],
-            },
-        )
-
-    assert (
-        gettxinfo.check_signatures_sighash_flag(
-            {
-                "tx_id": "tx_id",
                 "segwit": True,
                 "vin": [
                     {
@@ -789,3 +740,240 @@ def test_decode_checkmultisig():
         "2_16KsHvVQj6aGvVQpAUgRcfpVug3regjiUs_17yjtboB7RjK2BoQ78k51NtJ4cDQGYZQyb_1NNXBUF3rqXtFbWhK5nujSpvt9yApsRUT7_3",
         None,
     )
+
+
+def test_errors(ledger_db, monkeypatch):
+    with pytest.raises(exceptions.DecodeError, match="invalid OP_CHECKSIG"):
+        gettxinfo.get_checksig([b"\x00"])
+
+    with pytest.raises(exceptions.DecodeError, match="invalid OP_CHECKSIG"):
+        gettxinfo.get_checksig([b"\x00", b"\x00", b"\x00", b"\x00", b"\x00"])
+
+    with pytest.raises(exceptions.DecodeError, match="invalid OP_CHECKMULTISIG"):
+        gettxinfo.get_checkmultisig([b"\x00", b"\x00", b"\x00", b"\x00", b"\x00"])
+
+    pubkeyhash = ARC4(binascii.unhexlify("abcdef")).encrypt(b"0" + config.PREFIX + b"pubkeyhash")
+    asm = [
+        opcodes.OP_DUP,
+        opcodes.OP_HASH160,
+        pubkeyhash,
+        opcodes.OP_EQUALVERIFY,
+        opcodes.OP_CHECKSIG,
+    ]
+    assert gettxinfo.decode_checksig(asm, {"vin": [{"hash": "abcdef"}]}) == (None, b"pubkeyhash")
+
+    monkeypatch.setattr(gettxinfo, "get_checkmultisig", lambda asm: (asm[1:4], asm[0]))
+    data = ARC4(binascii.unhexlify("abcdef")).encrypt(b"0" + config.PREFIX + b"pubkeyhash")
+    asm = [
+        1,
+        b"0" + data[0 : len(data) // 2] + b"0",
+        b"0" + data[len(data) // 2 :] + b"0",
+        b"\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9w",
+        3,
+        opcodes.OP_CHECKMULTISIG,  # noqa: F405
+    ]
+    assert gettxinfo.decode_checkmultisig(asm, {"vin": [{"hash": "abcdef"}]}) == (
+        None,
+        b"pubkeyhash",
+    )
+
+
+def test_get_transaction_sources_checksig(monkeypatch):
+    def get_vin_info_mock_1(*args, **lwargs):
+        raise exceptions.BitcoindRPCError("error")
+
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_1)
+
+    with pytest.raises(exceptions.DecodeError, match="vin not found"):
+        gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]})
+
+    with pytest.raises(
+        gettxinfo.SighashFlagError,
+        match="impossible to determine SIGHASH flag for transaction abcdef",
+    ):
+        gettxinfo.check_signatures_sighash_flag(
+            {"tx_id": "abcdef", "segwit": False, "vin": [{"script_sig": b""}]}
+        )
+
+    def get_vin_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return 10000, binascii.unhexlify(op_checksig_script), False
+
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+    assert gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]}) == (
+        "1FwkKA9cqpNRFTpVaokdRjT9Xamvebrwcu",
+        10000,
+    )
+
+    pubkeyhash = ARC4(binascii.unhexlify("abcdef")).encrypt(b"0" + config.PREFIX + b"pubkeyhash")
+    asm = [
+        opcodes.OP_DUP,
+        opcodes.OP_HASH160,
+        pubkeyhash,
+        opcodes.OP_EQUALVERIFY,
+        opcodes.OP_CHECKSIG,
+    ]
+    monkeypatch.setattr("counterpartycore.lib.utils.script.script_to_asm", lambda x: asm)
+    with pytest.raises(exceptions.DecodeError, match="data in source"):
+        gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]})
+
+
+def test_get_transaction_sources_multisig(monkeypatch):
+    def get_vin_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return 10000, binascii.unhexlify(op_checksig_script), False
+
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+
+    data = ARC4(binascii.unhexlify("abcdef")).encrypt(b"0" + config.PREFIX + b"pubkeyhash")
+    monkeypatch.setattr(
+        "counterpartycore.lib.utils.script.script_to_asm",
+        lambda x: [
+            1,
+            b"0" + data[0 : len(data) // 2] + b"0",
+            b"0" + data[len(data) // 2 :] + b"0",
+            b"\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9w",
+            3,
+            opcodes.OP_CHECKMULTISIG,  # noqa: F405
+        ],
+    )
+    with pytest.raises(exceptions.DecodeError, match="data in source"):
+        gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]})
+
+
+def test_get_transaction_sources_unknown_type(monkeypatch):
+    def get_vin_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return 10000, binascii.unhexlify(op_checksig_script), False
+
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.utils.script.script_to_asm",
+        lambda x: [
+            opcodes.OP_CHECKSIG,
+            b"\x03\x19\xf6\xe0{\x0b\x8duaV9K\x9d\xcf;\x01\x1f\xe9\xac\x19\xf2p\x0b\xd6\xb6\x9aj\x17\x83\xdb\xb8\xb9w",
+            3,
+        ],
+    )
+    with pytest.raises(exceptions.DecodeError, match="unrecognised source type"):
+        gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]})
+
+
+def test_decode_scripthash():
+    assert gettxinfo.decode_scripthash(
+        [opcodes.OP_HASH160, b"H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607"]
+    ) == ("2Myq6jrmWb7bxTtT94AvBRj1roFPTLpa6m7", None)
+
+    assert gettxinfo.decode_scripthash([opcodes.OP_HASH160, b""]) == ("PA7wHSw", None)
+
+
+def test_is_valid_der_non_bytes(monkeymodule):
+    monkeymodule.setattr(gettxinfo, "is_valid_der", original_is_valid_der)
+    # Un DER valide typique pour une signature ECDSA
+    valid_der = binascii.unhexlify(
+        "3045022100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c"
+    )
+    assert gettxinfo.is_valid_der(valid_der)
+
+    # invalid first marker
+    invalid_der = binascii.unhexlify(
+        "3045032100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310220489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c"
+    )
+    assert not gettxinfo.is_valid_der(invalid_der)
+
+    # invalid second marker
+    invalid_der = binascii.unhexlify(
+        "3045022100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310320489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c"
+    )
+    assert not gettxinfo.is_valid_der(invalid_der)
+
+    invalid_der = binascii.unhexlify(
+        "3045022100c219a522e65ca8500ebe05a70d5a49d840ccc15f2afa4ee9df783f06b2a322310221489a46c37feb33f52c586da25c70113b8eea41216440eb84771cb67a67fdb68c"
+    )
+    assert not gettxinfo.is_valid_der(invalid_der)
+
+    assert not gettxinfo.is_valid_der("not bytes")
+
+
+def test_is_valid_schnorr_non_bytes():
+    assert not gettxinfo.is_valid_schnorr("not bytes")
+    assert not gettxinfo.is_valid_schnorr(123)
+    assert not gettxinfo.is_valid_schnorr(None)
+    assert not gettxinfo.is_valid_schnorr([1, 2, 3])
+    assert not gettxinfo.is_valid_schnorr(b"")  # Vide
+    assert not gettxinfo.is_valid_schnorr(b"\x00" * 63)  # Trop court
+    assert not gettxinfo.is_valid_schnorr(b"\x00" * 66)  # Trop long
+
+
+def test_is_valid_schnorr_invalid_r_value():
+    # r value >= p
+    p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+    p_bytes = p.to_bytes(32, byteorder="big")
+    invalid_r = bytes(p_bytes)  # A value that is exactly p
+
+    test_signature = invalid_r + b"\x00" * 32
+    assert not gettxinfo.is_valid_schnorr(test_signature)
+
+    # r value > p
+    p_plus_one = p + 1
+    p_plus_one_bytes = p_plus_one.to_bytes(32, byteorder="big")
+    invalid_r = bytes(p_plus_one_bytes)
+
+    test_signature = invalid_r + b"\x00" * 32
+    assert not gettxinfo.is_valid_schnorr(test_signature)
+
+
+def test_is_valid_schnorr_invalid_s_value():
+    """Test signatures with invalid s values"""
+    # s value >= n
+    n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+    n_bytes = n.to_bytes(32, byteorder="big")
+    invalid_s = bytes(n_bytes)  # A value that is exactly n
+
+    test_signature = b"\x01" * 32 + invalid_s
+    assert not gettxinfo.is_valid_schnorr(test_signature)
+
+    # s value > n
+    n_plus_one = n + 1
+    n_plus_one_bytes = n_plus_one.to_bytes(32, byteorder="big")
+    invalid_s = bytes(n_plus_one_bytes)
+
+    test_signature = b"\x01" * 32 + invalid_s
+    assert not gettxinfo.is_valid_schnorr(test_signature)
+
+
+def test_is_valid_schnorr_with_recovery_byte():
+    """Test signatures with a recovery byte"""
+    # 65-byte signature with a recovery byte
+    valid_signature_with_recovery = b"\x01" * 64 + b"\x00"
+    assert gettxinfo.is_valid_schnorr(valid_signature_with_recovery)
+
+    # 65-byte signature with an invalid recovery byte
+    invalid_signature_with_recovery = b"\x01" * 64 + b"\x02"
+    assert gettxinfo.is_valid_schnorr(invalid_signature_with_recovery)
+
+
+def test_get_transaction_source_from_p2sh(monkeypatch):
+    def get_vin_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return 10000, binascii.unhexlify(op_checksig_script), False
+
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+
+    assert gettxinfo.get_transaction_source_from_p2sh(
+        {"vin": [{"script_sig": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"}]},
+        p2sh_is_segwit=True,
+    ) == (None, b"", 10000)
+
+
+def test_get_dispensers_outputs(ledger_db, monkeypatch):
+    dispensers = markets.get_dispensers(ledger_db, status=0)
+    print(dispensers)
+    potential_dispensers = [
+        (dispensers[0]["source"], None),
+    ]
+    for dispenser in dispensers:
+        potential_dispensers.append((dispenser["source"], 1))
+
+    assert gettxinfo.get_dispensers_outputs(ledger_db, potential_dispensers) == []

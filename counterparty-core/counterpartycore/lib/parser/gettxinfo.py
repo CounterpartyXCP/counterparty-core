@@ -109,7 +109,7 @@ def is_valid_der(der):
         _r = int(s.read(rlength).hex(), 16)
         marker = s.read(1)[0]
         if marker != 0x02:
-            return False
+            return False  # et là
         slength = s.read(1)[0]
         s = int(s.read(slength).hex(), 16)
         if len(der) != 6 + rlength + slength:
@@ -129,11 +129,10 @@ def is_valid_schnorr(schnorr):
         return False
     if len(schnorr) == 65:
         schnorr = schnorr[:-1]
-    try:
-        r = int.from_bytes(schnorr[0:32], byteorder="big")
-        s = int.from_bytes(schnorr[32:64], byteorder="big")
-    except Exception:
-        return False
+
+    r = int.from_bytes(schnorr[0:32], byteorder="big")
+    s = int.from_bytes(schnorr[32:64], byteorder="big")
+
     if (r >= p) or (s >= n):
         return False
     return True
@@ -193,8 +192,6 @@ def collect_sighash_flags(script_sig, witnesses):
                 flags.append(flag)
         return flags
 
-    return flags
-
 
 class SighashFlagError(DecodeError):
     pass
@@ -219,7 +216,6 @@ def check_signatures_sighash_flag(decoded_tx):
 
     if len(flags) == 0:
         error = f"impossible to determine SIGHASH flag for transaction {decoded_tx['tx_id']}"
-        logger.debug(error)
         raise SighashFlagError(error)
 
     # first input must be signed with SIGHASH_ALL or SIGHASH_ALL|SIGHASH_ANYONECANPAY
@@ -227,7 +223,6 @@ def check_signatures_sighash_flag(decoded_tx):
     for flag in flags:
         if flag not in authorized_flags:
             error = f"invalid SIGHASH flag for transaction {decoded_tx['tx_id']}"
-            logger.debug(error)
             raise SighashFlagError(error)
 
 
@@ -257,8 +252,7 @@ def get_transaction_sources(decoded_tx):
                 raise DecodeError("data in source")
         elif asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:  # noqa: F405
             new_source, new_data = decode_scripthash(asm)
-            if new_data or not new_source:
-                raise DecodeError("data in source")
+            assert not new_data and new_source
         elif protocol.enabled("segwit_support") and asm[0] == b"":
             # Segwit output
             new_source = script.script_to_address(script_pubkey)
@@ -302,10 +296,6 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
             continue
 
         if new_source is not None:
-            if p2sh_encoding_source is not None and new_source != p2sh_encoding_source:
-                # this p2sh data input has a bad source address
-                raise DecodeError("inconsistent p2sh inputs")
-
             p2sh_encoding_source = new_source
 
         assert not new_destination
