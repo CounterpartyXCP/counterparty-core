@@ -1,7 +1,5 @@
 import time
 
-from flask import request
-
 from counterpartycore.lib import backend
 from counterpartycore.lib.ledger import blocks
 from counterpartycore.lib.utils import helpers
@@ -11,13 +9,6 @@ BACKEND_HEIGHT_REFRSH_INTERVAL = 3
 
 
 def get_backend_height():
-    # TODO: find a way to mock this function for testing
-    try:
-        if request.url_root == "http://localhost:10009/":
-            return 0
-    except RuntimeError:
-        pass
-
     block_count = backend.bitcoind.getblockcount()
     blocks_behind = backend.bitcoind.get_blocks_behind()
     return block_count + blocks_behind
@@ -76,18 +67,6 @@ class CurrentState(metaclass=helpers.SingletonMeta):
 
     def block_parser_status(self):
         return self.state.get("BLOCK_PARSER_STATUS", "starting")
-
-    def set_stopping(self, stopping):
-        self.state["STOPPING"] = stopping
-
-    def stopping(self):
-        return self.state.get("STOPPING", False)
-
-    def set_current_db_connection(self, db_connection):
-        self.state["CURRENT_DB_CONNECTION"] = db_connection
-
-    def current_db_connection(self):
-        return self.state.get("CURRENT_DB_CONNECTION")
 
 
 class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):

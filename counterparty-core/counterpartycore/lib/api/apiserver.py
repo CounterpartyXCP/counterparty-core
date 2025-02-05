@@ -74,14 +74,6 @@ def is_server_ready():
 
 
 def api_root():
-    network = "mainnet"
-    if config.TESTNET:
-        network = "testnet"
-    elif config.TESTNET4:
-        network = "testnet4"
-    elif config.REGTEST:
-        network = "regtest"
-
     with StateDBConnectionPool().connection() as state_db:
         counterparty_height = apiwatcher.get_last_block_parsed(state_db)
 
@@ -96,7 +88,7 @@ def api_root():
 
     return {
         "server_ready": server_ready,
-        "network": network,
+        "network": config.NETWORK_NAME,
         "version": config.VERSION_STRING,
         "backend_height": CurrentState().current_backend_height(),
         "counterparty_height": counterparty_height,
@@ -370,11 +362,12 @@ def handle_route(**kwargs):
             exceptions.AddressError,
             exceptions.ElectrsError,
             OverflowError,
+            TypeError,
         ) as e:
-            # import traceback
-            # print(traceback.format_exc())
             return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
         except Exception as e:
+            # import traceback
+            # print(traceback.format_exc())
             capture_exception(e)
             logger.error("Error in API: %s", e)
             return return_result(
@@ -504,7 +497,6 @@ def check_database_version(state_db):
 
 
 def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
-    print("API PROCESSES")
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(signum, frame):
@@ -549,8 +541,8 @@ def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
 
         wsgi_server.run()
 
-    except KeyboardInterrupt as e:
-        print("API Server KeyboardInterrupt", e)
+    except KeyboardInterrupt:
+        pass
 
     finally:
         logger.info("Stopping API Server...")
@@ -611,7 +603,6 @@ class APIServer(object):
     def start(self, args, log_stream):
         if self.process is not None:
             raise Exception("API Server is already running")
-        logger.warning("Starting API Server1...")
         self.process = Process(
             name="API",
             target=run_apiserver,
@@ -619,10 +610,8 @@ class APIServer(object):
         )
 
         try:
-            logger.warning("Starting API Server2...")
             self.process.start()
             logger.info("API PID: %s", self.process.pid)
-            logger.warning("Starting API Server3...")
         except Exception as e:
             logger.error(f"Error starting API Server: {e}")
             raise e

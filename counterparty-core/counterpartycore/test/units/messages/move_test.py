@@ -1,3 +1,5 @@
+import pytest
+from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import move
 
 DUMMY_UTXO = 64 * "0" + ":0"
@@ -125,3 +127,31 @@ def test_move_assets_divisible(
             },
         ],
     )
+
+
+def test_compose(ledger_db, defaults):
+    utxo = get_utxo(ledger_db, defaults["addresses"][0])
+
+    assert move.compose(ledger_db, utxo, defaults["addresses"][0]) == (
+        utxo,
+        [(defaults["addresses"][0], 546)],
+        None,
+    )
+
+    assert move.compose(ledger_db, utxo, defaults["addresses"][0], 10000) == (
+        utxo,
+        [(defaults["addresses"][0], 10000)],
+        None,
+    )
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid source utxo format"):
+        move.compose(ledger_db, "utxo", defaults["addresses"][0])
+
+    with pytest.raises(exceptions.ComposeError, match="No assets attached to the source utxo"):
+        move.compose(ledger_db, DUMMY_UTXO, defaults["addresses"][0])
+
+    with pytest.raises(exceptions.ComposeError, match="destination must be an address"):
+        move.compose(ledger_db, utxo, utxo)
+
+    with pytest.raises(exceptions.ComposeError, match="utxo_value must be an integer"):
+        move.compose(ledger_db, utxo, defaults["addresses"][0], utxo_value="string")

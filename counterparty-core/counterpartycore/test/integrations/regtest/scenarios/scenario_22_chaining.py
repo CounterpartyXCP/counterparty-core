@@ -26,6 +26,7 @@ SCENARIO = [
             "quantity": 1 * 10**8,
             "validate": False,
             "inputs_set": "$CREATE_CHAINING_TX_HASH:1",
+            "utxo_value": 10000,
         },
         "set_variables": {
             "ATTACH_CHAINING_TX_HASH": "$TX_HASH",
@@ -43,6 +44,7 @@ SCENARIO = [
             "destination": "$ADDRESS_8",
             "validate": False,
             "inputs_set": "$ATTACH_CHAINING_TX_HASH:2",
+            "utxo_value": 10000,
         },
         "set_variables": {
             "MOVETOUTXO_CHAINING_TX_HASH": "$TX_HASH",

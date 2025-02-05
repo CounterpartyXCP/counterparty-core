@@ -314,7 +314,7 @@ def truncate_fields(bindings):
     return truncated_bindings
 
 
-def log_event(db, block_index, event_index, event_name, bindings):
+def log_event(block_index, event_index, event_name, bindings):
     block_name = "Mempool" if CurrentState().parsing_mempool() else f"Block {block_index}"
     log_bindings = truncate_fields(bindings)
     log_bindings = " ".join([f"{key}={value}" for key, value in log_bindings.items()])
@@ -334,7 +334,7 @@ def log_event(db, block_index, event_index, event_name, bindings):
         if not CurrentState().parsing_mempool():
             zmq_event["block_index"] = block_index
             zmq_event["event_index"] = event_index
-        zmq_publisher.publish_event(db, zmq_event)
+        zmq_publisher.publish_event(zmq_event)
 
 
 class Spinner:
@@ -385,7 +385,7 @@ class ZmqPublisher(metaclass=helpers.SingletonMeta):
         self.socket = self.context.socket(zmq.PUB)
         self.socket.bind("tcp://*:%s" % config.ZMQ_PUBLISHER_PORT)
 
-    def publish_event(self, db, event):
+    def publish_event(self, event):
         logger.trace("Publishing event: %s", event["event"])
         self.socket.send_multipart(
             [event["event"].encode("utf-8"), helpers.to_json(event).encode("utf-8")]

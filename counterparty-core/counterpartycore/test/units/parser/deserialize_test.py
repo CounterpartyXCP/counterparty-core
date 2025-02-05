@@ -3,6 +3,7 @@ import time
 from io import BytesIO
 
 import bitcoin as bitcoinlib
+import pytest
 from counterparty_rs import utils as pycoin_rs_utils
 from counterpartycore.lib import config
 from counterpartycore.lib.parser import deserialize, gettxinfo
@@ -35,7 +36,7 @@ def create_block_hex(transactions_hex):
 
 def test_deserialize():
     original_network_name = config.NETWORK_NAME
-    config.NETWORK_NAME = "testnet"
+    config.NETWORK_NAME = "testnet3"
 
     hex = "0100000001db3acf37743ac015808f7911a88761530c801819b3b907340aa65dfb6d98ce24030000006a473044022002961f4800cb157f8c0913084db0ee148fa3e1130e0b5e40c3a46a6d4f83ceaf02202c3dd8e631bf24f4c0c5341b3e1382a27f8436d75f3e0a095915995b0bf7dc8e01210395c223fbf96e49e5b9e06a236ca7ef95b10bf18c074bd91a5942fc40360d0b68fdffffff040000000000000000536a4c5058325bd61325dc633fadf05bec9157c23106759cee40954d39d9dbffc17ec5851a2d1feb5d271da422e0e24c7ae8ad29d2eeabf7f9ca3de306bd2bc98e2a39e47731aa000caf400053000c1283000149c8000000000000001976a91462bef4110f98fdcb4aac3c1869dbed9bce8702ed88acc80000000000000017a9144317f779c0a2ccf8f6bc3d440bd9e536a5bff75287fa3e5100000000001976a914bf2646b8ba8b4a143220528bde9c306dac44a01c88ac00000000"
     decoded_tx = deserialize_rust(hex)
@@ -167,3 +168,15 @@ def test_deserialize_mpma(blockchain_mock, monkeypatch):
 
     config.NETWORK_NAME = original_network_name
     config.ADDRESSVERSION = original_address_version
+
+
+def test_deserialize_error():
+    with pytest.raises(ValueError, match="Failed to decode hex transaction"):
+        deserialize_rust("0100000001f9cf03a71930731618f2e0ff897db75d208a587129b96296f39")
+
+    with pytest.raises(ValueError, match="Failed to decode hex block"):
+        deserialize.deserialize_block(
+            "0100000001f9cf03a71930731618f2e0ff897db75d208a587129b96296f39",
+            parse_vouts=True,
+            block_index=900000,
+        )

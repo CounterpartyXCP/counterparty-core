@@ -388,6 +388,10 @@ def complete_unspent_list(unspent_list):
                     if "value" not in utxo:
                         utxo["value"] = int(vout["value"] * config.UNIT)
                         utxo["amount"] = vout["value"]
+        if "script_pub_key" not in utxo:
+            raise exceptions.ComposeError(
+                f"invalid UTXOs: {utxo['txid']}:{utxo['vout']}: script_pub_key not found, you can provide it with the `inputs_set` parameter, using <txid>:<vout>:<value>:<script_pub_key> format"
+            )
         utxo["is_segwit"] = is_segwit_output(utxo["script_pub_key"])
         completed_unspent_list.append(utxo)
     return completed_unspent_list
@@ -792,8 +796,9 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
         needed_fee = int(needed_fee)
+
         # if change is enough for needed fee, add change output and break
-        if change_amount > needed_fee:
+        if change_amount >= needed_fee:
             change_amount = int(change_amount - needed_fee)
             if change_amount > dust_size(change_address, construct_params):
                 change_outputs.append(

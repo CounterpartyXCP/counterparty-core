@@ -94,6 +94,7 @@ SCENARIO = [
         "params": {
             "asset": "UTXOASSET",
             "quantity": 10 * 10**8,
+            "utxo_value": 10000,
         },
         "set_variables": {
             "UTXOASSET_UTXO_1_TX_HASH": "$TX_HASH",
@@ -175,6 +176,7 @@ SCENARIO = [
         "params": {
             "destination": "$ADDRESS_8",
             "inputs_set": "$UTXOASSET_UTXO_1_TX_HASH:2",  # third output is change of attach transaction
+            "utxo_value": 10000,
         },
         "set_variables": {
             "UTXOASSET_UTXO_2_TX_HASH": "$TX_HASH",
@@ -245,6 +247,7 @@ SCENARIO = [
             "exact_fee": 0,
             "validate": False,
             "inputs_source": "$ADDRESS_8",
+            "utxo_value": 10000,
         },
         "set_variables": {
             "UTXOASSET_UTXO_3_TX_HASH": "$TX_HASH",
@@ -435,6 +438,7 @@ SCENARIO = [
             "asset": "UTXOASSET",
             "quantity": 10 * 10**8,
             "exact_fee": 0,
+            "utxo_value": 10000,
         },
     },
 ]

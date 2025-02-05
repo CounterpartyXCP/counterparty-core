@@ -42,7 +42,7 @@ def test_compose(ledger_db, defaults):
     )
     assert attach.compose(ledger_db, address_0, "XCP", 100) == (
         address_0,
-        [(address_0, 10000)],
+        [(address_0, 546)],
         b"eXCP|100|",
     )
 

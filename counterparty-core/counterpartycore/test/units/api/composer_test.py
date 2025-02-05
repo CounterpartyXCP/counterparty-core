@@ -667,7 +667,7 @@ def test_complete_unspent_list(defaults, monkeypatch):
                     },
                 }
             ]
-        }
+        },
     }
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction_batch", lambda *args, **kwargs: txs
@@ -703,6 +703,21 @@ def test_complete_unspent_list(defaults, monkeypatch):
                 {
                     "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c2",
                     "vout": 0,
+                }
+            ]
+        )
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:1: script_pub_key not found, you can provide it with the `inputs_set` parameter, using <txid>:<vout>:<value>:<script_pub_key> format"
+        ),
+    ):
+        composer.complete_unspent_list(
+            [
+                {
+                    "txid": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+                    "vout": 1,
                 }
             ]
         )
@@ -1540,10 +1555,10 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
     }
 
     expected = {
-        "rawtransaction": "02000000015aeb41a258e2349d502cfe434d177eb40058484f608a416f22d01e16b40f0add0000000000ffffffff0310270000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a100ec2affac401c38d464471bd3d38baddf6a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "02000000015aeb41a258e2349d502cfe434d177eb40058484f608a416f22d01e16b40f0add0000000000ffffffff0322020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a100ec2affac401c38d464471bd3d38badde4c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "btc_in": 1000000000,
-        "btc_out": 10000,
-        "btc_change": 999989494,
+        "btc_out": 546,
+        "btc_change": 999998948,
         "btc_fee": 506,
         "data": b"CNTRPRTYeXCP|10|",
         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
@@ -1553,7 +1568,7 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
             "adjusted_vsize": 253,
             "sigops_count": 8,
         },
-        "psbt": "02000000015aeb41a258e2349d502cfe434d177eb40058484f608a416f22d01e16b40f0add0000000000ffffffff0310270000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a100ec2affac401c38d464471bd3d38baddf6a09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "psbt": "02000000015aeb41a258e2349d502cfe434d177eb40058484f608a416f22d01e16b40f0add0000000000ffffffff0322020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a100ec2affac401c38d464471bd3d38badde4c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "params": {
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
@@ -1660,10 +1675,10 @@ def test_compose_move(ledger_db, defaults):
     }
 
     expected = {
-        "rawtransaction": "020000000185c1bfca581b7b7f2829ae390e4942f57f3151028962a0c3fb7c5baf3375c4a00000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac2ba19a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "02000000016140ecf663b2c8091eb8699fd8c0363fc177dc64dd869331a16fbeac20b671270000000000ffffffff0222020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac19c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "btc_in": 999999999,
-        "btc_out": 10000,
-        "btc_change": 999989547,
+        "btc_out": 546,
+        "btc_change": 999999001,
         "btc_fee": 452,
         "data": None,
         "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
@@ -1673,7 +1688,7 @@ def test_compose_move(ledger_db, defaults):
             "adjusted_vsize": 226,
             "sigops_count": 8,
         },
-        "psbt": "020000000185c1bfca581b7b7f2829ae390e4942f57f3151028962a0c3fb7c5baf3375c4a00000000000ffffffff0210270000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac2ba19a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "psbt": "02000000016140ecf663b2c8091eb8699fd8c0363fc177dc64dd869331a16fbeac20b671270000000000ffffffff0222020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac19c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "params": {
             "source": utxo_with_balance,
             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1694,7 +1709,7 @@ def test_compose_move(ledger_db, defaults):
     }
 
     expected = {
-        "rawtransaction": "020000000185c1bfca581b7b7f2829ae390e4942f57f3151028962a0c3fb7c5baf3375c4a00000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88aca1c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "02000000016140ecf663b2c8091eb8699fd8c0363fc177dc64dd869331a16fbeac20b671270000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88aca1c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "btc_in": 999999999,
         "btc_out": 666,
         "btc_change": 999998881,
@@ -1707,7 +1722,7 @@ def test_compose_move(ledger_db, defaults):
             "adjusted_vsize": 226,
             "sigops_count": 8,
         },
-        "psbt": "020000000185c1bfca581b7b7f2829ae390e4942f57f3151028962a0c3fb7c5baf3375c4a00000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88aca1c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "psbt": "02000000016140ecf663b2c8091eb8699fd8c0363fc177dc64dd869331a16fbeac20b671270000000000ffffffff029a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88aca1c59a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "params": {
             "source": utxo_with_balance,
             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -1930,3 +1945,105 @@ def test_utxolocks_custom_input(ledger_db):
         return
 
     raise Exception("Should have raised a BalanceError")
+
+
+def test_compose_detach(ledger_db, defaults):
+    utxo_with_balance = ledger_db.execute("""
+        SELECT utxo FROM balances WHERE quantity > 0 AND utxo IS NOT NULL ORDER BY rowid DESC LIMIT 1
+    """).fetchone()["utxo"]
+    # Test basic move
+    params = {
+        "source": utxo_with_balance,
+        "destination": defaults["addresses"][1],
+    }
+
+    construct_params = {
+        "verbose": True,
+        "inputs_set": f"{utxo_with_balance}:546:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+        "disable_utxo_locks": True,
+    }
+
+    expected = {
+        "rawtransaction": "02000000016140ecf663b2c8091eb8699fd8c0363fc177dc64dd869331a16fbeac20b671270000000000ffffffff0100000000000000002d6a2b3e469c1362a96b89affa189049413129c8c5352c1cab3e99a708b7a8d7b8bfd11f3fc66d86a5bd1885b6c000000000",
+        "btc_in": 546,
+        "btc_out": 0,
+        "btc_change": 0,
+        "btc_fee": 546,
+        "data": b"CNTRPRTYfmtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+        "inputs_values": [546],
+        "signed_tx_estimated_size": {
+            "vsize": 212,
+            "adjusted_vsize": 212,
+            "sigops_count": 0,
+        },
+        "psbt": "02000000016140ecf663b2c8091eb8699fd8c0363fc177dc64dd869331a16fbeac20b671270000000000ffffffff0100000000000000002d6a2b3e469c1362a96b89affa189049413129c8c5352c1cab3e99a708b7a8d7b8bfd11f3fc66d86a5bd1885b6c000000000",
+        "params": {
+            "source": utxo_with_balance,
+            "destination": defaults["addresses"][1],
+            "skip_validation": False,
+        },
+        "name": "detach",
+    }
+
+    result = composer.compose_transaction(ledger_db, "detach", params, construct_params)
+    assert result == expected
+
+
+def test_compose_attach(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "asset": "XCP",
+        "quantity": 10,
+    }
+
+    expected = {
+        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0222020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a103d5b4af14ef23843006594fdd8ed420600000000",
+        "btc_in": 1052,
+        "btc_out": 546,
+        "btc_change": 0,
+        "btc_fee": 506,
+        "data": b"CNTRPRTYeXCP|10|",
+        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+        "inputs_values": [1052],
+        "signed_tx_estimated_size": {
+            "vsize": 219,
+            "adjusted_vsize": 219,
+            "sigops_count": 4,
+        },
+        "psbt": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff0222020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0000000000000000126a103d5b4af14ef23843006594fdd8ed420600000000",
+        "params": {
+            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "asset": "XCP",
+            "quantity": 10,
+            "utxo_value": None,
+            "destination_vout": None,
+            "skip_validation": False,
+        },
+        "name": "attach",
+    }
+
+    result = composer.compose_transaction(
+        ledger_db,
+        "attach",
+        params,
+        {
+            "verbose": True,
+            "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:1052:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+            "disable_utxo_locks": True,
+        },
+    )
+    assert result == expected
+
+    with pytest.raises(
+        exceptions.ComposeError, match="Insufficient funds for the target amount: 546 < 1052"
+    ):
+        composer.compose_transaction(
+            ledger_db,
+            "attach",
+            params,
+            {
+                "verbose": True,
+                "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:546:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+            },
+        )

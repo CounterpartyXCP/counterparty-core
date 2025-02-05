@@ -106,7 +106,7 @@ def test_supplies_functions(ledger_db):
         },
         {"address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef", "address_quantity": 0, "escrow": None},
         {
-            "address": "5cd7678988dba9e7c9bac246de1393b10f1315fbc51c305a0b073c8ca69c9ada:0",
+            "address": "659c929d79db6fc80112ea874655368279e73789f47a6f15ac696728a493cc18:0",
             "address_quantity": 100,
             "escrow": None,
         },
@@ -155,7 +155,7 @@ def test_supplies_functions(ledger_db):
             "escrow": None,
         },
         {
-            "address": "a0c47533af5b7cfbc3a062890251317ff542490e39ae29287f7b1b58cabfc185:0",
+            "address": "2771b620acbe6fa1319386dd64dc77c13f36c0d89f69b81e09c8b263f6ec4061:0",
             "address_quantity": 1,
             "escrow": None,
         },

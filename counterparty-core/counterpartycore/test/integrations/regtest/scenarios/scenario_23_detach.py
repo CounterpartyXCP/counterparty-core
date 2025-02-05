@@ -37,6 +37,7 @@ SCENARIO = [
             "asset": "DETACHA",
             "quantity": 1 * 10**8,
             "inputs_set": "$CREATE_DETACHB_TX_HASH:1",
+            "utxo_value": 10000,
             "exact_fee": 0,
         },
         "set_variables": {
@@ -78,6 +79,7 @@ SCENARIO = [
             "inputs_set": "$ATTACH_DETACHA_TX_HASH:0",
             "exact_fee": 0,
             "validate": False,
+            "utxo_value": 10000,
         },
         "set_variables": {
             "ATTACH_DETACHB_TX_HASH": "$TX_HASH",
@@ -208,6 +210,7 @@ SCENARIO = [
         "params": {
             "asset": "DETACHA",
             "quantity": 1 * 10**8,
+            "utxo_value": 10000,
         },
         "set_variables": {
             "ATTACH2_DETACHA_TX_HASH": "$TX_HASH",
@@ -222,6 +225,7 @@ SCENARIO = [
         "params": {
             "destination": "$ADDRESS_9",
             "quantity": 1 * 10**8,
+            "utxo_value": 10000,
         },
         "controls": [
             {

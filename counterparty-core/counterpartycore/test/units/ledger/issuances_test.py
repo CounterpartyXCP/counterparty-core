@@ -152,3 +152,83 @@ def test_issuances_functions(ledger_db, defaults, current_block_index):
     assert issuances.get_asset_name(ledger_db, 1, current_block_index) == "XCP"
     assert issuances.get_asset_name(ledger_db, 0, current_block_index) == "BTC"
     assert issuances.get_asset_name(ledger_db, 453, current_block_index) == 0
+
+
+def test_get_assets_last_issuance(state_db):
+    assert issuances.get_assets_last_issuance(
+        state_db,
+        [
+            "DIVISIBLE",
+            "NODIVISIBLE",
+            "CALLABLE",
+            "LOCKED",
+            "LOCKEDPREV",
+            "PARENT.already.issued",
+        ],
+    ) == {
+        "A95428959342453541": {
+            "asset": "A95428959342453541",
+            "asset_longname": "PARENT.already.issued",
+            "description": "Child of parent",
+            "divisible": True,
+            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "locked": False,
+        },
+        "BTC": {
+            "divisible": True,
+            "asset_longname": None,
+            "description": "The Bitcoin cryptocurrency",
+            "locked": False,
+            "issuer": None,
+        },
+        "XCP": {
+            "divisible": True,
+            "asset_longname": None,
+            "description": "The Counterparty protocol native currency",
+            "locked": True,
+            "issuer": None,
+        },
+        "CALLABLE": {
+            "asset_longname": None,
+            "description": "Callable asset",
+            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "divisible": True,
+            "locked": False,
+        },
+        "DIVISIBLE": {
+            "asset_longname": None,
+            "description": "Divisible asset",
+            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "divisible": True,
+            "locked": False,
+        },
+        "LOCKED": {
+            "asset_longname": None,
+            "description": "Locked asset",
+            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "divisible": True,
+            "locked": True,
+        },
+        "LOCKEDPREV": {
+            "asset_longname": None,
+            "description": "changed",
+            "issuer": "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+            "divisible": True,
+            "locked": True,
+        },
+        "PARENT.already.issued": {
+            "asset": "A95428959342453541",
+            "asset_longname": "PARENT.already.issued",
+            "description": "Child of parent",
+            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "divisible": True,
+            "locked": False,
+        },
+        "NODIVISIBLE": {
+            "asset_longname": None,
+            "description": "No divisible asset",
+            "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "divisible": False,
+            "locked": False,
+        },
+    }

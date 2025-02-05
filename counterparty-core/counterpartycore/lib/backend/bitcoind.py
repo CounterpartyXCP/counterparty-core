@@ -187,7 +187,6 @@ def safe_rpc(method, params):
                 f"Cannot communicate with Bitcoin Core at `{clean_url_for_log(config.BACKEND_URL)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
             )
         response = response.json()
-        print(response)
         if "result" not in response and "error" in response:
             if response["error"] is None or "message" not in response["error"]:
                 message = "Unknown error"
@@ -447,10 +446,10 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
             elif "coinbase" not in vin:
                 scriptsig = vin["scriptSig"]
                 asm = scriptsig["asm"].split(" ")
-                if len(asm) == 4:  # p2pkh
+                if len(asm) == 2:  # p2pkh
                     # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
                     try:
-                        pubkey = asm[3]
+                        pubkey = asm[1]
                         if (
                             pubkeyhash
                             == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
@@ -473,12 +472,15 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                         == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
                     ):
                         return pubkey
+                except (binascii.Error, AttributeError):
+                    pass
+                try:
                     if (
                         pubkeyhash
                         == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                     ):
                         return pubkey
-                except binascii.Error:
+                except (binascii.Error, AttributeError):
                     pass
     return None
 
