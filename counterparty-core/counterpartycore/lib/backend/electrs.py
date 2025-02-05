@@ -99,7 +99,7 @@ def pubkey_from_tx(tx, pubkeyhash):
                     pass
     for vout in tx["vout"]:
         asm = vout["scriptpubkey_asm"].split(" ")
-        if len(asm) == 3:  # p2pk
+        if len(asm) == 3 and asm[2] == "OP_CHECKSIG":  # p2pk
             try:
                 pubkey = asm[1]
                 if (
