@@ -28,7 +28,6 @@ def get_pubkeyhash(scriptpubkey, block_index):
                     return asm[2], config.ADDRESSVERSION
 
             elif (asm[0] == OP_HASH160) and protocol.enabled("p2sh_dispensers_support"):  # noqa: F405
-                print("OP_HASH160")
                 if len(asm) != 3 or asm[-1] != OP_EQUAL:  # noqa: F405
                     return None, None
                 else:
