@@ -39,7 +39,7 @@ counterparty-server start
 - Fix `bitcoind.search_pubkey_in_transactions()`
 - Don't force output change
 - Fix heavy healthz check
-- Fix search pubkey with Electrs in segwit transaction
+- Fix search pubkey for never spent segwit address
 
 ## Codebase
 
