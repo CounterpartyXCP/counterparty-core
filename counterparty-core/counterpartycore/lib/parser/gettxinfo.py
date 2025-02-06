@@ -382,7 +382,6 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     ]:
         if protocol.enabled("disable_vanilla_btc_dispense", block_index):
             raise BTCOnlyError("no data and not unspendable")
-
         if protocol.enabled("dispensers", block_index) and not composing:
             dispensers_outputs = get_dispensers_outputs(db, potential_dispensers)
             if len(dispensers_outputs) == 0:

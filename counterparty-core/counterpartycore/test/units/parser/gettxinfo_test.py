@@ -1,12 +1,15 @@
 import binascii
+import struct
 
 import pytest
 from arc4 import ARC4
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger import markets
+from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import deserialize, gettxinfo
 from counterpartycore.lib.utils import opcodes
 from counterpartycore.test.mocks.bitcoind import original_is_valid_der
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_get_tx_info(ledger_db, current_block_index, blockchain_mock):
@@ -961,19 +964,543 @@ def test_get_transaction_source_from_p2sh(monkeypatch):
 
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
 
-    assert gettxinfo.get_transaction_source_from_p2sh(
-        {"vin": [{"script_sig": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"}]},
-        p2sh_is_segwit=True,
-    ) == (None, b"", 10000)
+    with ProtocolChangesDisabled(["prevout_segwit_fix"]):
+        assert gettxinfo.get_transaction_source_from_p2sh(
+            {"vin": [{"script_sig": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"}]},
+            p2sh_is_segwit=True,
+        ) == (None, b"", 10000)
 
 
-def test_get_dispensers_outputs(ledger_db, monkeypatch):
+def test_get_dispensers_outputs(ledger_db, monkeypatch, defaults):
     dispensers = markets.get_dispensers(ledger_db, status=0)
-    print(dispensers)
+
+    def is_dispensable_mock(db, destination, amount):
+        return True if amount else False
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.messages.dispenser.is_dispensable", is_dispensable_mock
+    )
+
     potential_dispensers = [
         (dispensers[0]["source"], None),
+        (dispensers[0]["source"], 5),
+        (dispensers[1]["source"], 10),
     ]
-    for dispenser in dispensers:
-        potential_dispensers.append((dispenser["source"], 1))
 
-    assert gettxinfo.get_dispensers_outputs(ledger_db, potential_dispensers) == []
+    assert gettxinfo.get_dispensers_outputs(ledger_db, potential_dispensers) == [
+        (dispensers[0]["source"], 5),
+        (dispensers[1]["source"], 10),
+    ]
+
+
+def test_get_dispensers_tx_info(ledger_db, defaults):
+    dispensers = markets.get_dispensers(ledger_db, status=0)
+    assert gettxinfo.get_dispensers_tx_info(
+        defaults["addresses"][0],
+        [
+            (dispensers[0]["source"], 5),
+            (dispensers[1]["source"], 10),
+            (dispensers[0]["source"], None),
+            (None, 5),
+        ],
+    ) == (
+        defaults["addresses"][0],
+        dispensers[0]["source"],
+        10,
+        0,
+        b"\r\x00",
+        [
+            {"btc_amount": 5, "destination": dispensers[0]["source"], "out_index": 0},
+            {"btc_amount": 10, "destination": dispensers[1]["source"], "out_index": 1},
+        ],
+    )
+
+    with ProtocolChangesDisabled(["multiple_dispenses"]):
+        assert gettxinfo.get_dispensers_tx_info(
+            defaults["addresses"][0],
+            [
+                (dispensers[0]["source"], 5),
+                (dispensers[1]["source"], 10),
+            ],
+        ) == (defaults["addresses"][0], dispensers[0]["source"], 5, 0, b"\r\x00", [])
+
+
+def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch):
+    with pytest.raises(exceptions.DecodeError, match="coinbase transaction"):
+        gettxinfo.get_tx_info_new(ledger_db, {"coinbase": True}, current_block_index)
+
+    with pytest.raises(exceptions.DecodeError, match="no parsed_vouts in decoded_tx"):
+        gettxinfo.get_tx_info_new(ledger_db, {"coinbase": False}, current_block_index)
+
+    with pytest.raises(exceptions.DecodeError, match="error from rust"):
+        gettxinfo.get_tx_info_new(
+            ledger_db,
+            {"coinbase": False, "parsed_vouts": Exception("error from rust")},
+            current_block_index,
+        )
+
+    with pytest.raises(exceptions.DecodeError, match="unrecognised output type"):
+        gettxinfo.get_tx_info_new(
+            ledger_db, {"coinbase": False, "parsed_vouts": "DecodeError"}, current_block_index
+        )
+
+    source = defaults["addresses"][1]
+    destinations = [defaults["addresses"][0]]
+    btc_amount = 100
+    fee = 0
+    data = b"P2SH"
+    potential_dispensers = [
+        (defaults["addresses"][0], None),
+        (defaults["addresses"][0], 5),
+        (defaults["addresses"][0], 10),
+    ]
+    monkeypatch.setattr(
+        gettxinfo, "get_transaction_source_from_p2sh", lambda *args: (source, b"", btc_amount)
+    )
+
+    with pytest.raises(exceptions.BTCOnlyError, match="no data and not unspendable"):
+        gettxinfo.get_tx_info_new(
+            ledger_db,
+            {
+                "coinbase": False,
+                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+            },
+            current_block_index,
+        )
+
+    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense"]):
+        with pytest.raises(exceptions.BTCOnlyError, match="no data and not unspendable"):
+            gettxinfo.get_tx_info_new(
+                ledger_db,
+                {
+                    "coinbase": False,
+                    "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                },
+                current_block_index,
+            )
+
+    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense"]):
+        with pytest.raises(exceptions.BTCOnlyError, match="no data and not unspendable"):
+            gettxinfo.get_tx_info_new(
+                ledger_db,
+                {
+                    "coinbase": False,
+                    "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                },
+                current_block_index,
+                composing=True,
+            )
+
+    assert gettxinfo.get_tx_info_new(
+        ledger_db,
+        {
+            "coinbase": False,
+            "parsed_vouts": ([config.UNSPENDABLE], btc_amount, fee, data, potential_dispensers),
+        },
+        current_block_index,
+        composing=True,
+    ) == (defaults["addresses"][1], config.UNSPENDABLE, 100, 100, b"", [])
+
+    monkeypatch.setattr(
+        gettxinfo,
+        "get_dispensers_outputs",
+        lambda *args: [
+            (defaults["addresses"][0], 5),
+            (defaults["addresses"][0], 10),
+        ],
+    )
+    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense"]):
+        assert gettxinfo.get_tx_info_new(
+            ledger_db,
+            {
+                "coinbase": False,
+                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+            },
+            current_block_index,
+        ) == (
+            defaults["addresses"][1],
+            defaults["addresses"][0],
+            10,
+            0,
+            b"\r\x00",
+            [
+                {"btc_amount": 5, "destination": defaults["addresses"][0], "out_index": 0},
+                {"btc_amount": 10, "destination": defaults["addresses"][0], "out_index": 1},
+            ],
+        )
+
+    monkeypatch.setattr(
+        gettxinfo, "get_transaction_sources", lambda *args: (defaults["addresses"][1], 10000)
+    )
+    monkeypatch.setattr(gettxinfo, "check_signatures_sighash_flag", lambda *args: None)
+
+    def unpack_mock(*args):
+        raise struct.error("error")
+
+    monkeypatch.setattr("counterpartycore.lib.parser.messagetype.unpack", unpack_mock)
+
+    assert gettxinfo.get_tx_info_new(
+        ledger_db,
+        {
+            "coinbase": False,
+            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+        },
+        current_block_index,
+    ) == (defaults["addresses"][1], defaults["addresses"][0], 100, 10000, b"z", [])
+
+
+def test_get_tx_info_new_3b(ledger_db, current_block_index, defaults, monkeypatch):
+    destinations = [defaults["addresses"][0]]
+    btc_amount = 100
+    fee = 0
+    potential_dispensers = [
+        (defaults["addresses"][0], None),
+        (defaults["addresses"][0], 5),
+        (defaults["addresses"][0], 10),
+    ]
+    monkeypatch.setattr(
+        gettxinfo, "get_transaction_sources", lambda *args: (defaults["addresses"][1], 10000)
+    )
+    monkeypatch.setattr(gettxinfo, "check_signatures_sighash_flag", lambda *args: None)
+
+    def unpack_mock(*args):
+        return dispenser.DISPENSE_ID, b""
+
+    monkeypatch.setattr("counterpartycore.lib.parser.messagetype.unpack", unpack_mock)
+
+    assert gettxinfo.get_tx_info_new(
+        ledger_db,
+        {
+            "coinbase": False,
+            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+        },
+        current_block_index,
+    ) == (
+        defaults["addresses"][1],
+        defaults["addresses"][0],
+        10,
+        0,
+        b"\r\x00",
+        [
+            {"destination": defaults["addresses"][0], "btc_amount": 5, "out_index": 0},
+            {"destination": defaults["addresses"][0], "btc_amount": 10, "out_index": 1},
+        ],
+    )
+
+
+def test_get_tx_info_4(ledger_db, defaults, monkeypatch):
+    destinations = [defaults["addresses"][0]]
+    btc_amount = 100
+    fee = 0
+    potential_dispensers = [
+        (defaults["addresses"][0], None),
+        (defaults["addresses"][0], 5),
+        (defaults["addresses"][0], 10),
+    ]
+    monkeypatch.setattr(
+        gettxinfo, "get_transaction_sources", lambda *args: (defaults["addresses"][1], 10000)
+    )
+    monkeypatch.setattr(gettxinfo, "check_signatures_sighash_flag", lambda *args: None)
+
+    def unpack_mock(*args):
+        return dispenser.DISPENSE_ID, b""
+
+    monkeypatch.setattr("counterpartycore.lib.parser.messagetype.unpack", unpack_mock)
+
+    assert gettxinfo._get_tx_info(
+        ledger_db,
+        {
+            "coinbase": False,
+            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+        },
+        block_index=None,
+    ) == (
+        defaults["addresses"][1],
+        defaults["addresses"][0],
+        10,
+        0,
+        b"\r\x00",
+        [
+            {"destination": defaults["addresses"][0], "btc_amount": 5, "out_index": 0},
+            {"destination": defaults["addresses"][0], "btc_amount": 10, "out_index": 1},
+        ],
+    )
+
+    with ProtocolChangesDisabled(["p2sh_addresses"]):
+        assert gettxinfo._get_tx_info(
+            ledger_db,
+            {
+                "coinbase": False,
+                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+            },
+            block_index=None,
+        ) == (
+            defaults["addresses"][1],
+            defaults["addresses"][0],
+            10,
+            0,
+            b"\r\x00",
+            [
+                {"destination": defaults["addresses"][0], "btc_amount": 5, "out_index": 0},
+                {"destination": defaults["addresses"][0], "btc_amount": 10, "out_index": 1},
+            ],
+        )
+
+    with ProtocolChangesDisabled(["p2sh_addresses", "multisig_addresses"]):
+        with pytest.raises(KeyError):
+            assert gettxinfo._get_tx_info(
+                ledger_db,
+                {
+                    "coinbase": False,
+                    "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+                },
+                block_index=None,
+            ) == (
+                defaults["addresses"][1],
+                defaults["addresses"][0],
+                10,
+                0,
+                b"\r\x00",
+                [
+                    {"destination": defaults["addresses"][0], "btc_amount": 5, "out_index": 0},
+                    {"destination": defaults["addresses"][0], "btc_amount": 10, "out_index": 1},
+                ],
+            )
+
+
+def test_select_utxo_destination_2():
+    assert (
+        gettxinfo.select_utxo_destination(
+            [
+                {"script_pub_key": "6a0b68656c6c6f20776f726c64"},  # OP_RETURN
+                {"script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"},  # P2PKH
+            ]
+        )
+        == 1
+    )
+
+    assert (
+        gettxinfo.select_utxo_destination(
+            [
+                {"script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"},  # P2PKH
+                {"script_pub_key": "6a0b68656c6c6f20776f726c64"},  # OP_RETURN
+                {"script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"},  # P2PKH
+            ]
+        )
+        == 0
+    )
+
+    assert (
+        gettxinfo.select_utxo_destination(
+            [
+                {"script_pub_key": "6a0b68656c6c6f20776f726c64"},  # OP_RETURN
+            ]
+        )
+        is None
+    )
+
+
+def test_get_inputs_with_balance(ledger_db, defaults):
+    utxo = ledger_db.execute(
+        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        (defaults["addresses"][0],),
+    ).fetchone()["utxo"]
+    txid, vout = utxo.split(":")
+
+    assert gettxinfo.get_inputs_with_balance(ledger_db, {"vin": [{"hash": txid, "n": vout}]}) == [
+        utxo
+    ]
+
+
+def test_get_first_non_op_return_output():
+    assert (
+        gettxinfo.get_first_non_op_return_output(
+            {
+                "tx_hash": "tx_hash",
+                "vout": [
+                    {"script_pub_key": "6a0b68656c6c6f20776f726c64"},  # OP_RETURN
+                    {
+                        "script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+                    },  # P2PKH
+                ],
+            }
+        )
+        == "tx_hash:1"
+    )
+
+    assert (
+        gettxinfo.get_first_non_op_return_output(
+            {
+                "tx_hash": "tx_hash",
+                "vout": [
+                    {
+                        "script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+                    },  # P2PKH
+                    {"script_pub_key": "6a0b68656c6c6f20776f726c64"},  # OP_RETURN
+                    {
+                        "script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+                    },  # P2PKH
+                ],
+            }
+        )
+        == "tx_hash:0"
+    )
+
+    assert (
+        gettxinfo.get_first_non_op_return_output(
+            {
+                "tx_hash": "tx_hash",
+                "vout": [
+                    {"script_pub_key": "6a0b68656c6c6f20776f726c64"},  # OP_RETURN
+                ],
+            }
+        )
+        is None
+    )
+
+
+def test_get_op_return_vout():
+    assert (
+        gettxinfo.get_op_return_vout({"vout": [{"script_pub_key": "6a0b68656c6c6f20776f726c64"}]})
+        == 0
+    )
+
+    assert (
+        gettxinfo.get_op_return_vout(
+            {"vout": [{"script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"}]}
+        )
+        is None
+    )
+
+    assert (
+        gettxinfo.get_op_return_vout(
+            {
+                "vout": [
+                    {"script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"},
+                    {"script_pub_key": "6a0b68656c6c6f20776f726c64"},
+                ]
+            }
+        )
+        == 1
+    )
+
+    assert gettxinfo.get_op_return_vout({"vout": [{"script_pub_key": "z"}]}) is None
+
+
+def test_get_utxos_info(ledger_db, defaults):
+    utxo = ledger_db.execute(
+        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        (defaults["addresses"][0],),
+    ).fetchone()["utxo"]
+    txid, vout = utxo.split(":")
+
+    assert gettxinfo.get_utxos_info(
+        ledger_db,
+        {
+            "tx_id": "tx_id",
+            "tx_hash": "tx_hash",
+            "vin": [{"hash": txid, "n": vout}],
+            "vout": [{"script_pub_key": "6a0b68656c6c6f20776f726c64"}],
+        },
+    ) == [utxo, "", "1", "0"]
+
+    assert gettxinfo.get_utxos_info(
+        ledger_db,
+        {
+            "tx_id": "tx_id",
+            "tx_hash": "tx_hash",
+            "vin": [{"hash": txid, "n": vout}],
+            "vout": [{"script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"}],
+        },
+    ) == [utxo, "tx_hash:0", "1", ""]
+
+    assert gettxinfo.get_utxos_info(
+        ledger_db,
+        {
+            "tx_id": "tx_id",
+            "tx_hash": "tx_hash",
+            "vin": [{"hash": txid, "n": vout}],
+            "vout": [
+                {"script_pub_key": "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"},
+                {"script_pub_key": "6a0b68656c6c6f20776f726c64"},
+            ],
+        },
+    ) == [utxo, "tx_hash:0", "2", "1"]
+
+    assert gettxinfo.get_utxos_info(
+        ledger_db,
+        {
+            "tx_id": "tx_id",
+            "tx_hash": "tx_hash",
+            "vin": [{"hash": txid, "n": vout}],
+            "vout": [{"script_pub_key": "z"}],
+        },
+    ) == [utxo, "tx_hash:0", "1", ""]
+
+    assert (
+        gettxinfo.get_utxos_info(
+            ledger_db,
+            {
+                "tx_id": "c80143886181ebbc782d23a50acca0f5ea7ac005d3164d7c76fc5e14f72d47c8",  # in KNOWN_SOURCES
+                "tx_hash": "tx_hash",
+                "vin": [{"hash": txid, "n": vout}],
+                "vout": [{"script_pub_key": "z"}],
+            },
+        )
+        == ["", "tx_hash:0", "1", ""]
+    )
+
+
+def test_update_utxo_balances_cache(ledger_db, defaults, current_block_index):
+    utxo = ledger_db.execute(
+        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        (defaults["addresses"][0],),
+    ).fetchone()["utxo"]
+
+    utxos_info = [utxo, "tx_hash:0", "2", "1"]
+
+    assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(utxo)
+
+    gettxinfo.update_utxo_balances_cache(
+        ledger_db, utxos_info, b"", defaults["addresses"][1], current_block_index
+    )
+
+    assert not ledger.caches.UTXOBalancesCache().has_balance(utxo)
+    assert ledger.caches.UTXOBalancesCache().has_balance("tx_hash:0")
+
+
+def test_get_tx_info_5(ledger_db, defaults, monkeypatch, current_block_index):
+    source = defaults["addresses"][1]
+    destinations = [defaults["addresses"][0]]
+    btc_amount = 100
+    fee = 0
+    data = b"P2SH"
+    potential_dispensers = [
+        (defaults["addresses"][0], None),
+        (defaults["addresses"][0], 5),
+        (defaults["addresses"][0], 10),
+    ]
+    monkeypatch.setattr(
+        gettxinfo, "get_transaction_source_from_p2sh", lambda *args: (source, b"", btc_amount)
+    )
+
+    utxo = ledger_db.execute(
+        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        (defaults["addresses"][0],),
+    ).fetchone()["utxo"]
+    txid, vout = utxo.split(":")
+
+    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense"]):
+        result = gettxinfo.get_tx_info(
+            ledger_db,
+            {
+                "coinbase": False,
+                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                "tx_id": "tx_id",
+                "tx_hash": "tx_hash",
+                "vin": [{"hash": txid, "n": vout}],
+                "vout": [{"script_pub_key": "6a0b68656c6c6f20776f726c64"}],
+            },
+            current_block_index,
+        )
+        assert result == (b"", None, None, None, None, None, [utxo, "", "1", "0"])
