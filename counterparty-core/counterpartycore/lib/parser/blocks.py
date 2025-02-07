@@ -48,7 +48,7 @@ from counterpartycore.lib.messages import (
 from counterpartycore.lib.messages.versions import enhancedsend, mpma
 from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -817,32 +817,16 @@ def rollback_empty_block(db):
         rollback(db, block_index=block["block_index"], force=True)
 
 
-def check_database_version(db):
-    # Update version if new database.
-    if CurrentState().current_block_index() <= config.BLOCK_FIRST:
-        logger.debug("New database detected. Updating database version.")
-        database.update_version(db)
-        return
-    if config.FORCE:
-        logger.debug("FORCE mode enabled. Skipping database version check.")
-        return
-    logger.debug("Checking Ledger database version...")
+def execute_upgrade_actions(db, upgrade_actions):
+    for action in upgrade_actions:
+        if action[0] == "reparse":
+            reparse(db, block_index=action[1])
+        elif action[0] == "rollback":
+            rollback(db, block_index=action[1])
 
-    database_version = database.get_config_value(db, "VERSION_STRING")
-    if database_version != config.VERSION_STRING:
-        upgrade_actions = config.UPGRADE_ACTIONS[config.NETWORK_NAME].get(config.VERSION_STRING, [])
-        logger.info("Database version mismatch. Required actions: %s", upgrade_actions)
-        for action in upgrade_actions:
-            if action[0] == "reparse":
-                reparse(db, block_index=action[1])
-            elif action[0] == "rollback":
-                rollback(db, block_index=action[1])
-        # refresh the current block index
-        CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
-        # update the database version
-        database.update_version(db)
-    else:
-        logger.debug("Ledger database is up to date.")
+
+def check_database_version(db):
+    check.check_database_version(db, execute_upgrade_actions, "Ledger")
 
 
 def start_rsfetcher():

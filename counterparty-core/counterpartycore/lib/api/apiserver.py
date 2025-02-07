@@ -17,13 +17,14 @@ from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
 from sentry_sdk import start_span as start_sentry_span
 
-from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, verbose, wsgi
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
+from counterpartycore.lib.parser import check
 from counterpartycore.lib.utils import address, database, helpers
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
 
@@ -475,33 +476,17 @@ def init_flask_app():
     return app
 
 
-def check_database_version(state_db):
-    # Update version if new database.
-    if CurrentState().current_block_index() <= config.BLOCK_FIRST:
-        logger.debug("New database detected. Updating database version.")
-        database.update_version(state_db)
-        return
-    if config.FORCE:
-        logger.debug("FORCE mode enabled. Skipping database version check.")
-        return
-    logger.debug("Checking State database version...")
+def execute_upgrade_actions(state_db, upgrade_actions):
+    for action in upgrade_actions:
+        if action[0] in ["rollback", "reparse"]:
+            dbbuilder.rollback_state_db(state_db, block_index=action[1])
+            break  # no need to continue
+        if action[0] == "refresh_state_db":
+            dbbuilder.refresh_state_db(state_db)
 
-    database_version = database.get_config_value(state_db, "VERSION_STRING")
-    if database_version != config.VERSION_STRING:
-        upgrade_actions = config.UPGRADE_ACTIONS[config.NETWORK_NAME].get(config.VERSION_STRING, [])
-        logger.info("Database version mismatch. Required actions: %s", upgrade_actions)
-        for action in upgrade_actions:
-            if action[0] in ["rollback", "reparse"]:
-                dbbuilder.rollback_state_db(state_db, block_index=action[1])
-                break  # no need to continue
-            if action[0] == "refresh_state_db":
-                dbbuilder.refresh_state_db(state_db)
-        # refresh the current block index
-        CurrentState().set_current_block_index(ledger.blocks.last_db_index(state_db))
-        # update the database version
-        database.update_version(state_db)
-    else:
-        logger.debug("State database is up to date.")
+
+def check_database_version(state_db):
+    check.check_database_version(state_db, execute_upgrade_actions, "State")
 
 
 def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):

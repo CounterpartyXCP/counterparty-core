@@ -9,6 +9,7 @@ import requests
 
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -1063,3 +1064,27 @@ def software_version():
 
     logger.debug("Version check passed.")
     return True
+
+
+def check_database_version(db, upgrade_actions_callback, database_name):
+    # Update version if new database.
+    if CurrentState().current_block_index() <= config.BLOCK_FIRST:
+        logger.debug("New database detected. Updating database version.")
+        database.update_version(db)
+        return
+    if config.FORCE:
+        logger.debug("FORCE mode enabled. Skipping database version check.")
+        return
+    logger.debug("Checking Ledger database version...")
+
+    database_version = database.get_config_value(db, "VERSION_STRING")
+    if database_version != config.VERSION_STRING:
+        upgrade_actions = config.UPGRADE_ACTIONS[config.NETWORK_NAME].get(config.VERSION_STRING, [])
+        logger.info("Database version mismatch. Required actions: %s", upgrade_actions)
+        upgrade_actions_callback(db, upgrade_actions)
+        # refresh the current block index
+        CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
+        # update the database version
+        database.update_version(db)
+    else:
+        logger.debug(f"{database_name} database is up to date.")
