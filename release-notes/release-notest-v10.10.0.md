@@ -40,6 +40,9 @@ counterparty-server start
 - Don't force output change
 - Fix heavy healthz check
 - Fix search pubkey for never spent segwit address
+- Fix shutdown with Gunicorn
+- Same log file for all Gunicorn processes
+- Fix double log in access file on API query
 
 ## Codebase
 
