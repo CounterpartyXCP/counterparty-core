@@ -753,10 +753,16 @@ def start_all(args, log_stream=None):
             follower_daemon.stop()
         if asset_conservation_checker:
             asset_conservation_checker.stop()
+
+        if apiserver_v2:
+            logger.info("Waiting for API processes to stop...")
+            apiserver_v2.stop()
+            while not apiserver_v2.has_stopped():
+                time.sleep(0.1)
+
         # then close the database with write access
         if db:
             database.close(db)
-        log.shutdown()
 
         # Now it's safe to check for WAL files
         for db_name, db_path in [
@@ -766,14 +772,15 @@ def start_all(args, log_stream=None):
             try:
                 database.check_wal_file(db_path)
             except exceptions.WALFileFoundError:
-                logger.warning(
-                    f"{db_name} WAL file detected. To ensure no data corruption has occurred, run `counterparty-server check-db`."
-                )
+                db_file = config.DATABASE if db_name == "Ledger DB" else config.STATE_DATABASE
+                db = database.get_db_connection(db_file, read_only=False, check_wal=False)
+                db.close()
             except exceptions.DatabaseError:
                 logger.warning(
                     f"{db_name} is in use by another process and was unable to be closed correctly."
                 )
 
+        log.shutdown()
         logger.info("Shutdown complete.")
 
 

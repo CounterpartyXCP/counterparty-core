@@ -2,6 +2,7 @@ import errno
 import logging
 import multiprocessing
 import os
+import signal
 import sys
 import threading
 
@@ -17,7 +18,7 @@ from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, helpers
 
 multiprocessing.set_start_method("spawn", force=True)
 
@@ -71,6 +72,7 @@ class GunicornArbiter(Arbiter):
         self.graceful_timeout = 30
         self.max_requests = 1000
         self.max_requests_jitter = 50
+        self.workers_pids = []
         self.init_loggers()
 
     def init_loggers(self):
@@ -98,6 +100,7 @@ class GunicornArbiter(Arbiter):
         if pid != 0:
             worker.pid = pid
             self.WORKERS[pid] = worker
+            self.workers_pids.append(pid)
             return pid
 
         # Child process
@@ -107,7 +110,7 @@ class GunicornArbiter(Arbiter):
         self.init_loggers()
         try:
             gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
-            logger.trace("Booting Gunicorn worker with pid: %s", worker.pid)
+            logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()
             sys.exit(0)
@@ -165,7 +168,19 @@ class GunicornArbiter(Arbiter):
                 raise
 
     def kill_all_workers(self):
-        self.reap_workers()
+        if len(self.workers_pids) == 0:
+            return
+        for pid in self.workers_pids:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+        while True:
+            stopped = [not helpers.is_process_alive(pid) for pid in self.workers_pids]
+            if all(stopped):
+                break
+        logger.info(f"All workers killed: {self.workers_pids}")
+        self.workers_pids = []
 
 
 class GunicornApplication(gunicorn.app.base.BaseApplication):
@@ -187,6 +202,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.ledger_db = None
         self.state_db = None
         self.current_state_thread = NodeStatusCheckerThread()
+        self.master_pid = os.getpid()
         super().__init__()
 
     def load_config(self):
@@ -202,8 +218,9 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.current_state_thread.start()
         return self.application
 
-    def run(self):
+    def run(self, server_ready_value):
         try:
+            self.server_ready_value = server_ready_value
             self.arbiter = GunicornArbiter(self)
             self.arbiter.run()
         except RuntimeError as e:
@@ -212,10 +229,11 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             sys.exit(1)
 
     def stop(self):
-        logger.warning("Stopping Gunicorn")
         self.current_state_thread.stop()
-        if self.arbiter:
+        if self.arbiter and self.master_pid == os.getpid():
+            logger.info("Stopping Gunicorn")
             self.arbiter.kill_all_workers()
+            self.server_ready_value.value = 2
 
 
 class WerkzeugApplication:
@@ -225,7 +243,7 @@ class WerkzeugApplication:
         self.current_state_thread = NodeStatusCheckerThread()
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
 
-    def run(self):
+    def run(self, server_ready_value=None):
         self.current_state_thread.start()
         self.server.serve_forever()
 
@@ -244,7 +262,7 @@ class WaitressApplication:
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )
 
-    def run(self):
+    def run(self, server_ready_value=None):
         self.current_state_thread.start()
         self.server.run()
 
@@ -265,9 +283,9 @@ class WSGIApplication:
         else:
             self.server = WaitressApplication(self.app, self.args)
 
-    def run(self):
+    def run(self, server_ready_value):
         logger.info("Starting WSGI Server thread...")
-        self.server.run()
+        self.server.run(server_ready_value)
 
     def stop(self):
         logger.info("Stopping WSGI Server thread...")

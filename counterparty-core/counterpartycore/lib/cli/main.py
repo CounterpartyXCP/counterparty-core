@@ -332,7 +332,9 @@ CONFIG_ARGS = [
         ("--waitress-threads",),
         {
             "type": int,
-            "default": 10,
+            "default": 2 * os.cpu_count()
+            + 1
+            - 2,  # - 2 to account for the follow and api watcher processes,
             "help": "number of threads for the Waitress WSGI server (if enabled)",
         },
     ],

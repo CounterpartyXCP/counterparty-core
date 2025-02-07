@@ -532,7 +532,7 @@ def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
         app.app_context().push()
         server_ready_value.value = 1
 
-        wsgi_server.run()
+        wsgi_server.run(server_ready_value)
 
     except KeyboardInterrupt:
         pass
@@ -555,16 +555,6 @@ def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
         logger.info("API Server stopped.")
 
 
-def is_process_alive(pid):
-    """Check For the existence of a unix pid."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    else:
-        return True
-
-
 # This thread is used for the following two reasons:
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
@@ -578,7 +568,7 @@ class ParentProcessChecker(threading.Thread):
 
     def run(self):
         try:
-            while not self.stop_event.is_set() and is_process_alive(self.parent_pid):
+            while not self.stop_event.is_set() and helpers.is_process_alive(self.parent_pid):
                 time.sleep(1)
             logger.debug("Parent process stopped. Exiting...")
             if self.wsgi_server is not None:
@@ -616,12 +606,15 @@ class APIServer(object):
     def stop(self):
         logger.info("Stopping API Server process...")
         if self.process.is_alive():
-            self.process.terminate()
-            self.process.join(timeout=2)
+            try:
+                os.kill(self.process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            self.process.join(timeout=10)
             if self.process.is_alive():
                 logger.error("API Server process did not stop in time. Terminating forcefully...")
                 self.process.kill()
         logger.info("API Server process stopped.")
 
     def has_stopped(self):
-        return self.stop_event.is_set()
+        return self.server_ready_value.value == 2

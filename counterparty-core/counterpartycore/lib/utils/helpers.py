@@ -1,6 +1,7 @@
 import decimal
 import itertools
 import json
+import os
 import string
 from operator import itemgetter
 from urllib.parse import urlparse
@@ -116,3 +117,13 @@ def is_valid_tx_hash(tx_hash):
     if all(c in string.hexdigits for c in tx_hash) and len(tx_hash) == 64:
         return True
     return False
+
+
+def is_process_alive(pid):
+    """Check For the existence of a unix pid."""
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True
