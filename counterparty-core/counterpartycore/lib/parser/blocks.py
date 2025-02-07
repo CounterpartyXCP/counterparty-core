@@ -820,9 +820,11 @@ def rollback_empty_block(db):
 def check_database_version(db):
     # Update version if new database.
     if CurrentState().current_block_index() <= config.BLOCK_FIRST:
+        logger.debug("New database detected. Updating database version.")
         database.update_version(db)
         return
     if config.FORCE:
+        logger.debug("FORCE mode enabled. Skipping database version check.")
         return
     logger.debug("Checking Ledger database version...")
 
@@ -839,6 +841,8 @@ def check_database_version(db):
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
         # update the database version
         database.update_version(db)
+    else:
+        logger.debug("Ledger database is up to date.")
 
 
 def start_rsfetcher():

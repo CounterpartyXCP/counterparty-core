@@ -478,9 +478,11 @@ def init_flask_app():
 def check_database_version(state_db):
     # Update version if new database.
     if CurrentState().current_block_index() <= config.BLOCK_FIRST:
+        logger.debug("New database detected. Updating database version.")
         database.update_version(state_db)
         return
     if config.FORCE:
+        logger.debug("FORCE mode enabled. Skipping database version check.")
         return
     logger.debug("Checking State database version...")
 
@@ -494,11 +496,12 @@ def check_database_version(state_db):
                 break  # no need to continue
             if action[0] == "refresh_state_db":
                 dbbuilder.refresh_state_db(state_db)
-
         # refresh the current block index
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(state_db))
         # update the database version
         database.update_version(state_db)
+    else:
+        logger.debug("State database is up to date.")
 
 
 def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):

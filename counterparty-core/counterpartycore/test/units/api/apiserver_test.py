@@ -1,6 +1,7 @@
 from counterpartycore.lib import config
-from counterpartycore.lib.api import apiwatcher, composer
+from counterpartycore.lib.api import apiserver, apiwatcher, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -225,3 +226,50 @@ def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults):
         "dispenser_tx_hash": dispenses["dispenser_tx_hash"],
         "btc_amount": 100,
     }
+
+
+def test_check_database_version(state_db, test_helpers, caplog, monkeypatch):
+    config.UPGRADE_ACTIONS["regtest"] = {
+        "10.9.1": [("refresh_state_db",), ("reparse", 100), ("rollback", 100)],
+    }
+
+    block_first = config.BLOCK_FIRST
+    config.BLOCK_FIRST = CurrentState().current_block_index()
+    with test_helpers.capture_log(caplog, "New database detected. Updating database version."):
+        apiserver.check_database_version(state_db)
+    config.BLOCK_FIRST = block_first
+
+    config.FORCE = True
+    with test_helpers.capture_log(caplog, "FORCE mode enabled. Skipping database version check."):
+        apiserver.check_database_version(state_db)
+    config.FORCE = False
+
+    version_string = config.VERSION_STRING
+    state_db.execute("UPDATE config SET value = '9.0.0' WHERE name = 'VERSION_STRING'")
+    config.VERSION_STRING = "9.0.0"
+    with test_helpers.capture_log(caplog, "State database is up to date."):
+        apiserver.check_database_version(state_db)
+
+    config.VERSION_STRING = "10.9.1"
+
+    def rollback_mock(db, block_index):
+        apiserver.logger.info("Rolling back to block %s", block_index)
+
+    def refresh_mock(db):
+        apiserver.logger.info("Refreshing state database")
+
+    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.rollback_state_db", rollback_mock)
+    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.refresh_state_db", refresh_mock)
+
+    with test_helpers.capture_log(
+        caplog,
+        [
+            "Required actions: [('refresh_state_db',), ('reparse', 100), ('rollback', 100)]",
+            "Refreshing state database",
+            "Rolling back to block 100",
+            "Database version number updated.",
+        ],
+    ):
+        apiserver.check_database_version(state_db)
+
+    config.VERSION_STRING = version_string
