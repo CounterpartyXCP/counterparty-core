@@ -823,6 +823,12 @@ def execute_upgrade_actions(db, upgrade_actions):
             reparse(db, block_index=action[1])
         elif action[0] == "rollback":
             rollback(db, block_index=action[1])
+        elif action[0] == "clear_not_supported_cache":
+            cache_path = os.path.join(
+                config.CACHE_DIR, f"not_supported_tx_cache.{config.NETWORK_NAME}.txt"
+            )
+            if os.path.exists(cache_path):
+                os.remove(cache_path)
 
 
 def check_database_version(db):

@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import send
@@ -63,7 +66,12 @@ def test_parse_tx_multisig(ledger_db, defaults, blockchain_mock, test_helpers):
 
 def test_check_database_version(ledger_db, test_helpers, caplog, monkeypatch):
     config.UPGRADE_ACTIONS["regtest"] = {
-        "10.9.1": [("refresh_state_db",), ("reparse", 100), ("rollback", 100)],
+        "10.9.1": [
+            ("refresh_state_db",),
+            ("reparse", 100),
+            ("rollback", 100),
+            ("clear_not_supported_cache",),
+        ],
     }
 
     block_first = config.BLOCK_FIRST
@@ -94,10 +102,16 @@ def test_check_database_version(ledger_db, test_helpers, caplog, monkeypatch):
     monkeypatch.setattr("counterpartycore.lib.parser.blocks.rollback", rollback_mock)
     monkeypatch.setattr("counterpartycore.lib.parser.blocks.reparse", reparse_mock)
 
+    cache_dir = config.CACHE_DIR
+    config.CACHE_DIR = tempfile.mkdtemp()
+    not_supported_file = os.path.join(config.CACHE_DIR, "not_supported_tx_cache.regtest.txt")
+    with open(not_supported_file, "w") as f:
+        f.write("test")
+
     with test_helpers.capture_log(
         caplog,
         [
-            "Required actions: [('refresh_state_db',), ('reparse', 100), ('rollback', 100)]",
+            "Required actions: [('refresh_state_db',), ('reparse', 100), ('rollback', 100), ('clear_not_supported_cache',)]",
             "Re-parsing from block 100",
             "Rolling back to block 100",
             "Database version number updated.",
@@ -105,4 +119,7 @@ def test_check_database_version(ledger_db, test_helpers, caplog, monkeypatch):
     ):
         blocks.check_database_version(ledger_db)
 
+    assert not os.path.exists(not_supported_file)
+
     config.VERSION_STRING = version_string
+    config.CACHE_DIR = cache_dir
