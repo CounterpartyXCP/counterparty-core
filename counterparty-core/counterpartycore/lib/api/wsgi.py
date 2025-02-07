@@ -246,6 +246,7 @@ class WerkzeugApplication:
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
 
     def run(self, server_ready_value=None):
+        self.server_ready_value = server_ready_value
         self.current_state_thread.start()
         self.server.serve_forever()
 
@@ -253,6 +254,7 @@ class WerkzeugApplication:
         self.current_state_thread.stop()
         self.server.shutdown()
         self.server.server_close()
+        self.server_ready_value.value = 2
 
 
 class WaitressApplication:
@@ -265,12 +267,14 @@ class WaitressApplication:
         )
 
     def run(self, server_ready_value=None):
+        self.server_ready_value = server_ready_value
         self.current_state_thread.start()
         self.server.run()
 
     def stop(self):
         self.current_state_thread.stop()
         self.server.close()
+        self.server_ready_value.value = 2
 
 
 class WSGIApplication:
