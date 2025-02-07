@@ -73,6 +73,7 @@ class GunicornArbiter(Arbiter):
         self.max_requests = 1000
         self.max_requests_jitter = 50
         self.workers_pids = []
+        self.worker_id = 0
         self.init_loggers()
 
     def init_loggers(self):
@@ -101,12 +102,13 @@ class GunicornArbiter(Arbiter):
             worker.pid = pid
             self.WORKERS[pid] = worker
             self.workers_pids.append(pid)
+            self.worker_id = len(self.workers_pids)
             return pid
 
         # Child process
         global logger  # noqa F811
         worker.pid = os.getpid()
-        logger = log.re_set_up(f".gunicorn.{worker.pid}", api=True)
+        logger = log.re_set_up("", api=True)
         self.init_loggers()
         try:
             gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
