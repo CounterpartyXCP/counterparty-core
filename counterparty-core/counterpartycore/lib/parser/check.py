@@ -1068,7 +1068,8 @@ def software_version():
 
 def check_database_version(db, upgrade_actions_callback, database_name):
     # Update version if new database.
-    last_block_index = ledger.blocks.last_db_index(db)
+    with database.LedgerDBConnectionPool().connection() as ledger_db:
+        last_block_index = ledger.blocks.last_db_index(ledger_db)
     if last_block_index <= config.BLOCK_FIRST:
         logger.debug("New database detected. Updating database version.")
         database.update_version(db)

@@ -1,7 +1,6 @@
-from counterpartycore.lib import config
+from counterpartycore.lib import config, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -228,13 +227,13 @@ def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults):
     }
 
 
-def test_check_database_version(state_db, test_helpers, caplog, monkeypatch):
+def test_check_database_version(state_db, ledger_db, test_helpers, caplog, monkeypatch):
     config.UPGRADE_ACTIONS["regtest"] = {
         "10.9.1": [("refresh_state_db",), ("reparse", 100), ("rollback", 100)],
     }
 
     block_first = config.BLOCK_FIRST
-    config.BLOCK_FIRST = CurrentState().current_block_index()
+    config.BLOCK_FIRST = ledger.blocks.last_db_index(ledger_db)
     with test_helpers.capture_log(caplog, "New database detected. Updating database version."):
         apiserver.check_database_version(state_db)
     config.BLOCK_FIRST = block_first
