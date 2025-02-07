@@ -49,6 +49,7 @@ counterparty-server start
 - Rename everywhere `testnet` to `testnet3`
 - Add `testnet4` and `regtest` profile in `docker-compose.yaml`
 - Restore Docker Composer, Compare Hashes and Tesnet4 Reparse tests
+- Refactor how required actions are triggered on upgrade
 
 ## API
 

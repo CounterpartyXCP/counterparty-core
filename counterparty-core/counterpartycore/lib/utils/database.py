@@ -199,21 +199,6 @@ def intergrity_check(db):
     logger.info("Integrity check completed.")
 
 
-def version(db):
-    cursor = db.cursor()
-    user_version = cursor.execute("PRAGMA user_version").fetchall()[0]["user_version"]
-    # manage old user_version
-    if user_version == config.VERSION_MINOR:
-        version_minor = user_version
-        version_major = config.VERSION_MAJOR
-        user_version = (config.VERSION_MAJOR * 1000) + version_minor
-        cursor.execute(f"PRAGMA user_version = {user_version}")
-    else:
-        version_minor = user_version % 1000
-        version_major = user_version // 1000
-    return version_major, version_minor
-
-
 def set_config_value(db, name, value):
     cursor = db.cursor()
     cursor.execute("INSERT OR REPLACE INTO config (name, value) VALUES (?, ?)", (name, value))
