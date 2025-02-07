@@ -5,7 +5,7 @@
   An Extension to Bitcoin by State-Machine Replication
 </h1>
 
-<table width="100%">
+<table syle="width: 100%">
 <tr>
     <td>Testing</td>
     <td>
