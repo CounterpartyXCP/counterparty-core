@@ -1,7 +1,11 @@
 <br />
 <div align="center"><a href="https://www.counterparty.io/"><img src="https://www.counterparty.io/images/xcp.svg" width="200"></a></div>
-<br />
-<table>
+
+<h1 align="center">
+  An Extension to Bitcoin by State-Machine Replication
+</h1>
+
+<table width="100%">
 <tr>
     <td>Testing</td>
     <td>
