@@ -32,6 +32,16 @@
         <a target="_blank" rel="noopener noreferrer" href="https://hub.docker.com/r/counterparty/counterparty"><img alt="Docker Image Size" src="https://img.shields.io/docker/image-size/counterparty/counterparty" style="max-width: 100%;"></a>
     </td>
 </tr>
+<tr>
+    <td>Github</td>
+    <td>
+        <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/t/CounterpartyXCP/counterparty-core">
+        <img alt="GitHub contributors" src="https://img.shields.io/github/contributors/CounterpartyXCP/counterparty-core">
+        <img alt="GitHub Release Date" src="https://img.shields.io/github/release-date/CounterpartyXCP/counterparty-core">
+    </td>
+</tr>
+
+
 </table>
 </div>
 
