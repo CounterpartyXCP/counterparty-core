@@ -1,4 +1,4 @@
-name: PyTest
+name: Units and Functionals
 
 on:
   push:

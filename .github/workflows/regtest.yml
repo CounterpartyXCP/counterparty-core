@@ -1,4 +1,4 @@
-name: Regtest test
+name: Integrations
 
 on:
   push:
