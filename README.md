@@ -40,8 +40,6 @@
         <img alt="GitHub Release Date" src="https://img.shields.io/github/release-date/CounterpartyXCP/counterparty-core">
     </td>
 </tr>
-
-
 </table>
 </div>
 
