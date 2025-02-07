@@ -244,6 +244,8 @@ class WerkzeugApplication:
         self.args = args
         self.current_state_thread = NodeStatusCheckerThread()
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
+        global logger  # noqa F811
+        logger = log.re_set_up("", api=True)
 
     def run(self, server_ready_value=None):
         self.server_ready_value = server_ready_value
@@ -265,6 +267,8 @@ class WaitressApplication:
         self.server = waitress.server.create_server(
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )
+        global logger  # noqa F811
+        logger = log.re_set_up("", api=True)
 
     def run(self, server_ready_value=None):
         self.server_ready_value = server_ready_value
