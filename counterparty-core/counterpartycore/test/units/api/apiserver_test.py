@@ -1,7 +1,8 @@
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES
-from counterpartycore.lib.messages import dividend, sweep
+from counterpartycore.lib.messages import dispense, dividend, sweep
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_apiserver_root(apiv2_client, current_block_index):
@@ -28,6 +29,9 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
         return None
     if "/compose/" in route:
         return None
+    if "/dispenses/" in route:
+        return None
+    print(route)
 
     last_block = db.execute(
         "SELECT block_hash FROM blocks WHERE block_index = ? ORDER BY block_index DESC LIMIT 1",
@@ -195,3 +199,29 @@ def test_invalid_hash(apiv2_client):
         result["error"]
         == "Invalid transaction hash: 65e649d58b95602b04172375dbd86783b7379e455a2bc801338d9299d10425a"
     )
+
+
+def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults):
+    tx = blockchain_mock.dummy_tx(
+        ledger_db, defaults["addresses"][0], defaults["addresses"][5], btc_amount=100
+    )
+    print("Parsing dispense")
+    with ProtocolChangesDisabled(["multiple_dispenses"]):
+        dispense.parse(ledger_db, tx)
+
+    dispenses = ledger_db.execute("SELECT * FROM dispenses ORDER BY rowid DESC LIMIT 1").fetchone()
+    url = f"/v2/dispenses/{dispenses['tx_hash']}"
+    result = apiv2_client.get(url).json
+
+    assert result["result"] == {
+        "tx_index": dispenses["tx_index"],
+        "dispense_index": 1,
+        "tx_hash": dispenses["tx_hash"],
+        "block_index": 1225,
+        "source": defaults["addresses"][5],
+        "destination": defaults["addresses"][0],
+        "asset": "XCP",
+        "dispense_quantity": 100,
+        "dispenser_tx_hash": dispenses["dispenser_tx_hash"],
+        "btc_amount": 100,
+    }

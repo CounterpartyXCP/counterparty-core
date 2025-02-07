@@ -54,6 +54,7 @@ counterparty-server start
 
 - Add `block_index` filter for get order matches endpoints
 - Add `block_index` filter for get dispenses by asset endpoint
+- Add Get Dispense By Hash endpoint
 
 ## CLI
 
