@@ -29,6 +29,7 @@
     <td>Docker</td>
     <td>
         <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/build_docker_image.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/build_docker_image.yml/badge.svg" alt="Docker" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://hub.docker.com/r/counterparty/counterparty"><img alt="Docker Image Size" src="https://img.shields.io/docker/image-size/counterparty/counterparty" style="max-width: 100%;"></a>
     </td>
 </tr>
 </table>
