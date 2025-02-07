@@ -1,6 +1,4 @@
-import pytest
-from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.parser import check
+from counterpartycore.lib import config
 from counterpartycore.lib.utils import database
 
 
@@ -12,20 +10,11 @@ def test_version(ledger_db, test_helpers):
         ledger_db,
         [
             {
-                "table": "pragma",
-                "field": "user_version",
-                "value": (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR,
+                "table": "config",
+                "values": {
+                    "name": "VERSION_STRING",
+                    "value": config.VERSION_STRING,
+                },
             }
         ],
     )
-
-    assert database.version(ledger_db) == (config.VERSION_MAJOR, config.VERSION_MINOR)
-
-    check.database_version(ledger_db)
-
-    config.VERSION_MAJOR += 1
-    with pytest.raises(exceptions.VersionError) as exception:
-        check.database_version(ledger_db)
-    assert exception.value.from_block_index == config.BLOCK_FIRST
-    assert exception.value.required_action == "rollback"
-    config.VERSION_MAJOR -= 1

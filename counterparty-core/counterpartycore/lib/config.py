@@ -19,25 +19,28 @@ DEFAULT_ELECTRS_URL_MAINNET = "https://blockstream.info/api"
 DEFAULT_ELECTRS_URL_TESTNET3 = "https://blockstream.info/testnet/api"
 DEFAULT_ELECTRS_URL_TESTNET4 = "https://mempool.space/testnet4/api"
 
-# When updating to a new verion, we are making a rollback if major version changes.
-# If minor version changes and if needed, we are making a reparse from a given block.
-# Fo example:
-# NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (1, 800000)
-# means that we need to reparse from block 800000 if database minor version is less than 1
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN = [(3, 0), (5, 865999), (6, 867000), (7, 869900)]
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET3 = [
-    (3, 0),
-    (5, 2925799),
-    (6, 2925799),
-    (7, 2925799),
-]
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET4 = None
 
-NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN = [(8, 871780), (9, 871780)]
-NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET3 = [(8, 3522632), (9, 3522632)]
-NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET4 = None
-
-STATE_DB_NEED_REFRESH_ON_VERSION_UPDATE = ["10.9.0-rc.1", "10.9.0"]
+UPGRADE_ACTIONS = {
+    "mainnet": {
+        "10.3.0": [("reparse", 0)],
+        "10.5.0": [("reparse", 865999)],
+        "10.6.0": [("reparse", 867000)],
+        "10.7.0": [("reparse", 869900)],
+        "10.8.0": [("rollback", 871780)],
+        "10.9.0-rc.1": [("rollback", 871780)],
+        "10.9.0": [("rollback", 871780)],
+    },
+    "testnet3": {
+        "10.3.0": [("reparse", 0)],
+        "10.5.0": [("reparse", 2925799)],
+        "10.6.0": [("reparse", 2925799)],
+        "10.7.0": [("reparse", 2925799)],
+        "10.8.0": [("rollback", 3522632)],
+        "10.9.0-rc.1": [("rollback", 3522632)],
+        "10.9.0": [("rollback", 3522632)],
+    },
+    "testnet4": {},
+}
 
 
 # Counterparty protocol

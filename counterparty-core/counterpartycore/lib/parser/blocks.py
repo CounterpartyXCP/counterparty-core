@@ -822,15 +822,19 @@ def check_database_version(db):
     if CurrentState().current_block_index() <= config.BLOCK_FIRST:
         database.update_version(db)
         return
-    try:
-        check.database_version(db)
-    except exceptions.VersionError as e:
-        logger.info(str(e))
-        # rollback or reparse the database
-        if e.required_action == "rollback":
-            rollback(db, block_index=e.from_block_index)
-        elif e.required_action == "reparse":
-            reparse(db, block_index=e.from_block_index)
+    if config.FORCE:
+        return
+    logger.debug("Checking Ledger database version...")
+
+    database_version = database.get_config_value(db, "VERSION_STRING")
+    if database_version != config.VERSION_STRING:
+        upgrade_actions = config.UPGRADE_ACTIONS[config.NETWORK_NAME].get(config.VERSION_STRING, [])
+        logger.info("Database version mismatch. Required actions: %s", upgrade_actions)
+        for action in upgrade_actions:
+            if action[0] == "reparse":
+                reparse(db, block_index=action[1])
+            elif action[0] == "rollback":
+                rollback(db, block_index=action[1])
         # refresh the current block index
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
         # update the database version

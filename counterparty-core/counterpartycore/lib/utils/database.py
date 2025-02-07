@@ -229,9 +229,6 @@ def get_config_value(db, name):
 
 
 def update_version(db):
-    cursor = db.cursor()
-    user_version = (config.VERSION_MAJOR * 1000) + config.VERSION_MINOR
-    cursor.execute(f"PRAGMA user_version = {user_version}")  # Syntax?!
     set_config_value(db, "VERSION_STRING", config.VERSION_STRING)
     logger.info("Database version number updated.")
 

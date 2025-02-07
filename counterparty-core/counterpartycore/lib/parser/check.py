@@ -9,7 +9,6 @@ import requests
 
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -1064,82 +1063,3 @@ def software_version():
 
     logger.debug("Version check passed.")
     return True
-
-
-def check_need_reparse(version_minor, message):
-    if config.FORCE:
-        return
-    if config.TESTNET4:
-        need_reparse_from = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET4
-    elif config.TESTNET3:
-        need_reparse_from = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET3
-    else:
-        need_reparse_from = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
-    if need_reparse_from is not None:
-        for min_version_minor, min_version_block_index in need_reparse_from:
-            if version_minor < min_version_minor:
-                raise exceptions.VersionError(
-                    message=message,
-                    required_action="reparse",
-                    from_block_index=min_version_block_index,
-                )
-
-
-def check_need_rollback(version_minor, message):
-    if config.FORCE:
-        return
-    if config.TESTNET4:
-        need_rollback_from = config.NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET4
-    elif config.TESTNET3:
-        need_rollback_from = config.NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET3
-    else:
-        need_rollback_from = config.NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN
-    if need_rollback_from is not None:
-        for min_version_minor, min_version_block_index in need_rollback_from:
-            if version_minor < min_version_minor:
-                raise exceptions.VersionError(
-                    message=message,
-                    required_action="rollback",
-                    from_block_index=min_version_block_index,
-                )
-
-
-def database_version(db):
-    if config.FORCE:
-        return
-    logger.debug("Checking database version...")
-
-    version_major, version_minor = database.version(db)
-    if version_major != config.VERSION_MAJOR:
-        # Rollback database if major version has changed.
-        raise exceptions.VersionError(
-            message=f"Client major version number mismatch: {version_major} ≠ {config.VERSION_MAJOR}.",
-            required_action="rollback",
-            from_block_index=config.BLOCK_FIRST,
-        )
-    elif version_minor != config.VERSION_MINOR:
-        # Reparse transactions from the vesion block if minor version has changed.
-        message = (
-            f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}. "
-        )
-        message += "Checking if a rollback or a reparse is needed..."
-        check_need_rollback(version_minor, message)
-        check_need_reparse(version_minor, message)
-        raise exceptions.VersionError(message=message, required_action=None)
-    else:
-        version_string = database.get_config_value(db, "VERSION_STRING")
-        if version_string:
-            version_pre_release = "-".join(version_string.split("-")[1:])
-        else:
-            # if version_string is not set, that mean we are on a version before 10.5.0 and after 10.4.8
-            # let's assume it's a pre-release version
-            # and set an arbitrary value different from config.VERSION_PRE_RELEASE
-            version_pre_release = "xxxx"
-        if version_pre_release != config.VERSION_PRE_RELEASE:
-            if version_pre_release == "xxxx":
-                message = "`VERSION_STRING` not found in dataase. "
-            else:
-                message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
-            message += "Checking if a rollback or a reparse is needed..."
-            check_need_rollback(version_minor, message)
-            check_need_reparse(version_minor, message)
