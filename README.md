@@ -1,5 +1,5 @@
 <br />
-<div align="center"><a href="https://www.counterparty.io/"><img src="https://www.counterparty.io/images/xcp.svg" width="400"></a></div>
+<div align="center"><a href="https://www.counterparty.io/"><img src="https://www.counterparty.io/images/xcp.svg" width="200"></a></div>
 <br />
 <table>
 <tr>
@@ -10,9 +10,9 @@
         <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/regtest.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/regtest.yml/badge.svg" alt="Integrations" style="max-width: 100%;"></a>
         <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/propertytest.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/propertytest.yml/badge.svg" alt="Property" style="max-width: 100%;"></a>
     </td>
-    <td>Scanning</td>
 </tr>
 <tr>
+    <td>Scanning</td>
     <td>
         <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/bandit.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/bandit.yml/badge.svg" alt="Bandit" style="max-width: 100%;"></a>
         <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/codeql.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" style="max-width: 100%;"></a>
