@@ -1,9 +1,14 @@
+import logging
+import os
+import threading
 import time
 
-from counterpartycore.lib import backend
+from counterpartycore.lib import backend, config
 from counterpartycore.lib.ledger import blocks
 from counterpartycore.lib.utils import helpers
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 BACKEND_HEIGHT_REFRSH_INTERVAL = 3
 
@@ -12,6 +17,36 @@ def get_backend_height():
     block_count = backend.bitcoind.getblockcount()
     blocks_behind = backend.bitcoind.get_blocks_behind()
     return block_count + blocks_behind
+
+
+class BackendHeigt(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self, name="BackendHeigt")
+        self.last_check = 0
+        self.stop_event = threading.Event()
+        self.refresh()
+
+    def run(self):
+        try:
+            while not self.stop_event.is_set():
+                if time.time() - self.last_check > BACKEND_HEIGHT_REFRSH_INTERVAL:
+                    self.refresh()
+                self.stop_event.wait(0.1)
+        finally:
+            logger.info("BackendHeigt Thread stopped.")
+
+    def refresh(self):
+        logger.trace("Updating backend height...")
+        new_backend_height = get_backend_height()
+        backend_height_path = os.path.join(config.DATA_DIR, f"backend_height.{config.NETWORK_NAME}")
+        with open(backend_height_path, "w") as f:
+            f.write(str(new_backend_height))
+        self.last_check = time.time()
+
+    def stop(self):
+        self.stop_event.set()
+        logger.info("Stopping BackendHeigt thread...")
+        self.join()
 
 
 class CurrentState(metaclass=helpers.SingletonMeta):
@@ -54,10 +89,11 @@ class CurrentState(metaclass=helpers.SingletonMeta):
         return self.state.get("CURRENT_BLOCK_TIME")
 
     def current_backend_height(self):
-        if time.time() - self.last_update >= BACKEND_HEIGHT_REFRSH_INTERVAL:
-            self.backend_height = get_backend_height()
-            self.last_update = time.time()
-        return self.backend_height
+        backend_height_path = os.path.join(config.DATA_DIR, f"backend_height.{config.NETWORK_NAME}")
+        if not os.path.exists(backend_height_path):
+            raise FileNotFoundError("Backend height file not found.")
+        with open(backend_height_path, "r") as f:
+            return int(f.read().strip())
 
     def current_tx_hash(self):
         return self.state.get("CURRENT_TX_HASH")

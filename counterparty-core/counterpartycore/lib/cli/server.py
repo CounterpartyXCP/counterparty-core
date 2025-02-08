@@ -23,7 +23,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1, dbbuilder
 from counterpartycore.lib.cli import bootstrap, log
-from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.ledger.currentstate import BackendHeigt, CurrentState
 from counterpartycore.lib.parser import blocks, check, follow
 from counterpartycore.lib.utils import database, helpers
 
@@ -661,6 +661,7 @@ def start_all(args, log_stream=None):
     asset_conservation_checker = None
     db = None
     api_stop_event = None
+    backend_height_thread = None
 
     # Log all config parameters, sorted by key
     # Filter out default values #TODO: these should be set in a different way
@@ -694,6 +695,10 @@ def start_all(args, log_stream=None):
 
         # Check software version
         check.software_version()
+
+        backend_height_thread = BackendHeigt()
+        backend_height_thread.daemon = True
+        backend_height_thread.start()
 
         # API Server v2
         api_stop_event = multiprocessing.Event()
@@ -743,6 +748,8 @@ def start_all(args, log_stream=None):
         logger.error("Exception caught!", exc_info=e)
     finally:
         # Ensure all threads are stopped
+        if backend_height_thread:
+            backend_height_thread.stop()
         if api_stop_event:
             api_stop_event.set()
         if api_status_poller:
