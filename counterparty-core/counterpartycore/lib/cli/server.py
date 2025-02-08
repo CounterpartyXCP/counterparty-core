@@ -699,6 +699,7 @@ def start_all(args, log_stream=None):
         backend_height_thread = BackendHeigt()
         backend_height_thread.daemon = True
         backend_height_thread.start()
+        CurrentState().set_backend_height_thread(backend_height_thread)
 
         # API Server v2
         api_stop_event = multiprocessing.Event()

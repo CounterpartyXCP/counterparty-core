@@ -1,5 +1,4 @@
 import logging
-import os
 import threading
 import time
 from multiprocessing import Value
@@ -87,12 +86,11 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def current_block_time(self):
         return self.state.get("CURRENT_BLOCK_TIME")
 
+    def set_backend_height_thread(self, backend_height_thread):
+        self.state["BACKEND_HEIGHT_THREAD"] = backend_height_thread
+
     def current_backend_height(self):
-        backend_height_path = os.path.join(config.DATA_DIR, f"backend_height.{config.NETWORK_NAME}")
-        if not os.path.exists(backend_height_path):
-            raise FileNotFoundError("Backend height file not found.")
-        with open(backend_height_path, "r") as f:
-            return int(f.read().strip())
+        return self.state["BACKEND_HEIGHT_THREAD"].shared_backend_height.value
 
     def current_tx_hash(self):
         return self.state.get("CURRENT_TX_HASH")

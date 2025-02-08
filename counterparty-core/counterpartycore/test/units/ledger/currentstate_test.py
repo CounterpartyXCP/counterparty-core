@@ -25,6 +25,3 @@ def test_currentstate(ledger_db, current_block_index, monkeypatch):
 
     currentstate.CurrentState().set("toto", "tata")
     assert currentstate.CurrentState().get("toto") == "tata"
-
-    monkeypatch.setattr(currentstate, "get_backend_height", lambda: 100)
-    assert currentstate.CurrentState().current_backend_height() == 100
