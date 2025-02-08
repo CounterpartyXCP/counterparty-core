@@ -43,6 +43,7 @@ counterparty-server start
 - Fix shutdown with Gunicorn
 - Same log file for all Gunicorn processes
 - Fix double log in access file on API query
+- Don't call `getblockcount` from each API thread or process
 
 ## Codebase
 

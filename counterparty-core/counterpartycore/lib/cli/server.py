@@ -702,7 +702,7 @@ def start_all(args, log_stream=None):
 
         # API Server v2
         api_stop_event = multiprocessing.Event()
-        apiserver_v2 = api_v2.APIServer(api_stop_event)
+        apiserver_v2 = api_v2.APIServer(api_stop_event, backend_height_thread.shared_backend_height)
         apiserver_v2.start(args, log_stream)
         while not apiserver_v2.is_ready() and not apiserver_v2.has_stopped():
             logger.trace("Waiting for API server to start...")

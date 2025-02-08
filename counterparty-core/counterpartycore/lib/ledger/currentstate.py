@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import time
+from multiprocessing import Value
 
 from counterpartycore.lib import backend, config
 from counterpartycore.lib.ledger import blocks
@@ -24,6 +25,7 @@ class BackendHeigt(threading.Thread):
         threading.Thread.__init__(self, name="BackendHeigt")
         self.last_check = 0
         self.stop_event = threading.Event()
+        self.shared_backend_height = Value("i", 0)
         self.refresh()
 
     def run(self):
@@ -37,10 +39,7 @@ class BackendHeigt(threading.Thread):
 
     def refresh(self):
         logger.trace("Updating backend height...")
-        new_backend_height = get_backend_height()
-        backend_height_path = os.path.join(config.DATA_DIR, f"backend_height.{config.NETWORK_NAME}")
-        with open(backend_height_path, "w") as f:
-            f.write(str(new_backend_height))
+        self.shared_backend_height.value = get_backend_height()
         self.last_check = time.time()
 
     def stop(self):

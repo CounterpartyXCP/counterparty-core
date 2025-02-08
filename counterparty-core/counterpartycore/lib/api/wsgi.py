@@ -25,11 +25,11 @@ multiprocessing.set_start_method("spawn", force=True)
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def refresh_current_state(ledger_db, state_db):
+def refresh_current_state(state_db, shared_backend_height):
     CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
 
     current_block_index = CurrentState().current_block_index()
-    current_backend_height = CurrentState().current_backend_height()
+    current_backend_height = shared_backend_height.value
 
     if current_backend_height > current_block_index:
         logger.debug(
@@ -42,21 +42,20 @@ def refresh_current_state(ledger_db, state_db):
 
 
 class NodeStatusCheckerThread(threading.Thread):
-    def __init__(self):
+    def __init__(self, shared_backend_height):
         threading.Thread.__init__(self, name="NodeStatusChecker")
+        self.shared_backend_height = shared_backend_height
         self.state_db = database.get_db_connection(config.STATE_DATABASE)
-        self.ledger_db = database.get_db_connection(config.DATABASE)
         self.stop_event = threading.Event()
 
     def run(self):
         logger.debug("Starting NodeStatusChecker thread...")
         try:
             while not self.stop_event.is_set():
-                refresh_current_state(self.ledger_db, self.state_db)
+                refresh_current_state(self.state_db, self.shared_backend_height)
                 self.stop_event.wait(timeout=1)
         finally:
             self.state_db.close()
-            self.ledger_db.close()
 
     def stop(self):
         self.stop_event.set()
@@ -203,7 +202,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.arbiter = None
         self.ledger_db = None
         self.state_db = None
-        self.current_state_thread = NodeStatusCheckerThread()
+
         self.master_pid = os.getpid()
         super().__init__()
 
@@ -220,8 +219,9 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.current_state_thread.start()
         return self.application
 
-    def run(self, server_ready_value):
+    def run(self, server_ready_value, shared_backend_height):
         try:
+            self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
             self.server_ready_value = server_ready_value
             self.arbiter = GunicornArbiter(self)
             self.arbiter.run()
@@ -242,13 +242,13 @@ class WerkzeugApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.current_state_thread = NodeStatusCheckerThread()
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
         global logger  # noqa F811
         logger = log.re_set_up("", api=True)
 
-    def run(self, server_ready_value=None):
+    def run(self, server_ready_value, shared_backend_height):
         self.server_ready_value = server_ready_value
+        self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
         self.current_state_thread.start()
         self.server.serve_forever()
 
@@ -263,15 +263,15 @@ class WaitressApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.current_state_thread = NodeStatusCheckerThread()
         self.server = waitress.server.create_server(
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )
         global logger  # noqa F811
         logger = log.re_set_up("", api=True)
 
-    def run(self, server_ready_value=None):
+    def run(self, server_ready_value, shared_backend_height):
         self.server_ready_value = server_ready_value
+        self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
         self.current_state_thread.start()
         self.server.run()
 
@@ -293,9 +293,9 @@ class WSGIApplication:
         else:
             self.server = WaitressApplication(self.app, self.args)
 
-    def run(self, server_ready_value):
+    def run(self, server_ready_value, shared_backend_height):
         logger.info("Starting WSGI Server thread...")
-        self.server.run(server_ready_value)
+        self.server.run(server_ready_value, shared_backend_height)
 
     def stop(self):
         logger.info("Stopping WSGI Server thread...")
