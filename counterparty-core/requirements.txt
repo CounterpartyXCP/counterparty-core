@@ -1,4 +1,4 @@
-apsw==3.45.1.0
+apsw==3.49.0.0
 appdirs==1.4.4
 setuptools-markdown==0.4.1
 python-dateutil==2.8.2
