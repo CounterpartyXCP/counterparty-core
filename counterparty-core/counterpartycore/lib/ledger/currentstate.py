@@ -90,6 +90,8 @@ class CurrentState(metaclass=helpers.SingletonMeta):
         self.state["BACKEND_HEIGHT_VALUE"] = shared_backend_height
 
     def current_backend_height(self):
+        if "BACKEND_HEIGHT_VALUE" not in self.state:
+            return None
         return self.state["BACKEND_HEIGHT_VALUE"].value
 
     def current_tx_hash(self):

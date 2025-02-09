@@ -199,6 +199,7 @@ def monkeymodule():
 
 
 original_is_valid_der = parser.gettxinfo.is_valid_der
+original_current_backend_height = CurrentState.current_backend_height
 
 
 @pytest.fixture(scope="session")
