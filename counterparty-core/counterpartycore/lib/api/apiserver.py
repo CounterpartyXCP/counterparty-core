@@ -524,6 +524,7 @@ def run_apiserver(
         watcher.start()
 
         app = init_flask_app()
+        app.shared_backend_height = shared_backend_height
 
         wsgi_server = wsgi.WSGIApplication(app, args=args)
 

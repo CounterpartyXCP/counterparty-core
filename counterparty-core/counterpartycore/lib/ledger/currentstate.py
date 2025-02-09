@@ -86,11 +86,11 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def current_block_time(self):
         return self.state.get("CURRENT_BLOCK_TIME")
 
-    def set_backend_height_thread(self, backend_height_thread):
-        self.state["BACKEND_HEIGHT_THREAD"] = backend_height_thread
+    def set_backend_height_value(self, shared_backend_height):
+        self.state["BACKEND_HEIGHT_VALUE"] = shared_backend_height
 
     def current_backend_height(self):
-        return self.state["BACKEND_HEIGHT_THREAD"].shared_backend_height.value
+        return self.state["BACKEND_HEIGHT_VALUE"].value
 
     def current_tx_hash(self):
         return self.state.get("CURRENT_TX_HASH")

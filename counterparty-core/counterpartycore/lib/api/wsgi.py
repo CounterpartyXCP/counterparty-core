@@ -221,6 +221,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
 
     def run(self, server_ready_value, shared_backend_height):
         try:
+            CurrentState().set_backend_height_value(shared_backend_height)
             self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
             self.server_ready_value = server_ready_value
             self.arbiter = GunicornArbiter(self)
@@ -248,6 +249,7 @@ class WerkzeugApplication:
 
     def run(self, server_ready_value, shared_backend_height):
         self.server_ready_value = server_ready_value
+        CurrentState().set_backend_height_value(shared_backend_height)
         self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
         self.current_state_thread.start()
         self.server.serve_forever()
@@ -271,6 +273,7 @@ class WaitressApplication:
 
     def run(self, server_ready_value, shared_backend_height):
         self.server_ready_value = server_ready_value
+        CurrentState().set_backend_height_value(shared_backend_height)
         self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
         self.current_state_thread.start()
         self.server.run()
