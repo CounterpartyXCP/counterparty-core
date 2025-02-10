@@ -32,6 +32,7 @@ class RPCHandler(socketserver.StreamRequestHandler):
         body = self.rfile.read(content_length) if content_length else b""
 
         try:
+            print(f"Forwarding request to {target_url}", body)
             response = self.server.session.post(
                 target_url,
                 auth=(RPC_USER, RPC_PASSWORD),
@@ -40,8 +41,10 @@ class RPCHandler(socketserver.StreamRequestHandler):
                 verify=False,
                 timeout=5,
             )
+            print(f"Received response from {target_url}", response.content)
 
             # Envoyer la réponse HTTP
+            print("Sending response to client")
             self.wfile.write(b"HTTP/1.1 200 OK\r\n")
             self.wfile.write(b"Content-Type: application/json\r\n")
             self.wfile.write(b"Connection: keep-alive\r\n")
@@ -49,8 +52,10 @@ class RPCHandler(socketserver.StreamRequestHandler):
             self.wfile.write(b"\r\n")
             self.wfile.write(response.content)
             self.wfile.flush()
+            print("Response sent to client")
 
         except Exception as e:
+            print(f"Error forwarding request: {e}")
             error_response = json.dumps({"error": str(e)}).encode()
             self.wfile.write(b"HTTP/1.1 500 Internal Server Error\r\n")
             self.wfile.write(b"Content-Type: application/json\r\n")
