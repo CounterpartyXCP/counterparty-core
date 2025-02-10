@@ -705,6 +705,8 @@ def handle_reorg(db):
     current_block_index = previous_block_index + 1
     rollback(db, block_index=current_block_index)
     CurrentState().set_current_block_index(previous_block_index)
+    ledger.caches.UTXOBalancesCache.reset_instance()
+    ledger.caches.UTXOBalancesCache(db)
 
     # get the new deserialized current block
     current_block = deserialize.deserialize_block(
