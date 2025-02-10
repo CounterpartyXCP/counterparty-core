@@ -1,5 +1,6 @@
 import os
 import random
+import urllib.parse
 
 import gevent
 import locust
@@ -37,6 +38,44 @@ class MainnetFixtures:
     jdog_address = "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev"
     jdog_tx_hash = "032d29f789f7fc0aa8d268431a02001a0d4ee9dc42ca4b21de26b912f101271c"
     raw_transaction = "0100000001b43530bc300f44a078bae943cb6ad3add44111ce2f815dad1deb921c912462d9020000008b483045022100849a06573b994a95b239cbaadf8cd266bdc5fc64535be43bcb786e29b515089502200a6fd9876ef888b67f1097928f7386f55e775b5812eb9ba22609abfdfe8d3f2f01410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ffffffff020000000000000000436a4145b0b98d99423f507895e7dbdf4b7973f7bd422984872c56c241007de56d991ce1c74270f773cf03896f4a50ee0df5eb153571ce2a767f51c7c9d7569bad277e9da9a78200000000001976a914bce6191bf2fd5981313cae869e9fafe164f7dbaf88ac00000000"
+    compose_args = {
+        "/v2/addresses/<address>/compose/bet": {
+            "feed_address": "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev",
+            "bet_type": 3,
+            "deadline": 1388000200,
+            "wager_quantity": 10,
+            "counterwager_quantity": 10,
+            "target_value": 0.0,
+            "leverage": 5040,
+            "expiration": 1000,
+        },
+        "/v2/addresses/<address>/compose/broadcast": {},
+        "/v2/addresses/<address>/compose/btcpay": {},
+        "/v2/addresses/<address>/compose/burn": {},
+        "/v2/addresses/<address>/compose/cancel": {},
+        "/v2/addresses/<address>/compose/destroy": {},
+        "/v2/addresses/<address>/compose/dispenser": {},
+        "/v2/addresses/<address>/compose/dividend": {},
+        "/v2/addresses/<address>/compose/dividend/estimatexcpfees": {},
+        "/v2/addresses/<address>/compose/issuance": {},
+        "/v2/addresses/<address>/compose/mpma": {},
+        "/v2/addresses/<address>/compose/order": {},
+        "/v2/addresses/<address>/compose/send": {},
+        "/v2/addresses/<address>/compose/sweep": {},
+        "/v2/addresses/<address>/compose/sweep/estimatexcpfees": {},
+        "/v2/addresses/<address>/compose/dispense": {},
+        "/v2/addresses/<address>/compose/fairminter": {},
+        "/v2/addresses/<address>/compose/fairmint": {},
+        "/v2/addresses/<address>/compose/attach": {},
+        "/v2/addresses/<address>/compose/attach/estimatexcpfees": {},
+        "/v2/utxos/<utxo>/compose/detach": {},
+        "/v2/utxos/<utxo>/compose/movetoutxo": {},
+    }
+    compose_common_args = {
+        "validate": "false",
+        "pubkeys": "0426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3",
+        "exact_fee": 0,
+    }
 
 
 DB.close()
@@ -45,8 +84,6 @@ DB.close()
 def prepare_url(route):
     # exclude broadcast signed tx and API v1
     if route in ["/v2/bitcoin/transactions", "/", "/v1/", "/api/", "/rpc/"]:
-        return None
-    if "/compose/" in route:
         return None
 
     url = route.replace("<int:block_index>", str(MainnetFixtures.last_tx["block_index"]))
@@ -97,6 +134,18 @@ def prepare_url(route):
         url = url + "?addresses=" + MainnetFixtures.jdog_address
     elif url == "/v2/utxos/withbalances":
         url = url + "?utxos=" + MainnetFixtures.utxo_with_balance["utxo"]
+
+    if "/compose/" in route and MainnetFixtures.compose_args.get(route, {}) != {}:
+        params = MainnetFixtures.compose_args[route] | MainnetFixtures.compose_common_args
+        query_string = []
+        for key, value in params.items():
+            if not isinstance(value, list):
+                query_string.append(urllib.parse.urlencode({key: value}))
+            else:
+                for i in range(len(value)):
+                    query_string.append(urllib.parse.urlencode({key: value[i]}))
+        query_string = "&".join(query_string)
+        url = url + "?" + query_string
 
     chr = "&" if "?" in url else "?"
     url = url + chr + "verbose=true"

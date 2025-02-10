@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: Linux-8CORE-32RAM-300SSD
     strategy:
       matrix:
         python-version: ["3.11"]

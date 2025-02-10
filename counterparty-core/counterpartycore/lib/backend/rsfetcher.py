@@ -33,7 +33,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
     thread_index_counter = 0  # Add a thread index counter
 
     def __init__(self, indexer_config=None):
-        logger.warning("Initializing RSFetcher...")
+        logger.debug("Initializing RSFetcher...")
         RSFetcher.thread_index_counter += 1
         if indexer_config is None:
             rpc_address = f"://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}"
@@ -41,7 +41,6 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                 rpc_address = f"https{rpc_address}"
             else:
                 rpc_address = f"http{rpc_address}"
-            logger.warning(f"rpc_address: {rpc_address}")
             self.config = {
                 "rpc_address": rpc_address,
                 "rpc_user": config.BACKEND_USER,

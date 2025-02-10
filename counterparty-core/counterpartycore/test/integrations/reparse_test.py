@@ -59,25 +59,26 @@ def bootstrap_and_reparse(network):
     assert ledger_hash_before == ledger_hash_after
     assert txlist_hash_before == txlist_hash_after
 
-    server_process = sh_counterparty_server("start", _bg=True)
+    if False:
+        server_process = sh_counterparty_server("start", _bg=True)
 
-    server_ready = False
-    while not server_ready:
-        try:
-            server_ready = requests.get(api_url, timeout=5).json()["result"]["server_ready"]
-            if not server_ready:
-                print("Waiting for server to be ready...")
+        server_ready = False
+        while not server_ready:
+            try:
+                server_ready = requests.get(api_url, timeout=5).json()["result"]["server_ready"]
+                if not server_ready:
+                    print("Waiting for server to be ready...")
+                    time.sleep(1)
+            except Exception as e:
+                print(e)
                 time.sleep(1)
-        except Exception as e:
-            print(e)
-            time.sleep(1)
-            pass
+                pass
 
-    server_process.terminate()
+        server_process.terminate()
 
     sh.rm("-rf", DATA_DIR)
 
 
 def test_reparse():
-    bootstrap_and_reparse("testnet4")
-    # bootstrap_and_reparse("mainnet")
+    # bootstrap_and_reparse("testnet4")
+    bootstrap_and_reparse("mainnet")
