@@ -1,3 +1,4 @@
+import os
 import random
 
 from locust import HttpUser, TaskSet, between, task
@@ -9,15 +10,14 @@ headers = {"Content-Type": "application/json"}
 ## SETUP ##
 ###########
 
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 # Load hard-coded list of addresses and transaction hashes from files
 def load_list_from_file(filename):
-    try:
-        with open(filename, "r") as file:
-            return [line.strip() for line in file if line.strip()]
-    except FileNotFoundError:
-        print(f"File {filename} not found.")
-        return []
+    filepath = os.path.join(CURR_DIR, filename)
+    with open(filepath, "r") as file:
+        return [line.strip() for line in file if line.strip()]
 
 
 HARDCODED_TX_HASHES = load_list_from_file("data/tx_hashes.csv")
@@ -379,3 +379,5 @@ class CounterpartyCoreUser(HttpUser):
     }
 
     wait_time = between(1, 3)
+
+    host = "http://localhost:4000"  # Counterparty API URL

@@ -636,7 +636,7 @@ class AssetConservationChecker(threading.Thread):
                 if time.time() - self.last_check > 60 * 60 * 12:
                     try:
                         check.asset_conservation(self.db, self.stop_event)
-                    except check.SanityError as e:
+                    except exceptions.SanityError as e:
                         logger.error("Asset conservation check failed: %s" % e)
                         _thread.interrupt_main()
                     self.last_check = time.time()
