@@ -6,7 +6,8 @@ on:
 
 jobs:
   build:
-    runs-on: Linux-Large
+    #runs-on: Linux-Large
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.11"]

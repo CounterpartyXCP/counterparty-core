@@ -80,5 +80,5 @@ def bootstrap_and_reparse(network):
 
 
 def test_reparse():
-    # bootstrap_and_reparse("testnet4")
-    bootstrap_and_reparse("mainnet")
+    bootstrap_and_reparse("testnet4")
+    # bootstrap_and_reparse("mainnet")
