@@ -19,11 +19,11 @@ def bootstrap_and_reparse(network):
         "--data-dir",
         DATA_DIR,
         "--no-confirm",
-        "--backend-ssl",
+        # "--backend-ssl",
     ]
     if network == "testnet4":
         args.append("--testnet4")
-        args += ["--backend-connect", "testnet4.counterparty.io"]
+        # args += ["--backend-connect", "testnet4.counterparty.io"]
         db_file = "counterparty.testnet4.db"
         api_url = "http://localhost:44000/v2/"
     else:
@@ -59,12 +59,12 @@ def bootstrap_and_reparse(network):
     assert ledger_hash_before == ledger_hash_after
     assert txlist_hash_before == txlist_hash_after
 
-    sh_counterparty_server("start")
+    server_process = sh_counterparty_server("start", _bg=True)
 
     server_ready = False
     while not server_ready:
         try:
-            server_ready = requests.get(api_url, timeout=5)["result"]["server_ready"]
+            server_ready = requests.get(api_url, timeout=5).json()["result"]["server_ready"]
             if not server_ready:
                 print("Waiting for server to be ready...")
                 time.sleep(1)
@@ -73,9 +73,11 @@ def bootstrap_and_reparse(network):
             time.sleep(1)
             pass
 
+    server_process.terminate()
+
     sh.rm("-rf", DATA_DIR)
 
 
 def test_reparse():
-    # bootstrap_and_reparse("testnet4")
-    bootstrap_and_reparse("mainnet")
+    bootstrap_and_reparse("testnet4")
+    # bootstrap_and_reparse("mainnet")
