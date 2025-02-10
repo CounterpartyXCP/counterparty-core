@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: Linux-8CORE-32RAM-300SSD
+    runs-on: Linux-Large
     strategy:
       matrix:
         python-version: ["3.11"]
