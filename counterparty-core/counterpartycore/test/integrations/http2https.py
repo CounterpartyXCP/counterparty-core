@@ -41,7 +41,7 @@ class RPCHandler(socketserver.StreamRequestHandler):
                 verify=False,
                 timeout=5,
             )
-            print(f"Received response from {target_url}", response.content)
+            print(f"Received response from {target_url}")
 
             # Envoyer la réponse HTTP
             print("Sending response to client")

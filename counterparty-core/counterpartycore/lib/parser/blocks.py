@@ -844,7 +844,8 @@ def start_rsfetcher():
     except exceptions.InvalidVersion as e:
         logger.error(e)
         sys.exit(1)
-    except Exception:
+    except Exception as e:
+        logger.error(f"Failed to start RSFetcher: {e}")
         logger.warning("Failed to start RSFetcher. Retrying in 5 seconds...")
         time.sleep(5)
         return start_rsfetcher()
