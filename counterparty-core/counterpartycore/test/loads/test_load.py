@@ -22,6 +22,7 @@ class MainnetFixtures:
         "SELECT * FROM balances WHERE utxo IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
     ).fetchone()
     last_dispenser = DB.execute("SELECT * FROM dispensers ORDER BY rowid DESC LIMIT 1").fetchone()
+    last_dispense = DB.execute("SELECT * FROM dispenses ORDER BY rowid DESC LIMIT 1").fetchone()
     last_order = DB.execute("SELECT * FROM orders ORDER BY rowid DESC LIMIT 1").fetchone()
     last_bet = DB.execute("SELECT * FROM bets ORDER BY rowid DESC LIMIT 1").fetchone()
     last_dividend = DB.execute("SELECT * FROM dividends ORDER BY rowid DESC LIMIT 1").fetchone()
@@ -34,7 +35,7 @@ class MainnetFixtures:
     asset, asset1, asset2 = "XCP", "PEPECASH", "FAIREST"
     datahex = "00000014000000a25be34b66000000174876e800010000000000000000000f446976697369626c65206173736574"
     jdog_address = "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev"
-    # 032d29f789f7fc0aa8d268431a02001a0d4ee9dc42ca4b21de26b912f101271c
+    jdog_tx_hash = "032d29f789f7fc0aa8d268431a02001a0d4ee9dc42ca4b21de26b912f101271c"
     raw_transaction = "0100000001b43530bc300f44a078bae943cb6ad3add44111ce2f815dad1deb921c912462d9020000008b483045022100849a06573b994a95b239cbaadf8cd266bdc5fc64535be43bcb786e29b515089502200a6fd9876ef888b67f1097928f7386f55e775b5812eb9ba22609abfdfe8d3f2f01410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ffffffff020000000000000000436a4145b0b98d99423f507895e7dbdf4b7973f7bd422984872c56c241007de56d991ce1c74270f773cf03896f4a50ee0df5eb153571ce2a767f51c7c9d7569bad277e9da9a78200000000001976a914bce6191bf2fd5981313cae869e9fafe164f7dbaf88ac00000000"
 
 
@@ -42,13 +43,10 @@ DB.close()
 
 
 def prepare_url(route):
-    if route in ["/v2/transactions/<tx_hash>/info", "/", "/v1/", "/api/", "/rpc/"]:
-        return None
-    if route.startswith("/v2/bitcoin/"):
+    # exclude broadcast signed tx and API v1
+    if route in ["/v2/bitcoin/transactions", "/", "/v1/", "/api/", "/rpc/"]:
         return None
     if "/compose/" in route:
-        return None
-    if "/dispenses/" in route:
         return None
 
     url = route.replace("<int:block_index>", str(MainnetFixtures.last_tx["block_index"]))
@@ -66,7 +64,9 @@ def prepare_url(route):
     url = url.replace("<address>", MainnetFixtures.jdog_address)
     url = url.replace("<utxo>", MainnetFixtures.utxo_with_balance["utxo"])
 
-    if url.startswith("/v2/issuances/"):
+    if url == "/v2/transactions/<tx_hash>/info":
+        url = url.replace("<tx_hash>", MainnetFixtures.jdog_tx_hash)
+    elif url.startswith("/v2/issuances/"):
         url = url.replace("<tx_hash>", MainnetFixtures.last_issuance["tx_hash"])
     elif url.startswith("/v2/sweeps/"):
         url = url.replace("<tx_hash>", MainnetFixtures.last_sweep["tx_hash"])
@@ -76,11 +76,15 @@ def prepare_url(route):
         url = url.replace("<tx_hash>", MainnetFixtures.last_fairminter["tx_hash"])
     elif url.startswith("/v2/fairmints/"):
         url = url.replace("<tx_hash>", MainnetFixtures.last_fairmint["tx_hash"])
+    elif url.startswith("/v2/dispenses/"):
+        url = url.replace("<tx_hash>", MainnetFixtures.last_dispense["tx_hash"])
     else:
         url = url.replace("<tx_hash>", MainnetFixtures.last_tx["tx_hash"])
 
     if url == "/v2/transactions/info":
         url = url + "?rawtransaction=" + MainnetFixtures.raw_transaction
+    elif url == "/v2/bitcoin/transactions/decode":
+        url = url + "?rawtx=" + MainnetFixtures.raw_transaction
     elif url == "/v2/transactions/unpack":
         url = url + "?datahex=" + MainnetFixtures.datahex
     elif url in [
@@ -88,6 +92,7 @@ def prepare_url(route):
         "/v2/addresses/transactions",
         "/v2/addresses/events",
         "/v2/addresses/mempool",
+        "/v2/bitcoin/addresses/utxos",
     ]:
         url = url + "?addresses=" + MainnetFixtures.jdog_address
     elif url == "/v2/utxos/withbalances":
@@ -121,7 +126,7 @@ def test_load():
 
     user_count = 5
     spawn_rate = 2
-    test_duration = 60
+    test_duration = 30
 
     env = locust.env.Environment(user_classes=[CounterpartyCoreUser])
     env.create_local_runner()
@@ -136,6 +141,7 @@ def test_load():
     gevent.spawn_later(test_duration, lambda: env.runner.quit())
     env.runner.greenlet.join()
 
+    print(env.stats.serialize_errors())
     assert env.stats.total.avg_response_time < 120  # ms
     assert env.stats.total.num_failures == 0
     assert env.stats.total.get_response_time_percentile(0.95) < 500  # ms
