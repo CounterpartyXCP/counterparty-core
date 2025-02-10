@@ -1,8 +1,12 @@
-name: Testnet4 Reparse Test
+name: Testnet4 Test
 
 on:
   push:
     branches: "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
