@@ -252,7 +252,7 @@ def generate_random_url():
             return url
 
 
-class CounterpartyCoreUser(locust.FastHttpUser):
+class CounterpartyCoreUser(locust.HttpUser):
     host = "http://localhost:4000"  # Counterparty API URL
     wait_time = locust.between(0.3, 0.6)
     network_timeout = 15.0
