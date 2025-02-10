@@ -142,6 +142,7 @@ only:
 - Events > Get Event Count > Get Event Count
 - Destructions > Get All Valid Destructions > Get All Valid Destructions
 - Dispenses > Get Dispenses > Get Dispenses
+- Dispenses > Get Dispense > Get Dispense
 - Sends > Get Sends > Get Sends
 - Issuances > Get Issuances > Get Issuances
 - Issuances > Get Issuance By Transaction Hash > Get Issuance By Transaction Hash

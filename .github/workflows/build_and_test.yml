@@ -1,4 +1,4 @@
-name: PyTest
+name: Units and Functionals
 
 on:
   push:
@@ -122,8 +122,11 @@ jobs:
       - name: Run counterparty-core tests
         run: |
           cd counterparty-core
-          pytest counterpartycore/test/units
-          pytest counterpartycore/test/functionals
+          pytest counterpartycore/test/units counterpartycore/test/functionals --cov=counterpartycore/lib/ --cov-report=
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
 
   ubuntu-22-04-python3-12:

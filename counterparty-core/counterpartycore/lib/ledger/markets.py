@@ -229,12 +229,19 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
         where.append("tx_index = ?")
         bindings.append(tx_index)
     # no sql injection here
-    query = f"""
-        SELECT *
-        FROM dispensers
-        WHERE ({" AND ".join(where)})
-        ORDER BY rowid DESC LIMIT 1
-    """  # nosec B608  # noqa: S608
+    if len(where) == 0:
+        query = """
+            SELECT *
+            FROM dispensers
+            ORDER BY rowid DESC LIMIT 1
+        """
+    else:
+        query = f"""
+            SELECT *
+            FROM dispensers
+            WHERE ({" AND ".join(where)})
+            ORDER BY rowid DESC LIMIT 1
+        """  # nosec B608  # noqa: S608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

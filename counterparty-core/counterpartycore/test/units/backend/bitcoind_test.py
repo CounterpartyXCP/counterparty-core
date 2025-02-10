@@ -161,3 +161,220 @@ def test_search_pubkey_in_transactions(monkeypatch):
     )
 
     helpers.setup_bitcoinutils("regtest")
+
+
+def test_search_pubkey_in_transactions_bech32(monkeypatch):
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction",
+        lambda x, y: {
+            "txid": "f8d74847198e409c3aa79eeb2c101e8fbb894a03858493d2ac3deb7970d12015",
+            "hash": "3eb5099f83612f406a4953c92692447da0b219182a7b29f1509c91a426a4db75",
+            "version": 2,
+            "size": 222,
+            "vsize": 141,
+            "weight": 561,
+            "locktime": 0,
+            "vin": [
+                {
+                    "txid": "e05a9501ac6f4cdc3f393a20e0e65a5079e6c346201722493294fe6033895219",
+                    "vout": 1,
+                    "scriptSig": {"asm": "", "hex": ""},
+                    "txinwitness": [
+                        "304402206c7475c0ef65f369ec2ff0bdb35b433f3ad2215b75b0856965e92b575f112d030220515a8aeeb4dc460a545e40c174879d80c9467b4926a328531078ab3d6c67e86101",
+                        "03821862113e63dcc139fb2e2c752ddcf64b2aaf40bf13ad6a0a29790f3ead77ac",
+                    ],
+                    "sequence": 4294967295,
+                }
+            ],
+            "vout": [
+                {
+                    "value": 0.00010000,
+                    "n": 0,
+                    "scriptPubKey": {
+                        "asm": "0 ece41d226060118079cbea4f35ac5c1dbd11fe86",
+                        "desc": "addr(tb1qanjp6gnqvqgcq7wtaf8nttzurk73rl5xqk08hs)#y2dx8ctv",
+                        "hex": "0014ece41d226060118079cbea4f35ac5c1dbd11fe86",
+                        "address": "tb1qanjp6gnqvqgcq7wtaf8nttzurk73rl5xqk08hs",
+                        "type": "witness_v0_keyhash",
+                    },
+                },
+                {
+                    "value": 0.00487958,
+                    "n": 1,
+                    "scriptPubKey": {
+                        "asm": "0 6150f9d41f5f0b7841f6be50eda0b5f9a7a81357",
+                        "desc": "addr(tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a)#c0fuzzfc",
+                        "hex": "00146150f9d41f5f0b7841f6be50eda0b5f9a7a81357",
+                        "address": "tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a",
+                        "type": "witness_v0_keyhash",
+                    },
+                },
+            ],
+            "hex": "020000000001011952893360fe94324922172046c3e679505ae6e0203a393fdc4c6fac01955ae00100000000ffffffff021027000000000000160014ece41d226060118079cbea4f35ac5c1dbd11fe8616720700000000001600146150f9d41f5f0b7841f6be50eda0b5f9a7a813570247304402206c7475c0ef65f369ec2ff0bdb35b433f3ad2215b75b0856965e92b575f112d030220515a8aeeb4dc460a545e40c174879d80c9467b4926a328531078ab3d6c67e861012103821862113e63dcc139fb2e2c752ddcf64b2aaf40bf13ad6a0a29790f3ead77ac00000000",
+            "blockhash": "000000000bf9eab2adae97280fbf4a352385c932e93f0a042da4c125a4ec493e",
+            "confirmations": 102,
+            "time": 1738780028,
+            "blocktime": 1738780028,
+        },
+    )
+
+    helpers.setup_bitcoinutils("testnet")
+
+    assert (
+        bitcoind.search_pubkey_in_transactions(
+            "tb1qanjp6gnqvqgcq7wtaf8nttzurk73rl5xqk08hs",
+            ["e05a9501ac6f4cdc3f393a20e0e65a5079e6c346201722493294fe6033895219"],
+        )
+        is None
+    )
+    assert (
+        bitcoind.search_pubkey_in_transactions(
+            "tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a",
+            ["e05a9501ac6f4cdc3f393a20e0e65a5079e6c346201722493294fe6033895219"],
+        )
+        == "03821862113e63dcc139fb2e2c752ddcf64b2aaf40bf13ad6a0a29790f3ead77ac"
+    )
+
+    helpers.setup_bitcoinutils("regtest")
+
+
+def test_search_pubkey_in_transactions_p2pkh(monkeypatch):
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction",
+        lambda x, y: {
+            "txid": "c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32",
+            "hash": "c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32",
+            "version": 2,
+            "size": 254,
+            "vsize": 254,
+            "weight": 1016,
+            "locktime": 0,
+            "vin": [
+                {
+                    "txid": "33e3ce1cd0c5a956ba6e253d6ebb9ce3b391bce1c7d07a95468c842ea4a07e02",
+                    "vout": 1,
+                    "scriptSig": {
+                        "asm": "30440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde7[ALL] 03a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6",
+                        "hex": "4730440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde7012103a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6",
+                    },
+                    "sequence": 4294967295,
+                }
+            ],
+            "vout": [
+                {
+                    "value": 0.00000000,
+                    "n": 0,
+                    "scriptPubKey": {
+                        "asm": "OP_RETURN 696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947",
+                        "desc": "raw(6a34696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947)#6k5z85th",
+                        "hex": "6a34696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947",
+                        "type": "nulldata",
+                    },
+                },
+                {
+                    "value": 0.52310396,
+                    "n": 1,
+                    "scriptPubKey": {
+                        "asm": "OP_DUP OP_HASH160 412463039be25be1bef6e6dbc5eb8eb18cf95694 OP_EQUALVERIFY OP_CHECKSIG",
+                        "desc": "addr(mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G)#ajysks2a",
+                        "hex": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+                        "address": "mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G",
+                        "type": "pubkeyhash",
+                    },
+                },
+            ],
+            "hex": "0200000001027ea0a42e848c46957ad0c7e1bc91b3e39cbb6e3d256eba56a9c5d01ccee333010000006a4730440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde7012103a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6ffffffff020000000000000000366a34696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d69477c311e03000000001976a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac00000000",
+            "blockhash": "0000000056ed6b0f69fb51d0a690b78b1ffaf44ef01f1380d3528fc430903f76",
+            "confirmations": 2996,
+            "time": 1737479508,
+            "blocktime": 1737479508,
+        },
+    )
+
+    helpers.setup_bitcoinutils("testnet")
+    assert (
+        bitcoind.search_pubkey_in_transactions(
+            "mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G",
+            ["c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32"],
+        )
+        == "03a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6"
+    )
+    assert (
+        bitcoind.search_pubkey_in_transactions(
+            "tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a",
+            ["c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32"],
+        )
+        is None
+    )
+    helpers.setup_bitcoinutils("regtest")
+
+
+def test_search_pubkey_in_transactions_p2pk(monkeypatch):
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction",
+        lambda x, y: {
+            "txid": "c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32",
+            "hash": "c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32",
+            "version": 2,
+            "size": 254,
+            "vsize": 254,
+            "weight": 1016,
+            "locktime": 0,
+            "vin": [
+                {
+                    "txid": "33e3ce1cd0c5a956ba6e253d6ebb9ce3b391bce1c7d07a95468c842ea4a07e02",
+                    "vout": 1,
+                    "scriptSig": {
+                        "asm": "30440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde7[ALL] 03a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6",
+                        "hex": "4730440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde7012103a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6",
+                    },
+                    "sequence": 4294967295,
+                }
+            ],
+            "vout": [
+                {
+                    "value": 0.00000000,
+                    "n": 0,
+                    "scriptPubKey": {
+                        "asm": "OP_RETURN 696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947",
+                        "desc": "raw(6a34696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947)#6k5z85th",
+                        "hex": "6a34696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947",
+                        "type": "nulldata",
+                    },
+                },
+                {
+                    "value": 0.52310396,
+                    "n": 1,
+                    "scriptPubKey": {
+                        "asm": "OP_PUSHBYTES_65 049464205950188c29d377eebca6535e0f3699ce4069ecd77ffebfbd0bcf95e3c134cb7d2742d800a12df41413a09ef87a80516353a2f0a280547bb5512dc03da8 OP_CHECKSIG",
+                        "desc": "addr(ms1J6ZT5X2n7vRiDdoJeNomprGsTrSEXUd)#ajysks2a",
+                        "hex": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+                        "address": "ms1J6ZT5X2n7vRiDdoJeNomprGsTrSEXUd",
+                        "type": "p2pk",
+                    },
+                },
+            ],
+            "hex": "0200000001027ea0a42e848c46957ad0c7e1bc91b3e39cbb6e3d256eba56a9c5d01ccee333010000006a4730440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde7012103a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6ffffffff020000000000000000366a34696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d69477c311e03000000001976a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac00000000",
+            "blockhash": "0000000056ed6b0f69fb51d0a690b78b1ffaf44ef01f1380d3528fc430903f76",
+            "confirmations": 2996,
+            "time": 1737479508,
+            "blocktime": 1737479508,
+        },
+    )
+
+    helpers.setup_bitcoinutils("testnet")
+    assert (
+        bitcoind.search_pubkey_in_transactions(
+            "ms1J6ZT5X2n7vRiDdoJeNomprGsTrSEXUd",
+            ["c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32"],
+        )
+        == "049464205950188c29d377eebca6535e0f3699ce4069ecd77ffebfbd0bcf95e3c134cb7d2742d800a12df41413a09ef87a80516353a2f0a280547bb5512dc03da8"
+    )
+    assert (
+        bitcoind.search_pubkey_in_transactions(
+            "tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a",
+            ["c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32"],
+        )
+        is None
+    )
+    helpers.setup_bitcoinutils("regtest")

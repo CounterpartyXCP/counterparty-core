@@ -1,3 +1,4 @@
+import errno
 import logging
 import multiprocessing
 import os
@@ -10,25 +11,25 @@ import waitress
 import waitress.server
 from gunicorn import util as gunicorn_util
 from gunicorn.arbiter import Arbiter
-from gunicorn.errors import AppImportError
+from gunicorn.errors import AppImportError, HaltServer
 from werkzeug.serving import make_server
 
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, helpers
 
 multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def refresh_current_state(ledger_db, state_db):
+def refresh_current_state(state_db, shared_backend_height):
     CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
 
     current_block_index = CurrentState().current_block_index()
-    current_backend_height = CurrentState().current_backend_height()
+    current_backend_height = shared_backend_height.value
 
     if current_backend_height > current_block_index:
         logger.debug(
@@ -41,21 +42,20 @@ def refresh_current_state(ledger_db, state_db):
 
 
 class NodeStatusCheckerThread(threading.Thread):
-    def __init__(self):
+    def __init__(self, shared_backend_height):
         threading.Thread.__init__(self, name="NodeStatusChecker")
+        self.shared_backend_height = shared_backend_height
         self.state_db = database.get_db_connection(config.STATE_DATABASE)
-        self.ledger_db = database.get_db_connection(config.DATABASE)
         self.stop_event = threading.Event()
 
     def run(self):
         logger.debug("Starting NodeStatusChecker thread...")
         try:
             while not self.stop_event.is_set():
-                refresh_current_state(self.ledger_db, self.state_db)
+                refresh_current_state(self.state_db, self.shared_backend_height)
                 self.stop_event.wait(timeout=1)
         finally:
             self.state_db.close()
-            self.ledger_db.close()
 
     def stop(self):
         self.stop_event.set()
@@ -71,6 +71,15 @@ class GunicornArbiter(Arbiter):
         self.graceful_timeout = 30
         self.max_requests = 1000
         self.max_requests_jitter = 50
+        self.workers_pids = []
+        self.worker_id = 0
+        self.init_loggers()
+
+    def init_loggers(self):
+        for handler in self.log.error_log.handlers:
+            self.log.error_log.handlers.remove(handler)
+        for handler in logger.handlers:
+            self.log.error_log.addHandler(handler)
 
     def handle_winch(self):
         pass
@@ -91,15 +100,18 @@ class GunicornArbiter(Arbiter):
         if pid != 0:
             worker.pid = pid
             self.WORKERS[pid] = worker
+            self.workers_pids.append(pid)
+            self.worker_id = len(self.workers_pids)
             return pid
 
         # Child process
         global logger  # noqa F811
         worker.pid = os.getpid()
-        logger = log.re_set_up(f".gunicorn.{worker.pid}", api=True)
+        logger = log.re_set_up("", api=True)
+        self.init_loggers()
         try:
             gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
-            logger.trace("Booting Gunicorn worker with pid: %s", worker.pid)
+            logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()
             sys.exit(0)
@@ -122,12 +134,54 @@ class GunicornArbiter(Arbiter):
             except Exception:
                 logger.warning("Exception during worker exit")
 
+    def reap_workers(self):
+        """\
+        Reap workers to avoid zombie processes
+        """
+        try:
+            while True:
+                wpid, status = os.waitpid(-1, os.WNOHANG)
+                if not wpid:
+                    break
+                if self.reexec_pid == wpid:
+                    self.reexec_pid = 0
+                else:
+                    # A worker was terminated. If the termination reason was
+                    # that it could not boot, we'll shut it down to avoid
+                    # infinite start/stop cycles.
+                    exitcode = status >> 8
+                    if exitcode != 0:
+                        self.log.error("Worker (pid:%s) exited with code %s", wpid, exitcode)
+                    if exitcode == self.WORKER_BOOT_ERROR:
+                        reason = "Worker failed to boot."
+                        raise HaltServer(reason, self.WORKER_BOOT_ERROR)
+                    if exitcode == self.APP_LOAD_ERROR:
+                        reason = "App failed to load."
+                        raise HaltServer(reason, self.APP_LOAD_ERROR)
+
+                    worker = self.WORKERS.pop(wpid, None)
+                    if not worker:
+                        continue
+                    worker.tmp.close()
+                    self.cfg.child_exit(self, worker)
+        except OSError as e:
+            if e.errno != errno.ECHILD:
+                raise
+
     def kill_all_workers(self):
-        for pid in list(self.WORKERS.keys()):
+        if len(self.workers_pids) == 0:
+            return
+        for pid in self.workers_pids:
             try:
-                os.kill(pid, signal.SIGKILL)
+                os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
+        while True:
+            stopped = [not helpers.is_process_alive(pid) for pid in self.workers_pids]
+            if all(stopped):
+                break
+        logger.info(f"All workers killed: {self.workers_pids}")
+        self.workers_pids = []
 
 
 class GunicornApplication(gunicorn.app.base.BaseApplication):
@@ -148,7 +202,8 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.arbiter = None
         self.ledger_db = None
         self.state_db = None
-        self.current_state_thread = NodeStatusCheckerThread()
+
+        self.master_pid = os.getpid()
         super().__init__()
 
     def load_config(self):
@@ -164,8 +219,11 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.current_state_thread.start()
         return self.application
 
-    def run(self):
+    def run(self, server_ready_value, shared_backend_height):
         try:
+            CurrentState().set_backend_height_value(shared_backend_height)
+            self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
+            self.server_ready_value = server_ready_value
             self.arbiter = GunicornArbiter(self)
             self.arbiter.run()
         except RuntimeError as e:
@@ -174,20 +232,25 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             sys.exit(1)
 
     def stop(self):
-        logger.warning("Stopping Gunicorn")
         self.current_state_thread.stop()
-        if self.arbiter:
+        if self.arbiter and self.master_pid == os.getpid():
+            logger.info("Stopping Gunicorn")
             self.arbiter.kill_all_workers()
+            self.server_ready_value.value = 2
 
 
 class WerkzeugApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.current_state_thread = NodeStatusCheckerThread()
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
+        global logger  # noqa F811
+        logger = log.re_set_up("", api=True)
 
-    def run(self):
+    def run(self, server_ready_value, shared_backend_height):
+        self.server_ready_value = server_ready_value
+        CurrentState().set_backend_height_value(shared_backend_height)
+        self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
         self.current_state_thread.start()
         self.server.serve_forever()
 
@@ -195,24 +258,30 @@ class WerkzeugApplication:
         self.current_state_thread.stop()
         self.server.shutdown()
         self.server.server_close()
+        self.server_ready_value.value = 2
 
 
 class WaitressApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        self.current_state_thread = NodeStatusCheckerThread()
         self.server = waitress.server.create_server(
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )
+        global logger  # noqa F811
+        logger = log.re_set_up("", api=True)
 
-    def run(self):
+    def run(self, server_ready_value, shared_backend_height):
+        self.server_ready_value = server_ready_value
+        CurrentState().set_backend_height_value(shared_backend_height)
+        self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
         self.current_state_thread.start()
         self.server.run()
 
     def stop(self):
         self.current_state_thread.stop()
         self.server.close()
+        self.server_ready_value.value = 2
 
 
 class WSGIApplication:
@@ -227,9 +296,9 @@ class WSGIApplication:
         else:
             self.server = WaitressApplication(self.app, self.args)
 
-    def run(self):
+    def run(self, server_ready_value, shared_backend_height):
         logger.info("Starting WSGI Server thread...")
-        self.server.run()
+        self.server.run(server_ready_value, shared_backend_height)
 
     def stop(self):
         logger.info("Stopping WSGI Server thread...")

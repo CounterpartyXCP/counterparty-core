@@ -57,8 +57,8 @@ def generate_asset_id(asset_name, block_index):
         n += digit
     asset_id = n
 
-    if asset_id < 26**3:
-        raise exceptions.AssetNameError("too short")
+    # sanity check
+    assert asset_id >= 26**3
 
     return asset_id
 
@@ -515,8 +515,6 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
     bindings = (fairminter_tx_hash, "valid")
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
-    if not sums:
-        return 0, 0
     return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
 
 

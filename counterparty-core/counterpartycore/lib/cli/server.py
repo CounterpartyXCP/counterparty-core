@@ -23,7 +23,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1, dbbuilder
 from counterpartycore.lib.cli import bootstrap, log
-from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.ledger.currentstate import BackendHeight, CurrentState
 from counterpartycore.lib.parser import blocks, check, follow
 from counterpartycore.lib.utils import database, helpers
 
@@ -661,6 +661,7 @@ def start_all(args, log_stream=None):
     asset_conservation_checker = None
     db = None
     api_stop_event = None
+    backend_height_thread = None
 
     # Log all config parameters, sorted by key
     # Filter out default values #TODO: these should be set in a different way
@@ -695,9 +696,14 @@ def start_all(args, log_stream=None):
         # Check software version
         check.software_version()
 
+        backend_height_thread = BackendHeight()
+        backend_height_thread.daemon = True
+        backend_height_thread.start()
+        CurrentState().set_backend_height_value(backend_height_thread.shared_backend_height)
+
         # API Server v2
         api_stop_event = multiprocessing.Event()
-        apiserver_v2 = api_v2.APIServer(api_stop_event)
+        apiserver_v2 = api_v2.APIServer(api_stop_event, backend_height_thread.shared_backend_height)
         apiserver_v2.start(args, log_stream)
         while not apiserver_v2.is_ready() and not apiserver_v2.has_stopped():
             logger.trace("Waiting for API server to start...")
@@ -743,6 +749,8 @@ def start_all(args, log_stream=None):
         logger.error("Exception caught!", exc_info=e)
     finally:
         # Ensure all threads are stopped
+        if backend_height_thread:
+            backend_height_thread.stop()
         if api_stop_event:
             api_stop_event.set()
         if api_status_poller:
@@ -753,10 +761,16 @@ def start_all(args, log_stream=None):
             follower_daemon.stop()
         if asset_conservation_checker:
             asset_conservation_checker.stop()
+
+        if apiserver_v2:
+            logger.info("Waiting for API processes to stop...")
+            apiserver_v2.stop()
+            while not apiserver_v2.has_stopped():
+                time.sleep(0.1)
+
         # then close the database with write access
         if db:
             database.close(db)
-        log.shutdown()
 
         # Now it's safe to check for WAL files
         for db_name, db_path in [
@@ -766,14 +780,15 @@ def start_all(args, log_stream=None):
             try:
                 database.check_wal_file(db_path)
             except exceptions.WALFileFoundError:
-                logger.warning(
-                    f"{db_name} WAL file detected. To ensure no data corruption has occurred, run `counterparty-server check-db`."
-                )
+                db_file = config.DATABASE if db_name == "Ledger DB" else config.STATE_DATABASE
+                db = database.get_db_connection(db_file, read_only=False, check_wal=False)
+                db.close()
             except exceptions.DatabaseError:
                 logger.warning(
                     f"{db_name} is in use by another process and was unable to be closed correctly."
                 )
 
+        log.shutdown()
         logger.info("Shutdown complete.")
 
 

@@ -1,7 +1,8 @@
-from counterpartycore.lib import config
-from counterpartycore.lib.api import apiwatcher, composer
+from counterpartycore.lib import config, ledger
+from counterpartycore.lib.api import apiserver, apiwatcher, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES
-from counterpartycore.lib.messages import dividend, sweep
+from counterpartycore.lib.messages import dispense, dividend, sweep
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_apiserver_root(apiv2_client, current_block_index):
@@ -28,6 +29,9 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
         return None
     if "/compose/" in route:
         return None
+    if "/dispenses/" in route:
+        return None
+    print(route)
 
     last_block = db.execute(
         "SELECT block_hash FROM blocks WHERE block_index = ? ORDER BY block_index DESC LIMIT 1",
@@ -195,3 +199,76 @@ def test_invalid_hash(apiv2_client):
         result["error"]
         == "Invalid transaction hash: 65e649d58b95602b04172375dbd86783b7379e455a2bc801338d9299d10425a"
     )
+
+
+def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults):
+    tx = blockchain_mock.dummy_tx(
+        ledger_db, defaults["addresses"][0], defaults["addresses"][5], btc_amount=100
+    )
+    print("Parsing dispense")
+    with ProtocolChangesDisabled(["multiple_dispenses"]):
+        dispense.parse(ledger_db, tx)
+
+    dispenses = ledger_db.execute("SELECT * FROM dispenses ORDER BY rowid DESC LIMIT 1").fetchone()
+    url = f"/v2/dispenses/{dispenses['tx_hash']}"
+    result = apiv2_client.get(url).json
+
+    assert result["result"] == {
+        "tx_index": dispenses["tx_index"],
+        "dispense_index": 1,
+        "tx_hash": dispenses["tx_hash"],
+        "block_index": 1225,
+        "source": defaults["addresses"][5],
+        "destination": defaults["addresses"][0],
+        "asset": "XCP",
+        "dispense_quantity": 100,
+        "dispenser_tx_hash": dispenses["dispenser_tx_hash"],
+        "btc_amount": 100,
+    }
+
+
+def test_check_database_version(state_db, ledger_db, test_helpers, caplog, monkeypatch):
+    config.UPGRADE_ACTIONS["regtest"] = {
+        "10.9.1": [("refresh_state_db",), ("reparse", 100), ("rollback", 100)],
+    }
+
+    block_first = config.BLOCK_FIRST
+    config.BLOCK_FIRST = ledger.blocks.last_db_index(ledger_db)
+    with test_helpers.capture_log(caplog, "New database detected. Updating database version."):
+        apiserver.check_database_version(state_db)
+    config.BLOCK_FIRST = block_first
+
+    config.FORCE = True
+    with test_helpers.capture_log(caplog, "FORCE mode enabled. Skipping database version check."):
+        apiserver.check_database_version(state_db)
+    config.FORCE = False
+
+    version_string = config.VERSION_STRING
+    state_db.execute("UPDATE config SET value = '9.0.0' WHERE name = 'VERSION_STRING'")
+    config.VERSION_STRING = "9.0.0"
+    with test_helpers.capture_log(caplog, "State database is up to date."):
+        apiserver.check_database_version(state_db)
+
+    config.VERSION_STRING = "10.9.1"
+
+    def rollback_mock(db, block_index):
+        apiserver.logger.info("Rolling back to block %s", block_index)
+
+    def refresh_mock(db):
+        apiserver.logger.info("Refreshing state database")
+
+    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.rollback_state_db", rollback_mock)
+    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.refresh_state_db", refresh_mock)
+
+    with test_helpers.capture_log(
+        caplog,
+        [
+            "Required actions: [('refresh_state_db',), ('reparse', 100), ('rollback', 100)]",
+            "Refreshing state database",
+            "Rolling back to block 100",
+            "Database version number updated.",
+        ],
+    ):
+        apiserver.check_database_version(state_db)
+
+    config.VERSION_STRING = version_string

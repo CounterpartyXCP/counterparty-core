@@ -1,9 +1,11 @@
 import re
+from decimal import Decimal as D
 from fractions import Fraction
 
 import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.ledger import issuances
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_issuances_functions(ledger_db, defaults, current_block_index):
@@ -232,3 +234,80 @@ def test_get_assets_last_issuance(state_db):
             "locked": False,
         },
     }
+
+
+def test_edge_cases_and_errors(ledger_db, current_block_index, monkeypatch):
+    with ProtocolChangesDisabled(["numeric_asset_names"]):
+        with pytest.raises(
+            exceptions.AssetNameError, match="non‐numeric asset name starts with ‘A’"
+        ):
+            asset_id_1 = issuances.generate_asset_id("ABCDE", current_block_index)
+            asset_id_2 = issuances.get_asset_id(ledger_db, "ABCDE", current_block_index)
+            assert asset_id_1 == asset_id_2
+
+    with ProtocolChangesDisabled(["hotfix_numeric_assets"]):
+        assert issuances.get_asset_id(
+            ledger_db, "BAAA", current_block_index
+        ) == issuances.generate_asset_id("BAAA", 308000)
+        assert issuances.get_asset_name(
+            ledger_db, 26**3, current_block_index
+        ) == issuances.generate_asset_name(26**3, 308000)
+
+    assert issuances.get_asset_name(ledger_db, "01234", current_block_index) == 0
+
+    with pytest.raises(
+        exceptions.QuantityError,
+        match="Divisible assets have only eight decimal places of precision.",
+    ):
+        issuances.value_input(D("1.12345678912345"), "DIVISIBLE", True)
+
+    assert issuances.value_input(12, "foobar", True) == 1200000000
+
+    assert issuances.value_output(D("1.12345678912345"), "DIVISIBLE", True) == "0.00000001"
+
+    assert issuances.value_output(1200000000, "foobar", True) == "12.0"
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.protocol.after_block_or_test_network", lambda x, y: False
+    )
+    assert issuances.price(10, 3) == D(D(10) / D(3))
+
+    with pytest.raises(exceptions.AssetError, match="No such asset: foobaz"):
+        issuances.get_asset_issuer(ledger_db, "foobaz")
+
+    assert issuances.get_asset_description(ledger_db, "XCP") == ""
+    assert issuances.get_asset_description(ledger_db, "BTC") == ""
+    assert issuances.get_asset_description(ledger_db, "NODIVISIBLE") == "No divisible asset"
+
+    assert len(issuances.get_issuances(ledger_db, locked=True)) == 3
+    assert issuances.get_issuances(ledger_db, block_index=current_block_index) == []
+
+    with ProtocolChangesDisabled(["fix_get_issuances"]):
+        assert len(issuances.get_issuances(ledger_db, locked=True, last=True)) == 3
+
+    assert issuances.get_last_issuance_no_cache(ledger_db, "NODIVISIBLE") == {
+        "asset": "NODIVISIBLE",
+        "asset_events": "creation",
+        "asset_longname": None,
+        "block_index": 104,
+        "call_date": 0,
+        "call_price": 0.0,
+        "callable": False,
+        "description": "No divisible asset",
+        "description_locked": False,
+        "divisible": False,
+        "fair_minting": False,
+        "fee_paid": 50000000,
+        "issuer": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        "locked": False,
+        "msg_index": 0,
+        "quantity": 1000,
+        "reset": False,
+        "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+        "status": "valid",
+        "transfer": False,
+        "tx_hash": "58d9b2b8eda2b46f478078a31939d919da185010bc6e110e2c97c7c351592857",
+        "tx_index": 2,
+    }
+
+    assert issuances.get_fairmint_quantities(ledger_db, "dummmy_hash") == (0, 0)

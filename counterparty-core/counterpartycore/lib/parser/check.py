@@ -1066,80 +1066,27 @@ def software_version():
     return True
 
 
-def check_need_reparse(version_minor, message):
-    if config.FORCE:
+def check_database_version(db, upgrade_actions_callback, database_name):
+    # Update version if new database.
+    with database.LedgerDBConnectionPool().connection() as ledger_db:
+        last_block_index = ledger.blocks.last_db_index(ledger_db)
+    if last_block_index <= config.BLOCK_FIRST:
+        logger.debug("New database detected. Updating database version.")
+        database.update_version(db)
         return
-    if config.TESTNET4:
-        need_reparse_from = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET4
-    elif config.TESTNET3:
-        need_reparse_from = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET3
-    else:
-        need_reparse_from = config.NEED_REPARSE_IF_MINOR_IS_LESS_THAN
-    if need_reparse_from is not None:
-        for min_version_minor, min_version_block_index in need_reparse_from:
-            if version_minor < min_version_minor:
-                raise exceptions.VersionError(
-                    message=message,
-                    required_action="reparse",
-                    from_block_index=min_version_block_index,
-                )
-
-
-def check_need_rollback(version_minor, message):
     if config.FORCE:
+        logger.debug("FORCE mode enabled. Skipping database version check.")
         return
-    if config.TESTNET4:
-        need_rollback_from = config.NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET4
-    elif config.TESTNET3:
-        need_rollback_from = config.NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET3
+    logger.debug("Checking Ledger database version...")
+
+    database_version = database.get_config_value(db, "VERSION_STRING")
+    if database_version != config.VERSION_STRING:
+        upgrade_actions = config.UPGRADE_ACTIONS[config.NETWORK_NAME].get(config.VERSION_STRING, [])
+        logger.info("Database version mismatch. Required actions: %s", upgrade_actions)
+        upgrade_actions_callback(db, upgrade_actions)
+        # refresh the current block index
+        CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
+        # update the database version
+        database.update_version(db)
     else:
-        need_rollback_from = config.NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN
-    if need_rollback_from is not None:
-        for min_version_minor, min_version_block_index in need_rollback_from:
-            if version_minor < min_version_minor:
-                raise exceptions.VersionError(
-                    message=message,
-                    required_action="rollback",
-                    from_block_index=min_version_block_index,
-                )
-
-
-def database_version(db):
-    if config.FORCE:
-        return
-    logger.debug("Checking database version...")
-
-    version_major, version_minor = database.version(db)
-    if version_major != config.VERSION_MAJOR:
-        # Rollback database if major version has changed.
-        raise exceptions.VersionError(
-            message=f"Client major version number mismatch: {version_major} ≠ {config.VERSION_MAJOR}.",
-            required_action="rollback",
-            from_block_index=config.BLOCK_FIRST,
-        )
-    elif version_minor != config.VERSION_MINOR:
-        # Reparse transactions from the vesion block if minor version has changed.
-        message = (
-            f"Client minor version number mismatch: {version_minor} ≠ {config.VERSION_MINOR}. "
-        )
-        message += "Checking if a rollback or a reparse is needed..."
-        check_need_rollback(version_minor, message)
-        check_need_reparse(version_minor, message)
-        raise exceptions.VersionError(message=message, required_action=None)
-    else:
-        version_string = database.get_config_value(db, "VERSION_STRING")
-        if version_string:
-            version_pre_release = "-".join(version_string.split("-")[1:])
-        else:
-            # if version_string is not set, that mean we are on a version before 10.5.0 and after 10.4.8
-            # let's assume it's a pre-release version
-            # and set an arbitrary value different from config.VERSION_PRE_RELEASE
-            version_pre_release = "xxxx"
-        if version_pre_release != config.VERSION_PRE_RELEASE:
-            if version_pre_release == "xxxx":
-                message = "`VERSION_STRING` not found in dataase. "
-            else:
-                message = f"Client pre-release version number mismatch: {version_pre_release} ≠ {config.VERSION_PRE_RELEASE}. "
-            message += "Checking if a rollback or a reparse is needed..."
-            check_need_rollback(version_minor, message)
-            check_need_reparse(version_minor, message)
+        logger.debug(f"{database_name} database is up to date.")

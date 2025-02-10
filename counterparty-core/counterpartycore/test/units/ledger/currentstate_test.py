@@ -1,4 +1,7 @@
+import time
+
 from counterpartycore.lib.ledger import currentstate
+from counterpartycore.test.mocks.bitcoind import original_current_backend_height
 
 
 def test_currentstate(ledger_db, current_block_index, monkeypatch):
@@ -26,5 +29,38 @@ def test_currentstate(ledger_db, current_block_index, monkeypatch):
     currentstate.CurrentState().set("toto", "tata")
     assert currentstate.CurrentState().get("toto") == "tata"
 
-    monkeypatch.setattr(currentstate, "get_backend_height", lambda: 100)
-    assert currentstate.CurrentState().current_backend_height() == 100
+
+def test_backend_height(monkeypatch):
+    current_backend_height = 1000
+
+    def get_backend_height_mock():
+        return current_backend_height
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getblockcount", get_backend_height_mock
+    )
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_blocks_behind", lambda: 0)
+    currentstate.CurrentState.current_backend_height = original_current_backend_height
+
+    assert currentstate.CurrentState().current_backend_height() is None
+
+    backend_height_thread = currentstate.BackendHeight()
+    currentstate.CurrentState().set_backend_height_value(
+        backend_height_thread.shared_backend_height
+    )
+
+    assert backend_height_thread.shared_backend_height.value == current_backend_height
+    # use .state directly because current_backend_height() is mocked
+    assert currentstate.CurrentState().current_backend_height() == current_backend_height
+
+    try:
+        backend_height_thread.start()
+        currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL = 0.1
+
+        for _i in range(10):
+            current_backend_height += 1
+            time.sleep(currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
+            assert backend_height_thread.shared_backend_height.value == current_backend_height
+            assert currentstate.CurrentState().current_backend_height() == current_backend_height
+    finally:
+        backend_height_thread.stop()

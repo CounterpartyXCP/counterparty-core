@@ -39,6 +39,11 @@ counterparty-server start
 - Fix `bitcoind.search_pubkey_in_transactions()`
 - Don't force output change
 - Fix heavy healthz check
+- Fix search pubkey for never spent segwit address
+- Fix shutdown with Gunicorn
+- Same log file for all Gunicorn processes
+- Fix double log in access file on API query
+- Don't call `getblockcount` from each API thread or process
 
 ## Codebase
 
@@ -48,11 +53,13 @@ counterparty-server start
 - Rename everywhere `testnet` to `testnet3`
 - Add `testnet4` and `regtest` profile in `docker-compose.yaml`
 - Restore Docker Composer, Compare Hashes and Tesnet4 Reparse tests
+- Refactor how required actions are triggered on upgrade
 
 ## API
 
 - Add `block_index` filter for get order matches endpoints
 - Add `block_index` filter for get dispenses by asset endpoint
+- Add Get Dispense By Hash endpoint
 
 ## CLI
 

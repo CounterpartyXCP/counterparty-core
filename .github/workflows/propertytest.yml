@@ -1,4 +1,4 @@
-name: Property test
+name: Property
 
 on:
   push:

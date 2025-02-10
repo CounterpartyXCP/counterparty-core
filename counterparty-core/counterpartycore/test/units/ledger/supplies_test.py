@@ -1,7 +1,7 @@
 from counterpartycore.lib.ledger import supplies
 
 
-def test_supplies_functions(ledger_db):
+def test_supplies_functions(ledger_db, defaults):
     assert supplies.xcp_created(ledger_db) == 604514652382
     assert supplies.xcp_destroyed(ledger_db) == 700000000
     assert supplies.xcp_supply(ledger_db) == 603814652382
@@ -160,3 +160,36 @@ def test_supplies_functions(ledger_db):
             "escrow": None,
         },
     ]
+
+    ledger_db.execute(
+        """
+        INSERT INTO destructions (asset, quantity, source, status) 
+        VALUES ('foobar', 1000, ?, 'valid')
+        """,
+        (defaults["addresses"][0],),
+    )
+    assert len(supplies.destructions(ledger_db).keys()) == 2
+
+    assert supplies.asset_issued_total_no_cache(ledger_db, "DIVISIBLE") == 100000000000
+
+    assert supplies.asset_destroyed_total_no_cache(ledger_db, "foobar") == 1000
+
+    assert supplies.held(ledger_db) == {
+        "A160361285792733729": 50,
+        "A95428959342453541": 100000000,
+        "BTC": 1466667,
+        "CALLABLE": 1000,
+        "DIVIDEND": 100,
+        "DIVISIBLE": 100000000000,
+        "FREEFAIRMIN": 10,
+        "LOCKED": 1000,
+        "LOCKEDPREV": 1000,
+        "MAXI": 9223372036854775807,
+        "NODIVISIBLE": 1000,
+        "PARENT": 100000000,
+        "PAYTOSCRIPT": 1000,
+        "QAIDFAIRMIN": 20,
+        "RAIDFAIRMIN": 20,
+        "TESTDISP": 1000,
+        "XCP": 603814652382,
+    }

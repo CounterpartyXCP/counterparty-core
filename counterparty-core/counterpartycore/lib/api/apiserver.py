@@ -17,10 +17,7 @@ from sentry_sdk import capture_exception
 from sentry_sdk import configure_scope as configure_sentry_scope
 from sentry_sdk import start_span as start_sentry_span
 
-from counterpartycore.lib import (
-    config,
-    exceptions,
-)
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, verbose, wsgi
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli import server
@@ -479,24 +476,22 @@ def init_flask_app():
     return app
 
 
+def execute_upgrade_actions(state_db, upgrade_actions):
+    for action in upgrade_actions:
+        if action[0] in ["rollback", "reparse"]:
+            dbbuilder.rollback_state_db(state_db, block_index=action[1])
+            break  # no need to continue
+        if action[0] == "refresh_state_db":
+            dbbuilder.refresh_state_db(state_db)
+
+
 def check_database_version(state_db):
-    try:
-        check.database_version(state_db)
-    except exceptions.VersionError as e:
-        logger.info(str(e))
-        # rollback or reparse the database
-        if e.required_action in ["rollback", "reparse"]:
-            dbbuilder.rollback_state_db(state_db, block_index=e.from_block_index)
-        else:
-            for version in config.STATE_DB_NEED_REFRESH_ON_VERSION_UPDATE:
-                if config.VERSION_STRING.startswith(version):
-                    dbbuilder.refresh_state_db(state_db)
-                    break
-        # update the database version
-        database.update_version(state_db)
+    check.check_database_version(state_db, execute_upgrade_actions, "State")
 
 
-def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
+def run_apiserver(
+    args, server_ready_value, stop_event, shared_backend_height, parent_pid, log_stream
+):
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(signum, frame):
@@ -529,6 +524,7 @@ def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
         watcher.start()
 
         app = init_flask_app()
+        app.shared_backend_height = shared_backend_height
 
         wsgi_server = wsgi.WSGIApplication(app, args=args)
 
@@ -539,7 +535,7 @@ def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
         app.app_context().push()
         server_ready_value.value = 1
 
-        wsgi_server.run()
+        wsgi_server.run(server_ready_value, shared_backend_height)
 
     except KeyboardInterrupt:
         pass
@@ -562,16 +558,6 @@ def run_apiserver(args, server_ready_value, stop_event, parent_pid, log_stream):
         logger.info("API Server stopped.")
 
 
-def is_process_alive(pid):
-    """Check For the existence of a unix pid."""
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    else:
-        return True
-
-
 # This thread is used for the following two reasons:
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
@@ -585,7 +571,7 @@ class ParentProcessChecker(threading.Thread):
 
     def run(self):
         try:
-            while not self.stop_event.is_set() and is_process_alive(self.parent_pid):
+            while not self.stop_event.is_set() and helpers.is_process_alive(self.parent_pid):
                 time.sleep(1)
             logger.debug("Parent process stopped. Exiting...")
             if self.wsgi_server is not None:
@@ -595,10 +581,11 @@ class ParentProcessChecker(threading.Thread):
 
 
 class APIServer(object):
-    def __init__(self, stop_event):
+    def __init__(self, stop_event, shared_backend_height):
         self.process = None
         self.server_ready_value = Value("I", 0)
         self.stop_event = stop_event
+        self.shared_backend_height = shared_backend_height
 
     def start(self, args, log_stream):
         if self.process is not None:
@@ -606,9 +593,15 @@ class APIServer(object):
         self.process = Process(
             name="API",
             target=run_apiserver,
-            args=(vars(args), self.server_ready_value, self.stop_event, os.getpid(), log_stream),
+            args=(
+                vars(args),
+                self.server_ready_value,
+                self.stop_event,
+                self.shared_backend_height,
+                os.getpid(),
+                log_stream,
+            ),
         )
-
         try:
             self.process.start()
             logger.info("API PID: %s", self.process.pid)
@@ -623,12 +616,15 @@ class APIServer(object):
     def stop(self):
         logger.info("Stopping API Server process...")
         if self.process.is_alive():
-            self.process.terminate()
-            self.process.join(timeout=2)
+            try:
+                os.kill(self.process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            self.process.join(timeout=10)
             if self.process.is_alive():
                 logger.error("API Server process did not stop in time. Terminating forcefully...")
                 self.process.kill()
         logger.info("API Server process stopped.")
 
     def has_stopped(self):
-        return self.stop_event.is_set()
+        return self.server_ready_value.value == 2

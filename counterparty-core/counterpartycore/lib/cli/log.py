@@ -10,6 +10,7 @@ from logging.handlers import RotatingFileHandler
 from multiprocessing import current_process
 
 import flask
+import multiprocessing_logging
 import zmq
 from dateutil.tz import tzlocal
 from halo import Halo
@@ -182,7 +183,7 @@ def set_up(
     quiet=True,
     log_file=None,
     json_logs=False,
-    max_log_file_size=40 * 1024 * 1024,
+    max_log_file_size=1024 * 1024,
     max_log_file_rotations=20,
     log_stream=None,
 ):
@@ -235,6 +236,8 @@ def set_up(
 
         fileh.emit = locked_emit
         logger.addHandler(fileh)
+
+        multiprocessing_logging.install_mp_handler()
 
     if config.LOG_IN_CONSOLE:
         if log_stream:

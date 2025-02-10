@@ -127,31 +127,19 @@ def test_get_messages(ledger_db):
     )
 
 
-def test_replay_events(ledger_db):
+def test_replay_events(ledger_db, defaults):
     rps_events = [
         [
             "DEBIT",
             "insert",
             "debits",
-            '{"action":"open RPS","address":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","asset":"XCP","block_index":308504,"event":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e","quantity":100000000,"tx_index":20260}',
+            f'{{"action":"open RPS","address":"{defaults["addresses"][0]}","asset":"XCP","block_index":308504,"event":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e","quantity":100000000,"tx_index":20260}}',
         ],
         [
             "OPEN_RPS",
             "insert",
             "rps",
-            '{"block_index":308504,"expiration":500,"expire_index":309004,"move_random_hash":"d02caf1175a967cb5830d0a19d43bb63de6025315b0eb09c80963f96237792e7","possible_moves":5,"source":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","status":"open","tx_hash":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e","tx_index":20260,"wager":100000000}',
-        ],
-        [
-            "DEBIT",
-            "insert",
-            "debits",
-            '{"action":"open RPS","address":"12tJDMYbSuVBW6SBkd5yLsx7P4CDwTod9L","asset":"XCP","block_index":308506,"event":"1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","quantity":100000000,"tx_index":20264}',
-        ],
-        [
-            "OPEN_RPS",
-            "insert",
-            "rps",
-            '{"block_index":308506,"expiration":500,"expire_index":309006,"move_random_hash":"54ccf2a6fe9e92424c843de14f380d9bd79915572be5d382caf70e76a194b71f","possible_moves":5,"source":"12tJDMYbSuVBW6SBkd5yLsx7P4CDwTod9L","status":"open","tx_hash":"1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","tx_index":20264,"wager":100000000}',
+            f'{{"block_index":308504,"expiration":500,"expire_index":309004,"move_random_hash":"d02caf1175a967cb5830d0a19d43bb63de6025315b0eb09c80963f96237792e7","possible_moves":5,"source":"{defaults["addresses"][0]}","status":"open","tx_hash":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e","tx_index":20260,"wager":100000000}}',
         ],
         [
             "RPS_UPDATE",
@@ -161,43 +149,69 @@ def test_replay_events(ledger_db):
             "tx_hash",
         ],
         [
-            "RPS_UPDATE",
-            "update",
-            "rps",
-            '{"status":"matched","tx_hash":"1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b"}',
-            "tx_hash",
-        ],
-        [
-            "RPS_MATCH",
-            "insert",
-            "rps_matches",
-            '{"block_index":308506,"id":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e_1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","match_expire_index":308526,"possible_moves":5,"status":"pending","tx0_address":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","tx0_block_index":308504,"tx0_expiration":500,"tx0_hash":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e","tx0_index":20260,"tx0_move_random_hash":"d02caf1175a967cb5830d0a19d43bb63de6025315b0eb09c80963f96237792e7","tx1_address":"12tJDMYbSuVBW6SBkd5yLsx7P4CDwTod9L","tx1_block_index":308506,"tx1_expiration":500,"tx1_hash":"1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","tx1_index":20264,"tx1_move_random_hash":"54ccf2a6fe9e92424c843de14f380d9bd79915572be5d382caf70e76a194b71f","wager":100000000}',
-        ],
-        [
             "CREDIT",
             "insert",
             "credits",
-            '{"address":"mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc","asset":"XCP","block_index":308509,"calling_function":"recredit wager","event":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e_1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","quantity":100000000,"tx_index":20273}',
-        ],
-        [
-            "CREDIT",
-            "insert",
-            "credits",
-            '{"address":"12tJDMYbSuVBW6SBkd5yLsx7P4CDwTod9L","asset":"XCP","block_index":308509,"calling_function":"recredit wager","event":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e_1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","quantity":100000000,"tx_index":20273}',
-        ],
-        [
-            "RPS_MATCH_UPDATE",
-            "update",
-            "rps_matches",
-            '{"id":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e_1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","status":"concluded: tie"}',
-            "id",
-        ],
-        [
-            "RPS_RESOLVE",
-            "insert",
-            "rpsresolves",
-            '{"block_index":308509,"move":3,"random":"2aeb66e29c4962457867100df828562f","rps_match_id":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e_1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","source":"12tJDMYbSuVBW6SBkd5yLsx7P4CDwTod9L","status":"valid","tx_hash":"f10857a8f71f85ce61e68df4d21face419ae9bc3660e71241ee93c264a2256ae","tx_index":20273}',
+            f'{{"address":"{defaults["addresses"][0]}","asset":"XCP","block_index":308509,"calling_function":"recredit wager","event":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e_1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","quantity":100000000,"tx_index":20273}}',
         ],
     ]
-    print(rps_events)
-    # events.replay_events(ledger_db, rps_events)
+    debits_before = ledger_db.execute(
+        "SELECT COUNT(*) AS count FROM debits WHERE address = ? and action = ?",
+        (defaults["addresses"][0], "open RPS"),
+    ).fetchone()["count"]
+    credits_before = ledger_db.execute(
+        "SELECT COUNT(*) AS count FROM credits WHERE address = ? and calling_function = ?",
+        (defaults["addresses"][0], "recredit wager"),
+    ).fetchone()["count"]
+    rps_before = ledger_db.execute(
+        "SELECT COUNT(*) AS count FROM rps WHERE source = ? and status = ?",
+        (defaults["addresses"][0], "matched"),
+    ).fetchone()["count"]
+
+    events.replay_events(ledger_db, rps_events)
+
+    debits_after = ledger_db.execute(
+        "SELECT COUNT(*) AS count FROM debits WHERE address = ? and action = ?",
+        (defaults["addresses"][0], "open RPS"),
+    ).fetchone()["count"]
+    credits_after = ledger_db.execute(
+        "SELECT COUNT(*) AS count FROM credits WHERE address = ? and calling_function = ?",
+        (defaults["addresses"][0], "recredit wager"),
+    ).fetchone()["count"]
+    rps_after = ledger_db.execute(
+        "SELECT COUNT(*) AS count FROM rps WHERE source = ? and status = ?",
+        (defaults["addresses"][0], "matched"),
+    ).fetchone()["count"]
+
+    assert debits_before + 1 == debits_after
+    assert credits_before + 1 == credits_after
+    assert rps_before + 1 == rps_after
+
+
+def test_replay_events_error(ledger_db, defaults):
+    with pytest.raises(exceptions.DatabaseError, match="id_name is required for update action"):
+        events.replay_events(
+            ledger_db,
+            [
+                [
+                    "RPS_UPDATE",
+                    "update",
+                    "rps",
+                    '{"status":"matched","tx_hash":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e"}',
+                    None,
+                ]
+            ],
+        )
+    with pytest.raises(exceptions.DatabaseError, match="Unknown action: delete"):
+        events.replay_events(
+            ledger_db,
+            [
+                [
+                    "RPS_UPDATE",
+                    "delete",
+                    "rps",
+                    '{"status":"matched","tx_hash":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e"}',
+                    "tx_hash",
+                ]
+            ],
+        )

@@ -1570,6 +1570,21 @@ def get_dispenses(ledger_db, cursor: str = None, limit: int = 100, offset: int =
     )
 
 
+def get_dispense(ledger_db, tx_hash: str):
+    """
+    Returns all the dispenses
+    :param str tx_hash: The hash of the transaction to return
+    :param str cursor: The last index of the dispenses to return
+    :param int limit: The maximum number of dispenses to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_row(
+        ledger_db,
+        "dispenses",
+        where={"tx_hash": tx_hash},
+    )
+
+
 def get_dispenses_by_block(
     ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
 ):

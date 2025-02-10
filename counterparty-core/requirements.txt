@@ -1,4 +1,4 @@
-apsw==3.45.1.0
+apsw==3.49.0.0
 appdirs==1.4.4
 setuptools-markdown==0.4.1
 python-dateutil==2.8.2
@@ -40,4 +40,5 @@ pyzstd==0.16.2
 dredd_hooks==0.2.0
 sh==2.0.6
 PyYAML==6.0.2
+multiprocessing-logging==0.3.4
 counterparty-rs==10.9.1

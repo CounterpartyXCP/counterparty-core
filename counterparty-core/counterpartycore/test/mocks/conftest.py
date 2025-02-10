@@ -111,7 +111,11 @@ class TestHelper:
         logger.propagate = True
         yield
         logger.propagate = False
-        assert message in caplog.text
+        if isinstance(message, list):
+            for m in message:
+                assert m in caplog.text
+        else:
+            assert message in caplog.text
 
 
 @pytest.fixture
