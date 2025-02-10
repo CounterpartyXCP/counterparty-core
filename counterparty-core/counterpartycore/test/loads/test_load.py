@@ -148,6 +148,28 @@ class MainnetFixtures:
 DB.close()
 
 
+def random_offset():
+    return random.randint(1, 10000)  # noqa S311  # Example of random range
+
+
+def random_limit():
+    return random.randint(1, 1000)  # noqa S311
+
+
+def random_verbose():
+    return random.choice(["true", "false"])  # noqa S311
+
+
+def random_params():
+    return "&".join(
+        [
+            urllib.parse.urlencode({"offset": random_offset()}),
+            urllib.parse.urlencode({"limit": random_limit()}),
+            urllib.parse.urlencode({"verbose": random_verbose()}),
+        ]
+    )
+
+
 def prepare_url(route):
     # exclude broadcast signed tx and API v1
     if route in ["/v2/bitcoin/transactions", "/", "/v1/", "/api/", "/rpc/"]:
@@ -218,7 +240,7 @@ def prepare_url(route):
             return None
 
     chr = "&" if "?" in url else "?"
-    url = url + chr + "verbose=true"
+    url = url + chr + random_params()
 
     return url
 
