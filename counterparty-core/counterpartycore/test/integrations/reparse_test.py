@@ -1,29 +1,41 @@
 import os
 import sys
 import tempfile
+import time
 
 import apsw
+import requests
 import sh
 
 
-def test_reparse_testnet4():
+def bootstrap_and_reparse(network):
     DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-data")
     if os.path.exists(DATA_DIR):
         sh.rm("-rf", DATA_DIR)
     sh.mkdir(DATA_DIR)
 
-    sh.counterparty_server(
-        "--testnet4",
+    args = [
         "-vv",
         "--data-dir",
         DATA_DIR,
         "--no-confirm",
-        "bootstrap",
-        _out=sys.stdout,
-        _err_to_out=True,
-    )
+        "--backend-ssl",
+    ]
+    if network == "testnet4":
+        args.append("--testnet4")
+        args += ["--backend-connect", "testnet4.counterparty.io"]
+        db_file = "counterparty.testnet4.db"
+        api_url = "http://localhost:44000/v2/"
+    else:
+        args += ["--backend-connect", "api.counterparty.io"]
+        db_file = "counterparty.db"
+        api_url = "http://localhost:4000/v2/"
 
-    db = apsw.Connection(os.path.join(DATA_DIR, "counterparty.testnet4.db"))
+    sh_counterparty_server = sh.counterparty_server.bake(*args, _out=sys.stdout, _err_to_out=True)
+
+    sh_counterparty_server("bootstrap")
+
+    db = apsw.Connection(os.path.join(DATA_DIR, db_file))
     last_block = db.execute(
         "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
     ).fetchone()
@@ -34,18 +46,9 @@ def test_reparse_testnet4():
 
     reparse_from = last_block_index - 1000
 
-    sh.counterparty_server(
-        "--testnet4",
-        "-vv",
-        "--data-dir",
-        DATA_DIR,
-        "reparse",
-        reparse_from,
-        _out=sys.stdout,
-        _err_to_out=True,
-    )
+    sh_counterparty_server("reparse", reparse_from)
 
-    db = apsw.Connection(os.path.join(DATA_DIR, "counterparty.testnet4.db"))
+    db = apsw.Connection(os.path.join(DATA_DIR, db_file))
     last_block = db.execute(
         "SELECT ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
     ).fetchone()
@@ -56,4 +59,23 @@ def test_reparse_testnet4():
     assert ledger_hash_before == ledger_hash_after
     assert txlist_hash_before == txlist_hash_after
 
+    sh_counterparty_server("start")
+
+    server_ready = False
+    while not server_ready:
+        try:
+            server_ready = requests.get(api_url, timeout=5)["result"]["server_ready"]
+            if not server_ready:
+                print("Waiting for server to be ready...")
+                time.sleep(1)
+        except Exception as e:
+            print(e)
+            time.sleep(1)
+            pass
+
     sh.rm("-rf", DATA_DIR)
+
+
+def test_reparse():
+    # bootstrap_and_reparse("testnet4")
+    bootstrap_and_reparse("mainnet")
