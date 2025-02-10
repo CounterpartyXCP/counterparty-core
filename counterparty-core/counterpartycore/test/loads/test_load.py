@@ -45,31 +45,98 @@ class MainnetFixtures:
             "deadline": 1388000200,
             "wager_quantity": 10,
             "counterwager_quantity": 10,
-            "target_value": 0.0,
+            "target_value": 0,
             "leverage": 5040,
             "expiration": 1000,
         },
-        "/v2/addresses/<address>/compose/broadcast": {},
-        "/v2/addresses/<address>/compose/btcpay": {},
-        "/v2/addresses/<address>/compose/burn": {},
-        "/v2/addresses/<address>/compose/cancel": {},
-        "/v2/addresses/<address>/compose/destroy": {},
-        "/v2/addresses/<address>/compose/dispenser": {},
-        "/v2/addresses/<address>/compose/dividend": {},
-        "/v2/addresses/<address>/compose/dividend/estimatexcpfees": {},
-        "/v2/addresses/<address>/compose/issuance": {},
-        "/v2/addresses/<address>/compose/mpma": {},
-        "/v2/addresses/<address>/compose/order": {},
-        "/v2/addresses/<address>/compose/send": {},
-        "/v2/addresses/<address>/compose/sweep": {},
-        "/v2/addresses/<address>/compose/sweep/estimatexcpfees": {},
-        "/v2/addresses/<address>/compose/dispense": {},
-        "/v2/addresses/<address>/compose/fairminter": {},
-        "/v2/addresses/<address>/compose/fairmint": {},
-        "/v2/addresses/<address>/compose/attach": {},
+        "/v2/addresses/<address>/compose/broadcast": {
+            "timestamp": 1388000002,
+            "value": 1,
+            "fee_fraction": 0.05,
+            "text": "Load Test",
+        },
+        "/v2/addresses/<address>/compose/btcpay": None,
+        "/v2/addresses/<address>/compose/burn": None,
+        "/v2/addresses/<address>/compose/cancel": None,
+        "/v2/addresses/<address>/compose/destroy": {
+            "asset": "XCP",
+            "quantity": 1,
+            "tag": "string",
+        },
+        "/v2/addresses/<address>/compose/dispenser": {
+            "asset": "XCP",
+            "give_quantity": 100,
+            "escrow_quantity": 100,
+            "mainchainrate": 100,
+            "status": 0,
+        },
+        "/v2/addresses/<address>/compose/dividend": {
+            "quantity_per_unit": 1,
+            "asset": "A4931122120200000000",
+            "dividend_asset": "XCP",
+        },
+        "/v2/addresses/<address>/compose/dividend/estimatexcpfees": {
+            "quantity_per_unit": 1,
+            "asset": "A4931122120200000000",
+            "dividend_asset": "XCP",
+        },
+        "/v2/addresses/<address>/compose/issuance": {
+            "asset": "DAVASABLE",
+            "quantity": 10000000000,
+            "transfer_destination": None,
+            "divisible": True,
+            "lock": None,
+            "reset": None,
+            "description": "Divisible asset",
+        },
+        "/v2/addresses/<address>/compose/mpma": {
+            "assets": "XCP,A4931122120200000000",
+            "destinations": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr,1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+            "quantities": "1,1",
+        },
+        "/v2/addresses/<address>/compose/order": {
+            "give_asset": "XCP",
+            "give_quantity": 1,
+            "get_asset": "A4931122120200000000",
+            "get_quantity": 1,
+            "expiration": 2000,
+            "fee_required": 0,
+        },
+        "/v2/addresses/<address>/compose/send": {
+            "asset": "XCP",
+            "quantity": 100,
+            "destination": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+        },
+        "/v2/addresses/<address>/compose/sweep": {
+            "destination": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+            "flags": 7,
+            "memo": "aa",
+        },
+        "/v2/addresses/<address>/compose/sweep/estimatexcpfees": {
+            "destination": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+            "flags": 7,
+            "memo": "aa",
+        },
+        "/v2/addresses/<address>/compose/dispense": {
+            "dispenser": last_dispenser["source"],
+            "quantity": 1,
+        },
+        "/v2/addresses/<address>/compose/fairminter": {
+            "asset": "LOADTEST",
+            "max_mint_per_tx": 100,
+        },
+        "/v2/addresses/<address>/compose/fairmint": {
+            "asset": last_fairminter["asset"],
+        },
+        "/v2/addresses/<address>/compose/attach": {
+            "asset": "XCP",
+            "quantity": 100,
+        },
         "/v2/addresses/<address>/compose/attach/estimatexcpfees": {},
         "/v2/utxos/<utxo>/compose/detach": {},
-        "/v2/utxos/<utxo>/compose/movetoutxo": {},
+        "/v2/utxos/<utxo>/compose/movetoutxo": {
+            "destination": "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev",
+        },
     }
     compose_common_args = {
         "validate": "false",
@@ -135,17 +202,20 @@ def prepare_url(route):
     elif url == "/v2/utxos/withbalances":
         url = url + "?utxos=" + MainnetFixtures.utxo_with_balance["utxo"]
 
-    if "/compose/" in route and MainnetFixtures.compose_args.get(route, {}) != {}:
-        params = MainnetFixtures.compose_args[route] | MainnetFixtures.compose_common_args
-        query_string = []
-        for key, value in params.items():
-            if not isinstance(value, list):
-                query_string.append(urllib.parse.urlencode({key: value}))
-            else:
-                for i in range(len(value)):
-                    query_string.append(urllib.parse.urlencode({key: value[i]}))
-        query_string = "&".join(query_string)
-        url = url + "?" + query_string
+    if "/compose/" in route:
+        if MainnetFixtures.compose_args.get(route):
+            params = MainnetFixtures.compose_args[route] | MainnetFixtures.compose_common_args
+            query_string = []
+            for key, value in params.items():
+                if not isinstance(value, list):
+                    query_string.append(urllib.parse.urlencode({key: value}))
+                else:
+                    for i in range(len(value)):
+                        query_string.append(urllib.parse.urlencode({key: value[i]}))
+            query_string = "&".join(query_string)
+            url = url + "?" + query_string
+        else:
+            return None
 
     chr = "&" if "?" in url else "?"
     url = url + chr + "verbose=true"
@@ -160,9 +230,11 @@ def generate_random_url():
             return url
 
 
-class CounterpartyCoreUser(locust.HttpUser):
+class CounterpartyCoreUser(locust.FastHttpUser):
     host = "http://localhost:4000"  # Counterparty API URL
     wait_time = locust.between(0.3, 0.6)
+    network_timeout = 15.0
+    connection_timeout = 15.0
 
     @locust.task
     def get_random_url(self):
