@@ -8,9 +8,10 @@ import requests
 import sh
 from http2https import PROXY_PORT, start_http_proxy, stop_http_proxy
 
+DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-data")
 
-def bootstrap_reparse_and_catchup(network):
-    DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-data")
+
+def prepare(network):
     if os.path.exists(DATA_DIR):
         sh.rm("-rf", DATA_DIR)
     sh.mkdir(DATA_DIR)
@@ -28,8 +29,14 @@ def bootstrap_reparse_and_catchup(network):
 
     sh_counterparty_server = sh.counterparty_server.bake(*args, _out=sys.stdout, _err_to_out=True)
 
+    return sh_counterparty_server, backend_url, db_file, api_url
+
+
+def bootstrap(sh_counterparty_server):
     sh_counterparty_server("bootstrap")
 
+
+def reparse(sh_counterparty_server, db_file):
     db = apsw.Connection(os.path.join(DATA_DIR, db_file))
     last_block = db.execute(
         "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
@@ -54,6 +61,8 @@ def bootstrap_reparse_and_catchup(network):
     assert ledger_hash_before == ledger_hash_after
     assert txlist_hash_before == txlist_hash_after
 
+
+def catchup(sh_counterparty_server, backend_url, api_url):
     try:
         start_http_proxy(backend_url)
         server_process = sh_counterparty_server("start", _bg=True)
@@ -73,4 +82,16 @@ def bootstrap_reparse_and_catchup(network):
         stop_http_proxy()
         server_process.terminate()
 
+
+def cleanup():
     sh.rm("-rf", DATA_DIR)
+
+
+def bootstrap_reparse_and_catchup(network):
+    sh_counterparty_server, backend_url, db_file, api_url = prepare(network)
+
+    bootstrap(sh_counterparty_server)
+    reparse(sh_counterparty_server, db_file)
+    catchup(sh_counterparty_server, backend_url, api_url)
+
+    cleanup()
