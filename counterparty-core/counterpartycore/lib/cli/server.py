@@ -23,7 +23,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1, dbbuilder
 from counterpartycore.lib.cli import bootstrap, log
-from counterpartycore.lib.ledger.currentstate import BackendHeigt, CurrentState
+from counterpartycore.lib.ledger.currentstate import BackendHeight, CurrentState
 from counterpartycore.lib.parser import blocks, check, follow
 from counterpartycore.lib.utils import database, helpers
 
@@ -696,7 +696,7 @@ def start_all(args, log_stream=None):
         # Check software version
         check.software_version()
 
-        backend_height_thread = BackendHeigt()
+        backend_height_thread = BackendHeight()
         backend_height_thread.daemon = True
         backend_height_thread.start()
         CurrentState().set_backend_height_value(backend_height_thread.shared_backend_height)

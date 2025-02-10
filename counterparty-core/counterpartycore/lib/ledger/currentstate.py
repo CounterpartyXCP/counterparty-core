@@ -19,9 +19,9 @@ def get_backend_height():
     return block_count + blocks_behind
 
 
-class BackendHeigt(threading.Thread):
+class BackendHeight(threading.Thread):
     def __init__(self):
-        threading.Thread.__init__(self, name="BackendHeigt")
+        threading.Thread.__init__(self, name="BackendHeight")
         self.last_check = 0
         self.stop_event = threading.Event()
         self.shared_backend_height = Value("i", 0)
@@ -34,7 +34,7 @@ class BackendHeigt(threading.Thread):
                     self.refresh()
                 self.stop_event.wait(0.1)
         finally:
-            logger.info("BackendHeigt Thread stopped.")
+            logger.info("BackendHeight Thread stopped.")
 
     def refresh(self):
         logger.trace("Updating backend height...")
@@ -43,7 +43,7 @@ class BackendHeigt(threading.Thread):
 
     def stop(self):
         self.stop_event.set()
-        logger.info("Stopping BackendHeigt thread...")
+        logger.info("Stopping BackendHeight thread...")
         self.join()
 
 

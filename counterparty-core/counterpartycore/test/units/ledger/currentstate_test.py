@@ -44,7 +44,7 @@ def test_backend_height(monkeypatch):
 
     assert currentstate.CurrentState().current_backend_height() is None
 
-    backend_height_thread = currentstate.BackendHeigt()
+    backend_height_thread = currentstate.BackendHeight()
     currentstate.CurrentState().set_backend_height_value(
         backend_height_thread.shared_backend_height
     )
@@ -53,13 +53,14 @@ def test_backend_height(monkeypatch):
     # use .state directly because current_backend_height() is mocked
     assert currentstate.CurrentState().current_backend_height() == current_backend_height
 
-    backend_height_thread.start()
-    currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL = 0.1
+    try:
+        backend_height_thread.start()
+        currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL = 0.1
 
-    for _i in range(10):
-        current_backend_height += 1
-        time.sleep(currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL * 2)
-        assert backend_height_thread.shared_backend_height.value == current_backend_height
-        assert currentstate.CurrentState().current_backend_height() == current_backend_height
-
-    backend_height_thread.stop()
+        for _i in range(10):
+            current_backend_height += 1
+            time.sleep(currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
+            assert backend_height_thread.shared_backend_height.value == current_backend_height
+            assert currentstate.CurrentState().current_backend_height() == current_backend_height
+    finally:
+        backend_height_thread.stop()
