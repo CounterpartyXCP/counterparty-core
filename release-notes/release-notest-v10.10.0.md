@@ -45,6 +45,7 @@ counterparty-server start
 - Fix double log in access file on API query
 - Don't call `getblockcount` from each API thread or process
 - Reset all caches on rolloback and reparse
+- Fix RSFetcher restart on failure
 
 ## Codebase
 

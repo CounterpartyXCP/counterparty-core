@@ -122,7 +122,9 @@ jobs:
       - name: Run counterparty-core tests
         run: |
           cd counterparty-core
-          pytest counterpartycore/test/units counterpartycore/test/functionals --cov=counterpartycore/lib/ --cov-report=
+          pytest counterpartycore/test/units counterpartycore/test/functionals \
+            --cov=counterpartycore/lib/ --cov-report= \
+            --cov-report=term-missing
       - name: Coveralls
         uses: coverallsapp/github-action@v2
         with:

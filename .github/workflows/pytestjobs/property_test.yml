@@ -1,15 +1,7 @@
-name: Property
-
-on:
-  push:
-    branches: "**"
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: workflow_call
 
 jobs:
-  build:
+  property_test:
     runs-on: ubuntu-latest
     strategy:
       matrix:

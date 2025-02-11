@@ -1,18 +1,8 @@
-name: Testnet4 Catchup Test
-
-on:
-  push:
-    branches:
-      - develop
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: workflow_call
 
 jobs:
-  build:
-    runs-on: Linux-Large
-    #runs-on: ubuntu-latest
+  testnet4sync_test:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.11"]
@@ -40,4 +30,4 @@ jobs:
     - name: Run tests
       run: |
         cd counterparty-core
-        hatch run pytest counterpartycore/test/integrations/testnet4_test.py -s -vv
+        hatch run pytest counterpartycore/test/integrations/testnet4sync_test.py -s -vv

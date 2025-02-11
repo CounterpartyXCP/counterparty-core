@@ -1,0 +1,19 @@
+name: Pytest Tests
+
+on:
+  push:
+    branches: "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scenarios_test:
+    uses: ./.github/workflows/pytestjobs/scenarios_test.yml
+  property_test:
+    uses: ./.github/workflows/pytestjobs/property_test.yml
+  testnet4_test:
+    uses: ./.github/workflows/pytestjobs/testnet4_test.yml
+  testnet4sync_test:
+    uses: ./.github/workflows/pytestjobs/testnet4sync_test.yml
