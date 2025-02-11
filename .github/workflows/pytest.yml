@@ -11,22 +11,31 @@ concurrency:
 jobs:
   scenarios-test:
     uses: ./.github/workflows/_pytest_scenarios.yml
+    secrets: inherit
   property-test:
     uses: ./.github/workflows/_pytest_property.yml
+    secrets: inherit
   testnet4-test:
     uses: ./.github/workflows/_pytest_testnet4.yml
+    secrets: inherit
   testnet4sync-test:
     uses: ./.github/workflows/_pytest_testnet4sync.yml
+    secrets: inherit
   reparse-test:
     uses: ./.github/workflows/_pytest_reparse.yml
+    secrets: inherit
   dockercompose-test:
     uses: ./.github/workflows/_pytest_dockercompose.yml
+    secrets: inherit
   comparehashes-test:
     uses: ./.github/workflows/_pytest_comparehashes.yml
+    secrets: inherit
   units-macos-m1:
     uses: ./.github/workflows/_pytest_units_macos.yml
+    secrets: inherit
   units-ubuntu:
     uses: ./.github/workflows/_pytest_units_ubuntu.yml
+    secrets: inherit
   coveralls:
     if: ${{ always() }}
     needs:
@@ -45,3 +54,4 @@ jobs:
       with:
         parallel-finished: true
         carryforward: "Scenarios,Property,Testnet4,Testnet4Sync,Reparse,DockerCompose,CompareHashes,Unit-3.10,Unit-3.11,Unit-3.12"
+        github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
