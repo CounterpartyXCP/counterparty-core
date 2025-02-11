@@ -10,10 +10,10 @@ concurrency:
 
 jobs:
   scenarios_test:
-    uses: ./.github/workflows/pytestjobs/scenarios_test.yml
+    uses: ./.github/workflows/scenarios_test.yml
   property_test:
-    uses: ./.github/workflows/pytestjobs/property_test.yml
+    uses: ./.github/workflows/property_test.yml
   testnet4_test:
-    uses: ./.github/workflows/pytestjobs/testnet4_test.yml
+    uses: ./.github/workflows/testnet4_test.yml
   testnet4sync_test:
-    uses: ./.github/workflows/pytestjobs/testnet4sync_test.yml
+    uses: ./.github/workflows/testnet4sync_test.yml
