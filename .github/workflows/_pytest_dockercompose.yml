@@ -21,7 +21,7 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y docker-compose-plugin
         python -m pip install --upgrade pip
-        pip install pytest hatchling==1.25.0 hatch==1.13.0
+        pip install pytest hatchling==1.25.0 hatch==1.13.0 coveralls pytest-cov
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
     - name: Run regtest tests
@@ -31,8 +31,7 @@ jobs:
             --cov=counterpartycore/lib/ --cov-report=
     # upload coverage to coveralls
     - name: Coveralls
-      uses: coverallsapp/github-action@v2
-      with:
-        github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        flag-name: DockerCompose
-        parallel: true
+      run: coveralls
+      env:
+        GITHUB_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        COVERALLS_PARALLEL: true

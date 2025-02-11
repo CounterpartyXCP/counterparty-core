@@ -48,10 +48,11 @@ jobs:
       - comparehashes-test
       - units-ubuntu
     runs-on: ubuntu-latest
+    container: python:3-slim
     steps:
+    - name: Install coveralls
+      run: pip3 install --upgrade coveralls
     - name: Coveralls Finished
-      uses: coverallsapp/github-action@v2
-      with:
-        parallel-finished: true
-        carryforward: "Scenarios,Property,Testnet4,Testnet4Sync,Reparse,DockerCompose,CompareHashes,Unit-3.10,Unit-3.11,Unit-3.12"
-        github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      run: coveralls --finish
+      env:
+        GITHUB_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}

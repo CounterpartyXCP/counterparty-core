@@ -15,7 +15,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest hatchling==1.25.0 hatch==1.13.0 requests pytest-cov
+        pip install pytest hatchling==1.25.0 hatch==1.13.0 requests pytest-cov coveralls
     - name: Run compare hashes tests
       run: |
         cd counterparty-core
@@ -23,8 +23,7 @@ jobs:
             --cov=counterpartycore/lib/ --cov-report=
     # upload coverage to coveralls
     - name: Coveralls
-      uses: coverallsapp/github-action@v2
-      with:
-        github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        flag-name: CompareHashes
-        parallel: true
+      run: coveralls
+      env:
+        GITHUB_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        COVERALLS_PARALLEL: true
