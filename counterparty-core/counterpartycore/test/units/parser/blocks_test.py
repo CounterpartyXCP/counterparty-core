@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from counterpartycore.lib import config
+from counterpartycore.lib import config, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import send
 from counterpartycore.lib.messages.versions import send1
@@ -123,3 +123,61 @@ def test_check_database_version(ledger_db, test_helpers, caplog, monkeypatch):
 
     config.VERSION_STRING = version_string
     config.CACHE_DIR = cache_dir
+
+
+def test_rollback(ledger_db, test_helpers, caplog):
+    utxos = ledger_db.execute(
+        """
+        SELECT * FROM (
+            SELECT utxo, MAX(rowid), quantity FROM balances GROUP BY utxo
+        )
+        WHERE utxo IS NOT NULL AND quantity > 0
+        """,
+    ).fetchall()
+    for utxo in utxos:
+        assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(utxo["utxo"])
+
+    last_attach = ledger_db.execute(
+        "SELECT * FROM sends WHERE send_type='attach' ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+    blocks.rollback(ledger_db, last_attach["block_index"] - 1)
+    assert not ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+
+def test_reparse(ledger_db, test_helpers, caplog):
+    last_block = ledger_db.execute(
+        "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+    ledger_hash_before = last_block["ledger_hash"]
+    txlist_hash_before = last_block["txlist_hash"]
+
+    utxos = ledger_db.execute(
+        """
+        SELECT * FROM (
+            SELECT utxo, MAX(rowid), quantity FROM balances GROUP BY utxo
+        )
+        WHERE utxo IS NOT NULL AND quantity > 0
+        """,
+    ).fetchall()
+    for utxo in utxos:
+        assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(utxo["utxo"])
+
+    last_attach = ledger_db.execute(
+        "SELECT * FROM sends WHERE send_type='attach' ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+    blocks.reparse(ledger_db, last_attach["block_index"] - 1)
+    assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+    last_block = ledger_db.execute(
+        "SELECT ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+    ledger_hash_after = last_block["ledger_hash"]
+    txlist_hash_after = last_block["txlist_hash"]
+    ledger_db.close()
+
+    assert ledger_hash_before == ledger_hash_after
+    assert txlist_hash_before == txlist_hash_after
