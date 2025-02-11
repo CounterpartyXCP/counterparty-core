@@ -1,0 +1,23 @@
+name: Code Scanners
+
+on:
+  push:
+    branches: "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bandit:
+    uses: ./.github/workflows/_scanners_bandit.yml
+  codeql:
+    uses: ./.github/workflows/_scanners_codeql.yml
+  licenses:
+    uses: ./.github/workflows/_scanners_licenses.yml
+  pylint:
+    uses: ./.github/workflows/_scanners_pylint.yml
+  ruff-check:
+    uses: ./.github/workflows/_scanners_ruff_check.yml
+  ruff-format:
+    uses: ./.github/workflows/_scanners_ruff_format.yml

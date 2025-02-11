@@ -10,26 +10,26 @@ concurrency:
 
 jobs:
   scenarios-test:
-    uses: ./.github/workflows/pytest_scenarios.yml
+    uses: ./.github/workflows/_pytest_scenarios.yml
   property-test:
-    uses: ./.github/workflows/pytest_property.yml
+    uses: ./.github/workflows/_pytest_property.yml
   testnet4-test:
-    uses: ./.github/workflows/pytest_testnet4.yml
+    uses: ./.github/workflows/_pytest_testnet4.yml
   testnet4sync-test:
-    uses: ./.github/workflows/pytest_testnet4sync.yml
+    uses: ./.github/workflows/_pytest_testnet4sync.yml
   reparse-test:
-    uses: ./.github/workflows/pytest_reparse.yml
+    uses: ./.github/workflows/_pytest_reparse.yml
   mainnet-test:
-    uses: ./.github/workflows/pytest_mainnet.yml
+    uses: ./.github/workflows/_pytest_mainnet.yml
   load-test:
-    uses: ./.github/workflows/pytest_load.yml
+    uses: ./.github/workflows/_pytest_load.yml
   dockercompose-test:
-    uses: ./.github/workflows/pytest_dockercompose.yml
+    uses: ./.github/workflows/_pytest_dockercompose.yml
   comparehashes-test:
-    uses: ./.github/workflows/pytest_comparehashes.yml
+    uses: ./.github/workflows/_pytest_comparehashes.yml
   units-macos-m1:
-    uses: ./.github/workflows/pytest_units_macos.yml
+    uses: ./.github/workflows/_pytest_units_macos.yml
   units-python310:
-    uses: ./.github/workflows/pytest_units_py310.yml
+    uses: ./.github/workflows/_pytest_units_py310.yml
   units-python312:
-    uses: ./.github/workflows/pytest_units_py312.yml
+    uses: ./.github/workflows/_pytest_units_py312.yml

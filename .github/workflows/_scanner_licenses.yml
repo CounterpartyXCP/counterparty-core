@@ -1,11 +1,7 @@
-name: Pylint
-
-on:
-  push:
-    branches: "**"
+on: workflow_call
 
 jobs:
-  build:
+  licenses:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -27,15 +23,14 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y libgirepository1.0-dev libleveldb-dev
         python -m pip install --upgrade pip
-        pip install pylint maturin
-        pip install pylint-sarif-unofficial
+        pip install license_scanner maturin sh
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
         pip install evdev
-    - name: Analysing the code with pylint
+    - name: Analysing dependencies with licence_scanner
       run: |
-        pylint2sarif $(git ls-files '*.py' | grep -v counterparty-rs/tests/ | grep -v counterparty-core/counterpartycore/test/ | grep -v counterparty-core/tools/) || true
+        python counterparty-core/tools/checklicences.py
     - name: Upload SARIF
       uses: github/codeql-action/upload-sarif/@v2
       with:
-        sarif_file: pylint.sarif
+        sarif_file: license_scanner.sarif
