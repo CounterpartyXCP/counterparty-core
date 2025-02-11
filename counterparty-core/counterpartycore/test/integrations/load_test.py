@@ -1,151 +1,157 @@
-import os
 import random
 import urllib.parse
+from io import StringIO
 
 import gevent
 import locust
+import reparsetest
 from counterpartycore.lib.api.routes import ALL_ROUTES
 from counterpartycore.lib.utils import database
 
-DB = database.get_db_connection(
-    os.path.expanduser("~/.local/share/counterparty/counterparty.db"), read_only=True
-)
 
+def generate_mainnet_fixtures(db_file):
+    db = database.get_db_connection(db_file, read_only=True)
 
-class MainnetFixtures:
-    last_block = DB.execute(
-        "SELECT block_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
-    ).fetchone()
-    last_tx = DB.execute(
-        "SELECT tx_hash, tx_index, block_index FROM transactions ORDER BY rowid DESC LIMIT 1"
-    ).fetchone()
-    utxo_with_balance = DB.execute(
-        "SELECT * FROM balances WHERE utxo IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
-    ).fetchone()
-    last_dispenser = DB.execute("SELECT * FROM dispensers ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_dispense = DB.execute("SELECT * FROM dispenses ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_order = DB.execute("SELECT * FROM orders ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_bet = DB.execute("SELECT * FROM bets ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_dividend = DB.execute("SELECT * FROM dividends ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_event = DB.execute("SELECT * FROM messages ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_issuance = DB.execute("SELECT * FROM issuances ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_sweep = DB.execute("SELECT * FROM sweeps ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_broadcast = DB.execute("SELECT * FROM broadcasts ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_fairminter = DB.execute("SELECT * FROM fairminters ORDER BY rowid DESC LIMIT 1").fetchone()
-    last_fairmint = DB.execute("SELECT * FROM fairmints ORDER BY rowid DESC LIMIT 1").fetchone()
-    asset, asset1, asset2 = "XCP", "PEPECASH", "FAIREST"
-    datahex = "00000014000000a25be34b66000000174876e800010000000000000000000f446976697369626c65206173736574"
-    jdog_address = "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev"
-    jdog_tx_hash = "032d29f789f7fc0aa8d268431a02001a0d4ee9dc42ca4b21de26b912f101271c"
-    raw_transaction = "0100000001b43530bc300f44a078bae943cb6ad3add44111ce2f815dad1deb921c912462d9020000008b483045022100849a06573b994a95b239cbaadf8cd266bdc5fc64535be43bcb786e29b515089502200a6fd9876ef888b67f1097928f7386f55e775b5812eb9ba22609abfdfe8d3f2f01410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ffffffff020000000000000000436a4145b0b98d99423f507895e7dbdf4b7973f7bd422984872c56c241007de56d991ce1c74270f773cf03896f4a50ee0df5eb153571ce2a767f51c7c9d7569bad277e9da9a78200000000001976a914bce6191bf2fd5981313cae869e9fafe164f7dbaf88ac00000000"
-    compose_args = {
-        "/v2/addresses/<address>/compose/bet": {
-            "feed_address": "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev",
-            "bet_type": 3,
-            "deadline": 1388000200,
-            "wager_quantity": 10,
-            "counterwager_quantity": 10,
-            "target_value": 0,
-            "leverage": 5040,
-            "expiration": 1000,
-        },
-        "/v2/addresses/<address>/compose/broadcast": {
-            "timestamp": 1388000002,
-            "value": 1,
-            "fee_fraction": 0.05,
-            "text": "Load Test",
-        },
-        "/v2/addresses/<address>/compose/btcpay": None,
-        "/v2/addresses/<address>/compose/burn": None,
-        "/v2/addresses/<address>/compose/cancel": None,
-        "/v2/addresses/<address>/compose/destroy": {
-            "asset": "XCP",
-            "quantity": 1,
-            "tag": "string",
-        },
-        "/v2/addresses/<address>/compose/dispenser": {
-            "asset": "XCP",
-            "give_quantity": 100,
-            "escrow_quantity": 100,
-            "mainchainrate": 100,
-            "status": 0,
-        },
-        "/v2/addresses/<address>/compose/dividend": {
-            "quantity_per_unit": 1,
-            "asset": "A4931122120200000000",
-            "dividend_asset": "XCP",
-        },
-        "/v2/addresses/<address>/compose/dividend/estimatexcpfees": {
-            "quantity_per_unit": 1,
-            "asset": "A4931122120200000000",
-            "dividend_asset": "XCP",
-        },
-        "/v2/addresses/<address>/compose/issuance": {
-            "asset": "DAVASABLE",
-            "quantity": 10000000000,
-            "transfer_destination": None,
-            "divisible": True,
-            "lock": None,
-            "reset": None,
-            "description": "Divisible asset",
-        },
-        "/v2/addresses/<address>/compose/mpma": {
-            "assets": "XCP,A4931122120200000000",
-            "destinations": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr,1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
-            "quantities": "1,1",
-        },
-        "/v2/addresses/<address>/compose/order": {
-            "give_asset": "XCP",
-            "give_quantity": 1,
-            "get_asset": "A4931122120200000000",
-            "get_quantity": 1,
-            "expiration": 2000,
-            "fee_required": 0,
-        },
-        "/v2/addresses/<address>/compose/send": {
-            "asset": "XCP",
-            "quantity": 100,
-            "destination": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
-        },
-        "/v2/addresses/<address>/compose/sweep": {
-            "destination": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
-            "flags": 7,
-            "memo": "aa",
-        },
-        "/v2/addresses/<address>/compose/sweep/estimatexcpfees": {
-            "destination": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
-            "flags": 7,
-            "memo": "aa",
-        },
-        "/v2/addresses/<address>/compose/dispense": {
-            "dispenser": last_dispenser["source"],
-            "quantity": 1,
-        },
-        "/v2/addresses/<address>/compose/fairminter": {
-            "asset": "LOADTEST",
-            "max_mint_per_tx": 100,
-        },
-        "/v2/addresses/<address>/compose/fairmint": {
-            "asset": last_fairminter["asset"],
-        },
-        "/v2/addresses/<address>/compose/attach": {
-            "asset": "XCP",
-            "quantity": 100,
-        },
-        "/v2/addresses/<address>/compose/attach/estimatexcpfees": {},
-        "/v2/utxos/<utxo>/compose/detach": {},
-        "/v2/utxos/<utxo>/compose/movetoutxo": {
-            "destination": "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev",
-        },
-    }
-    compose_common_args = {
-        "validate": "false",
-        "pubkeys": "0426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3",
-        "exact_fee": 0,
-    }
+    class MainnetFixtures:
+        last_block = db.execute(
+            "SELECT block_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+        ).fetchone()
+        last_tx = db.execute(
+            "SELECT tx_hash, tx_index, block_index FROM transactions ORDER BY rowid DESC LIMIT 1"
+        ).fetchone()
+        utxo_with_balance = db.execute(
+            "SELECT * FROM balances WHERE utxo IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
+        ).fetchone()
+        last_dispenser = db.execute(
+            "SELECT * FROM dispensers ORDER BY rowid DESC LIMIT 1"
+        ).fetchone()
+        last_dispense = db.execute("SELECT * FROM dispenses ORDER BY rowid DESC LIMIT 1").fetchone()
+        last_order = db.execute("SELECT * FROM orders ORDER BY rowid DESC LIMIT 1").fetchone()
+        last_bet = db.execute("SELECT * FROM bets ORDER BY rowid DESC LIMIT 1").fetchone()
+        last_dividend = db.execute("SELECT * FROM dividends ORDER BY rowid DESC LIMIT 1").fetchone()
+        last_event = db.execute("SELECT * FROM messages ORDER BY rowid DESC LIMIT 1").fetchone()
+        last_issuance = db.execute("SELECT * FROM issuances ORDER BY rowid DESC LIMIT 1").fetchone()
+        last_sweep = db.execute("SELECT * FROM sweeps ORDER BY rowid DESC LIMIT 1").fetchone()
+        last_broadcast = db.execute(
+            "SELECT * FROM broadcasts ORDER BY rowid DESC LIMIT 1"
+        ).fetchone()
+        last_fairminter = db.execute(
+            "SELECT * FROM fairminters ORDER BY rowid DESC LIMIT 1"
+        ).fetchone()
+        last_fairmint = db.execute("SELECT * FROM fairmints ORDER BY rowid DESC LIMIT 1").fetchone()
+        asset, asset1, asset2 = "XCP", "PEPECASH", "FAIREST"
+        datahex = "00000014000000a25be34b66000000174876e800010000000000000000000f446976697369626c65206173736574"
+        jdog_address = "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev"
+        jdog_tx_hash = "032d29f789f7fc0aa8d268431a02001a0d4ee9dc42ca4b21de26b912f101271c"
+        raw_transaction = "0100000001b43530bc300f44a078bae943cb6ad3add44111ce2f815dad1deb921c912462d9020000008b483045022100849a06573b994a95b239cbaadf8cd266bdc5fc64535be43bcb786e29b515089502200a6fd9876ef888b67f1097928f7386f55e775b5812eb9ba22609abfdfe8d3f2f01410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ffffffff020000000000000000436a4145b0b98d99423f507895e7dbdf4b7973f7bd422984872c56c241007de56d991ce1c74270f773cf03896f4a50ee0df5eb153571ce2a767f51c7c9d7569bad277e9da9a78200000000001976a914bce6191bf2fd5981313cae869e9fafe164f7dbaf88ac00000000"
+        compose_args = {
+            "/v2/addresses/<address>/compose/bet": {
+                "feed_address": "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev",
+                "bet_type": 3,
+                "deadline": 1388000200,
+                "wager_quantity": 10,
+                "counterwager_quantity": 10,
+                "target_value": 0,
+                "leverage": 5040,
+                "expiration": 1000,
+            },
+            "/v2/addresses/<address>/compose/broadcast": {
+                "timestamp": 1388000002,
+                "value": 1,
+                "fee_fraction": 0.05,
+                "text": "Load Test",
+            },
+            "/v2/addresses/<address>/compose/btcpay": None,
+            "/v2/addresses/<address>/compose/burn": None,
+            "/v2/addresses/<address>/compose/cancel": None,
+            "/v2/addresses/<address>/compose/destroy": {
+                "asset": "XCP",
+                "quantity": 1,
+                "tag": "string",
+            },
+            "/v2/addresses/<address>/compose/dispenser": {
+                "asset": "XCP",
+                "give_quantity": 100,
+                "escrow_quantity": 100,
+                "mainchainrate": 100,
+                "status": 0,
+            },
+            "/v2/addresses/<address>/compose/dividend": {
+                "quantity_per_unit": 1,
+                "asset": "A4931122120200000000",
+                "dividend_asset": "XCP",
+            },
+            "/v2/addresses/<address>/compose/dividend/estimatexcpfees": {
+                "quantity_per_unit": 1,
+                "asset": "A4931122120200000000",
+                "dividend_asset": "XCP",
+            },
+            "/v2/addresses/<address>/compose/issuance": {
+                "asset": "DAVASABLE",
+                "quantity": 10000000000,
+                "transfer_destination": None,
+                "divisible": True,
+                "lock": None,
+                "reset": None,
+                "description": "Divisible asset",
+            },
+            "/v2/addresses/<address>/compose/mpma": {
+                "assets": "XCP,A4931122120200000000",
+                "destinations": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr,1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+                "quantities": "1,1",
+            },
+            "/v2/addresses/<address>/compose/order": {
+                "give_asset": "XCP",
+                "give_quantity": 1,
+                "get_asset": "A4931122120200000000",
+                "get_quantity": 1,
+                "expiration": 2000,
+                "fee_required": 0,
+            },
+            "/v2/addresses/<address>/compose/send": {
+                "asset": "XCP",
+                "quantity": 100,
+                "destination": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+            },
+            "/v2/addresses/<address>/compose/sweep": {
+                "destination": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+                "flags": 7,
+                "memo": "aa",
+            },
+            "/v2/addresses/<address>/compose/sweep/estimatexcpfees": {
+                "destination": "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
+                "flags": 7,
+                "memo": "aa",
+            },
+            "/v2/addresses/<address>/compose/dispense": {
+                "dispenser": last_dispenser["source"],
+                "quantity": 1,
+            },
+            "/v2/addresses/<address>/compose/fairminter": {
+                "asset": "LOADTEST",
+                "max_mint_per_tx": 100,
+            },
+            "/v2/addresses/<address>/compose/fairmint": {
+                "asset": last_fairminter["asset"],
+            },
+            "/v2/addresses/<address>/compose/attach": {
+                "asset": "XCP",
+                "quantity": 100,
+            },
+            "/v2/addresses/<address>/compose/attach/estimatexcpfees": {},
+            "/v2/utxos/<utxo>/compose/detach": {},
+            "/v2/utxos/<utxo>/compose/movetoutxo": {
+                "destination": "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev",
+            },
+        }
+        compose_common_args = {
+            "validate": "false",
+            "pubkeys": "0426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3",
+            "exact_fee": 0,
+        }
 
-
-DB.close()
+    db.close()
+    return MainnetFixtures
 
 
 def random_offset():
@@ -170,7 +176,7 @@ def random_params():
     )
 
 
-def prepare_url(route):
+def prepare_url(route, MainnetFixtures):
     # exclude broadcast signed tx and API v1
     if route in ["/v2/bitcoin/transactions", "/", "/v1/", "/api/", "/rpc/"]:
         return None
@@ -245,9 +251,9 @@ def prepare_url(route):
     return url
 
 
-def generate_random_url():
+def generate_random_url(MainnetFixtures):
     while True:
-        url = prepare_url(random.choice(list(ALL_ROUTES.keys())))  # noqa S311
+        url = prepare_url(random.choice(list(ALL_ROUTES.keys())), MainnetFixtures)  # noqa S311
         if url:
             return url
 
@@ -257,34 +263,52 @@ class CounterpartyCoreUser(locust.HttpUser):
     wait_time = locust.between(0.3, 0.6)
     network_timeout = 15.0
     connection_timeout = 15.0
+    MainnetFixtures = None
 
     @locust.task
     def get_random_url(self):
         headers = {"Content-Type": "application/json"}
-        self.client.get(generate_random_url(), headers=headers)
+        self.client.get(generate_random_url(CounterpartyCoreUser.MainnetFixtures), headers=headers)
 
 
 def test_load():
-    locust.log.setup_logging("INFO")
+    sh_counterparty_server, backend_url, db_file, api_url = reparsetest.prepare("mainnet")
+    sh_counterparty_server("bootstrap")
 
-    user_count = 5
-    spawn_rate = 2
-    test_duration = 30
+    CounterpartyCoreUser.MainnetFixtures = generate_mainnet_fixtures(db_file)
 
-    env = locust.env.Environment(user_classes=[CounterpartyCoreUser])
-    env.create_local_runner()
+    try:
+        out = StringIO()
+        server_process = sh_counterparty_server(
+            "start", "--api-only", _bg=True, _out=out, _err_to_out=True
+        )
 
-    # start a greenlet that periodically outputs the current stats
-    gevent.spawn(locust.stats.stats_printer(env.stats))
-    # start a greenlet that save current stats to history
-    gevent.spawn(locust.stats.stats_history, env.runner)
-    # start the test
-    env.runner.start(user_count, spawn_rate=spawn_rate)
-    # in test_duration seconds stop the runner
-    gevent.spawn_later(test_duration, lambda: env.runner.quit())
-    env.runner.greenlet.join()
+        while "API.Watcher - Catch up completed" not in out.getvalue():
+            print("Waiting for server to be ready...")
+            gevent.sleep(1)
 
-    print(env.stats.serialize_errors())
-    assert env.stats.total.avg_response_time < 250  # ms
-    assert env.stats.total.num_failures == 0
-    assert env.stats.total.get_response_time_percentile(0.95) < 600  # ms
+        locust.log.setup_logging("INFO")
+
+        user_count = 5
+        spawn_rate = 2
+        test_duration = 30
+
+        env = locust.env.Environment(user_classes=[CounterpartyCoreUser])
+        env.create_local_runner()
+
+        # start a greenlet that periodically outputs the current stats
+        gevent.spawn(locust.stats.stats_printer(env.stats))
+        # start a greenlet that save current stats to history
+        gevent.spawn(locust.stats.stats_history, env.runner)
+        # start the test
+        env.runner.start(user_count, spawn_rate=spawn_rate)
+        # in test_duration seconds stop the runner
+        gevent.spawn_later(test_duration, lambda: env.runner.quit())
+        env.runner.greenlet.join()
+
+        print(env.stats.serialize_errors())
+        assert env.stats.total.avg_response_time < 250  # ms
+        assert env.stats.total.num_failures == 0
+        assert env.stats.total.get_response_time_percentile(0.95) < 600  # ms
+    finally:
+        server_process.terminate()

@@ -847,8 +847,12 @@ def start_rsfetcher():
         logger.error(e)
         sys.exit(1)
     except Exception as e:
-        logger.error(f"Failed to start RSFetcher: {e}")
-        logger.warning("Failed to start RSFetcher. Retrying in 5 seconds...")
+        logger.warning(f"Failed to start RSFetcher ({e}). Retrying in 5 seconds...")
+        try:
+            fetcher.stop()
+        except Exception as e:
+            logger.debug(f"Failed to stop RSFetcher ({e}).")
+            pass
         time.sleep(5)
         return start_rsfetcher()
     return fetcher

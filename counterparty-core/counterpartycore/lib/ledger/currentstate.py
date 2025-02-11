@@ -28,6 +28,8 @@ class BackendHeight(threading.Thread):
         self.refresh()
 
     def run(self):
+        if config.API_ONLY:
+            return
         try:
             while not self.stop_event.is_set():
                 if time.time() - self.last_check > BACKEND_HEIGHT_REFRSH_INTERVAL:
@@ -37,6 +39,8 @@ class BackendHeight(threading.Thread):
             logger.info("BackendHeight Thread stopped.")
 
     def refresh(self):
+        if config.API_ONLY:
+            return
         logger.trace("Updating backend height...")
         self.shared_backend_height.value = get_backend_height()
         self.last_check = time.time()

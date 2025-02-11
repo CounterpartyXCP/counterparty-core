@@ -713,6 +713,14 @@ def start_all(args, log_stream=None):
             logger.trace("Waiting for API server to start...")
             time.sleep(0.1)
 
+        if args.api_only:
+            while True:
+                api_stop_event.wait(1)
+            return
+
+        # Backend
+        ensure_backend_is_up()
+
         # API Status Poller
         api_status_poller = apiv1.APIStatusPoller()
         api_status_poller.daemon = True
@@ -722,14 +730,6 @@ def start_all(args, log_stream=None):
         apiserver_v1 = apiv1.APIServer()
         apiserver_v1.daemon = True
         apiserver_v1.start()
-
-        if args.api_only:
-            while True:
-                api_stop_event.wait(1)
-            return
-
-        # Backend
-        ensure_backend_is_up()
 
         # delete blocks with no ledger hashes
         # in case of reparse interrupted

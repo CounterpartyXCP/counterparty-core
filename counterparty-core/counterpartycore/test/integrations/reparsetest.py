@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 import time
 
 import apsw
@@ -7,8 +8,7 @@ import requests
 import sh
 from http2https import PROXY_PORT, start_http_proxy, stop_http_proxy
 
-CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-DATA_DIR = os.path.join(CURR_DIR, "counterparty-data")
+DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-data")
 
 
 def prepare(network):
@@ -36,6 +36,7 @@ def prepare(network):
         db_file = "counterparty.db"
         api_url = "http://localhost:4000/v2/"
 
+    db_file = os.path.join(DATA_DIR, db_file)
     sh_counterparty_server = sh.counterparty_server.bake(*args, _out=sys.stdout, _err_to_out=True)
 
     return sh_counterparty_server, backend_url, db_file, api_url
