@@ -16,7 +16,16 @@ def prepare(network):
         sh.rm("-rf", DATA_DIR)
     sh.mkdir(DATA_DIR)
 
-    args = ["-vv", "--data-dir", DATA_DIR, "--no-confirm", "--backend-port", PROXY_PORT]
+    args = [
+        "-vv",
+        "--data-dir",
+        DATA_DIR,
+        "--cache-dir",
+        DATA_DIR,
+        "--no-confirm",
+        "--backend-port",
+        PROXY_PORT,
+    ]
     if network == "testnet4":
         args.append("--testnet4")
         backend_url = "https://testnet4.counterparty.io:48332"

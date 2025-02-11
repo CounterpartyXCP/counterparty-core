@@ -377,6 +377,14 @@ CONFIG_ARGS = [
             "default": False,
         },
     ],
+    [
+        ("--api-only",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Don't parse new blocks, only run the API server",
+        },
+    ],
 ]
 
 
