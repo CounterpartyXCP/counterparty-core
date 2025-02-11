@@ -51,15 +51,10 @@ def decompress_zst(zst_filepath):
     filename = zst_filepath.replace(f".{version}.zst", "")
     filepath = os.path.join(os.path.dirname(zst_filepath), filename)
     print(f"Decompressing {zst_filepath} to {filepath}...")
-    input_file_size = os.path.getsize(zst_filepath)
+    # input_file_size = os.path.getsize(zst_filepath)
     with io.open(filepath, "wb") as output_file:
         with open(zst_filepath, "rb") as input_file:
-            pyzstd.decompress_stream(
-                input_file,
-                output_file,
-                read_size=16 * 1024,
-                callback=get_zst_callbacl(input_file_size),
-            )
+            pyzstd.decompress_stream(input_file, output_file, read_size=16 * 1024)
     os.remove(zst_filepath)
     os.chmod(filepath, 0o660)
     print(f"Decompressed {zst_filepath} in {time.time() - start_time:.2f}s")
