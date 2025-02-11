@@ -15,10 +15,9 @@ server = None
 
 class RPCHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        print("Received request from client")
         target_url = self.server.target_url
 
-        # Lire l'en-tête HTTP
+        # Read http headers
         headers = {}
         while True:
             line = self.rfile.readline().decode("utf-8")
@@ -28,14 +27,11 @@ class RPCHandler(socketserver.StreamRequestHandler):
                 name, value = line.strip().split(":", 1)
                 headers[name.strip()] = value.strip()
 
-        # Lire le corps de la requête
+        # Read http body
         content_length = int(headers.get("Content-Length", 0))
         body = self.rfile.read(content_length) if content_length else b""
 
-        print(f"Received request from client: {body}")
-
         try:
-            print(f"Forwarding request to {target_url}", body)
             response = self.server.session.post(
                 target_url,
                 auth=(RPC_USER, RPC_PASSWORD),
@@ -44,10 +40,8 @@ class RPCHandler(socketserver.StreamRequestHandler):
                 verify=False,
                 timeout=5,
             )
-            print(f"Received response from {target_url}")
 
-            # Envoyer la réponse HTTP
-            print("Sending response to client")
+            # Send response back to client
             self.wfile.write(b"HTTP/1.1 200 OK\r\n")
             self.wfile.write(b"Content-Type: application/json\r\n")
             self.wfile.write(b"Connection: keep-alive\r\n")
@@ -55,10 +49,8 @@ class RPCHandler(socketserver.StreamRequestHandler):
             self.wfile.write(b"\r\n")
             self.wfile.write(response.content)
             self.wfile.flush()
-            print("Response sent to client")
 
         except Exception as e:
-            print(f"Error forwarding request: {e}")
             error_response = json.dumps({"error": str(e)}).encode()
             self.wfile.write(b"HTTP/1.1 500 Internal Server Error\r\n")
             self.wfile.write(b"Content-Type: application/json\r\n")
@@ -75,16 +67,16 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     def __init__(self, server_address, RequestHandlerClass, target_url):
         self.target_url = target_url
 
-        # Configuration de la session avec pool de connexions
+        # Create a session to reuse TCP connection
         self.session = requests.Session()
         retry_strategy = Retry(
-            total=2,  # Nombre de tentatives
-            backoff_factor=0.1,  # Délai entre les tentatives
-            status_forcelist=[500, 502, 503, 504],  # Statuts HTTP à réessayer
+            total=2,
+            backoff_factor=0.1,
+            status_forcelist=[500, 502, 503, 504],
         )
         adapter = HTTPAdapter(
-            pool_connections=20,  # Nombre de connexions dans le pool
-            pool_maxsize=20,  # Taille maximale du pool
+            pool_connections=20,
+            pool_maxsize=20,
             max_retries=retry_strategy,
         )
         self.session.mount("https://", adapter)
@@ -93,12 +85,8 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         super().__init__(server_address, RequestHandlerClass)
 
 
-server = None
-
-
 def start_http_proxy(target_url):
     global server  # noqa PLW0603
-    print(f"Proxy starting on port {PROXY_PORT}")
     server = ThreadedTCPServer(("127.0.0.1", PROXY_PORT), RPCHandler, target_url)  # noqa S104
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
@@ -110,4 +98,3 @@ def stop_http_proxy():
     if server:
         server.shutdown()
         server.server_close()
-        print("Server stopped")

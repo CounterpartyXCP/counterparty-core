@@ -1,9 +1,8 @@
-name: Testnet4 Catchup Test
+name: Testnet4 Reparse Test
 
 on:
   push:
-    branches:
-      - develop
+    branches: "**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -11,8 +10,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: Linux-Large
-    #runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.11"]
@@ -40,4 +38,4 @@ jobs:
     - name: Run tests
       run: |
         cd counterparty-core
-        hatch run pytest counterpartycore/test/integrations/testnet4_test.py -s -vv
+        hatch run pytest counterpartycore/test/integrations/reparse_test.py -s -vv

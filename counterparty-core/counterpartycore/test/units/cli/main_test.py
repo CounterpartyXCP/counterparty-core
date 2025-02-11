@@ -76,4 +76,5 @@ def test_argparser():
         "action": "start",
         "config_file": None,
         "catch_up": "normal",
+        "api_only": False,
     }

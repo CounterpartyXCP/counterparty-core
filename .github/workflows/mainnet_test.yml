@@ -1,4 +1,4 @@
-name: Mainnet Test
+name: Mainnet Catchup Test
 
 on:
   push:

@@ -107,3 +107,12 @@ def bootstrap_reparse_and_catchup(network):
     catchup(sh_counterparty_server, backend_url, api_url)
 
     cleanup()
+
+
+def bootstrap_and_reparse(network):
+    sh_counterparty_server, _backend_url, db_file, _api_url = prepare(network)
+
+    bootstrap(sh_counterparty_server)
+    reparse(sh_counterparty_server, db_file)
+
+    cleanup()
