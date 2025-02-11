@@ -25,7 +25,7 @@ jobs:
       # Test counterparty-rs
       - name: Test counterparty-rs
         run: |
-          cd ${{ env.COUNTERPARTY_RS_DIR }}
+          cd counterparty-rs
           cargo test
 
       # Run counterparty-core tests
