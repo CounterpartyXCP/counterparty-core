@@ -23,6 +23,8 @@ def prepare(network):
         "--cache-dir",
         DATA_DIR,
         "--no-confirm",
+        "--backend-connect",
+        "127.0.0.1",
         "--backend-port",
         PROXY_PORT,
     ]

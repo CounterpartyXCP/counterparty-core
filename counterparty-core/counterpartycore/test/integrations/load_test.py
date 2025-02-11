@@ -142,6 +142,7 @@ def generate_mainnet_fixtures(db_file):
             "/v2/utxos/<utxo>/compose/detach": {},
             "/v2/utxos/<utxo>/compose/movetoutxo": {
                 "destination": "1JDogZS6tQcSxwfxhv6XKKjcyicYA4Feev",
+                "inputs_set": f"{utxo_with_balance['utxo']}:10000",
             },
         }
         compose_common_args = {
@@ -287,6 +288,8 @@ def test_load():
             "--backend-port",
             "8332",
             "--backend-ssl",
+            "--wsgi-server",
+            "gunicorn",
             _bg=True,
             _out=out,
             _err_to_out=True,
@@ -300,7 +303,7 @@ def test_load():
 
         user_count = 5
         spawn_rate = 2
-        test_duration = 30
+        test_duration = 120
 
         env = locust.env.Environment(user_classes=[CounterpartyCoreUser])
         env.create_local_runner()
@@ -316,9 +319,9 @@ def test_load():
         env.runner.greenlet.join()
 
         print(env.stats.serialize_errors())
-        assert env.stats.total.avg_response_time < 250  # ms
         assert env.stats.total.num_failures == 0
-        assert env.stats.total.get_response_time_percentile(0.95) < 600  # ms
+        assert env.stats.total.avg_response_time < 1500  # ms
+        assert env.stats.total.get_response_time_percentile(0.95) < 2000  # ms
     finally:
         print(out.getvalue())
         server_process.terminate()

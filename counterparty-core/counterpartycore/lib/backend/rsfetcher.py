@@ -41,6 +41,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                 rpc_address = f"https{rpc_address}"
             else:
                 rpc_address = f"http{rpc_address}"
+            logger.warning("rpc_address: %s", rpc_address)
             self.config = {
                 "rpc_address": rpc_address,
                 "rpc_user": config.BACKEND_USER,

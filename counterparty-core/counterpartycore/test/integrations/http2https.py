@@ -99,7 +99,7 @@ server = None
 def start_http_proxy(target_url):
     global server  # noqa PLW0603
     print(f"Proxy starting on port {PROXY_PORT}")
-    server = ThreadedTCPServer(("0.0.0.0", PROXY_PORT), RPCHandler, target_url)  # noqa S104
+    server = ThreadedTCPServer(("127.0.0.1", PROXY_PORT), RPCHandler, target_url)  # noqa S104
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
