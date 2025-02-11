@@ -280,7 +280,16 @@ def test_load():
     try:
         out = StringIO()
         server_process = sh_counterparty_server(
-            "start", "--api-only", _bg=True, _out=out, _err_to_out=True
+            "start",
+            "--api-only",
+            "--backend-connect",
+            "api.counterparty.io",
+            "--backend-port",
+            "8332",
+            "--backend-ssl",
+            _bg=True,
+            _out=out,
+            _err_to_out=True,
         )
 
         while "API.Watcher - Catch up completed" not in out.getvalue():
@@ -311,4 +320,5 @@ def test_load():
         assert env.stats.total.num_failures == 0
         assert env.stats.total.get_response_time_percentile(0.95) < 600  # ms
     finally:
+        print(out.getvalue())
         server_process.terminate()

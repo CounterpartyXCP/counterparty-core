@@ -15,6 +15,7 @@ server = None
 
 class RPCHandler(socketserver.StreamRequestHandler):
     def handle(self):
+        print("Received request from client")
         target_url = self.server.target_url
 
         # Lire l'en-tête HTTP
@@ -30,6 +31,8 @@ class RPCHandler(socketserver.StreamRequestHandler):
         # Lire le corps de la requête
         content_length = int(headers.get("Content-Length", 0))
         body = self.rfile.read(content_length) if content_length else b""
+
+        print(f"Received request from client: {body}")
 
         try:
             print(f"Forwarding request to {target_url}", body)
@@ -95,11 +98,11 @@ server = None
 
 def start_http_proxy(target_url):
     global server  # noqa PLW0603
-    server = ThreadedTCPServer(("127.0.0.1", PROXY_PORT), RPCHandler, target_url)
+    print(f"Proxy starting on port {PROXY_PORT}")
+    server = ThreadedTCPServer(("0.0.0.0", PROXY_PORT), RPCHandler, target_url)  # noqa S104
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
-    print(f"Server started on port {PROXY_PORT}")
 
 
 def stop_http_proxy():
