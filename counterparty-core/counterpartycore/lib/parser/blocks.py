@@ -706,6 +706,7 @@ def handle_reorg(db):
 
     # rollback to the previous block
     current_block_index = previous_block_index + 1
+    print(f"Rolling back to block {current_block_index}...")
     rollback(db, block_index=current_block_index)
     CurrentState().set_current_block_index(previous_block_index)
 
