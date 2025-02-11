@@ -9,11 +9,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  scenarios_test:
-    uses: ./.github/workflows/scenarios_test.yml
-  property_test:
-    uses: ./.github/workflows/property_test.yml
-  testnet4_test:
-    uses: ./.github/workflows/testnet4_test.yml
-  testnet4sync_test:
-    uses: ./.github/workflows/testnet4sync_test.yml
+  scenarios-test:
+    uses: ./.github/workflows/pytest_scenarios.yml
+  property-test:
+    uses: ./.github/workflows/pytest_property.yml
+  testnet4-test:
+    uses: ./.github/workflows/pytest_testnet4.yml
+  testnet4sync-test:
+    uses: ./.github/workflows/pytest_testnet4sync.yml
+  reparse-test:
+    uses: ./.github/workflows/pytest_reparse.yml
+  mainnet-test:
+    uses: ./.github/workflows/pytest_mainnet.yml
+  load-test:
+    uses: ./.github/workflows/pytest_load.yml
+  dockercompose-test:
+    uses: ./.github/workflows/pytest_dockercompose.yml
+  comparehashes-test:
+    uses: ./.github/workflows/pytest_comparehashes.yml
+  units-macos-m1:
+    uses: ./.github/workflows/pytest_units_macos.yml
+  units-python310:
+    uses: ./.github/workflows/pytest_units_py310.yml
+  units-python312:
+    uses: ./.github/workflows/pytest_units_py312.yml

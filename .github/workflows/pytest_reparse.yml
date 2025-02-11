@@ -1,18 +1,8 @@
-name: Mainnet Catchup Test
-
-on:
-  push:
-    branches:
-      - develop
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: workflow_call
 
 jobs:
-  build:
-    runs-on: Linux-Large
-    #runs-on: ubuntu-latest
+  reparse_test:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.11"]
@@ -33,10 +23,11 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y libgirepository1.0-dev libleveldb-dev
         python -m pip install --upgrade pip
-        pip install pylint maturin pytest
+        pip install pylint maturin pytest hatchling==1.25.0 hatch==1.13.0
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
+        chmod -R 777 /home/runner/.cache
     - name: Run tests
       run: |
         cd counterparty-core
-        pytest counterpartycore/test/integrations/mainnet_test.py -s -vv
+        hatch run pytest counterpartycore/test/integrations/reparse_test.py -s -vv

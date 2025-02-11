@@ -1,15 +1,7 @@
-name: Compare hashes test
-
-on:
-  push:
-    branches: "**"
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: workflow_call
 
 jobs:
-  build:
+  comparehashes_test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
