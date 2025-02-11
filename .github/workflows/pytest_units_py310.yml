@@ -33,9 +33,7 @@ jobs:
         run: |
           cd counterparty-core
           hatch run pytest counterpartycore/test/units counterpartycore/test/functionals \
-            --cov=counterpartycore/lib/ --cov-report= \
-            --cov-report=term-missing \
-            -s -vv
+            --cov=counterpartycore/lib/ --cov-report=
 
       # upload coverage to coveralls
       - name: Coveralls
