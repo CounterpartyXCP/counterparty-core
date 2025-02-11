@@ -558,6 +558,7 @@ def rollback(db, block_index=0, force=False):
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
     CurrentState().set_current_block_index(block_index - 1)
+    ledger.caches.reset_caches()
 
 
 def generate_progression_message(
@@ -592,6 +593,8 @@ def reparse(db, block_index=0):
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     with log.Spinner(f"Rolling database back to block {block_index}..."):
         clean_messages_tables(db, block_index=block_index)
+
+    ledger.caches.reset_caches()
 
     step = "Recalculating consensus hashes..."
     with log.Spinner("Recalculating consensus hashes..."):
@@ -705,8 +708,6 @@ def handle_reorg(db):
     current_block_index = previous_block_index + 1
     rollback(db, block_index=current_block_index)
     CurrentState().set_current_block_index(previous_block_index)
-    ledger.caches.UTXOBalancesCache.reset_instance()
-    ledger.caches.UTXOBalancesCache(db)
 
     # get the new deserialized current block
     current_block = deserialize.deserialize_block(
