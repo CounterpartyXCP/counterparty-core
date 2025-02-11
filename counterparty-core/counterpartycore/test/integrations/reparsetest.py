@@ -1,6 +1,5 @@
 import os
 import sys
-import tempfile
 import time
 
 import apsw
@@ -8,7 +7,8 @@ import requests
 import sh
 from http2https import PROXY_PORT, start_http_proxy, stop_http_proxy
 
-DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-data")
+# DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-data")
+DATA_DIR = os.path.join(os.path.expanduser("~/.cache"), "counterparty-data")
 
 
 def prepare(network):
