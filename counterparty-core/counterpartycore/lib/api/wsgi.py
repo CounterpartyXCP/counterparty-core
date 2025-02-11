@@ -31,6 +31,9 @@ def refresh_current_state(state_db, shared_backend_height):
     current_block_index = CurrentState().current_block_index()
     current_backend_height = shared_backend_height.value
 
+    if config.API_ONLY:
+        return
+
     if current_backend_height > current_block_index:
         logger.debug(
             f"Counterparty is currently behind Bitcoin Core. ({current_block_index} < {current_backend_height})"

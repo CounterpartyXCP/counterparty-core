@@ -170,6 +170,7 @@ def initialise_config(
     gunicorn_threads_per_worker=None,
     database_file=None,  # for tests
     electrs_url=None,
+    api_only=False,
 ):
     # log config already initialized
 
@@ -539,6 +540,8 @@ def initialise_config(
         else:
             config.ELECTRS_URL = None
 
+    config.API_ONLY = api_only
+
 
 def initialise_log_and_config(args, api=False, log_stream=None):
     # Configuration
@@ -583,6 +586,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
         "electrs_url": args.electrs_url,
+        "api_only": args.api_only,
     }
     # for tests
     if "database_file" in args:

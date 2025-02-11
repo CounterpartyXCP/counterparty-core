@@ -44,6 +44,7 @@ counterparty-server start
 - Same log file for all Gunicorn processes
 - Fix double log in access file on API query
 - Don't call `getblockcount` from each API thread or process
+- Reset all caches on rolloback and reparse
 
 ## Codebase
 
@@ -65,6 +66,7 @@ counterparty-server start
 
 - rename `--testnet` flag to `--testnet3`
 - Add Testnet4 bootstrap database
+- Add `--api-only` flag
 
 # Credits
 
