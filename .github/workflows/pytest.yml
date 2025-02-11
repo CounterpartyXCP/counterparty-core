@@ -27,10 +27,8 @@ jobs:
     uses: ./.github/workflows/_pytest_comparehashes.yml
   units-macos-m1:
     uses: ./.github/workflows/_pytest_units_macos.yml
-  units-python310:
-    uses: ./.github/workflows/_pytest_units_py310.yml
-  units-python312:
-    uses: ./.github/workflows/_pytest_units_py312.yml
+  units-ubuntu:
+    uses: ./.github/workflows/_pytest_units_ubuntu.yml
   coveralls:
     if: ${{ always() }}
     needs:
@@ -41,11 +39,11 @@ jobs:
       - reparse-test
       - dockercompose-test
       - comparehashes-test
-      - units-python310
+      - units-ubuntu
     runs-on: ubuntu-latest
     steps:
     - name: Coveralls Finished
       uses: coverallsapp/github-action@v2
       with:
         parallel-finished: true
-        carryforward: "Scenarios,Property,Testnet4,Testnet4Sync,Reparse,DockerCompose,CompareHashes,UnitsPython310"
+        carryforward: "Scenarios,Property,Testnet4,Testnet4Sync,Reparse,DockerCompose,CompareHashes,Unit-3.10,Unit-3.11,Unit-3.12"

@@ -12,14 +12,14 @@ concurrency:
 
 jobs:
   bandit:
-    uses: ./.github/workflows/_scanners_bandit.yml
+    uses: ./.github/workflows/_scanner_bandit.yml
   codeql:
-    uses: ./.github/workflows/_scanners_codeql.yml
+    uses: ./.github/workflows/_scanner_codeql.yml
   licenses:
-    uses: ./.github/workflows/_scanners_licenses.yml
+    uses: ./.github/workflows/_scanner_licenses.yml
   pylint:
-    uses: ./.github/workflows/_scanners_pylint.yml
+    uses: ./.github/workflows/_scanner_pylint.yml
   ruff-check:
-    uses: ./.github/workflows/_scanners_ruff_check.yml
+    uses: ./.github/workflows/_scanner_ruff_check.yml
   ruff-format:
-    uses: ./.github/workflows/_scanners_ruff_format.yml
+    uses: ./.github/workflows/_scanner_ruff_format.yml
