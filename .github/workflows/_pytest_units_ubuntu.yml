@@ -1,7 +1,7 @@
 on: workflow_call
 
 jobs:
-  units_py310:
+  units_ubuntu:
     runs-on: ubuntu-22.04
 
     strategy:
