@@ -1,0 +1,15 @@
+name: Pytest Tests Mainnet
+
+on:
+  push:
+    branches: "develop"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  #mainnet-test:
+  #  uses: ./.github/workflows/_pytest_mainnet.yml
+  load-test:
+    uses: ./.github/workflows/_pytest_load.yml

@@ -1,7 +1,7 @@
 on: workflow_call
 
 jobs:
-  ruff:
+  ruff-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

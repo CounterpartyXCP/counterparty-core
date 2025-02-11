@@ -23,11 +23,19 @@ jobs:
         sudo apt-get update -y
         sudo apt-get install -y libgirepository1.0-dev libleveldb-dev
         python -m pip install --upgrade pip
-        pip install pylint maturin pytest hatchling==1.25.0 hatch==1.13.0
+        pip install pylint maturin pytest hatchling==1.25.0 hatch==1.13.0 pytest-cov
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
         chmod -R 777 /home/runner/.cache
     - name: Run tests
       run: |
         cd counterparty-core
-        hatch run pytest counterpartycore/test/integrations/testnet4sync_test.py -s -vv
+        hatch run pytest counterpartycore/test/integrations/testnet4sync_test.py -s -vv \
+            --cov=counterpartycore/lib/ --cov-report=
+    # upload coverage to coveralls
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        flag-name: Testnet4Sync
+        parallel: true

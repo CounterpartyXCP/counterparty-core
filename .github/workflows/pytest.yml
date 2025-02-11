@@ -3,6 +3,8 @@ name: Pytest Tests
 on:
   push:
     branches: "**"
+  pull_request:
+    branches: "**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,10 +21,6 @@ jobs:
     uses: ./.github/workflows/_pytest_testnet4sync.yml
   reparse-test:
     uses: ./.github/workflows/_pytest_reparse.yml
-  mainnet-test:
-    uses: ./.github/workflows/_pytest_mainnet.yml
-  load-test:
-    uses: ./.github/workflows/_pytest_load.yml
   dockercompose-test:
     uses: ./.github/workflows/_pytest_dockercompose.yml
   comparehashes-test:
@@ -33,3 +31,21 @@ jobs:
     uses: ./.github/workflows/_pytest_units_py310.yml
   units-python312:
     uses: ./.github/workflows/_pytest_units_py312.yml
+  coveralls:
+    if: ${{ always() }}
+    needs:
+      - scenarios-test
+      - property-test
+      - testnet4-test
+      - testnet4sync-test
+      - reparse-test
+      - dockercompose-test
+      - comparehashes-test
+      - units-python310
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel-finished: true
+        carryforward: "Scenarios,Property,Testnet4,Testnet4Sync,Reparse,DockerCompose,CompareHashes,UnitsPython310"

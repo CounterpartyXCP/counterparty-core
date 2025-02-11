@@ -19,4 +19,12 @@ jobs:
     - name: Run compare hashes tests
       run: |
         cd counterparty-core
-        pytest counterpartycore/test/integrations/comparehashes_test.py -s -vv
+        pytest counterpartycore/test/integrations/comparehashes_test.py -s -vv \
+            --cov=counterpartycore/lib/ --cov-report=
+    # upload coverage to coveralls
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        flag-name: CompareHashes
+        parallel: true

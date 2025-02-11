@@ -3,23 +3,28 @@ on: workflow_call
 jobs:
   units_py310:
     runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
     steps:
       - uses: actions/checkout@v4
-
-      # Install dependencies
-      - uses: actions/setup-python@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
         with:
-          python-version: "3.10"
-          cache: "pip"
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install Rust
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          default: true
 
       - name: Install pytest and build module
         run: |
-          pip install pytest hatchling==1.25.0 hatch==1.13.0
+          pip install pytest hatchling==1.25.0 hatch==1.13.0 pytest-cov
           python -m pip install --upgrade build
 
       # Test counterparty-rs
@@ -40,3 +45,5 @@ jobs:
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          flag-name: Unit
+          parallel: true
