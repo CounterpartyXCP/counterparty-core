@@ -275,6 +275,8 @@ class CounterpartyCoreUser(locust.HttpUser):
 def test_load():
     sh_counterparty_server, backend_url, db_file, api_url = reparsetest.prepare("mainnet")
     sh_counterparty_server("bootstrap")
+    reparsetest.reparse(sh_counterparty_server, db_file)
+    reparsetest.catchup(sh_counterparty_server, backend_url, api_url)
 
     CounterpartyCoreUser.MainnetFixtures = generate_mainnet_fixtures(db_file)
 
