@@ -18,10 +18,22 @@ jobs:
         # Units tests
 
         name: ["Units And Functionals"]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12"]
         os: ["ubuntu-22.04", "macos-14"]
         test-path: ["units counterpartycore/test/functionals"]
         include:
+
+          - name: Units And Functionals
+            test-path: units counterpartycore/test/functionals
+            python-version: 3.13
+            os: ubuntu-22.04
+            run_coveralls: false
+          
+          - name: Units And Functionals
+            test-path: units counterpartycore/test/functionals
+            python-version: 3.13
+            os: "macos-14"
+            run_coveralls: false
 
           # Mainnet tests
 
@@ -32,7 +44,7 @@ jobs:
             only_on_develop: false
 
           - name: Mainnet Bootstrap And Catchup
-            test-path: integrations/main_test.py
+            test-path: integrations/mainnet_test.py
             os: Linux-Large-2
             run_coveralls: false
             only_on_develop: false
