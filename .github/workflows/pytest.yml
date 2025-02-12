@@ -10,40 +10,68 @@ concurrency:
 
 jobs:
   scenarios-test:
-    uses: ./.github/workflows/_pytest_scenarios.yml
+    uses: ./.github/workflows/_pytest_action.yml
+    with:
+      test-path: counterpartycore/test/integrations/regtest/scenarios_test.py
     secrets: inherit
+
   property-test:
-    uses: ./.github/workflows/_pytest_property.yml
+    uses: ./.github/workflows/_pytest_action.yml
+    with:
+      test-path: counterpartycore/test/integrations/regtest/property_test.py
     secrets: inherit
+
   testnet4-test:
-    uses: ./.github/workflows/_pytest_testnet4.yml
+    uses: ./.github/workflows/_pytest_action.yml
+    with:
+      test-path: counterpartycore/test/integrations/testnet4_test.py
     secrets: inherit
+
   testnet4sync-test:
-    uses: ./.github/workflows/_pytest_testnet4sync.yml
+    uses: ./.github/workflows/_pytest_action.yml
+    with:
+      test-path: counterpartycore/test/integrations/testnet4sync_test.py
     secrets: inherit
+
   reparse-test:
-    uses: ./.github/workflows/_pytest_reparse.yml
+    uses: ./.github/workflows/_pytest_action.yml
+    with:
+      test-path: counterpartycore/test/integrations/reparse_test.py
     secrets: inherit
+
   dockercompose-test:
-    uses: ./.github/workflows/_pytest_dockercompose.yml
+    uses: ./.github/workflows/_pytest_action.yml
+    with:
+      test-path: counterpartycore/test/integrations/dockercompose_test.py
     secrets: inherit
+
   comparehashes-test:
-    uses: ./.github/workflows/_base_test_config.yml
+    uses: ./.github/workflows/_pytest_action.yml
     with:
       test-path: counterpartycore/test/integrations/comparehashes_test.py
     secrets: inherit
+
   units-macos-m1:
     uses: ./.github/workflows/_pytest_units_macos.yml
     secrets: inherit
+  
+  units-macos-m1-2:
+    uses: ./.github/workflows/_pytest_action.yml
+    with:
+      os: macos-14
+      test-path: counterpartycore/test/units counterpartycore/test/functionals
+    secrets: inherit
+
   units-ubuntu:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
-    uses: ./.github/workflows/_base_test_config.yml
+    uses: ./.github/workflows/_pytest_action.yml
     with:
       python-version: ${{ matrix.python-version }}
       test-path: counterpartycore/test/units counterpartycore/test/functionals
     secrets: inherit
+
   coveralls:
     if: ${{ always() }}
     needs:

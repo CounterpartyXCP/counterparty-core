@@ -9,7 +9,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  #mainnet-test:
-  #  uses: ./.github/workflows/_pytest_mainnet.yml
   load-test:
-    uses: ./.github/workflows/_pytest_load.yml
+    uses: ./.github/workflows/_pytest_action.yml
+      with:
+        test-path: counterpartycore/test/integrations/load_test.py
+      secrets: inherit
+  main-test:
+    uses: ./.github/workflows/_pytest_action.yml
+      with:
+        test-path: counterpartycore/test/integrations/main_test.py
+      secrets: inherit
