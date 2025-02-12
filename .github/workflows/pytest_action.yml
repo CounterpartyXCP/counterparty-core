@@ -1,0 +1,73 @@
+name: Base Test Configuration
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        type: string
+        default: "3.11"
+      os:
+        type: string
+        default: "ubuntu-22.04"
+      test-path:
+        type: string
+        required: true
+      install_bitcoin:
+        type: boolean
+        default: false
+      run_coveralls:
+        type: boolean
+        default: true
+
+jobs:
+  pytest:
+    runs-on: ${{ inputs.os }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          default: true
+
+      - name: Install dependencies
+        run: |
+          # pip install --upgrade pytest hatchling==1.25.0 hatch==1.13.0 pytest-cov coveralls
+          pip install --upgrade pytest hatchling hatch pytest-cov coveralls
+
+      - name: Install Bitcoin & Electrs
+        if: inputs.install_bitcoin
+        run: |
+          wget https://bitcoincore.org/bin/bitcoin-core-28.0/bitcoin-28.0-x86_64-linux-gnu.tar.gz
+          tar -xvf bitcoin-28.0-x86_64-linux-gnu.tar.gz
+          sudo cp bitcoin-28.0/bin/bitcoin-cli /usr/local/bin/bitcoin-cli
+          sudo cp bitcoin-28.0/bin/bitcoind /usr/local/bin/bitcoind
+          sudo cp bitcoin-28.0/bin/bitcoin-wallet /usr/local/bin/bitcoin-wallet
+          npm install dredd --global
+          git clone https://github.com/mempool/electrs && cd electrs
+          cargo install --path=.
+
+      - name: Run tests
+        run: |
+          cd counterparty-core
+          hatch run pytest counterpartycore/test/${{ inputs.test-path }} \
+            --cov=../counterparty-core/counterpartycore/lib --cov-report=
+          mv .coverage* ../
+
+      - name: Upload coverage
+        if: inputs.run_coveralls
+        run: |
+          ls -al
+          coveralls debug --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_SERVICE_NAME: github
+          COVERALLS_PARALLEL: true
+          COVERALLS_SERVICE_JOB_ID: ${{ github.run_id }}

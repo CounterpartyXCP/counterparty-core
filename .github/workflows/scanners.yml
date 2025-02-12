@@ -9,15 +9,95 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  bandit:
-    uses: ./.github/workflows/_scanner_bandit.yml
-  codeql:
-    uses: ./.github/workflows/_scanner_codeql.yml
   licenses:
     uses: ./.github/workflows/_scanner_licenses.yml
+
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chartboost/ruff-action@v1
+        with:
+          args: "format --check"
+          version: 0.8.2
+      - uses: chartboost/ruff-action@v1
+        with:
+          version: 0.8.2
+
+  codeql:
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
+
+  bandit:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Bandit Scan
+        uses: shundor/python-bandit-scan@9cc5aa4a006482b8a7f91134412df6772dbda22c
+        with: # optional arguments
+          exit_zero: true # optional, default is DEFAULT
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information.
+          excluded_paths: "*/test/*,*/counterparty-core/tools/*" # optional, default is DEFAULT
+          skips: "B101" # optional, default is DEFAULT
+
   pylint:
-    uses: ./.github/workflows/_scanner_pylint.yml
-  ruff-check:
-    uses: ./.github/workflows/_scanner_ruff_check.yml
-  ruff-format:
-    uses: ./.github/workflows/_scanner_ruff_format.yml
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pylint pylint-sarif-unofficial
+    - name: Analysing the code with pylint
+      run: |
+        pylint2sarif $(git ls-files '*.py' | grep -v counterparty-rs/tests/ | grep -v counterparty-core/counterpartycore/test/ | grep -v counterparty-core/tools/) || true
+    - name: Upload SARIF
+      uses: github/codeql-action/upload-sarif/@v2
+      with:
+        sarif_file: pylint.sarif
+
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install license_scanner sh
+    - name: Analysing dependencies with licence_scanner
+      run: |
+        python counterparty-core/tools/checklicences.py
+    - name: Upload SARIF
+      uses: github/codeql-action/upload-sarif/@v2
+      with:
+        sarif_file: license_scanner.sarif

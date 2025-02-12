@@ -9,80 +9,63 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  scenarios-test:
-    uses: ./.github/workflows/_pytest_action.yml
-    with:
-      test-path: counterpartycore/test/integrations/regtest/scenarios_test.py
-    secrets: inherit
 
-  property-test:
-    uses: ./.github/workflows/_pytest_action.yml
-    with:
-      test-path: counterpartycore/test/integrations/regtest/property_test.py
-    secrets: inherit
-
-  testnet4-test:
-    uses: ./.github/workflows/_pytest_action.yml
-    with:
-      test-path: counterpartycore/test/integrations/testnet4_test.py
-    secrets: inherit
-
-  testnet4sync-test:
-    uses: ./.github/workflows/_pytest_action.yml
-    with:
-      test-path: counterpartycore/test/integrations/testnet4sync_test.py
-    secrets: inherit
-
-  reparse-test:
-    uses: ./.github/workflows/_pytest_action.yml
-    with:
-      test-path: counterpartycore/test/integrations/reparse_test.py
-    secrets: inherit
-
-  dockercompose-test:
-    uses: ./.github/workflows/_pytest_action.yml
-    with:
-      test-path: counterpartycore/test/integrations/dockercompose_test.py
-    secrets: inherit
-
-  comparehashes-test:
-    uses: ./.github/workflows/_pytest_action.yml
-    with:
-      test-path: counterpartycore/test/integrations/comparehashes_test.py
-    secrets: inherit
-
-  units-macos-m1:
-    uses: ./.github/workflows/_pytest_units_macos.yml
-    secrets: inherit
-  
-  units-macos-m1-2:
-    uses: ./.github/workflows/_pytest_action.yml
-    with:
-      os: macos-14
-      test-path: counterpartycore/test/units counterpartycore/test/functionals
-    secrets: inherit
-
-  units-ubuntu:
+  mainnet-tests:
+    if: github.ref == 'refs/heads/develop'
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-    uses: ./.github/workflows/_pytest_action.yml
+        include:
+          - test-path: integrations/load_test.py
+            os: Linux-Large-1
+          - test-path: integrations/main_test.py
+            os: Linux-Large-2
+    uses: ./.github/workflows/pytest_action.yml
+    with:
+      os: ${{ matrix.os }}
+      test-path: ${{ matrix.test-path }}
+      run_coveralls: false
+    secrets: inherit
+
+  ubuntu-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - test-path: integrations/regtest/scenarios_test.py
+            install_bitcoin: true
+          - test-path: integrations/regtest/property_test.py
+            install_bitcoin: true
+          - test-path: integrations/testnet4_test.py
+          - test-path: integrations/reparse_test.py
+          - test-path: integrations/dockercompose_test.py
+          - test-path: integrations/comparehashes_test.py
+          - test-path: integrations/testnet4sync_test.py
+    uses: ./.github/workflows/pytest_action.yml
+    with:
+      test-path: ${{ matrix.test-path }}
+      install_bitcoin: ${{ matrix.install_bitcoin || false }}
+    secrets: inherit
+
+  multiplaform-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: ["ubuntu-22.04", "macos-14"]
+        test-path:
+          - units counterpartycore/test/functionals
+    uses: ./.github/workflows/pytest_action.yml
     with:
       python-version: ${{ matrix.python-version }}
-      test-path: counterpartycore/test/units counterpartycore/test/functionals
+      test-path: ${{ matrix.test-path }}
     secrets: inherit
 
   coveralls:
     if: ${{ always() }}
     needs:
-      - scenarios-test
-      - property-test
-      - testnet4-test
-      - testnet4sync-test
-      - reparse-test
-      - dockercompose-test
-      - comparehashes-test
-      - units-ubuntu
+      - ubuntu-test
+      - multiplaform-test
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:
@@ -90,7 +73,6 @@ jobs:
       run: pip3 install --upgrade coveralls
     - name: Coveralls Finished
       run: |
-          export COVERALLS_FORCE_BRANCH="$GITHUB_REF_NAME"
           coveralls --finish --service=github
       env:
-        GITHUB_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
