@@ -9,63 +9,76 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
-  mainnet-tests:
-    if: github.ref == 'refs/heads/develop'
+  Test:
     strategy:
       fail-fast: false
+      # define the matrix
       matrix:
-        include:
-          - test-path: integrations/load_test.py
-            os: Linux-Large-1
-          - test-path: integrations/main_test.py
-            os: Linux-Large-2
-    uses: ./.github/workflows/pytest_action.yml
-    with:
-      os: ${{ matrix.os }}
-      test-path: ${{ matrix.test-path }}
-      run_coveralls: false
-    secrets: inherit
 
-  ubuntu-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - test-path: integrations/regtest/scenarios_test.py
-            install_bitcoin: true
-          - test-path: integrations/regtest/property_test.py
-            install_bitcoin: true
-          - test-path: integrations/testnet4_test.py
-          - test-path: integrations/reparse_test.py
-          - test-path: integrations/dockercompose_test.py
-          - test-path: integrations/comparehashes_test.py
-          - test-path: integrations/testnet4sync_test.py
-    uses: ./.github/workflows/pytest_action.yml
-    with:
-      test-path: ${{ matrix.test-path }}
-      install_bitcoin: ${{ matrix.install_bitcoin || false }}
-    secrets: inherit
+        # Units tests
 
-  multiplaform-test:
-    strategy:
-      fail-fast: false
-      matrix:
+        name: ["Units And Functionals Test"]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         os: ["ubuntu-22.04", "macos-14"]
-        test-path:
-          - units counterpartycore/test/functionals
+        test-path: ["units counterpartycore/test/functionals"]
+        include:
+
+          # Mainnet tests
+
+          - name: Mainnet API Load
+            test-path: integrations/load_test.py
+            os: Linux-Large-1
+            run_coveralls: false
+            only_on_develop: true
+
+          - name: Mainnet Bootstrap And Catchup
+            test-path: integrations/main_test.py
+            os: Linux-Large-2
+            run_coveralls: false
+            only_on_develop: true
+
+          # Regtest tests
+
+          - name: Regtest Scenarios
+            test-path: integrations/regtest/scenarios_test.py
+            install_bitcoin: true
+
+          - name: Property Test
+            test-path: integrations/regtest/property_test.py
+            install_bitcoin: true
+
+          # Testnet4 tests
+
+          - name: Testnet4 Bootstrap And Catchup
+            test-path: integrations/testnet4_test.py 
+
+          - name: Testnet4 Full Sync
+            test-path: integrations/testnet4sync_test.py
+
+          # Other tests
+
+          - name: Docker Compose
+            test-path: integrations/dockercompose_test.py
+
+          - name: Compare Hashes
+            test-path: integrations/comparehashes_test.py
+
+    # run pytest_action.yml for the matrix
     uses: ./.github/workflows/pytest_action.yml
     with:
-      python-version: ${{ matrix.python-version }}
+      name: ${{ matrix.name }} (${{ matrix.os }} - Python ${{ matrix.python-version }})
       test-path: ${{ matrix.test-path }}
+      os: ${{ matrix.os || 'ubuntu-22.04' }}
+      python-version: ${{ matrix.python-version || '3.11' }}
+      install_bitcoin: ${{ matrix.install_bitcoin || false }}
+      run_coveralls: ${{ matrix.run_coveralls || true }}
+      only_on_develop:  ${{ matrix.only_on_develop || false }}
     secrets: inherit
 
+  # finish the coveralls
   coveralls:
-    if: ${{ always() }}
     needs:
-      - ubuntu-test
-      - multiplaform-test
+      - Test
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:

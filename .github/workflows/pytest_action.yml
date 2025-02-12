@@ -1,8 +1,11 @@
-name: Base Test Configuration
+name: Pytest Action
 
 on:
   workflow_call:
     inputs:
+      name:
+        type: string
+        default: "Pytest"
       python-version:
         type: string
         default: "3.11"
@@ -18,10 +21,15 @@ on:
       run_coveralls:
         type: boolean
         default: true
+      only_on_develop:
+        type: boolean
+        default: false
 
 jobs:
   pytest:
+    name: ${{ inputs.name }}
     runs-on: ${{ inputs.os }}
+    if: ${{ !inputs.only_on_develop || github.ref == 'refs/heads/develop' }}
     steps:
       - uses: actions/checkout@v4
       
@@ -41,6 +49,8 @@ jobs:
         run: |
           # pip install --upgrade pytest hatchling==1.25.0 hatch==1.13.0 pytest-cov coveralls
           pip install --upgrade pytest hatchling hatch pytest-cov coveralls
+          cd counterparty-rs && pip install -e . && cd ..
+          cd counterparty-core && pip install -e . && cd ..
 
       - name: Install Bitcoin & Electrs
         if: inputs.install_bitcoin
@@ -57,15 +67,16 @@ jobs:
       - name: Run tests
         run: |
           cd counterparty-core
-          hatch run pytest counterpartycore/test/${{ inputs.test-path }} \
-            --cov=../counterparty-core/counterpartycore/lib --cov-report=
-          mv .coverage* ../
+          COV_CORE_SOURCE=counterpartycore/lib pytest counterpartycore/test/${{ inputs.test-path }} \
+            --cov=counterpartycore/lib --cov-report=term-missing --cov-report=
+          mv .coverage ../
 
       - name: Upload coverage
         if: inputs.run_coveralls
         run: |
           ls -al
           coveralls debug --service=github
+          coveralls --service=github --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_SERVICE_NAME: github
