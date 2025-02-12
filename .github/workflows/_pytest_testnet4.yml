@@ -32,10 +32,12 @@ jobs:
       run: |
         cd counterparty-core
         hatch run pytest counterpartycore/test/integrations/testnet4_test.py -s -vv \
-            --cov=counterpartycore/lib/ --cov-report=
+            --cov=counterpartycore/lib/ --cov-report=lcov:coverage.lcov
     # upload coverage to coveralls
     - name: Coveralls
-      run: coveralls
+      run: |
+          cd counterparty-core
+          export COVERALLS_FORCE_BRANCH="$GITHUB_REF_NAME"
+          coveralls --submit=./coverage.lcov 
       env:
-        GITHUB_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         COVERALLS_PARALLEL: true

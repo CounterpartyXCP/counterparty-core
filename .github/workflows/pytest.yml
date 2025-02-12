@@ -28,13 +28,21 @@ jobs:
     uses: ./.github/workflows/_pytest_dockercompose.yml
     secrets: inherit
   comparehashes-test:
-    uses: ./.github/workflows/_pytest_comparehashes.yml
+    uses: ./.github/workflows/_base_test_config.yml
+    with:
+      test-path: counterpartycore/test/integrations/comparehashes_test.py
     secrets: inherit
   units-macos-m1:
     uses: ./.github/workflows/_pytest_units_macos.yml
     secrets: inherit
   units-ubuntu:
-    uses: ./.github/workflows/_pytest_units_ubuntu.yml
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    uses: ./.github/workflows/_base_test_config.yml
+    with:
+      python-version: ${{ matrix.python-version }}
+      test-path: counterpartycore/test/units counterpartycore/test/functionals
     secrets: inherit
   coveralls:
     if: ${{ always() }}
@@ -53,6 +61,8 @@ jobs:
     - name: Install coveralls
       run: pip3 install --upgrade coveralls
     - name: Coveralls Finished
-      run: coveralls --finish
+      run: |
+          export COVERALLS_FORCE_BRANCH="$GITHUB_REF_NAME"
+          coveralls --finish --service=github
       env:
         GITHUB_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}

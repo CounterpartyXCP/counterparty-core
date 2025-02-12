@@ -2,7 +2,7 @@ name: Pytest Tests Mainnet
 
 on:
   push:
-    branches: "**"
+    branches: "develop"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
