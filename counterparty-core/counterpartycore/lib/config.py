@@ -40,7 +40,7 @@ UPGRADE_ACTIONS = {
         "10.9.0": [("rollback", 3522632)],
     },
     "testnet4": {
-        "10.10.0"[("rollback", 64492)],
+        "10.10.0": [("rollback", 64492)],
     },
 }
 
