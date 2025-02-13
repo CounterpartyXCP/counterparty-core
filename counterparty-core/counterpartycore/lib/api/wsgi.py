@@ -31,6 +31,9 @@ def refresh_current_state(state_db, shared_backend_height):
     current_block_index = CurrentState().current_block_index()
     current_backend_height = shared_backend_height.value
 
+    if config.API_ONLY:
+        return
+
     if current_backend_height > current_block_index:
         logger.debug(
             f"Counterparty is currently behind Bitcoin Core. ({current_block_index} < {current_backend_height})"
@@ -65,12 +68,8 @@ class NodeStatusCheckerThread(threading.Thread):
 
 class GunicornArbiter(Arbiter):
     def __init__(self, app):
-        super().__init__(app)  # Pass 'app' instead of 'app.cfg'
+        super().__init__(app)
         self.app = app
-        self.timeout = 30
-        self.graceful_timeout = 30
-        self.max_requests = 1000
-        self.max_requests_jitter = 50
         self.workers_pids = []
         self.worker_id = 0
         self.init_loggers()
@@ -188,6 +187,10 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
     def __init__(self, app, args=None):
         self.options = {
             "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
+            "timeout": 10,
+            "graceful_timeout": 10,
+            "max_requests": 1000,
+            "max_requests_jitter": 250,
             "workers": config.GUNICORN_WORKERS,
             "worker_class": "gthread",
             "daemon": True,

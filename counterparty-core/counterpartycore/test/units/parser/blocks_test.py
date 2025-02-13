@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from counterpartycore.lib import config
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import send
 from counterpartycore.lib.messages.versions import send1
@@ -123,3 +123,169 @@ def test_check_database_version(ledger_db, test_helpers, caplog, monkeypatch):
 
     config.VERSION_STRING = version_string
     config.CACHE_DIR = cache_dir
+
+
+def test_rollback(ledger_db, test_helpers, caplog):
+    utxos = ledger_db.execute(
+        """
+        SELECT * FROM (
+            SELECT utxo, MAX(rowid), quantity FROM balances GROUP BY utxo
+        )
+        WHERE utxo IS NOT NULL AND quantity > 0
+        """,
+    ).fetchall()
+    for utxo in utxos:
+        assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(utxo["utxo"])
+
+    last_attach = ledger_db.execute(
+        "SELECT * FROM sends WHERE send_type='attach' ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+    blocks.rollback(ledger_db, last_attach["block_index"] - 1)
+    assert not ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+    last_block = ledger_db.execute(
+        "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+    assert last_block["block_index"] == last_attach["block_index"] - 2
+
+
+def test_reparse(ledger_db, test_helpers, caplog):
+    last_block = ledger_db.execute(
+        "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+    ledger_hash_before = last_block["ledger_hash"]
+    txlist_hash_before = last_block["txlist_hash"]
+
+    utxos = ledger_db.execute(
+        """
+        SELECT * FROM (
+            SELECT utxo, MAX(rowid), quantity FROM balances GROUP BY utxo
+        )
+        WHERE utxo IS NOT NULL AND quantity > 0
+        """,
+    ).fetchall()
+    for utxo in utxos:
+        assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(utxo["utxo"])
+
+    last_attach = ledger_db.execute(
+        "SELECT * FROM sends WHERE send_type='attach' ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+    blocks.reparse(ledger_db, last_attach["block_index"] - 1)
+    assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+    last_block = ledger_db.execute(
+        "SELECT ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+    ledger_hash_after = last_block["ledger_hash"]
+    txlist_hash_after = last_block["txlist_hash"]
+    ledger_db.close()
+
+    assert ledger_hash_before == ledger_hash_after
+    assert txlist_hash_before == txlist_hash_after
+
+
+def test_handle_reorg(ledger_db, monkeypatch, test_helpers, caplog):
+    def getblockhash_mock(block_index):
+        block = ledger_db.execute(
+            "SELECT block_hash FROM blocks WHERE block_index = ?", (block_index,)
+        ).fetchone()
+        if block:
+            return block["block_hash"]
+        return "newblockhash"
+
+    def deserialize_block_mock(block, parse_vouts, block_index):
+        return None
+
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.getblockhash", getblockhash_mock)
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.getblock", lambda block_hash: None)
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.deserialize.deserialize_block", deserialize_block_mock
+    )
+
+    last_block = ledger_db.execute(
+        "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+
+    with test_helpers.capture_log(
+        caplog, f"Ledger DB rolled back to block {last_block['block_index']}"
+    ):
+        blocks.handle_reorg(ledger_db)
+
+
+def test_handle_reorg2(ledger_db, monkeypatch, test_helpers, caplog, current_block_index):
+    last_attach = ledger_db.execute(
+        "SELECT * FROM sends WHERE send_type='attach' ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    assert ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+    def getblockhash_mock(block_index):
+        if block_index >= last_attach["block_index"] - 1:
+            return "newblockhash"
+        block = ledger_db.execute(
+            "SELECT block_hash FROM blocks WHERE block_index = ?", (block_index,)
+        ).fetchone()
+        if block:
+            return block["block_hash"]
+        return "newblockhash"
+
+    def deserialize_block_mock(block, parse_vouts, block_index):
+        return None
+
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.getblockhash", getblockhash_mock)
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.getblock", lambda block_hash: None)
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.deserialize.deserialize_block", deserialize_block_mock
+    )
+
+    with test_helpers.capture_log(
+        caplog, f"Ledger DB rolled back to block {last_attach['block_index'] - 1}"
+    ):
+        blocks.handle_reorg(ledger_db)
+
+    last_block = ledger_db.execute(
+        "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+
+    assert last_block["block_index"] == last_attach["block_index"] - 2
+
+    assert not ledger.caches.UTXOBalancesCache(ledger_db).has_balance(last_attach["destination"])
+
+
+def test_handle_reorg3(ledger_db, monkeypatch, test_helpers, caplog):
+    last_block = ledger_db.execute(
+        "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+
+    def getblockhash_mock(block_index):
+        if block_index == last_block["block_index"]:
+            raise exceptions.BlockOutOfRange
+        block = ledger_db.execute(
+            "SELECT block_hash FROM blocks WHERE block_index = ?", (block_index,)
+        ).fetchone()
+        if block:
+            return block["block_hash"]
+        return "newblockhash"
+
+    def deserialize_block_mock(block, parse_vouts, block_index):
+        return None
+
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.getblockhash", getblockhash_mock)
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.getblock", lambda block_hash: None)
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.deserialize.deserialize_block", deserialize_block_mock
+    )
+
+    with test_helpers.capture_log(
+        caplog, f"Ledger DB rolled back to block {last_block['block_index'] - 1}"
+    ):
+        blocks.handle_reorg(ledger_db)
+
+    last_block_after = ledger_db.execute(
+        "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+
+    assert last_block_after["block_index"] == last_block["block_index"] - 2

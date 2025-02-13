@@ -25,6 +25,14 @@ def download_zst(data_dir, zst_url):
     return zst_filepath
 
 
+def get_zst_callbacl(input_file_size):
+    def print_decompression_progress(total_input, total_output, read_data, write_data):
+        percent = 100 * total_input / input_file_size
+        print(f"Progress: {percent:.1f}%", end="\r")
+
+    return print_decompression_progress
+
+
 def decompress_zst(zst_filepath):
     print(f"Decompressing {zst_filepath}...")
     start_time = time.time()
@@ -43,6 +51,7 @@ def decompress_zst(zst_filepath):
     filename = zst_filepath.replace(f".{version}.zst", "")
     filepath = os.path.join(os.path.dirname(zst_filepath), filename)
     print(f"Decompressing {zst_filepath} to {filepath}...")
+    # input_file_size = os.path.getsize(zst_filepath)
     with io.open(filepath, "wb") as output_file:
         with open(zst_filepath, "rb") as input_file:
             pyzstd.decompress_stream(input_file, output_file, read_size=16 * 1024)

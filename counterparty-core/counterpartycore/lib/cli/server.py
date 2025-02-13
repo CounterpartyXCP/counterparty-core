@@ -170,6 +170,7 @@ def initialise_config(
     gunicorn_threads_per_worker=None,
     database_file=None,  # for tests
     electrs_url=None,
+    api_only=False,
 ):
     # log config already initialized
 
@@ -539,6 +540,8 @@ def initialise_config(
         else:
             config.ELECTRS_URL = None
 
+    config.API_ONLY = api_only
+
 
 def initialise_log_and_config(args, api=False, log_stream=None):
     # Configuration
@@ -583,6 +586,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
         "electrs_url": args.electrs_url,
+        "api_only": args.api_only,
     }
     # for tests
     if "database_file" in args:
@@ -616,7 +620,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
     initialise_config(**init_args)
 
 
-def connect_to_backend():
+def ensure_backend_is_up():
     if not config.FORCE:
         backend.bitcoind.getblockcount()
 
@@ -636,7 +640,7 @@ class AssetConservationChecker(threading.Thread):
                 if time.time() - self.last_check > 60 * 60 * 12:
                     try:
                         check.asset_conservation(self.db, self.stop_event)
-                    except check.SanityError as e:
+                    except exceptions.SanityError as e:
                         logger.error("Asset conservation check failed: %s" % e)
                         _thread.interrupt_main()
                     self.last_check = time.time()
@@ -709,8 +713,13 @@ def start_all(args, log_stream=None):
             logger.trace("Waiting for API server to start...")
             time.sleep(0.1)
 
+        if args.api_only:
+            while True:
+                api_stop_event.wait(1)
+            return
+
         # Backend
-        connect_to_backend()
+        ensure_backend_is_up()
 
         # API Status Poller
         api_status_poller = apiv1.APIStatusPoller()

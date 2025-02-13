@@ -579,6 +579,7 @@ def create_app():
             if "fee" in transaction_args and "exact_fee" not in common_args:
                 common_args["exact_fee"] = transaction_args.pop("fee")
             common_args["accept_missing_params"] = True
+            common_args["verbose"] = True
             try:
                 with LedgerDBConnectionPool().connection() as db:
                     transaction_info = composer.compose_transaction(

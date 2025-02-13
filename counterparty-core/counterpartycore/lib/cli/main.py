@@ -340,7 +340,9 @@ CONFIG_ARGS = [
         ("--gunicorn-workers",),
         {
             "type": int,
-            "default": 2 * os.cpu_count() + 1,
+            "default": 2 * os.cpu_count()
+            + 1
+            - 2,  # - 2 to account for the follow and api watcher processes
             "help": "number of worker processes for gunicorn (if enabled)",
         },
     ],
@@ -373,6 +375,14 @@ CONFIG_ARGS = [
             "help": "On startup, rebuild all tables in the state database",
             "action": "store_true",
             "default": False,
+        },
+    ],
+    [
+        ("--api-only",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Don't parse new blocks, only run the API server",
         },
     ],
 ]

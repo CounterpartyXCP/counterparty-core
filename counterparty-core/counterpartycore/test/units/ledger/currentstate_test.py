@@ -1,5 +1,6 @@
 import time
 
+from counterpartycore.lib import config
 from counterpartycore.lib.ledger import currentstate
 from counterpartycore.test.mocks.bitcoind import original_current_backend_height
 
@@ -64,3 +65,15 @@ def test_backend_height(monkeypatch):
             assert currentstate.CurrentState().current_backend_height() == current_backend_height
     finally:
         backend_height_thread.stop()
+
+    backend_height_thread = currentstate.BackendHeight()
+
+    last_check_before = backend_height_thread.last_check
+    config.API_ONLY = True
+    backend_height_thread.refresh()
+    assert backend_height_thread.last_check == last_check_before
+
+    backend_height_thread.start()
+    time.sleep(currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
+    backend_height_thread.stop()
+    assert backend_height_thread.last_check == last_check_before

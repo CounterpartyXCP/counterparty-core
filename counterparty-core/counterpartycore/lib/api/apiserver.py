@@ -322,7 +322,12 @@ def handle_route(**kwargs):
         with configure_sentry_scope() as scope:
             scope.set_transaction_name(get_transaction_name(rule))
 
-        if not config.FORCE and not is_server_ready() and not return_result_if_not_ready(rule):
+        if (
+            not config.FORCE
+            and not is_server_ready()
+            and not return_result_if_not_ready(rule)
+            and not config.API_ONLY
+        ):
             return return_result(
                 503, error="Counterparty not ready", start_time=start_time, query_args=query_args
             )

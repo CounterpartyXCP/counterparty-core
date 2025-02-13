@@ -36,8 +36,13 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
         logger.debug("Initializing RSFetcher...")
         RSFetcher.thread_index_counter += 1
         if indexer_config is None:
+            rpc_address = f"://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}"
+            if config.BACKEND_SSL:
+                rpc_address = f"https{rpc_address}"
+            else:
+                rpc_address = f"http{rpc_address}"
             self.config = {
-                "rpc_address": f"http://{config.BACKEND_CONNECT}:{config.BACKEND_PORT}",
+                "rpc_address": rpc_address,
                 "rpc_user": config.BACKEND_USER,
                 "rpc_password": config.BACKEND_PASSWORD,
                 "db_dir": config.FETCHER_DB,
@@ -58,6 +63,8 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
             else:
                 self.config["log_level"] = config.LOG_LEVEL_STRING
         else:
+            logger.warning("Using custom indexer config.")
+            print(indexer_config)
             self.config = indexer_config
         self.config["network"] = config.NETWORK_NAME
         self.fetcher = None

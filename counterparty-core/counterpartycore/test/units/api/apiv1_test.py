@@ -820,3 +820,44 @@ def test_get_rows(ledger_db, state_db):
             "send_type": "send",
         }
     ]
+
+
+def test_extended_info(apiv1_client, defaults):
+    result = apiv1_client(
+        "create_issuance",
+        {
+            "source": defaults["addresses"][0],
+            "transfer_destination": defaults["addresses"][1],
+            "asset": "DIVISIBLE",
+            "quantity": 0,
+            "divisible": True,
+            "description": "",
+            "encoding": "multisig",
+            "extended_tx_info": True,
+        },
+    ).json
+
+    assert result["result"] == {
+        "btc_in": 1000000000,
+        "btc_out": 1546,
+        "btc_change": 999997574,
+        "btc_fee": 880,
+        "data": "434e54525052545916000000a25be34b660000000000000000010000",
+        "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+        "inputs_values": [1000000000],
+        "signed_tx_estimated_size": {"vsize": 340, "adjusted_vsize": 440, "sigops_count": 88},
+        "psbt": "0200000001f45bd80918ce634fe0d6e3ac328fa229c8aeff3e63316bb33e9db43dd07b75c30000000000ffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace80300000000000069512103ea49bccb9828a4b03ae59a92115ace194fb7b43de0f8830b2f6de1ee3b2c6dcb2102bddf4de9fc412c28787ed4a5d64a6080c8264a956a78010aa5b44b5e553bc2ce210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae86c09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "params": {
+            "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "transfer_destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+            "asset": "DIVISIBLE",
+            "quantity": 0,
+            "divisible": True,
+            "description": "",
+            "lock": None,
+            "reset": None,
+            "skip_validation": False,
+        },
+        "name": "issuance",
+        "tx_hex": "0200000001f45bd80918ce634fe0d6e3ac328fa229c8aeff3e63316bb33e9db43dd07b75c30000000000ffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace80300000000000069512103ea49bccb9828a4b03ae59a92115ace194fb7b43de0f8830b2f6de1ee3b2c6dcb2102bddf4de9fc412c28787ed4a5d64a6080c8264a956a78010aa5b44b5e553bc2ce210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae86c09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+    }
