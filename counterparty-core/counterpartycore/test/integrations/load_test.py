@@ -303,7 +303,7 @@ def test_load():
 
         user_count = 5
         spawn_rate = 2
-        test_duration = 120
+        test_duration = 60 * 5  # 5 minutes
 
         env = locust.env.Environment(user_classes=[CounterpartyCoreUser])
         env.create_local_runner()

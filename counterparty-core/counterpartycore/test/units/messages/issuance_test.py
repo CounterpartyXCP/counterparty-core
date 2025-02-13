@@ -1712,12 +1712,15 @@ def test_parse_paid_subasset_reissuance(ledger_db, blockchain_mock, defaults, te
 
 
 def test_reset_issuance(apiv2_client, ledger_db, state_db, defaults, blockchain_mock, test_helpers):
-    balances = apiv2_client.get("/v2/assets/CALLABLE/balances").json["result"]
+    balances = apiv2_client.get("/v2/assets/CALLABLE/balances")
+    print(balances)
+    balances = balances.json["result"]
     assert len(balances) == 1
     assert balances[0]["address"] == defaults["addresses"][0]
     assert balances[0]["quantity"] == 1000
 
     asset = apiv2_client.get("/v2/assets/CALLABLE").json["result"]
+    print(asset)
     assert asset["divisible"]
     assert asset["supply"] == balances[0]["quantity"]
 

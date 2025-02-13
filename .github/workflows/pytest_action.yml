@@ -67,7 +67,7 @@ jobs:
       - name: Run tests
         run: |
           cd counterparty-core
-          COV_CORE_SOURCE=counterpartycore/lib pytest counterpartycore/test/${{ inputs.test-path }} \
+          COV_CORE_SOURCE=counterpartycore/lib pytest counterpartycore/test/${{ inputs.test-path }} -s -vv \
             --cov=counterpartycore/lib --cov-report=term-missing --cov-report=
           mv .coverage ../
 
