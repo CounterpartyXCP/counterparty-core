@@ -6,6 +6,10 @@ from io import StringIO
 
 import requests
 import sh
+from counterpartycore.lib import config
+
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
 
 def print_docker_output(out, printed_line_count):
@@ -48,9 +52,20 @@ def test_docker_compose():
                 sh.rm("-rf", DATA_DIR)
         os.makedirs(DATA_DIR)
 
+        with open(os.path.join(BASE_DIR, "docker-compose.yml"), "r") as f:
+            docker_compose_file = f.read()
+        docker_compose_file = docker_compose_file.replace(
+            f"image: counterparty/counterparty:v{config.VERSION_STRING}",
+            "image: counterparty/counterparty:v10.9.1",
+        )
+        with open(os.path.join(BASE_DIR, "docker-compose-test.yml"), "w") as f:
+            f.write(docker_compose_file)
+
         out = StringIO()
         sh.docker(
             "compose",
+            "-f",
+            os.path.join(BASE_DIR, "docker-compose-test.yml"),
             "--profile",
             "regtest",
             "up",
@@ -92,6 +107,7 @@ def test_docker_compose():
             time.sleep(1)
     finally:
         try:
+            os.unlink(os.path.join(BASE_DIR, "docker-compose-test.yml"))
             sh.docker("compose", "--profile", "regtest", "stop", _out=sys.stdout, _err_to_out=True)
         except sh.ErrorReturnCode:
             pass
