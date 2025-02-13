@@ -3,6 +3,9 @@
 
 # Upgrading
 
+IMPORTANT:
+- If you are running a version lower than 10.9.0, you must first update to 10.9.0 and only then install v10.10.0.
+
 Download the latest version of `counterparty-core` and restart `counterparty-server`.
 
 With Docker Compose:
