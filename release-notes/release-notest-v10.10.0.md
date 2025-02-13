@@ -1,9 +1,14 @@
-# Release Notes - Counterparty Core v10.10.0 (2025-01-??)
+# Release Notes - Counterparty Core v10.10.0 (2025-02-13)
+
+This release includes a complete rewrite of the entire test harness for Counterparty Core, as well as both restored and all-new integration tests and GitHub workflows for continuous integration. This release also adds support for Python 3.12 and 3.13, which means significantly improved performance overall. There are of course a number of bugfixes, especially for node stability when Bitcoin Core is overloaded.
 
 
 # Upgrading
 
-IMPORTANT:
+This upgrade does not include a protocol change and is not mandatory. User-facing changes to the API include a decrease in the default output value for `attach` and `move` transactions to 546 satoshis and renaming the `--testnet` flag to `--testnet3`.
+
+
+**IMPORTANT**
 - If you are running a version lower than 10.9.0, you must first update to 10.9.0 and only then install v10.10.0.
 
 Download the latest version of `counterparty-core` and restart `counterparty-server`.
@@ -17,7 +22,7 @@ docker compose stop counterparty-core
 docker compose --profile mainnet up -d
 ```
 
-or `ctrl-c` to interrupt the server
+or use `ctrl-c` to interrupt the server:
 
 ```bash
 cd counterparty-core
@@ -38,40 +43,40 @@ counterparty-server start
 - Don't retry RPC calls in `safe_get_utxo_address()`
 - Fix error handling in `safe_rpc()`
 - Raise `ValueError` instead of `PanicException` when an error occurs in Rust deserialization
-- Return 400 error on TypeError when composing a transaction
+- Return `400` error on `TypeError` when composing a transaction
 - Fix `bitcoind.search_pubkey_in_transactions()`
-- Don't force output change
-- Fix heavy healthz check
-- Fix search pubkey for never spent segwit address
-- Fix shutdown with Gunicorn
-- Same log file for all Gunicorn processes
-- Fix double log in access file on API query
+- Don't force the existence of a change output
+- Fix heavy HealthZ check
+- Fix search pubkey for SegWit addresses that have never been used
+- Fix Gunicorn shutdown
+- Use the same logfile for all Gunicorn processes
+- Fix duplicate log entries in the API Access file
 - Don't call `getblockcount` from each API thread or process
-- Reset all caches on rolloback and reparse
+- Reset all caches on rollback and reparse
 - Fix RSFetcher restart on failure
-- Fix `extended_tx_info` param in API v1
+- Fix the `extended_tx_info` param in API v1
 
 ## Codebase
 
-- Complete rewrite of the test suite. See comments in `test/mocks/conftest.py`
-- Change default value for `attach` and `move` to 546
+- Completely rewrite the test suite. See comments in `test/mocks/conftest.py`.
+- Completely rewrite the GitHub Workflow files
 - Add support for Python 3.12 and 3.13
-- Rename everywhere `testnet` to `testnet3`
-- Add `testnet4` and `regtest` profile in `docker-compose.yaml`
-- Restore Docker Composer, Compare Hashes and Tesnet4 Reparse tests
-- Refactor how required actions are triggered on upgrade
-- Complete rewrite of the Github workflows files
+- Rename `testnet` to `testnet3` everywhere
+- Add `testnet4` and `regtest` profiles to `docker-compose.yaml`
+- Restore Docker Compose, Compare Hashes and testnet4 Reparse tests
+- Refactor required actions for automatic upgrades
 
 ## API
 
-- Add `block_index` filter for get order matches endpoints
-- Add `block_index` filter for get dispenses by asset endpoint
+- Change default value for `attach` and `move` to 546 satoshis
+- Add `block_index` filter for Get Order Matches endpoints
+- Add `block_index` filter for Get Dispenses by Asset endpoint
 - Add Get Dispense By Hash endpoint
 
 ## CLI
 
-- rename `--testnet` flag to `--testnet3`
-- Add Testnet4 bootstrap database
+- Rename `--testnet` flag to `--testnet3`
+- Add testnet4 bootstrap database
 - Add `--api-only` flag
 
 # Credits
