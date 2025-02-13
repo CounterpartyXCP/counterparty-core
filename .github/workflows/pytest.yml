@@ -83,7 +83,7 @@ jobs:
       os: ${{ matrix.os || 'ubuntu-22.04' }}
       python-version: ${{ matrix.python-version || '3.11' }}
       install_bitcoin: ${{ matrix.install_bitcoin || false }}
-      run_coveralls: ${{ matrix.run_coveralls }}
+      run_coveralls: ${{ matrix.run_coveralls == null || matrix.run_coveralls == true }}
       only_on_develop:  ${{ matrix.only_on_develop || false }}
     secrets: inherit
 
