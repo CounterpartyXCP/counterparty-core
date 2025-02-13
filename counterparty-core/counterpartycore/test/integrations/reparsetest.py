@@ -80,7 +80,7 @@ def rolllback(sh_counterparty_server, network):
         network_checkpoints = checkpoints.CHECKPOINTS_TESTNET4
     else:
         network_checkpoints = checkpoints.CHECKPOINTS_MAINNET
-    rollback_from = list(network_checkpoints.keys())[-3]
+    rollback_from = max(0, list(network_checkpoints.keys())[-1] - 200000)
     sh_counterparty_server("rollback", rollback_from)
 
 
