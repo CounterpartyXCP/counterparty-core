@@ -1,6 +1,5 @@
 import random
 
-import pytest
 from counterpartycore.lib.messages import gas
 
 
@@ -147,7 +146,6 @@ def generate_gas_counter(ledger_db, block_index, average):
     return block_index
 
 
-@pytest.mark.skip
 def test_calculate_fee(ledger_db):
     assert gas.get_average_transactions(ledger_db, TRANSACTION_ID, 800000) == 0
 

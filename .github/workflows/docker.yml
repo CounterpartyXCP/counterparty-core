@@ -12,7 +12,8 @@ env:
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 jobs:
-  build:
+  Build:
+    name: Build And Push Docker Image
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

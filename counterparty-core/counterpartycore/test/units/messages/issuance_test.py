@@ -1,7 +1,7 @@
 import binascii
 
 import pytest
-from counterpartycore.lib import exceptions
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher
 from counterpartycore.lib.messages import issuance
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
@@ -1712,6 +1712,8 @@ def test_parse_paid_subasset_reissuance(ledger_db, blockchain_mock, defaults, te
 
 
 def test_reset_issuance(apiv2_client, ledger_db, state_db, defaults, blockchain_mock, test_helpers):
+    config.FORCE = True
+
     balances = apiv2_client.get("/v2/assets/CALLABLE/balances")
     print(balances)
     balances = balances.json["result"]
@@ -1796,3 +1798,5 @@ def test_reset_issuance(apiv2_client, ledger_db, state_db, defaults, blockchain_
         if address_balance["asset"] != "CALLABLE":
             continue
         assert address_balance["addresses"][0]["quantity"] == balances[0]["quantity"]
+
+    config.FORCE = False

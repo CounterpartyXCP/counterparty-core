@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ruff:
+  Ruff:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,7 @@ jobs:
         with:
           version: 0.8.2
 
-  codeql:
+  Codeql:
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
     permissions:
@@ -46,7 +46,7 @@ jobs:
       with:
         category: "/language:${{matrix.language}}"
 
-  bandit:
+  Bandit:
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
@@ -61,7 +61,7 @@ jobs:
           excluded_paths: "*/test/*,*/counterparty-core/tools/*" # optional, default is DEFAULT
           skips: "B101" # optional, default is DEFAULT
 
-  pylint:
+  Pylint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -80,7 +80,7 @@ jobs:
       with:
         sarif_file: pylint.sarif
 
-  licenses:
+  Licenses:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

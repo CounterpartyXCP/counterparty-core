@@ -49,8 +49,8 @@ jobs:
         run: |
           # pip install --upgrade pytest hatchling==1.25.0 hatch==1.13.0 pytest-cov coveralls
           pip install --upgrade pytest hatchling hatch pytest-cov coveralls
-          cd counterparty-rs && pip install -e . && cd ..
-          cd counterparty-core && pip install -e . && cd ..
+          # cd counterparty-rs && pip install -e . && cd ..
+          # cd counterparty-core && pip install -e . && cd ..
 
       - name: Install Bitcoin & Electrs
         if: inputs.install_bitcoin
@@ -67,7 +67,7 @@ jobs:
       - name: Run tests
         run: |
           cd counterparty-core
-          COV_CORE_SOURCE=counterpartycore/lib pytest counterpartycore/test/${{ inputs.test-path }} -s -vv -x \
+          hatch run pytest counterpartycore/test/${{ inputs.test-path }} -s -vv -x \
             --cov=counterpartycore/lib --cov-report=term-missing --cov-report=
           mv .coverage ../
 
@@ -75,8 +75,8 @@ jobs:
         if: inputs.run_coveralls
         run: |
           ls -al
-          coveralls debug --service=github
-          coveralls --service=github --verbose
+          # coveralls debug --service=github
+          # coveralls --service=github --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_SERVICE_NAME: github
