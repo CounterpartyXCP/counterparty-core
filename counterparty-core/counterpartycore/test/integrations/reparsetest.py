@@ -90,12 +90,17 @@ def catchup(sh_counterparty_server, backend_url, api_url):
         server_process = sh_counterparty_server("start", _bg=True)
 
         server_ready = False
+        start_time = time.time()
+        error = None
         while not server_ready:
             try:
                 server_ready = requests.get(api_url, timeout=5).json()["result"]["server_ready"]
                 if not server_ready:
                     print("Waiting for server to be ready...")
                     time.sleep(1)
+                if time.time() - start_time > 60 * 20:
+                    error = "Timeout: not ready after 20 minutes"
+                    break
             except Exception:
                 # print(e)
                 time.sleep(1)
@@ -103,6 +108,8 @@ def catchup(sh_counterparty_server, backend_url, api_url):
     finally:
         stop_http_proxy()
         server_process.terminate()
+        if error:
+            raise Exception(error)
 
 
 def cleanup():
