@@ -72,7 +72,6 @@ jobs:
           mv .coverage ../
 
       - name: Upload coverage
-        if: inputs.run_coveralls
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
