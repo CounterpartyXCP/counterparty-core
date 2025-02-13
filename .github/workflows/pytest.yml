@@ -38,25 +38,32 @@ jobs:
 
           # Mainnet tests
 
+          # bootstrap, run the server with --api-only and run
+          # the locust tests
           - name: Mainnet API Load
             test-path: integrations/load_test.py
             os: Linux-Large-1
-            run_coveralls: false
-            only_on_develop: false
+            run_coveralls: true
+            only_on_develop: true
 
+          # bootstrap, reparse 1000 blocks,
+          # rollback 3 checkpoints and catchup
           - name: Mainnet Bootstrap And Catchup
             test-path: integrations/mainnet_test.py
             os: Linux-Large-2
-            run_coveralls: false
-            only_on_develop: false
+            run_coveralls: true
+            only_on_develop: true
 
           # Regtest tests
 
+          # run scenarios on regtest
+          # testing rollback, reparse, reorg, etc
           - name: Regtest Scenarios
             test-path: integrations/regtest/scenarios_test.py
             install_bitcoin: true
             run_coveralls: true
 
+          # run property tests on regtest
           - name: Property Test
             test-path: integrations/regtest/property_test.py
             install_bitcoin: true
@@ -64,19 +71,23 @@ jobs:
 
           # Testnet4 tests
 
+          # bootstrap, reparse 1000 blocks,
+          # rollback 3 checkpoints and catchup
           - name: Testnet4 Bootstrap And Catchup
             test-path: integrations/testnet4_test.py 
             run_coveralls: true
 
           # Other tests
 
+          # run the docker-compose tests
           - name: Docker Compose
             test-path: integrations/dockercompose_test.py
-            run_coveralls: true
+            run_coveralls: false
 
+          # compare hashes between several servers
           - name: Compare Hashes
             test-path: integrations/comparehashes_test.py
-            run_coveralls: true
+            run_coveralls: false
 
     # run pytest_action.yml for the matrix
     uses: ./.github/workflows/pytest_action.yml
