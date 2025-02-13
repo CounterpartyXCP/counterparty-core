@@ -2,6 +2,7 @@ import binascii
 
 import pytest
 from counterpartycore.lib import exceptions
+from counterpartycore.lib.api import apiwatcher
 from counterpartycore.lib.messages import issuance
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -1708,3 +1709,87 @@ def test_parse_paid_subasset_reissuance(ledger_db, blockchain_mock, defaults, te
             }
         ],
     )
+
+
+def test_reset_issuance(apiv2_client, ledger_db, state_db, defaults, blockchain_mock, test_helpers):
+    balances = apiv2_client.get("/v2/assets/CALLABLE/balances").json["result"]
+    assert len(balances) == 1
+    assert balances[0]["address"] == defaults["addresses"][0]
+    assert balances[0]["quantity"] == 1000
+
+    asset = apiv2_client.get("/v2/assets/CALLABLE").json["result"]
+    assert asset["divisible"]
+    assert asset["supply"] == balances[0]["quantity"]
+
+    address_balances = apiv2_client.get(
+        f"/v2/addresses/balances?verbose=true&addresses={defaults['addresses'][0]}&limit=50"
+    )
+    for address_balance in address_balances.json["result"]:
+        if address_balance["asset"] != "CALLABLE":
+            continue
+        assert address_balance["addresses"][0]["quantity"] == balances[0]["quantity"]
+
+    data = b"\x16\x00\x00\x00\x03\xc5\x8e\\V\x00\x00\x00\x00\x00\x00\x01\xf4\x00\x00\x01reseted"
+
+    assert issuance.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "CALLABLE",
+        500,
+        None,
+        False,  # divisble
+        False,  # lock
+        True,  # reset
+        "reseted",
+    ) == (
+        defaults["addresses"][0],
+        [],
+        data,
+    )
+    message = data[1:]
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "CALLABLE",
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": "reseted",
+                    "fee_paid": 0,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": 500,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": 0,
+                    "divisible": 0,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            }
+        ],
+    )
+
+    apiwatcher.catch_up(ledger_db, state_db, watcher=None)
+
+    balances = apiv2_client.get("/v2/assets/CALLABLE/balances").json["result"]
+    assert len(balances) == 1
+    assert balances[0]["address"] == defaults["addresses"][0]
+    assert balances[0]["quantity"] == 500
+
+    asset = apiv2_client.get("/v2/assets/CALLABLE").json["result"]
+    assert not asset["divisible"]
+    assert asset["supply"] == balances[0]["quantity"]
+
+    address_balances = apiv2_client.get(
+        f"/v2/addresses/balances?verbose=true&addresses={defaults['addresses'][0]}&limit=50"
+    )
+    for address_balance in address_balances.json["result"]:
+        if address_balance["asset"] != "CALLABLE":
+            continue
+        assert address_balance["addresses"][0]["quantity"] == balances[0]["quantity"]

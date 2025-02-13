@@ -29,8 +29,7 @@ jobs:
   pytest:
     name: ${{ inputs.name }}
     runs-on: ${{ inputs.os }}
-    # TODO: developtest -
-    if: ${{ !inputs.only_on_develop || github.ref == 'refs/heads/developtest' }}
+    if: ${{ !inputs.only_on_develop || github.ref == 'refs/heads/develop' }}
     steps:
       - uses: actions/checkout@v4
       
