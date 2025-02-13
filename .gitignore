@@ -48,4 +48,4 @@ test-results/
 ._*
 
 .hypothesis/
-.coverage*
+.coverage.*
