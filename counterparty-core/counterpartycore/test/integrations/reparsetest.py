@@ -98,11 +98,12 @@ def catchup(sh_counterparty_server, backend_url, api_url):
                 if not server_ready:
                     print("Waiting for server to be ready...")
                     time.sleep(1)
+            except Exception:
+                # after 20 minutes we should not have an error
+                # unless the server crashed
                 if time.time() - start_time > 60 * 20:
                     error = "Timeout: not ready after 20 minutes"
                     break
-            except Exception:
-                # print(e)
                 time.sleep(1)
                 pass
     finally:
