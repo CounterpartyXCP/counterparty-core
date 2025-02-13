@@ -46,6 +46,7 @@ counterparty-server start
 - Don't call `getblockcount` from each API thread or process
 - Reset all caches on rolloback and reparse
 - Fix RSFetcher restart on failure
+- Fix `extended_tx_info` param in API v1
 
 ## Codebase
 
@@ -56,6 +57,7 @@ counterparty-server start
 - Add `testnet4` and `regtest` profile in `docker-compose.yaml`
 - Restore Docker Composer, Compare Hashes and Tesnet4 Reparse tests
 - Refactor how required actions are triggered on upgrade
+- Complete rewrite of the Github workflows files
 
 ## API
 
