@@ -1,4 +1,5 @@
 import json
+import time
 
 import pytest
 from counterpartycore.lib import exceptions
@@ -12,6 +13,7 @@ class MockResponse:
         self.status_code = status_code
         self.json_data = json_data
         self.reason = reason
+        self.text = json.dumps(json_data)
 
     def json(self):
         return self.json_data
@@ -45,6 +47,8 @@ def mock_requests_post(*args, **kwargs):
         return MockResponse(200, {"result": None})
     if payload["method"] == "return_empty":
         return MockResponse(200, {})
+    if payload["method"] == "return_string":
+        return MockResponse(200, "string")
 
 
 @pytest.fixture(scope="function")
@@ -104,6 +108,15 @@ def test_rpc_call(init_mock):
     with pytest.raises(exceptions.BitcoindRPCError) as exc_info:
         bitcoind.rpc("return_code_30", [])
     assert str(exc_info.value) == "Error 30"
+
+    time_before = time.time()
+    with pytest.raises(
+        exceptions.BitcoindRPCError,
+        match='Received invalid JSON from backend with a response of 200: "string"',
+    ):
+        bitcoind.rpc("return_string", [])
+    time_after = time.time()
+    assert time_after - time_before >= 6 * 5  # 6 retries with 5 seconds wait time
 
 
 def test_rpc_safe(init_mock):
