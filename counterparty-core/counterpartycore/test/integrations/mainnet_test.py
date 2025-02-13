@@ -1,5 +1,5 @@
-from reparsetest import bootstrap_reparse_and_catchup
+from reparsetest import bootstrap_reparse_rollback_and_catchup
 
 
-def test_reparse():
-    bootstrap_reparse_and_catchup("mainnet")
+def test_mainnet():
+    bootstrap_reparse_rollback_and_catchup("mainnet")

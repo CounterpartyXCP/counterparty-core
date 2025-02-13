@@ -5,6 +5,7 @@ import time
 import apsw
 import requests
 import sh
+from counterpartycore.lib.messages.data import checkpoints
 from http2https import PROXY_PORT, start_http_proxy, stop_http_proxy
 
 # DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-data")
@@ -74,6 +75,15 @@ def reparse(sh_counterparty_server, db_file):
     assert txlist_hash_before == txlist_hash_after
 
 
+def rolllback(sh_counterparty_server, network):
+    if network == "testnet4":
+        network_checkpoints = checkpoints.CHECKPOINTS_TESTNET4
+    else:
+        network_checkpoints = checkpoints.CHECKPOINTS_MAINNET
+    rollback_from = list(network_checkpoints.keys())[-3]
+    sh_counterparty_server("rollback", rollback_from)
+
+
 def catchup(sh_counterparty_server, backend_url, api_url):
     try:
         start_http_proxy(backend_url)
@@ -99,28 +109,12 @@ def cleanup():
     sh.rm("-rf", DATA_DIR)
 
 
-def bootstrap_reparse_and_catchup(network):
+def bootstrap_reparse_rollback_and_catchup(network):
     sh_counterparty_server, backend_url, db_file, api_url = prepare(network)
 
     bootstrap(sh_counterparty_server)
     reparse(sh_counterparty_server, db_file)
-    catchup(sh_counterparty_server, backend_url, api_url)
-
-    cleanup()
-
-
-def bootstrap_and_reparse(network):
-    sh_counterparty_server, _backend_url, db_file, _api_url = prepare(network)
-
-    bootstrap(sh_counterparty_server)
-    reparse(sh_counterparty_server, db_file)
-
-    cleanup()
-
-
-def catchup_only(network):
-    sh_counterparty_server, backend_url, _db_file, api_url = prepare(network)
-
+    rolllback(sh_counterparty_server, network)
     catchup(sh_counterparty_server, backend_url, api_url)
 
     cleanup()
