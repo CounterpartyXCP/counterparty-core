@@ -10,7 +10,7 @@
 <tr>
     <td>Testing</td>
     <td>
-        <a target="_blank" rel="noopener noreferrer" href="https://coveralls.io/github/CounterpartyXCP/counterparty-core?branch=develop"><img src="https://coveralls.io/repos/github/CounterpartyXCP/counterparty-core/badge.svg?branch=develop" alt="Coverage Status" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://codecov.io/gh/CounterpartyXCP/counterparty-core" ><img src="https://codecov.io/gh/CounterpartyXCP/counterparty-core/graph/badge.svg?token=Qj8WFBsXmm"  alt="Codecov" style="max-width: 100%;"/></a>
         <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/build_and_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/build_and_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
         <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/regtest.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/regtest.yml/badge.svg" alt="Integrations" style="max-width: 100%;"></a>
         <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/propertytest.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/propertytest.yml/badge.svg" alt="Property" style="max-width: 100%;"></a>
