@@ -50,6 +50,7 @@ counterparty-server start
 - Reset all caches on rolloback and reparse
 - Fix RSFetcher restart on failure
 - Fix `extended_tx_info` param in API v1
+- Correctly handle RPC responses with simple strings
 
 ## Codebase
 

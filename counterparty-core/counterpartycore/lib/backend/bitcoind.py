@@ -41,7 +41,10 @@ def should_retry():
 
 def get_json_response(response, retry=0):
     try:
-        return response.json()
+        json_response = response.json()
+        if isinstance(json_response, str):
+            raise json.decoder.JSONDecodeError("Invalid JSON", json_response, 0)
+        return json_response
     except json.decoder.JSONDecodeError as e:  # noqa: F841
         if response.status_code == 200:
             logger.warning(
