@@ -100,20 +100,3 @@ jobs:
       run_coveralls: ${{ matrix.run_coveralls }}
       only_on_develop:  ${{ matrix.only_on_develop || false }}
     secrets: inherit
-
-  # finish the coveralls
-  coveralls:
-    if: ${{ always() }}
-    needs:
-      - Test
-    runs-on: ubuntu-latest
-    container: python:3-slim
-    steps:
-    - name: Install coveralls
-      run: pip3 install --upgrade coveralls
-    - name: Coveralls Finished
-      run: |
-          echo "CodeCov"
-          # coveralls --finish --service=github
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
