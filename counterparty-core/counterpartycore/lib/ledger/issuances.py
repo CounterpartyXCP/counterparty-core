@@ -317,7 +317,7 @@ def get_asset_issued(db, address):
 def get_assets_last_issuance(state_db, asset_list):
     assets_info = []
     cursor = state_db.cursor()
-    fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
+    fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked", "owner"]
 
     asset_name_list = [asset for asset in asset_list if asset and "." not in asset]
     if len(asset_name_list) > 0:

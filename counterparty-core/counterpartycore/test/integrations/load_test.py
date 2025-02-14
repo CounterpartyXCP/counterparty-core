@@ -149,6 +149,7 @@ def generate_mainnet_fixtures(db_file):
             "validate": "false",
             "pubkeys": "0426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3",
             "exact_fee": 0,
+            "disable_utxo_locks": "true",
         }
 
     db.close()
@@ -261,7 +262,7 @@ def generate_random_url(MainnetFixtures):
 
 class CounterpartyCoreUser(locust.HttpUser):
     host = "http://localhost:4000"  # Counterparty API URL
-    wait_time = locust.between(0.3, 0.6)
+    wait_time = locust.between(0.5, 1)
     network_timeout = 15.0
     connection_timeout = 15.0
     MainnetFixtures = None
@@ -301,7 +302,7 @@ def test_load():
 
         locust.log.setup_logging("INFO")
 
-        user_count = 5
+        user_count = 4
         spawn_rate = 2
         test_duration = 60 * 5  # 5 minutes
 

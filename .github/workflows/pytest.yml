@@ -47,7 +47,7 @@ jobs:
           - name: Mainnet Bootstrap And Catchup
             test-path: integrations/mainnet_test.py
             os: Linux-Large-2
-            only_on_develop: true
+            only_on_develop: false
 
           # Regtest tests
 

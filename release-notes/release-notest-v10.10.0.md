@@ -55,7 +55,7 @@ counterparty-server start
 - Reset all caches on rollback and reparse
 - Fix RSFetcher restart on failure
 - Fix the `extended_tx_info` param in API v1
-- Correctly handle RPC responses with simple strings
+- Correctly handle RPC responses with simple strings or with string in `error`
 
 ## Codebase
 
@@ -73,6 +73,7 @@ counterparty-server start
 - Add `block_index` filter for Get Order Matches endpoints
 - Add `block_index` filter for Get Dispenses by Asset endpoint
 - Add Get Dispense By Hash endpoint
+- Add `owner` field in assets info
 
 ## CLI
 

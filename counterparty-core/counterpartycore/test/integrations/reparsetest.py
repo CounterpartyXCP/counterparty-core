@@ -18,7 +18,7 @@ def prepare(network):
     sh.mkdir(DATA_DIR)
 
     args = [
-        "-vv",
+        # "-vv",
         "--data-dir",
         DATA_DIR,
         "--cache-dir",
