@@ -7,7 +7,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "10.9.1"  # for hatch
+__version__ = "10.10.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-")[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -16,27 +16,34 @@ VERSION_REVISION = int(version[2])
 VERSION_PRE_RELEASE = "-".join(VERSION_STRING.split("-")[1:])
 
 DEFAULT_ELECTRS_URL_MAINNET = "https://blockstream.info/api"
-DEFAULT_ELECTRS_URL_TESTNET = "https://blockstream.info/testnet/api"
+DEFAULT_ELECTRS_URL_TESTNET3 = "https://blockstream.info/testnet/api"
+DEFAULT_ELECTRS_URL_TESTNET4 = "https://mempool.space/testnet4/api"
 
-# When updating to a new verion, we are making a rollback if major version changes.
-# If minor version changes and if needed, we are making a reparse from a given block.
-# Fo example:
-# NEED_REPARSE_IF_MINOR_IS_LESS_THAN = (1, 800000)
-# means that we need to reparse from block 800000 if database minor version is less than 1
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN = [(3, 0), (5, 865999), (6, 867000), (7, 869900)]
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET = [
-    (3, 0),
-    (5, 2925799),
-    (6, 2925799),
-    (7, 2925799),
-]
-NEED_REPARSE_IF_MINOR_IS_LESS_THAN_TESTNET4 = None
 
-NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN = [(8, 871780), (9, 871780)]
-NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET = [(8, 3522632), (9, 3522632)]
-NEED_ROLLBACK_IF_MINOR_IS_LESS_THAN_TESTNET4 = None
-
-STATE_DB_NEED_REFRESH_ON_VERSION_UPDATE = ["10.9.0-rc.1", "10.9.0"]
+UPGRADE_ACTIONS = {
+    "mainnet": {
+        "10.3.0": [("reparse", 0)],
+        "10.5.0": [("reparse", 865999)],
+        "10.6.0": [("reparse", 867000)],
+        "10.7.0": [("reparse", 869900)],
+        "10.8.0": [("rollback", 871780)],
+        "10.9.0-rc.1": [("rollback", 871780)],
+        "10.9.0": [("rollback", 871780)],
+    },
+    "testnet3": {
+        "10.3.0": [("reparse", 0)],
+        "10.5.0": [("reparse", 2925799)],
+        "10.6.0": [("reparse", 2925799)],
+        "10.7.0": [("reparse", 2925799)],
+        "10.8.0": [("rollback", 3522632)],
+        "10.9.0-rc.1": [("rollback", 3522632)],
+        "10.9.0": [("rollback", 3522632)],
+        "10.10.0": [("rollback", 3522632)],
+    },
+    "testnet4": {
+        "10.10.0": [("rollback", 64492)],
+    },
+}
 
 
 # Counterparty protocol
@@ -69,44 +76,44 @@ FULL_APP_NAME = "Counterparty Core"
 LOGGER_NAME = APP_NAME
 
 DEFAULT_API_PORT_REGTEST = 24000
-DEFAULT_API_PORT_TESTNET = 14000
+DEFAULT_API_PORT_TESTNET3 = 14000
 DEFAULT_API_PORT_TESTNET4 = 44000
 DEFAULT_API_PORT = 4000
 
 DEFAULT_RPC_PORT_REGTEST = 24100
-DEFAULT_RPC_PORT_TESTNET = 14100
+DEFAULT_RPC_PORT_TESTNET3 = 14100
 DEFAULT_RPC_PORT_TESTNET4 = 44100
 DEFAULT_RPC_PORT = 4100
 
 DEFAULT_BACKEND_PORT_REGTEST = 18443
-DEFAULT_BACKEND_PORT_TESTNET = 18332
+DEFAULT_BACKEND_PORT_TESTNET3 = 18332
 DEFAULT_BACKEND_PORT_TESTNET4 = 48332
 DEFAULT_BACKEND_PORT = 8332
 
 DEFAULT_ZMQ_SEQUENCE_PORT_REGTEST = 29332
-DEFAULT_ZMQ_SEQUENCE_PORT_TESTNET = 19332
+DEFAULT_ZMQ_SEQUENCE_PORT_TESTNET3 = 19332
 DEFAULT_ZMQ_SEQUENCE_PORT_TESTNET4 = 49332
 DEFAULT_ZMQ_SEQUENCE_PORT = 9332
 
 DEFAULT_ZMQ_RAWBLOCK_PORT_REGTEST = 29333
-DEFAULT_ZMQ_RAWBLOCK_PORT_TESTNET = 19333
+DEFAULT_ZMQ_RAWBLOCK_PORT_TESTNET3 = 19333
 DEFAULT_ZMQ_RAWBLOCK_PORT_TESTNET4 = 49333
 DEFAULT_ZMQ_RAWBLOCK_PORT = 9333
 
 DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST = 24001
-DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET = 14001
+DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET3 = 14001
 DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET4 = 44001
 DEFAULT_ZMQ_PUBLISHER_PORT = 4001
 
 UNSPENDABLE_REGTEST = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
-UNSPENDABLE_TESTNET = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
+UNSPENDABLE_TESTNET3 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET4 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_MAINNET = "1CounterpartyXXXXXXXXXXXXXXXUWLpVr"
 
-ADDRESSVERSION_TESTNET = b"\x6f"
-P2SH_ADDRESSVERSION_TESTNET = b"\xc4"
-PRIVATEKEY_VERSION_TESTNET = b"\xef"
-MAGIC_BYTES_TESTNET = b"\xfa\xbf\xb5\xda"  # For bip-0010
+ADDRESSVERSION_TESTNET3 = b"\x6f"
+P2SH_ADDRESSVERSION_TESTNET3 = b"\xc4"
+PRIVATEKEY_VERSION_TESTNET3 = b"\xef"
+MAGIC_BYTES_TESTNET3 = b"\xfa\xbf\xb5\xda"  # For bip-0010
 
 ADDRESSVERSION_TESTNET4 = b"\x6f"
 P2SH_ADDRESSVERSION_TESTNET4 = b"\xc4"
@@ -123,10 +130,10 @@ P2SH_ADDRESSVERSION_REGTEST = b"\xc4"
 PRIVATEKEY_VERSION_REGTEST = b"\xef"
 MAGIC_BYTES_REGTEST = b"\xda\xb5\xbf\xfa"
 
-BLOCK_FIRST_TESTNET = 310000
-BLOCK_FIRST_TESTNET_HASH = "000000001f605ec6ee8d2c0d21bf3d3ded0a31ca837acc98893876213828989d"
-BURN_START_TESTNET = 310000
-BURN_END_TESTNET = 4017708  # Fifty years, at ten minutes per block.
+BLOCK_FIRST_TESTNET3 = 310000
+BLOCK_FIRST_TESTNET3_HASH = "000000001f605ec6ee8d2c0d21bf3d3ded0a31ca837acc98893876213828989d"
+BURN_START_TESTNET3 = 310000
+BURN_END_TESTNET3 = 4017708  # Fifty years, at ten minutes per block.
 
 BLOCK_FIRST_TESTNET4 = 63240
 BLOCK_FIRST_TESTNET4_HASH = "00000000ffa7082b07d16d8ee02d275ad80a4450350e53835f0f264d72b36cd7"
@@ -198,7 +205,7 @@ BOOTSTRAP_URLS = {
             "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.sig",
         ),
     ],
-    "testnet": [
+    "testnet3": [
         (
             "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.zst",
             "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.sig",
@@ -206,6 +213,16 @@ BOOTSTRAP_URLS = {
         (
             "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.zst",
             "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.sig",
+        ),
+    ],
+    "testnet4": [
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.sig",
+        ),
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.sig",
         ),
     ],
 }
@@ -228,7 +245,7 @@ LOG_IN_CONSOLE = False
 
 DEFAULT_DB_CONNECTION_POOL_SIZE = 10
 
-DEFAULT_UTXO_VALUE = 10000
+DEFAULT_UTXO_VALUE = 546
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 LEDGER_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "ledger", "migrations")

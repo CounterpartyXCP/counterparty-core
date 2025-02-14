@@ -23,7 +23,7 @@ from counterpartycore.lib import (
 from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1, dbbuilder
 from counterpartycore.lib.cli import bootstrap, log
-from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.ledger.currentstate import BackendHeight, CurrentState
 from counterpartycore.lib.parser import blocks, check, follow
 from counterpartycore.lib.utils import database, helpers
 
@@ -41,7 +41,7 @@ def initialise(*args, **kwargs):
         log_file=kwargs.pop("log_file", None),
         api_log_file=kwargs.pop("api_log_file", None),
         no_log_files=kwargs.pop("no_log_files", False),
-        testnet=kwargs.get("testnet", False),
+        testnet3=kwargs.get("testnet3", False),
         testnet4=kwargs.get("testnet4", False),
         regtest=kwargs.get("regtest", False),
         action=kwargs.get("action", None),
@@ -61,7 +61,7 @@ def initialise_log_config(
     log_file=None,
     api_log_file=None,
     no_log_files=False,
-    testnet=False,
+    testnet3=False,
     testnet4=False,
     regtest=False,
     action=None,
@@ -88,8 +88,8 @@ def initialise_log_config(
         config.LOG_LEVEL_STRING = "trace"
 
     network = ""
-    if testnet:
-        network += ".testnet"
+    if testnet3:
+        network += ".testnet3"
     if regtest:
         network += ".regtest"
     if testnet4:
@@ -128,7 +128,7 @@ def initialise_log_config(
 def initialise_config(
     data_dir=None,
     cache_dir=None,
-    testnet=False,
+    testnet3=False,
     testnet4=False,
     regtest=False,
     api_limit_rows=1000,
@@ -170,6 +170,7 @@ def initialise_config(
     gunicorn_threads_per_worker=None,
     database_file=None,  # for tests
     electrs_url=None,
+    api_only=False,
 ):
     # log config already initialized
 
@@ -189,10 +190,10 @@ def initialise_config(
     config.CACHE_DIR = cache_dir
 
     # testnet
-    if testnet:
-        config.TESTNET = testnet
+    if testnet3:
+        config.TESTNET3 = testnet3
     else:
-        config.TESTNET = False
+        config.TESTNET3 = False
 
     if testnet4:
         config.TESTNET4 = testnet4
@@ -205,7 +206,7 @@ def initialise_config(
     else:
         config.REGTEST = False
 
-    if config.TESTNET or config.TESTNET4:
+    if config.TESTNET3 or config.TESTNET4:
         bitcoinlib.SelectParams("testnet")
     elif config.REGTEST:
         bitcoinlib.SelectParams("regtest")
@@ -213,12 +214,13 @@ def initialise_config(
         bitcoinlib.SelectParams("mainnet")
 
     config.NETWORK_NAME = "mainnet"
-    if config.TESTNET:
-        config.NETWORK_NAME = "testnet"
+    if config.TESTNET3:
+        config.NETWORK_NAME = "testnet3"
     if config.TESTNET4:
         config.NETWORK_NAME = "testnet4"
     if config.REGTEST:
         config.NETWORK_NAME = "regtest"
+
     network = f".{config.NETWORK_NAME}" if config.NETWORK_NAME != "mainnet" else ""
 
     helpers.setup_bitcoinutils()
@@ -242,6 +244,14 @@ def initialise_config(
             if os.path.exists(old_db_name + ext):
                 os.unlink(old_db_name + ext)
 
+    if config.TESTNET3:
+        old_testnet3_ledger_db = config.DATABASE.replace(".testnet3.", ".testnet.")
+        if os.path.exists(old_testnet3_ledger_db):
+            os.rename(old_testnet3_ledger_db, config.DATABASE)
+        old_testnet3_state_db = config.STATE_DATABASE.replace(".testnet3.", ".testnet.")
+        if os.path.exists(old_testnet3_state_db):
+            os.rename(old_testnet3_state_db, config.STATE_DATABASE)
+
     config.API_LIMIT_ROWS = api_limit_rows
 
     ##############
@@ -257,8 +267,8 @@ def initialise_config(
     if backend_port:
         config.BACKEND_PORT = backend_port
     else:
-        if config.TESTNET:
-            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET
+        if config.TESTNET3:
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET3
         elif config.TESTNET4:
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET4
         elif config.REGTEST:
@@ -347,8 +357,8 @@ def initialise_config(
     if rpc_port:
         config.RPC_PORT = rpc_port
     else:
-        if config.TESTNET:
-            config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET
+        if config.TESTNET3:
+            config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET3
         elif config.TESTNET4:
             config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET4
         elif config.REGTEST:
@@ -397,8 +407,8 @@ def initialise_config(
     if api_port:
         config.API_PORT = api_port
     else:
-        if config.TESTNET:
-            config.API_PORT = config.DEFAULT_API_PORT_TESTNET
+        if config.TESTNET3:
+            config.API_PORT = config.DEFAULT_API_PORT_TESTNET3
         elif config.TESTNET4:
             config.API_PORT = config.DEFAULT_API_PORT_TESTNET4
         elif config.REGTEST:
@@ -420,8 +430,8 @@ def initialise_config(
     if zmq_publisher_port:
         config.ZMQ_PUBLISHER_PORT = zmq_publisher_port
     else:
-        if config.TESTNET:
-            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET
+        if config.TESTNET3:
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET3
         elif config.TESTNET4:
             config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET4
         elif config.REGTEST:
@@ -463,14 +473,14 @@ def initialise_config(
     config.PREFIX = b"CNTRPRTY"  # 8 bytes
 
     # (more) Testnet
-    if config.TESTNET:
-        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET
-        config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET
-        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET
-        config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET
-        config.BURN_START = config.BURN_START_TESTNET
-        config.BURN_END = config.BURN_END_TESTNET
-        config.UNSPENDABLE = config.UNSPENDABLE_TESTNET
+    if config.TESTNET3:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET3
+        config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET3
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_TESTNET3
+        config.BLOCK_FIRST = config.BLOCK_FIRST_TESTNET3
+        config.BURN_START = config.BURN_START_TESTNET3
+        config.BURN_END = config.BURN_END_TESTNET3
+        config.UNSPENDABLE = config.UNSPENDABLE_TESTNET3
     elif config.TESTNET4:
         config.MAGIC_BYTES = config.MAGIC_BYTES_TESTNET4
         config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET4
@@ -522,19 +532,23 @@ def initialise_config(
         config.ELECTRS_URL = electrs_url
     else:
         if config.NETWORK_NAME == "testnet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET
+            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET3
+        if config.NETWORK_NAME == "testnet4":
+            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET4
         elif config.NETWORK_NAME == "mainnet":
             config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_MAINNET
         else:
             config.ELECTRS_URL = None
 
+    config.API_ONLY = api_only
 
-def initialise_log_and_config(args, api=False):
+
+def initialise_log_and_config(args, api=False, log_stream=None):
     # Configuration
     init_args = {
         "data_dir": args.data_dir,
         "cache_dir": args.cache_dir,
-        "testnet": args.testnet,
+        "testnet3": args.testnet3,
         "testnet4": args.testnet4,
         "regtest": args.regtest,
         "api_limit_rows": args.api_limit_rows,
@@ -572,6 +586,7 @@ def initialise_log_and_config(args, api=False):
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
         "electrs_url": args.electrs_url,
+        "api_only": args.api_only,
     }
     # for tests
     if "database_file" in args:
@@ -583,7 +598,7 @@ def initialise_log_and_config(args, api=False):
         log_file=args.log_file,
         api_log_file=args.api_log_file,
         no_log_files=args.no_log_files,
-        testnet=args.testnet,
+        testnet3=args.testnet3,
         testnet4=args.testnet4,
         regtest=args.regtest,
         action=args.action,
@@ -600,11 +615,12 @@ def initialise_log_and_config(args, api=False):
         json_logs=config.JSON_LOGS,
         max_log_file_size=config.MAX_LOG_FILE_SIZE,
         max_log_file_rotations=config.MAX_LOG_FILE_ROTATIONS,
+        log_stream=log_stream,
     )
     initialise_config(**init_args)
 
 
-def connect_to_backend():
+def ensure_backend_is_up():
     if not config.FORCE:
         backend.bitcoind.getblockcount()
 
@@ -624,7 +640,7 @@ class AssetConservationChecker(threading.Thread):
                 if time.time() - self.last_check > 60 * 60 * 12:
                     try:
                         check.asset_conservation(self.db, self.stop_event)
-                    except check.SanityError as e:
+                    except exceptions.SanityError as e:
                         logger.error("Asset conservation check failed: %s" % e)
                         _thread.interrupt_main()
                     self.last_check = time.time()
@@ -641,7 +657,7 @@ class AssetConservationChecker(threading.Thread):
         self.join()
 
 
-def start_all(args):
+def start_all(args, log_stream=None):
     api_status_poller = None
     apiserver_v1 = None
     apiserver_v2 = None
@@ -649,6 +665,7 @@ def start_all(args):
     asset_conservation_checker = None
     db = None
     api_stop_event = None
+    backend_height_thread = None
 
     # Log all config parameters, sorted by key
     # Filter out default values #TODO: these should be set in a different way
@@ -683,16 +700,26 @@ def start_all(args):
         # Check software version
         check.software_version()
 
+        backend_height_thread = BackendHeight()
+        backend_height_thread.daemon = True
+        backend_height_thread.start()
+        CurrentState().set_backend_height_value(backend_height_thread.shared_backend_height)
+
         # API Server v2
         api_stop_event = multiprocessing.Event()
-        apiserver_v2 = api_v2.APIServer(api_stop_event)
-        apiserver_v2.start(args)
+        apiserver_v2 = api_v2.APIServer(api_stop_event, backend_height_thread.shared_backend_height)
+        apiserver_v2.start(args, log_stream)
         while not apiserver_v2.is_ready() and not apiserver_v2.has_stopped():
             logger.trace("Waiting for API server to start...")
             time.sleep(0.1)
 
+        if args.api_only:
+            while True:
+                api_stop_event.wait(1)
+            return
+
         # Backend
-        connect_to_backend()
+        ensure_backend_is_up()
 
         # API Status Poller
         api_status_poller = apiv1.APIStatusPoller()
@@ -731,6 +758,8 @@ def start_all(args):
         logger.error("Exception caught!", exc_info=e)
     finally:
         # Ensure all threads are stopped
+        if backend_height_thread:
+            backend_height_thread.stop()
         if api_stop_event:
             api_stop_event.set()
         if api_status_poller:
@@ -741,10 +770,16 @@ def start_all(args):
             follower_daemon.stop()
         if asset_conservation_checker:
             asset_conservation_checker.stop()
+
+        if apiserver_v2:
+            logger.info("Waiting for API processes to stop...")
+            apiserver_v2.stop()
+            while not apiserver_v2.has_stopped():
+                time.sleep(0.1)
+
         # then close the database with write access
         if db:
             database.close(db)
-        log.shutdown()
 
         # Now it's safe to check for WAL files
         for db_name, db_path in [
@@ -754,14 +789,15 @@ def start_all(args):
             try:
                 database.check_wal_file(db_path)
             except exceptions.WALFileFoundError:
-                logger.warning(
-                    f"{db_name} WAL file detected. To ensure no data corruption has occurred, run `counterparty-server check-db`."
-                )
+                db_file = config.DATABASE if db_name == "Ledger DB" else config.STATE_DATABASE
+                db = database.get_db_connection(db_file, read_only=False, check_wal=False)
+                db.close()
             except exceptions.DatabaseError:
                 logger.warning(
                     f"{db_name} is in use by another process and was unable to be closed correctly."
                 )
 
+        log.shutdown()
         logger.info("Shutdown complete.")
 
 

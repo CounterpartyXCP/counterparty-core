@@ -1,6 +1,7 @@
 import decimal
 import itertools
 import json
+import os
 import string
 from operator import itemgetter
 from urllib.parse import urlparse
@@ -56,6 +57,11 @@ class SingletonMeta(type):
             cls._instances[cls] = instance
         return cls._instances[cls]
 
+    def reset_instance(cls):
+        """Force reinitialization of the singleton instance."""
+        if cls in cls._instances:
+            del cls._instances[cls]
+
 
 def format_duration(seconds):
     duration_seconds = int(seconds)
@@ -85,8 +91,12 @@ class ApiJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def to_json(obj, indent=None):
-    return json.dumps(obj, cls=ApiJsonEncoder, indent=indent)
+def to_json(obj, indent=None, sort_keys=False):
+    return json.dumps(obj, cls=ApiJsonEncoder, indent=indent, sort_keys=sort_keys)
+
+
+def to_short_json(obj):
+    return json.dumps(obj, cls=ApiJsonEncoder, indent=None, sort_keys=True, separators=(",", ":"))
 
 
 def divide(value1, value2):
@@ -97,16 +107,23 @@ def divide(value1, value2):
 
 
 def setup_bitcoinutils(network=None):
-    if network is not None:
-        setup(network)
-        return
-    if config.NETWORK_NAME == "testnet4":
-        setup("testnet")
-    else:
-        setup(config.NETWORK_NAME)
+    current_network = network or config.NETWORK_NAME
+    if current_network.startswith("testnet"):
+        current_network = "testnet"
+    setup(current_network)
 
 
 def is_valid_tx_hash(tx_hash):
     if all(c in string.hexdigits for c in tx_hash) and len(tx_hash) == 64:
         return True
     return False
+
+
+def is_process_alive(pid):
+    """Check For the existence of a unix pid."""
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    else:
+        return True

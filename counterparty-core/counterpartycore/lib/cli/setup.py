@@ -2,6 +2,7 @@
 import argparse
 import codecs
 import configparser
+import copy
 import logging
 import os
 import platform
@@ -141,11 +142,9 @@ def read_config_file(default_config_file, config_file_path=None):
             fp.truncate()
 
     logger.debug(f"Loading configuration file: `{config_file_path}`")
-    configfile = configparser.SafeConfigParser(
-        allow_no_value=True, inline_comment_prefixes=("#", ";")
-    )
+    configfile = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes=("#", ";"))
     with codecs.open(config_file_path, "r", encoding="utf8") as fp:
-        configfile.readfp(fp)
+        configfile.read_file(fp)
 
     if "Default" not in configfile:
         configfile["Default"] = {}
@@ -154,7 +153,9 @@ def read_config_file(default_config_file, config_file_path=None):
 
 
 def add_config_arguments(parser, args, configfile, add_default=False):
-    for arg in args:
+    arguments = copy.deepcopy(args)
+    for argument in arguments:
+        arg = argument
         if add_default:
             key = arg[0][-1].replace("--", "")
             if (

@@ -1,0 +1,41 @@
+name: Docker
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: "**"
+
+env:
+  DOCKER_REPO: counterparty/counterparty
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+jobs:
+  Build:
+    name: Build And Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Docker
+      run: |
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+    - name: Build, tag, login and push image
+      run: |
+        if [[ ${{ github.event_name }} == 'release' ]]; then
+          export VERSION=v$(cat counterparty-core/counterpartycore/lib/config.py | grep '__version__ =' | awk -F '"' '{print $2}')
+        elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref }} == 'refs/heads/develop' ]]; then
+          export VERSION=develop
+        else
+          export VERSION=${{ github.sha }}
+        fi
+        docker build -t $DOCKER_REPO:$VERSION .
+        docker tag $DOCKER_REPO:$VERSION $DOCKER_REPO:latest
+        docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+        docker push $DOCKER_REPO:$VERSION
+        if [[ ${{ github.event_name }} == 'release' ]]; then
+          docker push $DOCKER_REPO:latest
+          echo "Image pushed: $DOCKER_REPO:latest"
+        fi
+        echo "Image pushed: $DOCKER_REPO:$VERSION"

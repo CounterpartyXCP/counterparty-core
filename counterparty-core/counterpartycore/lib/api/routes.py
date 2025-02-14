@@ -163,6 +163,7 @@ ALL_ROUTES = {
     "/v2/destructions": queries.get_all_valid_destructions,
     ### /dispenses ###
     "/v2/dispenses": queries.get_dispenses,
+    "/v2/dispenses/<tx_hash>": queries.get_dispense,
     ### /sends ###
     "/v2/sends": queries.get_sends,
     ### /issuances ###

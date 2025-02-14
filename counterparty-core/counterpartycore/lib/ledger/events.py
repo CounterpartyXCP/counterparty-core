@@ -177,7 +177,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
 
     ConsensusHashBuilder().append_to_block_journal(f"{command}{category}{bindings_string}")
 
-    log.log_event(db, block_index, message_index, event, items)
+    log.log_event(block_index, message_index, event, items)
 
 
 def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=None):
@@ -239,9 +239,6 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     if protocol.enabled("contracts_only_xcp_balances"):  # Protocol change.
         if len(address) == 40:
             assert asset == config.XCP
-
-    if asset == config.BTC:
-        raise exceptions.BalanceError(f"Cannot debit bitcoins from a {config.XCP_NAME} address!")
 
     debit_address = address
     utxo = None
@@ -350,7 +347,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     return utxo_address
 
 
-def get_messages(db, block_index=None, block_index_in=None, message_index_in=None):
+def get_messages(db, block_index=None, block_index_in=None, message_index_in=None, limit=100):
     cursor = db.cursor()
     where = []
     bindings = []
@@ -366,7 +363,11 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
         )
         bindings += message_index_in
     # no sql injection here
-    query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC"""  # nosec B608  # noqa: S608
+    if len(where) == 0:
+        query = """SELECT * FROM messages ORDER BY message_index ASC LIMIT ?"""
+    else:
+        query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC LIMIT ?"""  # nosec B608  # noqa: S608
+    bindings.append(limit)
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

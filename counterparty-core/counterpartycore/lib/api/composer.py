@@ -9,7 +9,7 @@ from collections import OrderedDict
 from decimal import Decimal as D
 
 from arc4 import ARC4
-from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress, PublicKey
+from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2trAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 
@@ -76,8 +76,8 @@ def is_address_script(address, script_pub_key):
 ################
 
 
-def address_to_script_pub_key(address, unspent_list, construct_params):
-    helpers.setup_bitcoinutils()
+def address_to_script_pub_key(address, unspent_list=[], construct_params={}, network=None):  # noqa B006
+    helpers.setup_bitcoinutils(network)
     if multisig.is_multisig(address):
         signatures_required, addresses, signatures_possible = multisig.extract_array(address)
         pubkeys = [search_pubkey(addr, unspent_list, construct_params) for addr in addresses]
@@ -90,8 +90,12 @@ def address_to_script_pub_key(address, unspent_list, construct_params):
         )
         return multisig_script
     try:
+        return P2trAddress(address).to_script_pub_key()
+    except (ValueError, TypeError):
+        pass
+    try:
         return P2wpkhAddress(address).to_script_pub_key()
-    except ValueError:
+    except (ValueError, TypeError):
         pass
     try:
         return P2pkhAddress(address).to_script_pub_key()
@@ -384,6 +388,10 @@ def complete_unspent_list(unspent_list):
                     if "value" not in utxo:
                         utxo["value"] = int(vout["value"] * config.UNIT)
                         utxo["amount"] = vout["value"]
+        if "script_pub_key" not in utxo:
+            raise exceptions.ComposeError(
+                f"invalid UTXOs: {utxo['txid']}:{utxo['vout']}: script_pub_key not found, you can provide it with the `inputs_set` parameter, using <txid>:<vout>:<value>:<script_pub_key> format"
+            )
         utxo["is_segwit"] = is_segwit_output(utxo["script_pub_key"])
         completed_unspent_list.append(utxo)
     return completed_unspent_list
@@ -589,13 +597,15 @@ def utxos_to_txins(utxos: list):
 #   Composition   #
 ##################
 
-DUMMY_DER_SIG = "3045" + "00" * 70
-DUMMY_REEDEM_SCRIPT = DUMMY_DER_SIG
+OP_0 = "00"
+OP_PUSHBYTES_33 = "21"
+OP_PUSHBYTES_72 = "48"
+OP_PUSHBYTES_73 = "49"
+
+DUMMY_DER_SIG = "3045" + "00" * 69 + "01"
+DUMMY_REEDEM_SCRIPT = OP_PUSHBYTES_72 + DUMMY_DER_SIG
 DUMMY_PUBKEY = "03" + 32 * "00"
 DUMMY_SCHNORR_SIG = "00" * 65
-OP_0 = "00"
-OP_PUSHBYTES_72 = "48"
-OP_PUSHBYTES_33 = "21"
 
 
 # dummies script_sig from https://learnmeabitcoin.com/technical/script/
@@ -609,9 +619,9 @@ def get_dummy_script_sig(script_pub_key):
     elif output_type == "P2MS":
         asm = script.script_to_asm(script_pub_key)
         required_signatures = asm[0]
-        script_sig = OP_0 + (required_signatures * DUMMY_DER_SIG)
+        script_sig = OP_0 + (required_signatures * (OP_PUSHBYTES_72 + DUMMY_DER_SIG))
     elif output_type == "P2SH":
-        script_sig = OP_0 + OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_72 + DUMMY_REEDEM_SCRIPT
+        script_sig = OP_0 + OP_PUSHBYTES_72 + DUMMY_DER_SIG + OP_PUSHBYTES_73 + DUMMY_REEDEM_SCRIPT
     if script_sig is not None:
         return Script.from_raw(script_sig)
     return None
@@ -643,6 +653,7 @@ def generate_dummy_signed_tx(tx, selected_utxos):
         dummy_witness = get_dummy_witness(utxo["script_pub_key"])
         if dummy_witness is not None:
             dummy_signed_tx.witnesses.append(dummy_witness)
+            dummy_signed_tx.has_segwit = True
     return dummy_signed_tx
 
 
@@ -785,8 +796,9 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         if max_fee is not None:
             needed_fee = min(needed_fee, max_fee)
         needed_fee = int(needed_fee)
+
         # if change is enough for needed fee, add change output and break
-        if change_amount > needed_fee:
+        if change_amount >= needed_fee:
             change_amount = int(change_amount - needed_fee)
             if change_amount > dust_size(change_address, construct_params):
                 change_outputs.append(

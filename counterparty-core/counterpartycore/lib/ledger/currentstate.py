@@ -1,30 +1,61 @@
+import logging
+import threading
 import time
+from multiprocessing import Value
 
-from flask import request
-
-from counterpartycore.lib import backend
+from counterpartycore.lib import backend, config
 from counterpartycore.lib.ledger import blocks
 from counterpartycore.lib.utils import helpers
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 BACKEND_HEIGHT_REFRSH_INTERVAL = 3
 
 
 def get_backend_height():
-    # TODO: find a way to mock this function for testing
-    try:
-        if request.url_root == "http://localhost:10009/":
-            return 0
-    except RuntimeError:
-        pass
-
     block_count = backend.bitcoind.getblockcount()
     blocks_behind = backend.bitcoind.get_blocks_behind()
     return block_count + blocks_behind
 
 
+class BackendHeight(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self, name="BackendHeight")
+        self.last_check = 0
+        self.stop_event = threading.Event()
+        self.shared_backend_height = Value("i", 0)
+        self.refresh()
+
+    def run(self):
+        if config.API_ONLY:
+            return
+        try:
+            while not self.stop_event.is_set():
+                if time.time() - self.last_check > BACKEND_HEIGHT_REFRSH_INTERVAL:
+                    self.refresh()
+                self.stop_event.wait(0.1)
+        finally:
+            logger.info("BackendHeight Thread stopped.")
+
+    def refresh(self):
+        if config.API_ONLY:
+            return
+        logger.trace("Updating backend height...")
+        self.shared_backend_height.value = get_backend_height()
+        self.last_check = time.time()
+
+    def stop(self):
+        self.stop_event.set()
+        logger.info("Stopping BackendHeight thread...")
+        self.join()
+
+
 class CurrentState(metaclass=helpers.SingletonMeta):
     def __init__(self):
+        self.init()
+
+    def init(self):
         self.state = {}
         self.last_update = 0
 
@@ -59,11 +90,13 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def current_block_time(self):
         return self.state.get("CURRENT_BLOCK_TIME")
 
+    def set_backend_height_value(self, shared_backend_height):
+        self.state["BACKEND_HEIGHT_VALUE"] = shared_backend_height
+
     def current_backend_height(self):
-        if time.time() - self.last_update >= BACKEND_HEIGHT_REFRSH_INTERVAL:
-            self.backend_height = get_backend_height()
-            self.last_update = time.time()
-        return self.backend_height
+        if "BACKEND_HEIGHT_VALUE" not in self.state:
+            return None
+        return self.state["BACKEND_HEIGHT_VALUE"].value
 
     def current_tx_hash(self):
         return self.state.get("CURRENT_TX_HASH")

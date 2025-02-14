@@ -10,6 +10,7 @@ from logging.handlers import RotatingFileHandler
 from multiprocessing import current_process
 
 import flask
+import multiprocessing_logging
 import zmq
 from dateutil.tz import tzlocal
 from halo import Halo
@@ -182,8 +183,9 @@ def set_up(
     quiet=True,
     log_file=None,
     json_logs=False,
-    max_log_file_size=40 * 1024 * 1024,
+    max_log_file_size=1024 * 1024,
     max_log_file_rotations=20,
+    log_stream=None,
 ):
     logging.Logger.trace = trace
     logging.Logger.event = event
@@ -235,8 +237,13 @@ def set_up(
         fileh.emit = locked_emit
         logger.addHandler(fileh)
 
+        multiprocessing_logging.install_mp_handler()
+
     if config.LOG_IN_CONSOLE:
-        console = logging.StreamHandler()
+        if log_stream:
+            console = logging.StreamHandler(log_stream)
+        else:
+            console = logging.StreamHandler()
         console.setLevel(log_level)
         if json_logs:
             console.setFormatter(CustomisedJSONFormatter())
@@ -310,7 +317,7 @@ def truncate_fields(bindings):
     return truncated_bindings
 
 
-def log_event(db, block_index, event_index, event_name, bindings):
+def log_event(block_index, event_index, event_name, bindings):
     block_name = "Mempool" if CurrentState().parsing_mempool() else f"Block {block_index}"
     log_bindings = truncate_fields(bindings)
     log_bindings = " ".join([f"{key}={value}" for key, value in log_bindings.items()])
@@ -330,7 +337,7 @@ def log_event(db, block_index, event_index, event_name, bindings):
         if not CurrentState().parsing_mempool():
             zmq_event["block_index"] = block_index
             zmq_event["event_index"] = event_index
-        zmq_publisher.publish_event(db, zmq_event)
+        zmq_publisher.publish_event(zmq_event)
 
 
 class Spinner:
@@ -381,7 +388,7 @@ class ZmqPublisher(metaclass=helpers.SingletonMeta):
         self.socket = self.context.socket(zmq.PUB)
         self.socket.bind("tcp://*:%s" % config.ZMQ_PUBLISHER_PORT)
 
-    def publish_event(self, db, event):
+    def publish_event(self, event):
         logger.trace("Publishing event: %s", event["event"])
         self.socket.send_multipart(
             [event["event"].encode("utf-8"), helpers.to_json(event).encode("utf-8")]

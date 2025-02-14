@@ -41,7 +41,10 @@ def should_retry():
 
 def get_json_response(response, retry=0):
     try:
-        return response.json()
+        json_response = response.json()
+        if isinstance(json_response, str):
+            raise json.decoder.JSONDecodeError("Invalid JSON", json_response, 0)
+        return json_response
     except json.decoder.JSONDecodeError as e:  # noqa: F841
         if response.status_code == 200:
             logger.warning(
@@ -105,6 +108,9 @@ def rpc_call(payload, retry=0):
     # Handle json decode errors
     response_json = get_json_response(response)
 
+    if "error" in response_json and isinstance(response_json["error"], str):
+        response_json["error"] = {"message": response_json["error"], "code": -1}
+
     # Batch query returns a list
     if isinstance(response_json, list):
         result = response_json
@@ -113,7 +119,7 @@ def rpc_call(payload, retry=0):
     elif "Block height out of range" in response_json["error"]["message"]:
         # this error should be managed by the caller
         raise exceptions.BlockOutOfRange(response_json["error"]["message"])
-    elif response_json["error"]["code"] in [-28, -8, -5, -2]:
+    elif response_json["error"]["code"] in [-28, -8, -5, -2, -1]:
         # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
         warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
         if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
@@ -181,9 +187,20 @@ def safe_rpc(method, params):
             headers={"content-type": "application/json"},
             verify=(not config.BACKEND_SSL_NO_VERIFY),
             timeout=config.REQUESTS_TIMEOUT,
-        ).json()
-        if "error" in response:
-            raise exceptions.BitcoindRPCError(response["error"]["message"])
+        )
+        if response is None:
+            raise exceptions.BitcoindRPCError(
+                f"Cannot communicate with Bitcoin Core at `{clean_url_for_log(config.BACKEND_URL)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
+            )
+        response = response.json()
+        if "result" not in response and "error" in response:
+            if response["error"] is None or "message" not in response["error"]:
+                message = "Unknown error"
+            else:
+                message = response["error"]["message"]
+            raise exceptions.BitcoindRPCError(message)
+        if response["result"] is None:
+            raise exceptions.BitcoindRPCError("No result returned")
         return response["result"]
     except (requests.exceptions.RequestException, json.decoder.JSONDecodeError, KeyError) as e:
         raise exceptions.BitcoindRPCError(f"Error calling {method}: {str(e)}") from e
@@ -258,11 +275,11 @@ def getrawmempool(verbose=False):
 
 
 @functools.lru_cache(maxsize=1000)
-def get_utxo_address_and_value(utxo):
+def get_utxo_address_and_value(utxo, no_retry=False):
     tx_hash = utxo.split(":")[0]
     vout = int(utxo.split(":")[1])
     try:
-        transaction = getrawtransaction(tx_hash, True)
+        transaction = getrawtransaction(tx_hash, True, no_retry=no_retry)
     except exceptions.BitcoindRPCError as e:
         raise exceptions.InvalidUTXOError(f"Could not find UTXO {utxo}") from e
     if vout >= len(transaction["vout"]):
@@ -274,7 +291,7 @@ def get_utxo_address_and_value(utxo):
 
 def safe_get_utxo_address(utxo):
     try:
-        return get_utxo_address_and_value(utxo)[0]
+        return get_utxo_address_and_value(utxo, no_retry=True)[0]
     except exceptions.InvalidUTXOError:
         return "unknown"
 
@@ -435,10 +452,10 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
             elif "coinbase" not in vin:
                 scriptsig = vin["scriptSig"]
                 asm = scriptsig["asm"].split(" ")
-                if len(asm) == 4:  # p2pkh
+                if len(asm) == 2:  # p2pkh
                     # catch unhexlify errs for when asm[1] isn't a pubkey (eg; for P2SH)
                     try:
-                        pubkey = asm[3]
+                        pubkey = asm[1]
                         if (
                             pubkeyhash
                             == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
@@ -453,7 +470,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                         pass
         for vout in tx["vout"]:
             asm = vout["scriptPubKey"]["asm"].split(" ")
-            if len(asm) == 3:  # p2pk
+            if len(asm) == 3 and asm[2] == "OP_CHECKSIG":  # p2pk
                 try:
                     pubkey = asm[1]
                     if (
@@ -461,12 +478,15 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                         == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
                     ):
                         return pubkey
+                except (binascii.Error, AttributeError):
+                    pass
+                try:
                     if (
                         pubkeyhash
                         == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                     ):
                         return pubkey
-                except binascii.Error:
+                except (binascii.Error, AttributeError):
                     pass
     return None
 

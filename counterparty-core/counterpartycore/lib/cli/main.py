@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import sys
 from urllib.parse import quote_plus as urlencode
 
 from termcolor import cprint
@@ -57,7 +58,7 @@ CONFIG_ARGS = [
         },
     ],
     [
-        ("--testnet",),
+        ("--testnet3",),
         {
             "action": "store_true",
             "default": False,
@@ -339,7 +340,9 @@ CONFIG_ARGS = [
         ("--gunicorn-workers",),
         {
             "type": int,
-            "default": 2 * os.cpu_count() + 1,
+            "default": 2 * os.cpu_count()
+            + 1
+            - 2,  # - 2 to account for the follow and api watcher processes
             "help": "number of worker processes for gunicorn (if enabled)",
         },
     ],
@@ -372,6 +375,14 @@ CONFIG_ARGS = [
             "help": "On startup, rebuild all tables in the state database",
             "action": "store_true",
             "default": False,
+        },
+    ],
+    [
+        ("--api-only",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Don't parse new blocks, only run the API server",
         },
     ],
 ]
@@ -409,20 +420,19 @@ def welcome_message(action, server_configfile):
     else:
         cprint("Warning: API access log disabled", "yellow")
 
+    cprint(f"Python version: {sys.version}", "light_grey")
+
     cprint(f"\n{'-' * 30} {action.upper()} {'-' * 30}\n", "green")
 
 
-def main():
-    sentry.init()
-    # Post installation tasks
-    server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
-
+def arg_parser(no_config_file=False, app_name=APP_NAME):
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(
-        prog=APP_NAME,
+        prog=app_name,
         description=f"Server for the {config.XCP_NAME} protocol",
         add_help=False,
         exit_on_error=False,
+        conflict_handler="resolve",
     )
     parser.add_argument(
         "-h", "--help", dest="help", action="store_true", help="show this help message and exit"
@@ -433,11 +443,13 @@ def main():
         action="version",
         version=f"{APP_NAME} v{APP_VERSION}; counterparty-core v{config.VERSION_STRING}",
     )
-    parser.add_argument("--config-file", help="the path to the configuration file")
-
-    cmd_args = parser.parse_known_args()[0]
-    config_file_path = getattr(cmd_args, "config_file", None)
-    configfile = setup.read_config_file("server.conf", config_file_path)
+    if not no_config_file:
+        parser.add_argument("--config-file", help="the path to the configuration file")
+        cmd_args = parser.parse_known_args()[0]
+        config_file_path = getattr(cmd_args, "config_file", None)
+        configfile = setup.read_config_file("server.conf", config_file_path)
+    else:
+        configfile = {"Default": {}}
 
     setup.add_config_arguments(parser, CONFIG_ARGS, configfile, add_default=True)
 
@@ -490,6 +502,15 @@ def main():
     )
     setup.add_config_arguments(parser_show_config, CONFIG_ARGS, configfile)
 
+    return parser
+
+
+def main():
+    sentry.init()
+    # Post installation tasks
+    server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
+
+    parser = arg_parser()
     args = parser.parse_args()
 
     # Help message

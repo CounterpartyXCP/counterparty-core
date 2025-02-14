@@ -1,4 +1,4 @@
-apsw==3.45.1.0
+apsw==3.49.0.0
 appdirs==1.4.4
 setuptools-markdown==0.4.1
 python-dateutil==2.8.2
@@ -13,14 +13,13 @@ safe-pysha3==1.0.4
 pytest==7.4.4
 pytest-cov==4.1.0
 python-bitcoinlib==0.12.2
-requests==2.32.0
+requests==2.32.2
 tendo==0.3.0
 xmltodict==0.13.0
 cachetools==5.3.2
 bitstring==4.1.4
 Werkzeug==3.0.6
 itsdangerous==2.1.2
-plyvel==1.5.1
 arc4==0.4.0
 halo==0.0.31
 termcolor==2.4.0
@@ -30,6 +29,7 @@ psutil==5.9.8
 influxdb-client==1.42.0
 python-gnupg==0.5.2
 pyzmq==26.0.3
+gevent==24.11.1
 JSON-log-formatter==1.0
 yoyo-migrations==8.2.0
 gunicorn==23.0.0
@@ -38,4 +38,8 @@ hypothesis==6.116.0
 bitcoin-utils==0.7.1
 pyzstd==0.16.2
 dredd_hooks==0.2.0
-counterparty-rs==10.9.1
+sh==2.0.6
+PyYAML==6.0.2
+multiprocessing-logging==0.3.4
+locust==2.32.8
+counterparty-rs==10.10.0

@@ -6,7 +6,7 @@ x-bitcoind-common: &bitcoind-common
   restart: unless-stopped
 
 x-counterparty-common: &counterparty-common
-  image: counterparty/counterparty:v10.9.1
+  image: counterparty/counterparty:v10.10.0
   stop_grace_period: 1m
   volumes:
     - data:/root/.bitcoin
@@ -66,14 +66,14 @@ services:
       - "--catch-up=bootstrap"
       #- "--verbose"
 
-  ###################
-  # Testnet Services #
-  ###################
+  #####################
+  # Testnet3 Services #
+  #####################
 
-  bitcoind-testnet:
+  bitcoind-testnet3:
     <<: *bitcoind-common
     profiles:
-      - testnet
+      - testnet3
     ports: 
       - "18332:18332"
       - "19332:19332"
@@ -97,23 +97,122 @@ services:
       - "-zmqpubsequence=tcp://0.0.0.0:19332"
       - "-zmqpubrawblock=tcp://0.0.0.0:19333"
 
-  counterparty-core-testnet:
+  counterparty-core-testne3:
     <<: *counterparty-common
     profiles:
-      - testnet
+      - testnet3
     links:
-      - bitcoind-testnet
+      - bitcoind-testnet3
     ports:
       - "14000:14000"                                      # API v2
       - "14100:14100"                                      # API v1
     command:
       - start
-      - "--testnet"
-      - "--backend-connect=bitcoind-testnet"
+      - "--testnet3"
+      - "--backend-connect=bitcoind-testnet3"
       - "--rpc-host=0.0.0.0"
       - "--api-host=0.0.0.0"
       - "--catch-up=bootstrap"
       #- "--verbose"
+
+  #####################
+  # Testnet4 Services #
+  #####################
+
+  bitcoind-testnet4:
+    <<: *bitcoind-common
+    profiles:
+      - testnet4
+    ports: 
+      - "48332:48332"
+      - "49332:49332"
+      - "49333:49333"
+    command: 
+      - "-chain=testnet4"
+      - "-rpcallowip=0.0.0.0/0"
+      - "-rpcbind=0.0.0.0"
+      - "-rpcuser=rpc"
+      - "-rpcpassword=rpc"
+      - "-listen=1"
+      - "-server=1"
+      - "-printtoconsole=1"
+      - "-addresstype=legacy"
+      - "-txindex=1"
+      - "-prune=0"
+      - "-dbcache=4000"
+      - "-mempoolfullrbf=1"
+      - "-zmqpubrawtx=tcp://0.0.0.0:49332"
+      - "-zmqpubhashtx=tcp://0.0.0.0:49332"
+      - "-zmqpubsequence=tcp://0.0.0.0:49332"
+      - "-zmqpubrawblock=tcp://0.0.0.0:49333"
+
+  counterparty-core-testne4:
+    <<: *counterparty-common
+    profiles:
+      - testnet4
+    links:
+      - bitcoind-testnet4
+    ports:
+      - "44000:44000"                                      # API v2
+      - "44100:44100"                                      # API v1
+    command:
+      - start
+      - "--testnet4"
+      - "--backend-connect=bitcoind-testnet4"
+      - "--rpc-host=0.0.0.0"
+      - "--api-host=0.0.0.0"
+      - "--catch-up=bootstrap"
+
+
+
+  #####################
+  # Regtest Services #
+  #####################
+
+  bitcoind-regtest:
+    <<: *bitcoind-common
+    profiles:
+      - regtest
+    ports: 
+      - "18443:18443"
+      - "29332:29332"
+      - "29333:29333"
+    command: 
+      - "-chain=regtest"
+      - "-rpcallowip=0.0.0.0/0"
+      - "-rpcbind=0.0.0.0"
+      - "-rpcuser=rpc"
+      - "-rpcpassword=rpc"
+      - "-listen=1"
+      - "-server=1"
+      - "-printtoconsole=1"
+      - "-addresstype=legacy"
+      - "-txindex=1"
+      - "-prune=0"
+      - "-dbcache=4000"
+      - "-mempoolfullrbf=1"
+      - "-zmqpubrawtx=tcp://0.0.0.0:29332"
+      - "-zmqpubhashtx=tcp://0.0.0.0:29332"
+      - "-zmqpubsequence=tcp://0.0.0.0:29332"
+      - "-zmqpubrawblock=tcp://0.0.0.0:29333"
+
+  counterparty-core-regtest:
+    <<: *counterparty-common
+    profiles:
+      - regtest
+    links:
+      - bitcoind-regtest
+    ports:
+      - "24000:24000"                                      # API v2
+      - "24100:24100"                                      # API v1
+    command:
+      - start
+      - "--regtest"
+      - "--backend-connect=bitcoind-regtest"
+      - "--rpc-host=0.0.0.0"
+      - "--api-host=0.0.0.0"
+      - "-vv"
+
 
 volumes: 
   data:

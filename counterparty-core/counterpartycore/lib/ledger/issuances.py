@@ -57,8 +57,8 @@ def generate_asset_id(asset_name, block_index):
         n += digit
     asset_id = n
 
-    if asset_id < 26**3:
-        raise exceptions.AssetNameError("too short")
+    # sanity check
+    assert asset_id >= 26**3
 
     return asset_id
 
@@ -201,15 +201,15 @@ def value_input(quantity, asset, divisible):
         return round(quantity)
 
 
-def value_output(quantity, asset, divisible):
-    def norm(num, places):
-        """Round only if necessary."""
-        num = round(num, places)
-        fmt = "{:." + str(places) + "f}"
-        # pylint: disable=C0209
-        num = fmt.format(num)
-        return num.rstrip("0") + "0" if num.rstrip("0")[-1] == "." else num.rstrip("0")
+def norm(num, places):
+    """Round only if necessary."""
+    num = round(num, places)
+    fmt = "{:." + str(places) + "f}"
+    num = fmt.format(num)
+    return num.rstrip("0") + "0" if num.rstrip("0")[-1] == "." else num.rstrip("0")
 
+
+def value_output(quantity, asset, divisible):
     if asset == "fraction":
         return str(norm(D(quantity) * D(100), 6)) + "%"
 
@@ -317,7 +317,7 @@ def get_asset_issued(db, address):
 def get_assets_last_issuance(state_db, asset_list):
     assets_info = []
     cursor = state_db.cursor()
-    fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked"]
+    fields = ["asset", "asset_longname", "description", "issuer", "divisible", "locked", "owner"]
 
     asset_name_list = [asset for asset in asset_list if asset and "." not in asset]
     if len(asset_name_list) > 0:
@@ -515,8 +515,6 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
     bindings = (fairminter_tx_hash, "valid")
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
-    if not sums:
-        return 0, 0
     return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
 
 

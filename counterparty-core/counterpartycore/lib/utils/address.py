@@ -129,7 +129,6 @@ def unpack(short_address_bytes):
 
 
 def is_valid_address(address, network=None):
-    print("Checking address validity", address, config.NETWORK_NAME)
     helpers.setup_bitcoinutils(network)
     if multisig.is_multisig(address):
         return True

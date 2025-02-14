@@ -107,7 +107,10 @@ def get_transactions(db, tx_hash=None, tx_index=None):
         where.append("tx_index = ?")
         bindings.append(tx_index)
     # no sql injection here
-    query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    if len(where) > 0:
+        query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    else:
+        query = "SELECT * FROM transactions"
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

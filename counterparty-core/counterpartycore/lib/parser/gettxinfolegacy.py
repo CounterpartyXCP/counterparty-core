@@ -28,7 +28,7 @@ def get_pubkeyhash(scriptpubkey, block_index):
                     return asm[2], config.ADDRESSVERSION
 
             elif (asm[0] == OP_HASH160) and protocol.enabled("p2sh_dispensers_support"):  # noqa: F405
-                if len(asm) != 3 or asm[-1] != "OP_EQUAL":
+                if len(asm) != 3 or asm[-1] != OP_EQUAL:  # noqa: F405
                     return None, None
                 else:
                     return asm[1], config.P2SH_ADDRESSVERSION
@@ -93,15 +93,15 @@ def get_tx_info_legacy(decoded_tx, block_index):
         # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
         asm = script.script_to_asm(script_pub_key)
         if len(asm) == 2 and asm[0] == OP_RETURN:  # OP_RETURN  # noqa: F405
-            if type(asm[1]) != bytes:  # noqa: E721
-                continue
+            # if type(asm[1]) != bytes:  # noqa: E721
+            #    continue
             data_chunk = asm[1]
             data += data_chunk
         elif (
             len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG  # noqa: F405
         ):  # Multi-sig
-            if type(asm[2]) != bytes:  # noqa: E721
-                continue
+            # if type(asm[2]) != bytes:  # noqa: E721
+            #    continue
             data_pubkey = asm[2]
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1 : data_chunk_length + 1]

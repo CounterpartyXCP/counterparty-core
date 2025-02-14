@@ -48,7 +48,7 @@ from counterpartycore.lib.messages import (
 from counterpartycore.lib.messages.versions import enhancedsend, mpma
 from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -558,6 +558,7 @@ def rollback(db, block_index=0, force=False):
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
     CurrentState().set_current_block_index(block_index - 1)
+    ledger.caches.reset_caches()
 
 
 def generate_progression_message(
@@ -592,6 +593,8 @@ def reparse(db, block_index=0):
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     with log.Spinner(f"Rolling database back to block {block_index}..."):
         clean_messages_tables(db, block_index=block_index)
+
+    ledger.caches.reset_caches()
 
     step = "Recalculating consensus hashes..."
     with log.Spinner("Recalculating consensus hashes..."):
@@ -703,6 +706,7 @@ def handle_reorg(db):
 
     # rollback to the previous block
     current_block_index = previous_block_index + 1
+    print(f"Rolling back to block {current_block_index}...")
     rollback(db, block_index=current_block_index)
     CurrentState().set_current_block_index(previous_block_index)
 
@@ -817,24 +821,22 @@ def rollback_empty_block(db):
         rollback(db, block_index=block["block_index"], force=True)
 
 
+def execute_upgrade_actions(db, upgrade_actions):
+    for action in upgrade_actions:
+        if action[0] == "reparse":
+            reparse(db, block_index=action[1])
+        elif action[0] == "rollback":
+            rollback(db, block_index=action[1])
+        elif action[0] == "clear_not_supported_cache":
+            cache_path = os.path.join(
+                config.CACHE_DIR, f"not_supported_tx_cache.{config.NETWORK_NAME}.txt"
+            )
+            if os.path.exists(cache_path):
+                os.remove(cache_path)
+
+
 def check_database_version(db):
-    # Update version if new database.
-    if CurrentState().current_block_index() <= config.BLOCK_FIRST:
-        database.update_version(db)
-        return
-    try:
-        check.database_version(db)
-    except exceptions.VersionError as e:
-        logger.info(str(e))
-        # rollback or reparse the database
-        if e.required_action == "rollback":
-            rollback(db, block_index=e.from_block_index)
-        elif e.required_action == "reparse":
-            reparse(db, block_index=e.from_block_index)
-        # refresh the current block index
-        CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
-        # update the database version
-        database.update_version(db)
+    check.check_database_version(db, execute_upgrade_actions, "Ledger")
 
 
 def start_rsfetcher():
@@ -844,8 +846,13 @@ def start_rsfetcher():
     except exceptions.InvalidVersion as e:
         logger.error(e)
         sys.exit(1)
-    except Exception:
-        logger.warning("Failed to start RSFetcher. Retrying in 5 seconds...")
+    except Exception as e:
+        logger.warning(f"Failed to start RSFetcher ({e}). Retrying in 5 seconds...")
+        try:
+            fetcher.stop()
+        except Exception as e:
+            logger.debug(f"Failed to stop RSFetcher ({e}).")
+            pass
         time.sleep(5)
         return start_rsfetcher()
     return fetcher
