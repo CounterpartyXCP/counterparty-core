@@ -149,6 +149,7 @@ def generate_mainnet_fixtures(db_file):
             "validate": "false",
             "pubkeys": "0426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3",
             "exact_fee": 0,
+            "disable_utxo_locks": "true",
         }
 
     db.close()
