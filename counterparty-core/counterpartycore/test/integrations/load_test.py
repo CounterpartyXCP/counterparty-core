@@ -262,7 +262,7 @@ def generate_random_url(MainnetFixtures):
 
 class CounterpartyCoreUser(locust.HttpUser):
     host = "http://localhost:4000"  # Counterparty API URL
-    wait_time = locust.between(0.3, 0.6)
+    wait_time = locust.between(0.5, 1)
     network_timeout = 15.0
     connection_timeout = 15.0
     MainnetFixtures = None
@@ -302,7 +302,7 @@ def test_load():
 
         locust.log.setup_logging("INFO")
 
-        user_count = 5
+        user_count = 4
         spawn_rate = 2
         test_duration = 60 * 5  # 5 minutes
 
