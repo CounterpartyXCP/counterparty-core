@@ -108,6 +108,9 @@ def rpc_call(payload, retry=0):
     # Handle json decode errors
     response_json = get_json_response(response)
 
+    if "error" in response_json and isinstance(response_json["error"], str):
+        response_json["error"] = {"message": response_json["error"], "code": -1}
+
     # Batch query returns a list
     if isinstance(response_json, list):
         result = response_json
@@ -116,7 +119,7 @@ def rpc_call(payload, retry=0):
     elif "Block height out of range" in response_json["error"]["message"]:
         # this error should be managed by the caller
         raise exceptions.BlockOutOfRange(response_json["error"]["message"])
-    elif response_json["error"]["code"] in [-28, -8, -5, -2]:
+    elif response_json["error"]["code"] in [-28, -8, -5, -2, -1]:
         # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
         warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
         if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY

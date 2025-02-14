@@ -55,7 +55,7 @@ counterparty-server start
 - Reset all caches on rollback and reparse
 - Fix RSFetcher restart on failure
 - Fix the `extended_tx_info` param in API v1
-- Correctly handle RPC responses with simple strings
+- Correctly handle RPC responses with simple strings or with string in `error`
 
 ## Codebase
 

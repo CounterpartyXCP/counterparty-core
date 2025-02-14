@@ -1,4 +1,5 @@
 import json
+import re
 import time
 
 import pytest
@@ -49,6 +50,8 @@ def mock_requests_post(*args, **kwargs):
         return MockResponse(200, {})
     if payload["method"] == "return_string":
         return MockResponse(200, "string")
+    if payload["method"] == "return_error_string":
+        return MockResponse(200, {"error": "an error"})
 
 
 @pytest.fixture(scope="function")
@@ -117,6 +120,14 @@ def test_rpc_call(init_mock):
         bitcoind.rpc("return_string", [])
     time_after = time.time()
     assert time_after - time_before >= 6 * 5  # 6 retries with 5 seconds wait time
+
+    with pytest.raises(
+        exceptions.BitcoindRPCError,
+        match=re.escape(
+            "Error calling {'method': 'return_error_string', 'params': [], 'jsonrpc': '2.0', 'id': 0}: {'message': 'an error', 'code': -1}. Sleeping for ten seconds and retrying."
+        ),
+    ):
+        bitcoind.rpc("return_error_string", [])
 
 
 def test_rpc_safe(init_mock):
