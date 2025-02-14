@@ -73,6 +73,7 @@ counterparty-server start
 - Add `block_index` filter for Get Order Matches endpoints
 - Add `block_index` filter for Get Dispenses by Asset endpoint
 - Add Get Dispense By Hash endpoint
+- Add `owner` field in assets info
 
 ## CLI
 
