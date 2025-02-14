@@ -49,7 +49,7 @@ jobs:
             test-path: integrations/mainnet_test.py
             os: Linux-Large-2
             #only_on_develop: true
-            only_on_develop: false
+            only_on_develop: true
 
           # Regtest tests
 
