@@ -37,17 +37,17 @@ jobs:
 
           # bootstrap, run the server with --api-only and run
           # the locust tests
-          #- name: Mainnet API Load
-          #  test-path: integrations/load_test.py
-          #  os: Linux-Large-1
-          #  only_on_develop: true
+          - name: Mainnet API Load
+            test-path: integrations/load_test.py
+            os: Linux-Large-1
+            only_on_develop: true
 
           # bootstrap, reparse 1000 blocks,
           # rollback 3 checkpoints and catchup
-          - name: Mainnet Bootstrap And Catchup
-            test-path: integrations/mainnet_test.py
-            os: Linux-Large-2
-            only_on_develop: true
+          #- name: Mainnet Bootstrap And Catchup
+          #  test-path: integrations/mainnet_test.py
+          #  os: Linux-Large-2
+          #  only_on_develop: true
 
           # Regtest tests
 
