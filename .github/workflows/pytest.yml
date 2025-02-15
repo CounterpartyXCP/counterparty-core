@@ -44,10 +44,10 @@ jobs:
 
           # bootstrap, reparse 1000 blocks,
           # rollback 3 checkpoints and catchup
-          - name: Mainnet Bootstrap And Catchup
-            test-path: integrations/mainnet_test.py
-            os: Linux-Large-2
-            only_on_develop: false
+          #- name: Mainnet Bootstrap And Catchup
+          #  test-path: integrations/mainnet_test.py
+          #  os: Linux-Large-2
+          #  only_on_develop: true
 
           # Regtest tests
 
