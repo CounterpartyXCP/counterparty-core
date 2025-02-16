@@ -2,7 +2,7 @@
 <div align="center"><a href="https://www.counterparty.io/"><img src="https://www.counterparty.io/images/xcp.svg" width="200"></a></div>
 
 <h1 align="center">
-  Counterparty: An Extension to Bitcoin by State-Machine Replication
+  Counterparty: an Extension to Bitcoin by State-Machine Replication
 </h1>
 
 <div align="center">
