@@ -1,3 +1,4 @@
+import ctypes
 import logging
 import threading
 import time
@@ -18,7 +19,7 @@ class BackendHeight(threading.Thread):
         threading.Thread.__init__(self, name="BackendHeight")
         self.last_check = 0
         self.stop_event = threading.Event()
-        self.shared_backend_height = Value("i", 0)
+        self.shared_backend_height = Value(ctypes.c_ulong, 0)
         self.refresh()
 
     def run(self):
@@ -38,10 +39,7 @@ class BackendHeight(threading.Thread):
         logger.trace("Updating backend height...")
         tip = backend.bitcoind.get_chain_tip()
         block_count = backend.bitcoind.getblockcount()
-        print("tip", tip)
-        print("block_count", block_count)
         value = int(tip * 10e8 + block_count)  # let use only one shared value
-        print("value", value)
         self.shared_backend_height.value = value
         self.last_check = time.time()
 
@@ -91,7 +89,6 @@ class CurrentState(metaclass=helpers.SingletonMeta):
         return self.state.get("CURRENT_BLOCK_TIME")
 
     def set_backend_height_value(self, shared_backend_height):
-        print("shared_backend_height", shared_backend_height.value)
         self.state["BACKEND_HEIGHT_VALUE"] = shared_backend_height
 
     def current_backend_height(self):

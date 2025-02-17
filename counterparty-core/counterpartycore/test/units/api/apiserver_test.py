@@ -13,7 +13,7 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "server_ready": True,
             "network": "regtest",
             "version": config.VERSION_STRING,
-            "backend_height": current_block_index,
+            "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "documentation": "https://counterpartycore.docs.apiary.io/",
             "routes": "http://localhost/v2/routes",

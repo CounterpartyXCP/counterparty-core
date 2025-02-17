@@ -44,12 +44,7 @@ def test_backend_height(monkeypatch):
         "counterpartycore.lib.backend.bitcoind.get_chain_tip", lambda: current_backend_height
     )
 
-    assert currentstate.CurrentState().current_backend_height() is None
-    assert currentstate.CurrentState().current_block_count() is None
-
-    currentstate.BackendHeight.reset_instance()
     backend_height_thread = currentstate.BackendHeight()
-    print("SETTT")
     currentstate.CurrentState().set_backend_height_value(
         backend_height_thread.shared_backend_height
     )

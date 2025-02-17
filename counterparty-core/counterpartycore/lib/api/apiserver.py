@@ -49,13 +49,6 @@ def verify_password(username, password):
 
 
 def is_server_ready():
-    # TODO: find a way to mock this function for testing
-    try:
-        if request.url_root == "http://localhost:10009/":
-            return True
-    except RuntimeError:
-        pass
-
     if CurrentState().current_backend_height() is None:
         return False
     if CurrentState().current_block_index() in [
