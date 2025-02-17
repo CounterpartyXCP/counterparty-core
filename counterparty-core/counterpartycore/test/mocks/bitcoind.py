@@ -199,7 +199,6 @@ def monkeymodule():
 
 
 original_is_valid_der = parser.gettxinfo.is_valid_der
-original_current_backend_height = CurrentState.current_backend_height
 
 
 @pytest.fixture(scope="session")
@@ -217,8 +216,6 @@ def bitcoind_mock(monkeymodule):
     monkeymodule.setattr(f"{gettxinfo_module}.is_valid_der", is_valid_der)
     monkeymodule.setattr(f"{backend_module}.search_pubkey", search_pubkey)
     monkeymodule.setattr("counterpartycore.lib.messages.bet.date_passed", lambda x: False)
-
-    monkeymodule.setattr(CurrentState, "current_backend_height", lambda x: x.current_block_index())
 
     return sys.modules[__name__]
 

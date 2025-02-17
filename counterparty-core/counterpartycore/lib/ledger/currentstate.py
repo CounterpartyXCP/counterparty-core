@@ -13,12 +13,6 @@ logger = logging.getLogger(config.LOGGER_NAME)
 BACKEND_HEIGHT_REFRSH_INTERVAL = 3
 
 
-def get_backend_height():
-    block_count = backend.bitcoind.getblockcount()
-    blocks_behind = backend.bitcoind.get_blocks_behind()
-    return block_count + blocks_behind
-
-
 class BackendHeight(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self, name="BackendHeight")
@@ -42,7 +36,13 @@ class BackendHeight(threading.Thread):
         if config.API_ONLY:
             return
         logger.trace("Updating backend height...")
-        self.shared_backend_height.value = get_backend_height()
+        tip = backend.bitcoind.get_chain_tip()
+        block_count = backend.bitcoind.getblockcount()
+        print("tip", tip)
+        print("block_count", block_count)
+        value = int(tip * 10e8 + block_count)  # let use only one shared value
+        print("value", value)
+        self.shared_backend_height.value = value
         self.last_check = time.time()
 
     def stop(self):
@@ -91,12 +91,18 @@ class CurrentState(metaclass=helpers.SingletonMeta):
         return self.state.get("CURRENT_BLOCK_TIME")
 
     def set_backend_height_value(self, shared_backend_height):
+        print("shared_backend_height", shared_backend_height.value)
         self.state["BACKEND_HEIGHT_VALUE"] = shared_backend_height
 
     def current_backend_height(self):
         if "BACKEND_HEIGHT_VALUE" not in self.state:
             return None
-        return self.state["BACKEND_HEIGHT_VALUE"].value
+        return int(self.state["BACKEND_HEIGHT_VALUE"].value // 10e8)
+
+    def current_block_count(self):
+        if "BACKEND_HEIGHT_VALUE" not in self.state:
+            return None
+        return int(self.state["BACKEND_HEIGHT_VALUE"].value % 10e8)
 
     def current_tx_hash(self):
         return self.state.get("CURRENT_TX_HASH")

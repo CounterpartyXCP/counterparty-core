@@ -2,7 +2,6 @@ import time
 
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger import currentstate
-from counterpartycore.test.mocks.bitcoind import original_current_backend_height
 
 
 def test_currentstate(ledger_db, current_block_index, monkeypatch):
@@ -33,26 +32,35 @@ def test_currentstate(ledger_db, current_block_index, monkeypatch):
 
 def test_backend_height(monkeypatch):
     current_backend_height = 1000
+    current_block_count = 980
 
     def get_backend_height_mock():
         return current_backend_height
 
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.bitcoind.getblockcount", get_backend_height_mock
+        "counterpartycore.lib.backend.bitcoind.getblockcount", lambda: current_block_count
     )
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_blocks_behind", lambda: 0)
-    currentstate.CurrentState.current_backend_height = original_current_backend_height
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_chain_tip", lambda: current_backend_height
+    )
 
     assert currentstate.CurrentState().current_backend_height() is None
+    assert currentstate.CurrentState().current_block_count() is None
 
+    currentstate.BackendHeight.reset_instance()
     backend_height_thread = currentstate.BackendHeight()
+    print("SETTT")
     currentstate.CurrentState().set_backend_height_value(
         backend_height_thread.shared_backend_height
     )
 
-    assert backend_height_thread.shared_backend_height.value == current_backend_height
+    assert (
+        backend_height_thread.shared_backend_height.value
+        == current_backend_height * 10e8 + current_block_count
+    )
     # use .state directly because current_backend_height() is mocked
     assert currentstate.CurrentState().current_backend_height() == current_backend_height
+    assert currentstate.CurrentState().current_block_count() == current_block_count
 
     try:
         backend_height_thread.start()
@@ -60,9 +68,14 @@ def test_backend_height(monkeypatch):
 
         for _i in range(10):
             current_backend_height += 1
+            current_block_count += 1
             time.sleep(currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
-            assert backend_height_thread.shared_backend_height.value == current_backend_height
+            assert (
+                backend_height_thread.shared_backend_height.value
+                == current_backend_height * 10e8 + current_block_count
+            )
             assert currentstate.CurrentState().current_backend_height() == current_backend_height
+            assert currentstate.CurrentState().current_block_count() == current_block_count
     finally:
         backend_height_thread.stop()
 
