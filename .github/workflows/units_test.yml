@@ -1,0 +1,25 @@
+name: Units Test
+
+on:
+  push:
+    branches: "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Units:
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: ["units"]
+        os: ["ubuntu-22.04", "macos-14"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    uses: ./.github/workflows/pytest_action.yml
+    with:
+      name: Units (${{ matrix.os }} - Python ${{ matrix.python-version }})
+      test-path: ${{ matrix.test-path }}
+      os: ${{ matrix.os || 'ubuntu-22.04' }}
+      python-version: ${{ matrix.python-version || '3.11' }}
+    secrets: inherit

@@ -1,0 +1,29 @@
+name: Licenses Scanner
+
+on:
+  push:
+    branches: "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Licenses:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install license_scanner sh
+    - name: Analysing dependencies with licence_scanner
+      run: |
+        python counterparty-core/tools/checklicences.py
+    - name: Upload SARIF
+      uses: github/codeql-action/upload-sarif/@v2
+      with:
+        sarif_file: license_scanner.sarif

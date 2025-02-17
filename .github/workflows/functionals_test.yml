@@ -1,0 +1,17 @@
+name: Functionals Test
+
+on:
+  push:
+    branches: "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Functionals:
+    uses: ./.github/workflows/pytest_action.yml
+    with:
+      name: Functionals
+      test-path: functionals
+    secrets: inherit
