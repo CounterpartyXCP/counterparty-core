@@ -1,7 +1,6 @@
 import logging
 import os
 import queue
-import random
 import shutil
 import threading
 import time
@@ -149,10 +148,12 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
         logger.debug("Starting to prefetch blocks...")
         expected_height = self.next_height
         self.running = True
+        retry = 0
         while not self.stopped_event.is_set():
             try:
                 block = self.fetcher.get_block_non_blocking()
                 if block is not None:
+                    retry = 0
                     while not self.stopped_event.is_set():
                         try:
                             self.prefetch_queue.put(block, timeout=1)
@@ -176,9 +177,12 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                             logger.debug("Prefetch queue is full; waiting...")
                             time.sleep(0.1)
                 elif not self.stopped_event.is_set():
-                    logger.debug("No block fetched. Waiting before next fetch.")
+                    retry += 1
+                    logger.debug(
+                        f"Waiting for to prefetch block {expected_height}...({retry / 10}s)"
+                    )
                     # Use Event's wait method instead of time.sleep for better responsiveness
-                    self.stopped_event.wait(timeout=random.uniform(0.2, 0.7))  # noqa: S311
+                    self.stopped_event.wait(retry / 10)  # noqa: S311
             except Exception as e:
                 if str(e) == "Stopped error":
                     logger.warning(
