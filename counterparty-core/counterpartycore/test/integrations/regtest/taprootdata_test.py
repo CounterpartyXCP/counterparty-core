@@ -60,6 +60,8 @@ def test_p2ptr_inscription():
         tx_out = TxOutput(10000, destination_address.to_script_pub_key())
         commit_tx = Transaction([tx_in], [tx_out], has_segwit=True)
 
+        txid_before_sign = commit_tx.get_txid()
+
         # sign the input
         sig = source_private_key.sign_taproot_input(
             commit_tx, 0, [source_address.to_script_pub_key()], [10000]
@@ -72,6 +74,8 @@ def test_p2ptr_inscription():
         # send the transaction and mine a block
         commit_txid = node.bitcoin_cli("sendrawtransaction", commit_tx.serialize()).strip()
         node.mine_blocks(1)
+
+        assert commit_txid == txid_before_sign
 
         # REVEAL
 
