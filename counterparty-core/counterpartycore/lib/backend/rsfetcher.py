@@ -178,9 +178,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                             time.sleep(0.1)
                 elif not self.stopped_event.is_set():
                     retry += 1
-                    logger.debug(
-                        f"Waiting for to prefetch block {expected_height}...({retry / 10}s)"
-                    )
+                    logger.debug(f"Waiting to prefetch block {expected_height}...({retry / 10}s)")
                     # Use Event's wait method instead of time.sleep for better responsiveness
                     self.stopped_event.wait(retry / 10)  # noqa: S311
             except Exception as e:
