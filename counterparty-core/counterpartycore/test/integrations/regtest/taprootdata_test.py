@@ -62,6 +62,17 @@ def test_p2ptr_inscription():
 
         txid_before_sign = commit_tx.get_txid()
 
+        # REVEAL
+
+        txid = txid_before_sign
+        vout = 0
+
+        # use commit tx as input
+        tx_in = TxInput(txid, vout)
+        # use source address as output
+        tx_out = TxOutput(10000, source_address.to_script_pub_key())
+        reveal_tx = Transaction([tx_in], [tx_out], has_segwit=True)
+
         # sign the input
         sig = source_private_key.sign_taproot_input(
             commit_tx, 0, [source_address.to_script_pub_key()], [10000]
@@ -70,23 +81,6 @@ def test_p2ptr_inscription():
         commit_tx.witnesses.append(TxWitnessInput([sig]))
 
         print("Signed Commit Transaction:", commit_tx.serialize())
-
-        # send the transaction and mine a block
-        commit_txid = node.bitcoin_cli("sendrawtransaction", commit_tx.serialize()).strip()
-        node.mine_blocks(1)
-
-        assert commit_txid == txid_before_sign
-
-        # REVEAL
-
-        txid = commit_txid
-        vout = 0
-
-        # use commit tx as input
-        tx_in = TxInput(txid, vout)
-        # use source address as output
-        tx_out = TxOutput(10000, source_address.to_script_pub_key())
-        reveal_tx = Transaction([tx_in], [tx_out], has_segwit=True)
 
         # sign the input containing the inscription script
         sig = source_private_key.sign_taproot_input(
@@ -114,13 +108,15 @@ def test_p2ptr_inscription():
         print("Signed Reveal Transaction:", reveal_tx.serialize())
 
         # send the transaction and mine a block
-        commit_txid = node.bitcoin_cli("sendrawtransaction", reveal_tx.serialize()).strip()
+        commit_txid = node.bitcoin_cli("sendrawtransaction", commit_tx.serialize()).strip()
+        reveal_txid = node.bitcoin_cli("sendrawtransaction", reveal_tx.serialize()).strip()
         node.mine_blocks(1)
+        assert commit_txid == txid_before_sign
 
         # VERIFY
 
         # get the transaction from the blockchain
-        verify_raw = node.bitcoin_cli("getrawtransaction", commit_txid, 0).strip()
+        verify_raw = node.bitcoin_cli("getrawtransaction", reveal_txid, 0).strip()
         verify_tx = Transaction.from_raw(verify_raw)
 
         # extract the inscription script
