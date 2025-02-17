@@ -13,35 +13,19 @@
         <a target="_blank" rel="noopener noreferrer" href="https://codecov.io/gh/CounterpartyXCP/counterparty-core" >
             <img src="https://codecov.io/gh/CounterpartyXCP/counterparty-core/graph/badge.svg?token=Qj8WFBsXmm"  alt="Codecov" style="max-width: 100%;"/>
         </a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions">
-            <img alt="Units" src="https://img.shields.io/badge/Units-passing-green?logo=GitHub&color=%2330C653">
-        </a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions">
-            <img alt="Functionals" src="https://img.shields.io/badge/Functionals-passing-green?logo=GitHub&color=%2330C653">
-        </a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions">
-            <img alt="Integrations" src="https://img.shields.io/badge/Integrations-passing-green?logo=GitHub&color=%2330C653">
-        </a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions">
-            <img alt="Property" src="https://img.shields.io/badge/Property-passing-green?logo=GitHub&color=%2330C653">
-        </a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/units_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/units_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/functionals_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/functionals_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/integrations_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/integrations_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/property_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/property_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
     </td>
 </tr>
 <tr>
     <td>Scanning</td>
     <td>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions">
-            <img alt="CodeQL" src="https://img.shields.io/badge/CodeQL-ok-green?color=%2330C653">
-        </a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions">
-            <img alt="Bandit" src="https://img.shields.io/badge/Bandit-ok-green?color=%2330C653">
-        </a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions">
-            <img alt="Ruff" src="https://img.shields.io/badge/Ruff-ok-green?color=%2330C653">
-        </a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions">
-            <img alt="Pylint" src="https://img.shields.io/badge/Pylint-ok-green?color=%2330C653">
-        </a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/bandit_scanner.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/bandit_scanner.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/codeql_scanner.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/codeql_scanner.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/pylint_scanner.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/pylint_scanner.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/ruff_scanner.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/ruff_scanner.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
     </td>
 </tr>
 <tr>
