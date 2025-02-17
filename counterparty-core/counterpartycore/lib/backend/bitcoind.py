@@ -171,16 +171,10 @@ def rpc(method, params, no_retry=False):
     return rpc_call(payload)
 
 
-# no retry for requests from the API
-def safe_rpc(method, params):
+def safe_rpc_payload(payload):
     start_time = time.time()
+    method = payload["method"] if isinstance(payload, dict) else payload[0]["method"]
     try:
-        payload = {
-            "method": method,
-            "params": params,
-            "jsonrpc": "2.0",
-            "id": 0,
-        }
         response = requests.post(
             config.BACKEND_URL,
             data=json.dumps(payload),
@@ -193,6 +187,8 @@ def safe_rpc(method, params):
                 f"Cannot communicate with Bitcoin Core at `{clean_url_for_log(config.BACKEND_URL)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
             )
         response = response.json()
+        if isinstance(response, list):
+            return response
         if "result" not in response and "error" in response:
             if response["error"] is None or "message" not in response["error"]:
                 message = "Unknown error"
@@ -207,6 +203,17 @@ def safe_rpc(method, params):
     finally:
         elapsed = time.time() - start_time
         logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
+
+
+# no retry for requests from the API
+def safe_rpc(method, params):
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    return safe_rpc_payload(payload)
 
 
 def getblockcount():
@@ -235,7 +242,7 @@ def getrawtransaction(tx_hash, verbose=False, no_retry=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0], no_retry=no_retry)
 
 
-def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False):
+def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False, no_retry=False):
     if len(tx_hashes) == 0:
         return {}
     if len(tx_hashes) > config.MAX_RPC_BATCH_SIZE:
@@ -250,7 +257,10 @@ def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False):
         }
         for i, tx_hash in enumerate(tx_hashes)
     ]
-    results = rpc_call(payload)
+    if no_retry:
+        results = safe_rpc_payload(payload)
+    else:
+        results = rpc_call(payload)
 
     if return_dict:
         raw_transactions = {}
@@ -519,15 +529,19 @@ def list_unspent(source, allow_unconfirmed_inputs):
     return []
 
 
-def get_vin_info(vin, no_retry=False):
-    # Note: We don't know what block the `vin` is in, and the block might
-    # have been from a while ago, so this call may not hit the cache.
-    vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
+def get_vins_info(vins, no_retry=False):
+    hashes = [vin["hash"] for vin in vins]
+    inputs_txs = getrawtransaction_batch(hashes, verbose=False, return_dict=True, no_retry=no_retry)
 
-    is_segwit = vin_ctx["segwit"]
-    vout = vin_ctx["vout"][vin["n"]]
+    vins_info = []
+    for vin in vins:
+        raw_input_tx = inputs_txs[vin["hash"]]
+        input_tx = deserialize.deserialize_tx(raw_input_tx)
+        vout = input_tx["vout"][vin["n"]]
+        is_segwit = input_tx["segwit"]
+        vins_info.append((vout["value"], vout["script_pub_key"], is_segwit))
 
-    return vout["value"], vout["script_pub_key"], is_segwit
+    return vins_info
 
 
 def get_transaction(tx_hash: str, format: str = "json"):

@@ -29,8 +29,8 @@ def refresh_current_state(state_db, shared_backend_height):
     CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
 
     current_block_index = CurrentState().current_block_index()
-    current_backend_height = shared_backend_height.value // 10e8
-    current_block_count = shared_backend_height.value % 10e8
+    current_backend_height = int(shared_backend_height.value // 10e8)
+    current_block_count = int(shared_backend_height.value % 10e8)
 
     if config.API_ONLY:
         return

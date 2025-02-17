@@ -3,8 +3,9 @@ import logging
 
 from arc4 import ARC4
 
-from counterpartycore.lib import backend, config
+from counterpartycore.lib import backend, config, exceptions
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import base58, script
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
@@ -145,10 +146,16 @@ def get_tx_info_legacy(decoded_tx, block_index):
         raise BTCOnlyError("no data and not unspendable")
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
+    # get inputs info by batch
+    try:
+        vins_info = backend.bitcoind.get_vins_info(
+            decoded_tx["vin"], no_retry=CurrentState().parsing_mempool()
+        )
+    except exceptions.BitcoindRPCError as e:
+        raise DecodeError("vin not found") from e
+
     source_list = []
-    for vin in decoded_tx["vin"][:]:  # Loop through input transactions.
-        # Get the full transaction data for this input transaction.
-        vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(vin)
+    for vout_value, script_pubkey, _is_segwit in vins_info:  # Loop through input transactions.
         fee += vout_value
 
         address = get_address(script_pubkey, block_index)
