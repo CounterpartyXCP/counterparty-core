@@ -9,10 +9,11 @@
 
 ## Bugfixes
 
-- Handle correctly errors in subprocess when bootsraping
+- Handle correctly errors in subprocess when bootstrapping
 
 ## Codebase
 
+- Tweak logging Bitcoin Core Catch Up
 
 ## API
 
