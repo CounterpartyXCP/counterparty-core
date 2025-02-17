@@ -29,18 +29,19 @@ def refresh_current_state(state_db, shared_backend_height):
     CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
 
     current_block_index = CurrentState().current_block_index()
-    current_backend_height = shared_backend_height.value
+    current_backend_height = shared_backend_height.value // 10e8
+    current_block_count = shared_backend_height.value % 10e8
 
     if config.API_ONLY:
         return
 
     if current_backend_height > current_block_index:
         logger.debug(
-            f"Counterparty is currently behind Bitcoin Core. ({current_block_index} < {current_backend_height})"
+            f"Counterparty is currently behind Bitcoin Core. (Counterparty Block Height = {current_block_index}, Bitcoin Core Block Height = {current_block_count}, Network Block Height = {current_backend_height})"
         )
     elif current_backend_height < current_block_index:
         logger.debug(
-            f"Bitcoin Core is currently behind the network. ({current_block_index} > {current_backend_height})"
+            f"Bitcoin Core is currently behind the network. (Counterparty Block Height = {current_block_index}, Bitcoin Core Block Height = {current_block_count}, Network Block Height = {current_backend_height}))"
         )
 
 

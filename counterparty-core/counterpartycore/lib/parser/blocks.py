@@ -864,7 +864,7 @@ def catch_up(db, check_asset_conservation=True):
     fetcher = None
 
     try:
-        CurrentState().set_block_parser_status("catching up")
+        CurrentState().set_block_parser_status("Catching Up")
         # update the current block index
         current_block_index = ledger.blocks.last_db_index(db)
         if current_block_index == 0:

@@ -373,8 +373,11 @@ def get_mempool_info():
 
 def wait_for_block(block_index):
     block_count = getblockcount()
+    tip = get_chain_tip()
     while block_count < block_index:
-        logger.debug(f"Waiting for bitcoind to catch up {block_index - block_count} blocks...")
+        logger.debug(
+            f"Waiting for Bitcoin Core to process block {block_index}... (Bitcoin Core Block Height = {block_count}, Network Block Height = {tip})"
+        )
         time.sleep(10)
         block_count = getblockcount()
 

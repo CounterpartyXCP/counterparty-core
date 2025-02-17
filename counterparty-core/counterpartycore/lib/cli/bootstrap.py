@@ -5,7 +5,7 @@ import sys
 import tempfile
 import time
 import urllib.request
-from multiprocessing import Process
+from multiprocessing import Process, Value
 
 import gnupg
 import pyzstd
@@ -117,9 +117,13 @@ def decompress_and_verify(zst_filepath, sig_url):
     check_signature(filepath, sig_url)
 
 
-def verfif_and_decompress(zst_filepath, sig_url):
-    check_signature(zst_filepath, sig_url)
-    decompress_zst(zst_filepath)
+def verfif_and_decompress(zst_filepath, sig_url, decompressors_state):
+    try:
+        check_signature(zst_filepath, sig_url)
+        decompress_zst(zst_filepath)
+    except Exception as e:
+        cprint(f"Failed to verify and decompress {zst_filepath}: {e}", "red")
+        decompressors_state.value = 1
 
 
 def clean_data_dir(data_dir):
@@ -137,17 +141,33 @@ def clean_data_dir(data_dir):
 
 def download_bootstrap_files(data_dir, files):
     decompressors = []
+    decompressors_state = Value("i", 0)
     for zst_url, sig_url in files:
-        zst_filepath = download_zst(data_dir, zst_url)
+        # download .zst file
+        try:
+            zst_filepath = download_zst(data_dir, zst_url)
+        except Exception as e:
+            cprint(f"Failed to download {zst_url}: {e}", "red")
+            for decompressor in decompressors:
+                decompressor.kill()
+                sys.exit(1)
+
         decompressor = Process(
             target=verfif_and_decompress,
-            args=(zst_filepath, sig_url),
+            args=(zst_filepath, sig_url, decompressors_state),
         )
         decompressor.start()
         decompressors.append(decompressor)
 
-    for decompressor in decompressors:
-        decompressor.join()
+    while True:
+        if not any(decompressor.is_alive() for decompressor in decompressors):
+            break
+        if decompressors_state.value == 1:
+            cprint("Failed to decompress and verify bootstrap files.", "red")
+            for decompressor in decompressors:
+                decompressor.kill()
+            sys.exit(1)
+        time.sleep(0.1)
 
 
 def confirm_bootstrap():
