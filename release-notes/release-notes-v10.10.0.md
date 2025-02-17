@@ -1,11 +1,11 @@
 # Release Notes - Counterparty Core v10.10.0 (2025-02-13)
 
-This release includes a complete rewrite of the entire test harness for Counterparty Core, as well as both restored and all-new integration tests and GitHub workflows for continuous integration. This release also adds support for Python 3.12 and 3.13, which means significantly improved performance overall. There are of course a number of bugfixes, especially for node stability when Bitcoin Core is overloaded.
+This release includes a complete rewrite of the entire test harness for Counterparty Core, as well as both the restoration of disabled tests and the introduction of new integration tests. This release also adds support for Python 3.12 and 3.13, which means significantly improved performance overall. There are of course a number of bugfixes, especially for node stability when Bitcoin Core is overloaded.
 
 
 # Upgrading
 
-This upgrade does not include a protocol change and is not mandatory. User-facing changes to the API include a decrease in the default output value for `attach` and `move` transactions to 546 satoshis and renaming the `--testnet` flag to `--testnet3`.
+This upgrade does not include a protocol change and is not mandatory. User-facing changes to the API include a change in the default output value for `attach` and `move` transactions to 546 satoshis and the renaming the `--testnet` flag to `--testnet3`.
 
 
 **IMPORTANT**

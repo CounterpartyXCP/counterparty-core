@@ -146,7 +146,7 @@ def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
 
 
 def get_matching_orders(db, tx_hash, give_asset, get_asset):
-    if CurrentState().block_parser_status() == "catching up":
+    if CurrentState().block_parser_status() == "Catching Up":
         return OrdersCache(db).get_matching_orders(tx_hash, give_asset, get_asset)
     return get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset)
 

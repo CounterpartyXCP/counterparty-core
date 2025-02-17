@@ -253,7 +253,6 @@ class BlockchainWatcher:
 
     async def handle(self):
         self.check_software_version_if_needed()
-        CurrentState().set_block_parser_status("catching up")
         late_since = None
 
         while True:

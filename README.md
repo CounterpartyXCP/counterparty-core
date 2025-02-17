@@ -2,7 +2,7 @@
 <div align="center"><a href="https://www.counterparty.io/"><img src="https://www.counterparty.io/images/xcp.svg" width="200"></a></div>
 
 <h1 align="center">
-  An Extension to Bitcoin by State-Machine Replication
+  Counterparty: an Extension to Bitcoin by State-Machine Replication
 </h1>
 
 <div align="center">
@@ -10,25 +10,30 @@
 <tr>
     <td>Testing</td>
     <td>
-        <a target="_blank" rel="noopener noreferrer" href="https://codecov.io/gh/CounterpartyXCP/counterparty-core" ><img src="https://codecov.io/gh/CounterpartyXCP/counterparty-core/graph/badge.svg?token=Qj8WFBsXmm"  alt="Codecov" style="max-width: 100%;"/></a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/build_and_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/build_and_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/regtest.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/regtest.yml/badge.svg" alt="Integrations" style="max-width: 100%;"></a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/propertytest.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/propertytest.yml/badge.svg" alt="Property" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://codecov.io/gh/CounterpartyXCP/counterparty-core" >
+            <img src="https://codecov.io/gh/CounterpartyXCP/counterparty-core/graph/badge.svg?token=Qj8WFBsXmm"  alt="Codecov" style="max-width: 100%;"/>
+        </a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/units_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/units_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/functionals_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/functionals_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/integrations_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/integrations_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/property_test.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/property_test.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
     </td>
 </tr>
 <tr>
     <td>Scanning</td>
     <td>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/bandit.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/bandit.yml/badge.svg" alt="Bandit" style="max-width: 100%;"></a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/codeql.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" style="max-width: 100%;"></a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/pylint.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/pylint.yml/badge.svg" alt="PyLint" style="max-width: 100%;"></a>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/license_scanner.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/license_scanner.yml/badge.svg" alt="License Scanner" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/bandit_scanner.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/bandit_scanner.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/codeql_scanner.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/codeql_scanner.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/pylint_scanner.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/pylint_scanner.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/ruff_scanner.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/ruff_scanner.yml/badge.svg" alt="Functionals" style="max-width: 100%;"></a>
     </td>
 </tr>
 <tr>
     <td>Docker</td>
     <td>
-        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/build_docker_image.yml/badge.svg"><img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/build_docker_image.yml/badge.svg" alt="Docker" style="max-width: 100%;"></a>
+        <a target="_blank" rel="noopener noreferrer" href="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/docker.yml/badge.svg">
+            <img src="https://github.com/CounterpartyXCP/counterparty-core/actions/workflows/docker.yml/badge.svg" alt="Docker" style="max-width: 100%;">
+        </a>
         <a target="_blank" rel="noopener noreferrer" href="https://hub.docker.com/r/counterparty/counterparty"><img alt="Docker Image Size" src="https://img.shields.io/docker/image-size/counterparty/counterparty" style="max-width: 100%;"></a>
     </td>
 </tr>

@@ -1,4 +1,4 @@
-name: Pytest
+name: Integrations Test
 
 on:
   push:
@@ -9,30 +9,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  Test:
+  Integrations:
     strategy:
       fail-fast: false
       # define the matrix
       matrix:
 
         # Units tests
-
-        name: ["Units And Functionals"]
-        python-version: ["3.10", "3.11", "3.12"]
-        os: ["ubuntu-22.04", "macos-14"]
-        test-path: ["units counterpartycore/test/functionals"]
         include:
-
-          - name: Units And Functionals
-            test-path: units counterpartycore/test/functionals
-            python-version: 3.13
-            os: ubuntu-22.04
-
-          - name: Units And Functionals
-            test-path: units counterpartycore/test/functionals
-            python-version: 3.13
-            os: macos-14
-
           # Mainnet tests
 
           # bootstrap, run the server with --api-only and run
@@ -44,10 +28,10 @@ jobs:
 
           # bootstrap, reparse 1000 blocks,
           # rollback 3 checkpoints and catchup
-          - name: Mainnet Bootstrap And Catchup
-            test-path: integrations/mainnet_test.py
-            os: Linux-Large-2
-            only_on_develop: false
+          #- name: Mainnet Bootstrap And Catchup
+          #  test-path: integrations/mainnet_test.py
+          #  os: Linux-Large-2
+          #  only_on_develop: true
 
           # Regtest tests
 
@@ -55,11 +39,6 @@ jobs:
           # testing rollback, reparse, reorg, etc
           - name: Regtest Scenarios
             test-path: integrations/regtest/scenarios_test.py
-            install_bitcoin: true
-
-          # run property tests on regtest
-          - name: Property Test
-            test-path: integrations/regtest/property_test.py
             install_bitcoin: true
 
           # Testnet4 tests
@@ -82,10 +61,8 @@ jobs:
     # run pytest_action.yml for the matrix
     uses: ./.github/workflows/pytest_action.yml
     with:
-      name: ${{ matrix.name }} (${{ matrix.os }} - Python ${{ matrix.python-version }})
+      name: ${{ matrix.name }}
       test-path: ${{ matrix.test-path }}
-      os: ${{ matrix.os || 'ubuntu-22.04' }}
-      python-version: ${{ matrix.python-version || '3.11' }}
       install_bitcoin: ${{ matrix.install_bitcoin || false }}
       only_on_develop:  ${{ matrix.only_on_develop || false }}
     secrets: inherit

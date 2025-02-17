@@ -156,3 +156,31 @@ def test_decode_p2w():
     )
     assert decode_p2w(script_pubkey) == ("bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6", None)
     assert decode_p2w(script_pubkey)[0] == utils.script_to_address(script_pubkey, "mainnet")
+
+    script_pubkey = binascii.unhexlify(
+        "51200f9dab1a72f7c48da8a1df2f913bef649bfc0d77072dffd11329b8048293d7a3"
+    )
+    # correct address
+    assert (
+        utils.script_to_address3(script_pubkey, "mainnet")
+        == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrthqukll5gn9xuqfq5n673smy4m63"
+    )
+    # incorrect address
+    assert (
+        utils.script_to_address(script_pubkey, "mainnet")
+        == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrth0ugtv7"
+    )
+
+    script_pubkey = binascii.unhexlify(
+        "00207086320071974eef5e72eaa01dd9096e10c0383483855ea6b344259c244f73c2"
+    )
+    # correct address
+    assert (
+        utils.script_to_address3(script_pubkey, "mainnet")
+        == "bc1qwzrryqr3ja8w7hnja2spmkgfdcgvqwp5swz4af4ngsjecfz0w0pqud7k38"
+    )
+    # incorrect address
+    assert (
+        utils.script_to_address2(script_pubkey, "mainnet")
+        == "bc1qwzrryqr3ja8w7hnja2spmkgfdcgvqwp5wgm2h7"
+    )

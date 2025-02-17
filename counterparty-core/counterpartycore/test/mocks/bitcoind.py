@@ -1,7 +1,9 @@
 import binascii
+import ctypes
 import sys
 import time
 import traceback
+from multiprocessing import Value
 
 import pytest
 from bitcoinutils.keys import PublicKey
@@ -157,6 +159,7 @@ def mine_block(db, transactions):
         "transactions": transactions,
     }
     blocks.parse_new_block(db, decoded_block)
+    CurrentState().state["BACKEND_HEIGHT_VALUE"].value = int(block_index * 10e8 + block_index)
 
 
 def mine_empty_blocks(db, blocks):
@@ -199,7 +202,6 @@ def monkeymodule():
 
 
 original_is_valid_der = parser.gettxinfo.is_valid_der
-original_current_backend_height = CurrentState.current_backend_height
 
 
 @pytest.fixture(scope="session")
@@ -214,11 +216,20 @@ def bitcoind_mock(monkeymodule):
     monkeymodule.setattr(
         f"{bitcoind_module}.get_utxo_address_and_value", get_utxo_address_and_value
     )
+    monkeymodule.setattr(
+        f"{bitcoind_module}.getblockcount", lambda: CurrentState().current_block_index()
+    )
+    monkeymodule.setattr(
+        f"{bitcoind_module}.get_chain_tip", lambda: CurrentState().current_block_index()
+    )
+
     monkeymodule.setattr(f"{gettxinfo_module}.is_valid_der", is_valid_der)
     monkeymodule.setattr(f"{backend_module}.search_pubkey", search_pubkey)
     monkeymodule.setattr("counterpartycore.lib.messages.bet.date_passed", lambda x: False)
+    monkeymodule.setattr("counterpartycore.lib.api.apiserver.is_server_ready", lambda: True)
 
-    monkeymodule.setattr(CurrentState, "current_backend_height", lambda x: x.current_block_index())
+    shared_backend_height = Value(ctypes.c_ulong, 0)
+    CurrentState().set_backend_height_value(shared_backend_height)
 
     return sys.modules[__name__]
 

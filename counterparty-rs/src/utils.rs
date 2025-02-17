@@ -139,6 +139,36 @@ pub fn script_to_address2(script_pubkey: Vec<u8>, network: &str) -> PyResult<Str
     }
 }
 
+
+#[pyfunction]
+pub fn script_to_address3(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
+    // Convert the script pubkey to a Script object
+    let script = ScriptBuf::from(script_pubkey);
+
+    // Convert the network string to a Network enum value
+    let network_enum = match network {
+        "mainnet" => Network::Bitcoin,
+        "testnet3" => Network::Testnet,
+        "testnet4" => Network::Testnet4,
+        "signet" => Network::Signet,
+        "regtest" => Network::Regtest,
+        _ => {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Invalid network value",
+            ))
+        }
+    };
+    let address = match Address::from_script(&script, network_enum) {
+        Ok(addr) => addr,
+        Err(_) => {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Failed to derive address",
+            ))
+        }
+    };
+    Ok(address.to_string())
+}
+
 #[pyfunction]
 fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
     // Wrap the code block that may panic inside `catch_unwind()`
@@ -373,6 +403,7 @@ pub fn register_utils_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()
     m.add_function(wrap_pyfunction!(script_to_asm, &m)?)?;
     m.add_function(wrap_pyfunction!(script_to_address, &m)?)?;
     m.add_function(wrap_pyfunction!(script_to_address2, &m)?)?;
+    m.add_function(wrap_pyfunction!(script_to_address3, &m)?)?;
     parent_module.add_submodule(&m)?;
     Ok(())
 }
