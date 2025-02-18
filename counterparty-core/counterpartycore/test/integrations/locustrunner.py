@@ -272,12 +272,12 @@ class CounterpartyCoreUser(locust.HttpUser):
         self.client.get(generate_random_url(CounterpartyCoreUser.MainnetFixtures), headers=headers)
 
 
-def run_locust(db_file, duration=300):
+def run_locust(db_file, duration=300, wait_time=None, user_count=4):
     CounterpartyCoreUser.MainnetFixtures = generate_mainnet_fixtures(db_file)
+    CounterpartyCoreUser.wait_time = wait_time or locust.between(0.5, 1)
 
     locust.log.setup_logging("INFO")
 
-    user_count = 4
     spawn_rate = 2
     test_duration = 60 * 5  # 5 minutes
 
@@ -309,4 +309,9 @@ def run_locust(db_file, duration=300):
 
 
 if __name__ == "__main__":
-    run_locust(os.path.expanduser("~/.local/share/counterparty/counterparty.db"), duration=None)
+    run_locust(
+        os.path.expanduser("~/.local/share/counterparty/counterparty.db"),
+        duration=None,
+        wait_time=locust.between(0.1, 0.3),
+        user_count=5,
+    )
