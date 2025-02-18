@@ -95,11 +95,11 @@ pub fn timed<T, F>(m: String, f: F) -> Result<T, Error>
 where
     F: FnOnce() -> Result<T, Error>,
 {
-    info!("{}...", m);
+    debug!("{}...", m);
     let start = Instant::now();
     let result = f();
     let duration = start.elapsed();
-    info!("{} took {:?}", m, duration);
+    debug!("{} took {:?}", m, duration);
     result
 }
 

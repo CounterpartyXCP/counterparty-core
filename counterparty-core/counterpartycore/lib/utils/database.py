@@ -159,7 +159,7 @@ def initialise_db():
         cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
 
     # Database
-    logger.info(f"Connecting to database... (SQLite {apsw.apswversion()})")
+    logger.debug(f"Connecting to database... (SQLite {apsw.apswversion()})")
     db = get_connection(read_only=False)
 
     return db

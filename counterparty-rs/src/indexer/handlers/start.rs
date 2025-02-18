@@ -10,7 +10,7 @@ use crate::indexer::{
     workers::{consumer, extractor, fetcher, new_worker_pool, orderer, producer, reporter, writer},
 };
 use crossbeam_channel::{bounded, unbounded};
-use tracing::info;
+use tracing::{info, debug};
 
 pub fn new<D>(
     parallelism: usize,
@@ -52,8 +52,8 @@ where
         "First Bitcoin client op: GetBlockchainHeight".into(),
         || client.get_blockchain_height(),
     )?;
-    info!("Starting at block height: {}", start_height);
-    info!("Targeting block height: {}", target_block);
+    debug!("Starting at block height: {}", start_height);
+    debug!("Targeting block height: {}", target_block);
 
     handles.append(&mut new_worker_pool(
         "Producer".into(),
