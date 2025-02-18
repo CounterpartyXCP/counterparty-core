@@ -23,6 +23,7 @@
 ## CLI
 
 - Accepts `--catch-up` flag before the command
+- Add a locust runner to test local node (`python3 counterpartycore/test/integration/locustrunner.py` will start Locust Web UI on http://localhost:8089/).
 
 # Credits
 
