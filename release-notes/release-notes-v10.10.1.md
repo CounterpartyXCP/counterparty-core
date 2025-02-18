@@ -22,6 +22,7 @@
 
 ## CLI
 
+- Accepts `--catch-up` flag before the command
 
 # Credits
 
