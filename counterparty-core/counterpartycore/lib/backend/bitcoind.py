@@ -245,35 +245,42 @@ def getrawtransaction(tx_hash, verbose=False, no_retry=False):
 def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False, no_retry=False):
     if len(tx_hashes) == 0:
         return {}
-    if len(tx_hashes) > config.MAX_RPC_BATCH_SIZE:
-        raise exceptions.BitcoindRPCError("Too many transactions requested")
 
-    payload = [
-        {
-            "method": "getrawtransaction",
-            "params": [tx_hash, 1 if verbose else 0],
-            "jsonrpc": "2.0",
-            "id": i,
-        }
-        for i, tx_hash in enumerate(tx_hashes)
-    ]
-    if no_retry:
-        results = safe_rpc_payload(payload)
-    else:
-        results = rpc_call(payload)
+    # Process transactions in batches of MAX_RPC_BATCH_SIZE
+    all_raw_transactions = {} if return_dict else []
 
-    if return_dict:
-        raw_transactions = {}
-        for result in results:
-            if "result" in result and result["result"] is not None:
-                raw_transactions[tx_hashes[result["id"]]] = result["result"]
-    else:
-        raw_transactions = []
-        for result in results:
-            if "result" in result and result["result"] is not None:
-                raw_transactions.append(result["result"])
+    for i in range(0, len(tx_hashes), config.MAX_RPC_BATCH_SIZE):
+        batch = tx_hashes[i : i + config.MAX_RPC_BATCH_SIZE]
 
-    return raw_transactions
+        payload = [
+            {
+                "method": "getrawtransaction",
+                "params": [tx_hash, 1 if verbose else 0],
+                "jsonrpc": "2.0",
+                "id": j,
+            }
+            for j, tx_hash in enumerate(batch)
+        ]
+
+        if no_retry:
+            batch_results = safe_rpc_payload(payload)
+        else:
+            batch_results = rpc_call(payload)
+
+        # Process results for this batch
+        if return_dict:
+            for result in batch_results:
+                if "result" in result and result["result"] is not None:
+                    # Use the batch array to get the correct tx_hash
+                    batch_index = result["id"]
+                    tx_hash = batch[batch_index]
+                    all_raw_transactions[tx_hash] = result["result"]
+        else:
+            for result in batch_results:
+                if "result" in result and result["result"] is not None:
+                    all_raw_transactions.append(result["result"])
+
+    return all_raw_transactions
 
 
 def createrawtransaction(inputs, outputs):
