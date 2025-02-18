@@ -272,7 +272,7 @@ class CounterpartyCoreUser(locust.HttpUser):
         self.client.get(generate_random_url(CounterpartyCoreUser.MainnetFixtures), headers=headers)
 
 
-def run_locust(db_file, duration=300, wait_time=None, user_count=4):
+def run_locust(db_file, duration=300, wait_time=None, user_count=4, stats_printer=True):
     CounterpartyCoreUser.MainnetFixtures = generate_mainnet_fixtures(db_file)
     CounterpartyCoreUser.wait_time = wait_time or locust.between(0.5, 1)
 
@@ -288,7 +288,8 @@ def run_locust(db_file, duration=300, wait_time=None, user_count=4):
         web_ui = env.create_web_ui("127.0.0.1", 8089)
 
         # start a greenlet that periodically outputs the current stats
-        gevent.spawn(locust.stats.stats_printer(env.stats))
+        if stats_printer:
+            gevent.spawn(locust.stats.stats_printer(env.stats))
         # start a greenlet that save current stats to history
         gevent.spawn(locust.stats.stats_history, env.runner)
         # start the test
@@ -314,4 +315,5 @@ if __name__ == "__main__":
         duration=None,
         wait_time=locust.between(0.1, 0.3),
         user_count=5,
+        stats_printer=False,
     )

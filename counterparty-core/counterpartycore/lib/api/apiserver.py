@@ -524,7 +524,11 @@ def run_apiserver(
         app = init_flask_app()
         app.shared_backend_height = shared_backend_height
 
-        wsgi_server = wsgi.WSGIApplication(app, args=args)
+        try:
+            wsgi_server = wsgi.WSGIApplication(app, args=args)
+        except OSError as e:
+            logger.error(f"Error starting WSGI Server: {e}")
+            exit(1)
 
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid)
@@ -554,6 +558,7 @@ def run_apiserver(
             watcher.join()
 
         logger.info("API Server stopped.")
+        server_ready_value.value = 2
 
 
 # This thread is used for the following two reasons:

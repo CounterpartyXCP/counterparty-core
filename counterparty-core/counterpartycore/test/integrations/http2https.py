@@ -66,6 +66,7 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
     def __init__(self, server_address, RequestHandlerClass, target_url):
         self.target_url = target_url
+        print("Proxying to", target_url)
 
         # Create a session to reuse TCP connection
         self.session = requests.Session()

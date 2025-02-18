@@ -130,7 +130,8 @@ class GunicornArbiter(Arbiter):
             logger.info("Worker exiting (pid: %s)", worker.pid)
             try:
                 worker.tmp.close()
-                self.cfg.worker_exit(self, worker)
+                sys.exit(-1)
+                # self.cfg.worker_exit(self, worker)
             except Exception:
                 logger.warning("Exception during worker exit")
 
@@ -206,7 +207,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.arbiter = None
         self.ledger_db = None
         self.state_db = None
-
+        self.current_state_thread = None
         self.master_pid = os.getpid()
         super().__init__()
 
@@ -236,7 +237,8 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             sys.exit(1)
 
     def stop(self):
-        self.current_state_thread.stop()
+        if self.current_state_thread:
+            self.current_state_thread.stop()
         if self.arbiter and self.master_pid == os.getpid():
             logger.info("Stopping Gunicorn")
             self.arbiter.kill_all_workers()

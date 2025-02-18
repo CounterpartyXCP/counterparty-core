@@ -93,6 +93,7 @@ class BlockchainWatcher:
         # catch up and clean mempool before starting
         self.mempool_parser = None
         if not config.NO_MEMPOOL:
+            CurrentState().set_block_parser_status("Initializing")
             mempool.clean_mempool(self.db)
             self.mempool_parser = RawMempoolParser(self.db)
             self.mempool_parser.start()

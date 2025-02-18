@@ -709,8 +709,11 @@ def start_all(args, log_stream=None):
         api_stop_event = multiprocessing.Event()
         apiserver_v2 = api_v2.APIServer(api_stop_event, backend_height_thread.shared_backend_height)
         apiserver_v2.start(args, log_stream)
-        while not apiserver_v2.is_ready() and not apiserver_v2.has_stopped():
+        while not apiserver_v2.is_ready():
             logger.trace("Waiting for API server to start...")
+            if apiserver_v2.has_stopped():
+                logger.error("API server stopped unexpectedly.")
+                return
             time.sleep(0.1)
 
         if args.api_only:
