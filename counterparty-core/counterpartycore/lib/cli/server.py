@@ -635,64 +635,67 @@ class AssetConservationChecker(threading.Thread):
 
     def run(self):
         self.db = database.get_db_connection(config.DATABASE, read_only=True, check_wal=False)
-        try:
-            while not self.stop_event.is_set():
-                if time.time() - self.last_check > 60 * 60 * 12:
-                    try:
-                        check.asset_conservation(self.db, self.stop_event)
-                    except exceptions.SanityError as e:
-                        logger.error("Asset conservation check failed: %s" % e)
-                        _thread.interrupt_main()
-                    self.last_check = time.time()
-                time.sleep(1)
-        finally:
-            if self.db is not None:
-                self.db.close()
-                self.db = None
-            logger.info("Thread stopped.")
+        while not self.stop_event.is_set():
+            if time.time() - self.last_check > 60 * 60 * 12:
+                try:
+                    check.asset_conservation(self.db, self.stop_event)
+                except exceptions.SanityError as e:
+                    logger.error("Asset conservation check failed: %s" % e)
+                    _thread.interrupt_main()
+                self.last_check = time.time()
+            time.sleep(1)
 
     def stop(self):
-        self.stop_event.set()
         logger.info("Stopping Asset Conservation Checker thread...")
+        self.stop_event.set()
         self.join()
+        if self.db is not None:
+            self.db.close()
+            self.db = None
+        logger.info("Asset Conservation Checker thread stopped.")
 
 
-def start_all(args, log_stream=None):
-    api_status_poller = None
-    apiserver_v1 = None
-    apiserver_v2 = None
-    follower_daemon = None
-    asset_conservation_checker = None
-    db = None
-    api_stop_event = None
-    backend_height_thread = None
+class CounterpartyServer(threading.Thread):
+    def __init__(self, args, log_stream=None):
+        threading.Thread.__init__(self, name="CounterpartyServer")
+        self.daemon = True
+        self.args = args
+        self.api_status_poller = None
+        self.apiserver_v1 = None
+        self.apiserver_v2 = None
+        self.follower_daemon = None
+        self.asset_conservation_checker = None
+        self.db = None
+        self.api_stop_event = None
+        self.backend_height_thread = None
+        self.log_stream = log_stream
 
-    # Log all config parameters, sorted by key
-    # Filter out default values #TODO: these should be set in a different way
-    custom_config = {
-        k: v
-        for k, v in sorted(config.__dict__.items())
-        if not k.startswith("__") and not k.startswith("DEFAULT_")
-    }
-    logger.debug(f"Config: {custom_config}")
+        # Log all config parameters, sorted by key
+        # Filter out default values #TODO: these should be set in a different way
+        custom_config = {
+            k: v
+            for k, v in sorted(config.__dict__.items())
+            if not k.startswith("__") and not k.startswith("DEFAULT_")
+        }
+        logger.debug(f"Config: {custom_config}")
 
-    try:
+    def run(self):
         # download bootstrap if necessary
         if (
-            not os.path.exists(config.DATABASE) and args.catch_up == "bootstrap"
-        ) or args.catch_up == "bootstrap-always":
-            bootstrap.bootstrap(no_confirm=True, snapshot_url=args.bootstrap_url)
+            not os.path.exists(config.DATABASE) and self.args.catch_up == "bootstrap"
+        ) or self.args.catch_up == "bootstrap-always":
+            bootstrap.bootstrap(no_confirm=True, snapshot_url=self.args.bootstrap_url)
 
         # Initialise database
         database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
-        db = database.initialise_db()
-        CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
-        blocks.check_database_version(db)
-        database.optimize(db)
+        self.db = database.initialise_db()
+        CurrentState().set_current_block_index(ledger.blocks.last_db_index(self.db))
+        blocks.check_database_version(self.db)
+        database.optimize(self.db)
 
-        if args.rebuild_state_db:
+        if self.args.rebuild_state_db:
             dbbuilder.build_state_db()
-        elif args.refresh_state_db:
+        elif self.args.refresh_state_db:
             state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
             dbbuilder.refresh_state_db(state_db)
             state_db.close()
@@ -700,89 +703,88 @@ def start_all(args, log_stream=None):
         # Check software version
         check.software_version()
 
-        backend_height_thread = BackendHeight()
-        backend_height_thread.daemon = True
-        backend_height_thread.start()
-        CurrentState().set_backend_height_value(backend_height_thread.shared_backend_height)
+        self.backend_height_thread = BackendHeight()
+        self.backend_height_thread.daemon = True
+        self.backend_height_thread.start()
+        CurrentState().set_backend_height_value(self.backend_height_thread.shared_backend_height)
 
         # API Server v2
-        api_stop_event = multiprocessing.Event()
-        apiserver_v2 = api_v2.APIServer(api_stop_event, backend_height_thread.shared_backend_height)
-        apiserver_v2.start(args, log_stream)
-        while not apiserver_v2.is_ready():
+        self.api_stop_event = multiprocessing.Event()
+        self.apiserver_v2 = api_v2.APIServer(
+            self.api_stop_event, self.backend_height_thread.shared_backend_height
+        )
+        self.apiserver_v2.start(self.args, self.log_stream)
+        while not self.apiserver_v2.is_ready():
             logger.trace("Waiting for API server to start...")
-            if apiserver_v2.has_stopped():
+            if self.apiserver_v2.has_stopped():
                 logger.error("API server stopped unexpectedly.")
                 return
             time.sleep(0.1)
 
-        if args.api_only:
+        if self.args.api_only:
             while True:
-                api_stop_event.wait(1)
+                self.api_stop_event.wait(1)
             return
 
         # Backend
         ensure_backend_is_up()
 
         # API Status Poller
-        api_status_poller = apiv1.APIStatusPoller()
-        api_status_poller.daemon = True
-        api_status_poller.start()
+        self.api_status_poller = apiv1.APIStatusPoller()
+        self.api_status_poller.daemon = True
+        self.api_status_poller.start()
 
         # API Server v1
-        apiserver_v1 = apiv1.APIServer()
-        apiserver_v1.daemon = True
-        apiserver_v1.start()
+        self.apiserver_v1 = apiv1.APIServer()
+        self.apiserver_v1.daemon = True
+        self.apiserver_v1.start()
 
         # delete blocks with no ledger hashes
         # in case of reparse interrupted
-        blocks.rollback_empty_block(db)
+        blocks.rollback_empty_block(self.db)
 
         # Asset conservation checker
         if config.CHECK_ASSET_CONSERVATION:
-            asset_conservation_checker = AssetConservationChecker()
-            asset_conservation_checker.start()
+            self.asset_conservation_checker = AssetConservationChecker()
+            self.asset_conservation_checker.start()
 
         # Reset (delete) rust fetcher database
         blocks.reset_rust_fetcher_database()
 
         # catch up
-        blocks.catch_up(db)
+        blocks.catch_up(self.db)
 
         # Blockchain watcher
         logger.info("Watching for new blocks...")
-        follower_daemon = follow.start_blockchain_watcher(db)
-        follower_daemon.start()
+        self.follower_daemon = follow.start_blockchain_watcher(self.db)
+        self.follower_daemon.start()
 
-    except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt received. Shutting down...")
-        pass
-    except Exception as e:
-        logger.error("Exception caught!", exc_info=e)
-    finally:
+    def stop(self):
+        logger.warning("Shutting down...")
         # Ensure all threads are stopped
-        if backend_height_thread:
-            backend_height_thread.stop()
-        if api_stop_event:
-            api_stop_event.set()
-        if api_status_poller:
-            api_status_poller.stop()
-        if apiserver_v1:
-            apiserver_v1.stop()
-        if follower_daemon:
-            follower_daemon.stop()
-        if asset_conservation_checker:
-            asset_conservation_checker.stop()
+        if self.backend_height_thread:
+            self.backend_height_thread.stop()
+        if self.api_stop_event:
+            self.api_stop_event.set()
+        if self.api_status_poller:
+            self.api_status_poller.stop()
+        if self.apiserver_v1:
+            self.apiserver_v1.stop()
+        if self.follower_daemon:
+            self.follower_daemon.stop()
 
-        if apiserver_v2:
+        if self.asset_conservation_checker:
+            self.asset_conservation_checker.stop()
+
+        if self.apiserver_v2:
             logger.info("Waiting for API processes to stop...")
-            apiserver_v2.stop()
-            while not apiserver_v2.has_stopped():
+            self.apiserver_v2.stop()
+            while not self.apiserver_v2.has_stopped():
                 time.sleep(0.1)
 
         # then close the database with write access
-        if db:
-            database.close(db)
+        if self.db:
+            database.close(self.db)
 
         # Now it's safe to check for WAL files
         for db_name, db_path in [
@@ -802,6 +804,20 @@ def start_all(args, log_stream=None):
 
         log.shutdown()
         logger.info("Shutdown complete.")
+
+
+def start_all(args, log_stream=None):
+    server = CounterpartyServer(args, log_stream)
+    try:
+        server.start()
+        while True:
+            server.join(1)
+    except KeyboardInterrupt:
+        logger.warning("Keyboard interrupt received. Shutting down...")
+    except Exception as e:
+        logger.error("Exception caught!", exc_info=e)
+    finally:
+        server.stop()
 
 
 def reparse(block_index):
