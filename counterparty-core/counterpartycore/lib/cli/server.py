@@ -765,8 +765,12 @@ class CounterpartyServer(threading.Thread):
 
     def stop(self):
         logger.info("Shutting down...")
-        # self.db.interrupt()
+
         # Ensure all threads are stopped
+        if self.follower_daemon:
+            self.follower_daemon.stop()
+        if self.asset_conservation_checker:
+            self.asset_conservation_checker.stop()
         if self.backend_height_thread:
             self.backend_height_thread.stop()
         if self.api_stop_event:
@@ -777,19 +781,7 @@ class CounterpartyServer(threading.Thread):
             self.apiserver_v1.stop()
         if self.apiserver_v2:
             self.apiserver_v2.stop()
-        if self.follower_daemon:
-            self.follower_daemon.stop()
 
-        if self.asset_conservation_checker:
-            self.asset_conservation_checker.stop()
-
-        if self.apiserver_v2:
-            logger.info("Waiting for API processes to stop...")
-            self.apiserver_v2.stop()
-            while not self.apiserver_v2.has_stopped():
-                time.sleep(0.1)
-
-        log.shutdown()
         logger.info("Shutdown complete.")
 
 
