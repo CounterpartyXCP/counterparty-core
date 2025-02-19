@@ -11,6 +11,7 @@ import time
 from urllib.parse import quote_plus as urlencode
 
 import appdirs
+import apsw
 import bitcoin as bitcoinlib
 from termcolor import colored, cprint
 
@@ -642,12 +643,15 @@ class AssetConservationChecker(threading.Thread):
                 except exceptions.SanityError as e:
                     logger.error("Asset conservation check failed: %s" % e)
                     _thread.interrupt_main()
+                except apsw.InterruptError:
+                    break
                 self.last_check = time.time()
             time.sleep(1)
 
     def stop(self):
         logger.info("Stopping Asset Conservation Checker thread...")
         self.stop_event.set()
+        self.db.interrupt()
         self.join()
         if self.db is not None:
             self.db.close()
@@ -761,6 +765,7 @@ class CounterpartyServer(threading.Thread):
 
     def stop(self):
         logger.warning("Shutting down...")
+        self.db.interrupt()
         # Ensure all threads are stopped
         if self.backend_height_thread:
             self.backend_height_thread.stop()

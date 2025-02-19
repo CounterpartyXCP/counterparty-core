@@ -91,6 +91,7 @@ class BlockchainWatcher:
         self.last_software_version_check_time = 0
         self.last_mempool_parsing_time = 0
         # catch up and clean mempool before starting
+        self.stop_event = threading.Event()
         self.mempool_parser = None
         if not config.NO_MEMPOOL:
             CurrentState().set_block_parser_status("Initializing")
@@ -256,7 +257,7 @@ class BlockchainWatcher:
         self.check_software_version_if_needed()
         late_since = None
 
-        while True:
+        while True and not self.stop_event.is_set():
             try:
                 if not config.NO_MEMPOOL:
                     if len(RAW_MEMPOOL) > 0:
@@ -306,14 +307,17 @@ class BlockchainWatcher:
         logger.debug("Starting blockchain watcher...")
         # Schedule the handle coroutine once
         self.task = self.loop.create_task(self.handle())
-        self.loop.run_forever()
+        try:
+            self.loop.run_forever()
+        finally:
+            self.loop.close()
 
     def stop(self):
         logger.debug("Stopping blockchain watcher...")
         # Cancel the handle task
+        self.stop_event.set()
         self.task.cancel()
         self.loop.stop()
-        self.loop.close()
         # Clean up ZMQ context
         self.zmq_context.destroy()
         # Stop mempool parser
@@ -349,13 +353,15 @@ def get_raw_mempool(db):
 class RawMempoolParser(threading.Thread):
     def __init__(self, db):
         threading.Thread.__init__(self, name="RawMempoolParser")
+        self.db = db
         self.daemon = True
-        self.tx_hashes_chunks, self.timestamps = get_raw_mempool(db)
         self.stop_event = threading.Event()
+        self.tx_hashes_chunks, self.timestamps = get_raw_mempool(self.db)
 
     def run(self):
         logger.debug("Starting RawMempoolParser...")
         start = time.time()
+
         counter = 0
         while len(self.tx_hashes_chunks) > 0 and not self.stop_event.is_set():
             txhash_list = self.tx_hashes_chunks.pop(0)
@@ -371,6 +377,7 @@ class RawMempoolParser(threading.Thread):
         )
 
     def stop(self):
+        self.db.interrupt()
         if self.is_alive():
             logger.debug("Stopping RawMempoolParser...")
             self.stop_event.set()
