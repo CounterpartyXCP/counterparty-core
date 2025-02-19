@@ -890,6 +890,8 @@ def catch_up(db, check_asset_conservation=True):
         parsed_blocks = 0
 
         while CurrentState().current_block_index() < block_count:
+            if CurrentState().block_parser_status() == "Stopping":
+                return
             # Get block information and transactions
             fetch_time_start = time.time()
             if fetcher is None:

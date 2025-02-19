@@ -48,6 +48,9 @@ jobs:
           - name: Testnet4 Bootstrap And Catchup
             test-path: integrations/testnet4_test.py 
 
+          - name: Testnet4 Start and Shutdown
+            test-path: integrations/shutdown_test.py
+
           # Other tests
 
           # run the docker-compose tests

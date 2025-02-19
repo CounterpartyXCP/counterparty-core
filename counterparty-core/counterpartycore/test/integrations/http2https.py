@@ -38,7 +38,7 @@ class RPCHandler(socketserver.StreamRequestHandler):
                 data=body,
                 headers={"Content-Type": "application/json"},
                 verify=False,
-                timeout=5,
+                timeout=15,
             )
 
             # Send response back to client

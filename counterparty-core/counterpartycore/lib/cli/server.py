@@ -756,7 +756,7 @@ class CounterpartyServer(threading.Thread):
         blocks.reset_rust_fetcher_database()
 
         # catch up
-        blocks.catch_up(self.db)
+        blocks.catch_up(self.db, self.api_stop_event)
 
         # Blockchain watcher
         logger.info("Watching for new blocks...")
@@ -765,6 +765,7 @@ class CounterpartyServer(threading.Thread):
 
     def stop(self):
         logger.info("Shutting down...")
+        CurrentState().set_block_parser_status("Stopping")
 
         # Ensure all threads are stopped
         if self.follower_daemon:

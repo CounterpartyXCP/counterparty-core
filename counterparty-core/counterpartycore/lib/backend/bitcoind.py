@@ -13,6 +13,7 @@ from bitcoinutils.keys import PublicKey
 from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
 
 from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import deserialize, utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -36,6 +37,8 @@ def clean_url_for_log(url):
 
 # for testing
 def should_retry():
+    if CurrentState().block_parser_status() == "Stopping":
+        return False
     return True
 
 

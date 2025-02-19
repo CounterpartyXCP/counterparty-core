@@ -1,49 +1,76 @@
-import os
 import random
-import signal
+import socket
 import time
 from io import StringIO
 
-import sh
+from counterpartycore.lib.cli import server
+from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.test.integrations import reparsetest
 from http2https import PROXY_PORT, start_http_proxy, stop_http_proxy
 
 
-def test_shutdown():
-    sh_counterparty_server, backend_url, db_file, api_url = reparsetest.prepare("mainnet")
+def is_port_in_used(port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", port))
+        return False
+    except socket.error:
+        return True
+    finally:
+        s.close()
 
-    out = StringIO()
+
+def test_shutdown():
+    sh_counterparty_server, backend_url, db_file, api_url = reparsetest.prepare("testnet4")
+
     try:
         start_http_proxy(backend_url)
-        server_process = sh_counterparty_server(
-            "start",
-            "--backend-connect",
-            "127.0.0.1",
-            "--backend-port",
-            PROXY_PORT,
-            "--wsgi-server",
-            "gunicorn",
-            _bg=True,
-            _out=out,
-            _err_to_out=True,
-            _bg_exc=False,
+
+        parser = arg_parser(no_config_file=True)
+        args = parser.parse_args(
+            [
+                "--testnet4",
+                "--data-dir",
+                reparsetest.DATA_DIR,
+                "--cache-dir",
+                reparsetest.DATA_DIR,
+                "start",
+                "--backend-connect",
+                "127.0.0.1",
+                "--backend-port",
+                f"{PROXY_PORT}",
+                "--wsgi-server",
+                "gunicorn",
+            ]
         )
 
-        duration = random.randint(1, 60)  # noqa S311
+        log_stream = StringIO()
+        server.initialise_log_and_config(args, log_stream=log_stream)
+
+        test_duration = random.randint(1, 60)  # noqa S311
         start_time = time.time()
 
-        print(f"Waiting random time: {duration}s")
-        while time.time() - start_time < duration:
-            time.sleep(1)
+        print("Test duration: ", test_duration)
 
-        print("Shutting down server...")
-        # server_process.terminate()
-        os.kill(server_process.pid, signal.SIGTERM)
+        counterparty_server = server.CounterpartyServer(args, log_stream)
+        counterparty_server.start()
+        while time.time() - start_time < test_duration:
+            counterparty_server.join(1)
 
-    except sh.SignalException_SIGTERM:
-        pass
+        assert is_port_in_used(44000)
+
     finally:
-        print("Waiting for server to shutdown...")
-        time.sleep(30)
+        print("Shutting down server...")
+        counterparty_server.stop()
         stop_http_proxy()
-        print(out.getvalue())
+
+    logs = log_stream.getvalue()
+
+    assert "Ledger.Main - Shutting down..." in logs
+    assert "Ledger.Main - Asset Conservation Checker thread stopped." in logs
+    assert "Ledger.BackendHeight - BackendHeight Thread stopped." in logs
+    assert "Ledger.Main - API Server v1 thread stopped." in logs
+    assert "Ledger.Main - API Server process stopped." in logs
+    assert "Ledger.Main - Shutdown complete." in logs
+
+    assert not is_port_in_used(44000)
