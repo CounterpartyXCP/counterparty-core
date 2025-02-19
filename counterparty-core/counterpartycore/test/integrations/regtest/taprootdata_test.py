@@ -8,6 +8,7 @@ from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from bitcoinutils.utils import ControlBlock
+from counterpartycore.lib.utils import helpers
 from regtestnode import RegtestNodeThread
 
 
@@ -49,9 +50,13 @@ def test_p2ptr_inscription():
 
         # Outputs
 
+        original_content = ("hello world" * 4000).encode()
+        # split the data in chunks of 520 bytes
+        datas = helpers.chunkify(original_content, 520)
+        datas = [binascii.hexlify(data).decode("utf-8") for data in datas]
+
         # Build inscription envelope script
-        data = binascii.hexlify("hello world!".encode()).decode()
-        inscription_script = Script(["OP_FALSE", "OP_IF", data, "OP_ENDIF"])
+        inscription_script = Script(["OP_FALSE", "OP_IF"] + datas + ["OP_ENDIF"])
         # use source address as destination
         destination_address = source_pubkey.get_taproot_address([[inscription_script]])
         print("To Taproot script address", destination_address.to_string())
@@ -121,9 +126,12 @@ def test_p2ptr_inscription():
 
         # extract the inscription script
         inscription_script = Script.from_raw(verify_tx.witnesses[0].stack[1])
+        # join all the chunks
+        inscription_data = "".join(inscription_script.script[2:-1])
+        inscription_content = binascii.unhexlify(inscription_data)
 
         # get our data
-        assert binascii.unhexlify(inscription_script.script[2]).decode("utf-8") == "hello world!"
+        assert inscription_content == original_content
 
     finally:
         regtest_node_thread.stop()
