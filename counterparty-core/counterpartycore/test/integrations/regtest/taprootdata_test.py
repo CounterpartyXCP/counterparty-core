@@ -3,6 +3,7 @@ import json
 import os
 import time
 
+import requests
 from bitcoinutils.keys import PrivateKey
 from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
@@ -10,6 +11,26 @@ from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessI
 from bitcoinutils.utils import ControlBlock
 from counterpartycore.lib.utils import helpers
 from regtestnode import RegtestNodeThread
+
+
+def rpc_call(method, params):
+    headers = {"content-type": "application/json"}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    response = requests.post(
+        "http://localhost:18443/",
+        data=json.dumps(payload),
+        headers=headers,
+        auth=("rpc", "rpc"),
+        timeout=20,
+    )
+    result = response.json()
+    print(result)
+    return result
 
 
 def test_p2ptr_inscription():
@@ -50,7 +71,7 @@ def test_p2ptr_inscription():
 
         # Outputs
 
-        original_content = ("hello world" * 4000).encode()
+        original_content = b"\x01" * 1024 * 1024 * 3  # 3MB of data
         # split the data in chunks of 520 bytes
         datas = helpers.chunkify(original_content, 520)
         datas = [binascii.hexlify(data).decode("utf-8") for data in datas]
@@ -110,11 +131,14 @@ def test_p2ptr_inscription():
             TxWitnessInput([sig, inscription_script.to_hex(), control_block.to_hex()])
         )
 
-        print("Signed Reveal Transaction:", reveal_tx.serialize())
+        print("Signed Reveal Transaction:", reveal_tx.serialize()[0:100])
 
         # send the transaction and mine a block
-        commit_txid = node.bitcoin_cli("sendrawtransaction", commit_tx.serialize()).strip()
-        reveal_txid = node.bitcoin_cli("sendrawtransaction", reveal_tx.serialize()).strip()
+        commit_txid = rpc_call("sendrawtransaction", [commit_tx.serialize()])["result"]
+        node.mine_blocks(1)
+
+        reveal_txid = rpc_call("sendrawtransaction", [reveal_tx.serialize()])["result"]
+
         node.mine_blocks(1)
         assert commit_txid == txid_before_sign
 
