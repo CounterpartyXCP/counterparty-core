@@ -63,7 +63,6 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                 self.config["log_level"] = config.LOG_LEVEL_STRING
         else:
             logger.warning("Using custom indexer config.")
-            print(indexer_config)
             self.config = indexer_config
         self.config["network"] = config.NETWORK_NAME
         self.fetcher = None

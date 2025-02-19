@@ -493,8 +493,9 @@ def run_apiserver(
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(signum, frame):
-        logger.warning("Keyboard interrupt received. Shutting down...")
-        raise KeyboardInterrupt
+        pass
+        # logger.warning("Keyboard interrupt received. Shutting down...")
+        # raise KeyboardInterrupt
 
     wsgi_server = None
     parent_checker = None
@@ -524,7 +525,11 @@ def run_apiserver(
         app = init_flask_app()
         app.shared_backend_height = shared_backend_height
 
-        wsgi_server = wsgi.WSGIApplication(app, args=args)
+        try:
+            wsgi_server = wsgi.WSGIApplication(app, args=args)
+        except OSError as e:
+            logger.error(f"Error starting WSGI Server: {e}")
+            exit(1)
 
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid)
@@ -534,9 +539,6 @@ def run_apiserver(
         server_ready_value.value = 1
 
         wsgi_server.run(server_ready_value, shared_backend_height)
-
-    except KeyboardInterrupt:
-        pass
 
     finally:
         logger.info("Stopping API Server...")
@@ -554,6 +556,7 @@ def run_apiserver(
             watcher.join()
 
         logger.info("API Server stopped.")
+        server_ready_value.value = 2
 
 
 # This thread is used for the following two reasons:
