@@ -12,6 +12,9 @@
 - Handle correctly errors in subprocess when bootstrapping
 - Fix `getrawtransaction_batch()` for batches greater than `config.MAX_RPC_BATCH_SIZE`
 - Better error handling for port taken
+- Fix ungraceful ZeroMQ Failure
+- Fix Conservation Check Failing Ungracefull
+- Cleaner Gunicorn Shutdown
 
 ## Codebase
 
