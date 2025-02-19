@@ -377,11 +377,11 @@ class RawMempoolParser(threading.Thread):
         )
 
     def stop(self):
+        logger.debug("Stopping RawMempoolParser...")
         self.db.interrupt()
-        if self.is_alive():
-            logger.debug("Stopping RawMempoolParser...")
-            self.stop_event.set()
-            self.join()
+        # if self.is_alive():
+        self.stop_event.set()
+        self.join()
 
 
 class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):

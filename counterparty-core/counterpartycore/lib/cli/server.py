@@ -764,8 +764,8 @@ class CounterpartyServer(threading.Thread):
         self.follower_daemon.start()
 
     def stop(self):
-        logger.warning("Shutting down...")
-        self.db.interrupt()
+        logger.info("Shutting down...")
+        # self.db.interrupt()
         # Ensure all threads are stopped
         if self.backend_height_thread:
             self.backend_height_thread.stop()
@@ -775,6 +775,8 @@ class CounterpartyServer(threading.Thread):
             self.api_status_poller.stop()
         if self.apiserver_v1:
             self.apiserver_v1.stop()
+        if self.apiserver_v2:
+            self.apiserver_v2.stop()
         if self.follower_daemon:
             self.follower_daemon.stop()
 
@@ -786,26 +788,6 @@ class CounterpartyServer(threading.Thread):
             self.apiserver_v2.stop()
             while not self.apiserver_v2.has_stopped():
                 time.sleep(0.1)
-
-        # then close the database with write access
-        if self.db:
-            database.close(self.db)
-
-        # Now it's safe to check for WAL files
-        for db_name, db_path in [
-            ("Ledger DB", config.DATABASE),
-            ("State DB", config.STATE_DATABASE),
-        ]:
-            try:
-                database.check_wal_file(db_path)
-            except exceptions.WALFileFoundError:
-                db_file = config.DATABASE if db_name == "Ledger DB" else config.STATE_DATABASE
-                db = database.get_db_connection(db_file, read_only=False, check_wal=False)
-                db.close()
-            except exceptions.DatabaseError:
-                logger.warning(
-                    f"{db_name} is in use by another process and was unable to be closed correctly."
-                )
 
         log.shutdown()
         logger.info("Shutdown complete.")
