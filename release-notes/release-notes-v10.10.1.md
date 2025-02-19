@@ -20,6 +20,7 @@
 
 - Tweak logging Bitcoin Core Catch Up
 - Batch getrawtransaction for `get_vin_info()`
+- Create events indexes after catch up
 
 ## API
 

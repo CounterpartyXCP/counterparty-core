@@ -48,7 +48,7 @@ from counterpartycore.lib.messages import (
 from counterpartycore.lib.messages.versions import enhancedsend, mpma
 from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import database, helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -858,6 +858,23 @@ def start_rsfetcher():
     return fetcher
 
 
+def create_events_indexes(db):
+    if database.get_config_value(db, "EVENTS_INDEXES_CREATED") == "True":
+        return
+    sqls = [
+        "CREATE INDEX IF NOT EXISTS messages_block_index_idx ON messages (block_index)",
+        "CREATE INDEX IF NOT EXISTS messages_block_index_message_index_idx ON messages (block_index, message_index)",
+        "CREATE INDEX IF NOT EXISTS messages_block_index_event_idx ON messages (block_index, event)",
+        "CREATE INDEX IF NOT EXISTS messages_event_idx ON messages (event)",
+        "CREATE INDEX IF NOT EXISTS messages_tx_hash_idx ON messages (tx_hash)",
+        "CREATE INDEX IF NOT EXISTS messages_event_hash_idx ON messages (event_hash)",
+    ]
+    cursor = db.cursor()
+    for sql in sqls:
+        cursor.execute(sql)
+    database.set_config_value(db, "EVENTS_INDEXES_CREATED", "True")
+
+
 def catch_up(db, check_asset_conservation=True):
     logger.info("Catching up...")
 
@@ -942,6 +959,8 @@ def catch_up(db, check_asset_conservation=True):
     finally:
         if fetcher is not None:
             fetcher.stop()
+
+    create_events_indexes(db)
 
     logger.info("Catch up complete.")
 
