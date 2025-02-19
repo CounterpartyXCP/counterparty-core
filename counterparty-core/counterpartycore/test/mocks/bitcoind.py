@@ -136,8 +136,8 @@ def list_unspent(source, allow_unconfirmed_inputs=True):
     return BlockchainMock().list_unspent(source, allow_unconfirmed_inputs)
 
 
-def get_vin_info(vin, no_retry=False):
-    return BlockchainMock().get_vin_info(vin)
+def get_vins_info(vins, no_retry=False):
+    return [BlockchainMock().get_vin_info(vin) for vin in vins]
 
 
 def get_utxo_address_and_value(utxo, no_retry=False):
@@ -211,7 +211,7 @@ def bitcoind_mock(monkeymodule):
     backend_module = "counterpartycore.lib.backend"
     monkeymodule.setattr(f"{bitcoind_module}.list_unspent", list_unspent)
     monkeymodule.setattr(f"{bitcoind_module}.satoshis_per_vbyte", satoshis_per_vbyte)
-    monkeymodule.setattr(f"{bitcoind_module}.get_vin_info", get_vin_info)
+    monkeymodule.setattr(f"{bitcoind_module}.get_vins_info", get_vins_info)
     monkeymodule.setattr(f"{bitcoind_module}.convert_to_psbt", lambda x: x)
     monkeymodule.setattr(
         f"{bitcoind_module}.get_utxo_address_and_value", get_utxo_address_and_value

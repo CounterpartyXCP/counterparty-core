@@ -294,6 +294,9 @@ class BlockchainWatcher:
                 break  # Exit the loop if the task is cancelled
             except Exception as e:
                 logger.error("Error in handle loop: %s", e)
+                import traceback
+
+                print(traceback.format_exc())  # for debugging
                 capture_exception(e)
                 self.stop()
                 break  # Optionally break the loop on other exceptions
