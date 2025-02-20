@@ -12,13 +12,20 @@ use bitcoin::{
         OP_PUSHNUM_3, OP_RETURN,
     },
     script::Instruction::{Op, PushBytes},
-    Block, BlockHash, Script, TxOut,
+    Block, BlockHash, Script, TxOut, Txid,
 };
 use bitcoincore_rpc::bitcoin::script::Instruction;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
+
+use crate::indexer::block::VinOutput;
+
+use std::cell::RefCell;
+thread_local! {
+    static CURRENT_BLOCK_VINS: RefCell<HashMap<String, VinOutput>> = RefCell::new(HashMap::new());
+}
 
 use super::{
     block::{
@@ -401,11 +408,30 @@ pub fn parse_transaction(
         } else {
             vtxinwit.push(Vec::new());
         }
+
+        let key = format!("{}:{}", vin.previous_output.txid, vin.previous_output.vout);
+
+        CURRENT_BLOCK_VINS.with(|v| {
+            let map = v.borrow();
+            println!("CURRENT_BLOCK_VINS contains {} entries", map.len());
+            println!("Looking for key: {}", key);
+            if let Some(value) = map.get(&key) {
+                println!("Found value: is_segwit={}, value={}", value.is_segwit, value.value);
+            } else {
+                println!("Key not found in map");
+            }
+        });
+
+        let vin_info = CURRENT_BLOCK_VINS.with(|v| {
+            v.borrow_mut().remove(&key)
+        });
+
         vins.push(Vin {
             hash,
             n: vin.previous_output.vout,
             sequence: vin.sequence.0,
             script_sig: vin.script_sig.to_bytes(),
+            info: vin_info,
         })
     }
 
@@ -574,6 +600,7 @@ pub trait BitcoinRpc<B>: Send + Clone + 'static {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error>;
     fn get_block(&self, hash: &BlockHash) -> Result<Box<B>, Error>;
     fn get_blockchain_height(&self) -> Result<u32, Error>;
+    fn get_raw_transaction(&self, txid: &Txid) -> Result<bitcoin::Transaction, Error>;
 }
 
 struct GetBlockHash {
@@ -590,6 +617,11 @@ struct GetBlockchainHeight {
     sender: Sender<Result<u32, Error>>,
 }
 
+struct GetRawTransaction {
+    txid: Txid,
+    sender: Sender<Result<bitcoin::Transaction, Error>>,
+}
+
 type Channel<T> = (Sender<T>, Receiver<T>);
 
 #[derive(Clone)]
@@ -597,6 +629,7 @@ struct Channels {
     get_block_hash: Channel<GetBlockHash>,
     get_block: Channel<GetBlock>,
     get_blockchain_height: Channel<GetBlockchainHeight>,
+    get_raw_transaction: Channel<GetRawTransaction>,
 }
 
 impl Channels {
@@ -605,6 +638,7 @@ impl Channels {
             get_block_hash: bounded(n),
             get_block: bounded(n),
             get_blockchain_height: bounded(n),
+            get_raw_transaction: bounded(n),
         }
     }
 }
@@ -664,11 +698,17 @@ impl BitcoinClient {
                 if let Ok(GetBlockchainHeight {sender}) = msg {
                   sender.send(client.get_blockchain_height())?;
                 }
+              },
+              recv(channels.get_raw_transaction.1) -> msg => {
+                if let Ok(GetRawTransaction {txid, sender}) = msg {
+                    sender.send(client.get_raw_transaction(&txid))?;
+                }
               }
             }
         }
     }
 }
+
 
 impl BitcoinRpc<Block> for BitcoinClient {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error> {
@@ -718,6 +758,22 @@ impl BitcoinRpc<Block> for BitcoinClient {
             }
         }
     }
+
+    fn get_raw_transaction(&self, txid: &Txid) -> Result<bitcoin::Transaction, Error> {
+        let (tx, rx) = bounded(1);
+        self.channels.get_raw_transaction.0.send(GetRawTransaction {
+            txid: *txid,
+            sender: tx,
+        })?;
+        let (id, done) = self.stopper.subscribe()?;
+        select! {
+            recv(done) -> _ => Err(Error::Stopped),
+            recv(rx) -> result => {
+                self.stopper.unsubscribe(id)?;
+                result?
+            }
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -744,11 +800,69 @@ impl BitcoinRpc<Block> for BitcoinClientInner {
     }
 
     fn get_block(&self, hash: &BlockHash) -> Result<Box<Block>, Error> {
-        Ok(Box::new(self.client.get_block(hash)?))
+        let block = self.client.get_block(hash)?;
+        let mut vins_tx = HashMap::new();
+
+        // Print pour debug
+        println!("Analyzing block...");
+
+        // Collecter tous les vins
+        for tx in block.txdata.iter() {
+            if tx.is_coinbase() {
+                continue;
+            }
+            for vin in tx.input.iter() {
+                let key = format!("{}:{}", vin.previous_output.txid, vin.previous_output.vout);
+                //println!("Processing vin key: {}", key);  // Debug print
+                if !vins_tx.contains_key(&key) {
+                    match self.get_raw_transaction(&vin.previous_output.txid) {
+                        Ok(vin_tx) => {
+                            if let Some(output) = vin_tx.output.get(vin.previous_output.vout as usize) {
+                                let is_segwit = is_valid_segwit_script(&output.script_pubkey);
+                                vins_tx.insert(key.clone(), VinOutput {
+                                 script_pub_key: output.script_pubkey.to_bytes(),
+                                    value: output.value.to_sat(),
+                                    is_segwit,
+                                });
+                                //println!("Successfully added vin key: {}", key);  // Debug print
+                            }
+                        }
+                        Err(e) => {
+                            println!("Failed to get raw transaction for {}: {:?}", key, e);  // Debug print
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        println!("Before updating CURRENT_BLOCK_VINS, size: {}", vins_tx.len());
+        for (k, _) in vins_tx.iter() {
+            println!("  Key in vins_tx: {}", k);
+        }
+
+        // Mettre à jour la variable globale AVANT de créer le Box<Block>
+        CURRENT_BLOCK_VINS.with(|v| {
+            let mut map = v.borrow_mut();
+            *map = vins_tx;
+            // Print immédiatement après la mise à jour
+            println!("Just after setting CURRENT_BLOCK_VINS, size: {}", map.len());
+            for (k, _) in map.iter() {
+                println!("  Key in CURRENT_BLOCK_VINS: {}", k);
+            }
+        });
+
+
+        Ok(Box::new(block))
     }
 
     fn get_blockchain_height(&self) -> Result<u32, Error> {
         Ok(self.client.get_blockchain_info()?.blocks as u32)
+    }
+
+    fn get_raw_transaction(&self, txid: &Txid) -> Result<bitcoin::Transaction, Error> {
+        Ok(self.client.get_raw_transaction(txid, None)?)
     }
 }
 
