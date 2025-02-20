@@ -8,7 +8,9 @@ from counterpartycore.lib.ledger import markets
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import deserialize, gettxinfo
 from counterpartycore.lib.utils import opcodes
-from counterpartycore.test.mocks.bitcoind import original_is_valid_der
+from counterpartycore.test.mocks.bitcoind import (
+    original_is_valid_der,
+)
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -781,11 +783,16 @@ def test_errors(ledger_db, monkeypatch):
     )
 
 
-def test_get_transaction_sources_checksig(monkeypatch):
-    def get_vin_info_mock_1(*args, **lwargs):
+def test_get_transaction_sources_checksig(monkeypatch, monkeymodule):
+    def get_decoded_transaction(*args, **lwargs):
         raise exceptions.BitcoindRPCError("error")
 
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_1)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_decoded_transaction", get_decoded_transaction
+    )
+    # mocked_get_vin_info = backend.bitcoind.get_vin_info
+    # backend.bitcoind.get_vin_info = original_get_vin_info
+    # monkeymodule.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", original_get_vin_info)
 
     with pytest.raises(exceptions.DecodeError, match="vin not found"):
         gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]})
@@ -819,6 +826,10 @@ def test_get_transaction_sources_checksig(monkeypatch):
     monkeypatch.setattr("counterpartycore.lib.utils.script.script_to_asm", lambda x: asm)
     with pytest.raises(exceptions.DecodeError, match="data in source"):
         gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]})
+
+    # monkeymodule.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info)
+
+    # backend.bitcoind.get_vin_info = mocked_get_vin_info
 
 
 def test_get_transaction_sources_multisig(monkeypatch):

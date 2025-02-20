@@ -7,7 +7,7 @@ from multiprocessing import Value
 
 import pytest
 from bitcoinutils.keys import PublicKey
-from counterpartycore.lib import config, parser
+from counterpartycore.lib import backend, config, exceptions, parser
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, check, deserialize
@@ -141,7 +141,10 @@ def get_vins_info(vins, no_retry=False):
 
 
 def get_vin_info(vin, no_retry=False):
-    return BlockchainMock().get_vin_info(vin)
+    try:
+        return BlockchainMock().get_vin_info(vin)
+    except KeyError as e:
+        raise exceptions.DecodeError("vin not found") from e
 
 
 def get_utxo_address_and_value(utxo, no_retry=False):
@@ -206,6 +209,7 @@ def monkeymodule():
 
 
 original_is_valid_der = parser.gettxinfo.is_valid_der
+original_get_vin_info = backend.bitcoind.get_vin_info
 
 
 @pytest.fixture(scope="session")
