@@ -155,8 +155,8 @@ def test_deserialize_mpma(blockchain_mock, monkeypatch):
     ] = "18b7eyatTwZ8mvSCXRRxjNjvr3DPwhh6bU"
 
     monkeypatch.setattr(
-        "counterpartycore.lib.backend.bitcoind.get_vins_info",
-        lambda vin, no_retry: [(64777, "", False)],
+        "counterpartycore.lib.backend.bitcoind.get_vin_info",
+        lambda vin, no_retry: (64777, "", False),
     )
 
     hex = "0100000001f9cf03a71930731618f2e0ff897db75d208a587129b96296f3958b0dc146420900000000e5483045022100a72e4be0a0f581e1c438c7048413c65c05793e8328a7acaa1ef081cc8c44909a0220718e772276aaa7adf8392a1d39ab44fc8778f622ee0dea9858cd5894290abb2b014c9a4c6f434e545250525459030003000fc815eeb3172efc23fbd39c41189e83e4e0c8150033dafc6a4dcd8bce30b038305e30e5defad4acd6009081f7ee77f0ef849a213670d4e785c26d71375d40467e543326526fa800000000000000060100000000000000018000000000000000006000752102e6dd23598e1d2428ecf7eb59c27fdfeeb7a27c26906e96dc1f3d5ebba6e54d08ad0075740087ffffffff0100000000000000000e6a0c2bb584c84ba87a60dcab46c100000000"

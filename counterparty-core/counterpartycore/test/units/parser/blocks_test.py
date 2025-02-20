@@ -6,6 +6,7 @@ from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import send
 from counterpartycore.lib.messages.versions import send1
 from counterpartycore.lib.parser import blocks
+from counterpartycore.lib.utils import database
 
 
 def test_parse_tx_simple(ledger_db, defaults, blockchain_mock, test_helpers):
@@ -289,3 +290,17 @@ def test_handle_reorg3(ledger_db, monkeypatch, test_helpers, caplog):
     ).fetchone()
 
     assert last_block_after["block_index"] == last_block["block_index"] - 2
+
+
+def test_create_events_indexes(ledger_db):
+    sql = "SELECT * FROM sqlite_master WHERE type= 'index' and tbl_name = 'messages'"
+    assert len(ledger_db.execute(sql).fetchall()) == 0
+
+    assert database.get_config_value(ledger_db, "EVENTS_INDEXES_CREATED") is None
+
+    blocks.create_events_indexes(ledger_db)
+
+    assert len(ledger_db.execute(sql).fetchall()) == 6
+    assert database.get_config_value(ledger_db, "EVENTS_INDEXES_CREATED") == "True"
+
+    blocks.create_events_indexes(ledger_db)
