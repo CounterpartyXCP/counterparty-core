@@ -539,6 +539,13 @@ def list_unspent(source, allow_unconfirmed_inputs):
     return []
 
 
+def get_vin_info(vin, no_retry=False):
+    vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
+    is_segwit = vin_ctx["segwit"]
+    vout = vin_ctx["vout"][vin["n"]]
+    return vout["value"], vout["script_pub_key"], is_segwit
+
+
 def get_vins_info(vins, no_retry=False):
     hashes = [vin["hash"] for vin in vins]
     inputs_txs = getrawtransaction_batch(hashes, verbose=False, return_dict=True, no_retry=no_retry)

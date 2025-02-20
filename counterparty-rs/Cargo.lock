@@ -404,6 +404,7 @@ dependencies = [
  "crossbeam-channel",
  "derive_more",
  "hex",
+ "lazy_static",
  "par-map",
  "pyo3",
  "pyo3-build-config 0.20.3",

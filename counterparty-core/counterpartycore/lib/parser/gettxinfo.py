@@ -226,19 +226,24 @@ def check_signatures_sighash_flag(decoded_tx):
             raise SighashFlagError(error)
 
 
+def get_vin_info(vin):
+    vin_info = vin.get("info")
+    if vin_info is None:
+        try:
+            return backend.bitcoind.get_vin_info(vin, no_retry=CurrentState().parsing_mempool())
+        except exceptions.BitcoindRPCError as e:
+            raise DecodeError("vin not found") from e
+    else:
+        return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
+
+
 def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
 
-    # get inputs info by batch
-    try:
-        vins_info = backend.bitcoind.get_vins_info(
-            decoded_tx["vin"], no_retry=CurrentState().parsing_mempool()
-        )
-    except exceptions.BitcoindRPCError as e:
-        raise DecodeError("vin not found") from e
+    for vin in decoded_tx["vin"]:  # Loop through inputs.
+        vout_value, script_pubkey, _is_segwit = get_vin_info(vin)
 
-    for vout_value, script_pubkey, _is_segwit in vins_info:  # Loop through inputs.
         outputs_value += vout_value
 
         asm = script.script_to_asm(script_pubkey)
@@ -276,16 +281,8 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
     data = b""
     outputs_value = 0
 
-    # get inputs info by batch
-    try:
-        vins_info = backend.bitcoind.get_vins_info(
-            decoded_tx["vin"], no_retry=CurrentState().parsing_mempool()
-        )
-    except exceptions.BitcoindRPCError as e:
-        raise DecodeError("vin not found") from e
-
-    for i, vin in enumerate(decoded_tx["vin"]):
-        vout_value, _script_pubkey, is_segwit = vins_info[i]
+    for vin in decoded_tx["vin"]:
+        vout_value, _script_pubkey, is_segwit = get_vin_info(vin)
 
         if protocol.enabled("prevout_segwit_fix"):
             prevout_is_segwit = is_segwit

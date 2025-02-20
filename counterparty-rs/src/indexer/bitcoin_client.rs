@@ -22,9 +22,11 @@ use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use crate::indexer::block::VinOutput;
 
-use std::cell::RefCell;
-thread_local! {
-    static CURRENT_BLOCK_VINS: RefCell<HashMap<String, VinOutput>> = RefCell::new(HashMap::new());
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref GLOBAL_CLIENT: Mutex<Option<BitcoinClient>> = Mutex::new(None);
 }
 
 use super::{
@@ -390,50 +392,14 @@ pub fn parse_transaction(
     let mut vins = Vec::new();
     let mut segwit = false;
     let mut vtxinwit: Vec<Vec<String>> = Vec::new();
-    let mut key = Vec::new();
-    for vin in tx.input.iter() {
-        if key.is_empty() {
-            key = vin.previous_output.txid.to_byte_array().to_vec();
-            key.reverse();
-        }
-        let hash = vin.previous_output.txid.to_string();
-        if !vin.witness.is_empty() {
-            vtxinwit.push(
-                vin.witness
-                    .iter()
-                    .map(|w| w.as_hex().to_string())
-                    .collect::<Vec<_>>(),
-            );
-            segwit = true;
-        } else {
-            vtxinwit.push(Vec::new());
-        }
 
-        let key = format!("{}:{}", vin.previous_output.txid, vin.previous_output.vout);
-
-        CURRENT_BLOCK_VINS.with(|v| {
-            let map = v.borrow();
-            println!("CURRENT_BLOCK_VINS contains {} entries", map.len());
-            println!("Looking for key: {}", key);
-            if let Some(value) = map.get(&key) {
-                println!("Found value: is_segwit={}, value={}", value.is_segwit, value.value);
-            } else {
-                println!("Key not found in map");
-            }
-        });
-
-        let vin_info = CURRENT_BLOCK_VINS.with(|v| {
-            v.borrow_mut().remove(&key)
-        });
-
-        vins.push(Vin {
-            hash,
-            n: vin.previous_output.vout,
-            sequence: vin.sequence.0,
-            script_sig: vin.script_sig.to_bytes(),
-            info: vin_info,
-        })
-    }
+    let key = if !tx.input.is_empty() {
+        let mut key = tx.input[0].previous_output.txid.to_byte_array().to_vec();
+        key.reverse();
+        key
+    } else {
+        Vec::new()
+    };
 
     let mut vouts = Vec::new();
     let mut destinations = Vec::new();
@@ -499,11 +465,60 @@ pub fn parse_transaction(
                 destinations,
                 btc_amount,
                 fee,
-                data,
+                data: data.clone(),
                 potential_dispensers,
             })
         };
     }
+
+    for vin in tx.input.iter() {
+        let hash = vin.previous_output.txid.to_string();
+        if !vin.witness.is_empty() {
+            vtxinwit.push(
+                vin.witness
+                    .iter()
+                    .map(|w| w.as_hex().to_string())
+                    .collect::<Vec<_>>(),
+            );
+            segwit = true;
+        } else {
+            vtxinwit.push(Vec::new());
+        }
+
+        let vin_info = if !data.is_empty() {
+            if let Some(client) = GLOBAL_CLIENT.lock().unwrap().as_ref() {
+                match client.get_raw_transaction(&vin.previous_output.txid) {
+                    Ok(prev_tx) => {
+                        let vout_idx = vin.previous_output.vout as usize;
+                        if vout_idx < prev_tx.output.len() {
+                            Some(VinOutput {
+                                value: prev_tx.output[vout_idx].value.to_sat(),
+                                script_pub_key: prev_tx.output[vout_idx].script_pubkey.to_bytes(),
+                                is_segwit: !vin.witness.is_empty(),
+                            })
+                        } else {
+                            None
+                        }
+                    },
+                    Err(_) => None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+
+        vins.push(Vin {
+            hash,
+            n: vin.previous_output.vout,
+            sequence: vin.sequence.0,
+            script_sig: vin.script_sig.to_bytes(),
+            info: vin_info,
+        })
+    }
+
     let tx_id = tx.compute_txid().to_string();
     let tx_hash;
     if segwit && config.correct_segwit_txids_enabled(height) {
@@ -653,12 +668,16 @@ pub struct BitcoinClient {
 
 impl BitcoinClient {
     pub fn new(config: &Config, stopper: Stopper, n: usize) -> Result<Self, Error> {
-        Ok(BitcoinClient {
+        let client = Self {
             n,
             config: config.clone(),
             stopper,
             channels: Channels::new(n),
-        })
+        };
+        
+        *GLOBAL_CLIENT.lock().unwrap() = Some(client.clone());
+        
+        Ok(client)
     }
 
     pub fn start(&self) -> Result<Vec<JoinHandle<Result<(), Error>>>, Error> {
@@ -800,61 +819,7 @@ impl BitcoinRpc<Block> for BitcoinClientInner {
     }
 
     fn get_block(&self, hash: &BlockHash) -> Result<Box<Block>, Error> {
-        let block = self.client.get_block(hash)?;
-        let mut vins_tx = HashMap::new();
-
-        // Print pour debug
-        println!("Analyzing block...");
-
-        // Collecter tous les vins
-        for tx in block.txdata.iter() {
-            if tx.is_coinbase() {
-                continue;
-            }
-            for vin in tx.input.iter() {
-                let key = format!("{}:{}", vin.previous_output.txid, vin.previous_output.vout);
-                //println!("Processing vin key: {}", key);  // Debug print
-                if !vins_tx.contains_key(&key) {
-                    match self.get_raw_transaction(&vin.previous_output.txid) {
-                        Ok(vin_tx) => {
-                            if let Some(output) = vin_tx.output.get(vin.previous_output.vout as usize) {
-                                let is_segwit = is_valid_segwit_script(&output.script_pubkey);
-                                vins_tx.insert(key.clone(), VinOutput {
-                                 script_pub_key: output.script_pubkey.to_bytes(),
-                                    value: output.value.to_sat(),
-                                    is_segwit,
-                                });
-                                //println!("Successfully added vin key: {}", key);  // Debug print
-                            }
-                        }
-                        Err(e) => {
-                            println!("Failed to get raw transaction for {}: {:?}", key, e);  // Debug print
-                            continue;
-                        }
-                    }
-                }
-            }
-        }
-
-
-        println!("Before updating CURRENT_BLOCK_VINS, size: {}", vins_tx.len());
-        for (k, _) in vins_tx.iter() {
-            println!("  Key in vins_tx: {}", k);
-        }
-
-        // Mettre à jour la variable globale AVANT de créer le Box<Block>
-        CURRENT_BLOCK_VINS.with(|v| {
-            let mut map = v.borrow_mut();
-            *map = vins_tx;
-            // Print immédiatement après la mise à jour
-            println!("Just after setting CURRENT_BLOCK_VINS, size: {}", map.len());
-            for (k, _) in map.iter() {
-                println!("  Key in CURRENT_BLOCK_VINS: {}", k);
-            }
-        });
-
-
-        Ok(Box::new(block))
+        Ok(Box::new(self.client.get_block(hash)?))
     }
 
     fn get_blockchain_height(&self) -> Result<u32, Error> {
