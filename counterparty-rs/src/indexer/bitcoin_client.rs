@@ -29,6 +29,8 @@ lazy_static! {
     static ref GLOBAL_CLIENT: Mutex<Option<Weak<BitcoinClient>>> = Mutex::new(None);
 }
 
+use crate::indexer::batch_rpc::{BatchRpcClient, BATCH_CLIENT};
+
 use super::{
     block::{
         Block as CrateBlock, ParsedVouts, PotentialDispenser, ToBlock, Transaction, Vin, Vout,
@@ -383,7 +385,7 @@ fn parse_vout(
 }
 
 pub fn parse_transaction(
-    tx: &bitcoin::blockdata::transaction::Transaction,
+    tx: &bitcoin::Transaction,
     config: &Config,
     height: u32,
     parse_vouts: bool,
@@ -471,7 +473,29 @@ pub fn parse_transaction(
         };
     }
 
-    for vin in tx.input.iter() {
+    let input_txids: Vec<_> = tx.input.iter()
+        .map(|vin| vin.previous_output.txid)
+        .collect();
+
+    let prev_txs = if !data.is_empty() {
+        if BATCH_CLIENT.lock().unwrap().is_none() {
+            *BATCH_CLIENT.lock().unwrap() = Some(BatchRpcClient::new(
+                config.rpc_address.clone(),
+                config.rpc_user.clone(),
+                config.rpc_password.clone(),
+            ).unwrap());
+        }
+
+        if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
+            batch_client.get_transactions(&input_txids).unwrap_or_default()
+        } else {
+            vec![None; input_txids.len()]
+        }
+    } else {
+        vec![None; input_txids.len()]
+    };
+
+    for (vin, prev_tx) in tx.input.iter().zip(prev_txs.iter()) {
         let hash = vin.previous_output.txid.to_string();
         if !vin.witness.is_empty() {
             vtxinwit.push(
@@ -485,25 +509,16 @@ pub fn parse_transaction(
             vtxinwit.push(Vec::new());
         }
 
-        let vin_info = match ((!data.is_empty(), GLOBAL_CLIENT.lock().unwrap().as_ref().and_then(|weak| weak.upgrade()))) {
-            (true, Some(client)) => {
-                client
-                    .get_raw_transaction(&vin.previous_output.txid)
-                    .ok()
-                    .and_then(|prev_tx| {
-                        let vout_idx = vin.previous_output.vout as usize;
-                        prev_tx.output.get(vout_idx).map(|output| {
-                            VinOutput {
-                                value: output.value.to_sat(),
-                                script_pub_key: output.script_pubkey.to_bytes(),
-                                is_segwit: !vin.witness.is_empty(),
-                            }
-                        })
-                    })
-            }
-            _ => None,
-        };
-
+        let vin_info = prev_tx.as_ref().and_then(|prev_tx| {
+            let vout_idx = vin.previous_output.vout as usize;
+            prev_tx.output.get(vout_idx).map(|output| {
+                VinOutput {
+                    value: output.value.to_sat(),
+                    script_pub_key: output.script_pubkey.to_bytes(),
+                    is_segwit: !vin.witness.is_empty(),
+                }
+            })
+        });
 
         vins.push(Vin {
             hash,
@@ -511,7 +526,7 @@ pub fn parse_transaction(
             sequence: vin.sequence.0,
             script_sig: vin.script_sig.to_bytes(),
             info: vin_info,
-        })
+        });
     }
 
     let tx_id = tx.compute_txid().to_string();
@@ -521,13 +536,14 @@ pub fn parse_transaction(
     } else {
         tx_hash = Sha256dHash::hash(&tx_bytes).to_string();
     }
+
     Transaction {
         version: tx.version.0,
         segwit,
         coinbase: tx.is_coinbase(),
         lock_time: tx.lock_time.to_consensus_u32(),
-        tx_id: tx_id,
-        tx_hash: tx_hash,
+        tx_id,
+        tx_hash,
         vtxinwit,
         vin: vins,
         vout: vouts,
