@@ -485,28 +485,23 @@ pub fn parse_transaction(
             vtxinwit.push(Vec::new());
         }
 
-        let vin_info = if !data.is_empty() {
-            if let Some(client) = GLOBAL_CLIENT.lock().unwrap().as_ref() {
-                match client.get_raw_transaction(&vin.previous_output.txid) {
-                    Ok(prev_tx) => {
+        let vin_info = match ((!data.is_empty(), GLOBAL_CLIENT.lock().unwrap().as_ref())) {
+            (true, Some(client)) => {
+                client
+                    .get_raw_transaction(&vin.previous_output.txid)
+                    .ok()
+                    .and_then(|prev_tx| {
                         let vout_idx = vin.previous_output.vout as usize;
-                        if vout_idx < prev_tx.output.len() {
-                            Some(VinOutput {
-                                value: prev_tx.output[vout_idx].value.to_sat(),
-                                script_pub_key: prev_tx.output[vout_idx].script_pubkey.to_bytes(),
+                        prev_tx.output.get(vout_idx).map(|output| {
+                            VinOutput {
+                                value: output.value.to_sat(),
+                                script_pub_key: output.script_pubkey.to_bytes(),
                                 is_segwit: !vin.witness.is_empty(),
-                            })
-                        } else {
-                            None
-                        }
-                    },
-                    Err(_) => None
-                }
-            } else {
-                None
+                            }
+                        })
+                    })
             }
-        } else {
-            None
+            _ => None,
         };
 
 
