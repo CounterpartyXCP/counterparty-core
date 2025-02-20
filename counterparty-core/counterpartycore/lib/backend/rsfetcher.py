@@ -102,7 +102,8 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
         self.prefetch_queue_initialized = False
 
     def get_block(self, retry=0):
-        logger.trace("Fetching block with Rust backend.")
+        if hasattr(logger, "trace"):
+            logger.trace("Fetching block with Rust backend.")
         block = self.get_prefetched_block()
 
         if block is None:
@@ -123,6 +124,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
         return block
 
     def get_prefetched_block(self):
+        print("Getting prefetched block")
         try:
             logger.debug("Looking for block in prefetch queue...")
             while not self.stopped_event.is_set():
@@ -135,6 +137,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                     )
                     return block
                 except queue.Empty:
+                    print("Queue is empty")
                     logger.debug("Prefetch queue is empty; waiting for blocks...")
             # If stopped and queue is empty
             logger.debug("Fetcher stopped and prefetch queue is empty.")
@@ -144,6 +147,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
             raise e
 
     def prefetch_blocks(self):
+        print("Prefetching blocks")
         logger.debug("Starting to prefetch blocks...")
         expected_height = self.next_height
         self.running = True
@@ -151,6 +155,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
         while not self.stopped_event.is_set():
             try:
                 block = self.fetcher.get_block_non_blocking()
+                print(block)
                 if block is not None:
                     retry = 0
                     while not self.stopped_event.is_set():
@@ -181,6 +186,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                     # Use Event's wait method instead of time.sleep for better responsiveness
                     self.stopped_event.wait(retry / 10)  # noqa: S311
             except Exception as e:
+                print(e)
                 if str(e) == "Stopped error":
                     logger.warning(
                         "RSFetcher thread found stopped due to an error. Restarting in 5 seconds..."
