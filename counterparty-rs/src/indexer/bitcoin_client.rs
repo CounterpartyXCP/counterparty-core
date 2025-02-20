@@ -1,6 +1,6 @@
 use std::cmp::min;
 use std::iter::repeat;
-use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
+use std::{collections::HashMap, thread::JoinHandle};
 
 use crate::b58::b58_encode;
 use crate::utils::script_to_address;
@@ -22,11 +22,11 @@ use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use crate::indexer::block::VinOutput;
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, Weak};
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref GLOBAL_CLIENT: Mutex<Option<BitcoinClient>> = Mutex::new(None);
+    static ref GLOBAL_CLIENT: Mutex<Option<Weak<BitcoinClient>>> = Mutex::new(None);
 }
 
 use super::{
@@ -485,7 +485,7 @@ pub fn parse_transaction(
             vtxinwit.push(Vec::new());
         }
 
-        let vin_info = match ((!data.is_empty(), GLOBAL_CLIENT.lock().unwrap().as_ref())) {
+        let vin_info = match ((!data.is_empty(), GLOBAL_CLIENT.lock().unwrap().as_ref().and_then(|weak| weak.upgrade()))) {
             (true, Some(client)) => {
                 client
                     .get_raw_transaction(&vin.previous_output.txid)
@@ -655,6 +655,7 @@ impl Channels {
 
 #[derive(Clone)]
 pub struct BitcoinClient {
+    inner: Arc<BitcoinClientInner>,
     n: usize,
     config: Config,
     stopper: Stopper,
@@ -664,13 +665,15 @@ pub struct BitcoinClient {
 impl BitcoinClient {
     pub fn new(config: &Config, stopper: Stopper, n: usize) -> Result<Self, Error> {
         let client = Self {
+            inner: Arc::new(BitcoinClientInner::new(config)?),
             n,
             config: config.clone(),
             stopper,
             channels: Channels::new(n),
         };
         
-        *GLOBAL_CLIENT.lock().unwrap() = Some(client.clone());
+        let client_arc = Arc::new(client.clone());
+        *GLOBAL_CLIENT.lock().unwrap() = Some(Arc::downgrade(&client_arc));
         
         Ok(client)
     }
