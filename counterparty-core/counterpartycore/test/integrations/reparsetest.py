@@ -36,7 +36,7 @@ def prepare(network):
         db_file = "counterparty.testnet4.db"
         api_url = "http://localhost:44000/v2/"
     else:
-        args += ["--testnet4", "--backend-connect", "api.counterparty.io", "--backend-port", "8332"]
+        args += ["--backend-connect", "api.counterparty.io", "--backend-port", "8332"]
         db_file = "counterparty.db"
         api_url = "http://localhost:4000/v2/"
 
