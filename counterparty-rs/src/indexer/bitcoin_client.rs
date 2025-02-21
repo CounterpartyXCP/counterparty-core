@@ -663,7 +663,6 @@ impl Channels {
 
 #[derive(Clone)]
 pub struct BitcoinClient {
-    inner: Arc<BitcoinClientInner>,
     n: usize,
     config: Config,
     stopper: Stopper,
@@ -673,7 +672,6 @@ pub struct BitcoinClient {
 impl BitcoinClient {
     pub fn new(config: &Config, stopper: Stopper, n: usize) -> Result<Self, Error> {
         let client = Self {
-            inner: Arc::new(BitcoinClientInner::new(config)?),
             n,
             config: config.clone(),
             stopper,

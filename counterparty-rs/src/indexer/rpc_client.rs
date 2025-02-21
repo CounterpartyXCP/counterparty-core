@@ -44,6 +44,7 @@ struct RpcError {
     message: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum BatchRpcError {
     Http(reqwest::Error),
