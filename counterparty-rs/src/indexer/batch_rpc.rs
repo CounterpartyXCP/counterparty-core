@@ -64,14 +64,6 @@ impl From<serde_json::Error> for BatchRpcError {
 
 impl BatchRpcClient {
     pub fn new(url: String, user: String, password: String) -> Result<Self, BatchRpcError> {
-        static INIT: std::sync::Once = std::sync::Once::new();
-        INIT.call_once(|| {
-            // Configure uniquement pour reqwest et ses composants
-            std::env::set_var("REQWEST_LOG", "off");
-            std::env::set_var("HYPER_LOG", "off");
-            std::env::set_var("RSFETCHER_LOG", "off");
-        });
-
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         

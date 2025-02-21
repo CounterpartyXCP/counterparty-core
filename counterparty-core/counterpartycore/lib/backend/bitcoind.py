@@ -542,7 +542,6 @@ def list_unspent(source, allow_unconfirmed_inputs):
 def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
     if vin_info is None:
-        logger.error("vin info not found")
         try:
             vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
             is_segwit = vin_ctx["segwit"]
@@ -551,7 +550,6 @@ def get_vin_info(vin, no_retry=False):
         except exceptions.BitcoindRPCError as e:
             raise exceptions.DecodeError("vin not found") from e
     else:
-        logger.warning("Using cached vin info")
         return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
 
 

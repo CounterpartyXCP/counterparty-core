@@ -25,9 +25,6 @@ use crate::indexer::block::VinOutput;
 use std::sync::{Arc, Mutex, Weak};
 use lazy_static::lazy_static;
 
-lazy_static! {
-    static ref GLOBAL_CLIENT: Mutex<Option<Weak<BitcoinClient>>> = Mutex::new(None);
-}
 
 use crate::indexer::batch_rpc::{BatchRpcClient, BATCH_CLIENT};
 
@@ -626,7 +623,6 @@ pub trait BitcoinRpc<B>: Send + Clone + 'static {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error>;
     fn get_block(&self, hash: &BlockHash) -> Result<Box<B>, Error>;
     fn get_blockchain_height(&self) -> Result<u32, Error>;
-    fn get_raw_transaction(&self, txid: &Txid) -> Result<bitcoin::Transaction, Error>;
 }
 
 struct GetBlockHash {
@@ -655,7 +651,6 @@ struct Channels {
     get_block_hash: Channel<GetBlockHash>,
     get_block: Channel<GetBlock>,
     get_blockchain_height: Channel<GetBlockchainHeight>,
-    get_raw_transaction: Channel<GetRawTransaction>,
 }
 
 impl Channels {
@@ -664,7 +659,6 @@ impl Channels {
             get_block_hash: bounded(n),
             get_block: bounded(n),
             get_blockchain_height: bounded(n),
-            get_raw_transaction: bounded(n),
         }
     }
 }
@@ -687,10 +681,6 @@ impl BitcoinClient {
             stopper,
             channels: Channels::new(n),
         };
-        
-        let client_arc = Arc::new(client.clone());
-        *GLOBAL_CLIENT.lock().unwrap() = Some(Arc::downgrade(&client_arc));
-        
         Ok(client)
     }
 
@@ -730,11 +720,6 @@ impl BitcoinClient {
               recv(channels.get_blockchain_height.1) -> msg => {
                 if let Ok(GetBlockchainHeight {sender}) = msg {
                   sender.send(client.get_blockchain_height())?;
-                }
-              },
-              recv(channels.get_raw_transaction.1) -> msg => {
-                if let Ok(GetRawTransaction {txid, sender}) = msg {
-                    sender.send(client.get_raw_transaction(&txid))?;
                 }
               }
             }
@@ -791,22 +776,6 @@ impl BitcoinRpc<Block> for BitcoinClient {
             }
         }
     }
-
-    fn get_raw_transaction(&self, txid: &Txid) -> Result<bitcoin::Transaction, Error> {
-        let (tx, rx) = bounded(1);
-        self.channels.get_raw_transaction.0.send(GetRawTransaction {
-            txid: *txid,
-            sender: tx,
-        })?;
-        let (id, done) = self.stopper.subscribe()?;
-        select! {
-            recv(done) -> _ => Err(Error::Stopped),
-            recv(rx) -> result => {
-                self.stopper.unsubscribe(id)?;
-                result?
-            }
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -838,10 +807,6 @@ impl BitcoinRpc<Block> for BitcoinClientInner {
 
     fn get_blockchain_height(&self) -> Result<u32, Error> {
         Ok(self.client.get_blockchain_info()?.blocks as u32)
-    }
-
-    fn get_raw_transaction(&self, txid: &Txid) -> Result<bitcoin::Transaction, Error> {
-        Ok(self.client.get_raw_transaction(txid, None)?)
     }
 }
 

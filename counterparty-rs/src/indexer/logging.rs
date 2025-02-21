@@ -38,7 +38,7 @@ impl<L> ConnectionPoolFilter<L> {
         message.contains("reuse idle connection") ||
         message.contains("put; add idle connection") ||
         message.contains("pooling idle connection") ||
-        hmessage.contains("hyper_util")
+        message.contains("hyper_util")
     }
 }
 
