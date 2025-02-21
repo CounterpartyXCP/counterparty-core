@@ -1,10 +1,9 @@
+use super::config::Config;
 use pyo3::{
     exceptions::PyException,
     types::{PyAnyMethods, PyBytes, PyDict, PyTuple},
     IntoPy, PyObject, Python,
 };
-use std::collections::HashMap;
-use super::config::Config;
 
 #[derive(Clone)]
 pub struct VinOutput {
@@ -34,7 +33,11 @@ impl IntoPy<PyObject> for Vin {
 
         if let Some(info) = self.info {
             let info_dict = PyDict::new_bound(py);
-            info_dict.set_item("script_pub_key", PyBytes::new_bound(py, &info.script_pub_key))
+            info_dict
+                .set_item(
+                    "script_pub_key",
+                    PyBytes::new_bound(py, &info.script_pub_key),
+                )
                 .unwrap();
             info_dict.set_item("value", info.value).unwrap();
             info_dict.set_item("is_segwit", info.is_segwit).unwrap();
@@ -52,7 +55,6 @@ pub struct Vout {
     pub value: u64,
     pub script_pub_key: Vec<u8>,
 }
-
 
 impl IntoPy<PyObject> for Vout {
     #[allow(clippy::unwrap_used)]

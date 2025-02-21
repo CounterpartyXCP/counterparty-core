@@ -1,7 +1,7 @@
 use std::{fs::OpenOptions, io, sync::Once};
 
 use colored::{Color, Colorize};
-use tracing::{level_filters::LevelFilter, Event, Level, Subscriber, span};
+use tracing::{level_filters::LevelFilter, span, Event, Level, Subscriber};
 use tracing_subscriber::{
     fmt::{
         format::Writer,
@@ -10,7 +10,7 @@ use tracing_subscriber::{
         writer::BoxMakeWriter,
         FmtContext, FormatEvent, FormatFields,
     },
-    layer::{SubscriberExt, Context},
+    layer::{Context, SubscriberExt},
     registry::LookupSpan,
     Layer, Registry,
 };
@@ -38,11 +38,9 @@ impl<L> ConnectionPoolFilter<L> {
         let mut visitor = MessageVisitor(&mut message);
         event.record(&mut visitor);
 
-        message.contains("take?") ||
-        message.contains("reuse idle connection") ||
-        message.contains("put; add idle connection") ||
-        message.contains("pooling idle connection") ||
-        message.contains("hyper_util")
+        message.contains("take?")
+            || message.contains("connection")
+            || message.contains("hyper_util")
     }
 }
 
@@ -100,37 +98,35 @@ pub fn setup_logging(config: &Config) {
             .open(&config.log_file)
             .expect("Failed to open log file");
 
-        let file_writer = BoxMakeWriter::new(file);
-        let stderr_writer = BoxMakeWriter::new(io::stderr);
-
         let file_layer = ConnectionPoolFilter::new(
             layer()
                 .json()
                 .with_timer(custom_time_format())
-                .with_writer(file_writer)
+                .with_writer(BoxMakeWriter::new(file))
                 .with_filter(LevelFilter::TRACE)
+                .boxed(),
         );
 
-        let stderr_layer: Box<dyn Layer<_> + Send + Sync> = if config.json_format {
-            Box::new(ConnectionPoolFilter::new(
+        let stderr_layer = if config.json_format {
+            ConnectionPoolFilter::new(
                 layer()
                     .json()
                     .with_timer(custom_time_format())
-                    .with_writer(stderr_writer)
+                    .with_writer(BoxMakeWriter::new(io::stderr))
                     .with_filter(LevelFilter::from(config.log_level))
-            ))
+                    .boxed(),
+            )
         } else {
-            Box::new(ConnectionPoolFilter::new(
+            ConnectionPoolFilter::new(
                 layer()
                     .event_format(new_custom_formatter())
-                    .with_writer(stderr_writer)
+                    .with_writer(BoxMakeWriter::new(io::stderr))
                     .with_filter(LevelFilter::from(config.log_level))
-            ))
+                    .boxed(),
+            )
         };
 
-        let subscriber = Registry::default()
-            .with(file_layer)
-            .with(stderr_layer);
+        let subscriber = Registry::default().with(file_layer).with(stderr_layer);
 
         tracing::subscriber::set_global_default(subscriber)
             .expect("Failed to set global subscriber");

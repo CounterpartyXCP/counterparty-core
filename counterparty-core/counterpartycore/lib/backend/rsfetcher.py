@@ -48,7 +48,6 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                 "log_file": config.FETCHER_LOG,
                 "json_format": config.JSON_LOGS,
                 "only_write_in_reorg_window": True,
-                "log_level": "error",
             }
             if (
                 isinstance(config.LOG_EXCLUDE_FILTERS, list)

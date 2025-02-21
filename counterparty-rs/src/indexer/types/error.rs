@@ -1,11 +1,8 @@
-use std::sync;
-
+use crossbeam_channel::SendError;
 use pyo3::exceptions::PyException;
 use pyo3::PyErr;
+use std::sync;
 use thiserror::Error;
-use std::array::TryFromSliceError;
-use std::sync::PoisonError;
-use crossbeam_channel::{RecvError, SendError};
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -74,5 +71,3 @@ impl From<Error> for PyErr {
         PyException::new_err(value.to_string())
     }
 }
-
-

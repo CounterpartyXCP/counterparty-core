@@ -7,13 +7,13 @@ mod constants;
 mod database;
 mod handlers;
 mod logging;
+mod rpc_client;
 mod stopper;
 #[cfg(test)]
 mod test_utils;
 mod types;
 mod utils;
 mod workers;
-mod rpc_client;
 
 use std::thread::JoinHandle;
 
@@ -107,9 +107,12 @@ impl Deserializer {
         parse_vouts: bool,
         py: Python<'_>,
     ) -> PyResult<PyObject> {
-        let decoded_tx = hex::decode(tx_hex).map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to decode hex transaction"))?;
-        let transaction: Transaction =
-            deserialize(&decoded_tx).map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to deserialize transaction"))?;
+        let decoded_tx = hex::decode(tx_hex).map_err(|_| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to decode hex transaction")
+        })?;
+        let transaction: Transaction = deserialize(&decoded_tx).map_err(|_| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to deserialize transaction")
+        })?;
 
         let deserialized_transaction = self::bitcoin_client::parse_transaction(
             &transaction,
@@ -127,8 +130,12 @@ impl Deserializer {
         parse_vouts: bool,
         py: Python<'_>,
     ) -> PyResult<PyObject> {
-        let decoded_block = hex::decode(block_hex).map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to decode hex block"))?;
-        let block: Block = deserialize(&decoded_block).map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to deserialize transaction"))?;
+        let decoded_block = hex::decode(block_hex).map_err(|_| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to decode hex block")
+        })?;
+        let block: Block = deserialize(&decoded_block).map_err(|_| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to deserialize transaction")
+        })?;
 
         let deserialized_block =
             self::bitcoin_client::parse_block(block, &self.config, height, parse_vouts);

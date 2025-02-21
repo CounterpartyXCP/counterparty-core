@@ -1,7 +1,7 @@
 use std::cmp::max;
 
 use crossbeam_channel::bounded;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
 use crate::indexer::{
     bitcoin_client::BitcoinClient, config::Config, database::Database, logging::setup_logging,

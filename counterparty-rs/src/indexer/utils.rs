@@ -7,7 +7,7 @@ use std::{
 
 use crossbeam_channel::{after, select, unbounded, Receiver, Sender};
 use rand::{thread_rng, Rng};
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 use uuid::Uuid;
 
 use super::{stopper::Stopper, types::error::Error};

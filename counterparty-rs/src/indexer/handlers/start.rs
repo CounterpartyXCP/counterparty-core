@@ -10,7 +10,7 @@ use crate::indexer::{
     workers::{consumer, extractor, fetcher, new_worker_pool, orderer, producer, reporter, writer},
 };
 use crossbeam_channel::{bounded, unbounded};
-use tracing::{info, debug};
+use tracing::{debug, info};
 
 pub fn new<D>(
     parallelism: usize,

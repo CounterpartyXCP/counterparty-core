@@ -1,6 +1,7 @@
 use std::cmp::min;
+use std::collections::HashMap;
 use std::iter::repeat;
-use std::{collections::HashMap, thread::JoinHandle};
+use std::thread::JoinHandle;
 
 use crate::b58::b58_encode;
 use crate::utils::script_to_address;
@@ -12,7 +13,7 @@ use bitcoin::{
         OP_PUSHNUM_3, OP_RETURN,
     },
     script::Instruction::{Op, PushBytes},
-    Block, BlockHash, Script, TxOut, Txid,
+    Block, BlockHash, Script, TxOut,
 };
 use bitcoincore_rpc::bitcoin::script::Instruction;
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
@@ -470,25 +471,32 @@ pub fn parse_transaction(
     let mut prev_txs = vec![None; tx.input.len()];
     if !data.is_empty() {
         if BATCH_CLIENT.lock().unwrap().is_none() {
-            *BATCH_CLIENT.lock().unwrap() = Some(BatchRpcClient::new(
-                config.rpc_address.clone(),
-                config.rpc_user.clone(),
-                config.rpc_password.clone(),
-            ).unwrap());
+            *BATCH_CLIENT.lock().unwrap() = Some(
+                BatchRpcClient::new(
+                    config.rpc_address.clone(),
+                    config.rpc_user.clone(),
+                    config.rpc_password.clone(),
+                )
+                .unwrap(),
+            );
         }
 
         if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
-            let input_txids: Vec<_> = tx.input.iter()
+            let input_txids: Vec<_> = tx
+                .input
+                .iter()
                 .map(|vin| vin.previous_output.txid)
                 .collect();
-            prev_txs = batch_client.get_transactions(&input_txids).unwrap_or_default();
+            prev_txs = batch_client
+                .get_transactions(&input_txids)
+                .unwrap_or_default();
         }
     }
 
     // Always process all inputs
     for (i, vin) in tx.input.iter().enumerate() {
         let hash = vin.previous_output.txid.to_string();
-        
+
         if !vin.witness.is_empty() {
             vtxinwit.push(
                 vin.witness
@@ -504,12 +512,10 @@ pub fn parse_transaction(
         let vin_info = prev_txs.get(i).and_then(|prev_tx| {
             prev_tx.as_ref().and_then(|tx| {
                 let vout_idx = vin.previous_output.vout as usize;
-                tx.output.get(vout_idx).map(|output| {
-                    VinOutput {
-                        value: output.value.to_sat(),
-                        script_pub_key: output.script_pubkey.to_bytes(),
-                        is_segwit: !vin.witness.is_empty(),
-                    }
+                tx.output.get(vout_idx).map(|output| VinOutput {
+                    value: output.value.to_sat(),
+                    script_pub_key: output.script_pubkey.to_bytes(),
+                    is_segwit: !vin.witness.is_empty(),
                 })
             })
         });
@@ -655,7 +661,6 @@ impl Channels {
     }
 }
 
-
 #[derive(Clone)]
 pub struct BitcoinClient {
     inner: Arc<BitcoinClientInner>,
@@ -720,7 +725,6 @@ impl BitcoinClient {
     }
 }
 
-
 impl BitcoinRpc<Block> for BitcoinClient {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error> {
         let (tx, rx) = bounded(1);
@@ -782,7 +786,8 @@ impl BitcoinClientInner {
             config.rpc_address.clone(),
             config.rpc_user.clone(),
             config.rpc_password.clone(),
-        ).map_err(|e| Error::BitcoinRpc(format!("Failed to create BatchRpcClient: {:#?}", e)))?;
+        )
+        .map_err(|e| Error::BitcoinRpc(format!("Failed to create BatchRpcClient: {:#?}", e)))?;
 
         Ok(BitcoinClientInner {
             client: Arc::new(client),
@@ -792,27 +797,32 @@ impl BitcoinClientInner {
 
 impl BitcoinRpc<Block> for BitcoinClientInner {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error> {
-        self.client.get_block_hash(height)
+        self.client
+            .get_block_hash(height)
             .map_err(|e| Error::BitcoinRpc(format!("Failed to get block hash: {:#?}", e)))
     }
 
     fn get_block(&self, hash: &BlockHash) -> Result<Box<Block>, Error> {
-        self.client.get_block(hash)
+        self.client
+            .get_block(hash)
             .map(Box::new)
             .map_err(|e| Error::BitcoinRpc(format!("Failed to get block: {:#?}", e)))
     }
 
     fn get_blockchain_height(&self) -> Result<u32, Error> {
-        self.client.get_blockchain_info()
+        self.client
+            .get_blockchain_info()
             .map_err(|e| Error::BitcoinRpc(format!("Failed to get blockchain info: {:#?}", e)))
             .and_then(|info| {
-                info["blocks"].as_u64()
-                    .ok_or_else(|| Error::BitcoinRpc("Invalid blocks field in blockchain info".into()))
+                info["blocks"]
+                    .as_u64()
+                    .ok_or_else(|| {
+                        Error::BitcoinRpc("Invalid blocks field in blockchain info".into())
+                    })
                     .map(|h| h as u32)
             })
     }
 }
-
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]

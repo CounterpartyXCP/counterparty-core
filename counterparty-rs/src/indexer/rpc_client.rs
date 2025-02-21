@@ -1,15 +1,15 @@
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use bitcoin::Transaction;
 use bitcoin::Txid;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use bitcoin::{Block, BlockHash};
+use lazy_static::lazy_static;
 use reqwest::blocking::Client as HttpClient;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::collections::HashMap;
-use lazy_static::lazy_static;
-use bitcoin::{Block, BlockHash};
 use std::str::FromStr;
+use std::sync::{Arc, Mutex};
 
 lazy_static! {
     pub(crate) static ref BATCH_CLIENT: Mutex<Option<BatchRpcClient>> = Mutex::new(None);
@@ -68,12 +68,12 @@ impl BatchRpcClient {
     pub fn new(url: String, user: String, password: String) -> Result<Self, BatchRpcError> {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        
+
         let auth = format!("{}:{}", user, password);
         let auth = format!("Basic {}", BASE64.encode(auth));
-        
+
         let client = HttpClient::builder()
-            .connection_verbose(false)  // Désactive les logs verbeux de reqwest
+            .connection_verbose(false) // Désactive les logs verbeux de reqwest
             .default_headers(headers)
             .pool_max_idle_per_host(32)
             .pool_idle_timeout(std::time::Duration::from_secs(90))
@@ -89,7 +89,10 @@ impl BatchRpcClient {
     }
 
     // Le reste du code reste inchangé...
-    pub fn get_transactions(&self, txids: &[Txid]) -> Result<Vec<Option<Transaction>>, BatchRpcError> {
+    pub fn get_transactions(
+        &self,
+        txids: &[Txid],
+    ) -> Result<Vec<Option<Transaction>>, BatchRpcError> {
         if txids.is_empty() {
             return Ok(vec![]);
         }
@@ -107,60 +110,76 @@ impl BatchRpcClient {
         }
 
         if uncached_txids.is_empty() {
-            return Ok(txids.iter()
+            return Ok(txids
+                .iter()
                 .map(|txid| result_map.get(txid).cloned().flatten())
                 .collect());
         }
 
-        let requests: Vec<RpcRequest> = uncached_txids.iter().enumerate().map(|(i, txid)| {
-            RpcRequest {
+        let requests: Vec<RpcRequest> = uncached_txids
+            .iter()
+            .enumerate()
+            .map(|(i, txid)| RpcRequest {
                 jsonrpc: "2.0".to_string(),
                 id: i as u64,
                 method: "getrawtransaction".to_string(),
                 params: vec![json!(txid.to_string()), json!(false)],
-            }
-        }).collect();
+            })
+            .collect();
 
         let mut headers = HeaderMap::new();
         headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
 
-        let response = self.client
+        let response = self
+            .client
             .post(&self.url)
             .headers(headers)
             .json(&requests)
             .send()?;
 
         if !response.status().is_success() {
-            return Err(BatchRpcError::Rpc(format!("HTTP error: {}", response.status())));
+            return Err(BatchRpcError::Rpc(format!(
+                "HTTP error: {}",
+                response.status()
+            )));
         }
 
         let responses: Vec<RpcResponse> = response.json()?;
-        
+
         for (txid, response) in uncached_txids.iter().zip(responses.into_iter()) {
             let tx = match response {
-                RpcResponse { result: Some(value), error: None, .. } => {
-                    let hex = value.as_str()
-                        .ok_or_else(|| BatchRpcError::InvalidResponse("Expected hex string".into()))?;
-                    let bytes = hex::decode(hex).map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))?;
+                RpcResponse {
+                    result: Some(value),
+                    error: None,
+                    ..
+                } => {
+                    let hex = value.as_str().ok_or_else(|| {
+                        BatchRpcError::InvalidResponse("Expected hex string".into())
+                    })?;
+                    let bytes = hex::decode(hex)
+                        .map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))?;
                     let tx: Transaction = bitcoin::consensus::deserialize(&bytes)
                         .map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))?;
                     Some(tx)
-                },
-                RpcResponse { error: Some(error), .. } => {
+                }
+                RpcResponse {
+                    error: Some(error), ..
+                } => {
                     if error.code == -5 {
                         None
                     } else {
                         return Err(BatchRpcError::Rpc(error.message));
                     }
-                },
-                _ => None
+                }
+                _ => None,
             };
-            
+
             cache.insert(*txid, tx.clone());
             result_map.insert(*txid, tx);
         }
 
-        Ok(txids.iter()
+        Ok(txids
+            .iter()
             .map(|txid| result_map.get(txid).cloned().flatten())
             .collect())
     }
@@ -176,29 +195,40 @@ impl BatchRpcClient {
         let mut headers = HeaderMap::new();
         headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
 
-        let response = self.client
+        let response = self
+            .client
             .post(&self.url)
             .headers(headers)
             .json(&request)
             .send()?;
 
         if !response.status().is_success() {
-            return Err(BatchRpcError::Rpc(format!("HTTP error: {}", response.status())));
+            return Err(BatchRpcError::Rpc(format!(
+                "HTTP error: {}",
+                response.status()
+            )));
         }
 
         let response: RpcResponse = response.json()?;
-        
+
         match response {
-            RpcResponse { result: Some(value), error: None, .. } => {
-                let hash_str = value.as_str()
-                    .ok_or_else(|| BatchRpcError::InvalidResponse("Expected block hash string".into()))?;
+            RpcResponse {
+                result: Some(value),
+                error: None,
+                ..
+            } => {
+                let hash_str = value.as_str().ok_or_else(|| {
+                    BatchRpcError::InvalidResponse("Expected block hash string".into())
+                })?;
                 BlockHash::from_str(hash_str)
                     .map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))
-            },
-            RpcResponse { error: Some(error), .. } => {
-                Err(BatchRpcError::Rpc(error.message))
-            },
-            _ => Err(BatchRpcError::InvalidResponse("Invalid response format".into()))
+            }
+            RpcResponse {
+                error: Some(error), ..
+            } => Err(BatchRpcError::Rpc(error.message)),
+            _ => Err(BatchRpcError::InvalidResponse(
+                "Invalid response format".into(),
+            )),
         }
     }
 
@@ -213,31 +243,42 @@ impl BatchRpcClient {
         let mut headers = HeaderMap::new();
         headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
 
-        let response = self.client
+        let response = self
+            .client
             .post(&self.url)
             .headers(headers)
             .json(&request)
             .send()?;
 
         if !response.status().is_success() {
-            return Err(BatchRpcError::Rpc(format!("HTTP error: {}", response.status())));
+            return Err(BatchRpcError::Rpc(format!(
+                "HTTP error: {}",
+                response.status()
+            )));
         }
 
         let response: RpcResponse = response.json()?;
-        
+
         match response {
-            RpcResponse { result: Some(value), error: None, .. } => {
-                let hex = value.as_str()
-                    .ok_or_else(|| BatchRpcError::InvalidResponse("Expected block hex string".into()))?;
-                let bytes = hex::decode(hex)
-                    .map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))?;
+            RpcResponse {
+                result: Some(value),
+                error: None,
+                ..
+            } => {
+                let hex = value.as_str().ok_or_else(|| {
+                    BatchRpcError::InvalidResponse("Expected block hex string".into())
+                })?;
+                let bytes =
+                    hex::decode(hex).map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))?;
                 bitcoin::consensus::deserialize(&bytes)
                     .map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))
-            },
-            RpcResponse { error: Some(error), .. } => {
-                Err(BatchRpcError::Rpc(error.message))
-            },
-            _ => Err(BatchRpcError::InvalidResponse("Invalid response format".into()))
+            }
+            RpcResponse {
+                error: Some(error), ..
+            } => Err(BatchRpcError::Rpc(error.message)),
+            _ => Err(BatchRpcError::InvalidResponse(
+                "Invalid response format".into(),
+            )),
         }
     }
 
@@ -252,22 +293,34 @@ impl BatchRpcClient {
         let mut headers = HeaderMap::new();
         headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
 
-        let response = self.client
+        let response = self
+            .client
             .post(&self.url)
             .headers(headers)
             .json(&request)
             .send()?;
 
         if !response.status().is_success() {
-            return Err(BatchRpcError::Rpc(format!("HTTP error: {}", response.status())));
+            return Err(BatchRpcError::Rpc(format!(
+                "HTTP error: {}",
+                response.status()
+            )));
         }
 
         let response: RpcResponse = response.json()?;
-        
+
         match response {
-            RpcResponse { result: Some(value), error: None, .. } => Ok(value),
-            RpcResponse { error: Some(error), .. } => Err(BatchRpcError::Rpc(error.message)),
-            _ => Err(BatchRpcError::InvalidResponse("Invalid response format".into()))
+            RpcResponse {
+                result: Some(value),
+                error: None,
+                ..
+            } => Ok(value),
+            RpcResponse {
+                error: Some(error), ..
+            } => Err(BatchRpcError::Rpc(error.message)),
+            _ => Err(BatchRpcError::InvalidResponse(
+                "Invalid response format".into(),
+            )),
         }
     }
 }
