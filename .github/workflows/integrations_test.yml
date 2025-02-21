@@ -71,4 +71,5 @@ jobs:
       test-path: ${{ matrix.test-path }}
       install_bitcoin: ${{ matrix.install_bitcoin || false }}
       only_on_develop:  ${{ matrix.only_on_develop || false }}
+      os: ${{ matrix.os || 'ubuntu-22.04' }}
     secrets: inherit
