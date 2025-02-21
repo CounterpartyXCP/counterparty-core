@@ -30,6 +30,11 @@ impl<L> ConnectionPoolFilter<L> {
     }
 
     fn is_connection_pool_message(event: &Event) -> bool {
+        let target = event.metadata().target();
+        if target.starts_with("hyper_util") {
+            return true;
+        }
+
         let mut message = String::new();
         let mut visitor = MessageVisitor(&mut message);
         event.record(&mut visitor);
