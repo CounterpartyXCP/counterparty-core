@@ -7,6 +7,7 @@ import pytest
 from counterparty_rs import utils as pycoin_rs_utils
 from counterpartycore.lib import config
 from counterpartycore.lib.parser import deserialize, gettxinfo
+from counterpartycore.lib.utils import helpers
 
 
 def deserialize_bitcoinlib(tx_hex):
@@ -146,6 +147,7 @@ def test_deserialize():
 
 
 def test_deserialize_mpma(blockchain_mock, monkeypatch):
+    helpers.setup_bitcoinutils("mainnet")
     original_network_name = config.NETWORK_NAME
     original_address_version = config.ADDRESSVERSION
     config.NETWORK_NAME = "mainnet"
@@ -170,6 +172,7 @@ def test_deserialize_mpma(blockchain_mock, monkeypatch):
 
     config.NETWORK_NAME = original_network_name
     config.ADDRESSVERSION = original_address_version
+    helpers.setup_bitcoinutils("regtest")
 
 
 def test_deserialize_error():

@@ -55,7 +55,9 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
     def get_vin_info(self, vin):
         source = self.source_by_txid[vin["hash"]]
         value = int(10 * config.UNIT)
-        script_pub_key = composer.address_to_script_pub_key(source, network="regtest").to_hex()
+        script_pub_key = composer.address_to_script_pub_key(
+            source, network=config.NETWORK_NAME
+        ).to_hex()
         is_segwit = composer.is_segwit_output(script_pub_key)
         return value, script_pub_key, is_segwit
 
@@ -137,7 +139,10 @@ def list_unspent(source, allow_unconfirmed_inputs=True):
 
 
 def get_vins_info(vins, no_retry=False):
-    return [BlockchainMock().get_vin_info(vin) for vin in vins]
+    try:
+        return [BlockchainMock().get_vin_info(vin) for vin in vins]
+    except KeyError as e:
+        raise exceptions.DecodeError("vin not found") from e
 
 
 def get_vin_info(vin, no_retry=False):

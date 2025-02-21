@@ -809,7 +809,12 @@ def test_get_transaction_sources_checksig(monkeypatch, monkeymodule):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
+    def get_vins_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return [(10000, binascii.unhexlify(op_checksig_script), False)]
+
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
     assert gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]}) == (
         "1FwkKA9cqpNRFTpVaokdRjT9Xamvebrwcu",
         10000,
@@ -837,7 +842,12 @@ def test_get_transaction_sources_multisig(monkeypatch):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
+    def get_vins_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return [(10000, binascii.unhexlify(op_checksig_script), False)]
+
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     data = ARC4(binascii.unhexlify("abcdef")).encrypt(b"0" + config.PREFIX + b"pubkeyhash")
     monkeypatch.setattr(
@@ -860,7 +870,12 @@ def test_get_transaction_sources_unknown_type(monkeypatch):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
+    def get_vins_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return [(10000, binascii.unhexlify(op_checksig_script), False)] * len(args[0])
+
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     monkeypatch.setattr(
         "counterpartycore.lib.utils.script.script_to_asm",
@@ -973,7 +988,12 @@ def test_get_transaction_source_from_p2sh(monkeypatch):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
+    def get_vins_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return [(10000, binascii.unhexlify(op_checksig_script), False)]
+
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     with ProtocolChangesDisabled(["prevout_segwit_fix"]):
         assert gettxinfo.get_transaction_source_from_p2sh(
