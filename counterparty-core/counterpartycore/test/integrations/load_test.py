@@ -6,7 +6,7 @@ from counterpartycore.test.integrations.locustrunner import run_locust
 
 
 def test_load():
-    sh_counterparty_server, backend_url, db_file, api_url = reparsetest.prepare("mainnet")
+    sh_counterparty_server, db_file, api_url = reparsetest.prepare("mainnet")
     sh_counterparty_server("bootstrap")
 
     try:

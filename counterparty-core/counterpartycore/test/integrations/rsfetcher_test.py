@@ -5,16 +5,15 @@ import time
 
 from counterpartycore.lib import config
 from counterpartycore.lib.backend import rsfetcher
-from counterpartycore.test.integrations.http2https import start_http_proxy, stop_http_proxy
 
 TEST_DB_PATH = os.path.join(tempfile.gettempdir(), "rsfetcher_test_db")
 
 if os.path.exists(TEST_DB_PATH):
     shutil.rmtree(TEST_DB_PATH)
 
-PROXY_PORT = 48500
+
 TEST_CONFIG = {
-    "rpc_address": f"http://127.0.0.1:{PROXY_PORT}",
+    "rpc_address": "https://api.counterparty.io:8332",
     "rpc_user": "rpc",
     "rpc_password": "rpc",
     "db_dir": TEST_DB_PATH,
@@ -32,16 +31,7 @@ def test_fetcher_singleton():
     config.TESTNET3 = False
     config.TESTNET4 = False
 
-    proxy_server = None
     try:
-        # Start proxy with proper error handling
-        proxy_server = start_http_proxy(
-            "https://api.counterparty.io:8332",
-            port=PROXY_PORT,
-            rpc_user=TEST_CONFIG["rpc_user"],
-            rpc_password=TEST_CONFIG["rpc_password"],
-        )
-
         # Initialize fetcher and start at specific height
         fetcher = rsfetcher.RSFetcher(indexer_config=TEST_CONFIG)
         fetcher.start(start_height=884596)
@@ -84,8 +74,6 @@ def test_fetcher_singleton():
     finally:
         if fetcher:
             fetcher.stop()
-        if proxy_server:
-            stop_http_proxy(proxy_server)
 
     # Reset config
     config.NETWORK_NAME = "regtest"

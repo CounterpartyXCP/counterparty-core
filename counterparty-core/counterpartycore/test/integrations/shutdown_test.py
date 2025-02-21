@@ -6,7 +6,6 @@ from io import StringIO
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.test.integrations import reparsetest
-from http2https import PROXY_PORT, start_http_proxy, stop_http_proxy
 
 
 def is_port_in_used(port):
@@ -21,11 +20,9 @@ def is_port_in_used(port):
 
 
 def test_shutdown():
-    sh_counterparty_server, backend_url, db_file, api_url = reparsetest.prepare("testnet4")
+    reparsetest.prepare("testnet4")
 
     try:
-        start_http_proxy(backend_url)
-
         parser = arg_parser(no_config_file=True)
         args = parser.parse_args(
             [
@@ -36,9 +33,10 @@ def test_shutdown():
                 reparsetest.DATA_DIR,
                 "start",
                 "--backend-connect",
-                "127.0.0.1",
+                "testnet4.counterparty.io",
                 "--backend-port",
-                f"{PROXY_PORT}",
+                "48332",
+                "--backend-ssl",
                 "--wsgi-server",
                 "gunicorn",
             ]
@@ -62,7 +60,6 @@ def test_shutdown():
     finally:
         print("Shutting down server...")
         counterparty_server.stop()
-        stop_http_proxy()
 
     logs = log_stream.getvalue()
 

@@ -8,6 +8,8 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use lazy_static::lazy_static;
+use bitcoin::{Block, BlockHash};
+use std::str::FromStr;
 
 lazy_static! {
     pub(crate) static ref BATCH_CLIENT: Mutex<Option<BatchRpcClient>> = Mutex::new(None);
@@ -161,5 +163,111 @@ impl BatchRpcClient {
         Ok(txids.iter()
             .map(|txid| result_map.get(txid).cloned().flatten())
             .collect())
+    }
+
+    pub fn get_block_hash(&self, height: u32) -> Result<BlockHash, BatchRpcError> {
+        let request = RpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: 0,
+            method: "getblockhash".to_string(),
+            params: vec![json!(height)],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
+
+        let response = self.client
+            .post(&self.url)
+            .headers(headers)
+            .json(&request)
+            .send()?;
+
+        if !response.status().is_success() {
+            return Err(BatchRpcError::Rpc(format!("HTTP error: {}", response.status())));
+        }
+
+        let response: RpcResponse = response.json()?;
+        
+        match response {
+            RpcResponse { result: Some(value), error: None, .. } => {
+                let hash_str = value.as_str()
+                    .ok_or_else(|| BatchRpcError::InvalidResponse("Expected block hash string".into()))?;
+                BlockHash::from_str(hash_str)
+                    .map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))
+            },
+            RpcResponse { error: Some(error), .. } => {
+                Err(BatchRpcError::Rpc(error.message))
+            },
+            _ => Err(BatchRpcError::InvalidResponse("Invalid response format".into()))
+        }
+    }
+
+    pub fn get_block(&self, hash: &BlockHash) -> Result<Block, BatchRpcError> {
+        let request = RpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: 0,
+            method: "getblock".to_string(),
+            params: vec![json!(hash.to_string()), json!(0)],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
+
+        let response = self.client
+            .post(&self.url)
+            .headers(headers)
+            .json(&request)
+            .send()?;
+
+        if !response.status().is_success() {
+            return Err(BatchRpcError::Rpc(format!("HTTP error: {}", response.status())));
+        }
+
+        let response: RpcResponse = response.json()?;
+        
+        match response {
+            RpcResponse { result: Some(value), error: None, .. } => {
+                let hex = value.as_str()
+                    .ok_or_else(|| BatchRpcError::InvalidResponse("Expected block hex string".into()))?;
+                let bytes = hex::decode(hex)
+                    .map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))?;
+                bitcoin::consensus::deserialize(&bytes)
+                    .map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))
+            },
+            RpcResponse { error: Some(error), .. } => {
+                Err(BatchRpcError::Rpc(error.message))
+            },
+            _ => Err(BatchRpcError::InvalidResponse("Invalid response format".into()))
+        }
+    }
+
+    pub fn get_blockchain_info(&self) -> Result<Value, BatchRpcError> {
+        let request = RpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: 0,
+            method: "getblockchaininfo".to_string(),
+            params: vec![],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
+
+        let response = self.client
+            .post(&self.url)
+            .headers(headers)
+            .json(&request)
+            .send()?;
+
+        if !response.status().is_success() {
+            return Err(BatchRpcError::Rpc(format!("HTTP error: {}", response.status())));
+        }
+
+        let response: RpcResponse = response.json()?;
+        
+        match response {
+            RpcResponse { result: Some(value), error: None, .. } => Ok(value),
+            RpcResponse { error: Some(error), .. } => Err(BatchRpcError::Rpc(error.message)),
+            _ => Err(BatchRpcError::InvalidResponse("Invalid response format".into()))
+        }
     }
 }

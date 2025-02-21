@@ -6,7 +6,6 @@ import apsw
 import requests
 import sh
 from counterpartycore.lib.messages.data import checkpoints
-from http2https import PROXY_PORT, start_http_proxy, stop_http_proxy
 
 # DATA_DIR = os.path.join(tempfile.gettempdir(), "counterparty-data")
 DATA_DIR = os.path.join(os.path.expanduser("~/.cache"), "counterparty-test-data")
@@ -24,25 +23,27 @@ def prepare(network):
         "--cache-dir",
         DATA_DIR,
         "--no-confirm",
-        "--backend-connect",
-        "127.0.0.1",
-        "--backend-port",
-        PROXY_PORT,
+        "--backend-ssl",
     ]
     if network == "testnet4":
-        args.append("--testnet4")
-        backend_url = "https://testnet4.counterparty.io:48332"
+        args += [
+            "--testnet4",
+            "--backend-connect",
+            "testnet4.counterparty.io",
+            "--backend-port",
+            "48332",
+        ]
         db_file = "counterparty.testnet4.db"
         api_url = "http://localhost:44000/v2/"
     else:
-        backend_url = "https://api.counterparty.io:8332"
+        args += ["--testnet4", "--backend-connect", "api.counterparty.io", "--backend-port", "8332"]
         db_file = "counterparty.db"
         api_url = "http://localhost:4000/v2/"
 
     db_file = os.path.join(DATA_DIR, db_file)
     sh_counterparty_server = sh.counterparty_server.bake(*args, _out=sys.stdout, _err_to_out=True)
 
-    return sh_counterparty_server, backend_url, db_file, api_url
+    return sh_counterparty_server, db_file, api_url
 
 
 def bootstrap(sh_counterparty_server):
@@ -84,9 +85,8 @@ def rolllback(sh_counterparty_server, network):
     sh_counterparty_server("rollback", rollback_from)
 
 
-def catchup(sh_counterparty_server, backend_url, api_url):
+def catchup(sh_counterparty_server, api_url):
     try:
-        start_http_proxy(backend_url)
         server_process = sh_counterparty_server("start", _bg=True)
 
         server_ready = False
@@ -107,7 +107,6 @@ def catchup(sh_counterparty_server, backend_url, api_url):
                 time.sleep(1)
                 pass
     finally:
-        stop_http_proxy()
         server_process.terminate()
         if error:
             raise Exception(error)
@@ -118,11 +117,11 @@ def cleanup():
 
 
 def bootstrap_reparse_rollback_and_catchup(network):
-    sh_counterparty_server, backend_url, db_file, api_url = prepare(network)
+    sh_counterparty_server, db_file, api_url = prepare(network)
 
     bootstrap(sh_counterparty_server)
     reparse(sh_counterparty_server, db_file)
     rolllback(sh_counterparty_server, network)
-    catchup(sh_counterparty_server, backend_url, api_url)
+    catchup(sh_counterparty_server, api_url)
 
     cleanup()

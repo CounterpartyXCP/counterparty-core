@@ -15,18 +15,14 @@ use bitcoin::{
     Block, BlockHash, Script, TxOut, Txid,
 };
 use bitcoincore_rpc::bitcoin::script::Instruction;
-use bitcoincore_rpc::{Auth, Client, RpcApi};
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use crate::indexer::block::VinOutput;
-
-use std::sync::{Arc, Mutex, Weak};
-use lazy_static::lazy_static;
-
-
 use crate::indexer::batch_rpc::{BatchRpcClient, BATCH_CLIENT};
+
+use std::sync::Arc;
 
 use super::{
     block::{
@@ -664,6 +660,7 @@ impl Channels {
     }
 }
 
+
 #[derive(Clone)]
 pub struct BitcoinClient {
     inner: Arc<BitcoinClientInner>,
@@ -781,15 +778,16 @@ impl BitcoinRpc<Block> for BitcoinClient {
 
 #[derive(Clone)]
 struct BitcoinClientInner {
-    client: Arc<Client>,
+    client: Arc<BatchRpcClient>,
 }
 
 impl BitcoinClientInner {
     fn new(config: &Config) -> Result<Self, Error> {
-        let client = Client::new(
-            &config.rpc_address,
-            Auth::UserPass(config.rpc_user.clone(), config.rpc_password.clone()),
-        )?;
+        let client = BatchRpcClient::new(
+            config.rpc_address.clone(),
+            config.rpc_user.clone(),
+            config.rpc_password.clone(),
+        ).map_err(|e| Error::BitcoinRpc(format!("Failed to create BatchRpcClient: {:#?}", e)))?;
 
         Ok(BitcoinClientInner {
             client: Arc::new(client),
@@ -799,17 +797,27 @@ impl BitcoinClientInner {
 
 impl BitcoinRpc<Block> for BitcoinClientInner {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error> {
-        Ok(self.client.get_block_hash(height as u64)?)
+        self.client.get_block_hash(height)
+            .map_err(|e| Error::BitcoinRpc(format!("Failed to get block hash: {:#?}", e)))
     }
 
     fn get_block(&self, hash: &BlockHash) -> Result<Box<Block>, Error> {
-        Ok(Box::new(self.client.get_block(hash)?))
+        self.client.get_block(hash)
+            .map(Box::new)
+            .map_err(|e| Error::BitcoinRpc(format!("Failed to get block: {:#?}", e)))
     }
 
     fn get_blockchain_height(&self) -> Result<u32, Error> {
-        Ok(self.client.get_blockchain_info()?.blocks as u32)
+        self.client.get_blockchain_info()
+            .map_err(|e| Error::BitcoinRpc(format!("Failed to get blockchain info: {:#?}", e)))
+            .and_then(|info| {
+                info["blocks"].as_u64()
+                    .ok_or_else(|| Error::BitcoinRpc("Invalid blocks field in blockchain info".into()))
+                    .map(|h| h as u32)
+            })
     }
 }
+
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
