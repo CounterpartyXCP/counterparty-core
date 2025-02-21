@@ -69,7 +69,9 @@ jobs:
           cd counterparty-core
           hatch run pytest counterpartycore/test/${{ inputs.test-path }} \
             ${{ !inputs.no_cov_report && '-s -vv -x --cov=counterpartycore/lib --cov-report=term-missing --cov-report=' || '' }}
-          mv .coverage ../
+          if [ "${{ !inputs.no_cov_report }}" = "true" ]; then
+            mv .coverage ../
+          fi
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5

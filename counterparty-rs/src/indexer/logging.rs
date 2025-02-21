@@ -91,6 +91,8 @@ where
 
 #[allow(clippy::expect_used)]
 pub fn setup_logging(config: &Config) {
+    println!("Current log level setting: {:?}", config.log_level);
+    
     INIT.call_once(|| {
         let file = OpenOptions::new()
             .append(true)
@@ -98,35 +100,38 @@ pub fn setup_logging(config: &Config) {
             .open(&config.log_file)
             .expect("Failed to open log file");
 
-        let file_layer = ConnectionPoolFilter::new(
-            layer()
-                .json()
-                .with_timer(custom_time_format())
-                .with_writer(BoxMakeWriter::new(file))
-                .with_filter(LevelFilter::TRACE)
-                .boxed(),
-        );
+        // Changer l'ordre: d'abord ConnectionPoolFilter, puis le filtre de niveau
+        let file_layer = layer()
+            .json()
+            .with_timer(custom_time_format())
+            .with_writer(BoxMakeWriter::new(file))
+            .boxed();
+        
+        let file_layer = ConnectionPoolFilter::new(file_layer)
+            .with_filter(LevelFilter::from(config.log_level));
 
         let stderr_layer = if config.json_format {
-            ConnectionPoolFilter::new(
-                layer()
-                    .json()
-                    .with_timer(custom_time_format())
-                    .with_writer(BoxMakeWriter::new(io::stderr))
-                    .with_filter(LevelFilter::from(config.log_level))
-                    .boxed(),
-            )
+            let layer = layer()
+                .json()
+                .with_timer(custom_time_format())
+                .with_writer(BoxMakeWriter::new(io::stderr))
+                .boxed();
+            
+            ConnectionPoolFilter::new(layer)
+                .with_filter(LevelFilter::from(config.log_level))
         } else {
-            ConnectionPoolFilter::new(
-                layer()
-                    .event_format(new_custom_formatter())
-                    .with_writer(BoxMakeWriter::new(io::stderr))
-                    .with_filter(LevelFilter::from(config.log_level))
-                    .boxed(),
-            )
+            let layer = layer()
+                .event_format(new_custom_formatter())
+                .with_writer(BoxMakeWriter::new(io::stderr))
+                .boxed();
+            
+            ConnectionPoolFilter::new(layer)
+                .with_filter(LevelFilter::from(config.log_level))
         };
 
-        let subscriber = Registry::default().with(file_layer).with(stderr_layer);
+        let subscriber = Registry::default()
+            .with(file_layer)
+            .with(stderr_layer);
 
         tracing::subscriber::set_global_default(subscriber)
             .expect("Failed to set global subscriber");
