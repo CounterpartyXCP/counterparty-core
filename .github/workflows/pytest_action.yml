@@ -68,7 +68,7 @@ jobs:
         run: |
           cd counterparty-core
           hatch run pytest counterpartycore/test/${{ inputs.test-path }} \
-          ${{ !inputs.no_cov_report && '-s -vv -x --cov=counterpartycore/lib --cov-report=term-missing --cov-report=' || '' }} \
+            ${{ !inputs.no_cov_report && '-s -vv -x --cov=counterpartycore/lib --cov-report=term-missing --cov-report=' || '' }}
           mv .coverage ../
 
       - name: Upload coverage
