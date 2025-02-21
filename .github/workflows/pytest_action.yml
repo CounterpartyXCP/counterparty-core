@@ -24,6 +24,9 @@ on:
       only_on_develop:
         type: boolean
         default: false
+      verbose:
+        type: boolean
+        default: true
 
 jobs:
   pytest:
@@ -67,7 +70,7 @@ jobs:
       - name: Run tests
         run: |
           cd counterparty-core
-          hatch run pytest counterpartycore/test/${{ inputs.test-path }} -s -vv -x \
+          hatch run pytest counterpartycore/test/${{ inputs.test-path }} ${{ inputs.verbose && '-s -vv' || '' }} -x \
             --cov=counterpartycore/lib --cov-report=term-missing --cov-report=
           mv .coverage ../
 

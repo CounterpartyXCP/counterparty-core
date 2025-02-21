@@ -25,6 +25,7 @@ jobs:
             test-path: integrations/load_test.py
             os: Linux-Large-1
             only_on_develop: false
+            verbose: false
 
           # bootstrap, reparse 1000 blocks,
           # rollback 3 checkpoints and catchup
@@ -40,29 +41,35 @@ jobs:
           - name: Regtest Scenarios
             test-path: integrations/regtest/scenarios_test.py
             install_bitcoin: true
+            verbose: true
 
           # Testnet4 tests
 
           # bootstrap, reparse 1000 blocks,
           # rollback 3 checkpoints and catchup
           - name: Testnet4 Bootstrap And Catchup
-            test-path: integrations/testnet4_test.py 
+            test-path: integrations/testnet4_test.py
+            verbose: true
 
           - name: Testnet4 Start and Shutdown
             test-path: integrations/shutdown_test.py
+            verbose: true
 
           # Other tests
 
           # run the docker-compose tests
           - name: Docker Compose
             test-path: integrations/dockercompose_test.py
+            verbose: true
 
           # compare hashes between several servers
           - name: Compare Hashes
             test-path: integrations/comparehashes_test.py
+            verbose: true
           
           - name: RSFetcher Test
             test-path: integrations/rsfetcher_test.py
+            verbose: true
 
     # run pytest_action.yml for the matrix
     uses: ./.github/workflows/pytest_action.yml
@@ -72,4 +79,5 @@ jobs:
       install_bitcoin: ${{ matrix.install_bitcoin || false }}
       only_on_develop:  ${{ matrix.only_on_develop || false }}
       os: ${{ matrix.os || 'ubuntu-22.04' }}
+      verbose: ${{ matrix.verbose }}
     secrets: inherit
