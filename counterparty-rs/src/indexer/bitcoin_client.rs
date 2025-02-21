@@ -15,7 +15,7 @@ use bitcoin::{
     script::Instruction::{Op, PushBytes},
     Block, BlockHash, Script, TxOut,
 };
-use bitcoincore_rpc::bitcoin::script::Instruction;
+
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
@@ -157,9 +157,9 @@ fn parse_vout(
         }
         let pb = match instructions.get(2) {
             Some(Ok(instruction)) => match instruction {
-                Instruction::Op(OP_PUSHNUM_1) => vec![1],
-                Instruction::PushBytes(bytes) => bytes.as_bytes().to_vec(),
-                Instruction::Op(op) => vec![op.to_u8()],
+                Op(OP_PUSHNUM_1) => vec![1],
+                PushBytes(bytes) => bytes.as_bytes().to_vec(),
+                Op(op) => vec![op.to_u8()],
             },
             Some(Err(_)) => vec![],
             None => vec![],
@@ -827,12 +827,14 @@ impl BitcoinRpc<Block> for BitcoinClientInner {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
-    use bitcoincore_rpc::bitcoin::{
-        absolute::LockTime,
+    use bitcoin::{
         block::{self, Header},
-        transaction, Amount, CompactTarget, OutPoint, ScriptBuf, ScriptHash, Sequence, Transaction,
+        absolute::LockTime,
+        transaction::Version,
+        Amount, CompactTarget, OutPoint, ScriptBuf, Sequence, Transaction,
         TxIn, TxMerkleNode, TxOut, Txid, Witness,
     };
+    use bitcoin::hashes::{Hash, sha256d};
 
     use crate::indexer::{
         test_utils::{test_block_hash, test_h160_hash, test_sha256_hash},
@@ -844,19 +846,26 @@ mod tests {
     #[test]
     fn test_get_entries() {
         let height = 2;
-        let script_pubkey = ScriptBuf::new_p2sh(&ScriptHash::from_byte_array(test_h160_hash(0)));
+        
+        let script_pubkey = ScriptBuf::from_bytes(test_h160_hash(0).to_vec());
+        
         let tx_in = TxIn {
-            previous_output: OutPoint::new(Txid::from_slice(&test_sha256_hash(0)).unwrap(), 1),
+            previous_output: OutPoint {
+                txid: Txid::from_raw_hash(sha256d::Hash::from_slice(&test_sha256_hash(0)).unwrap()),
+                vout: 1,
+            },
             script_sig: ScriptBuf::from_bytes(test_h160_hash(0).to_vec()),
-            sequence: Sequence(0xFFFFFFFF),
-            witness: Witness::new(),
+            sequence: Sequence::MAX,
+            witness: Witness::default(),
         };
+
         let tx_out = TxOut {
-            value: Amount::MIN,
+            value: Amount::from_sat(1),
             script_pubkey: script_pubkey.clone(),
         };
+
         let tx = Transaction {
-            version: transaction::Version::ONE,
+            version: Version::ONE,
             lock_time: LockTime::ZERO,
             input: vec![tx_in],
             output: vec![tx_out],
@@ -866,7 +875,7 @@ mod tests {
             header: Header {
                 version: block::Version::ONE,
                 prev_blockhash: test_block_hash(1),
-                merkle_root: TxMerkleNode::from_slice(&test_sha256_hash(height)).unwrap(),
+                merkle_root: TxMerkleNode::from_raw_hash(sha256d::Hash::from_slice(&test_sha256_hash(height)).unwrap()),
                 time: 1234567890,
                 bits: CompactTarget::default(),
                 nonce: 0,
@@ -894,7 +903,7 @@ mod tests {
 
         let entry = entries.get(3).unwrap().to_entry();
         let e = ScriptHashHasOutputsInBlockAtHeight::from_entry(entry).unwrap();
-        assert_eq!(e.script_hash, script_pubkey.script_hash().to_byte_array());
+        assert_eq!(e.script_hash.to_vec(), script_pubkey.script_hash().as_byte_array().to_vec());
         assert_eq!(e.height, height);
     }
 }
