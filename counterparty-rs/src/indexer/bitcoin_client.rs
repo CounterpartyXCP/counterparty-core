@@ -470,11 +470,9 @@ pub fn parse_transaction(
         };
     }
 
-    let input_txids: Vec<_> = tx.input.iter()
-        .map(|vin| vin.previous_output.txid)
-        .collect();
-
-    let prev_txs = if !data.is_empty() {
+    // Try to get previous transactions info if RPC is available and data is not empty
+    let mut prev_txs = vec![None; tx.input.len()];
+    if !data.is_empty() {
         if BATCH_CLIENT.lock().unwrap().is_none() {
             *BATCH_CLIENT.lock().unwrap() = Some(BatchRpcClient::new(
                 config.rpc_address.clone(),
@@ -484,16 +482,17 @@ pub fn parse_transaction(
         }
 
         if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
-            batch_client.get_transactions(&input_txids).unwrap_or_default()
-        } else {
-            vec![None; input_txids.len()]
+            let input_txids: Vec<_> = tx.input.iter()
+                .map(|vin| vin.previous_output.txid)
+                .collect();
+            prev_txs = batch_client.get_transactions(&input_txids).unwrap_or_default();
         }
-    } else {
-        vec![None; input_txids.len()]
-    };
+    }
 
-    for (vin, prev_tx) in tx.input.iter().zip(prev_txs.iter()) {
+    // Always process all inputs
+    for (i, vin) in tx.input.iter().enumerate() {
         let hash = vin.previous_output.txid.to_string();
+        
         if !vin.witness.is_empty() {
             vtxinwit.push(
                 vin.witness
@@ -506,14 +505,16 @@ pub fn parse_transaction(
             vtxinwit.push(Vec::new());
         }
 
-        let vin_info = prev_tx.as_ref().and_then(|prev_tx| {
-            let vout_idx = vin.previous_output.vout as usize;
-            prev_tx.output.get(vout_idx).map(|output| {
-                VinOutput {
-                    value: output.value.to_sat(),
-                    script_pub_key: output.script_pubkey.to_bytes(),
-                    is_segwit: !vin.witness.is_empty(),
-                }
+        let vin_info = prev_txs.get(i).and_then(|prev_tx| {
+            prev_tx.as_ref().and_then(|tx| {
+                let vout_idx = vin.previous_output.vout as usize;
+                tx.output.get(vout_idx).map(|output| {
+                    VinOutput {
+                        value: output.value.to_sat(),
+                        script_pub_key: output.script_pubkey.to_bytes(),
+                        is_segwit: !vin.witness.is_empty(),
+                    }
+                })
             })
         });
 
