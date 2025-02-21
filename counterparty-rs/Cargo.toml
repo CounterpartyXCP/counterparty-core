@@ -19,7 +19,6 @@ bitcoin = "0.32.4"
 par-map = "0.1.4"
 tracing = "0.1.40"
 crossbeam-channel = "0.5.13"
-bitcoincore-rpc = "0.19.0"
 thiserror = "1.0.58"
 derive_more = "0.99.17"
 tracing-subscriber = { version = "0.3.18", features = [

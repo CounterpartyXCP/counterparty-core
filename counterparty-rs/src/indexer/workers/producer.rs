@@ -1,6 +1,6 @@
 use std::{thread::sleep, time::Duration};
 
-use bitcoincore_rpc::bitcoin::hashes::Hash;
+use bitcoin::hashes::Hash;
 use crossbeam_channel::{Receiver, Sender};
 use tracing::info;
 
@@ -142,7 +142,7 @@ where
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use bitcoincore_rpc::bitcoin::BlockHash;
+    use bitcoin::BlockHash;
 
     use crate::{
         indexer::{

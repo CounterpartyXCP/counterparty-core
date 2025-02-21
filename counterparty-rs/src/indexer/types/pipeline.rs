@@ -1,4 +1,4 @@
-use bitcoincore_rpc::bitcoin::BlockHash;
+use bitcoin::BlockHash;
 use crossbeam_channel::{Receiver, Sender};
 
 use crate::indexer::block::{Block, ToBlock};
