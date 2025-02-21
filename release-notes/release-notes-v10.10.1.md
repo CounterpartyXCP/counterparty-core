@@ -21,6 +21,8 @@
 - Tweak logging Bitcoin Core Catch Up
 - Batch getrawtransaction for `get_vin_info()`
 - Create events indexes after catch up
+- Make RPC calls to get transactions inputs info with RSFetcher
+- Make RSFetcher compatible with HTTPS
 
 ## API
 
