@@ -20,7 +20,7 @@ use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use crate::indexer::block::VinOutput;
-use crate::indexer::batch_rpc::{BatchRpcClient, BATCH_CLIENT};
+use crate::indexer::rpc_client::{BatchRpcClient, BATCH_CLIENT};
 
 use std::sync::Arc;
 
@@ -634,11 +634,6 @@ struct GetBlock {
 
 struct GetBlockchainHeight {
     sender: Sender<Result<u32, Error>>,
-}
-
-struct GetRawTransaction {
-    txid: Txid,
-    sender: Sender<Result<bitcoin::Transaction, Error>>,
 }
 
 type Channel<T> = (Sender<T>, Receiver<T>);

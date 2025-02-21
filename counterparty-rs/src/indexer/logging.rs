@@ -19,7 +19,6 @@ use super::config::Config;
 
 static INIT: Once = Once::new();
 
-// Créons un Layer personnalisé pour filtrer les messages spécifiques
 struct ConnectionPoolFilter<L> {
     inner: L,
 }
@@ -47,7 +46,6 @@ impl<L> ConnectionPoolFilter<L> {
     }
 }
 
-// Un simple visiteur pour extraire le message
 struct MessageVisitor<'a>(&'a mut String);
 
 impl<'a> tracing::field::Visit for MessageVisitor<'a> {
@@ -174,9 +172,8 @@ where
         let metadata = event.metadata();
         write!(
             writer,
-            " - [{}] - {} - ",
-            format!("{:>8}", metadata.level().to_string()).color(self.get_color(metadata.level())),
-            metadata.target()
+            " - [{}] - RSFetcher - ",
+            format!("{:>8}", metadata.level().to_string()).color(self.get_color(metadata.level()))
         )?;
         ctx.field_format().format_fields(writer.by_ref(), event)?;
         writeln!(writer)

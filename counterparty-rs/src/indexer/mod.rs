@@ -13,7 +13,7 @@ mod test_utils;
 mod types;
 mod utils;
 mod workers;
-mod batch_rpc;
+mod rpc_client;
 
 use std::thread::JoinHandle;
 
