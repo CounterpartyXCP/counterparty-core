@@ -24,7 +24,7 @@ jobs:
           - name: Mainnet API Load
             test-path: integrations/load_test.py
             os: Linux-Large-1
-            only_on_develop: true
+            only_on_develop: false
 
           # bootstrap, reparse 1000 blocks,
           # rollback 3 checkpoints and catchup
