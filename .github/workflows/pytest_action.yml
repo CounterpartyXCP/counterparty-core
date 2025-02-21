@@ -18,15 +18,12 @@ on:
       install_bitcoin:
         type: boolean
         default: false
-      run_coveralls:
-        type: boolean
-        default: true
       only_on_develop:
         type: boolean
         default: false
-      verbose:
+      no_cov_report:
         type: boolean
-        default: true
+        default: false
 
 jobs:
   pytest:
@@ -70,8 +67,8 @@ jobs:
       - name: Run tests
         run: |
           cd counterparty-core
-          hatch run pytest counterpartycore/test/${{ inputs.test-path }} ${{ inputs.verbose && '-s -vv' || '' }} -x \
-            --cov=counterpartycore/lib --cov-report=term-missing --cov-report=
+          hatch run pytest counterpartycore/test/${{ inputs.test-path }} \
+          ${{ !inputs.no_cov_report && '-s -vv -x --cov=counterpartycore/lib --cov-report=term-missing --cov-report=' || '' }} \
           mv .coverage ../
 
       - name: Upload coverage
