@@ -34,11 +34,11 @@ use super::{
     types::{
         entry::{
             BlockAtHeightHasHash, BlockAtHeightSpentOutputInTx,
-            ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxInBlockAtHeight, TxidVoutPrefix,
+            ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxInBlockAtHeight,
             WritableEntry,
         },
         error::Error,
-        pipeline::{BlockHasEntries, BlockHasOutputs, BlockHasPrevBlockHash},
+        pipeline::{BlockHasEntries, BlockHasPrevBlockHash},
     },
     workers::new_worker_pool,
 };
@@ -602,25 +602,6 @@ impl BlockHasPrevBlockHash for Block {
     }
 }
 
-impl BlockHasOutputs for Block {
-    fn get_script_hash_outputs(&self, script_hash: [u8; 20]) -> Vec<(TxidVoutPrefix, u64)> {
-        let mut outputs = Vec::new();
-        for tx in self.txdata.iter() {
-            for (i, o) in tx.output.iter().enumerate() {
-                if script_hash == o.script_pubkey.script_hash().as_byte_array().as_ref() {
-                    outputs.push((
-                        TxidVoutPrefix {
-                            txid: tx.compute_txid().to_byte_array(),
-                            vout: i as u32,
-                        },
-                        o.value.to_sat(),
-                    ));
-                }
-            }
-        }
-        outputs
-    }
-}
 
 pub trait BitcoinRpc<B>: Send + Clone + 'static {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error>;

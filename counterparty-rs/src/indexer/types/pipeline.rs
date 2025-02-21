@@ -5,7 +5,7 @@ use crate::indexer::block::{Block, ToBlock};
 use crate::indexer::config::{Config, Mode};
 
 use super::{
-    entry::{ToEntry, TxidVoutPrefix},
+    entry::ToEntry,
     error::Error,
 };
 
@@ -15,9 +15,6 @@ pub trait BlockHasEntries {
     fn get_entries(&self, mode: Mode, height: u32) -> Vec<Box<dyn ToEntry>>;
 }
 
-pub trait BlockHasOutputs {
-    fn get_script_hash_outputs(&self, script_hash: [u8; 20]) -> Vec<(TxidVoutPrefix, u64)>;
-}
 
 pub trait BlockHasPrevBlockHash {
     fn get_prev_block_hash(&self) -> &BlockHash;

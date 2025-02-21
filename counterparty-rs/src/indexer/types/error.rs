@@ -8,8 +8,6 @@ use thiserror::Error;
 pub enum Error {
     #[error("IO error: {0}")]
     IO(#[from] std::io::Error),
-    #[error("RPC error: {0}")]
-    Rpc(#[from] bitcoincore_rpc::Error),
     #[error("RocksDB error: {0}")]
     RocksDB(#[from] rocksdb::Error),
     #[error("TryFromSlice error: {0}")]
