@@ -92,7 +92,7 @@ where
 #[allow(clippy::expect_used)]
 pub fn setup_logging(config: &Config) {
     println!("Current log level setting: {:?}", config.log_level);
-    
+
     INIT.call_once(|| {
         let file = OpenOptions::new()
             .append(true)
@@ -106,9 +106,9 @@ pub fn setup_logging(config: &Config) {
             .with_timer(custom_time_format())
             .with_writer(BoxMakeWriter::new(file))
             .boxed();
-        
-        let file_layer = ConnectionPoolFilter::new(file_layer)
-            .with_filter(LevelFilter::from(config.log_level));
+
+        let file_layer =
+            ConnectionPoolFilter::new(file_layer).with_filter(LevelFilter::from(config.log_level));
 
         let stderr_layer = if config.json_format {
             let layer = layer()
@@ -116,22 +116,18 @@ pub fn setup_logging(config: &Config) {
                 .with_timer(custom_time_format())
                 .with_writer(BoxMakeWriter::new(io::stderr))
                 .boxed();
-            
-            ConnectionPoolFilter::new(layer)
-                .with_filter(LevelFilter::from(config.log_level))
+
+            ConnectionPoolFilter::new(layer).with_filter(LevelFilter::from(config.log_level))
         } else {
             let layer = layer()
                 .event_format(new_custom_formatter())
                 .with_writer(BoxMakeWriter::new(io::stderr))
                 .boxed();
-            
-            ConnectionPoolFilter::new(layer)
-                .with_filter(LevelFilter::from(config.log_level))
+
+            ConnectionPoolFilter::new(layer).with_filter(LevelFilter::from(config.log_level))
         };
 
-        let subscriber = Registry::default()
-            .with(file_layer)
-            .with(stderr_layer);
+        let subscriber = Registry::default().with(file_layer).with(stderr_layer);
 
         tracing::subscriber::set_global_default(subscriber)
             .expect("Failed to set global subscriber");

@@ -4,17 +4,13 @@ use crossbeam_channel::{Receiver, Sender};
 use crate::indexer::block::{Block, ToBlock};
 use crate::indexer::config::{Config, Mode};
 
-use super::{
-    entry::ToEntry,
-    error::Error,
-};
+use super::{entry::ToEntry, error::Error};
 
 pub type ChanOut = (Sender<Box<Block>>, Receiver<Box<Block>>);
 
 pub trait BlockHasEntries {
     fn get_entries(&self, mode: Mode, height: u32) -> Vec<Box<dyn ToEntry>>;
 }
-
 
 pub trait BlockHasPrevBlockHash {
     fn get_prev_block_hash(&self) -> &BlockHash;

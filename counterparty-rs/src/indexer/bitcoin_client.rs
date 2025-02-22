@@ -34,8 +34,7 @@ use super::{
     types::{
         entry::{
             BlockAtHeightHasHash, BlockAtHeightSpentOutputInTx,
-            ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxInBlockAtHeight,
-            WritableEntry,
+            ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxInBlockAtHeight, WritableEntry,
         },
         error::Error,
         pipeline::{BlockHasEntries, BlockHasPrevBlockHash},
@@ -495,8 +494,6 @@ pub fn parse_transaction(
 
     // Always process all inputs
     for (i, vin) in tx.input.iter().enumerate() {
-        let hash = vin.previous_output.txid.to_string();
-
         if !vin.witness.is_empty() {
             vtxinwit.push(
                 vin.witness
@@ -508,14 +505,22 @@ pub fn parse_transaction(
         } else {
             vtxinwit.push(Vec::new());
         }
+    }
 
+    for (i, vin) in tx.input.iter().enumerate() {
+        let hash = vin.previous_output.txid.to_string();
         let vin_info = prev_txs.get(i).and_then(|prev_tx| {
             prev_tx.as_ref().and_then(|tx| {
                 let vout_idx = vin.previous_output.vout as usize;
+
+                let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
+                    tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
+                });
+
                 tx.output.get(vout_idx).map(|output| VinOutput {
                     value: output.value.to_sat(),
                     script_pub_key: output.script_pubkey.to_bytes(),
-                    is_segwit: !vin.witness.is_empty(),
+                    is_segwit: is_segwit,
                 })
             })
         });
@@ -601,7 +606,6 @@ impl BlockHasPrevBlockHash for Block {
         &self.header.prev_blockhash
     }
 }
-
 
 pub trait BitcoinRpc<B>: Send + Clone + 'static {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error>;
@@ -806,14 +810,14 @@ impl BitcoinRpc<Block> for BitcoinClientInner {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use bitcoin::hashes::{sha256d, Hash};
     use bitcoin::{
-        block::{self, Header},
         absolute::LockTime,
+        block::{self, Header},
         transaction::Version,
-        Amount, CompactTarget, OutPoint, ScriptBuf, Sequence, Transaction,
-        TxIn, TxMerkleNode, TxOut, Txid, Witness,
+        Amount, CompactTarget, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxMerkleNode,
+        TxOut, Txid, Witness,
     };
-    use bitcoin::hashes::{Hash, sha256d};
 
     use crate::indexer::{
         test_utils::{test_block_hash, test_h160_hash, test_sha256_hash},
@@ -825,9 +829,9 @@ mod tests {
     #[test]
     fn test_get_entries() {
         let height = 2;
-        
+
         let script_pubkey = ScriptBuf::from_bytes(test_h160_hash(0).to_vec());
-        
+
         let tx_in = TxIn {
             previous_output: OutPoint {
                 txid: Txid::from_raw_hash(sha256d::Hash::from_slice(&test_sha256_hash(0)).unwrap()),
@@ -854,7 +858,9 @@ mod tests {
             header: Header {
                 version: block::Version::ONE,
                 prev_blockhash: test_block_hash(1),
-                merkle_root: TxMerkleNode::from_raw_hash(sha256d::Hash::from_slice(&test_sha256_hash(height)).unwrap()),
+                merkle_root: TxMerkleNode::from_raw_hash(
+                    sha256d::Hash::from_slice(&test_sha256_hash(height)).unwrap(),
+                ),
                 time: 1234567890,
                 bits: CompactTarget::default(),
                 nonce: 0,
@@ -882,7 +888,10 @@ mod tests {
 
         let entry = entries.get(3).unwrap().to_entry();
         let e = ScriptHashHasOutputsInBlockAtHeight::from_entry(entry).unwrap();
-        assert_eq!(e.script_hash.to_vec(), script_pubkey.script_hash().as_byte_array().to_vec());
+        assert_eq!(
+            e.script_hash.to_vec(),
+            script_pubkey.script_hash().as_byte_array().to_vec()
+        );
         assert_eq!(e.height, height);
     }
 }
