@@ -474,7 +474,7 @@ def arg_parser(no_config_file=False, app_name=APP_NAME):
     parser_server = subparsers.add_parser("start", help="run the server")
     parser_server.add_argument("--config-file", help="the path to the configuration file")
     setup.add_config_arguments(parser_server, CONFIG_ARGS, configfile)
-
+    
     parser_reparse = subparsers.add_parser(
         "reparse", help="reparse all transactions in the database"
     )

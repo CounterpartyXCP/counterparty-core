@@ -765,9 +765,11 @@ class CounterpartyServer(threading.Thread):
 
         # Catch Up
         if config.PROFILE:
+            logger.info("Starting profiler before catchup...")
             self.profiler = cProfile.Profile()
             self.profiler.enable()
             blocks.catch_up(self.db, self.api_stop_event)
+            logger.info("Stopping profiler after catchup...")
             self.profiler.disable()
         else:
             blocks.catch_up(self.db, self.api_stop_event)
@@ -799,7 +801,8 @@ class CounterpartyServer(threading.Thread):
 
         # Dump profiling data
         if config.PROFILE and self.profiler:
-            profile_path = os.path.join(config.CACHE_DIR, "catch_up.prof")
+            logger.info("Dumping profiling data...")
+            profile_path = os.path.join(config.CACHE_DIR, "catchup.prof")
             try:
                 self.profiler.dump_stats(profile_path)
                 stats = pstats.Stats(self.profiler).sort_stats("cumtime")
