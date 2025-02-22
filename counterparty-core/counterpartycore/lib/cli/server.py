@@ -15,6 +15,11 @@ import apsw
 import bitcoin as bitcoinlib
 from termcolor import colored, cprint
 
+import cProfile
+import pstats
+import io
+import pstats
+
 from counterpartycore.lib import (
     backend,
     config,
@@ -675,6 +680,7 @@ class CounterpartyServer(threading.Thread):
         self.api_stop_event = None
         self.backend_height_thread = None
         self.log_stream = log_stream
+        self.profiler = None
 
         # Log all config parameters, sorted by key
         # Filter out default values #TODO: these should be set in a different way
@@ -759,24 +765,10 @@ class CounterpartyServer(threading.Thread):
 
         # Catch Up
         if config.PROFILE:
-            import cProfile
-            import pstats
-
-            global global_profiler
-            global_profiler = cProfile.Profile()
-            try:
-                global_profiler.enable()
-                blocks.catch_up(self.db, self.api_stop_event)
-            except KeyboardInterrupt:
-                logger.warning("KeyboardInterrupt received during profiling. Dumping profiler stats and stopping...")
-                raise
-            finally:
-                global_profiler.disable()
-                profile_path = os.path.join(config.CACHE_DIR, "catch_up.prof")
-                global_profiler.dump_stats(profile_path)
-                stats = pstats.Stats(global_profiler).sort_stats("cumtime")
-                stats.print_stats(10)
-                global_profiler = None
+            self.profiler = cProfile.Profile()
+            self.profiler.enable()
+            blocks.catch_up(self.db, self.api_stop_event)
+            self.profiler.disable()
         else:
             blocks.catch_up(self.db, self.api_stop_event)
 
@@ -804,6 +796,17 @@ class CounterpartyServer(threading.Thread):
             self.apiserver_v1.stop()
         if self.apiserver_v2:
             self.apiserver_v2.stop()
+
+        # Dump profiling data
+        if config.PROFILE and self.profiler:
+            profile_path = os.path.join(config.CACHE_DIR, "catch_up.prof")
+            try:
+                self.profiler.dump_stats(profile_path)
+                stats = pstats.Stats(self.profiler).sort_stats("cumtime")
+                stats.print_stats(10)
+            except Exception as e:
+                logger.error("Error dumping profiler stats: %s", e)
+            self.profiler = None
 
         logger.info("Shutdown complete.")
 
