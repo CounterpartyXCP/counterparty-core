@@ -172,6 +172,7 @@ def initialise_config(
     database_file=None,  # for tests
     electrs_url=None,
     api_only=False,
+    profile=False
 ):
     # log config already initialized
 
@@ -542,10 +543,10 @@ def initialise_config(
             config.ELECTRS_URL = None
 
     config.API_ONLY = api_only
+    config.PROFILE = profile
 
 
 def initialise_log_and_config(args, api=False, log_stream=None):
-    # Configuration
     init_args = {
         "data_dir": args.data_dir,
         "cache_dir": args.cache_dir,
@@ -588,6 +589,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
         "electrs_url": args.electrs_url,
         "api_only": args.api_only,
+        "profile": args.profile
     }
     # for tests
     if "database_file" in args:
@@ -755,10 +757,30 @@ class CounterpartyServer(threading.Thread):
         # Reset (delete) rust fetcher database
         blocks.reset_rust_fetcher_database()
 
-        # catch up
-        blocks.catch_up(self.db, self.api_stop_event)
+        # Catch Up
+        if config.PROFILE:
+            import cProfile
+            import pstats
 
-        # Blockchain watcher
+            global global_profiler
+            global_profiler = cProfile.Profile()
+            try:
+                global_profiler.enable()
+                blocks.catch_up(self.db, self.api_stop_event)
+            except KeyboardInterrupt:
+                logger.warning("KeyboardInterrupt received during profiling. Dumping profiler stats and stopping...")
+                raise
+            finally:
+                global_profiler.disable()
+                profile_path = os.path.join(config.CACHE_DIR, "catch_up.prof")
+                global_profiler.dump_stats(profile_path)
+                stats = pstats.Stats(global_profiler).sort_stats("cumtime")
+                stats.print_stats(10)
+                global_profiler = None
+        else:
+            blocks.catch_up(self.db, self.api_stop_event)
+
+        # Blockchain Watcher
         logger.info("Watching for new blocks...")
         self.follower_daemon = follow.start_blockchain_watcher(self.db)
         self.follower_daemon.start()
