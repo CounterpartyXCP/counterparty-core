@@ -15,6 +15,7 @@
 - Fix ungraceful ZeroMQ Failure
 - Fix Conservation Check Failing Ungracefull
 - Cleaner Gunicorn Shutdown
+- Fix ungraceful Waitress shutdown
 
 ## Codebase
 
@@ -31,6 +32,7 @@
 
 - Accepts `--catch-up` flag before the command
 - Add a locust runner to test local node (`python3 counterpartycore/test/integration/locustrunner.py` will start Locust Web UI on http://localhost:8089/).
+- Add `--profile` CLI flag that enables cProfile during catchup and dumps the results to the console after it is complete
 
 # Credits
 
