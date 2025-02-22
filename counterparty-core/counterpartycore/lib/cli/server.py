@@ -2,10 +2,12 @@
 
 import _thread
 import binascii
+import cProfile
 import decimal
 import logging
 import multiprocessing
 import os
+import pstats
 import threading
 import time
 from urllib.parse import quote_plus as urlencode
@@ -14,11 +16,6 @@ import appdirs
 import apsw
 import bitcoin as bitcoinlib
 from termcolor import colored, cprint
-
-import cProfile
-import pstats
-import io
-import pstats
 
 from counterpartycore.lib import (
     backend,
@@ -177,7 +174,7 @@ def initialise_config(
     database_file=None,  # for tests
     electrs_url=None,
     api_only=False,
-    profile=False
+    profile=False,
 ):
     # log config already initialized
 
@@ -594,7 +591,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
         "electrs_url": args.electrs_url,
         "api_only": args.api_only,
-        "profile": args.profile
+        "profile": args.profile,
     }
     # for tests
     if "database_file" in args:

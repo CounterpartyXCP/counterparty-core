@@ -286,7 +286,9 @@ class WaitressApplication:
             self.server.run()
         except OSError as e:
             if e.errno == 9:
-                logger.debug("Ignoring OSError [Errno 9] Bad file descriptor during waitress server shutdown.")
+                logger.debug(
+                    "Ignoring OSError [Errno 9] Bad file descriptor during waitress server shutdown."
+                )
             else:
                 raise
 
