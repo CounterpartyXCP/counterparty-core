@@ -724,7 +724,9 @@ def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
     # increment block index
-    CurrentState().set_current_block_index(CurrentState().current_block_index() + 1)
+    CurrentState().set_current_block_index(
+        CurrentState().current_block_index() + 1, skip_lock_time=True
+    )
 
     # get next tx index if not provided
     if tx_index is None:

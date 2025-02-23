@@ -63,9 +63,9 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def get(self, key):
         return self.state.get(key)
 
-    def set_current_block_index(self, block_index):
+    def set_current_block_index(self, block_index, skip_lock_time=False):
         self.state["CURRENT_BLOCK_INDEX"] = block_index
-        if block_index:
+        if block_index and not skip_lock_time:
             with LedgerDBConnectionPool().connection() as ledger_db:
                 last_block = blocks.get_block(ledger_db, CurrentState().current_block_index())
             if last_block:
