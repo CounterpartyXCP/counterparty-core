@@ -12,7 +12,7 @@ TEST_CONFIG = {
     "rpc_user": "rpc",
     "rpc_password": "rpc",
     "db_dir": TEST_DB_PATH,
-    "log_file": "/Users/wilfred/Desktop/indexer_test.log",
+    "log_file": "/Users/user/Desktop/indexer_test.log",
     "log_level": "debug",
     "json_format": False,
     "consume_blocks": True,
