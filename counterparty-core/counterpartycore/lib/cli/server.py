@@ -810,7 +810,9 @@ class CounterpartyServer(threading.Thread):
             try:
                 self.profiler.dump_stats(profile_path)
                 stats = pstats.Stats(self.profiler).sort_stats("cumtime")
-                stats.print_stats(10)
+                stats.print_stats(20)
+                stats = pstats.Stats(self.profiler).sort_stats("tottime")
+                stats.print_stats(20)
             except Exception as e:
                 logger.error("Error dumping profiler stats: %s", e)
             self.profiler = None
