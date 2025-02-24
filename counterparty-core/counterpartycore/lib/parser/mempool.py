@@ -30,12 +30,19 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
                 (config.MEMPOOL_BLOCK_INDEX, config.MEMPOOL_BLOCK_HASH, now),
             )
             # get the last tx_index
-            cursor.execute("SELECT tx_index FROM transactions ORDER BY tx_index DESC LIMIT 1")
+            cursor.execute(
+                "SELECT tx_index FROM mempool_transactions ORDER BY tx_index DESC LIMIT 1"
+            )
             last_tx = cursor.fetchone()
             if last_tx:
                 mempool_tx_index = last_tx["tx_index"] + 1
             else:
-                mempool_tx_index = 0
+                cursor.execute("SELECT tx_index FROM transactions ORDER BY tx_index DESC LIMIT 1")
+                last_tx = cursor.fetchone()
+                if last_tx:
+                    mempool_tx_index = last_tx["tx_index"] + 1
+                else:
+                    mempool_tx_index = 0
 
             # get message index before parsing the block
             cursor.execute("SELECT MAX(message_index) as message_index FROM messages")
@@ -122,7 +129,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
 
         for tx in mempool_transactions:
             cursor.execute(
-                """INSERT INTO transactions VALUES(
+                """INSERT INTO mempool_transactions VALUES(
                     :tx_index, :tx_hash, :block_index, :block_hash, :block_time, :source, :destination, :btc_amount, :fee,
                     :data, :supported, :utxos_info, :transaction_type
                 )""",
