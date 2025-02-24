@@ -688,7 +688,7 @@ class CounterpartyServer(threading.Thread):
         }
         logger.debug(f"Config: {custom_config}")
 
-    def run(self):
+    def run_server(self):
         # download bootstrap if necessary
         if (
             not os.path.exists(config.DATABASE) and self.args.catch_up == "bootstrap"
@@ -776,6 +776,12 @@ class CounterpartyServer(threading.Thread):
         self.follower_daemon = follow.start_blockchain_watcher(self.db)
         self.follower_daemon.start()
 
+    def run(self):
+        try:
+            self.run_server()
+        except Exception:
+            _thread.interrupt_main()
+
     def stop(self):
         logger.info("Shutting down...")
         CurrentState().set_block_parser_status("Stopping")
@@ -819,8 +825,6 @@ def start_all(args, log_stream=None):
             server.join(1)
     except KeyboardInterrupt:
         logger.warning("Keyboard interrupt received. Shutting down...")
-    except Exception as e:
-        logger.error("Exception caught!", exc_info=e)
     finally:
         server.stop()
 

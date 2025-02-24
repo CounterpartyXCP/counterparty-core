@@ -9,7 +9,6 @@ import decimal
 import logging
 import os
 import struct
-import sys
 import time
 from datetime import timedelta
 
@@ -847,7 +846,7 @@ def start_rsfetcher():
         fetcher.start(CurrentState().current_block_index() + 1)
     except exceptions.InvalidVersion as e:
         logger.error(e)
-        sys.exit(1)
+        raise e
     except Exception as e:
         logger.warning(f"Failed to start RSFetcher ({e}). Retrying in 5 seconds...")
         try:

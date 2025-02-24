@@ -16,6 +16,7 @@
 - Fix Conservation Check Failing Ungracefull
 - Cleaner Gunicorn Shutdown
 - Fix ungraceful Waitress shutdown
+- Handle correctly RSFetcher version mismatch error
 
 ## Codebase
 
