@@ -328,6 +328,10 @@ def select_rows(
                 break
             row["params"] = json.loads(row["params"])
 
+    if table == "all_transactions":
+        for row in result:
+            row["confirmed"] = True if row["confirmed"] == 1 else False
+
     return QueryResult(result, next_cursor, table, result_count)
 
 
