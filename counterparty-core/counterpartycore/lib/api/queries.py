@@ -388,7 +388,7 @@ def get_last_block(ledger_db):
     )
 
 
-def prepare_transactions_where(type, other_conditions=None, show_unconfirmed=False):
+def prepare_transactions_where(type, other_conditions=None):
     where = []
     type_list = type.split(",")
     for transaction_type in type_list:
@@ -400,9 +400,6 @@ def prepare_transactions_where(type, other_conditions=None, show_unconfirmed=Fal
             if other_conditions:
                 where_status.update(other_conditions)
             where.append(where_status)
-    if not show_unconfirmed:
-        for cond in where:
-            cond["confirmed"] = True
     return where
 
 
@@ -422,14 +419,15 @@ def get_transactions(
     :param int limit: The number of transactions to return (e.g. 2)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "all_transactions",
+        table_name,
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        where=prepare_transactions_where(type, show_unconfirmed=show_unconfirmed),
+        where=prepare_transactions_where(type),
     )
 
 
@@ -451,11 +449,12 @@ def get_transactions_by_block(
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     where = {"block_index": block_index}
     return select_rows(
         ledger_db,
-        "all_transactions",
-        where=prepare_transactions_where(type, where, show_unconfirmed=show_unconfirmed),
+        table_name,
+        where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,
@@ -482,10 +481,11 @@ def get_transactions_by_address(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source": address}
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "all_transactions",
-        where=prepare_transactions_where(type, where, show_unconfirmed=show_unconfirmed),
+        table_name,
+        where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,
@@ -512,10 +512,11 @@ def get_transactions_by_addresses(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source__in": addresses.split(",")}
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "all_transactions",
-        where=prepare_transactions_where(type, where, show_unconfirmed=show_unconfirmed),
+        table_name,
+        where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,
