@@ -215,6 +215,7 @@ def monkeymodule():
 
 original_is_valid_der = parser.gettxinfo.is_valid_der
 original_get_vin_info = backend.bitcoind.get_vin_info
+original_get_vins_info = backend.bitcoind.get_vins_info
 
 
 @pytest.fixture(scope="session")
