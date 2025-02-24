@@ -534,10 +534,9 @@ def rebuild_database(db, include_transactions=True):
     for table in tables_to_clean:
         cursor.execute(f"DROP TABLE IF EXISTS {table}")  # nosec B608
     cursor.execute("""PRAGMA foreign_keys=ON""")
-    with open(
-        os.path.join(config.LEDGER_DB_MIGRATIONS_DIR, "0001.initial_migration.sql"), "r"
-    ) as sql_file:
-        db.execute(sql_file.read())
+    for file in ["0001.initial_migration.sql", "0002.create_mempool_transactions_table"]:
+        with open(os.path.join(config.LEDGER_DB_MIGRATIONS_DIR, file), "r") as sql_file:
+            db.execute(sql_file.read())
 
 
 def rollback(db, block_index=0, force=False):

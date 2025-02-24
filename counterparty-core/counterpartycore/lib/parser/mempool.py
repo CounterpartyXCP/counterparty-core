@@ -16,6 +16,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     logger.trace(f"Parsing {len(raw_tx_list)} raw transaction(s) from the mempool...")
     now = time.time()
     transaction_events = []
+    mempool_transactions = []
     cursor = db.cursor()
     not_supported_txs = []
     try:
@@ -81,6 +82,14 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             )
             # save the events in memory
             transaction_events = cursor.fetchall()
+
+            # get the mempool transactions
+            cursor.execute(
+                """SELECT * FROM transactions WHERE block_index = ?""",
+                (config.MEMPOOL_BLOCK_INDEX,),
+            )
+            # save the mempool transactions in memory
+            mempool_transactions = cursor.fetchall()
             # we raise an exception to rollback the transaction
             raise exceptions.MempoolError("Mempool transaction parsed successfully.")
     except exceptions.MempoolError:
@@ -110,14 +119,24 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
                 )""",
                 event,
             )
+
+        for tx in mempool_transactions:
+            cursor.execute(
+                """INSERT INTO transactions VALUES(
+                    :tx_index, :tx_hash, :block_index, :block_hash, :block_time, :source, :destination, :btc_amount, :fee,
+                    :data, :supported, :utxos_info, :transaction_type
+                )""",
+                tx,
+            )
     logger.trace("Mempool transaction parsed successfully.")
     CurrentState().set_parsing_mempool(False)
     return not_supported_txs
 
 
-def clean_transaction_events(db, tx_hash):
+def clean_transaction_from_mempool(db, tx_hash):
     cursor = db.cursor()
     cursor.execute("DELETE FROM mempool WHERE tx_hash = ?", (tx_hash,))
+    cursor.execute("DELETE FROM mempool_transactions WHERE tx_hash = ?", (tx_hash,))
 
 
 def clean_mempool(db):
@@ -128,7 +147,7 @@ def clean_mempool(db):
     for event in mempool_events:
         tx = ledger.blocks.get_transaction(db, event["tx_hash"])
         if tx:
-            clean_transaction_events(db, event["tx_hash"])
+            clean_transaction_from_mempool(db, event["tx_hash"])
     # remove transactions removed from the mempool
     logger.debug("Remove transactions removed from the mempool...")
     cursor.execute("SELECT distinct tx_hash FROM mempool")
@@ -136,4 +155,4 @@ def clean_mempool(db):
     raw_mempool = backend.bitcoind.getrawmempool(verbose=False)
     for tx_hash in tx_hashes:
         if tx_hash["tx_hash"] not in raw_mempool:
-            clean_transaction_events(db, tx_hash["tx_hash"])
+            clean_transaction_from_mempool(db, tx_hash["tx_hash"])
