@@ -25,6 +25,12 @@ def compose(db, source, destination=None, skip_validation=False):
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
+    if not skip_validation:
+        balances = ledger.balances.get_utxo_balances(db, source)
+        quantity = sum(balance["quantity"] for balance in balances)
+        if quantity == 0:
+            raise exceptions.ComposeError("no assets to detach")
+
     # check if destination is an address
     if destination is not None:
         try:

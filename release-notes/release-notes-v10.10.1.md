@@ -29,6 +29,7 @@
 
 ## API
 
+- Check balance when composing `detach` transaction
 
 ## CLI
 
