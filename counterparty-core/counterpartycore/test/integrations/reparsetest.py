@@ -32,6 +32,7 @@ def prepare(network):
             "testnet4.counterparty.io",
             "--backend-port",
             "48332",
+            "--profile",
         ]
         db_file = "counterparty.testnet4.db"
         api_url = "http://localhost:44000/v2/"
