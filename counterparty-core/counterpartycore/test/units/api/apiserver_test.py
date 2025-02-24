@@ -272,3 +272,39 @@ def test_check_database_version(state_db, ledger_db, test_helpers, caplog, monke
         apiserver.check_database_version(state_db)
 
     config.VERSION_STRING = version_string
+
+
+def test_show_unconfirmed(apiv2_client, ledger_db):
+    url = "/v2/transactions?show_unconfirmed=true&limit=1"
+    result = apiv2_client.get(url).json["result"]
+    assert result[0]["confirmed"]
+
+    url = "/v2/transactions?limit=1"
+    result = apiv2_client.get(url).json["result"]
+    assert "confirmed" not in result[0]
+
+    ledger_db.execute(
+        """INSERT INTO mempool_transactions VALUES(
+            :tx_index, :tx_hash, :block_index, :block_hash, :block_time, :source, :destination, :btc_amount, :fee,
+            :data, :supported, :utxos_info, :transaction_type
+        )""",
+        {
+            "tx_index": 9999999,
+            "tx_hash": "tx_hash",
+            "block_index": 9999999,
+            "block_hash": "mempool",
+            "block_time": 9999999,
+            "source": "source",
+            "destination": "destination",
+            "btc_amount": 9999999,
+            "fee": 0,
+            "data": b"",
+            "supported": True,
+            "utxos_info": "",
+            "transaction_type": "send",
+        },
+    )
+
+    url = "/v2/transactions?show_unconfirmed=true&limit=2"
+    result = apiv2_client.get(url).json["result"]
+    assert not result[0]["confirmed"]

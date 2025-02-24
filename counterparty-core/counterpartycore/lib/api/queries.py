@@ -296,6 +296,9 @@ def select_rows(
                 sort_order = "ASC"
             if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
                 order_by.append(f"{sort_name} {sort_order.upper()}")
+    elif table == "all_transactions":
+        order_by.append("confirmed ASC")
+        order_by.append(f"{cursor_field} {order}")
     if len(order_by) == 0:
         order_by.append(f"{cursor_field} {order}")
     order_by_clause = f"ORDER BY {','.join(order_by)}"
@@ -305,6 +308,8 @@ def select_rows(
     if offset is not None:
         query = f"{query} OFFSET ?"
         bindings.append(offset)
+
+    print(query, bindings)
 
     with start_sentry_span(op="db.sql.execute", description=query) as sql_span:
         sql_span.set_tag("db.system", "sqlite3")
