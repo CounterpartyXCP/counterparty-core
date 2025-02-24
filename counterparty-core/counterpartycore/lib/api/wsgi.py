@@ -282,7 +282,15 @@ class WaitressApplication:
         CurrentState().set_backend_height_value(shared_backend_height)
         self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
         self.current_state_thread.start()
-        self.server.run()
+        try:
+            self.server.run()
+        except OSError as e:
+            if e.errno == 9:
+                logger.debug(
+                    "Ignoring OSError [Errno 9] Bad file descriptor during waitress server shutdown."
+                )
+            else:
+                raise
 
     def stop(self):
         self.current_state_thread.stop()

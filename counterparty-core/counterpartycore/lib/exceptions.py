@@ -197,6 +197,10 @@ class VersionError(Exception):
         self.from_block_index = from_block_index
 
 
+class VersionCheckError(Exception):
+    pass
+
+
 class VersionUpdateRequiredError(Exception):
     pass
 

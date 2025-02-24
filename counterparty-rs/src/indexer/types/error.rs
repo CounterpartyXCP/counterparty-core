@@ -1,16 +1,13 @@
-use std::sync;
-
 use crossbeam_channel::SendError;
 use pyo3::exceptions::PyException;
 use pyo3::PyErr;
+use std::sync;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("IO error: {0}")]
     IO(#[from] std::io::Error),
-    #[error("RPC error: {0}")]
-    Rpc(#[from] bitcoincore_rpc::Error),
     #[error("RocksDB error: {0}")]
     RocksDB(#[from] rocksdb::Error),
     #[error("TryFromSlice error: {0}")]
@@ -47,6 +44,12 @@ pub enum Error {
     Serde(#[from] serde_json::Error),
     #[error("ParseVout error: {0}")]
     ParseVout(String),
+    #[error("Bitcoin RPC error: {0}")]
+    BitcoinRpc(String),
+    #[error("Database error: {0}")]
+    Database(String),
+    #[error("System error: {0}")]
+    System(String),
 }
 
 impl<T> From<SendError<T>> for Error {

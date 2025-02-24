@@ -626,9 +626,9 @@ if __name__ == "__main__":
     print("Generating API documentation...")
     data_dir = sys.argv[1] if len(sys.argv) > 1 else "regtestnode"
     print(f"Using data directory: {data_dir}")
-    assert os.path.exists(
-        f"{data_dir}/counterparty.regtest.db"
-    ), f"Data directory {data_dir} does not exist."
+    assert os.path.exists(f"{data_dir}/counterparty.regtest.db"), (
+        f"Data directory {data_dir} does not exist."
+    )
     db = database.get_db_connection(
         f"{data_dir}/counterparty.regtest.db", read_only=True, check_wal=False
     )

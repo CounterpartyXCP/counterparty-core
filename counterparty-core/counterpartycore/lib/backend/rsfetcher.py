@@ -102,7 +102,6 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
         self.prefetch_queue_initialized = False
 
     def get_block(self, retry=0):
-        logger.trace("Fetching block with Rust backend.")
         block = self.get_prefetched_block()
 
         if block is None:

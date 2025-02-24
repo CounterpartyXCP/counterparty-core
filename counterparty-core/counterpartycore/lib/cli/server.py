@@ -2,10 +2,12 @@
 
 import _thread
 import binascii
+import cProfile
 import decimal
 import logging
 import multiprocessing
 import os
+import pstats
 import threading
 import time
 from urllib.parse import quote_plus as urlencode
@@ -172,6 +174,7 @@ def initialise_config(
     database_file=None,  # for tests
     electrs_url=None,
     api_only=False,
+    profile=False,
 ):
     # log config already initialized
 
@@ -542,10 +545,10 @@ def initialise_config(
             config.ELECTRS_URL = None
 
     config.API_ONLY = api_only
+    config.PROFILE = profile
 
 
 def initialise_log_and_config(args, api=False, log_stream=None):
-    # Configuration
     init_args = {
         "data_dir": args.data_dir,
         "cache_dir": args.cache_dir,
@@ -588,6 +591,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
         "electrs_url": args.electrs_url,
         "api_only": args.api_only,
+        "profile": args.profile,
     }
     # for tests
     if "database_file" in args:
@@ -673,6 +677,7 @@ class CounterpartyServer(threading.Thread):
         self.api_stop_event = None
         self.backend_height_thread = None
         self.log_stream = log_stream
+        self.profiler = None
 
         # Log all config parameters, sorted by key
         # Filter out default values #TODO: these should be set in a different way
@@ -683,7 +688,7 @@ class CounterpartyServer(threading.Thread):
         }
         logger.debug(f"Config: {custom_config}")
 
-    def run(self):
+    def run_server(self):
         # download bootstrap if necessary
         if (
             not os.path.exists(config.DATABASE) and self.args.catch_up == "bootstrap"
@@ -755,13 +760,28 @@ class CounterpartyServer(threading.Thread):
         # Reset (delete) rust fetcher database
         blocks.reset_rust_fetcher_database()
 
-        # catch up
-        blocks.catch_up(self.db, self.api_stop_event)
+        # Catch Up
+        if config.PROFILE:
+            logger.info("Starting profiler before catchup...")
+            self.profiler = cProfile.Profile()
+            self.profiler.enable()
+            blocks.catch_up(self.db, self.api_stop_event)
+            logger.info("Stopping profiler after catchup...")
+            self.profiler.disable()
+        else:
+            blocks.catch_up(self.db, self.api_stop_event)
 
-        # Blockchain watcher
+        # Blockchain Watcher
         logger.info("Watching for new blocks...")
         self.follower_daemon = follow.start_blockchain_watcher(self.db)
         self.follower_daemon.start()
+
+    def run(self):
+        try:
+            self.run_server()
+        except Exception as e:
+            logger.error("Error in server thread: %s", e)
+            _thread.interrupt_main()
 
     def stop(self):
         logger.info("Shutting down...")
@@ -783,6 +803,20 @@ class CounterpartyServer(threading.Thread):
         if self.apiserver_v2:
             self.apiserver_v2.stop()
 
+        # Dump profiling data
+        if config.PROFILE and self.profiler:
+            logger.info("Dumping profiling data...")
+            profile_path = os.path.join(config.CACHE_DIR, "catchup.prof")
+            try:
+                self.profiler.dump_stats(profile_path)
+                stats = pstats.Stats(self.profiler).sort_stats("cumtime")
+                stats.print_stats(20)
+                stats = pstats.Stats(self.profiler).sort_stats("tottime")
+                stats.print_stats(20)
+            except Exception as e:
+                logger.error("Error dumping profiler stats: %s", e)
+            self.profiler = None
+
         logger.info("Shutdown complete.")
 
 
@@ -793,9 +827,7 @@ def start_all(args, log_stream=None):
         while True:
             server.join(1)
     except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt received. Shutting down...")
-    except Exception as e:
-        logger.error("Exception caught!", exc_info=e)
+        logger.warning("Interruption received. Shutting down...")
     finally:
         server.stop()
 

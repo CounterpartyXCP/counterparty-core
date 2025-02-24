@@ -9,7 +9,6 @@ import decimal
 import logging
 import os
 import struct
-import sys
 import time
 from datetime import timedelta
 
@@ -48,7 +47,7 @@ from counterpartycore.lib.messages import (
 from counterpartycore.lib.messages.versions import enhancedsend, mpma
 from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import database, helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -724,7 +723,9 @@ def parse_new_block(db, decoded_block, tx_index=None):
     start_time = time.time()
 
     # increment block index
-    CurrentState().set_current_block_index(CurrentState().current_block_index() + 1)
+    CurrentState().set_current_block_index(
+        CurrentState().current_block_index() + 1, skip_lock_time=True
+    )
 
     # get next tx index if not provided
     if tx_index is None:
@@ -845,7 +846,7 @@ def start_rsfetcher():
         fetcher.start(CurrentState().current_block_index() + 1)
     except exceptions.InvalidVersion as e:
         logger.error(e)
-        sys.exit(1)
+        raise e
     except Exception as e:
         logger.warning(f"Failed to start RSFetcher ({e}). Retrying in 5 seconds...")
         try:
@@ -856,6 +857,23 @@ def start_rsfetcher():
         time.sleep(5)
         return start_rsfetcher()
     return fetcher
+
+
+def create_events_indexes(db):
+    if database.get_config_value(db, "EVENTS_INDEXES_CREATED") == "True":
+        return
+    sqls = [
+        "CREATE INDEX IF NOT EXISTS messages_block_index_idx ON messages (block_index)",
+        "CREATE INDEX IF NOT EXISTS messages_block_index_message_index_idx ON messages (block_index, message_index)",
+        "CREATE INDEX IF NOT EXISTS messages_block_index_event_idx ON messages (block_index, event)",
+        "CREATE INDEX IF NOT EXISTS messages_event_idx ON messages (event)",
+        "CREATE INDEX IF NOT EXISTS messages_tx_hash_idx ON messages (tx_hash)",
+        "CREATE INDEX IF NOT EXISTS messages_event_hash_idx ON messages (event_hash)",
+    ]
+    cursor = db.cursor()
+    for sql in sqls:
+        cursor.execute(sql)
+    database.set_config_value(db, "EVENTS_INDEXES_CREATED", "True")
 
 
 def catch_up(db, check_asset_conservation=True):
@@ -942,6 +960,8 @@ def catch_up(db, check_asset_conservation=True):
     finally:
         if fetcher is not None:
             fetcher.stop()
+
+    create_events_indexes(db)
 
     logger.info("Catch up complete.")
 

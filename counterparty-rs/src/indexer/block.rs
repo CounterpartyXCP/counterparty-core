@@ -1,10 +1,16 @@
+use super::config::Config;
 use pyo3::{
     exceptions::PyException,
     types::{PyAnyMethods, PyBytes, PyDict, PyTuple},
     IntoPy, PyObject, Python,
 };
 
-use super::config::Config;
+#[derive(Clone)]
+pub struct VinOutput {
+    pub script_pub_key: Vec<u8>,
+    pub value: u64,
+    pub is_segwit: bool,
+}
 
 #[derive(Clone)]
 pub struct Vin {
@@ -12,6 +18,7 @@ pub struct Vin {
     pub n: u32,       // prev output index
     pub sequence: u32,
     pub script_sig: Vec<u8>,
+    pub info: Option<VinOutput>,
 }
 
 impl IntoPy<PyObject> for Vin {
@@ -23,6 +30,22 @@ impl IntoPy<PyObject> for Vin {
         dict.set_item("sequence", self.sequence).unwrap();
         dict.set_item("script_sig", PyBytes::new_bound(py, &self.script_sig))
             .unwrap();
+
+        if let Some(info) = self.info {
+            let info_dict = PyDict::new_bound(py);
+            info_dict
+                .set_item(
+                    "script_pub_key",
+                    PyBytes::new_bound(py, &info.script_pub_key),
+                )
+                .unwrap();
+            info_dict.set_item("value", info.value).unwrap();
+            info_dict.set_item("is_segwit", info.is_segwit).unwrap();
+            dict.set_item("info", info_dict).unwrap();
+        } else {
+            dict.set_item("info", py.None()).unwrap();
+        }
+
         dict.unbind().into()
     }
 }

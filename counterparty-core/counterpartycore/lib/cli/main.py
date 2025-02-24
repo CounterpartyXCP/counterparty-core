@@ -393,6 +393,14 @@ CONFIG_ARGS = [
             "help": "Catch up mode (default: normal)",
         },
     ],
+    [
+        ("--profile",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Enable cProfile profiling for catchup; dumps output to a file in the cache dir",
+        },
+    ],
 ]
 
 

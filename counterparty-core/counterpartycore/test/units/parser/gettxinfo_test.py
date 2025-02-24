@@ -8,7 +8,9 @@ from counterpartycore.lib.ledger import markets
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import deserialize, gettxinfo
 from counterpartycore.lib.utils import opcodes
-from counterpartycore.test.mocks.bitcoind import original_is_valid_der
+from counterpartycore.test.mocks.bitcoind import (
+    original_is_valid_der,
+)
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -781,11 +783,16 @@ def test_errors(ledger_db, monkeypatch):
     )
 
 
-def test_get_transaction_sources_checksig(monkeypatch):
-    def get_vins_info_mock_1(*args, **lwargs):
+def test_get_transaction_sources_checksig(monkeypatch, monkeymodule):
+    def get_decoded_transaction(*args, **lwargs):
         raise exceptions.BitcoindRPCError("error")
 
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_1)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_decoded_transaction", get_decoded_transaction
+    )
+    # mocked_get_vin_info = backend.bitcoind.get_vin_info
+    # backend.bitcoind.get_vin_info = original_get_vin_info
+    # monkeymodule.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", original_get_vin_info)
 
     with pytest.raises(exceptions.DecodeError, match="vin not found"):
         gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]})
@@ -798,10 +805,15 @@ def test_get_transaction_sources_checksig(monkeypatch):
             {"tx_id": "abcdef", "segwit": False, "vin": [{"script_sig": b""}]}
         )
 
+    def get_vin_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return (10000, binascii.unhexlify(op_checksig_script), False)
+
     def get_vins_info_mock_2(*args, **lwargs):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return [(10000, binascii.unhexlify(op_checksig_script), False)]
 
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
     assert gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]}) == (
         "1FwkKA9cqpNRFTpVaokdRjT9Xamvebrwcu",
@@ -820,12 +832,21 @@ def test_get_transaction_sources_checksig(monkeypatch):
     with pytest.raises(exceptions.DecodeError, match="data in source"):
         gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]})
 
+    # monkeymodule.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info)
+
+    # backend.bitcoind.get_vin_info = mocked_get_vin_info
+
 
 def test_get_transaction_sources_multisig(monkeypatch):
+    def get_vin_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return (10000, binascii.unhexlify(op_checksig_script), False)
+
     def get_vins_info_mock_2(*args, **lwargs):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return [(10000, binascii.unhexlify(op_checksig_script), False)]
 
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     data = ARC4(binascii.unhexlify("abcdef")).encrypt(b"0" + config.PREFIX + b"pubkeyhash")
@@ -845,10 +866,15 @@ def test_get_transaction_sources_multisig(monkeypatch):
 
 
 def test_get_transaction_sources_unknown_type(monkeypatch):
+    def get_vin_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return (10000, binascii.unhexlify(op_checksig_script), False)
+
     def get_vins_info_mock_2(*args, **lwargs):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
-        return [(10000, binascii.unhexlify(op_checksig_script), False)]
+        return [(10000, binascii.unhexlify(op_checksig_script), False)] * len(args[0])
 
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     monkeypatch.setattr(
@@ -958,10 +984,15 @@ def test_is_valid_schnorr_with_recovery_byte():
 
 
 def test_get_transaction_source_from_p2sh(monkeypatch):
+    def get_vin_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return (10000, binascii.unhexlify(op_checksig_script), False)
+
     def get_vins_info_mock_2(*args, **lwargs):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return [(10000, binascii.unhexlify(op_checksig_script), False)]
 
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     with ProtocolChangesDisabled(["prevout_segwit_fix"]):

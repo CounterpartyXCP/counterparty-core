@@ -24,7 +24,8 @@ jobs:
           - name: Mainnet API Load
             test-path: integrations/load_test.py
             os: Linux-Large-1
-            only_on_develop: true
+            only_on_develop: false
+            no_cov_report: true
 
           # bootstrap, reparse 1000 blocks,
           # rollback 3 checkpoints and catchup
@@ -46,7 +47,7 @@ jobs:
           # bootstrap, reparse 1000 blocks,
           # rollback 3 checkpoints and catchup
           - name: Testnet4 Bootstrap And Catchup
-            test-path: integrations/testnet4_test.py 
+            test-path: integrations/testnet4_test.py
 
           - name: Testnet4 Start and Shutdown
             test-path: integrations/shutdown_test.py
@@ -61,6 +62,9 @@ jobs:
           - name: Compare Hashes
             test-path: integrations/comparehashes_test.py
 
+          - name: RSFetcher Test
+            test-path: integrations/rsfetcher_test.py
+
     # run pytest_action.yml for the matrix
     uses: ./.github/workflows/pytest_action.yml
     with:
@@ -68,4 +72,6 @@ jobs:
       test-path: ${{ matrix.test-path }}
       install_bitcoin: ${{ matrix.install_bitcoin || false }}
       only_on_develop:  ${{ matrix.only_on_develop || false }}
+      os: ${{ matrix.os || 'ubuntu-22.04' }}
+      no_cov_report: ${{ matrix.no_cov_report || false }}
     secrets: inherit

@@ -1,6 +1,6 @@
 use std::{thread::sleep, time::Duration};
 
-use bitcoincore_rpc::bitcoin::hashes::Hash;
+use bitcoin::hashes::Hash;
 use crossbeam_channel::{Receiver, Sender};
 use tracing::info;
 
@@ -42,7 +42,7 @@ where
                 db.block_at_height_has_hash(j)?
                     .ok_or(Error::BlockNotWritten(j))
             },
-            format!("Timedout waiting for block at index {} to be written", j),
+            format!("Still waiting for block at index {} to be written", j),
         )?;
 
         if prev_block_hash == expected_prev_block_hash {
@@ -142,7 +142,7 @@ where
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use bitcoincore_rpc::bitcoin::BlockHash;
+    use bitcoin::BlockHash;
 
     use crate::{
         indexer::{

@@ -2,7 +2,6 @@ import binascii
 import hashlib
 import json
 import logging
-import sys
 import warnings
 
 import requests
@@ -167,17 +166,15 @@ def software_version():
         ValueError,
         requests.exceptions.ReadTimeout,
         TimeoutError,
-    ):
-        logger.warning("Unable to check Counterparty version.")
-        return False
+        json.decoder.JSONDecodeError,
+    ) as e:
+        raise exceptions.VersionCheckError(
+            "Unable to check Counterparty version. Use --force to ignore verfication."
+        ) from e
 
     for change_name in versions:
         protocol_change = versions[change_name]
-        try:
-            check_change(protocol_change, change_name)
-        except exceptions.VersionUpdateRequiredError:  # noqa: F841
-            logger.error("Version Update Required")
-            sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+        check_change(protocol_change, change_name)
 
     logger.debug("Version check passed.")
     return True

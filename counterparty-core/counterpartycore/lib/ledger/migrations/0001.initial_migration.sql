@@ -587,12 +587,6 @@ CREATE TABLE IF NOT EXISTS messages(
                       event TEXT,
                       tx_hash TEXT,
                       event_hash TEXT);
-CREATE INDEX IF NOT EXISTS messages_block_index_idx ON messages (block_index);
-CREATE INDEX IF NOT EXISTS messages_block_index_message_index_idx ON messages (block_index, message_index);
-CREATE INDEX IF NOT EXISTS messages_block_index_event_idx ON messages (block_index, event);
-CREATE INDEX IF NOT EXISTS messages_event_idx ON messages (event);
-CREATE INDEX IF NOT EXISTS messages_tx_hash_idx ON messages (tx_hash);
-CREATE INDEX IF NOT EXISTS messages_event_hash_idx ON messages (event_hash);
 CREATE TABLE IF NOT EXISTS transaction_outputs(
                         tx_index,
                         tx_hash TEXT,
