@@ -42,7 +42,7 @@ where
                 db.block_at_height_has_hash(j)?
                     .ok_or(Error::BlockNotWritten(j))
             },
-            format!("Timedout waiting for block at index {} to be written", j),
+            format!("Still waiting for block at index {} to be written", j),
         )?;
 
         if prev_block_hash == expected_prev_block_hash {

@@ -59,7 +59,7 @@ where
                         return Err(Error::OperationCancelled(error_message));
                     },
                     recv(retry_timer) -> _ => {
-                        debug!("{} Retrying after error: {:?}", error_message, e);
+                        debug!("{} Retrying after: {:?}", error_message, e);
                     },
                     recv(timeout_timer) -> _ => {
                         stopper.unsubscribe(id)?;
