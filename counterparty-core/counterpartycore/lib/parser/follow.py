@@ -206,7 +206,7 @@ class BlockchainWatcher:
         # transaction removed from mempool for non-block inclusion reasons
         elif label == "R":
             logger.debug("Removing transaction from mempool: %s", item_hash)
-            mempool.clean_transaction_events(self.db, item_hash)
+            mempool.clean_transaction_from_mempool(self.db, item_hash)
 
     def receive_message(self, topic, body, seq):
         sequence = "Unknown"

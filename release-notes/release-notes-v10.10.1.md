@@ -30,6 +30,8 @@
 ## API
 
 - Check balance when composing `detach` transaction
+- Add `show_unconfirmed` parameter for get transactions endpoints
+- Add `count_confirmed` parameter for get transactions count endpoints
 
 ## CLI
 
