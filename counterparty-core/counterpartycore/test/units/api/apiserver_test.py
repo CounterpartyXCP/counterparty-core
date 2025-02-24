@@ -31,7 +31,6 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
         return None
     if "/dispenses/" in route:
         return None
-    print(route)
 
     last_block = db.execute(
         "SELECT block_hash FROM blocks WHERE block_index = ? ORDER BY block_index DESC LIMIT 1",
@@ -305,6 +304,6 @@ def test_show_unconfirmed(apiv2_client, ledger_db):
         },
     )
 
-    url = "/v2/transactions?show_unconfirmed=true&limit=2"
+    url = "/v2/transactions?show_unconfirmed=true&limit=1"
     result = apiv2_client.get(url).json["result"]
     assert not result[0]["confirmed"]
