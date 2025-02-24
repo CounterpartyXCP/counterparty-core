@@ -779,7 +779,8 @@ class CounterpartyServer(threading.Thread):
     def run(self):
         try:
             self.run_server()
-        except Exception:
+        except Exception as e:
+            logger.error("Error in server thread: %s", e)
             _thread.interrupt_main()
 
     def stop(self):
@@ -824,7 +825,7 @@ def start_all(args, log_stream=None):
         while True:
             server.join(1)
     except KeyboardInterrupt:
-        logger.warning("Keyboard interrupt received. Shutting down...")
+        logger.warning("Interruption received. Shutting down...")
     finally:
         server.stop()
 

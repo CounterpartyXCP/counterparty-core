@@ -17,6 +17,7 @@
 - Cleaner Gunicorn Shutdown
 - Fix ungraceful Waitress shutdown
 - Handle correctly RSFetcher version mismatch error
+- Handle correctly errors in Counterparty Server version checking
 
 ## Codebase
 
