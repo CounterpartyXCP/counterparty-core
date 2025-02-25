@@ -264,8 +264,8 @@ def select_rows(
     ):
         select += ", NULLIF(destination, '') AS destination"
 
-    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
-    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
+    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
 
     if wrap_where is not None:
         wrap_where_field = []
@@ -278,10 +278,10 @@ def select_rows(
             bindings_count.append(value)
         wrap_where_clause = " AND ".join(wrap_where_field)
         wrap_where_clause = f"WHERE {wrap_where_clause}"
-        query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608
-        query_count = f"SELECT COUNT(*) AS count FROM ({query_count}) {wrap_where_clause}"  # nosec B608  # noqa: S608
+        query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
+        query_count = f"SELECT COUNT(*) AS count FROM ({query_count}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
     else:
-        query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608
+        query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608 # nosec B608
 
     order_by = []
     if sort is not None:
@@ -303,7 +303,7 @@ def select_rows(
         order_by.append(f"{cursor_field} {order}")
     order_by_clause = f"ORDER BY {','.join(order_by)}"
 
-    query = f"{query} {order_by_clause} LIMIT ?"  # nosec B608  # noqa: S608
+    query = f"{query} {order_by_clause} LIMIT ?"  # nosec B608  # noqa: S608 # nosec B608
     bindings.append(limit + 1)
     if offset is not None:
         query = f"{query} OFFSET ?"

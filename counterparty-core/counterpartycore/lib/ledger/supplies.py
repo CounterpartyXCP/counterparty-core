@@ -476,10 +476,10 @@ def held(db):  # TODO: Rename ?
     ]
     # no sql injection here
     sql = (
-        "SELECT asset, SUM(total) AS total FROM ("  # noqa: S608
+        "SELECT asset, SUM(total) AS total FROM ("  # noqa: S608 # nosec B608
         + " UNION ALL ".join(queries)
         + ") GROUP BY asset;"
-    )  # nosec B608
+    )
 
     cursor = db.cursor()
     cursor.execute(sql)

@@ -190,7 +190,7 @@ def update_event_to_sql(event):
         where_bindings.append(event_bindings[id_field_name])
     where_clause = " AND ".join(where)
 
-    sql = f"UPDATE {event['category']} SET {sets_clause} WHERE {where_clause}"  # noqa: S608
+    sql = f"UPDATE {event['category']} SET {sets_clause} WHERE {where_clause}"  # noqa: S608 # nosec B608
 
     return sql, sql_bindings
 
@@ -329,7 +329,7 @@ def update_assets_info(state_db, event):
             set_data.append("issuer = :issuer")
         set_data = ", ".join(set_data)
 
-        sql = f"UPDATE assets_info SET {set_data} WHERE asset = :asset"  # noqa: S608
+        sql = f"UPDATE assets_info SET {set_data} WHERE asset = :asset"  # noqa: S608 # nosec B608
         cursor = state_db.cursor()
         cursor.execute(sql, event_bindings)
         return
@@ -427,7 +427,7 @@ def update_balances(state_db, event):
         address_or_utxo = event_bindings["utxo"]
     event_bindings["address_or_utxo"] = address_or_utxo
 
-    sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608
+    sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608 # nosec B608
     existing_balance = fetch_one(state_db, sql, event_bindings)
 
     if existing_balance is not None:
@@ -435,12 +435,12 @@ def update_balances(state_db, event):
             UPDATE balances
             SET quantity = quantity + :quantity
             WHERE {field_name} = :address_or_utxo AND asset = :asset
-            """  # noqa: S608
+            """  # noqa: S608 # nosec B608
     else:
         sql = f"""
             INSERT INTO balances ({field_name}, asset, quantity, utxo_address)
             VALUES (:address_or_utxo, :asset, :quantity, :utxo_address)
-            """  # noqa: S608
+            """  # noqa: S608 # nosec B608
     utxo_address = None
     if "utxo_address" in event_bindings:
         utxo_address = event_bindings["utxo_address"]

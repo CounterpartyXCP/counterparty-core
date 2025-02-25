@@ -23,7 +23,7 @@ def get_cursor(db):
 def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
     fields = list(record.keys())
     placeholders = ", ".join(["?" for _ in fields])
-    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608
+    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608 # nosec B608
 
     with get_cursor(db) as cursor:
         cursor.execute(query, list(record.values()))
@@ -31,7 +31,7 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
             cursor.execute("SELECT last_insert_rowid() AS rowid")
             inserted_rowid = cursor.fetchone()["rowid"]
             new_record = cursor.execute(
-                f"SELECT * FROM {table_name} WHERE rowid = ?",  # noqa: S608
+                f"SELECT * FROM {table_name} WHERE rowid = ?",  # noqa: S608 # nosec B608
                 (inserted_rowid,),
             ).fetchone()
             if AssetCache in AssetCache._instances:
@@ -59,7 +59,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
         WHERE {id_name} = ?
         ORDER BY rowid DESC
         LIMIT 1
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     bindings = (id_value,)
     need_update_record = cursor.execute(select_query, bindings).fetchone()
 
@@ -81,7 +81,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     fields_name = ", ".join(new_record.keys())
     fields_values = ", ".join([f":{key}" for key in new_record.keys()])
     # no sql injection here
-    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
+    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(insert_query, new_record)
     cursor.close()
     # Add event to journal
@@ -366,7 +366,7 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     if len(where) == 0:
         query = """SELECT * FROM messages ORDER BY message_index ASC LIMIT ?"""
     else:
-        query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC LIMIT ?"""  # nosec B608  # noqa: S608
+        query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC LIMIT ?"""  # nosec B608  # noqa: S608 # nosec B608
     bindings.append(limit)
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()

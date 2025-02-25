@@ -274,7 +274,7 @@ def get_rows(
 
     # SELECT
     # no sql injection here
-    statement = f"""SELECT * FROM ({table})"""  # nosec B608  # noqa: S608
+    statement = f"""SELECT * FROM ({table})"""  # nosec B608  # noqa: S608 # nosec B608
     # WHERE
     bindings = []
     conditions = []
@@ -783,7 +783,7 @@ def create_app():
             block_indexes_placeholder = f"{','.join(['?'] * len(block_indexes))}"
             # no sql injection here
             cursor.execute(
-                f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608
+                f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608 # nosec B608
                 block_indexes,
             )
             blocks = cursor.fetchall()  # noqa: F811
@@ -883,7 +883,7 @@ def create_app():
                 "destructions",
             ]:
                 # no sql injection here, element is hardcoded
-                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608  # noqa: S608
+                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608  # noqa: S608 # nosec B608
                 count_list = cursor.fetchall()
                 assert len(count_list) == 1
                 counts[element] = count_list[0]["count"]

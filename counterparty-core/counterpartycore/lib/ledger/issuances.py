@@ -324,7 +324,7 @@ def get_assets_last_issuance(state_db, asset_list):
         query = f"""
             SELECT {", ".join(fields)} FROM assets_info
             WHERE asset IN ({",".join(["?"] * len(asset_name_list))})
-        """  # nosec B608  # noqa: S608
+        """  # nosec B608  # noqa: S608 # nosec B608
         cursor.execute(query, asset_name_list)
         assets_info += cursor.fetchall()
 
@@ -333,7 +333,7 @@ def get_assets_last_issuance(state_db, asset_list):
         query = f"""
             SELECT {", ".join(fields)} FROM assets_info
             WHERE asset_longname IN ({",".join(["?"] * len(asset_longname_list))})
-        """  # nosec B608  # noqa: S608
+        """  # nosec B608  # noqa: S608 # nosec B608
         cursor.execute(query, asset_longname_list)
         assets_info += cursor.fetchall()
 
@@ -392,7 +392,7 @@ def get_issuances(
         where.append("block_index = ?")
         bindings.append(block_index)
     # no sql injection here
-    query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608 # nosec B608
     if protocol.enabled("fix_get_issuances", current_block_index):
         order_fields = "rowid, tx_index"
     else:
@@ -433,7 +433,7 @@ def get_asset(db, asset):
         SELECT * FROM issuances
         WHERE ({name_field} = ? AND status = ?)
         ORDER BY tx_index DESC
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     bindings = (asset, "valid")
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()

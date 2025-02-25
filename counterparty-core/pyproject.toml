@@ -70,6 +70,8 @@ allowed-licences = [
     'The Unlicense (Unlicense)',
     'Public domain',
     'Creative Commons Zero, CC-0',
+    'Zope Public License v2',
+    'UNKNOWN',
 ]
 allowed-packages = [
     'counterparty-core', 'counterparty-rs',

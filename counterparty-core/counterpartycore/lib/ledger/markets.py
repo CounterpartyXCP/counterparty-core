@@ -184,7 +184,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
                 {where_source}
             GROUP BY tx_hash
         ) WHERE give_remaining = 0 OR get_remaining = 0
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
 
     cursor = db.cursor()
     cursor.execute(select_query, select_bindings)
@@ -241,7 +241,7 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
             FROM dispensers
             WHERE ({" AND ".join(where)})
             ORDER BY rowid DESC LIMIT 1
-        """  # nosec B608  # noqa: S608
+        """  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -252,7 +252,7 @@ def get_dispensers_info(db, tx_hash_list):
         SELECT *, MAX(rowid) AS rowid FROM dispensers
         WHERE tx_hash IN ({})
         GROUP BY tx_hash
-    """.format(",".join(["?" for e in range(0, len(tx_hash_list))]))  # nosec B608  # noqa: S608
+    """.format(",".join(["?" for e in range(0, len(tx_hash_list))]))  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tx_hash_list)
     dispensers = cursor.fetchall()
     result = {}
@@ -369,7 +369,7 @@ def get_dispensers(
             {group_clause}
         ) {second_where_str}
         {order_clause}
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

@@ -50,7 +50,7 @@ def get_broadcasts_by_source(db, address: str, status: str = "valid", order_by: 
         SELECT * FROM broadcasts
         WHERE (status = ? AND source = ?)
         ORDER BY tx_index {order_by}
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     bindings = (status, address)
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -77,7 +77,7 @@ def get_burns(db, address: str = None, status: str = "valid"):
         where.append("source = ?")
         bindings.append(address)
     # no sql injection here
-    query = f"""SELECT * FROM burns WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    query = f"""SELECT * FROM burns WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -95,7 +95,7 @@ def get_addresses(db, address=None):
         where.append("address = ?")
         bindings.append(address)
     # no sql injection here
-    query = f"""SELECT *, MAX(rowid) AS rowid FROM addresses WHERE ({" AND ".join(where)}) GROUP BY address"""  # nosec B608  # noqa: S608
+    query = f"""SELECT *, MAX(rowid) AS rowid FROM addresses WHERE ({" AND ".join(where)}) GROUP BY address"""  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

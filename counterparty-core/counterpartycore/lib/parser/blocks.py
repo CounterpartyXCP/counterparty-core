@@ -501,7 +501,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
 def clean_table_from(cursor, table, block_index):
     logger.debug(f"Rolling back table `{table}`...")
     # internal function, no sql injection here
-    cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608  # noqa: S608
+    cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608  # noqa: S608 # nosec B608
 
 
 def clean_messages_tables(db, block_index=0):
