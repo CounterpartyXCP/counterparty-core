@@ -268,6 +268,7 @@ def execute_api_function(rule, route, function_args):
             and is_cachable(rule)
             and route["function"].__name__ != "redirect_to_api_v1"
             and not request.path.startswith("/v2/mempool/")
+            and "show_unconfirmed=true" not in request.url
         ):
             sentry_put_span.set_data("cache.key", cache_key)
             BLOCK_CACHE[cache_key] = result
@@ -494,8 +495,6 @@ def run_apiserver(
 
     def handle_interrupt_signal(signum, frame):
         pass
-        # logger.warning("Keyboard interrupt received. Shutting down...")
-        # raise KeyboardInterrupt
 
     wsgi_server = None
     parent_checker = None

@@ -180,6 +180,9 @@ def select_rows(
     if offset is not None or sort is not None:
         last_cursor = None
 
+    if table == "all_transactions":
+        cursor_field = "tx_index"
+
     cursor = db.cursor()
 
     if where is None:
@@ -256,7 +259,7 @@ def select_rows(
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
     if (
-        table in ["transactions", "sends", "btcpays", "sweeps", "dispenses"]
+        table in ["all_transactions", "transactions", "sends", "btcpays", "sweeps", "dispenses"]
         and "COUNT(*)" not in select
     ):
         select += ", NULLIF(destination, '') AS destination"
@@ -293,6 +296,9 @@ def select_rows(
                 sort_order = "ASC"
             if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
                 order_by.append(f"{sort_name} {sort_order.upper()}")
+    elif table == "all_transactions":
+        order_by.append("confirmed ASC")
+        order_by.append(f"{cursor_field} {order}")
     if len(order_by) == 0:
         order_by.append(f"{cursor_field} {order}")
     order_by_clause = f"ORDER BY {','.join(order_by)}"
@@ -324,6 +330,10 @@ def select_rows(
             if "params" not in row:
                 break
             row["params"] = json.loads(row["params"])
+
+    if table == "all_transactions":
+        for row in result:
+            row["confirmed"] = True if row["confirmed"] == 1 else False
 
     return QueryResult(result, next_cursor, table, result_count)
 
@@ -403,6 +413,7 @@ def prepare_transactions_where(type, other_conditions=None):
 def get_transactions(
     ledger_db,
     type: TransactionType = "all",
+    show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 10,
     offset: int = None,
@@ -410,13 +421,15 @@ def get_transactions(
     """
     Returns the list of the last ten transactions
     :param str type: The type of the transaction to return
+    :param bool show_unconfirmed: Show unconfirmed transactions
     :param str cursor: The index of the most recent transactions to return (e.g. $LAST_TX_INDEX)
     :param int limit: The number of transactions to return (e.g. 2)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,
@@ -429,6 +442,7 @@ def get_transactions_by_block(
     ledger_db,
     block_index: int,
     type: TransactionType = "all",
+    show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 10,
     offset: int = None,
@@ -437,14 +451,16 @@ def get_transactions_by_block(
     Returns the transactions of a block
     :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
     :param str type: The type of the transaction to return
+    :param bool show_unconfirmed: Show unconfirmed transactions
     :param str cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     where = {"block_index": block_index}
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
@@ -457,6 +473,7 @@ def get_transactions_by_address(
     ledger_db,
     address: str,
     type: TransactionType = "all",
+    show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 10,
     offset: int = None,
@@ -465,14 +482,16 @@ def get_transactions_by_address(
     Returns the transactions of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str type: The type of the transaction to return
+    :param bool show_unconfirmed: Show unconfirmed transactions
     :param str cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source": address}
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
@@ -485,6 +504,7 @@ def get_transactions_by_addresses(
     ledger_db,
     addresses: str,
     type: TransactionType = "all",
+    show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -493,14 +513,16 @@ def get_transactions_by_addresses(
     Returns the transactions of a list of addresses
     :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_1,$ADDRESS_2)
     :param str type: The type of the transaction to return
+    :param bool show_unconfirmed: Show unconfirmed transactions
     :param str cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source__in": addresses.split(",")}
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
@@ -522,14 +544,18 @@ def get_transaction_types_count(state_db):
     )
 
 
-def get_transaction_types_count_by_block(ledger_db, block_index: int):
+def get_transaction_types_count_by_block(
+    ledger_db, block_index: int, count_unconfirmed: bool = False
+):
     """
     Returns the count of each transaction type
     :param int block_index: The index of the block to return (e.g. $LAST_TX_INDEX)
+    :param bool count_unconfirmed: Count unconfirmed transactions
     """
+    table_name = "all_transactions" if count_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         select="transaction_type, COUNT(*) AS count",
         where={"block_index": block_index},
         group_by="transaction_type",
@@ -538,13 +564,18 @@ def get_transaction_types_count_by_block(ledger_db, block_index: int):
     )
 
 
-def get_transaction_types_count_by_address(ledger_db, address: str):
+def get_transaction_types_count_by_address(
+    ledger_db, address: str, count_unconfirmed: bool = False
+):
     """
     Returns the count of each transaction type
+    :param str address: The address to return (e.g. $ADDRESS_1)
+    :param bool count_unconfirmed: Count unconfirmed transactions
     """
+    table_name = "all_transactions" if count_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         select="transaction_type, COUNT(*) AS count",
         where={"source": address},
         group_by="transaction_type",
@@ -560,7 +591,7 @@ def get_transaction_by_hash(ledger_db, tx_hash: str):
     """
     return select_row(
         ledger_db,
-        "transactions",
+        "all_transactions",
         where={"tx_hash": tx_hash},
     )
 
@@ -572,7 +603,7 @@ def get_transaction_by_tx_index(ledger_db, tx_index: int):
     """
     return select_row(
         ledger_db,
-        "transactions",
+        "all_transactions",
         where={"tx_index": tx_index},
     )
 

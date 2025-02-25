@@ -168,6 +168,7 @@ def software_version():
         TimeoutError,
         json.decoder.JSONDecodeError,
     ) as e:
+        logger.error(e, exc_info=True)
         raise exceptions.VersionCheckError(
             "Unable to check Counterparty version. Use --force to ignore verfication."
         ) from e
