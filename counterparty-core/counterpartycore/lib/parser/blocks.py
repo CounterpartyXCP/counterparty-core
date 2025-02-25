@@ -543,6 +543,7 @@ def rollback(db, block_index=0, force=False):
     if not force and block_index > CurrentState().current_block_index():
         logger.debug("Block index is higher than current block index. No need to reparse.")
         return
+    CurrentState().set_ledger_state(db, "Rollbacking")
     block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
     step = f"Rolling Ledger DB back to block {block_index}..."
@@ -587,6 +588,7 @@ def reparse(db, block_index=0):
     if block_index > CurrentState().current_block_index():
         logger.debug("Block index is higher than current block index. No need to reparse.")
         return
+    CurrentState().set_ledger_state(db, "Reparsing")
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     with log.Spinner(f"Rolling database back to block {block_index}..."):
@@ -881,7 +883,7 @@ def catch_up(db, check_asset_conservation=True):
     fetcher = None
 
     try:
-        CurrentState().set_ledger_state("Catching Up")
+        CurrentState().set_ledger_state(db, "Catching Up")
         # update the current block index
         current_block_index = ledger.blocks.last_db_index(db)
         if current_block_index == 0:

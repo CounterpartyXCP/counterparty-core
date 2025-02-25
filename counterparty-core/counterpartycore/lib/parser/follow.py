@@ -65,7 +65,7 @@ def get_zmq_notifications_addresses():
 
 def start_blockchain_watcher(db):
     try:
-        CurrentState().set_ledger_state("Following")
+        CurrentState().set_ledger_state(db, "Following")
         return BlockchainWatcher(db)
     except exceptions.BitcoindZMQError as e:
         logger.error(e)

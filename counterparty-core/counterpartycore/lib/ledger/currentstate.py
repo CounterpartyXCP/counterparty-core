@@ -83,10 +83,9 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def set_parsing_mempool(self, parsing_mempool):
         self.state["PARSING_MEMPOOL"] = parsing_mempool
 
-    def set_ledger_state(self, status):
+    def set_ledger_state(self, ledger_db, status):
         # use db to share Ledger state with other processes
-        with LedgerDBConnectionPool().connection() as ledger_db:
-            set_config_value(ledger_db, "LEDGER_STATE", status)
+        set_config_value(ledger_db, "LEDGER_STATE", status)
 
     def current_block_index(self):
         return self.state.get("CURRENT_BLOCK_INDEX")
@@ -115,7 +114,7 @@ class CurrentState(metaclass=helpers.SingletonMeta):
 
     def ledger_state(self):
         with LedgerDBConnectionPool().connection() as ledger_db:
-            return get_config_value(ledger_db, "LEDGER_STATE")
+            return get_config_value(ledger_db, "LEDGER_STATE") or "Starting"
 
 
 class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):

@@ -20,11 +20,11 @@ def test_currentstate(ledger_db, current_block_index, monkeypatch):
     currentstate.CurrentState().set_parsing_mempool(False)
     assert not currentstate.CurrentState().parsing_mempool()
 
-    assert currentstate.CurrentState().ledger_state() == "starting"
-    currentstate.CurrentState().set_ledger_state("running")
-    assert currentstate.CurrentState().ledger_state() == "running"
-    currentstate.CurrentState().set_ledger_state("starting")
-    assert currentstate.CurrentState().ledger_state() == "starting"
+    assert currentstate.CurrentState().ledger_state() == "Starting"
+    currentstate.CurrentState().set_ledger_state(ledger_db, "Following")
+    assert currentstate.CurrentState().ledger_state() == "Following"
+    currentstate.CurrentState().set_ledger_state(ledger_db, "Catching Up")
+    assert currentstate.CurrentState().ledger_state() == "Catching Up"
 
     currentstate.CurrentState().set("toto", "tata")
     assert currentstate.CurrentState().get("toto") == "tata"

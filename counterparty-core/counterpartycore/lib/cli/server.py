@@ -689,7 +689,6 @@ class CounterpartyServer(threading.Thread):
         logger.debug(f"Config: {custom_config}")
 
     def run_server(self):
-        CurrentState().set_ledger_state("Starting")
         # download bootstrap if necessary
         if (
             not os.path.exists(config.DATABASE) and self.args.catch_up == "bootstrap"
@@ -786,7 +785,7 @@ class CounterpartyServer(threading.Thread):
 
     def stop(self):
         logger.info("Shutting down...")
-        CurrentState().set_ledger_state("Stopping")
+        CurrentState().set_ledger_state(self.db, "Stopping")
 
         # Ensure all threads are stopped
         if self.follower_daemon:

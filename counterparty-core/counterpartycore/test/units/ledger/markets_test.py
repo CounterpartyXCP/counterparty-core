@@ -6,9 +6,9 @@ def test_markets(ledger_db, defaults):
     assert len(markets.get_open_btc_orders(ledger_db, defaults["addresses"][0])) == 1
 
     original_state = currentstate.CurrentState().ledger_state()
-    currentstate.CurrentState().set_ledger_state("catching up")
+    currentstate.CurrentState().set_ledger_state(ledger_db, "Catching Up")
     assert len(markets.get_matching_orders(ledger_db, "tx_hash", "BTC", "XCP")) == 2
-    currentstate.CurrentState().set_ledger_state(original_state)
+    currentstate.CurrentState().set_ledger_state(ledger_db, original_state)
 
     open_orders = ledger_db.execute(
         """SELECT rowid FROM (
