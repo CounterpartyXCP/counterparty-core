@@ -88,7 +88,7 @@ def build_consolidated_table(state_db, table_name):
         SELECT sql, type FROM ledger_db.sqlite_master 
         WHERE tbl_name='{table_name}'
         AND type != 'trigger'
-    """).fetchall():  # noqa S608
+    """).fetchall():  # noqa S608 # nosec B608
         if sql["type"] == "index":
             indexes.append(sql["sql"])
         else:
@@ -102,7 +102,7 @@ def build_consolidated_table(state_db, table_name):
         SELECT {CONSOLIDATED_TABLES[table_name]}, MAX(rowid) as max_id
         FROM ledger_db.{table_name}
         GROUP BY {CONSOLIDATED_TABLES[table_name]}
-    """)  # noqa S608
+    """)  # noqa S608 # nosec B608
 
     state_db.execute("""
         CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)
@@ -118,7 +118,7 @@ def build_consolidated_table(state_db, table_name):
         SELECT {select_fields}
         FROM ledger_db.{table_name} b
         JOIN latest_ids l ON b.rowid = l.max_id
-    """)  # noqa S608
+    """)  # noqa S608 # nosec B608
     state_db.execute("DROP TABLE latest_ids")
 
     # add additional columns

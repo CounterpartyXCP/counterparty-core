@@ -49,7 +49,7 @@ def apply(db):
         SELECT event, bindings, message_index, block_index
         FROM ledger_db.messages WHERE event IN ({placeholders})
         ORDER BY message_index
-    """  # noqa S608
+    """  # noqa S608 # nosec B608
 
     cursor.execute(sql, event_names)
 
