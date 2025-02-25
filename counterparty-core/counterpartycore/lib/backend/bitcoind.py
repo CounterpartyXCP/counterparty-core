@@ -37,7 +37,7 @@ def clean_url_for_log(url):
 
 # for testing
 def should_retry():
-    if CurrentState().block_parser_status() == "Stopping":
+    if CurrentState().ledger_state() == "Stopping":
         return False
     return True
 

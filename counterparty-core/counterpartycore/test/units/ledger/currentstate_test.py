@@ -2,6 +2,7 @@ import time
 
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger import currentstate
+from counterpartycore.lib.utils import database
 
 
 def test_currentstate(ledger_db, current_block_index, monkeypatch):
@@ -20,11 +21,13 @@ def test_currentstate(ledger_db, current_block_index, monkeypatch):
     currentstate.CurrentState().set_parsing_mempool(False)
     assert not currentstate.CurrentState().parsing_mempool()
 
-    assert currentstate.CurrentState().block_parser_status() == "starting"
-    currentstate.CurrentState().set_block_parser_status("running")
-    assert currentstate.CurrentState().block_parser_status() == "running"
-    currentstate.CurrentState().set_block_parser_status("starting")
-    assert currentstate.CurrentState().block_parser_status() == "starting"
+    assert currentstate.CurrentState().ledger_state() == "Starting"
+    currentstate.CurrentState().set_ledger_state(ledger_db, "Following")
+    assert currentstate.CurrentState().ledger_state() == "Following"
+    assert database.get_config_value(ledger_db, "LEDGER_STATE") == "Following"
+    currentstate.CurrentState().set_ledger_state(ledger_db, "Catching Up")
+    assert currentstate.CurrentState().ledger_state() == "Catching Up"
+    assert database.get_config_value(ledger_db, "LEDGER_STATE") == "Catching Up"
 
     currentstate.CurrentState().set("toto", "tata")
     assert currentstate.CurrentState().get("toto") == "tata"

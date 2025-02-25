@@ -65,6 +65,7 @@ def get_zmq_notifications_addresses():
 
 def start_blockchain_watcher(db):
     try:
+        CurrentState().set_ledger_state(db, "Following")
         return BlockchainWatcher(db)
     except exceptions.BitcoindZMQError as e:
         logger.error(e)
@@ -94,7 +95,6 @@ class BlockchainWatcher:
         self.stop_event = threading.Event()
         self.mempool_parser = None
         if not config.NO_MEMPOOL:
-            CurrentState().set_block_parser_status("Initializing")
             mempool.clean_mempool(self.db)
             self.mempool_parser = RawMempoolParser(self.db)
             self.mempool_parser.start()
@@ -297,6 +297,8 @@ class BlockchainWatcher:
             except Exception as e:
                 logger.error("Error in handle loop: %s", e)
                 capture_exception(e)
+                # import traceback
+                # print(traceback.format_exc())  # for debugging
                 self.stop()
                 break  # Optionally break the loop on other exceptions
 

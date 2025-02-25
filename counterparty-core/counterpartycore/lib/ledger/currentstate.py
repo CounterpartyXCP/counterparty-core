@@ -7,7 +7,11 @@ from multiprocessing import Value
 from counterpartycore.lib import backend, config
 from counterpartycore.lib.ledger import blocks
 from counterpartycore.lib.utils import helpers
-from counterpartycore.lib.utils.database import LedgerDBConnectionPool
+from counterpartycore.lib.utils.database import (
+    LedgerDBConnectionPool,
+    get_config_value,
+    set_config_value,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -79,8 +83,9 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def set_parsing_mempool(self, parsing_mempool):
         self.state["PARSING_MEMPOOL"] = parsing_mempool
 
-    def set_block_parser_status(self, status):
-        self.state["BLOCK_PARSER_STATUS"] = status
+    def set_ledger_state(self, ledger_db, status):
+        # use db to share Ledger state with other processes
+        set_config_value(ledger_db, "LEDGER_STATE", status)
 
     def current_block_index(self):
         return self.state.get("CURRENT_BLOCK_INDEX")
@@ -107,8 +112,9 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def parsing_mempool(self):
         return self.state.get("PARSING_MEMPOOL")
 
-    def block_parser_status(self):
-        return self.state.get("BLOCK_PARSER_STATUS", "starting")
+    def ledger_state(self):
+        with LedgerDBConnectionPool().connection() as ledger_db:
+            return get_config_value(ledger_db, "LEDGER_STATE") or "Starting"
 
 
 class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):

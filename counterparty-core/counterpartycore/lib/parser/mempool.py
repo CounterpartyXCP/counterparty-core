@@ -33,16 +33,20 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             cursor.execute(
                 "SELECT tx_index FROM mempool_transactions ORDER BY tx_index DESC LIMIT 1"
             )
+            last_mempool_tx = cursor.fetchone()
+            if last_mempool_tx:
+                last_mempool_tx_index = last_mempool_tx["tx_index"] + 1
+            else:
+                last_mempool_tx_index = 1
+
+            cursor.execute("SELECT tx_index FROM transactions ORDER BY tx_index DESC LIMIT 1")
             last_tx = cursor.fetchone()
             if last_tx:
-                mempool_tx_index = last_tx["tx_index"] + 1
+                last_tx_index = last_tx["tx_index"] + 1
             else:
-                cursor.execute("SELECT tx_index FROM transactions ORDER BY tx_index DESC LIMIT 1")
-                last_tx = cursor.fetchone()
-                if last_tx:
-                    mempool_tx_index = last_tx["tx_index"] + 1
-                else:
-                    mempool_tx_index = 0
+                last_tx_index = 1
+
+            mempool_tx_index = max(last_mempool_tx_index, last_tx_index)
 
             # get message index before parsing the block
             cursor.execute("SELECT MAX(message_index) as message_index FROM messages")

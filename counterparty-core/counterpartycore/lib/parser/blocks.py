@@ -534,7 +534,7 @@ def rebuild_database(db, include_transactions=True):
     for table in tables_to_clean:
         cursor.execute(f"DROP TABLE IF EXISTS {table}")  # nosec B608
     cursor.execute("""PRAGMA foreign_keys=ON""")
-    for file in ["0001.initial_migration.sql", "0002.create_mempool_transactions_table"]:
+    for file in ["0001.initial_migration.sql", "0002.create_mempool_transactions_table.sql"]:
         with open(os.path.join(config.LEDGER_DB_MIGRATIONS_DIR, file), "r") as sql_file:
             db.execute(sql_file.read())
 
@@ -543,6 +543,7 @@ def rollback(db, block_index=0, force=False):
     if not force and block_index > CurrentState().current_block_index():
         logger.debug("Block index is higher than current block index. No need to reparse.")
         return
+    CurrentState().set_ledger_state(db, "Rolling Back")
     block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
     step = f"Rolling Ledger DB back to block {block_index}..."
@@ -587,6 +588,7 @@ def reparse(db, block_index=0):
     if block_index > CurrentState().current_block_index():
         logger.debug("Block index is higher than current block index. No need to reparse.")
         return
+    CurrentState().set_ledger_state(db, "Reparsing")
     cursor = db.cursor()
     # clean all tables except assets' blocks', 'transaction_outputs' and 'transactions'
     with log.Spinner(f"Rolling database back to block {block_index}..."):
@@ -881,7 +883,7 @@ def catch_up(db, check_asset_conservation=True):
     fetcher = None
 
     try:
-        CurrentState().set_block_parser_status("Catching Up")
+        CurrentState().set_ledger_state(db, "Catching Up")
         # update the current block index
         current_block_index = ledger.blocks.last_db_index(db)
         if current_block_index == 0:
@@ -907,7 +909,7 @@ def catch_up(db, check_asset_conservation=True):
         parsed_blocks = 0
 
         while CurrentState().current_block_index() < block_count:
-            if CurrentState().block_parser_status() == "Stopping":
+            if CurrentState().ledger_state() == "Stopping":
                 return
             # Get block information and transactions
             fetch_time_start = time.time()

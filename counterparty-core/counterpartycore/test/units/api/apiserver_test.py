@@ -2,6 +2,7 @@ from counterpartycore.lib import config, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
+from counterpartycore.lib.parser import blocks
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -15,6 +16,7 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "version": config.VERSION_STRING,
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
+            "ledger_state": "Starting",
             "documentation": "https://counterpartycore.docs.apiary.io/",
             "routes": "http://localhost/v2/routes",
             "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
@@ -307,3 +309,39 @@ def test_show_unconfirmed(apiv2_client, ledger_db):
     url = "/v2/transactions?show_unconfirmed=true&limit=1"
     result = apiv2_client.get(url).json["result"]
     assert not result[0]["confirmed"]
+
+
+def test_ledger_state(apiv2_client, current_block_index, ledger_db):
+    blocks.rollback(ledger_db, current_block_index - 10)
+    response = apiv2_client.get("/v2")
+    assert response.status_code == 200
+    assert response.json == {
+        "result": {
+            "server_ready": True,
+            "network": "regtest",
+            "version": config.VERSION_STRING,
+            "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
+            "counterparty_height": current_block_index,
+            "ledger_state": "Rolling Back",
+            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "routes": "http://localhost/v2/routes",
+            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+        }
+    }
+
+    blocks.reparse(ledger_db, current_block_index - 20)
+    response = apiv2_client.get("/v2")
+    assert response.status_code == 200
+    assert response.json == {
+        "result": {
+            "server_ready": True,
+            "network": "regtest",
+            "version": config.VERSION_STRING,
+            "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
+            "counterparty_height": current_block_index,
+            "ledger_state": "Reparsing",
+            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "routes": "http://localhost/v2/routes",
+            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+        }
+    }

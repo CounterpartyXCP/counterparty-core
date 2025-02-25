@@ -401,6 +401,10 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
         while not regtest_node_thread.ready():
             time.sleep(1)
 
+        server_status = regtest_node_thread.node.api_call("")
+        assert server_status["result"]["server_ready"]
+        assert server_status["result"]["ledger_state"] == "Following"
+
         context = {}
 
         check_api_v1(regtest_node_thread.node)
