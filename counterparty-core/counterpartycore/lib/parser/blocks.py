@@ -543,7 +543,7 @@ def rollback(db, block_index=0, force=False):
     if not force and block_index > CurrentState().current_block_index():
         logger.debug("Block index is higher than current block index. No need to reparse.")
         return
-    CurrentState().set_ledger_state(db, "Rollbacking")
+    CurrentState().set_ledger_state(db, "Rolling Back")
     block_index = max(block_index, config.BLOCK_FIRST)
     # clean all tables
     step = f"Rolling Ledger DB back to block {block_index}..."
