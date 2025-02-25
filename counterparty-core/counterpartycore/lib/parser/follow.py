@@ -297,6 +297,8 @@ class BlockchainWatcher:
             except Exception as e:
                 logger.error("Error in handle loop: %s", e)
                 capture_exception(e)
+                # import traceback
+                # print(traceback.format_exc())  # for debugging
                 self.stop()
                 break  # Optionally break the loop on other exceptions
 
