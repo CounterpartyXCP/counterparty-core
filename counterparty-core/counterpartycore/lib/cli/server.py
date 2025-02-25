@@ -655,7 +655,8 @@ class AssetConservationChecker(threading.Thread):
     def stop(self):
         logger.info("Stopping Asset Conservation Checker thread...")
         self.stop_event.set()
-        self.db.interrupt()
+        if self.db is not None:
+            self.db.interrupt()
         self.join()
         if self.db is not None:
             self.db.close()
@@ -679,6 +680,7 @@ class CounterpartyServer(threading.Thread):
         self.log_stream = log_stream
         self.profiler = None
         self.stop_when_ready = stop_when_ready
+        self.stopped = False
 
         # Log all config parameters, sorted by key
         # Filter out default values #TODO: these should be set in a different way
@@ -766,13 +768,14 @@ class CounterpartyServer(threading.Thread):
             logger.info("Starting profiler before catchup...")
             self.profiler = cProfile.Profile()
             self.profiler.enable()
-            blocks.catch_up(self.db, self.api_stop_event)
+            blocks.catch_up(self.db)
             logger.info("Stopping profiler after catchup...")
             self.profiler.disable()
         else:
-            blocks.catch_up(self.db, self.api_stop_event)
+            blocks.catch_up(self.db)
 
         if self.stop_when_ready:
+            self.stop()  # stop here
             return
 
         # Blockchain Watcher
@@ -788,6 +791,8 @@ class CounterpartyServer(threading.Thread):
             _thread.interrupt_main()
 
     def stop(self):
+        if self.stopped:
+            return
         logger.info("Shutting down...")
         if self.db:
             CurrentState().set_ledger_state(self.db, "Stopping")
@@ -822,6 +827,7 @@ class CounterpartyServer(threading.Thread):
                 logger.error("Error dumping profiler stats: %s", e)
             self.profiler = None
 
+        self.stopped = True
         logger.info("Shutdown complete.")
 
 
@@ -830,7 +836,10 @@ def start_all(args, log_stream=None, stop_when_ready=False):
     try:
         server.start()
         while True:
-            server.join(1)
+            if not server.stopped:
+                server.join(1)
+            else:
+                break
     except KeyboardInterrupt:
         logger.warning("Interruption received. Shutting down...")
     finally:
