@@ -333,7 +333,7 @@ def select_rows(
 
     if table == "all_transactions":
         for row in result:
-            row["confirmed"] = True if row["confirmed"] == 1 else False
+            row["confirmed"] = bool(row["confirmed"])
 
     return QueryResult(result, next_cursor, table, result_count)
 
@@ -441,7 +441,7 @@ def get_transactions(
 def get_transactions_by_block(
     ledger_db,
     block_index: int,
-    type: TransactionType = "all",
+    type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 10,
@@ -472,7 +472,7 @@ def get_transactions_by_block(
 def get_transactions_by_address(
     ledger_db,
     address: str,
-    type: TransactionType = "all",
+    type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 10,
@@ -503,7 +503,7 @@ def get_transactions_by_address(
 def get_transactions_by_addresses(
     ledger_db,
     addresses: str,
-    type: TransactionType = "all",
+    type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 100,

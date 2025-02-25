@@ -495,7 +495,7 @@ def run_apiserver(
 ):
     logger.info("Starting API Server process...")
 
-    def handle_interrupt_signal(signum, frame):
+    def handle_interrupt_signal(_signum, _frame):
         pass
 
     wsgi_server = None
