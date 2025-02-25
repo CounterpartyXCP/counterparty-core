@@ -185,7 +185,7 @@ class OrdersCache(metaclass=helpers.SingletonMeta):
             set_data.append("block_index = :block_index")
         bindings["block_index"] = CurrentState().current_block_index()
         set_data = ", ".join(set_data)
-        sql = f"""UPDATE orders SET {set_data} WHERE tx_hash = :tx_hash"""  # noqa S608
+        sql = f"""UPDATE orders SET {set_data} WHERE tx_hash = :tx_hash"""  # noqa S608 # nosec B608
         cursor = self.cache_db.cursor()
         cursor.execute(sql, bindings)
         self.clean_filled_orders()

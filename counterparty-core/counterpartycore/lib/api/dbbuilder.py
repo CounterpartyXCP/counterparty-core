@@ -80,7 +80,7 @@ def rollback_tables(state_db, block_index):
 
     for table in ROLLBACKABLE_TABLES:
         logger.debug(f"Rolling back table `{table}`...")
-        cursor.execute(f"DELETE FROM {table} WHERE block_index >= ?", (block_index,))  # noqa S608
+        cursor.execute(f"DELETE FROM {table} WHERE block_index >= ?", (block_index,))  # noqa S608 # nosec B608
 
     cursor.execute("""PRAGMA foreign_keys=ON""")
     cursor.close()

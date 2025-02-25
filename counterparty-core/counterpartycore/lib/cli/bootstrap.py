@@ -56,7 +56,7 @@ def decompress_zst(zst_filepath):
         with open(zst_filepath, "rb") as input_file:
             pyzstd.decompress_stream(input_file, output_file, read_size=16 * 1024)
     os.remove(zst_filepath)
-    os.chmod(filepath, 0o660)
+    os.chmod(filepath, 0o660)  # nosec B103
     print(f"Decompressed {zst_filepath} in {time.time() - start_time:.2f}s")
     return filepath
 
@@ -71,7 +71,7 @@ def download_and_decompress(data_dir, zst_url):
     filepath = os.path.join(data_dir, filename)
     with io.open(filepath, "wb") as output_file:
         pyzstd.decompress_stream(response, output_file, read_size=16 * 1024)
-    os.chmod(filepath, 0o660)
+    os.chmod(filepath, 0o660)  # nosec B103
     print(f"Downloaded and decompressed {zst_url} in {time.time() - start_time:.2f}s")
     return filepath
 

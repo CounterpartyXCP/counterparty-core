@@ -476,7 +476,7 @@ def inject_transactions_events(ledger_db, state_db, result_list):
         FROM messages 
         WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))}) 
         AND event NOT IN ({",".join("?" * len(exclude_events))})
-    """  # noqa S608
+    """  # noqa S608 # nosec B608
     events = cursor.execute(sql, transaction_hashes + exclude_events).fetchall()
     for event in events:
         event["params"] = json.loads(event["params"])
