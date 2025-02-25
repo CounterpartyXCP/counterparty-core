@@ -59,7 +59,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         defaults["addresses"][1],
         "XCP",
         defaults["quantity"] / 3,
-        1,
     ) == ["quantity must be in satoshis"]
     assert send.validate(
         ledger_db,

@@ -6,7 +6,6 @@ from counterpartycore.lib.messages import bet
 def test_validate(ledger_db, defaults, current_block_index):
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         0,
         1488000100,
@@ -20,7 +19,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         0,
         1488000100,
@@ -34,7 +32,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][0],
         defaults["addresses"][1],
         3,
         1388001000,
@@ -48,7 +45,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         -1,
         1488000100,
@@ -62,7 +58,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         2,
         1488000100,
@@ -76,7 +71,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["p2sh_addresses"][0],
         defaults["addresses"][0],
         0,
         1488000100,
@@ -90,7 +84,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][0],
         defaults["p2sh_addresses"][0],
         0,
         1488000100,
@@ -104,7 +97,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         3,
         1488000100,
@@ -121,7 +113,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -135,7 +126,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -149,7 +139,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -163,7 +152,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -177,7 +165,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -191,7 +178,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -205,7 +191,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][2],
         1,
         1488000100,
@@ -219,7 +204,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         -1488000100,
@@ -233,7 +217,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -247,7 +230,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -261,7 +243,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         2,
         1488000100,
@@ -275,7 +256,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -289,7 +269,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -303,7 +282,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -317,7 +295,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         2**63,
         1488000100,
@@ -331,7 +308,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         1488000100,
@@ -345,7 +321,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert bet.validate(
         ledger_db,
-        defaults["addresses"][1],
         defaults["addresses"][0],
         1,
         2**63,

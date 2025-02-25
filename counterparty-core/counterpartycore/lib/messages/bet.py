@@ -113,7 +113,6 @@ def get_fee_fraction(db, feed_address):
 
 def validate(
     db,
-    source,
     feed_address,
     bet_type,
     deadline,
@@ -218,7 +217,6 @@ def compose(
 
     problems, leverage = validate(
         db,
-        source,
         feed_address,
         bet_type,
         deadline,
@@ -333,7 +331,6 @@ def parse(db, tx, message):
 
         problems, leverage = validate(
             db,
-            tx["source"],
             feed_address,
             bet_type,
             deadline,

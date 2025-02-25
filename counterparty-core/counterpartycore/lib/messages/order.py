@@ -340,7 +340,7 @@ def compose(
     return (source, [], data)
 
 
-def unpack(db, message, block_index, return_dict=False):
+def unpack(db, message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
@@ -379,7 +379,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     (give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, status) = unpack(
-        db, message, tx["block_index"]
+        db, message
     )
 
     price = 0

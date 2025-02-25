@@ -186,7 +186,7 @@ def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa # pylin
     :param address: The address that will be issuing the dividend (e.g. $ADDRESS_1)
     :param asset: The asset or subasset that the dividends are being rewarded on (e.g. MYASSETA)
     """
-    return messages.dividend.get_estimate_xcp_fee(db, asset, CurrentState().current_block_index())
+    return messages.dividend.get_estimate_xcp_fee(db, asset)
 
 
 def compose_issuance(
@@ -505,7 +505,7 @@ def compose_attach(
     return composer.compose_transaction(db, "attach", params, construct_params)
 
 
-def get_attach_estimate_xcp_fee(db, address: str = None):  # noqa
+def get_attach_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
     """
     Returns the estimated fee for attaching assets to a UTXO.
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
@@ -667,7 +667,7 @@ def unpack(db, datahex: str, block_index: int = None):
         # Order
         elif message_type_id == messages.order.ID:
             message_type_name = "order"
-            message_data = messages.order.unpack(db, message, block_index, return_dict=True)
+            message_data = messages.order.unpack(db, message, return_dict=True)
         # Send
         elif message_type_id == messages.send.ID:
             message_type_name = "send"
@@ -679,7 +679,7 @@ def unpack(db, datahex: str, block_index: int = None):
         # MPMA send
         elif message_type_id == messages.versions.mpma.ID:
             message_type_name = "mpma_send"
-            mpma_message_data = messages.versions.mpma.unpack(message, block_index)
+            mpma_message_data = messages.versions.mpma.unpack(message)
             message_data = []
             for asset_name, send_info in mpma_message_data.items():
                 message_data.append(

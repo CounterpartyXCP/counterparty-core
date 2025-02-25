@@ -254,9 +254,7 @@ def test_edge_cases_and_errors(ledger_db, current_block_index, monkeypatch):
 
     with ProtocolChangesDisabled(["hotfix_numeric_assets"]):
         assert issuances.get_asset_id(ledger_db, "BAAA") == issuances.generate_asset_id("BAAA")
-        assert issuances.get_asset_name(ledger_db, 26**3) == issuances.generate_asset_name(
-            26**3, 308000
-        )
+        assert issuances.get_asset_name(ledger_db, 26**3) == issuances.generate_asset_name(26**3)
 
     assert issuances.get_asset_name(ledger_db, "01234") == 0
 

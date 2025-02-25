@@ -84,14 +84,14 @@ def _encode_construct_send_list(send_asset, lut, sends):
     ]
 
 
-def _solve_asset(db, asset_name, block_index):
+def _solve_asset(db, asset_name):
     asset = ledger.issuances.resolve_subasset_longname(db, asset_name)
     return ledger.issuances.get_asset_id(db, asset)
 
 
-def _encode_compress_send_list(db, nbits, send, block_index):
+def _encode_compress_send_list(db, nbits, send):
     r = BitArray()
-    r.append(f"uintbe:64={_solve_asset(db, send['assetName'], block_index)}")
+    r.append(f"uintbe:64={_solve_asset(db, send['assetName'])}")
     r.append(f"uint:{nbits}={len(send['sendList']) - 1}")
 
     for send_item in send["sendList"]:
@@ -121,7 +121,7 @@ def _encode_construct_sends(sends):
     return {"lut": lut, "sendLists": send_lists}
 
 
-def _encode_compress_sends(db, mpma_send, block_index, memo=None, memo_is_hex=False):
+def _encode_compress_sends(db, mpma_send, memo=None, memo_is_hex=False):
     compressed_lut = _encode_compress_lut(mpma_send["lut"])
     memo_arr = _encode_memo(memo, memo_is_hex).bin
 
@@ -133,9 +133,7 @@ def _encode_compress_sends(db, mpma_send, block_index, memo=None, memo_is_hex=Fa
                 "".join(
                     [
                         "1",
-                        _encode_compress_send_list(
-                            db, mpma_send["lut"]["nbits"], send_list, block_index
-                        ).bin,
+                        _encode_compress_send_list(db, mpma_send["lut"]["nbits"], send_list).bin,
                     ]
                 )
                 for send_list in mpma_send["sendLists"]
@@ -148,9 +146,9 @@ def _encode_compress_sends(db, mpma_send, block_index, memo=None, memo_is_hex=Fa
     return b"".join([compressed_lut, barr.bytes])
 
 
-def _encode_mpma_send(db, sends, block_index, memo=None, memo_is_hex=False):
+def _encode_mpma_send(db, sends, memo=None, memo_is_hex=False):
     mpma = _encode_construct_sends(sends)
-    send = _encode_compress_sends(db, mpma, block_index, memo=memo, memo_is_hex=memo_is_hex)
+    send = _encode_compress_sends(db, mpma, memo=memo, memo_is_hex=memo_is_hex)
 
     return send
 
@@ -177,7 +175,7 @@ def _decode_decode_lut(data):
     return address_list, lut_nbits, data[p:]
 
 
-def _decode_decode_send_list(stream, nbits, lut, block_index):
+def _decode_decode_send_list(stream, nbits, lut):
     asset_id = stream.read("uintbe:64")
 
     if nbits > 0:
@@ -205,12 +203,12 @@ def _decode_decode_send_list(stream, nbits, lut, block_index):
     return asset, send_list
 
 
-def _decode_decode_sends(stream, nbits, lut, block_index):
+def _decode_decode_sends(stream, nbits, lut):
     # stream = ConstBitStream(data)
     sends = {}
 
     while stream.read("bool"):
-        asset, send_list = _decode_decode_send_list(stream, nbits, lut, block_index)
+        asset, send_list = _decode_decode_send_list(stream, nbits, lut)
         sends[asset] = send_list
 
     return sends
@@ -231,11 +229,11 @@ def _decode_memo(stream):
         return None, None
 
 
-def _decode_mpma_send_decode(data, block_index):
+def _decode_mpma_send_decode(data):
     lut, nbits, remain = _decode_decode_lut(data)
     stream = ConstBitStream(remain)
     memo, is_hex = _decode_memo(stream)
-    sends = _decode_decode_sends(stream, nbits, lut, block_index)
+    sends = _decode_decode_sends(stream, nbits, lut)
     if memo is not None:
         for asset in sends:
             send_list = sends[asset]

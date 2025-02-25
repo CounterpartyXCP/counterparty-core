@@ -6,7 +6,6 @@ from itertools import groupby
 from bitstring import ReadError
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 from counterpartycore.lib.utils.mpmaencoding import (
@@ -30,9 +29,9 @@ def py34_tuple_append(first_elem, t):
 
 
 ## expected functions for message version
-def unpack(message, block_index):
+def unpack(message):
     try:
-        unpacked = _decode_mpma_send_decode(message, block_index)
+        unpacked = _decode_mpma_send_decode(message)
     except struct.error as e:  # noqa: F841
         raise exceptions.UnpackError("could not unpack")  # noqa: B904
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:  # noqa: F841
@@ -143,8 +142,6 @@ def compose(
         if balance < quantity and not skip_validation:
             raise exceptions.ComposeError(f"insufficient funds for {asset}")
 
-    block_index = CurrentState().current_block_index()
-
     cursor.close()
 
     problems = validate(db, asset_dest_quant_list)
@@ -154,9 +151,7 @@ def compose(
     data = messagetype.pack(ID)
 
     try:
-        data += _encode_mpma_send(
-            db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex
-        )
+        data += _encode_mpma_send(db, asset_dest_quant_list, memo=memo, memo_is_hex=memo_is_hex)
     except Exception as e:
         raise exceptions.ComposeError(f"couldn't encode MPMA send: {e}") from e
 
@@ -165,7 +160,7 @@ def compose(
 
 def parse(db, tx, message):
     try:
-        unpacked = unpack(message, tx["block_index"])
+        unpacked = unpack(message)
         status = "valid"
     except struct.error as e:  # noqa: F841
         status = "invalid: truncated message"
