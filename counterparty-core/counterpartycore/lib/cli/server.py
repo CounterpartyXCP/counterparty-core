@@ -785,7 +785,8 @@ class CounterpartyServer(threading.Thread):
 
     def stop(self):
         logger.info("Shutting down...")
-        CurrentState().set_ledger_state(self.db, "Stopping")
+        if self.db:
+            CurrentState().set_ledger_state(self.db, "Stopping")
 
         # Ensure all threads are stopped
         if self.follower_daemon:

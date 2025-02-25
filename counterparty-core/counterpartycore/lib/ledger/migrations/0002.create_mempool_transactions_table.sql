@@ -18,7 +18,7 @@ CREATE INDEX IF NOT EXISTS mempool_transactions_block_index_tx_index_idx ON memp
 CREATE INDEX IF NOT EXISTS mempool_transactions_tx_index_tx_hash_block_index_idx ON mempool_transactions (tx_index, tx_hash, block_index);
 CREATE INDEX IF NOT EXISTS mempool_transactions_source_idx ON mempool_transactions (source);
 
-CREATE VIEW all_transactions AS
+CREATE VIEW IF NOT EXISTS all_transactions AS
     SELECT 
         tx_index,
         tx_hash,
