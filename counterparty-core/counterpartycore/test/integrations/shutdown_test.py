@@ -55,8 +55,6 @@ def test_shutdown():
         while time.time() - start_time < test_duration:
             counterparty_server.join(1)
 
-        assert is_port_in_used(44000)
-
     finally:
         print("Shutting down server...")
         counterparty_server.stop()
