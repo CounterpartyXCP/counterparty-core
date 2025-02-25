@@ -17,7 +17,7 @@ from counterpartycore.lib.utils import assetnames
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def generate_asset_id(asset_name, block_index):
+def generate_asset_id(asset_name):
     """Create asset_id from asset_name."""
     if asset_name == config.BTC:
         return 0
@@ -63,7 +63,7 @@ def generate_asset_id(asset_name, block_index):
     return asset_id
 
 
-def generate_asset_name(asset_id, block_index):
+def generate_asset_name(asset_id):
     """Create asset_name from asset_id."""
     if asset_id == 0:
         return config.BTC
@@ -95,10 +95,10 @@ def generate_asset_name(asset_id, block_index):
     return asset_name
 
 
-def get_asset_id(db, asset_name, block_index):
+def get_asset_id(db, asset_name):
     """Return asset_id from asset_name."""
     if not protocol.enabled("hotfix_numeric_assets"):
-        return generate_asset_id(asset_name, block_index)
+        return generate_asset_id(asset_name)
     cursor = db.cursor()
     query = """
         SELECT * FROM assets
@@ -113,10 +113,10 @@ def get_asset_id(db, asset_name, block_index):
         raise exceptions.AssetError(f"No such asset: {asset_name}")
 
 
-def get_asset_name(db, asset_id, block_index):
+def get_asset_name(db, asset_id):
     """Return asset_name from asset_id."""
     if not protocol.enabled("hotfix_numeric_assets"):
-        return generate_asset_name(asset_id, block_index)
+        return generate_asset_name(asset_id)
     cursor = db.cursor()
     query = """
         SELECT * FROM assets

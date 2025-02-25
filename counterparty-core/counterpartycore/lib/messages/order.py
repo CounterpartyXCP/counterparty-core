@@ -21,7 +21,7 @@ LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
 
 
-def exact_penalty(db, address, block_index, order_match_id, tx_index):
+def exact_penalty(db, address, block_index, tx_index):
     # Penalize addresses that don’t make BTC payments. If an address lets an
     # order match expire, expire sell BTC orders from that address.
     cursor = db.cursor()
@@ -188,9 +188,9 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     # Penalize tardiness.
     if protocol.after_block_or_test_network(block_index, 313900):  # Protocol change.
         if tx0_order["status"] == "expired" and order_match["forward_asset"] == config.BTC:
-            exact_penalty(db, order_match["tx0_address"], block_index, order_match["id"], tx_index)
+            exact_penalty(db, order_match["tx0_address"], block_index, tx_index)
         if tx1_order["status"] == "expired" and order_match["backward_asset"] == config.BTC:
-            exact_penalty(db, order_match["tx1_address"], block_index, order_match["id"], tx_index)
+            exact_penalty(db, order_match["tx1_address"], block_index, tx_index)
 
     # Re‐match.
     if protocol.after_block_or_test_network(block_index, 310000):  # Protocol change.
@@ -228,7 +228,6 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
 
 def validate(
     db,
-    source,
     give_asset,
     give_quantity,
     get_asset,
@@ -320,7 +319,6 @@ def compose(
 
     problems = validate(
         db,
-        source,
         give_asset,
         give_quantity,
         get_asset,
@@ -332,8 +330,8 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    give_id = ledger.issuances.get_asset_id(db, give_asset, CurrentState().current_block_index())
-    get_id = ledger.issuances.get_asset_id(db, get_asset, CurrentState().current_block_index())
+    give_id = ledger.issuances.get_asset_id(db, give_asset)
+    get_id = ledger.issuances.get_asset_id(db, get_asset)
     data = messagetype.pack(ID)
     data += struct.pack(
         FORMAT, give_id, give_quantity, get_id, get_quantity, expiration, fee_required
@@ -349,8 +347,8 @@ def unpack(db, message, block_index, return_dict=False):
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(
             FORMAT, message
         )
-        give_asset = ledger.issuances.get_asset_name(db, give_id, block_index)
-        get_asset = ledger.issuances.get_asset_name(db, get_id, block_index)
+        give_asset = ledger.issuances.get_asset_name(db, give_id)
+        get_asset = ledger.issuances.get_asset_name(db, get_id)
         status = "open"
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = (
@@ -403,7 +401,6 @@ def parse(db, tx, message):
 
         problems = validate(
             db,
-            tx["source"],
             give_asset,
             give_quantity,
             get_asset,

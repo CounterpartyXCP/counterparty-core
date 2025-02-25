@@ -419,7 +419,7 @@ def handle_route(**kwargs):
         return return_result(500, error="Internal server error")
 
 
-def handle_not_found(error):
+def handle_not_found(_error):
     return return_result(404, error="Not found")
 
 

@@ -4,7 +4,6 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispense
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
@@ -16,11 +15,11 @@ LENGTH = 8 + 8
 ID = 0
 
 
-def unpack(db, message, block_index):
+def unpack(db, message):
     # Only used for `unpack` API call at the moment.
     try:
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
+        asset = ledger.issuances.get_asset_name(db, asset_id)
 
     except struct.error:
         raise exceptions.UnpackError("could not unpack")  # noqa: B904
@@ -32,7 +31,7 @@ def unpack(db, message, block_index):
     return unpacked
 
 
-def validate(db, source, destination, asset, quantity, block_index):
+def validate(db, destination, asset, quantity):
     problems = []
 
     if asset == config.BTC:
@@ -107,13 +106,11 @@ def compose(
     if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
-    block_index = CurrentState().current_block_index()
-
-    problems = validate(db, source, destination, asset, quantity, block_index)
+    problems = validate(db, destination, asset, quantity)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    asset_id = ledger.issuances.get_asset_id(db, asset, block_index)
+    asset_id = ledger.issuances.get_asset_id(db, asset)
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, asset_id, quantity)
 
@@ -129,7 +126,7 @@ def parse(db, tx, message):
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         asset_id, quantity = struct.unpack(FORMAT, message)
-        asset = ledger.issuances.get_asset_name(db, asset_id, tx["block_index"])
+        asset = ledger.issuances.get_asset_name(db, asset_id)
         status = "valid"
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
         asset, quantity = None, None
@@ -152,7 +149,7 @@ def parse(db, tx, message):
         quantity = min(quantity, config.MAX_INT)
 
     if status == "valid":
-        problems = validate(db, tx["source"], tx["destination"], asset, quantity, tx["block_index"])
+        problems = validate(db, tx["destination"], asset, quantity)
         if problems:
             status = "invalid: " + "; ".join(problems)
 

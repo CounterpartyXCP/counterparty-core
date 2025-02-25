@@ -562,7 +562,7 @@ def test_match(ledger_db):
 def test_cancel_bet(ledger_db, test_helpers, current_block_index):
     bets = ledger_db.execute("SELECT * FROM bets WHERE status = 'open'").fetchall()
     for last_bet in bets:
-        bet.cancel_bet(ledger_db, last_bet, "cancelled", current_block_index, last_bet["tx_index"])
+        bet.cancel_bet(ledger_db, last_bet, "cancelled", last_bet["tx_index"])
         test_helpers.check_records(
             ledger_db,
             [
@@ -582,9 +582,7 @@ def test_cancel_bet(ledger_db, test_helpers, current_block_index):
 
 def test_cancel_bet_match(ledger_db, test_helpers, current_block_index):
     bet_match = ledger_db.execute("SELECT * FROM bet_matches ORDER BY rowid LIMIT 1").fetchone()
-    bet.cancel_bet_match(
-        ledger_db, bet_match, "filled", current_block_index, bet_match["tx0_index"]
-    )
+    bet.cancel_bet_match(ledger_db, bet_match, "filled", bet_match["tx0_index"])
 
     test_helpers.check_records(
         ledger_db,

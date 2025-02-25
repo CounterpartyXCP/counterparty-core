@@ -32,7 +32,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, exclude_empty_holders=False):
     return holders
 
 
-def holders(db, asset, exclude_empty_holders=False, block_index=None):
+def holders(db, asset, exclude_empty_holders=False):
     """Return holders of the asset."""
     holders = []
     cursor = db.cursor()

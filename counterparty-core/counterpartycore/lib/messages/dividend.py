@@ -67,7 +67,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     exclude_empty = False
     if protocol.enabled("zero_quantity_value_adjustment_1"):
         exclude_empty = True
-    holders = ledger.supplies.holders(db, asset, exclude_empty, block_index=block_index)
+    holders = ledger.supplies.holders(db, asset, exclude_empty)
 
     outputs = []
     addresses = []
@@ -146,7 +146,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
 
 def get_estimate_xcp_fee(db, asset, block_index):
-    holders = ledger.supplies.holders(db, asset, True, block_index=block_index)
+    holders = ledger.supplies.holders(db, asset, True)
     addresses = [holder["address"] for holder in holders]
     holder_count = len(set(addresses))
     return int(0.0002 * config.UNIT * holder_count)
@@ -180,10 +180,8 @@ def compose(
             None,
         )
 
-    asset_id = ledger.issuances.get_asset_id(db, asset, CurrentState().current_block_index())
-    dividend_asset_id = ledger.issuances.get_asset_id(
-        db, dividend_asset, CurrentState().current_block_index()
-    )
+    asset_id = ledger.issuances.get_asset_id(db, asset)
+    dividend_asset_id = ledger.issuances.get_asset_id(db, dividend_asset)
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)
@@ -193,12 +191,12 @@ def unpack(db, message, block_index, return_dict=False):
     try:
         if protocol.after_block_or_test_network(block_index, 288151) and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
-            asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
-            dividend_asset = ledger.issuances.get_asset_name(db, dividend_asset_id, block_index)
+            asset = ledger.issuances.get_asset_name(db, asset_id)
+            dividend_asset = ledger.issuances.get_asset_name(db, dividend_asset_id)
             status = "valid"
         elif len(message) == LENGTH_1:
             quantity_per_unit, asset_id = struct.unpack(FORMAT_1, message)
-            asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
+            asset = ledger.issuances.get_asset_name(db, asset_id)
             dividend_asset = config.XCP
             status = "valid"
         else:

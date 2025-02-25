@@ -24,7 +24,7 @@ with open(CURR_DIR + "/data/mainnet_burns.csv", "r") as f:
         MAINNET_BURNS[line["tx_hash"]] = line
 
 
-def validate(db, source, destination, quantity, block_index, overburn=False):
+def validate(destination, quantity, block_index):
     problems = []
 
     # Check destination address.
@@ -50,9 +50,7 @@ def validate(db, source, destination, quantity, block_index, overburn=False):
 def compose(db, source: str, quantity: int, overburn: bool = False, skip_validation: bool = False):
     cursor = db.cursor()
     destination = config.UNSPENDABLE
-    problems = validate(
-        db, source, destination, quantity, CurrentState().current_block_index(), overburn=overburn
-    )
+    problems = validate(destination, quantity, CurrentState().current_block_index())
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
@@ -67,7 +65,7 @@ def compose(db, source: str, quantity: int, overburn: bool = False, skip_validat
     return (source, [(destination, quantity)], None)
 
 
-def parse(db, tx, message=None):
+def parse(db, tx):
     burn_parse_cursor = db.cursor()
 
     if protocol.is_test_network():
@@ -76,12 +74,9 @@ def parse(db, tx, message=None):
 
         if status == "valid":
             problems = validate(
-                db,
-                tx["source"],
                 tx["destination"],
                 tx["btc_amount"],
                 tx["block_index"],
-                overburn=False,
             )
             if problems:
                 status = "invalid: " + "; ".join(problems)

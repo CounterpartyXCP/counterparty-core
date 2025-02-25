@@ -180,7 +180,7 @@ def compose_dividend(
     return composer.compose_transaction(db, "dividend", params, construct_params)
 
 
-def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa
+def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa # pylint: disable=W0613
     """
     Returns the estimated fee for issuing a dividend.
     :param address: The address that will be issuing the dividend (e.g. $ADDRESS_1)
@@ -671,11 +671,11 @@ def unpack(db, datahex: str, block_index: int = None):
         # Send
         elif message_type_id == messages.send.ID:
             message_type_name = "send"
-            message_data = messages.send.unpack(db, message, block_index)
+            message_data = messages.send.unpack(db, message)
         # Enhanced send
         elif message_type_id == messages.versions.enhancedsend.ID:
             message_type_name = "enhanced_send"
-            message_data = messages.versions.enhancedsend.unpack(message, block_index)
+            message_data = messages.versions.enhancedsend.unpack(message)
         # MPMA send
         elif message_type_id == messages.versions.mpma.ID:
             message_type_name = "mpma_send"

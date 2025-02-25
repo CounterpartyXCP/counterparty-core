@@ -323,7 +323,6 @@ def get_dispensers(
     asset=None,
     origin=None,
     status=None,
-    tx_hash=None,
     order_by=None,
     group_by=None,
 ):

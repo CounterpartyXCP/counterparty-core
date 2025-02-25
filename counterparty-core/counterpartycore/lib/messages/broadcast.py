@@ -264,11 +264,11 @@ def parse(db, tx, message):
         # Cancel Open Bets?
         if value == -2:
             for i in ledger.other.get_bet_by_feed(db, tx["source"], status="open"):
-                bet.cancel_bet(db, i, "dropped", tx["block_index"], tx["tx_index"])
+                bet.cancel_bet(db, i, "dropped", tx["tx_index"])
         # Cancel Pending Bet Matches?
         if value == -3:
             for bet_match in ledger.other.get_pending_bet_matches(db, tx["source"]):
-                bet.cancel_bet_match(db, bet_match, "dropped", tx["block_index"], tx["tx_index"])
+                bet.cancel_bet_match(db, bet_match, "dropped", tx["tx_index"])
         cursor.close()
         return
 

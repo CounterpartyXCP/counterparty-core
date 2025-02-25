@@ -24,22 +24,9 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert (
         send.validate(
             ledger_db,
-            defaults["addresses"][0],
             defaults["addresses"][1],
             "XCP",
             defaults["quantity"],
-            1,
-        )
-        == []
-    )
-    assert (
-        send.validate(
-            ledger_db,
-            defaults["addresses"][0],
-            defaults["p2sh_addresses"][0],
-            "XCP",
-            defaults["quantity"],
-            1,
         )
         == []
     )
@@ -47,24 +34,28 @@ def test_validate(ledger_db, defaults, current_block_index):
         send.validate(
             ledger_db,
             defaults["p2sh_addresses"][0],
+            "XCP",
+            defaults["quantity"],
+        )
+        == []
+    )
+    assert (
+        send.validate(
+            ledger_db,
             defaults["addresses"][1],
             "XCP",
             defaults["quantity"],
-            1,
         )
         == []
     )
     assert send.validate(
         ledger_db,
-        defaults["addresses"][0],
         defaults["addresses"][1],
         "BTC",
         defaults["quantity"],
-        1,
     ) == ["cannot send bitcoins"]
     assert send.validate(
         ledger_db,
-        defaults["addresses"][0],
         defaults["addresses"][1],
         "XCP",
         defaults["quantity"] / 3,
@@ -72,41 +63,28 @@ def test_validate(ledger_db, defaults, current_block_index):
     ) == ["quantity must be in satoshis"]
     assert send.validate(
         ledger_db,
-        defaults["addresses"][0],
         defaults["addresses"][1],
         "XCP",
         -1 * defaults["quantity"],
-        1,
     ) == ["negative quantity"]
     assert (
         send.validate(
             ledger_db,
-            defaults["addresses"][0],
             defaults["p2ms_addresses"][0],
             "XCP",
             defaults["quantity"],
-            1,
         )
         == []
     )
-    assert (
-        send.validate(
-            ledger_db, defaults["addresses"][0], defaults["addresses"][1], "MAXI", 2**63 - 1, 1
-        )
-        == []
-    )
-    assert send.validate(
-        ledger_db, defaults["addresses"][0], defaults["addresses"][1], "MAXI", 2**63, 1
-    ) == ["integer overflow"]
+    assert send.validate(ledger_db, defaults["addresses"][1], "MAXI", 2**63 - 1) == []
+    assert send.validate(ledger_db, defaults["addresses"][1], "MAXI", 2**63) == ["integer overflow"]
 
     insert_required_option(ledger_db, current_block_index, defaults)
     assert send.validate(
         ledger_db,
-        defaults["addresses"][0],
         defaults["addresses"][6],
         "XCP",
         defaults["quantity"],
-        1,
     ) == ["destination requires memo"]
 
 

@@ -984,16 +984,15 @@ def create_app():
         # TODO: Enabled only for `send`.
         if message_type_id == send.ID:
             with LedgerDBConnectionPool().connection() as db:
-                unpacked = send.unpack(db, message, CurrentState().current_block_index())
+                unpacked = send.unpack(db, message)
         elif message_type_id == enhancedsend.ID:
-            unpacked = enhancedsend.unpack(message, CurrentState().current_block_index())
+            unpacked = enhancedsend.unpack(message)
         else:
             raise exceptions.APIError("unsupported message type")
         return message_type_id, unpacked
 
     @dispatcher.add_method
-    # TODO: Rename this method.
-    def search_pubkey(pubkeyhash, provided_pubkeys=None):
+    def search_pubkey(pubkeyhash):
         return backend.electrs.search_pubkey(pubkeyhash)
 
     @dispatcher.add_method
@@ -1259,7 +1258,7 @@ def create_app():
 class APIServer(threading.Thread):
     """Handle JSON-RPC API calls."""
 
-    def __init__(self, db=None):
+    def __init__(self):
         self.is_ready = False
         self.server = None
         self.ctx = None

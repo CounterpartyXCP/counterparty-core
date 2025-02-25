@@ -877,7 +877,7 @@ def create_events_indexes(db):
     database.set_config_value(db, "EVENTS_INDEXES_CREATED", "True")
 
 
-def catch_up(db, check_asset_conservation=True):
+def catch_up(db):
     logger.info("Catching up...")
 
     fetcher = None

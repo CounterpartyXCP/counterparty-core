@@ -43,7 +43,7 @@ def unpack(message, block_index):
     return unpacked
 
 
-def validate(db, source, asset_dest_quant_list, block_index):
+def validate(db, asset_dest_quant_list):
     problems = []
 
     if len(asset_dest_quant_list) == 0:
@@ -147,7 +147,7 @@ def compose(
 
     cursor.close()
 
-    problems = validate(db, source, asset_dest_quant_list, block_index)
+    problems = validate(db, asset_dest_quant_list)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
@@ -182,7 +182,7 @@ def parse(db, tx, message):
     if status == "valid":
         for asset_id in unpacked:
             try:
-                asset = ledger.issuances.get_asset_name(db, asset_id, tx["block_index"])  # noqa: F841
+                asset = ledger.issuances.get_asset_name(db, asset_id)  # noqa: F841
             except exceptions.AssetNameError as e:  # noqa: F841
                 status = f"invalid: asset {asset_id} invalid at block index {tx['block_index']}"
                 break
@@ -208,7 +208,7 @@ def parse(db, tx, message):
                 all_debits.append({"asset": asset_id, "quantity": total_sent})
 
     if status == "valid":
-        problems = validate(db, tx["source"], plain_sends, tx["block_index"])
+        problems = validate(db, plain_sends)
 
         if problems:
             status = "invalid:" + "; ".join(problems)

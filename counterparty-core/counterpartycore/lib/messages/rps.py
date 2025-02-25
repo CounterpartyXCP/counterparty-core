@@ -42,7 +42,7 @@ def replay_events(db, key):
         ledger.events.replay_events(db, events)
 
 
-def parse(db, tx, message):
+def parse(db, tx):
     logger.debug(
         "Replay RPS events for transaction %(tx_hash)s",
         {

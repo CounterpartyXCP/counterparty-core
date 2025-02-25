@@ -201,7 +201,7 @@ def validate(
                                 )
 
             if len(problems) == 0:
-                asset_id = ledger.issuances.generate_asset_id(asset, block_index)
+                asset_id = ledger.issuances.generate_asset_id(asset)
                 if asset_id == 0:
                     problems.append(
                         f"cannot dispense {asset}"
@@ -264,9 +264,7 @@ def compose(
         if not skip_validation:
             raise exceptions.ComposeError(problems)
         else:
-            assetid = ledger.issuances.generate_asset_id(
-                asset, block_index=CurrentState().current_block_index()
-            )
+            assetid = ledger.issuances.generate_asset_id(asset)
 
     destination = []
     data = messagetype.pack(ID)
@@ -332,7 +330,7 @@ def unpack(message, return_dict=False):
             read = LENGTH + 21
         if len(message) > read:
             oracle_address = address_unpack(message[read : read + 21])
-        asset = ledger.issuances.generate_asset_name(assetid, CurrentState().current_block_index())
+        asset = ledger.issuances.generate_asset_name(assetid)
         status = "valid"
     except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
         (

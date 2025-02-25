@@ -26,7 +26,7 @@ def download_zst(data_dir, zst_url):
 
 
 def get_zst_callbacl(input_file_size):
-    def print_decompression_progress(total_input, total_output, read_data, write_data):
+    def print_decompression_progress(total_input, _total_output, _read_data, _write_data):
         percent = 100 * total_input / input_file_size
         print(f"Progress: {percent:.1f}%", end="\r")
 

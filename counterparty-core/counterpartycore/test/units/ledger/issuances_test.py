@@ -9,52 +9,52 @@ from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_issuances_functions(ledger_db, defaults, current_block_index):
-    assert issuances.generate_asset_id("BTC", current_block_index) == 0
-    assert issuances.generate_asset_id("XCP", current_block_index) == 1
+    assert issuances.generate_asset_id("BTC") == 0
+    assert issuances.generate_asset_id("XCP") == 1
 
     with pytest.raises(exceptions.AssetNameError, match="too short"):
-        issuances.generate_asset_id("BCD", 308000)
+        issuances.generate_asset_id("BCD")
 
     with pytest.raises(exceptions.AssetNameError, match="non‐numeric asset name starts with ‘A’"):
-        issuances.generate_asset_id("ABCD", 308000)
+        issuances.generate_asset_id("ABCD")
 
     with pytest.raises(exceptions.AssetNameError, match="numeric asset name not in range"):
-        issuances.generate_asset_id(f"A{26**12}", 308000)
+        issuances.generate_asset_id(f"A{26**12}")
 
     with pytest.raises(exceptions.AssetNameError, match="numeric asset name not in range"):
-        issuances.generate_asset_id(f"A{2**64}", 308000)
+        issuances.generate_asset_id(f"A{2**64}")
 
-    assert issuances.generate_asset_id(f"A{26**12 + 1}", 308000) == 26**12 + 1
-    assert issuances.generate_asset_id(f"A{2**64 - 1}", 308000) == 2**64 - 1
+    assert issuances.generate_asset_id(f"A{26**12 + 1}") == 26**12 + 1
+    assert issuances.generate_asset_id(f"A{2**64 - 1}") == 2**64 - 1
 
     with pytest.raises(exceptions.AssetNameError, match="long asset names must be numeric"):
-        issuances.generate_asset_id("LONGASSETNAMES", 308000)
+        issuances.generate_asset_id("LONGASSETNAMES")
 
     with pytest.raises(exceptions.AssetNameError, match=re.escape("invalid character:")):
-        issuances.generate_asset_id("BCDE_F", 308000)
+        issuances.generate_asset_id("BCDE_F")
 
-    assert issuances.generate_asset_id("BAAA", 308000) == 26**3
-    assert issuances.generate_asset_id("ZZZZZZZZZZZZ", 308000) == 26**12 - 1
+    assert issuances.generate_asset_id("BAAA") == 26**3
+    assert issuances.generate_asset_id("ZZZZZZZZZZZZ") == 26**12 - 1
 
-    assert issuances.generate_asset_name(0, current_block_index) == "BTC"
-    assert issuances.generate_asset_name(1, current_block_index) == "XCP"
-    assert issuances.generate_asset_name(26**12 - 1, 308000) == "ZZZZZZZZZZZZ"
-    assert issuances.generate_asset_name(26**3, 308000) == "BAAA"
-    assert issuances.generate_asset_name(2**64 - 1, 308000) == f"A{2**64 - 1}"
-    assert issuances.generate_asset_name(26**12 + 1, 308000) == f"A{26**12 + 1}"
+    assert issuances.generate_asset_name(0) == "BTC"
+    assert issuances.generate_asset_name(1) == "XCP"
+    assert issuances.generate_asset_name(26**12 - 1) == "ZZZZZZZZZZZZ"
+    assert issuances.generate_asset_name(26**3) == "BAAA"
+    assert issuances.generate_asset_name(2**64 - 1) == f"A{2**64 - 1}"
+    assert issuances.generate_asset_name(26**12 + 1) == f"A{26**12 + 1}"
 
     with pytest.raises(exceptions.AssetIDError, match="too low"):
-        issuances.generate_asset_name(26**3 - 1, 308000)
+        issuances.generate_asset_name(26**3 - 1)
     with pytest.raises(exceptions.AssetIDError, match="too high"):
-        issuances.generate_asset_name(2**64, 308000)
+        issuances.generate_asset_name(2**64)
 
     assert issuances.price(1, 10) == Fraction(1, 10)
 
-    assert issuances.get_asset_id(ledger_db, "XCP", current_block_index) == 1
-    assert issuances.get_asset_id(ledger_db, "BTC", current_block_index) == 0
+    assert issuances.get_asset_id(ledger_db, "XCP") == 1
+    assert issuances.get_asset_id(ledger_db, "BTC") == 0
 
     with pytest.raises(exceptions.AssetError, match="No such asset: foobar"):
-        issuances.get_asset_id(ledger_db, "foobar", current_block_index)
+        issuances.get_asset_id(ledger_db, "foobar")
 
     assert issuances.resolve_subasset_longname(ledger_db, "XCP") == "XCP"
     assert issuances.resolve_subasset_longname(ledger_db, "PARENT") == "PARENT"
@@ -151,9 +151,9 @@ def test_issuances_functions(ledger_db, defaults, current_block_index):
             "NODIVISIBLE",
         )
 
-    assert issuances.get_asset_name(ledger_db, 1, current_block_index) == "XCP"
-    assert issuances.get_asset_name(ledger_db, 0, current_block_index) == "BTC"
-    assert issuances.get_asset_name(ledger_db, 453, current_block_index) == 0
+    assert issuances.get_asset_name(ledger_db, 1) == "XCP"
+    assert issuances.get_asset_name(ledger_db, 0) == "BTC"
+    assert issuances.get_asset_name(ledger_db, 453) == 0
 
 
 def test_get_assets_last_issuance(state_db):
@@ -248,19 +248,17 @@ def test_edge_cases_and_errors(ledger_db, current_block_index, monkeypatch):
         with pytest.raises(
             exceptions.AssetNameError, match="non‐numeric asset name starts with ‘A’"
         ):
-            asset_id_1 = issuances.generate_asset_id("ABCDE", current_block_index)
-            asset_id_2 = issuances.get_asset_id(ledger_db, "ABCDE", current_block_index)
+            asset_id_1 = issuances.generate_asset_id("ABCDE")
+            asset_id_2 = issuances.get_asset_id(ledger_db, "ABCDE")
             assert asset_id_1 == asset_id_2
 
     with ProtocolChangesDisabled(["hotfix_numeric_assets"]):
-        assert issuances.get_asset_id(
-            ledger_db, "BAAA", current_block_index
-        ) == issuances.generate_asset_id("BAAA", 308000)
-        assert issuances.get_asset_name(
-            ledger_db, 26**3, current_block_index
-        ) == issuances.generate_asset_name(26**3, 308000)
+        assert issuances.get_asset_id(ledger_db, "BAAA") == issuances.generate_asset_id("BAAA")
+        assert issuances.get_asset_name(ledger_db, 26**3) == issuances.generate_asset_name(
+            26**3, 308000
+        )
 
-    assert issuances.get_asset_name(ledger_db, "01234", current_block_index) == 0
+    assert issuances.get_asset_name(ledger_db, "01234") == 0
 
     with pytest.raises(
         exceptions.QuantityError,

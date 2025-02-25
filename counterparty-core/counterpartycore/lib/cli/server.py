@@ -765,11 +765,11 @@ class CounterpartyServer(threading.Thread):
             logger.info("Starting profiler before catchup...")
             self.profiler = cProfile.Profile()
             self.profiler.enable()
-            blocks.catch_up(self.db, self.api_stop_event)
+            blocks.catch_up(self.db)
             logger.info("Stopping profiler after catchup...")
             self.profiler.disable()
         else:
-            blocks.catch_up(self.db, self.api_stop_event)
+            blocks.catch_up(self.db)
 
         # Blockchain Watcher
         logger.info("Watching for new blocks...")

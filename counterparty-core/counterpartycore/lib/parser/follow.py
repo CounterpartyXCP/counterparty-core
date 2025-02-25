@@ -71,7 +71,7 @@ def start_blockchain_watcher(db):
         logger.error(e)
         logger.warning("Sleeping 5 seconds, catching up again, then retrying...")
         time.sleep(5)
-        blocks.catch_up(db, check_asset_conservation=False)
+        blocks.catch_up(db)
         return start_blockchain_watcher(db)
 
 
@@ -135,7 +135,7 @@ class BlockchainWatcher:
             if previous_block is None:
                 # catch up with rpc if previous block is missing
                 logger.debug("Previous block is missing. Catching up...")
-                blocks.catch_up(self.db, check_asset_conservation=False)
+                blocks.catch_up(self.db)
             else:
                 blocks.parse_new_block(self.db, decoded_block)
             if not config.NO_MEMPOOL:
@@ -286,7 +286,7 @@ class BlockchainWatcher:
                         late_since = None
                     if late_since is not None and time.time() - late_since > 60:
                         logger.warning("ZMQ is late. Catching up...")
-                        blocks.catch_up(self.db, check_asset_conservation=False)
+                        blocks.catch_up(self.db)
                         late_since = None
 
                 # Yield control to the event loop to allow other tasks to run

@@ -3,7 +3,6 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import assetnames
 
@@ -77,9 +76,9 @@ def validate(
 
     # check asset name format
     try:
-        ledger.issuances.generate_asset_id(asset, CurrentState().current_block_index())
+        ledger.issuances.generate_asset_id(asset)
         if asset_parent != "":
-            ledger.issuances.generate_asset_id(asset_parent, CurrentState().current_block_index())
+            ledger.issuances.generate_asset_id(asset_parent)
     except exceptions.AssetNameError as e:
         problems.append(f"Invalid asset name: {e}")
 
@@ -446,7 +445,7 @@ def parse(db, tx, message):
 
     if not existing_asset:
         # Add to table of assets if new asset
-        asset_id = ledger.issuances.generate_asset_id(asset_name, tx["block_index"])
+        asset_id = ledger.issuances.generate_asset_id(asset_name)
         bindings = {
             "asset_id": str(asset_id),
             "asset_name": asset_name,

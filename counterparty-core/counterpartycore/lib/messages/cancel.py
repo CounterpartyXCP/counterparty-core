@@ -92,7 +92,7 @@ def parse(db, tx, message):
             order.cancel_order(db, offer, "cancelled", tx["block_index"], tx["tx_index"])
         # Cancel if bet.
         elif offer_type == "bet":
-            bet.cancel_bet(db, offer, "cancelled", tx["block_index"], tx["tx_index"])
+            bet.cancel_bet(db, offer, "cancelled", tx["tx_index"])
         # If neither order or bet, mark as invalid.
         else:
             assert False  # noqa: B011

@@ -39,7 +39,7 @@ def date_passed(date):
     return date <= int(time.time())
 
 
-def cancel_bet(db, bet, status, block_index, tx_index):
+def cancel_bet(db, bet, status, tx_index):
     # Update status of bet.
     set_data = {"status": status}
     ledger.other.update_bet(db, bet["tx_hash"], set_data)
@@ -61,7 +61,7 @@ def cancel_bet(db, bet, status, block_index, tx_index):
     )
 
 
-def cancel_bet_match(db, bet_match, status, block_index, tx_index):
+def cancel_bet_match(db, bet_match, status, tx_index):
     # Does not re‐open, re‐fill, etc. constituent bets.
     # Recredit tx0 address.
     ledger.events.credit(
@@ -601,7 +601,7 @@ def expire(db, block_index, block_time):
     # Expire bets and give refunds for the quantity wager_remaining.
     for bet in ledger.other.get_bets_to_expire(db, block_index):
         # use tx_index=0 for block actions
-        cancel_bet(db, bet, "expired", block_index, 0)
+        cancel_bet(db, bet, "expired", 0)
 
         # Record bet expiration.
         bindings = {
@@ -616,7 +616,7 @@ def expire(db, block_index, block_time):
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     for bet_match in ledger.other.get_bet_matches_to_expire(db, block_time):
         # use tx_index=0 for block actions
-        cancel_bet_match(db, bet_match, "expired", block_index, 0)
+        cancel_bet_match(db, bet_match, "expired", 0)
 
         # Record bet match expiration.
         bindings = {

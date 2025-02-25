@@ -10,12 +10,12 @@ ID = send1.ID
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def unpack(db, message, block_index):
-    return send1.unpack(db, message, block_index)
+def unpack(db, message):
+    return send1.unpack(db, message)
 
 
-def validate(db, source, destination, asset, quantity, block_index):
-    return send1.validate(db, source, destination, asset, quantity, block_index)
+def validate(db, destination, asset, quantity):
+    return send1.validate(db, destination, asset, quantity)
 
 
 def compose(

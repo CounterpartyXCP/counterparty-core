@@ -101,7 +101,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
         self.prefetch_queue_initialized = False
 
-    def get_block(self, retry=0):
+    def get_block(self):
         block = self.get_prefetched_block()
 
         if block is None:

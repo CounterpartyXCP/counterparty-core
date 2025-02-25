@@ -7,7 +7,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert (
         order.validate(
             ledger_db,
-            defaults["addresses"][0],
             "DIVISIBLE",
             defaults["quantity"],
             "XCP",
@@ -22,7 +21,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert (
         order.validate(
             ledger_db,
-            defaults["p2sh_addresses"][0],
             "DIVISIBLE",
             defaults["quantity"],
             "XCP",
@@ -36,7 +34,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert order.validate(
         ledger_db,
-        defaults["addresses"][0],
         "DIVISIBLE",
         defaults["quantity"],
         "XCP",
@@ -48,7 +45,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert order.validate(
         ledger_db,
-        defaults["addresses"][0],
         "BTC",
         defaults["quantity"],
         "BTC",
@@ -60,7 +56,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert order.validate(
         ledger_db,
-        defaults["addresses"][0],
         "DIVISIBLE",
         defaults["quantity"] / 3,
         "XCP",
@@ -72,7 +67,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert order.validate(
         ledger_db,
-        defaults["addresses"][0],
         "DIVISIBLE",
         defaults["quantity"],
         "XCP",
@@ -84,7 +78,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert order.validate(
         ledger_db,
-        defaults["addresses"][0],
         "DIVISIBLE",
         defaults["quantity"],
         "XCP",
@@ -96,7 +89,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert order.validate(
         ledger_db,
-        defaults["addresses"][0],
         "DIVISIBLE",
         -defaults["quantity"],
         "XCP",
@@ -113,7 +105,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert order.validate(
         ledger_db,
-        defaults["addresses"][0],
         "DIVISIBLE",
         0,
         "XCP",
@@ -125,7 +116,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert order.validate(
         ledger_db,
-        defaults["addresses"][0],
         "NOASSETA",
         defaults["quantity"],
         "NOASSETB",
@@ -137,7 +127,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert order.validate(
         ledger_db,
-        defaults["addresses"][0],
         "DIVISIBLE",
         2**63 + 10,
         "XCP",

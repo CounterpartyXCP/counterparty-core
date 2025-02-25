@@ -46,7 +46,7 @@ def debug(self, msg, *args, **kwargs):
     self._log(logging.DEBUG, msg, args, **kwargs)
 
 
-def formatTime(record, datefmt=None):
+def formatTime(record, _datefmt=None):
     date = datetime.fromtimestamp(record.created, tzlocal())
     date_string = date.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + date.strftime("%z")
     # same as Rust log format

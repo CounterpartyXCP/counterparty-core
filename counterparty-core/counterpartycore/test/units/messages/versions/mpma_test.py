@@ -164,105 +164,83 @@ def test_unpack(defaults, current_block_index):
 
 
 def test_validate(ledger_db, defaults, current_block_index):
-    assert mpma.validate(ledger_db, defaults["addresses"][0], [], 1) == (
-        ["send list cannot be empty"]
-    )
+    assert mpma.validate(ledger_db, []) == (["send list cannot be empty"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [("XCP", defaults["addresses"][1], defaults["quantity"])],
-        1,
     ) == (["send list cannot have only one element"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], 0.1),
         ],
-        1,
     ) == ([f"quantities must be an int (in satoshis) for XCP to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], -defaults["quantity"]),
         ],
-        1,
     ) == ([f"negative quantity for XCP to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], 0),
         ],
-        1,
     ) == ([f"zero quantity for XCP to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], config.MAX_INT + 1),
         ],
-        1,
     ) == ([f"integer overflow for XCP to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", None, defaults["quantity"]),
         ],
-        1,
     ) == (["destination is required for XCP"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("BTC", defaults["addresses"][1], defaults["quantity"]),
         ],
-        1,
     ) == ([f"cannot send BTC to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], defaults["quantity"]),
         ],
-        1,
     ) == ([])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][2], defaults["quantity"] + 1),
         ],
-        1,
     ) == (["cannot specify more than once a destination per asset"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][6], defaults["quantity"], "DEADBEEF", True),
         ],
-        1,
     ) == ([])
 
     ledger.events.insert_record(
@@ -278,12 +256,10 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][6], defaults["quantity"]),
         ],
-        1,
     ) == ([f"destination {defaults['addresses'][6]} requires memo"])
 
 

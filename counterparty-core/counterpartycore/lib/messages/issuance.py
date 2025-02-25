@@ -35,7 +35,6 @@ DESCRIPTION_NULL_ACTION = "NULL"
 def validate(
     db,
     source,
-    destination,
     asset,
     quantity,
     divisible,
@@ -311,9 +310,9 @@ def compose(
                 #   generate a random numeric asset id which will map to this subasset
                 asset = assetnames.generate_random_asset(subasset_longname)
 
-    asset_id = ledger.issuances.generate_asset_id(asset, CurrentState().current_block_index())
+    asset_id = ledger.issuances.generate_asset_id(asset)
     asset_name = ledger.issuances.generate_asset_name(
-        asset_id, CurrentState().current_block_index()
+        asset_id
     )  # This will remove leading zeros in the numeric assets
 
     (
@@ -330,7 +329,6 @@ def compose(
     ) = validate(
         db,
         source,
-        transfer_destination,
         asset_name,
         quantity,
         divisible,
@@ -624,11 +622,11 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                 "",
             )
         try:
-            asset = ledger.issuances.generate_asset_name(asset_id, block_index)
+            asset = ledger.issuances.generate_asset_name(asset_id)
 
             ##This is for backwards compatibility with assets names longer than 12 characters
             if asset.startswith("A"):
-                named_asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
+                named_asset = ledger.issuances.get_asset_name(db, asset_id)
 
                 if named_asset != 0:
                     asset = named_asset
@@ -757,7 +755,6 @@ def parse(db, tx, message, message_type_id):
         ) = validate(
             db,
             tx["source"],
-            tx["destination"],
             asset,
             quantity,
             divisible,

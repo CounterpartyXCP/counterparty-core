@@ -86,7 +86,7 @@ def _encode_construct_send_list(send_asset, lut, sends):
 
 def _solve_asset(db, asset_name, block_index):
     asset = ledger.issuances.resolve_subasset_longname(db, asset_name)
-    return ledger.issuances.get_asset_id(db, asset, block_index)
+    return ledger.issuances.get_asset_id(db, asset)
 
 
 def _encode_compress_send_list(db, nbits, send, block_index):
@@ -187,7 +187,7 @@ def _decode_decode_send_list(stream, nbits, lut, block_index):
         num_recipients = 1
         range_limit = num_recipients
     send_list = []
-    asset = ledger.issuances.generate_asset_name(asset_id, block_index)
+    asset = ledger.issuances.generate_asset_name(asset_id)
     for i in range(0, range_limit):  # noqa: B007
         if nbits > 0:
             idx = stream.read(f"uint:{nbits}")
