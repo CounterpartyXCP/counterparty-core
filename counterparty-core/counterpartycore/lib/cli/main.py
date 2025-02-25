@@ -475,6 +475,11 @@ def arg_parser(no_config_file=False, app_name=APP_NAME):
     parser_server.add_argument("--config-file", help="the path to the configuration file")
     setup.add_config_arguments(parser_server, CONFIG_ARGS, configfile)
 
+    parser_rebuild = subparsers.add_parser(
+        "rebuild", help="re-sync from scratch and stop the server"
+    )
+    setup.add_config_arguments(parser_rebuild, CONFIG_ARGS, configfile)
+
     parser_reparse = subparsers.add_parser(
         "reparse", help="reparse all transactions in the database"
     )
@@ -550,6 +555,9 @@ def main():
 
     elif args.action == "start":
         server.start_all(args)
+
+    elif args.action == "rebuild":
+        server.rebuild(args)
 
     elif args.action == "show-params":
         server.show_params()

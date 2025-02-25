@@ -664,7 +664,7 @@ class AssetConservationChecker(threading.Thread):
 
 
 class CounterpartyServer(threading.Thread):
-    def __init__(self, args, log_stream=None):
+    def __init__(self, args, log_stream=None, stop_when_ready=False):
         threading.Thread.__init__(self, name="CounterpartyServer")
         self.daemon = True
         self.args = args
@@ -678,6 +678,7 @@ class CounterpartyServer(threading.Thread):
         self.backend_height_thread = None
         self.log_stream = log_stream
         self.profiler = None
+        self.stop_when_ready = stop_when_ready
 
         # Log all config parameters, sorted by key
         # Filter out default values #TODO: these should be set in a different way
@@ -771,6 +772,9 @@ class CounterpartyServer(threading.Thread):
         else:
             blocks.catch_up(self.db, self.api_stop_event)
 
+        if self.stop_when_ready:
+            return
+
         # Blockchain Watcher
         logger.info("Watching for new blocks...")
         self.follower_daemon = follow.start_blockchain_watcher(self.db)
@@ -821,8 +825,8 @@ class CounterpartyServer(threading.Thread):
         logger.info("Shutdown complete.")
 
 
-def start_all(args, log_stream=None):
-    server = CounterpartyServer(args, log_stream)
+def start_all(args, log_stream=None, stop_when_ready=False):
+    server = CounterpartyServer(args, log_stream, stop_when_ready=stop_when_ready)
     try:
         server.start()
         while True:
@@ -831,6 +835,11 @@ def start_all(args, log_stream=None):
         logger.warning("Interruption received. Shutting down...")
     finally:
         server.stop()
+
+
+def rebuild(args):
+    bootstrap.clean_data_dir(config.DATA_DIR)
+    start_all(args, stop_when_ready=True)
 
 
 def reparse(block_index):
