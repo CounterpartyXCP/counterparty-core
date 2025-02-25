@@ -32,6 +32,8 @@
 - Check balance when composing `detach` transaction
 - Add `show_unconfirmed` parameter for get transactions endpoints
 - Add `count_confirmed` parameter for get transactions count endpoints
+- Add `X-LEDGER-STATE` header in all API responses
+- Add `ledger_state` field in API v2 root endpoint
 
 ## CLI
 
