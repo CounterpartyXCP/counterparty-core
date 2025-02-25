@@ -118,7 +118,7 @@ def initialise_log_config(
     else:  # user-specified location
         config.API_LOG = api_log_file
 
-    config.LOG_IN_CONSOLE = action == "start" or config.VERBOSE > 0
+    config.LOG_IN_CONSOLE = action in ["start", "rebuild"] or config.VERBOSE > 0
     config.JSON_LOGS = json_logs
 
     config.MAX_LOG_FILE_SIZE = max_log_file_size
@@ -655,7 +655,8 @@ class AssetConservationChecker(threading.Thread):
     def stop(self):
         logger.info("Stopping Asset Conservation Checker thread...")
         self.stop_event.set()
-        self.db.interrupt()
+        if self.db is not None:
+            self.db.interrupt()
         self.join()
         if self.db is not None:
             self.db.close()
@@ -664,7 +665,7 @@ class AssetConservationChecker(threading.Thread):
 
 
 class CounterpartyServer(threading.Thread):
-    def __init__(self, args, log_stream=None):
+    def __init__(self, args, log_stream=None, stop_when_ready=False):
         threading.Thread.__init__(self, name="CounterpartyServer")
         self.daemon = True
         self.args = args
@@ -678,6 +679,8 @@ class CounterpartyServer(threading.Thread):
         self.backend_height_thread = None
         self.log_stream = log_stream
         self.profiler = None
+        self.stop_when_ready = stop_when_ready
+        self.stopped = False
 
         # Log all config parameters, sorted by key
         # Filter out default values #TODO: these should be set in a different way
@@ -765,11 +768,15 @@ class CounterpartyServer(threading.Thread):
             logger.info("Starting profiler before catchup...")
             self.profiler = cProfile.Profile()
             self.profiler.enable()
-            blocks.catch_up(self.db, self.api_stop_event)
+            blocks.catch_up(self.db)
             logger.info("Stopping profiler after catchup...")
             self.profiler.disable()
         else:
-            blocks.catch_up(self.db, self.api_stop_event)
+            blocks.catch_up(self.db)
+
+        if self.stop_when_ready:
+            self.stop()  # stop here
+            return
 
         # Blockchain Watcher
         logger.info("Watching for new blocks...")
@@ -784,6 +791,8 @@ class CounterpartyServer(threading.Thread):
             _thread.interrupt_main()
 
     def stop(self):
+        if self.stopped:
+            return
         logger.info("Shutting down...")
         if self.db:
             CurrentState().set_ledger_state(self.db, "Stopping")
@@ -818,19 +827,28 @@ class CounterpartyServer(threading.Thread):
                 logger.error("Error dumping profiler stats: %s", e)
             self.profiler = None
 
+        self.stopped = True
         logger.info("Shutdown complete.")
 
 
-def start_all(args, log_stream=None):
-    server = CounterpartyServer(args, log_stream)
+def start_all(args, log_stream=None, stop_when_ready=False):
+    server = CounterpartyServer(args, log_stream, stop_when_ready=stop_when_ready)
     try:
         server.start()
         while True:
-            server.join(1)
+            if not server.stopped:
+                server.join(1)
+            else:
+                break
     except KeyboardInterrupt:
         logger.warning("Interruption received. Shutting down...")
     finally:
         server.stop()
+
+
+def rebuild(args):
+    bootstrap.clean_data_dir(config.DATA_DIR)
+    start_all(args, stop_when_ready=True)
 
 
 def reparse(block_index):

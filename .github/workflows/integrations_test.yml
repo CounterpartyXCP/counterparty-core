@@ -52,6 +52,9 @@ jobs:
           - name: Testnet4 Start and Shutdown
             test-path: integrations/shutdown_test.py
 
+          - name: Testnet4 Rebuild
+            test-path: integrations/rebuild_test.py
+
           # Other tests
 
           # run the docker-compose tests

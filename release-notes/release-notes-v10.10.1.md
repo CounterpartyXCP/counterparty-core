@@ -40,6 +40,7 @@
 - Accepts `--catch-up` flag before the command
 - Add a locust runner to test local node (`python3 counterpartycore/test/integration/locustrunner.py` will start Locust Web UI on http://localhost:8089/).
 - Add `--profile` CLI flag that enables cProfile during catchup and dumps the results to the console after it is complete
+- Add `--rebuild` command: re-synced from scratch and stop the server
 
 # Credits
 
