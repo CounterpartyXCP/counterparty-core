@@ -47,10 +47,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # pip install --upgrade pytest hatchling==1.25.0 hatch==1.13.0 pytest-cov coveralls
           pip install --upgrade pytest hatchling hatch pytest-cov coveralls
-          # cd counterparty-rs && pip install -e . && cd ..
-          # cd counterparty-core && pip install -e . && cd ..
 
       - name: Install Bitcoin & Electrs
         if: inputs.install_bitcoin
