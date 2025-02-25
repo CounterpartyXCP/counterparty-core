@@ -91,8 +91,6 @@ where
 
 #[allow(clippy::expect_used)]
 pub fn setup_logging(config: &Config) {
-    println!("Current log level setting: {:?}", config.log_level);
-
     INIT.call_once(|| {
         let file = OpenOptions::new()
             .append(true)

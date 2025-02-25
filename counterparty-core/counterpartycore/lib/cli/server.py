@@ -118,7 +118,7 @@ def initialise_log_config(
     else:  # user-specified location
         config.API_LOG = api_log_file
 
-    config.LOG_IN_CONSOLE = action == "start" or config.VERBOSE > 0
+    config.LOG_IN_CONSOLE = action in ["start", "rebuild"] or config.VERBOSE > 0
     config.JSON_LOGS = json_logs
 
     config.MAX_LOG_FILE_SIZE = max_log_file_size
