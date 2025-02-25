@@ -82,6 +82,7 @@ def api_root():
         "version": config.VERSION_STRING,
         "backend_height": CurrentState().current_backend_height(),
         "counterparty_height": counterparty_height,
+        "ledger_state": CurrentState().ledger_state(),
         "documentation": "https://counterpartycore.docs.apiary.io/",
         "routes": f"{request.url_root}v2/routes",
         "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
@@ -156,6 +157,7 @@ def return_result(
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
     response.headers["X-BITCOIN-HEIGHT"] = CurrentState().current_backend_height()
+    response.headers["X-LEDGER-STATE"] = CurrentState().ledger_state()
     response.headers["Content-Type"] = "application/json"
     set_cors_headers(response)
 

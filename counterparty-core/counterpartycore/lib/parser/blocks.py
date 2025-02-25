@@ -881,7 +881,7 @@ def catch_up(db, check_asset_conservation=True):
     fetcher = None
 
     try:
-        CurrentState().set_block_parser_status("Catching Up")
+        CurrentState().set_ledger_state("Catching Up")
         # update the current block index
         current_block_index = ledger.blocks.last_db_index(db)
         if current_block_index == 0:
@@ -907,7 +907,7 @@ def catch_up(db, check_asset_conservation=True):
         parsed_blocks = 0
 
         while CurrentState().current_block_index() < block_count:
-            if CurrentState().block_parser_status() == "Stopping":
+            if CurrentState().ledger_state() == "Stopping":
                 return
             # Get block information and transactions
             fetch_time_start = time.time()
