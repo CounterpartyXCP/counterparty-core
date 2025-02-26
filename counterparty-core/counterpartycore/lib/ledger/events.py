@@ -72,7 +72,6 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     new_record["block_index"] = CurrentState().current_block_index()
     # let's keep the original tx_index so we can preserve order
     # with the old queries (ordered by default by old primary key)
-    # TODO: restore with protocol change and checkpoints update
     # if 'tx_index' in new_record:
     #    new_record['tx_index'] = tx_index
     # insert new record

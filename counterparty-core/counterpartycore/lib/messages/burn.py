@@ -148,7 +148,6 @@ def parse(db, tx):
         status = "valid"
 
     # Add parsed transaction to message-type–specific table.
-    # TODO: store sent in table
     bindings = {
         "tx_index": tx_index,
         "tx_hash": tx_hash,

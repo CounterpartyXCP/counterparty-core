@@ -377,7 +377,7 @@ def supplies(db):
     return {key: d1[key] - d2.get(key, 0) for key in d1.keys()}
 
 
-def held(db):  # TODO: Rename ?
+def held(db):
     queries = [
         """
         SELECT asset, SUM(quantity) AS total FROM (

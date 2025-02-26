@@ -1,5 +1,3 @@
-# TODO: after "spend_utxo_to_detach" activation refactor like rps.py
-
 import logging
 import struct
 

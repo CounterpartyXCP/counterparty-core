@@ -603,7 +603,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                     description,
                 ) = struct.unpack(curr_format, message)
 
-            call_price = round(call_price, 6)  # TODO: arbitrary
+            call_price = round(call_price, 6)
             try:
                 description = description.decode("utf-8")
             except UnicodeDecodeError:

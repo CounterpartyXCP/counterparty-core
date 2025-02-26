@@ -180,7 +180,7 @@ def value_input(quantity, asset, divisible):
         return round(quantity)
 
     if asset in ("value", "fraction", "price", "odds"):
-        return float(quantity)  # TODO: Float?!
+        return float(quantity)
 
     if divisible:
         quantity = D(quantity) * config.UNIT

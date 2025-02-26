@@ -135,7 +135,7 @@ def check_backend_state():
     block_count = backend.bitcoind.getblockcount()
     block_hash = backend.bitcoind.getblockhash(block_count)
     cblock = backend.bitcoind.getblock(block_hash, verbosity=1)
-    time_behind = time.time() - cblock["time"]  # TODO: Block times are not very reliable.
+    time_behind = time.time() - cblock["time"]
     if time_behind > 60 * 60 * 2:  # Two hours.
         raise exceptions.BackendError(
             f"Bitcoind is running about {round(time_behind / 3600)} hours behind."
@@ -149,7 +149,6 @@ def check_backend_state():
     logger.debug("API Status Poller - Backend state check passed.")
 
 
-# TODO: ALL queries EVERYWHERE should be done with these methods
 def db_query(db, statement, bindings=(), callback=None, **callback_args):
     """Allow direct access to the database in a parametrized manner."""
     cursor = db.cursor()
@@ -220,7 +219,6 @@ def get_rows(
     elif not isinstance(filters, list):
         filters = []
 
-    # TODO: Document this! (Each filter can be an ordered list.)
     new_filters = []
     for filter_ in filters:
         if type(filter_) in (list, tuple) and len(filter_) in [3, 4]:
@@ -957,7 +955,6 @@ def create_app():
         data = binascii.unhexlify(data_hex)
         message_type_id, message = messagetype.unpack(data)
 
-        # TODO: Enabled only for `send`.
         if message_type_id == send.ID:
             with LedgerDBConnectionPool().connection() as db:
                 unpacked = send.unpack(db, message)
