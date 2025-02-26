@@ -25,25 +25,24 @@ def get_pubkeyhash(scriptpubkey, block_index):
                     or asm[4] != OP_CHECKSIG  # noqa: F405
                 ):
                     return None, None
-                else:
-                    return asm[2], config.ADDRESSVERSION
+                return asm[2], config.ADDRESSVERSION
 
-            elif (asm[0] == OP_HASH160) and protocol.enabled("p2sh_dispensers_support"):  # noqa: F405
+            if (asm[0] == OP_HASH160) and protocol.enabled("p2sh_dispensers_support"):  # noqa: F405
                 if len(asm) != 3 or asm[-1] != OP_EQUAL:  # noqa: F405
                     return None, None
-                else:
-                    return asm[1], config.P2SH_ADDRESSVERSION
+                return asm[1], config.P2SH_ADDRESSVERSION
         return None, None
-    else:
-        if (
-            len(asm) != 5
-            or asm[0] != OP_DUP  # noqa: F405
-            or asm[1] != OP_HASH160  # noqa: F405
-            or asm[3] != OP_EQUALVERIFY  # noqa: F405
-            or asm[4] != OP_CHECKSIG  # noqa: F405
-        ):
-            return None, None
-        return asm[2], config.ADDRESSVERSION
+
+    if (
+        len(asm) != 5
+        or asm[0] != OP_DUP  # noqa: F405
+        or asm[1] != OP_HASH160  # noqa: F405
+        or asm[3] != OP_EQUALVERIFY  # noqa: F405
+        or asm[4] != OP_CHECKSIG  # noqa: F405
+    ):
+        return None, None
+
+    return asm[2], config.ADDRESSVERSION
 
 
 def is_witness_v0_keyhash(scriptpubkey):
@@ -57,18 +56,18 @@ def get_address(scriptpubkey, block_index):
     if protocol.enabled("correct_segwit_txids") and is_witness_v0_keyhash(scriptpubkey):
         address = script.script_to_address(scriptpubkey)
         return address
-    else:
-        pubkeyhash, address_version = get_pubkeyhash(scriptpubkey, block_index)
-        if not pubkeyhash:
-            return False
-        pubkeyhash = binascii.hexlify(pubkeyhash).decode("utf-8")
-        address = base58.base58_check_encode(pubkeyhash, address_version)
-        # Test decoding of address.
-        if address != config.UNSPENDABLE and binascii.unhexlify(
-            bytes(pubkeyhash, "utf-8")
-        ) != base58.base58_check_decode(address, address_version):
-            return False
-        return address
+
+    pubkeyhash, address_version = get_pubkeyhash(scriptpubkey, block_index)
+    if not pubkeyhash:
+        return False
+    pubkeyhash = binascii.hexlify(pubkeyhash).decode("utf-8")
+    address = base58.base58_check_encode(pubkeyhash, address_version)
+    # Test decoding of address.
+    if address != config.UNSPENDABLE and binascii.unhexlify(
+        bytes(pubkeyhash, "utf-8")
+    ) != base58.base58_check_decode(address, address_version):
+        return False
+    return address
 
 
 def get_tx_info_legacy(decoded_tx, block_index):

@@ -483,11 +483,11 @@ def match(db, tx, block_index=None):
     if not orders:
         cursor.close()
         return
-    else:
-        assert len(orders) == 1
-        if orders[0]["status"] != "open":
-            cursor.close()
-            return
+
+    assert len(orders) == 1
+    if orders[0]["status"] != "open":
+        cursor.close()
+        return
 
     tx1 = orders[0]
 

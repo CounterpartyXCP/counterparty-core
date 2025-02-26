@@ -113,7 +113,6 @@ def calculate_fee(x: int, a: int, b: int, base_fee: int, k: int):
 
     if x <= a:
         return 0
-    elif x <= b:
+    if x <= b:
         return sigmoid(x)
-    else:
-        return base_fee + (((x - b) ** m) / n)
+    return base_fee + (((x - b) ** m) / n)

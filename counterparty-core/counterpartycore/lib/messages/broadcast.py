@@ -58,17 +58,16 @@ def parse_options_from_string(string):
         except Exception as e:  # noqa: E722 # pylint: disable=broad-exception-caught
             raise exceptions.OptionsError("options not an integer") from e
         return options
-    else:
-        return False
+    return False
 
 
 def validate_address_options(options):
     """Ensure the options are all valid and in range."""
     if (options > config.MAX_INT) or (options < 0):
         raise exceptions.OptionsError("options integer overflow")
-    elif options > config.ADDRESS_OPTION_MAX_VALUE:
+    if options > config.ADDRESS_OPTION_MAX_VALUE:
         raise exceptions.OptionsError("options out of range")
-    elif not helpers.active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
+    if not helpers.active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
         raise exceptions.OptionsError("options not possible")
 
 

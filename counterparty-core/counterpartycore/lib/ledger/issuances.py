@@ -21,7 +21,7 @@ def generate_asset_id(asset_name):
     """Create asset_id from asset_name."""
     if asset_name == config.BTC:
         return 0
-    elif asset_name == config.XCP:
+    if asset_name == config.XCP:
         return 1
 
     if len(asset_name) < 4:
@@ -33,15 +33,15 @@ def generate_asset_id(asset_name):
             # Must be numeric.
             try:
                 asset_id = int(asset_name[1:])
-            except ValueError:
-                raise exceptions.AssetNameError("non‐numeric asset name starts with ‘A’")  # noqa: B904
+            except ValueError as e:
+                raise exceptions.AssetNameError("non‐numeric asset name starts with ‘A’") from e
 
             # Number must be in range.
             if not (26**12 + 1 <= asset_id <= 2**64 - 1):
                 raise exceptions.AssetNameError("numeric asset name not in range")
 
             return asset_id
-        elif len(asset_name) >= 13:
+        if len(asset_name) >= 13:
             raise exceptions.AssetNameError("long asset names must be numeric")
 
     if asset_name[0] == "A":
@@ -67,7 +67,7 @@ def generate_asset_name(asset_id):
     """Create asset_name from asset_id."""
     if asset_id == 0:
         return config.BTC
-    elif asset_id == 1:
+    if asset_id == 1:
         return config.XCP
 
     if asset_id < 26**3:
@@ -89,9 +89,6 @@ def generate_asset_name(asset_id):
         res.append(assetnames.B26_DIGITS[r])
     asset_name = "".join(res[::-1])
 
-    """
-    return asset_name + checksum.compute(asset_name)
-    """
     return asset_name
 
 
@@ -109,8 +106,7 @@ def get_asset_id(db, asset_name):
     assets = list(cursor)
     if len(assets) == 1:
         return int(assets[0]["asset_id"])
-    else:
-        raise exceptions.AssetError(f"No such asset: {asset_name}")
+    raise exceptions.AssetError(f"No such asset: {asset_name}")
 
 
 def get_asset_name(db, asset_id):
@@ -127,7 +123,7 @@ def get_asset_name(db, asset_id):
     assets = list(cursor)
     if len(assets) == 1:
         return assets[0]["asset_name"]
-    elif not assets:
+    if not assets:
         return 0  # Strange, I know…
 
 
@@ -164,19 +160,19 @@ def is_divisible(db, asset):
     """Check if the asset is divisible."""
     if asset in (config.BTC, config.XCP):
         return True
-    else:
-        cursor = db.cursor()
-        query = """
-            SELECT * FROM issuances
-            WHERE (status = ? AND asset = ?)
-            ORDER BY tx_index DESC
-        """
-        bindings = ("valid", asset)
-        cursor.execute(query, bindings)
-        issuances = cursor.fetchall()
-        if not issuances:
-            raise exceptions.AssetError(f"No such asset: {asset}")
-        return issuances[0]["divisible"]
+
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM issuances
+        WHERE (status = ? AND asset = ?)
+        ORDER BY tx_index DESC
+    """
+    bindings = ("valid", asset)
+    cursor.execute(query, bindings)
+    issuances = cursor.fetchall()
+    if not issuances:
+        raise exceptions.AssetError(f"No such asset: {asset}")
+    return issuances[0]["divisible"]
 
 
 def value_input(quantity, asset, divisible):
@@ -190,15 +186,15 @@ def value_input(quantity, asset, divisible):
         quantity = D(quantity) * config.UNIT
         if quantity == quantity.to_integral():
             return int(quantity)
-        else:
-            raise exceptions.QuantityError(
-                "Divisible assets have only eight decimal places of precision."
-            )
-    else:
-        quantity = D(quantity)
-        if quantity != round(quantity):
-            raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
-        return round(quantity)
+
+        raise exceptions.QuantityError(
+            "Divisible assets have only eight decimal places of precision."
+        )
+
+    quantity = D(quantity)
+    if quantity != round(quantity):
+        raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
+    return round(quantity)
 
 
 def norm(num, places):
@@ -220,13 +216,12 @@ def value_output(quantity, asset, divisible):
         quantity = D(quantity) / D(config.UNIT)
         if quantity == quantity.to_integral():
             return str(quantity) + ".0"  # For divisible assets, display the decimal point.
-        else:
-            return norm(quantity, 8)
-    else:
-        quantity = D(quantity)
-        if quantity != round(quantity):
-            raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
-        return round(quantity)
+        return norm(quantity, 8)
+
+    quantity = D(quantity)
+    if quantity != round(quantity):
+        raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
+    return round(quantity)
 
 
 def value_out(db, quantity, asset, divisible=None):
@@ -247,47 +242,47 @@ def price(numerator, denominator):
         CurrentState().current_block_index(), 294500
     ):  # Protocol change.
         return fractions.Fraction(numerator, denominator)
-    else:
-        numerator = D(numerator)
-        denominator = D(denominator)
-        return D(numerator / denominator)
+
+    numerator = D(numerator)
+    denominator = D(denominator)
+    return D(numerator / denominator)
 
 
 def get_asset_issuer(db, asset):
     """Check if the asset is divisible."""
     if asset in (config.BTC, config.XCP):
         return True
-    else:
-        cursor = db.cursor()
-        query = """
-            SELECT * FROM issuances
-            WHERE (status = ? AND asset = ?)
-            ORDER BY tx_index DESC
-        """
-        bindings = ("valid", asset)
-        cursor.execute(query, bindings)
-        issuances = cursor.fetchall()
-        if not issuances:
-            raise exceptions.AssetError(f"No such asset: {asset}")
-        return issuances[0]["issuer"]
+
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM issuances
+        WHERE (status = ? AND asset = ?)
+        ORDER BY tx_index DESC
+    """
+    bindings = ("valid", asset)
+    cursor.execute(query, bindings)
+    issuances = cursor.fetchall()
+    if not issuances:
+        raise exceptions.AssetError(f"No such asset: {asset}")
+    return issuances[0]["issuer"]
 
 
 def get_asset_description(db, asset):
     if asset in (config.BTC, config.XCP):
         return ""
-    else:
-        cursor = db.cursor()
-        query = """
-            SELECT * FROM issuances
-            WHERE (status = ? AND asset = ?)
-            ORDER BY tx_index DESC
-        """
-        bindings = ("valid", asset)
-        cursor.execute(query, bindings)
-        issuances = cursor.fetchall()
-        if not issuances:
-            raise exceptions.AssetError(f"No such asset: {asset}")
-        return issuances[0]["description"]
+
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM issuances
+        WHERE (status = ? AND asset = ?)
+        ORDER BY tx_index DESC
+    """
+    bindings = ("valid", asset)
+    cursor.execute(query, bindings)
+    issuances = cursor.fetchall()
+    if not issuances:
+        raise exceptions.AssetError(f"No such asset: {asset}")
+    return issuances[0]["description"]
 
 
 def get_issuances_count(db, address):

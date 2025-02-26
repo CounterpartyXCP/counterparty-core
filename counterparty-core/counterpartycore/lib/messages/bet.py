@@ -391,10 +391,11 @@ def match(db, tx):
     bets = ledger.other.get_bet(db, bet_hash=tx["tx_hash"])
     if not bets:
         return
-    else:
-        assert len(bets) == 1
-        if bets[0]["status"] != "open":
-            return
+
+    assert len(bets) == 1
+    if bets[0]["status"] != "open":
+        return
+
     tx1 = bets[0]
 
     # Get counterbet_type.

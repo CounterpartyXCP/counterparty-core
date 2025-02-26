@@ -194,8 +194,7 @@ def get_rows(
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
             return f"""({",".join(["?" for e in range(0, len(value))])})"""
-        else:
-            return """?"""
+        return """?"""
 
     if not table or table.lower() not in API_TABLES:
         raise exceptions.APIError("Unknown table")
@@ -599,13 +598,13 @@ def create_app():
                     )  # filter out None
                     if old_style_api:
                         if len(tx_hexes) != 1:
-                            raise Exception("Can't do 2 TXs with old_style_api")
+                            raise exceptions.APIError("Can't do 2 TXs with old_style_api")
                         return tx_hexes[0]
-                    else:
-                        if len(tx_hexes) == 1:
-                            return tx_hexes[0]
-                        else:
-                            return tx_hexes
+
+                    if len(tx_hexes) == 1:
+                        return tx_hexes[0]
+
+                    return tx_hexes
             except (
                 TypeError,
                 exceptions.AddressError,
@@ -657,11 +656,10 @@ def create_app():
         with LedgerDBConnectionPool().connection() as db:
             if asset == "BTC":
                 return backend.bitcoind.get_btc_supply(normalize=False)
-            elif asset == "XCP":
+            if asset == "XCP":
                 return ledger.supplies.xcp_supply(db)
-            else:
-                asset = ledger.issuances.resolve_subasset_longname(db, asset)
-                return ledger.supplies.asset_supply(db, asset)
+            asset = ledger.issuances.resolve_subasset_longname(db, asset)
+            return ledger.supplies.asset_supply(db, asset)
 
     @dispatcher.add_method
     def get_xcp_supply():
@@ -915,13 +913,13 @@ def create_app():
         )
         if order_by is None:
             return results
-        else:
-            order_key = order_by
-            reverse = False
-            if order_key.startswith("-"):
-                order_key = order_key[1:]
-                reverse = True
-            return sorted(results, key=lambda x: x[order_key], reverse=reverse)
+
+        order_key = order_by
+        reverse = False
+        if order_key.startswith("-"):
+            order_key = order_key[1:]
+            reverse = True
+        return sorted(results, key=lambda x: x[order_key], reverse=reverse)
 
     @dispatcher.add_method
     def getrawtransaction(tx_hash, verbose=False):

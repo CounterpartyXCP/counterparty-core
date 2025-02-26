@@ -492,8 +492,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
         cursor.close()
 
         return tx_index + 1
-    else:
-        pass
+
     CurrentState().set_current_tx_hash(None)
     return tx_index
 

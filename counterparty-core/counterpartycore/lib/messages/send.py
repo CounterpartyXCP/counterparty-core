@@ -56,7 +56,7 @@ def compose(
                             raise exceptions.ComposeError(
                                 "memo and memo_is_hex lists should have the same length"
                             )
-                        elif len(memo) != len(destination):
+                        if len(memo) != len(destination):
                             raise exceptions.ComposeError(
                                 "memo/memo_is_hex lists should have the same length as sends"
                             )
@@ -69,7 +69,7 @@ def compose(
                             None,
                             skip_validation,
                         )
-                    elif isinstance(memo, dict) and isinstance(memo_is_hex, dict):
+                    if isinstance(memo, dict) and isinstance(memo_is_hex, dict):
                         # (2) implemented here
                         if not (
                             "list" in memo
@@ -80,11 +80,11 @@ def compose(
                             raise exceptions.ComposeError(
                                 'when specifying memo/memo_is_hex as a dict, they must contain keys "list" and "msg_wide"'
                             )
-                        elif len(memo["list"]) != len(memo_is_hex["list"]):
+                        if len(memo["list"]) != len(memo_is_hex["list"]):
                             raise exceptions.ComposeError(
                                 "length of memo.list and memo_is_hex.list must be equal"
                             )
-                        elif len(memo["list"]) != len(destination):
+                        if len(memo["list"]) != len(destination):
                             raise exceptions.ComposeError(
                                 "length of memo.list/memo_is_hex.list must be equal to the amount of sends"
                             )
@@ -99,23 +99,21 @@ def compose(
                             memo_is_hex["msg_wide"],
                             skip_validation,
                         )
-                    else:
-                        # (3) the default case
-                        return mpma.compose(
-                            db,
-                            source,
-                            helpers.flat(zip(asset, destination, quantity)),
-                            memo,
-                            memo_is_hex,
-                            skip_validation,
-                        )
-                else:
-                    raise exceptions.ComposeError(
-                        "destination, asset and quantity arrays must have the same amount of elements"
+                    # (3) the default case
+                    return mpma.compose(
+                        db,
+                        source,
+                        helpers.flat(zip(asset, destination, quantity)),
+                        memo,
+                        memo_is_hex,
+                        skip_validation,
                     )
-            else:
-                raise exceptions.ComposeError("mpma sends are not enabled")
-        elif use_enhanced_send is None or use_enhanced_send:
+
+                raise exceptions.ComposeError(
+                    "destination, asset and quantity arrays must have the same amount of elements"
+                )
+            raise exceptions.ComposeError("mpma sends are not enabled")
+        if use_enhanced_send is None or use_enhanced_send:
             return enhancedsend.compose(
                 db,
                 source,
@@ -127,7 +125,8 @@ def compose(
                 skip_validation,
                 no_dispense,
             )
-    elif memo is not None or use_enhanced_send:
+
+    if memo is not None or use_enhanced_send:
         raise exceptions.ComposeError("enhanced sends are not enabled")
 
     return send1.compose(db, source, destination, asset, quantity, skip_validation, no_dispense)

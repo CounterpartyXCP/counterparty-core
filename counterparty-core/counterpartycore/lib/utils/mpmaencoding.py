@@ -60,9 +60,8 @@ def _encode_memo(memo=None, is_hex=False):
             barr.append(BitArray(memo.encode("utf-8")))
 
         return barr
-    else:
-        # if the memo is None, return just a 0 bit
-        return BitArray("0b0")
+    # if the memo is None, return just a 0 bit
+    return BitArray("0b0")
 
 
 def _safe_tuple_index(t, i):
@@ -223,8 +222,8 @@ def _decode_memo(stream):
             data = data.decode("utf-8")
 
         return data, is_hex
-    else:
-        return None, None
+
+    return None, None
 
 
 def _decode_mpma_send_decode(data):

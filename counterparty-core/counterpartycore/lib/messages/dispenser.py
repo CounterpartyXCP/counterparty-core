@@ -232,8 +232,7 @@ def validate(
 
     if len(problems) > 0:
         return None, problems
-    else:
-        return asset_id, None
+    return asset_id, None
 
 
 def compose(

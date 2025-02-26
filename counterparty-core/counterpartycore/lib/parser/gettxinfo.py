@@ -448,15 +448,14 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=Fa
             p2sh_is_segwit=p2sh_is_segwit,
             composing=composing,
         )
-    elif protocol.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
+    if protocol.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(
             db,
             decoded_tx,
             block_index,
             composing=composing,
         )
-    else:
-        return gettxinfolegacy.get_tx_info_legacy(decoded_tx, block_index)
+    return gettxinfolegacy.get_tx_info_legacy(decoded_tx, block_index)
 
 
 def select_utxo_destination(vouts):

@@ -4,7 +4,6 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.parser import messagetype
 from counterpartycore.lib.utils import address
 
@@ -104,10 +103,10 @@ def parse(db, tx, message):
             db, tx["source"], asset, quantity, tx["tx_index"], "destroy", tx["tx_hash"]
         )
 
-    except UnpackError as e:  # noqa: F405
+    except exceptions.UnpackError as e:  # noqa: F405
         status = "invalid: " + "".join(e.args)
 
-    except (ValidateError, BalanceError) as e:  # noqa: F405
+    except (exceptions.ValidateError, exceptions.BalanceError) as e:  # noqa: F405
         status = "invalid: " + "".join(e.args)
 
     bindings = {

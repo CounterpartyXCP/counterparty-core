@@ -25,19 +25,19 @@ def validate(db, source, order_match_id, block_index):
     if len(order_matches) == 0:
         problems.append(f"no such order match {order_match_id}")
         return None, None, None, None, order_match, problems
-    elif len(order_matches) > 1:
+    if len(order_matches) > 1:
         assert False  # noqa: B011
-    else:
-        order_match = order_matches[0]
 
-        if order_match["status"] == "expired":
-            problems.append("order match expired")
-        elif order_match["status"] == "completed":
-            problems.append("order match completed")
-        elif order_match["status"].startswith("invalid"):
-            problems.append("order match invalid")
-        elif order_match["status"] != "pending":
-            raise exceptions.OrderError("unrecognised order match status")
+    order_match = order_matches[0]
+
+    if order_match["status"] == "expired":
+        problems.append("order match expired")
+    elif order_match["status"] == "completed":
+        problems.append("order match completed")
+    elif order_match["status"].startswith("invalid"):
+        problems.append("order match invalid")
+    elif order_match["status"] != "pending":
+        raise exceptions.OrderError("unrecognised order match status")
 
     # Figure out to which address the BTC are being paid.
     # Check that source address is correct.

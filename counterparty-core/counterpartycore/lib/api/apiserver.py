@@ -247,8 +247,7 @@ def execute_api_function(rule, route, function_args):
             result = BLOCK_CACHE[cache_key]
             sentry_get_span.set_data("cache.hit", True)
             return result
-        else:
-            sentry_get_span.set_data("cache.hit", False)
+        sentry_get_span.set_data("cache.hit", False)
 
     with start_sentry_span(op="cache.put") as sentry_put_span:
         needed_db = function_needs_db(route["function"])
