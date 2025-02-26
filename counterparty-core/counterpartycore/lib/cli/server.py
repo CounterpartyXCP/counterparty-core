@@ -645,7 +645,7 @@ class AssetConservationChecker(threading.Thread):
                 try:
                     check.asset_conservation(self.db, self.stop_event)
                 except exceptions.SanityError as e:
-                    logger.error("Asset conservation check failed: %s" % e)
+                    logger.error("Asset conservation check failed: %s", e)
                     _thread.interrupt_main()
                 except apsw.InterruptError:
                     break

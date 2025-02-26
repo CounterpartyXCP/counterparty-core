@@ -891,23 +891,6 @@ def create_app():
             return counts
 
     @dispatcher.add_method
-    def get_asset_names(longnames=False):
-        with LedgerDBConnectionPool().connection() as db:
-            all_assets = ledger.other.get_valid_assets(db)
-        if longnames:
-            names = [
-                {"asset": row["asset"], "asset_longname": row["asset_longname"]}
-                for row in all_assets
-            ]
-        else:
-            names = [row["asset"] for row in all_assets]
-        return names
-
-    @dispatcher.add_method
-    def get_asset_longnames():
-        return get_asset_names(longnames=True)
-
-    @dispatcher.add_method
     def get_holder_count(asset):
         with LedgerDBConnectionPool().connection() as db:
             asset = ledger.issuances.resolve_subasset_longname(db, asset)
@@ -925,10 +908,8 @@ def create_app():
         return holders
 
     @dispatcher.add_method
-    def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-        return backend.electrs.get_history(
-            address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes
-        )
+    def search_raw_transactions(address, unconfirmed=True):
+        return backend.electrs.get_history(address, unconfirmed=unconfirmed)
 
     @dispatcher.add_method
     def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
@@ -1008,22 +989,22 @@ def create_app():
                 dispensers = ledger.markets.get_dispenser_info(db, tx_index=tx_index)
 
             if len(dispensers) == 1:
-                dispenser = dispensers[0]
+                dispenser_info = dispensers[0]
                 oracle_price = ""
                 satoshi_price = ""
                 fiat_price = ""
                 oracle_price_last_updated = ""
                 oracle_fiat_label = ""
 
-                if dispenser["oracle_address"] != None:  # noqa: E711
-                    fiat_price = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
+                if dispenser_info["oracle_address"] != None:  # noqa: E711
+                    fiat_price = helpers.satoshirate_to_fiat(dispenser_info["satoshirate"])
                     (
                         oracle_price,
-                        oracle_fee,
+                        _oracle_fee,
                         oracle_fiat_label,
                         oracle_price_last_updated,
                     ) = ledger.other.get_oracle_last_price(
-                        db, dispenser["oracle_address"], CurrentState().current_block_index()
+                        db, dispenser_info["oracle_address"], CurrentState().current_block_index()
                     )
 
                     if oracle_price > 0:
@@ -1032,23 +1013,23 @@ def create_app():
                         raise exceptions.APIError("Last oracle price is zero")
 
                 return {
-                    "tx_index": dispenser["tx_index"],
-                    "tx_hash": dispenser["tx_hash"],
-                    "block_index": dispenser["block_index"],
-                    "source": dispenser["source"],
-                    "asset": dispenser["asset"],
-                    "give_quantity": dispenser["give_quantity"],
-                    "escrow_quantity": dispenser["escrow_quantity"],
-                    "mainchainrate": dispenser["satoshirate"],
+                    "tx_index": dispenser_info["tx_index"],
+                    "tx_hash": dispenser_info["tx_hash"],
+                    "block_index": dispenser_info["block_index"],
+                    "source": dispenser_info["source"],
+                    "asset": dispenser_info["asset"],
+                    "give_quantity": dispenser_info["give_quantity"],
+                    "escrow_quantity": dispenser_info["escrow_quantity"],
+                    "mainchainrate": dispenser_info["satoshirate"],
                     "fiat_price": fiat_price,
                     "fiat_unit": oracle_fiat_label,
                     "oracle_price": oracle_price,
                     "satoshi_price": satoshi_price,
-                    "status": dispenser["status"],
-                    "give_remaining": dispenser["give_remaining"],
-                    "oracle_address": dispenser["oracle_address"],
+                    "status": dispenser_info["status"],
+                    "give_remaining": dispenser_info["give_remaining"],
+                    "oracle_address": dispenser_info["oracle_address"],
                     "oracle_price_last_updated": oracle_price_last_updated,
-                    "asset_longname": dispenser["asset_longname"],
+                    "asset_longname": dispenser_info["asset_longname"],
                 }
 
         return {}
@@ -1089,24 +1070,22 @@ def create_app():
                 request_json = flask.request.get_data().decode("utf-8")
                 response = handle_rpc_post(request_json)
                 return response
-            elif flask.request.method == "OPTIONS":
+            if flask.request.method == "OPTIONS":
                 response = handle_rpc_options()
                 return response
-            else:
-                error = "Invalid method."
-                return flask.Response(error, 405, mimetype="application/json")
-        elif request_path.startswith("v1/rest/"):
+            error = "Invalid method."
+            return flask.Response(error, 405, mimetype="application/json")
+        if request_path.startswith("v1/rest/"):
             if flask.request.method == "GET" or flask.request.method == "POST":
                 # Pass the URL path without /REST/ part and Flask request object.
                 rest_path = args_path.split("/", 1)[1]
                 response = handle_rest(rest_path, flask.request)
                 return response
-            else:
-                error = "Invalid method."
-                return flask.Response(error, 405, mimetype="application/json")
-        else:
-            # Not found
-            return flask.Response(None, 404, mimetype="application/json")
+
+            error = "Invalid method."
+            return flask.Response(error, 405, mimetype="application/json")
+        # Not found
+        return flask.Response(None, 404, mimetype="application/json")
 
     ######################
     # JSON-RPC API
@@ -1194,17 +1173,17 @@ def create_app():
         query_data = {}
 
         if compose:
-            transaction_args, common_args, private_key_wif = split_compose_params(**extra_args)
+            transaction_args, common_args, _private_key_wif = split_compose_params(**extra_args)
 
             # Must have some additional transaction arguments.
-            if not len(transaction_args):
+            if len(transaction_args) == 0:
                 error = "No transaction arguments provided."
                 return flask.Response(error, 400, mimetype="application/json")
 
             # Compose the transaction.
             try:
                 with LedgerDBConnectionPool().connection() as db:
-                    query_data, data = composer.compose_transaction(
+                    query_data, _data = composer.compose_transaction(
                         db, query_type, transaction_args, common_args
                     )
             except (
@@ -1219,7 +1198,7 @@ def create_app():
                 return flask.Response(error_msg, 400, mimetype="application/json")
         else:
             # Need to de-generate extra_args to pass it through.
-            query_args = dict([item for item in extra_args])
+            query_args = dict(list(extra_args))
             operator = query_args.pop("op", "AND")
             # Put the data into specific dictionary format.
             data_filter = [

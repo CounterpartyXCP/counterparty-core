@@ -209,6 +209,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.state_db = None
         self.current_state_thread = None
         self.master_pid = os.getpid()
+        self.server_ready_value = None
         super().__init__()
 
     def load_config(self):
@@ -250,6 +251,8 @@ class WerkzeugApplication:
         self.app = app
         self.args = args
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
+        self.current_state_thread = None
+        self.server_ready_value = None
         global logger  # noqa F811
         logger = log.re_set_up("", api=True)
 
@@ -274,6 +277,8 @@ class WaitressApplication:
         self.server = waitress.server.create_server(
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )
+        self.current_state_thread = None
+        self.server_ready_value = None
         global logger  # noqa F811
         logger = log.re_set_up("", api=True)
 

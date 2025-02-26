@@ -324,6 +324,8 @@ def prepare_outputs(source, destinations, data, unspent_list, construct_params):
 
 class UTXOLocks(metaclass=helpers.SingletonMeta):
     def __init__(self):
+        self.max_age = None
+        self.max_size = None
         self.init()
 
     def init(self):

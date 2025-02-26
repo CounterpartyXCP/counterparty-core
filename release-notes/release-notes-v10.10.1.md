@@ -34,6 +34,7 @@
 - Add `count_confirmed` parameter for get transactions count endpoints
 - Add `X-LEDGER-STATE` header in all API responses
 - Add `ledger_state` field in API v2 root endpoint
+- Remove `get_asset_names` and `get_asset_longnames` commands from API v1
 
 ## CLI
 
