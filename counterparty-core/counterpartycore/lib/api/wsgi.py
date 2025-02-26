@@ -185,7 +185,7 @@ class GunicornArbiter(Arbiter):
             stopped = [not helpers.is_process_alive(pid) for pid in self.workers_pids]
             if all(stopped):
                 break
-        logger.info(f"All workers killed: {self.workers_pids}")
+        logger.info("All workers killed: %s", self.workers_pids)
         self.workers_pids = []
 
 

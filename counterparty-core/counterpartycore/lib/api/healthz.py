@@ -63,7 +63,7 @@ def healthz(db, check_type: str = "light"):
             healthz_light(db)
     except Exception as e:  # pylint: disable=broad-except
         logger.exception(e)
-        logger.error(f"Health check failed: {e}")
+        logger.error("Health check failed: %s", e)
         return False
     return True
 

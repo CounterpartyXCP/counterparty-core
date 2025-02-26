@@ -557,7 +557,7 @@ def catch_up(ledger_db, state_db, watcher=None):
     check_reorg(ledger_db, state_db)
     event_to_parse_count = get_event_to_parse_count(ledger_db, state_db)
     if event_to_parse_count > 0:
-        logger.debug(f"{event_to_parse_count} events to catch up...")
+        logger.debug("%s events to catch up...", event_to_parse_count)
         start_time = time.time()
         event_parsed = 0
         next_event = get_next_event_to_parse(ledger_db, state_db)
@@ -567,12 +567,15 @@ def catch_up(ledger_db, state_db, watcher=None):
             if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
                 logger.debug(
-                    f"{event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
+                    "%s / %s events parsed. (%s)",
+                    event_parsed,
+                    event_to_parse_count,
+                    format_duration(duration),
                 )
             next_event = get_next_event_to_parse(ledger_db, state_db)
         if watcher is None or not watcher.stop_event.is_set():
             duration = time.time() - start_time
-            logger.info(f"Catch up completed. ({format_duration(duration)})")
+            logger.info("Catch up completed. (%s)", format_duration(duration))
     else:
         logger.info("Catch up completed.")
 
@@ -615,8 +618,8 @@ def check_reorg(ledger_db, state_db):
         target_block_index = 0
         if matching_event is not None:
             target_block_index = matching_event["block_index"] + 1
-        logger.warning(f"Blockchain reorganization detected at Block {target_block_index}")
-        logger.info(f"Rolling back to block: {target_block_index}")
+        logger.warning("Blockchain reorganization detected at Block %s", target_block_index)
+        logger.info("Rolling back to block: %s", target_block_index)
         dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
 
 

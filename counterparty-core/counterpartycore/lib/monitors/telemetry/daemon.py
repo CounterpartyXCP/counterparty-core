@@ -45,7 +45,7 @@ class TelemetryDaemon:
                     self.client.send(data)
                     last_run = time.time()
             except Exception as e:  # pylint: disable=broad-except
-                logger.error(f"Error in telemetry daemon: {e}")
+                logger.error("Error in telemetry daemon: %s", e)
                 time.sleep(0.5)
 
     def stop(self):

@@ -39,4 +39,4 @@ class TelemetryOneShot(metaclass=SingletonMeta):
                 self.send(data)
         except Exception as e:  # pylint: disable=broad-except
             capture_exception(e)
-            logger.warning(f"Error in telemetry one shot: {e}")
+            logger.warning("Error in telemetry one shot: %s", e)

@@ -37,9 +37,6 @@ def test_backend_height(monkeypatch):
     current_backend_height = 1000
     current_block_count = 980
 
-    def get_backend_height_mock():
-        return current_backend_height
-
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getblockcount", lambda: current_block_count
     )
@@ -62,12 +59,12 @@ def test_backend_height(monkeypatch):
 
     try:
         backend_height_thread.start()
-        currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL = 0.1
+        backendheight.BACKEND_HEIGHT_REFRSH_INTERVAL = 0.1
 
         for _i in range(10):
             current_backend_height += 1
             current_block_count += 1
-            time.sleep(currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
+            time.sleep(backendheight.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
             assert (
                 backend_height_thread.shared_backend_height.value
                 == current_backend_height * 10e8 + current_block_count
@@ -85,6 +82,6 @@ def test_backend_height(monkeypatch):
     assert backend_height_thread.last_check == last_check_before
 
     backend_height_thread.start()
-    time.sleep(currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
+    time.sleep(backendheight.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
     backend_height_thread.stop()
     assert backend_height_thread.last_check == last_check_before

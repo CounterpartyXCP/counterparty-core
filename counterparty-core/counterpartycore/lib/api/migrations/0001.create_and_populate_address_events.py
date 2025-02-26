@@ -66,7 +66,7 @@ def apply(db):
 
     cursor.close()
 
-    logger.debug(f"Populated `address_events` table in {time.time() - start_time:.2f} seconds")
+    logger.debug("Populated `address_events` table in %.2f seconds", time.time() - start_time)
 
 
 def rollback(db):

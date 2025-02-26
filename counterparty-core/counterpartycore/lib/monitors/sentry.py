@@ -45,7 +45,7 @@ def init():
 
     sample_rate = float(os.environ.get("SENTRY_SAMPLE_RATE", 0.01))
 
-    logger.info(f"Initializing Sentry with {dsn} and sample rate of {sample_rate}...")
+    logger.info("Initializing Sentry with %s and sample rate of %s...", dsn, sample_rate)
 
     sentry_sdk.init(
         dsn=dsn,

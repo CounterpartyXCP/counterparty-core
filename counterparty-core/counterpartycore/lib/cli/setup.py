@@ -141,7 +141,7 @@ def read_config_file(default_config_file, config_file_path=None):
             fp.seek(-bomlen, os.SEEK_CUR)
             fp.truncate()
 
-    logger.debug(f"Loading configuration file: `{config_file_path}`")
+    logger.debug("Loading configuration file: `%s`", config_file_path)
     configfile = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes=("#", ";"))
     with codecs.open(config_file_path, "r", encoding="utf8") as fp:
         configfile.read_file(fp)

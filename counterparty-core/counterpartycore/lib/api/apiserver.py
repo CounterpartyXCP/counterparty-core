@@ -526,7 +526,7 @@ def run_apiserver(
         try:
             wsgi_server = wsgi.WSGIApplication(app, args=args)
         except OSError as e:
-            logger.error(f"Error starting WSGI Server: {e}")
+            logger.error("Error starting WSGI Server: %s", e)
             sys.exit(1)
 
         logger.info("Starting Parent Process Checker thread...")
@@ -605,7 +605,7 @@ class APIServer:
             self.process.start()
             logger.info("API PID: %s", self.process.pid)
         except Exception as e:  # pylint: disable=broad-except
-            logger.error(f"Error starting API Server: {e}")
+            logger.error("Error starting API Server: %s", e)
             raise e
         return self.process
 

@@ -52,7 +52,7 @@ def apply(db):
     )
 
     logger.debug(
-        f"Populated the `transaction_types_count` table in {time.time() - start_time:.2f} seconds"
+        "Populated the `transaction_types_count` table in %.2f seconds", time.time() - start_time
     )
 
 

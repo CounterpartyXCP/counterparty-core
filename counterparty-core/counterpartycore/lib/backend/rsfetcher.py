@@ -21,11 +21,11 @@ PREFETCH_QUEUE_SIZE = 20
 def delete_database_directory():
     if os.path.isdir(config.FETCHER_DB_OLD):
         shutil.rmtree(config.FETCHER_DB_OLD)
-        logger.debug(f"RSFetcher - Deleted old database at {config.FETCHER_DB_OLD}")
+        logger.debug("RSFetcher - Deleted old database at %s", config.FETCHER_DB_OLD)
 
     if os.path.isdir(config.FETCHER_DB):
         shutil.rmtree(config.FETCHER_DB)
-        logger.debug(f"RSFetcher - Reset database at {config.FETCHER_DB}")
+        logger.debug("RSFetcher - Reset database at %s", config.FETCHER_DB)
 
 
 class RSFetcher(metaclass=helpers.SingletonMeta):
@@ -110,7 +110,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
 
         # Handle potentially out-of-order blocks
         if block["height"] != self.next_height:
-            logger.warning(f"Received block {block['height']} when expecting {self.next_height}")
+            logger.warning("Received block %s when expecting %s", block["height"], self.next_height)
             self.next_height = block["height"]
 
         self.next_height += 1
@@ -139,7 +139,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
             logger.debug("Fetcher stopped and prefetch queue is empty.")
             return None
         except Exception as e:  # pylint: disable=broad-except
-            logger.error(f"Error getting prefetched block: {e}")
+            logger.error("Error getting prefetched block: %s", e)
             raise e
 
     def prefetch_blocks(self):

@@ -49,7 +49,7 @@ def apply(db):
 
     db.execute("""CREATE INDEX events_count_count_idx ON events_count (count)""")
 
-    logger.debug(f"Populated the `events_count` table in {time.time() - start_time:.2f} seconds")
+    logger.debug("Populated the `events_count` table in %.2f seconds", time.time() - start_time)
 
 
 def rollback(db):

@@ -81,7 +81,7 @@ def apply(db):
     for sql in sqls:
         db.execute(sql)
 
-    logger.debug(f"Populated the `all_expirations` table in {time.time() - start_time:.2f} seconds")
+    logger.debug("Populated the `all_expirations` table in %.2f seconds", time.time() - start_time)
 
 
 def rollback(db):

@@ -11,8 +11,6 @@ from counterpartycore.lib.utils.database import (
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-BACKEND_HEIGHT_REFRSH_INTERVAL = 3
-
 
 class CurrentState(metaclass=helpers.SingletonMeta):
     def __init__(self):

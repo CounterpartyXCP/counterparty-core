@@ -113,7 +113,7 @@ def update_transaction(db, tx, supported):
             {"supported": False, "tx_hash": tx["tx_hash"]},
         )
         if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
-            logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
+            logger.info("Unsupported transaction: hash %s; data %s", tx["tx_hash"], tx["data"])
         cursor.close()
 
 

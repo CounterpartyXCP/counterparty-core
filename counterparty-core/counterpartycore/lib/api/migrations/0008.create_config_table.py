@@ -28,7 +28,7 @@ def apply(db):
 
     database.update_version(db)
 
-    logger.debug(f"`config` table created in {time.time() - start_time:.2f} seconds")
+    logger.debug("`config` table created in %.2f seconds", time.time() - start_time)
 
 
 def rollback(db):

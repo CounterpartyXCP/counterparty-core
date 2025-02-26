@@ -158,7 +158,7 @@ def initialise_db():
         cprint("THE OPTION `--force` IS NOT FOR USE ON PRODUCTION SYSTEMS.", "yellow")
 
     # Database
-    logger.debug(f"Connecting to database... (SQLite {apsw.apswversion()})")
+    logger.debug("Connecting to database... (SQLite %s)", apsw.apswversion())
     db = get_connection(read_only=False)
 
     return db
@@ -177,7 +177,7 @@ def check_foreign_keys(db):
     rows = cursor.fetchall()
     if rows:
         for row in rows:
-            logger.debug(f"Foreign Key Error: {row}")
+            logger.debug("Foreign Key Error: %s", row)
         raise exceptions.DatabaseError("Foreign key check failed.")
 
     logger.info("Foreign key check completed.")
@@ -192,7 +192,7 @@ def intergrity_check(db):
     rows = cursor.fetchall()
     if not (len(rows) == 1 and rows[0]["integrity_check"] == "ok"):
         for row in rows:
-            logger.debug(f"Integrity Error: {row}")
+            logger.debug("Integrity Error: %s", row)
         raise exceptions.DatabaseError("Integrity check failed.")
 
     logger.info("Integrity check completed.")
@@ -238,7 +238,7 @@ def close(db):
 
 
 def apply_outstanding_migration(db_file, migration_dir):
-    logger.info(f"Applying migrations to {db_file}...")
+    logger.info("Applying migrations to %s...", db_file)
     # Apply migrations
     backend = get_backend(f"sqlite:///{db_file}")
     migrations = read_migrations(migration_dir)
@@ -253,7 +253,7 @@ def apply_outstanding_migration(db_file, migration_dir):
 
 
 def rollback_all_migrations(db_file, migration_dir):
-    logger.info(f"Rolling back all migrations from {db_file}...")
+    logger.info("Rolling back all migrations from %s...", db_file)
     backend = get_backend(f"sqlite:///{db_file}")
     migrations = read_migrations(migration_dir)
     backend.rollback_migrations(backend.to_rollback(migrations))
