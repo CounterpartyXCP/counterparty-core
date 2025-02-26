@@ -257,7 +257,7 @@ class BlockchainWatcher:
         self.check_software_version_if_needed()
         late_since = None
 
-        while True and not self.stop_event.is_set():
+        while not self.stop_event.is_set():
             try:
                 if not config.NO_MEMPOOL:
                     if len(RAW_MEMPOOL) > 0:

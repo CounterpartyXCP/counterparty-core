@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import os
 import signal
+import sys
 import threading
 import time
 from collections import OrderedDict
@@ -529,7 +530,7 @@ def run_apiserver(
             wsgi_server = wsgi.WSGIApplication(app, args=args)
         except OSError as e:
             logger.error(f"Error starting WSGI Server: {e}")
-            exit(1)
+            sys.exit(1)
 
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid)
@@ -581,7 +582,7 @@ class ParentProcessChecker(threading.Thread):
             pass
 
 
-class APIServer(object):
+class APIServer:
     def __init__(self, stop_event, shared_backend_height):
         self.process = None
         self.server_ready_value = Value("I", 0)

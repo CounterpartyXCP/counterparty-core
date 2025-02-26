@@ -27,10 +27,10 @@ class TestTelemetryDaemon:
         client = MagicMock()
         daemon = TelemetryDaemon(collector, client, interval=0.5)
         daemon.start()
-        assert daemon.is_running == True  # noqa: E712
+        assert daemon.is_running
         time.sleep(2)
         daemon.stop()
-        assert daemon.is_running == False  # noqa: E712
+        assert not daemon.is_running
         assert client.send.call_count > 1
         assert collector.collect.call_count > 1
 
@@ -60,8 +60,8 @@ class TestTelemetryCollectorBase:
         assert data["version"] == "1.2.3"
         assert data["uptime"] > 0
         assert data["network"] == "MAINNET"
-        assert isinstance(data["dockerized"], bool)  # noqa: E712
-        assert data["force_enabled"] == False  # noqa: E712
+        assert isinstance(data["dockerized"], bool)
+        assert not data["force_enabled"]
 
     @patch("counterpartycore.lib.monitors.telemetry.collectors.base.ledger")
     @patch("counterpartycore.lib.monitors.telemetry.collectors.base.os.path.exists")

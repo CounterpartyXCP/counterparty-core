@@ -8,7 +8,7 @@ import time
 from collections import OrderedDict
 from decimal import Decimal as D
 
-from arc4 import ARC4
+from arc4 import ARC4  # pylint: disable=no-name-in-module
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2trAddress, P2wpkhAddress, PublicKey
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
@@ -76,11 +76,13 @@ def is_address_script(address, script_pub_key):
 ################
 
 
-def address_to_script_pub_key(address, unspent_list=[], construct_params={}, network=None):  # noqa B006
+def address_to_script_pub_key(address, unspent_list=None, construct_params=None, network=None):  # noqa B006
     helpers.setup_bitcoinutils(network)
     if multisig.is_multisig(address):
         signatures_required, addresses, signatures_possible = multisig.extract_array(address)
-        pubkeys = [search_pubkey(addr, unspent_list, construct_params) for addr in addresses]
+        pubkeys = [
+            search_pubkey(addr, unspent_list or [], construct_params or {}) for addr in addresses
+        ]
         if None in pubkeys:
             raise exceptions.ComposeError(
                 f"Pubkeys not found for {address}, please provide them with the `pubkeys` parameter"

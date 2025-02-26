@@ -81,7 +81,7 @@ def parse(db, tx):
             if problems:
                 status = "invalid: " + "; ".join(problems)
 
-            if tx["btc_amount"] != None:  # noqa: E711
+            if tx["btc_amount"] is not None:  # noqa: E711
                 sent = tx["btc_amount"]
             else:
                 sent = 0
@@ -125,26 +125,26 @@ def parse(db, tx):
         # Mainnet burns are hard‐coded.
 
         try:
-            line = MAINNET_BURNS[tx["tx_hash"]]
+            row = MAINNET_BURNS[tx["tx_hash"]]
         except KeyError:
             return
 
         ledger.events.credit(
             db,
-            line["source"],
+            row["source"],
             config.XCP,
-            int(line["earned"]),
+            int(row["earned"]),
             tx["tx_index"],
             action="burn",
-            event=line["tx_hash"],
+            event=row["tx_hash"],
         )
 
         tx_index = int(tx["tx_index"])
-        tx_hash = line["tx_hash"]
-        block_index = int(line["block_index"])
-        source = line["source"]
-        burned = int(line["burned"])
-        earned = int(line["earned"])
+        tx_hash = row["tx_hash"]
+        block_index = int(row["block_index"])
+        source = row["source"]
+        burned = int(row["burned"])
+        earned = int(row["earned"])
         status = "valid"
 
     # Add parsed transaction to message-type–specific table.

@@ -3,7 +3,7 @@ import logging
 import struct
 from io import BytesIO
 
-from arc4 import ARC4
+from arc4 import ARC4  # pylint: disable=no-name-in-module
 
 from counterpartycore.lib import backend, config, exceptions, ledger
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
@@ -185,12 +185,11 @@ def collect_sighash_flags(script_sig, witnesses):
         return flags
 
     # Other cases
-    if len(witnesses) >= 3:
-        for item in witnesses:
-            flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
-            if flag is not None:
-                flags.append(flag)
-        return flags
+    for item in witnesses:
+        flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
+        if flag is not None:
+            flags.append(flag)
+    return flags
 
 
 class SighashFlagError(DecodeError):

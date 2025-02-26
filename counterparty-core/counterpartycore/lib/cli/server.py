@@ -683,13 +683,13 @@ class CounterpartyServer(threading.Thread):
         self.stopped = False
 
         # Log all config parameters, sorted by key
-        # Filter out default values #TODO: these should be set in a different way
+        # Filter out default values, these should be set in a different way
         custom_config = {
             k: v
             for k, v in sorted(config.__dict__.items())
             if not k.startswith("__") and not k.startswith("DEFAULT_")
         }
-        logger.debug(f"Config: {custom_config}")
+        logger.debug("Config: %s", custom_config)
 
     def run_server(self):
         # download bootstrap if necessary

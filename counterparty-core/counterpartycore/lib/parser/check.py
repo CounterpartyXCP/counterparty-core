@@ -109,7 +109,7 @@ def asset_conservation(db, stop_event=None):
                 logger.debug("Stop event received. Exiting asset conservation check...")
                 return
             asset_issued = supplies[asset]
-            asset_held = held[asset] if asset in held and held[asset] != None else 0  # noqa: E711
+            asset_held = held[asset] if asset in held and held[asset] is not None else 0  # noqa: E711
             if asset_issued != asset_held:
                 raise exceptions.SanityError(
                     f"{ledger.issuances.value_out(db, asset_issued, asset)} {asset} issued ≠ "

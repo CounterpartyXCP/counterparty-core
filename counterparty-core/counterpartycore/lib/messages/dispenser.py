@@ -247,7 +247,7 @@ def compose(
     oracle_address: str = None,
     skip_validation: bool = False,
 ):
-    assetid, problems = validate(
+    asset_id, problems = validate(
         db,
         source,
         asset,
@@ -259,15 +259,13 @@ def compose(
         CurrentState().current_block_index(),
         oracle_address,
     )
-    if problems:
-        if not skip_validation:
-            raise exceptions.ComposeError(problems)
-        else:
-            assetid = ledger.issuances.generate_asset_id(asset)
+    if problems and not skip_validation:
+        raise exceptions.ComposeError(problems)
 
+    asset_id = ledger.issuances.generate_asset_id(asset)
     destination = []
     data = messagetype.pack(ID)
-    data += struct.pack(FORMAT, assetid, give_quantity, escrow_quantity, mainchainrate, status)
+    data += struct.pack(FORMAT, asset_id, give_quantity, escrow_quantity, mainchainrate, status)
     if (status == STATUS_OPEN_EMPTY_ADDRESS and open_address) or (
         protocol.enabled("dispenser_origin_permission_extended")
         and status == STATUS_CLOSED
@@ -405,7 +403,7 @@ def parse(db, tx, message):
         if problems:
             status = "invalid: " + "; ".join(problems)
         else:
-            if dispenser_status == STATUS_OPEN or dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
+            if dispenser_status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
                 existing = ledger.markets.get_dispensers(
                     db, address=action_address, asset=asset, status=STATUS_OPEN
                 )

@@ -133,9 +133,9 @@ def get_pending_bet_matches(db, feed_address, order_by=None):
         ) WHERE status = ?
     """
     if order_by is not None:
-        query += f""" ORDER BY {order_by}"""
+        query += f" ORDER BY {order_by}"
     else:
-        query += f""" ORDER BY rowid"""  # noqa: F541
+        query += " ORDER BY rowid"
     bindings = (feed_address, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()

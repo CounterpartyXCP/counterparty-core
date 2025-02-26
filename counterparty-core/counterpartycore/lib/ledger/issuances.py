@@ -37,7 +37,7 @@ def generate_asset_id(asset_name):
                 raise exceptions.AssetNameError("non‐numeric asset name starts with ‘A’") from e
 
             # Number must be in range.
-            if not (26**12 + 1 <= asset_id <= 2**64 - 1):
+            if not 26**12 + 1 <= asset_id <= 2**64 - 1:
                 raise exceptions.AssetNameError("numeric asset name not in range")
 
             return asset_id
@@ -123,8 +123,7 @@ def get_asset_name(db, asset_id):
     assets = list(cursor)
     if len(assets) == 1:
         return assets[0]["asset_name"]
-    if not assets:
-        return 0  # Strange, I know…
+    return 0  # Strange, I know…
 
 
 # If asset_name is an existing subasset (PARENT.child) then return the corresponding numeric asset name (A12345)

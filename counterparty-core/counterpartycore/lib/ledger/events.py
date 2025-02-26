@@ -50,7 +50,7 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
 # This function allows you to update a record using an INSERT.
 # The `block_index` and `rowid` fields allow you to
 # order updates and retrieve the row with the current data.
-def insert_update(db, table_name, id_name, id_value, update_data, event, event_info={}):  # noqa: B006
+def insert_update(db, table_name, id_name, id_value, update_data, event, event_info=None):  # noqa: B006
     cursor = db.cursor()
     # select records to update
     select_query = f"""
@@ -84,7 +84,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     cursor.execute(insert_query, new_record)
     cursor.close()
     # Add event to journal
-    event_paylod = update_data | {id_name: id_value} | event_info
+    event_paylod = update_data | {id_name: id_value} | event_info or {}
     if "rowid" in event_paylod:
         del event_paylod["rowid"]
     add_to_journal(
@@ -104,11 +104,11 @@ def last_message(db):
     messages = list(cursor.execute(query))
     if messages:
         assert len(messages) == 1
-        last_message = messages[0]
+        message = messages[0]
     else:
         raise exceptions.DatabaseError("No messages found.")
     cursor.close()
-    return last_message
+    return message
 
 
 # we are using a function here for testing purposes
@@ -225,7 +225,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Debit given address by quantity of asset."""
     block_index = CurrentState().current_block_index()
 
-    if type(quantity) != int:  # noqa: E721
+    if not isinstance(quantity, int):  # noqa: E721
         raise exceptions.DebitError("Quantity must be an integer.")
     if quantity < 0:
         raise exceptions.DebitError("Negative quantity.")
@@ -303,7 +303,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Credit given address by quantity of asset."""
     block_index = CurrentState().current_block_index()
 
-    if type(quantity) != int:  # noqa: E721
+    if not isinstance(quantity, int):  # noqa: E721
         raise exceptions.CreditError("Quantity must be an integer.")
     if quantity < 0:
         raise exceptions.CreditError("Negative quantity.")

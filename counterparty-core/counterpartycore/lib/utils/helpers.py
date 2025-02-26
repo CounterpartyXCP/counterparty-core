@@ -27,9 +27,9 @@ def accumulate(l):  # noqa: E741
         yield key, sum(item[1] for item in subiter)
 
 
-def active_options(config, options):
+def active_options(given_config, options):
     """Checks if options active in some given config."""
-    return config & options == options
+    return given_config & options == options
 
 
 ID_SEPARATOR = "_"

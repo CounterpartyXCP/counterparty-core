@@ -67,12 +67,12 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     exclude_empty = False
     if protocol.enabled("zero_quantity_value_adjustment_1"):
         exclude_empty = True
-    holders = ledger.supplies.holders(db, asset, exclude_empty)
+    asset_holders = ledger.supplies.holders(db, asset, exclude_empty)
 
     outputs = []
     addresses = []
     dividend_total = 0
-    for holder in holders:
+    for holder in asset_holders:
         if block_index < 294500 and not protocol.is_test_network():  # Protocol change.
             if holder["escrow"]:
                 continue
@@ -145,8 +145,8 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
 
 def get_estimate_xcp_fee(db, asset):
-    holders = ledger.supplies.holders(db, asset, True)
-    addresses = [holder["address"] for holder in holders]
+    asset_holders = ledger.supplies.holders(db, asset, True)
+    addresses = [holder["address"] for holder in asset_holders]
     holder_count = len(set(addresses))
     return int(0.0002 * config.UNIT * holder_count)
 

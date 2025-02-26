@@ -43,14 +43,14 @@ def get_pending_btc_order_matches(db, address):
     return cursor.fetchall()
 
 
-def get_order_match(db, id):
+def get_order_match(db, match_id):
     cursor = db.cursor()
     query = """
         SELECT *, rowid
         FROM order_matches
         WHERE id = ?
         ORDER BY rowid DESC LIMIT 1"""
-    bindings = (id,)
+    bindings = (match_id,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -254,11 +254,11 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
 
 def get_dispensers_info(db, tx_hash_list):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT *, MAX(rowid) AS rowid FROM dispensers
-        WHERE tx_hash IN ({})
+        WHERE tx_hash IN ({",".join(["?" for e in range(0, len(tx_hash_list))])})
         GROUP BY tx_hash
-    """.format(",".join(["?" for e in range(0, len(tx_hash_list))]))  # nosec B608  # noqa: S608 # nosec B608
+    """  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tx_hash_list)
     dispensers = cursor.fetchall()
     result = {}

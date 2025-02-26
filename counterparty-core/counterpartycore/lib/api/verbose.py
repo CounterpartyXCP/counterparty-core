@@ -376,7 +376,7 @@ def inject_normalized_quantities(result_list):
 def inject_fiat_price(ledger_db, dispenser):
     if "satoshirate" not in dispenser:
         return dispenser
-    if dispenser["oracle_address"] != None:  # noqa: E711
+    if dispenser["oracle_address"] is not None:  # noqa: E711
         dispenser["fiat_price"] = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
         (
             dispenser["oracle_price"],

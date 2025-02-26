@@ -1,3 +1,4 @@
+# pylint: disable=unused-import
 """
 The database connections are read‐only, so SQL injection attacks can’t be a
 problem.
@@ -221,7 +222,7 @@ def get_rows(
 
     new_filters = []
     for filter_ in filters:
-        if type(filter_) in (list, tuple) and len(filter_) in [3, 4]:
+        if isinstance(filter_, (list, tuple)) and len(filter_) in [3, 4]:
             new_filter = {"field": filter_[0], "op": filter_[1], "value": filter_[2]}
             if len(filter_) == 4:
                 new_filter["case_sensitive"] = filter_[3]
@@ -481,7 +482,7 @@ class APIStatusPoller(threading.Thread):
 
     def run(self):
         logger.info("Starting v1 API Status Poller thread...")
-        global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
+        global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603 # pylint: disable=global-statement
 
         interval_if_ready = 5 * 60  # 5 minutes
         interval_if_not_ready = 60  # 1 minute
@@ -676,19 +677,19 @@ def create_app():
             )
         assets_info = []
         with LedgerDBConnectionPool().connection() as db:
-            for asset in assets:
-                asset = ledger.issuances.resolve_subasset_longname(db, asset)  # noqa: PLW2901
+            for asset_item in assets:
+                final_asset = ledger.issuances.resolve_subasset_longname(db, asset_item)  # noqa: PLW2901
 
                 # BTC and XCP.
-                if asset in [config.BTC, config.XCP]:
-                    if asset == config.BTC:
+                if final_asset in [config.BTC, config.XCP]:
+                    if final_asset == config.BTC:
                         supply = backend.bitcoind.get_btc_supply(normalize=False)
                     else:
                         supply = ledger.supplies.xcp_supply(db)
 
                     assets_info.append(
                         {
-                            "asset": asset,
+                            "asset": final_asset,
                             "asset_longname": None,
                             "owner": None,
                             "divisible": True,
@@ -703,25 +704,24 @@ def create_app():
                 # User‐created asset.
                 cursor = db.cursor()
                 issuances = ledger.issuances.get_issuances(
-                    db, asset=asset, status="valid", first=True
+                    db, asset=final_asset, status="valid", first=True
                 )
                 cursor.close()
                 if not issuances:
                     continue  # asset not found, most likely
-                else:
-                    last_issuance = issuances[-1]
+                last_issuance = issuances[-1]
                 locked = False
                 for e in issuances:
                     if e["locked"]:
                         locked = True
                 assets_info.append(
                     {
-                        "asset": asset,
+                        "asset": final_asset,
                         "asset_longname": last_issuance["asset_longname"],
                         "owner": last_issuance["issuer"],
                         "divisible": bool(last_issuance["divisible"]),
                         "locked": locked,
-                        "supply": ledger.supplies.asset_supply(db, asset),
+                        "supply": ledger.supplies.asset_supply(db, final_asset),
                         "description": last_issuance["description"],
                         "issuer": last_issuance["issuer"],
                     }
@@ -885,11 +885,12 @@ def create_app():
 
     @dispatcher.add_method
     def get_holder_count(asset):
+        all_holders = []
         with LedgerDBConnectionPool().connection() as db:
             asset = ledger.issuances.resolve_subasset_longname(db, asset)
-            holders = ledger.supplies.holders(db, asset, True)
+            all_holders = ledger.supplies.holders(db, asset, True)
         addresses = []
-        for holder in holders:
+        for holder in all_holders:
             addresses.append(holder["address"])
         return {asset: len(set(addresses))}
 
@@ -1068,7 +1069,7 @@ def create_app():
             error = "Invalid method."
             return flask.Response(error, 405, mimetype="application/json")
         if request_path.startswith("v1/rest/"):
-            if flask.request.method == "GET" or flask.request.method == "POST":
+            if flask.request.method in ["GET", "POST"]:
                 # Pass the URL path without /REST/ part and Flask request object.
                 rest_path = args_path.split("/", 1)[1]
                 response = handle_rest(rest_path, flask.request)
@@ -1097,7 +1098,7 @@ def create_app():
                 "id" in request_data and request_data["jsonrpc"] == "2.0" and request_data["method"]
             )
             # params may be omitted
-        except Exception:  # noqa: E722
+        except Exception:  # noqa: E722 # pylint: disable=broader-exception-caught
             obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                 data="Invalid JSON-RPC 2.0 request format"
             )
@@ -1210,7 +1211,7 @@ def create_app():
         # See which encoding to choose from.
         file_format = flask_request.headers["Accept"]
         # JSON as default.
-        if file_format == "application/json" or file_format == "*/*":
+        if file_format in ["application/json", "*/*"]:
             response_data = json.dumps(query_data)
         elif file_format == "application/xml":
             # Add document root for XML. Note when xmltodict encounters a list, it produces separate tags for every item.

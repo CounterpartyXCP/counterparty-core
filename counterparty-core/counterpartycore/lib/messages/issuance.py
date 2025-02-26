@@ -319,13 +319,13 @@ def compose(
         call_date,
         call_price,
         problems,
-        fee,
+        _fee,
         validated_description,
         divisible,
         lock,
         reset,
         reissuance,
-        reissued_asset_longname,
+        _reissued_asset_longname,
     ) = validate(
         db,
         source,
@@ -637,7 +637,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                 if named_asset != 0:
                     asset = named_asset
 
-            if description == None:  # noqa: E711
+            if description is None:  # noqa: E711
                 try:
                     description = ledger.issuances.get_asset_description(db, asset)
                 except exceptions.AssetError:

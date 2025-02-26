@@ -373,7 +373,7 @@ def parse(db, tx, message):
     status = "pending"
     if start_block == 0 or tx["block_index"] >= start_block:
         status = "open"
-    if end_block > 0 and tx["block_index"] > end_block:
+    if tx["block_index"] > end_block > 0:
         status = "closed"
 
     existing_asset = ledger.issuances.get_asset(db, asset)

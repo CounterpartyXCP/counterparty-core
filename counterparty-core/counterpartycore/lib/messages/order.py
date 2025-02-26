@@ -38,7 +38,6 @@ def exact_penalty(db, address, block_index, tx_index):
             cancel_order_match(db, bad_order_match, "expired", block_index, tx_index)
 
     cursor.close()
-    return
 
 
 def cancel_order(db, order, status, block_index, tx_index):

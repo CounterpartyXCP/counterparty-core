@@ -70,7 +70,7 @@ def download_and_decompress(data_dir, zst_url):
     filename = zst_filename.replace(".latest.zst", "")
     filepath = os.path.join(data_dir, filename)
     with io.open(filepath, "wb") as output_file:
-        pyzstd.decompress_stream(response, output_file, read_size=16 * 1024)
+        pyzstd.decompress_stream(response, output_file, read_size=16 * 1024)  # pylint: disable=no-member
     os.chmod(filepath, 0o660)  # nosec B103
     print(f"Downloaded and decompressed {zst_url} in {time.time() - start_time:.2f}s")
     return filepath

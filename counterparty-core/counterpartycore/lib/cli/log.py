@@ -43,10 +43,10 @@ def event(self, msg, *args, **kwargs):
 
 
 def debug(self, msg, *args, **kwargs):
-    self._log(logging.DEBUG, msg, args, **kwargs)
+    self._log(logging.DEBUG, msg, args, **kwargs)  # pylint: disable=protected-access
 
 
-def formatTime(record, _datefmt=None):
+def format_time(record, _datefmt=None):
     date = datetime.fromtimestamp(record.created, tzlocal())
     date_string = date.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + date.strftime("%z")
     # same as Rust log format
@@ -132,7 +132,7 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_format)
         if isinstance(record.args, dict):
             record.args = truncate_fields(record.args)
-        formatter.formatTime = formatTime
+        formatter.formatTime = format_time
         return formatter.format(record)
 
 
@@ -386,12 +386,12 @@ class ZmqPublisher(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
-        self.socket.bind("tcp://*:%s" % config.ZMQ_PUBLISHER_PORT)
+        self.socket.bind(f"tcp://*:{config.ZMQ_PUBLISHER_PORT}")
 
-    def publish_event(self, event):
-        logger.trace("Publishing event: %s", event["event"])
+    def publish_event(self, new_event):
+        logger.trace("Publishing event: %s", new_event["event"])
         self.socket.send_multipart(
-            [event["event"].encode("utf-8"), helpers.to_json(event).encode("utf-8")]
+            [new_event["event"].encode("utf-8"), helpers.to_json(new_event).encode("utf-8")]
         )
 
     def close(self):

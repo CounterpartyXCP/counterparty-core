@@ -105,7 +105,7 @@ class GunicornArbiter(Arbiter):
             return pid
 
         # Child process
-        global logger  # noqa F811
+        global logger  # noqa F811 # pylint: disable=global-statement
         worker.pid = os.getpid()
         logger = log.re_set_up("", api=True)
         self.init_loggers()
@@ -253,7 +253,7 @@ class WerkzeugApplication:
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
         self.current_state_thread = None
         self.server_ready_value = None
-        global logger  # noqa F811
+        global logger  # noqa F811  # pylint: disable=global-statement
         logger = log.re_set_up("", api=True)
 
     def run(self, server_ready_value, shared_backend_height):
@@ -279,7 +279,7 @@ class WaitressApplication:
         )
         self.current_state_thread = None
         self.server_ready_value = None
-        global logger  # noqa F811
+        global logger  # noqa F811 # pylint: disable=global-statement
         logger = log.re_set_up("", api=True)
 
     def run(self, server_ready_value, shared_backend_height):
@@ -307,7 +307,7 @@ class WSGIApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        logger.info(f"Starting WSGI Server: {config.WSGI_SERVER}")
+        logger.info("Starting WSGI Server: %s", config.WSGI_SERVER)
         if config.WSGI_SERVER == "gunicorn":
             self.server = GunicornApplication(self.app, self.args)
         elif config.WSGI_SERVER == "werkzeug":
@@ -315,7 +315,7 @@ class WSGIApplication:
         else:
             self.server = WaitressApplication(self.app, self.args)
 
-    def run(self, server_ready_value, shared_backend_height):
+    def run(self, server_ready_value, shared_backend_height):  # pylint: disable=arguments-differ
         logger.info("Starting WSGI Server thread...")
         self.server.run(server_ready_value, shared_backend_height)
 

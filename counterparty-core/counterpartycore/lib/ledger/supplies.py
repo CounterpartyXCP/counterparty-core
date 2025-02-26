@@ -18,7 +18,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, exclude_empty_holders=False):
     all_holders = []
     for holder in save_records.values():
         if holder[hold_fields_1["address_quantity"]] > 0 or (
-            exclude_empty_holders == False and holder[hold_fields_1["address_quantity"]] == 0  # noqa: E712
+            not exclude_empty_holders and holder[hold_fields_1["address_quantity"]] == 0  # noqa: E712
         ):
             all_holders.append(
                 {
@@ -374,7 +374,7 @@ def supplies(db):
     """Return supplies."""
     d1 = creations(db)
     d2 = destructions(db)
-    return {key: d1[key] - d2.get(key, 0) for key in d1.keys()}
+    return {key: value - d2.get(key, 0) for key, value in d1}
 
 
 def held(db):

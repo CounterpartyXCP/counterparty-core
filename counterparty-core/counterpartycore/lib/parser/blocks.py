@@ -421,7 +421,7 @@ def parse_block(
 
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
-    assert type(tx_hash) == str  # noqa: E721
+    assert isinstance(tx_hash, str)
     CurrentState().set_current_tx_hash(tx_hash)
     cursor = db.cursor()
 
