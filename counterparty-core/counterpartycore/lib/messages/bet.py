@@ -105,10 +105,8 @@ def get_fee_fraction(db, feed_address):
         fee_fraction_int = last_broadcast["fee_fraction_int"]
         if fee_fraction_int:
             return fee_fraction_int / 1e8
-        else:
-            return 0
-    else:
         return 0
+    return 0
 
 
 def validate(
@@ -424,7 +422,7 @@ def match(db, tx):
         if tx1_status != "open":
             break
 
-        logger.debug("Considering: " + tx0["tx_hash"])
+        logger.debug("Considering: %s", tx0["tx_hash"])
         tx0_wager_remaining = tx0["wager_remaining"]
         tx0_counterwager_remaining = tx0["counterwager_remaining"]
 
@@ -585,7 +583,7 @@ def match(db, tx):
             }
             ledger.events.insert_record(db, "bet_matches", bindings, "BET_MATCH")
             logger.info(
-                "Bet match %(tx0_index)s for %(forward_quantity)s XCP against %(backward_quantity)s XCP on %(feed_address)s",
+                "Bet Match: tx0_index=%(tx0_index)s, forward=%(forward_quantity)s XCP, backward=%(backward_quantity)s XCP, feed=%(feed_address)s",
                 bindings,
             )
 
@@ -608,7 +606,7 @@ def expire(db, block_index, block_time):
             "block_index": block_index,
         }
         ledger.events.insert_record(db, "bet_expirations", bindings, "BET_EXPIRATION")
-        logger.info("Bet Expiration %(bet_hash)s", bindings)
+        logger.info("Bet expired: %(bet_hash)s", bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     for bet_match in ledger.other.get_bet_matches_to_expire(db, block_time):

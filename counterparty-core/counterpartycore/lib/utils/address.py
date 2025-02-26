@@ -1,13 +1,10 @@
-import logging
-
 import bitcoin
 from bitcoin.bech32 import CBech32Data
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.parser.protocol import enabled
 from counterpartycore.lib.utils import base58, helpers, multisig
-
-logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def is_pubkeyhash(monosig_address):
@@ -22,7 +19,7 @@ def is_pubkeyhash(monosig_address):
 
 def pubkeyhash_array(address):
     """Return PubKeyHashes from an address."""
-    signatures_required, pubs, signatures_possible = multisig.extract_array(address)
+    _signatures_required, pubs, _signatures_possible = multisig.extract_array(address)
     if not all([is_pubkeyhash(pub) for pub in pubs]):
         raise exceptions.MultiSigAddressError(
             "Invalid PubKeyHashes. Multi-signature address must use PubKeyHashes, not public keys."
@@ -33,9 +30,9 @@ def pubkeyhash_array(address):
 
 def is_bech32(address):
     try:
-        b32data = CBech32Data(address)  # noqa: F841
+        CBech32Data(address)  # noqa: F841
         return True
-    except:  # noqa: E722
+    except:  # noqa: E722 # pylint: disable=bare-except
         return False
 
 
@@ -71,9 +68,6 @@ def pack(address):
     """
     Converts a base58 bitcoin address into a 21 byte bytes object
     """
-    from counterpartycore.lib.parser.protocol import (
-        enabled,  # Here to account for test mock changes
-    )
 
     if enabled("segwit_support"):
         try:
@@ -83,9 +77,9 @@ def pack(address):
             )  # mark the first byte for segwit
             witprog = bech32.to_bytes()
             if len(witprog) > 20:
-                raise Exception("p2wsh still not supported for sending")
+                raise Exception("p2wsh still not supported for sending")  # pylint: disable=broad-exception-raised
             return b"".join([witver, witprog])
-        except Exception as ne:  # noqa: F841
+        except Exception:  # noqa: F841 # pylint: disable=broad-except
             try:
                 validate(address)  # This will check if the address is valid
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
@@ -93,7 +87,7 @@ def pack(address):
             except Exception as e:  # pylint: disable=broad-except  # noqa: F841
                 raise exceptions.AddressError(  # noqa: B904
                     f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
-                )
+                ) from e
     else:
         try:
             short_address_bytes = bitcoin.base58.decode(address)[:-4]
@@ -107,10 +101,6 @@ def unpack(short_address_bytes):
     """
     Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
     """
-    from counterpartycore.lib.parser.protocol import (
-        enabled,  # Here to account for test mock changes
-    )
-
     if short_address_bytes == b"":
         raise exceptions.UnpackError
 

@@ -996,7 +996,7 @@ def create_app():
                 oracle_price_last_updated = ""
                 oracle_fiat_label = ""
 
-                if dispenser_info["oracle_address"] != None:  # noqa: E711
+                if dispenser_info["oracle_address"] is not None:  # noqa: E711
                     fiat_price = helpers.satoshirate_to_fiat(dispenser_info["satoshirate"])
                     (
                         oracle_price,

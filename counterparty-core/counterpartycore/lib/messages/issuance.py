@@ -508,6 +508,11 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
     # Unpack message.
     try:
         subasset_longname = None
+        asset_id = None
+        quantity = None
+        divisible = None
+        callable_ = None
+        call_date = None
         if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
             if not protocol.enabled("subassets", block_index=block_index):
                 logger.warning(f"subassets are not enabled at block {block_index}")
@@ -532,7 +537,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
 
             description_length = len(message) - subasset_format_length - compacted_subasset_length
             if description_length < 0:
-                logger.warning(f"invalid subasset length: {compacted_subasset_length}")
+                logger.warning("invalid subasset length: %s", compacted_subasset_length)
                 raise exceptions.UnpackError
             messages_format = f">{compacted_subasset_length}s{description_length}s"
             compacted_subasset_longname, description = struct.unpack(
@@ -641,7 +646,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         except exceptions.AssetIDError:
             asset = None
             status = "invalid: bad asset name"
-    except exceptions.UnpackError as e:  # noqa: F841
+    except exceptions.UnpackError:
         (
             asset_id,
             asset,
@@ -727,6 +732,7 @@ def parse(db, tx, message, message_type_id):
     ) = unpack(db, message, message_type_id, tx["block_index"])
     # parse and validate the subasset from the message
     subasset_parent = None
+    reissued_asset_longname = None
     if status == "valid" and subasset_longname is not None:  # Protocol change.
         try:
             # ensure the subasset_longname is valid
@@ -734,7 +740,7 @@ def parse(db, tx, message, message_type_id):
             subasset_parent, subasset_longname = assetnames.parse_subasset_from_asset_name(
                 subasset_longname, protocol.enabled("allow_subassets_on_numerics")
             )
-        except exceptions.AssetNameError as e:  # noqa: F841
+        except exceptions.AssetNameError:
             asset = None
             status = "invalid: bad subasset name"
 

@@ -32,12 +32,12 @@ def py34_tuple_append(first_elem, t):
 def unpack(message):
     try:
         unpacked = _decode_mpma_send_decode(message)
-    except struct.error as e:  # noqa: F841
-        raise exceptions.UnpackError("could not unpack")  # noqa: B904
-    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:  # noqa: F841
-        raise exceptions.UnpackError("invalid asset in mpma send")  # noqa: B904
-    except ReadError as e:  # noqa: F841
-        raise exceptions.UnpackError("truncated data")  # noqa: B904
+    except struct.error as e:
+        raise exceptions.UnpackError("could not unpack") from e
+    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
+        raise exceptions.UnpackError("invalid asset in mpma send") from e
+    except ReadError as e:
+        raise exceptions.UnpackError("truncated data") from e
 
     return unpacked
 
@@ -162,9 +162,9 @@ def parse(db, tx, message):
     try:
         unpacked = unpack(message)
         status = "valid"
-    except struct.error as e:  # noqa: F841
+    except struct.error:
         status = "invalid: truncated message"
-    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:  # noqa: F841
+    except (exceptions.AssetNameError, exceptions.AssetIDError):
         status = "invalid: invalid asset name/id"
     except Exception as e:  # pylint: disable=broad-except
         status = f"invalid: couldn't unpack; {e}"
@@ -175,10 +175,10 @@ def parse(db, tx, message):
     all_debits = []
     all_credits = []
     if status == "valid":
-        for asset_id in unpacked:
+        for asset_id in unpacked.keys():
             try:
-                asset = ledger.issuances.get_asset_name(db, asset_id)  # noqa: F841
-            except exceptions.AssetNameError as e:  # noqa: F841
+                ledger.issuances.get_asset_name(db, asset_id)
+            except exceptions.AssetNameError:
                 status = f"invalid: asset {asset_id} invalid at block index {tx['block_index']}"
                 break
 

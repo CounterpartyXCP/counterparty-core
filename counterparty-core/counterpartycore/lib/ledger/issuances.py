@@ -140,8 +140,8 @@ def resolve_subasset_longname(db, asset_name):
             _subasset_parent, subasset_longname = assetnames.parse_subasset_from_asset_name(
                 asset_name, protocol.enabled("allow_subassets_on_numerics")
             )
-        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
-            logger.warning(f"Invalid subasset {asset_name}")
+        except Exception:  # pylint: disable=broad-except  # noqa: F841
+            logger.warning("Invalid subasset %s", asset_name)
             subasset_longname = None
 
         if subasset_longname is not None:
@@ -230,13 +230,13 @@ def value_output(quantity, asset, divisible):
 
 
 def value_out(db, quantity, asset, divisible=None):
-    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:  # noqa: E711
+    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible is None:
         divisible = is_divisible(db, asset)
     return value_output(quantity, asset, divisible)
 
 
 def value_in(db, quantity, asset, divisible=None):
-    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:  # noqa: E711
+    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible is None:
         divisible = is_divisible(db, asset)
     return value_input(quantity, asset, divisible)
 
@@ -447,7 +447,7 @@ def get_asset(db, asset):
             break
 
     asset = issuances[0]
-    asset["supply"] = asset_supply(db, issuance["asset"])
+    asset["supply"] = asset_supply(db, issuances[0]["asset"])
     asset["locked"] = locked
     return asset
 

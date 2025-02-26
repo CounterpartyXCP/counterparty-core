@@ -112,17 +112,14 @@ def asset_conservation(db, stop_event=None):
             asset_held = held[asset] if asset in held and held[asset] != None else 0  # noqa: E711
             if asset_issued != asset_held:
                 raise exceptions.SanityError(
-                    "{} {} issued ≠ {} {} held".format(
-                        ledger.issuances.value_out(db, asset_issued, asset),
-                        asset,
-                        ledger.issuances.value_out(db, asset_held, asset),
-                        asset,
-                    )
+                    f"{ledger.issuances.value_out(db, asset_issued, asset)} {asset} issued ≠ "
+                    f"{ledger.issuances.value_out(db, asset_held, asset)} {asset} held"
                 )
             logger.trace(
-                "{} has been conserved ({} {} both issued and held)".format(
-                    asset, ledger.issuances.value_out(db, asset_issued, asset), asset
-                )
+                "%s has been conserved (%s %s both issued and held)",
+                asset,
+                ledger.issuances.value_out(db, asset_issued, asset),
+                asset,
             )
     logger.debug("All assets have been conserved.")
 
@@ -204,4 +201,4 @@ def check_database_version(db, upgrade_actions_callback, database_name):
         # update the database version
         database.update_version(db)
     else:
-        logger.debug(f"{database_name} database is up to date.")
+        logger.debug("%s database is up to date.", database_name)
