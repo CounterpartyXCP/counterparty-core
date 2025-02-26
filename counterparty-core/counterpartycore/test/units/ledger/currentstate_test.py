@@ -1,7 +1,7 @@
 import time
 
 from counterpartycore.lib import config
-from counterpartycore.lib.ledger import currentstate
+from counterpartycore.lib.ledger import backendheight, currentstate
 from counterpartycore.lib.utils import database
 
 
@@ -47,7 +47,7 @@ def test_backend_height(monkeypatch):
         "counterpartycore.lib.backend.bitcoind.get_chain_tip", lambda: current_backend_height
     )
 
-    backend_height_thread = currentstate.BackendHeight()
+    backend_height_thread = backendheight.BackendHeight()
     currentstate.CurrentState().set_backend_height_value(
         backend_height_thread.shared_backend_height
     )
@@ -77,7 +77,7 @@ def test_backend_height(monkeypatch):
     finally:
         backend_height_thread.stop()
 
-    backend_height_thread = currentstate.BackendHeight()
+    backend_height_thread = backendheight.BackendHeight()
 
     last_check_before = backend_height_thread.last_check
     config.API_ONLY = True

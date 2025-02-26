@@ -1,5 +1,6 @@
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.backend import bitcoind, electrs
+
+from . import bitcoind, electrs
 
 
 def list_unspent(source, allow_unconfirmed_inputs):
