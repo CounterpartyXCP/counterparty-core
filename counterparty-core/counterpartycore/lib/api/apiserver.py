@@ -363,7 +363,7 @@ def handle_route(**kwargs):
             TypeError,
         ) as e:
             return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             # import traceback
             # print(traceback.format_exc())
             capture_exception(e)
@@ -413,7 +413,7 @@ def handle_route(**kwargs):
             start_time=start_time,
             query_args=query_args,
         )
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         capture_exception(e)
         logger.error("Error in API: %s", e)
         return return_result(500, error="Internal server error")
@@ -607,7 +607,7 @@ class APIServer(object):
         try:
             self.process.start()
             logger.info("API PID: %s", self.process.pid)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.error(f"Error starting API Server: {e}")
             raise e
         return self.process

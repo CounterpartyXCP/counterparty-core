@@ -102,7 +102,7 @@ def rpc_call(payload, retry=0):
                 stack_info=config.VERBOSE > 0,
             )
             time.sleep(5)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             broken_error = e
             break
     if broken_error:
@@ -444,7 +444,7 @@ def sendrawtransaction(signedhex: str):
     """
     try:
         return rpc("sendrawtransaction", [signedhex])
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.BitcoindRPCError(f"Error broadcasting transaction: {str(e)}") from e
 
 

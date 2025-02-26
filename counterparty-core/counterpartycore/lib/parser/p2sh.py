@@ -168,7 +168,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                                 and redeem_script[pos + 4 + unique_offfset_length]
                                 == bitcoinlib.core.script.OP_EQUAL
                             )
-        except Exception as e:  # noqa: F841
+        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
             return None, None, False, None
 
     return pubkey, source, redeem_script_is_valid, found_data

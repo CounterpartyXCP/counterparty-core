@@ -231,14 +231,14 @@ class BlockchainWatcher:
                 logger.trace("No message available in topic `%s`", topic_name)
                 return
             raise e
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.error("Error receiving message: %s. Reconnecting...", e)
             capture_exception(e)
             self.connect_to_zmq()
             return
         try:
             self.receive_message(topic, body, seq)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.error("Error processing message: %s", e)
             # import traceback
             # print(traceback.format_exc())  # for debugging
@@ -294,7 +294,7 @@ class BlockchainWatcher:
             except asyncio.CancelledError:
                 logger.debug("BlockchainWatcher.handle() was cancelled.")
                 break  # Exit the loop if the task is cancelled
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 logger.error("Error in handle loop: %s", e)
                 capture_exception(e)
                 # import traceback

@@ -786,7 +786,7 @@ class CounterpartyServer(threading.Thread):
     def run(self):
         try:
             self.run_server()
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.error("Error in server thread: %s", e)
             _thread.interrupt_main()
 
@@ -823,7 +823,7 @@ class CounterpartyServer(threading.Thread):
                 stats.print_stats(20)
                 stats = pstats.Stats(self.profiler).sort_stats("tottime")
                 stats.print_stats(20)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 logger.error("Error dumping profiler stats: %s", e)
             self.profiler = None
 

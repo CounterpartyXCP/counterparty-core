@@ -81,7 +81,7 @@ def test_fetcher_singleton():
             }
         ]
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         print(f"Error: {e}")
         raise
     finally:

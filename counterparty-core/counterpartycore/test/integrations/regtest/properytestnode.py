@@ -27,7 +27,7 @@ class PropertyTestNode:
         except KeyboardInterrupt:
             print(regtest_node_thread.node.server_out.getvalue())
             pass
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             print(regtest_node_thread.node.server_out.getvalue())
             raise e
         finally:

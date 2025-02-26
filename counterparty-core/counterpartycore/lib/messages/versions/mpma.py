@@ -152,7 +152,7 @@ def compose(
 
     try:
         data += _encode_mpma_send(db, asset_dest_quant_list, memo=memo, memo_is_hex=memo_is_hex)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError(f"couldn't encode MPMA send: {e}") from e
 
     return (source, [], data)
@@ -166,7 +166,7 @@ def parse(db, tx, message):
         status = "invalid: truncated message"
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:  # noqa: F841
         status = "invalid: invalid asset name/id"
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         status = f"invalid: couldn't unpack; {e}"
 
     cursor = db.cursor()

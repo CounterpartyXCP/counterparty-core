@@ -151,7 +151,7 @@ def unpack(message, return_dict=False):
             }
 
         return (source, destination, asset, int(quantity))
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.UnpackError(f"Cannot unpack utxo message: {e}") from e
 
 

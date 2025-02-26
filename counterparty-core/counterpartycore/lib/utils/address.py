@@ -90,7 +90,7 @@ def pack(address):
                 validate(address)  # This will check if the address is valid
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
                 return short_address_bytes
-            except Exception as e:  # noqa: F841
+            except Exception as e:  # pylint: disable=broad-except  # noqa: F841
                 raise exceptions.AddressError(  # noqa: B904
                     f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
                 )

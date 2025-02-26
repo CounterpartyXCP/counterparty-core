@@ -118,7 +118,7 @@ def create_tx_output(value, address_or_script, unspent_list, construct_params):
             output_script = address_to_script_pub_key(
                 address_or_script, unspent_list, construct_params
             )
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError(
             f"Invalid script or address for output: {address_or_script} (error: {e})"
         ) from e
@@ -435,7 +435,7 @@ def prepare_inputs_set(inputs_set):
         if script_pub_key is not None:
             try:
                 script.script_to_asm(script_pub_key)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 raise exceptions.ComposeError(
                     f"invalid UTXOs: {utxo} (invalid script_pub_key)"
                 ) from e
@@ -459,7 +459,7 @@ def utxo_to_address(db, utxo):
         vout = int(vout)
         address = tx["vout"][vout]["scriptPubKey"]["address"]
         return address
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError(
             f"invalid UTXOs: {utxo} (not found in the database or Bitcoin Core)"
         ) from e
@@ -479,7 +479,7 @@ def ensure_utxo_is_first(utxo, unspent_list):
     if first_utxo["txid"] != txid or first_utxo["vout"] != vout:
         try:
             value = backend.bitcoind.get_utxo_value(txid, vout)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (value not found)") from e
         new_unspent_list.insert(
             0,
@@ -1092,7 +1092,7 @@ def compose_transaction(db, name, params, construct_parameters):
     # sanity check
     try:
         check_transaction_sanity(tx_info, result, construct_params)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError(str(e)) from e
 
     # return result

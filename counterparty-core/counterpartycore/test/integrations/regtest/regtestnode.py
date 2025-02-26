@@ -496,7 +496,7 @@ class RegtestNode:
             self.counterparty_server_process.terminate()
             self.counterparty_server_process.wait()
             self.kill_gunicorn_workers()
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             print(e)
             pass
 

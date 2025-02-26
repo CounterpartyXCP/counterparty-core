@@ -140,7 +140,7 @@ def resolve_subasset_longname(db, asset_name):
             _subasset_parent, subasset_longname = assetnames.parse_subasset_from_asset_name(
                 asset_name, protocol.enabled("allow_subassets_on_numerics")
             )
-        except Exception as e:  # noqa: F841
+        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
             logger.warning(f"Invalid subasset {asset_name}")
             subasset_longname = None
 

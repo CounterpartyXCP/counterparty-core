@@ -21,7 +21,7 @@ class TelemetryOneShot(metaclass=SingletonMeta):
     def send(self, data, retry=0):
         try:
             self.client.send(data)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             if retry < 10:
                 logger.trace(f"Error in telemetry one shot: {e}. Retrying in 2 seconds...")
                 time.sleep(2)
@@ -37,6 +37,6 @@ class TelemetryOneShot(metaclass=SingletonMeta):
                 collector.close()
             if data:
                 self.send(data)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             capture_exception(e)
             logger.warning(f"Error in telemetry one shot: {e}")

@@ -138,7 +138,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
             # If stopped and queue is empty
             logger.debug("Fetcher stopped and prefetch queue is empty.")
             return None
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.error(f"Error getting prefetched block: {e}")
             raise e
 
@@ -179,7 +179,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                     logger.debug(f"Waiting to prefetch block {expected_height}...({retry / 10}s)")
                     # Use Event's wait method instead of time.sleep for better responsiveness
                     self.stopped_event.wait(retry / 10)  # noqa: S311
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 if str(e) == "Stopped error":
                     logger.warning(
                         "RSFetcher thread found stopped due to an error. Restarting in 5 seconds..."
@@ -204,7 +204,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
             if self.fetcher:
                 self.fetcher.stop()
                 logger.debug("Fetcher stopped.")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.error(f"Error during stop: {e}")
             if str(e) != "Stopped error":
                 raise e

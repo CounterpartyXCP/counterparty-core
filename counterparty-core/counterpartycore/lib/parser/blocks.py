@@ -240,7 +240,7 @@ def parse_tx(db, tx):
             if protocol.enabled("spend_utxo_to_detach") and message_type_id == attach.ID:
                 moved = move.move_assets(db, tx)
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ParseTransactionError(f"{e}") from e
     finally:
         cursor.close()
@@ -848,11 +848,11 @@ def start_rsfetcher():
     except exceptions.InvalidVersion as e:
         logger.error(e)
         raise e
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         logger.warning(f"Failed to start RSFetcher ({e}). Retrying in 5 seconds...")
         try:
             fetcher.stop()
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.debug(f"Failed to stop RSFetcher ({e}).")
             pass
         time.sleep(5)

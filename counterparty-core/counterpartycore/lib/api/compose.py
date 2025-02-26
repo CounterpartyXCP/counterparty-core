@@ -553,7 +553,7 @@ def info_by_tx_hash(db, tx_hash: str):
     """
     try:
         rawtransaction = backend.bitcoind.getrawtransaction(tx_hash)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError("Invalid transaction") from e
     return info(db, rawtransaction)
 
@@ -570,7 +570,7 @@ def info(db, rawtransaction: str, block_index: int = None):
             parse_vouts=True,
             block_index=block_index,
         )
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError("Invalid rawtransaction") from e
 
     try:
@@ -608,7 +608,7 @@ def unpack(db, datahex: str, block_index: int = None):
     """
     try:
         data = binascii.unhexlify(datahex)
-    except Exception as e:  # noqa
+    except Exception as e:  # pylint: disable=broad-except  # noqa
         raise exceptions.UnpackError("Data must be in hexadecimal format") from e
 
     if data[: len(config.PREFIX)] == config.PREFIX:

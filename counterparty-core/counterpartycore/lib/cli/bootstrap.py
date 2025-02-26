@@ -121,7 +121,7 @@ def verfif_and_decompress(zst_filepath, sig_url, decompressors_state):
     try:
         check_signature(zst_filepath, sig_url)
         decompress_zst(zst_filepath)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         cprint(f"Failed to verify and decompress {zst_filepath}: {e}", "red")
         decompressors_state.value = 1
 
@@ -146,7 +146,7 @@ def download_bootstrap_files(data_dir, files):
         # download .zst file
         try:
             zst_filepath = download_zst(data_dir, zst_url)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             cprint(f"Failed to download {zst_url}: {e}", "red")
             for decompressor in decompressors:
                 decompressor.kill()
