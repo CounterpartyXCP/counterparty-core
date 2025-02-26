@@ -1,3 +1,5 @@
+# pylint: disable=too-many-lines
+
 import json
 import typing
 from typing import Literal
