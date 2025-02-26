@@ -1,5 +1,3 @@
-#! /usr/bin/python3
-
 """
 The database connections are read‐only, so SQL injection attacks can’t be a
 problem.
@@ -133,7 +131,7 @@ CURRENT_API_STATUS_RESPONSE_JSON = None  # is updated by the APIStatusPoller
 
 
 def check_backend_state():
-    f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""  # noqa: B021
+    """Checks blocktime of last block to see if Bitcoin Core is running behind."""
     block_count = backend.bitcoind.getblockcount()
     block_hash = backend.bitcoind.getblockhash(block_count)
     cblock = backend.bitcoind.getblock(block_hash, verbosity=1)
@@ -189,7 +187,7 @@ def get_rows(
 ):
     """SELECT * FROM wrapper. Filters results based on a filter data structure (as used by the API)."""
 
-    if filters == None:  # noqa: E711
+    if filters is None:  # noqa: E711
         filters = []
 
     def value_to_marker(value):
@@ -199,7 +197,6 @@ def get_rows(
         else:
             return """?"""
 
-    # TODO: Document that op can be anything that SQLite3 accepts.
     if not table or table.lower() not in API_TABLES:
         raise exceptions.APIError("Unknown table")
     if filterop and filterop.upper() not in ["OR", "AND"]:
@@ -214,7 +211,6 @@ def get_rows(
         raise exceptions.APIError("Limit should be greater than 0")
     if not isinstance(offset, int):
         raise exceptions.APIError("Invalid offset")
-    # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
     if order_by and not re.compile("^[a-z0-9_]+$").match(order_by):
         raise exceptions.APIError("Invalid order_by, must be a field name")
 
@@ -233,7 +229,7 @@ def get_rows(
             if len(filter_) == 4:
                 new_filter["case_sensitive"] = filter_[3]
             new_filters.append(new_filter)
-        elif type(filter_) == dict:  # noqa: E721
+        elif isinstance(filter_, dict):  # noqa: E721
             new_filters.append(filter_)
         else:
             raise exceptions.APIError("Unknown filter type")
@@ -280,7 +276,7 @@ def get_rows(
     conditions = []
     for filter_ in filters:
         case_sensitive = False if "case_sensitive" not in filter_ else filter_["case_sensitive"]
-        if filter_["op"] == "LIKE" and case_sensitive == False:  # noqa: E712
+        if filter_["op"] == "LIKE" and not case_sensitive:  # noqa: E712
             filter_["field"] = f"""UPPER({filter_["field"]})"""
             filter_["value"] = filter_["value"].upper()
         marker = value_to_marker(filter_["value"])
@@ -292,17 +288,17 @@ def get_rows(
     # AND filters
     more_conditions = []
     if table not in ["balances", "order_matches", "bet_matches"]:
-        if start_block != None:  # noqa: E711
+        if start_block is not None:  # noqa: E711
             more_conditions.append("""block_index >= ?""")
             bindings.append(start_block)
-        if end_block != None:  # noqa: E711
+        if end_block is not None:  # noqa: E711
             more_conditions.append("""block_index <= ?""")
             bindings.append(end_block)
     elif table in ["order_matches", "bet_matches"]:
-        if start_block != None:  # noqa: E711
+        if start_block is not None:  # noqa: E711
             more_conditions.append("""tx0_block_index >= ?""")
             bindings.append(start_block)
-        if end_block != None:  # noqa: E711
+        if end_block is not None:  # noqa: E711
             more_conditions.append("""tx1_block_index <= ?""")
             bindings.append(end_block)
 
@@ -331,9 +327,9 @@ def get_rows(
         statement += f""" {" AND ".join(all_conditions)}"""
 
     # ORDER BY
-    if order_by != None:  # noqa: E711
+    if order_by is not None:  # noqa: E711
         statement += f""" ORDER BY {order_by}"""
-        if order_dir != None:  # noqa: E711
+        if order_dir is not None:  # noqa: E711
             statement += f""" {order_dir.upper()}"""
     # LIMIT
     if limit and limit > 0:
@@ -395,7 +391,7 @@ def adjust_get_balances_results(query_result, ledger_db):
 def adjust_get_destructions_results(query_result):
     filtered_results = []
     for destruction_row in list(query_result):
-        if type(destruction_row["tag"]) == bytes:  # noqa: E721
+        if isinstance(destruction_row["tag"], bytes):
             destruction_row["tag"] = destruction_row["tag"].decode("utf-8", "ignore")
 
         filtered_results.append(destruction_row)
@@ -413,8 +409,8 @@ def adjust_get_sends_memo_filters(filters):
             filter_["field"] = "memo"
             try:
                 filter_["value"] = bytes.fromhex(filter_["value"])
-            except ValueError as e:  # noqa: F841
-                raise exceptions.APIError("Invalid memo_hex value")  # noqa: B904
+            except ValueError as e:
+                raise exceptions.APIError("Invalid memo_hex value") from e
 
 
 def adjust_get_sends_results(query_result):
@@ -426,7 +422,7 @@ def adjust_get_sends_results(query_result):
                 send_row["memo_hex"] = None
                 send_row["memo"] = None
             else:
-                if type(send_row["memo"]) == str:  # noqa: E721
+                if isinstance(send_row["memo"], str):  # noqa: E721
                     send_row["memo"] = bytes(send_row["memo"], "utf-8")
 
                 send_row["memo_hex"] = binascii.hexlify(send_row["memo"]).decode("utf8")
@@ -495,6 +491,7 @@ class APIStatusPoller(threading.Thread):
         interval = interval_if_not_ready
 
         while not self.stop_event.is_set():
+            code = 0
             try:
                 # Check that backend is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
@@ -543,8 +540,8 @@ def create_app():
         def get_method(**kwargs):
             try:
                 return get_rows(table=table, **kwargs)
-            except TypeError as e:  # TODO: generalise for all API methods
-                raise exceptions.APIError(str(e))  # noqa: B904
+            except TypeError as e:
+                raise exceptions.APIError(str(e)) from e
 
         return get_method
 
@@ -555,7 +552,7 @@ def create_app():
 
     @dispatcher.add_method
     def sql(query, bindings=None):
-        if bindings == None:  # noqa: E711
+        if bindings is None:  # noqa: E711
             bindings = []
         with LedgerDBConnectionPool().connection() as db:
             return db_query(db, query, tuple(bindings))
@@ -566,7 +563,7 @@ def create_app():
     # Generate dynamically create_{transaction} methods
     def generate_create_method(tx):
         def create_method(**kwargs):
-            transaction_args, common_args, private_key_wif = split_compose_params(**kwargs)
+            transaction_args, common_args, _private_key_wif = split_compose_params(**kwargs)
             extended_tx_info = old_style_api = False
             if "extended_tx_info" in common_args:
                 extended_tx_info = common_args["extended_tx_info"]
@@ -619,9 +616,9 @@ def create_app():
                 # TypeError happens when unexpected keyword arguments are passed in
                 error_msg = f"Error composing {tx} transaction via API: {str(error)}"
                 logger.trace(error_msg)
-                raise JSONRPCDispatchException(  # noqa: B904
+                raise JSONRPCDispatchException(
                     code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg
-                )
+                ) from error
 
         return create_method
 
@@ -822,12 +819,12 @@ def create_app():
 
             try:
                 last_message = ledger.events.last_message(db)
-            except:  # noqa: E722
+            except:  # noqa: E722  # pylint: disable=bare-except
                 last_message = None
 
         try:
             bitcoind_blocks_behind = backend.bitcoind.get_blocks_behind()
-        except:  # noqa: E722
+        except:  # noqa: E722  # pylint: disable=bare-except
             bitcoind_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
         bitcoind_caught_up = bitcoind_blocks_behind <= 1
 

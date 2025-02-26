@@ -72,8 +72,8 @@ def compose(db, source: str, order_match_id: str, skip_validation: bool = False)
         order_match_id[65:],
     )  # UTF-8 encoding means that the indices are doubled.
 
-    destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = validate(
-        db, source, order_match_id, CurrentState().current_block_index()
+    destination, btc_quantity, _escrowed_asset, _escrowed_quantity, order_match, problems = (
+        validate(db, source, order_match_id, CurrentState().current_block_index())
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -82,10 +82,11 @@ def compose(db, source: str, order_match_id: str, skip_validation: bool = False)
     time_left = order_match["match_expire_index"] - CurrentState().current_block_index()
     if time_left < 4:
         logger.warning(
-            f"Only {time_left} blocks until that order match expires. The payment might not make into the blockchain in time."
+            "Only %s blocks until that order match expires. The payment might not make into the blockchain in time.",
+            time_left,
         )
     if 10 - time_left < 4:
-        logger.warning(f"Order match has only {10 - time_left} confirmation(s).")
+        logger.warning("Order match has only %s confirmation(s).", 10 - time_left)
 
     tx0_hash_bytes, tx1_hash_bytes = (
         binascii.unhexlify(bytes(tx0_hash, "utf-8")),
@@ -107,7 +108,7 @@ def unpack(message, return_dict=False):
         )
         order_match_id = helpers.make_id(tx0_hash, tx1_hash)
         status = "valid"
-    except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
+    except (exceptions.UnpackError, struct.error):
         tx0_hash, tx1_hash, order_match_id = None, None, None
         status = "invalid: could not unpack"
 
@@ -128,11 +129,10 @@ def parse(db, tx, message):
     tx0_hash, tx1_hash, order_match_id, status = unpack(message)
 
     if status == "valid":
-        destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems = (
+        _destination, btc_quantity, escrowed_asset, escrowed_quantity, _order_match, problems = (
             validate(db, tx["source"], order_match_id, tx["block_index"])
         )
         if problems:
-            order_match = None  # noqa: F841
             status = "invalid: " + "; ".join(problems)
 
     if status == "valid":

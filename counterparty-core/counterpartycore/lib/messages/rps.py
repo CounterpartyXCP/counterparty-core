@@ -30,7 +30,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 ID = 80
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(CURR_DIR, "data", "rps_events.json")) as f:
+with open(os.path.join(CURR_DIR, "data", "rps_events.json"), encoding="utf-8") as f:
     RPS_EVENTS = json.load(f)
 
 

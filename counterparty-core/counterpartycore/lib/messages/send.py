@@ -115,7 +115,7 @@ def compose(
                     )
             else:
                 raise exceptions.ComposeError("mpma sends are not enabled")
-        elif use_enhanced_send is None or use_enhanced_send == True:  # noqa: E712
+        elif use_enhanced_send is None or use_enhanced_send:
             return enhancedsend.compose(
                 db,
                 source,
@@ -127,11 +127,11 @@ def compose(
                 skip_validation,
                 no_dispense,
             )
-    elif memo is not None or use_enhanced_send == True:  # noqa: E712
+    elif memo is not None or use_enhanced_send:
         raise exceptions.ComposeError("enhanced sends are not enabled")
 
     return send1.compose(db, source, destination, asset, quantity, skip_validation, no_dispense)
 
 
-def parse(db, tx, message):  # TODO: *args
+def parse(db, tx, message):
     return send1.parse(db, tx, message)

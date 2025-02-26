@@ -111,7 +111,7 @@ def get_tx_info_legacy(decoded_tx, block_index):
             block_index, 293000
         ):  # Protocol change.
             # Be strict.
-            pubkeyhash, address_version = get_pubkeyhash(script_pub_key, block_index)
+            pubkeyhash, _address_version = get_pubkeyhash(script_pub_key, block_index)
             if not pubkeyhash:
                 continue
             key = binascii.unhexlify(decoded_tx["vin"][0]["hash"])

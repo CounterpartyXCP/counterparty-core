@@ -46,7 +46,7 @@ def _encode_memo(memo=None, is_hex=False):
         if is_hex:
             # signal a 1 bit for hex encoded memos
             barr.append("0b1")
-            if type(memo) is str:  # append the string as hex-string  # noqa: E721
+            if isinstance(memo, str):  # append the string as hex-string  # noqa: E721
                 barr.append(f"uint:6={len(memo) >> 1}")
                 memo = f"0x{memo}"
             else:
@@ -67,11 +67,9 @@ def _encode_memo(memo=None, is_hex=False):
 
 def _safe_tuple_index(t, i):
     """Get an element from a tuple, returning None if it's out of bounds"""
-
     if len(t) <= i:
         return None
-    else:
-        return t[i]
+    return t[i]
 
 
 def _encode_construct_send_list(send_asset, lut, sends):
@@ -102,7 +100,7 @@ def _encode_compress_send_list(db, nbits, send):
 
         try:
             memo_str = _encode_memo(memo=send_item[2], is_hex=send_item[3])
-        except:  # noqa: E722
+        except:  # noqa: E722  # pylint: disable=bare-except
             memo_str = BitArray("0b0")
 
         r.append(memo_str)
@@ -164,7 +162,7 @@ def _decode_decode_lut(data):
     address_list = []
     bytes_per_address = 21
 
-    for i in range(0, num_addresses):  # noqa: B007
+    for _i in range(0, num_addresses):  # noqa: B007
         addr_raw = data[p : p + bytes_per_address]
 
         address_list.append(address.unpack(addr_raw))
@@ -186,7 +184,7 @@ def _decode_decode_send_list(stream, nbits, lut):
         range_limit = num_recipients
     send_list = []
     asset = ledger.issuances.generate_asset_name(asset_id)
-    for i in range(0, range_limit):  # noqa: B007
+    for _i in range(0, range_limit):  # noqa: B007
         if nbits > 0:
             idx = stream.read(f"uint:{nbits}")
         else:
@@ -235,8 +233,7 @@ def _decode_mpma_send_decode(data):
     memo, is_hex = _decode_memo(stream)
     sends = _decode_decode_sends(stream, nbits, lut)
     if memo is not None:
-        for asset in sends:
-            send_list = sends[asset]
+        for send_list in sends.values():
             for idx, send in enumerate(send_list):
                 if len(send) == 2:
                     send_list[idx] = (send[0], send[1], memo, is_hex)

@@ -214,7 +214,7 @@ def validate(
     cursor.close()
 
     if oracle_address is not None and protocol.enabled("oracle_dispensers", block_index):
-        last_price, last_fee, last_label, last_updated = ledger.other.get_oracle_last_price(
+        last_price, _last_fee, _last_label, _last_updated = ledger.other.get_oracle_last_price(
             db, oracle_address, block_index
         )
 
@@ -296,7 +296,7 @@ def compose(
 def calculate_oracle_fee(
     db, escrow_quantity, give_quantity, mainchainrate, oracle_address, block_index
 ):
-    last_price, last_fee, last_fiat_label, last_updated = ledger.other.get_oracle_last_price(
+    last_price, last_fee, _last_fiat_label, _last_updated = ledger.other.get_oracle_last_price(
         db, oracle_address, block_index
     )
     last_fee_multiplier = last_fee / config.UNIT
@@ -332,7 +332,7 @@ def unpack(message, return_dict=False):
             oracle_address = address_unpack(message[read : read + 21])
         asset = ledger.issuances.generate_asset_name(assetid)
         status = "valid"
-    except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
+    except (exceptions.UnpackError, struct.error):
         (
             give_quantity,
             escrow_quantity,
@@ -386,7 +386,7 @@ def parse(db, tx, message):
 
     if status == "valid":
         if protocol.enabled("dispenser_parsing_validation", CurrentState().current_block_index()):
-            asset_id, problems = validate(
+            _asset_id, problems = validate(
                 db,
                 tx["source"],
                 asset,
@@ -412,7 +412,7 @@ def parse(db, tx, message):
                 )
 
                 if len(existing) == 0:
-                    if (oracle_address != None) and protocol.enabled(  # noqa: E711
+                    if oracle_address is not None and protocol.enabled(  # noqa: E711
                         "oracle_dispensers", tx["block_index"]
                     ):
                         oracle_fee = calculate_oracle_fee(
@@ -485,7 +485,7 @@ def parse(db, tx, message):
                                     action="open dispenser",
                                     event=tx["tx_hash"],
                                 )
-                        except exceptions.DebitError as e:  # noqa: F841
+                        except exceptions.DebitError:
                             status = "invalid: insufficient funds"
 
                     if status == "valid":
@@ -527,7 +527,7 @@ def parse(db, tx, message):
                         protocol.enabled("dispenser_origin_permission_extended", tx["block_index"])
                         and tx["source"] == existing[0]["origin"]
                     ):
-                        if (oracle_address != None) and protocol.enabled(  # noqa: E711
+                        if oracle_address is not None and protocol.enabled(  # noqa: E711
                             "oracle_dispensers", tx["block_index"]
                         ):
                             oracle_fee = calculate_oracle_fee(
@@ -717,8 +717,8 @@ def is_dispensable(db, address, amount):
     dispensers = ledger.markets.get_dispensers(db, address=address, status_in=[0, 11])
 
     for next_dispenser in dispensers:
-        if next_dispenser["oracle_address"] != None:  # noqa: E711
-            last_price, last_fee, last_fiat_label, last_updated = (
+        if next_dispenser["oracle_address"] is not None:
+            last_price, _last_fee, _last_fiat_label, _last_updated = (
                 ledger.other.get_oracle_last_price(
                     db, next_dispenser["oracle_address"], CurrentState().current_block_index()
                 )

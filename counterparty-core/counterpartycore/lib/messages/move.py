@@ -80,7 +80,7 @@ def move_balances(db, tx, source, destination):
 
         # log the move
         logger.info(
-            f"Move {balance['asset']} from utxo: {source} to utxo: {destination} ({tx['tx_hash']})"
+            f"Move {balance['quantity']} {balance['asset']} from utxo: {source} to utxo: {destination} ({tx['tx_hash']})"
         )
 
 

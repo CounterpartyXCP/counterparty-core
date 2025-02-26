@@ -79,7 +79,7 @@ def compose(
         memo = struct.pack(f">{len(memo)}s", memo)
 
     block_index = CurrentState().current_block_index()
-    problems, total_fee = validate(db, source, destination, flags, memo, block_index)
+    problems, _total_fee = validate(db, source, destination, flags, memo, block_index)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
@@ -110,8 +110,8 @@ def unpack(message):
         # unpack address
         full_address = address.unpack(short_address_bytes)
     except struct.error as e:
-        logger.warning(f"sweep send unpack error: {e}")
-        raise exceptions.UnpackError("could not unpack")  # noqa: B904
+        logger.warning("sweep send unpack error: %s", e)
+        raise exceptions.UnpackError("could not unpack") from e
 
     unpacked = {
         "destination": full_address,
@@ -142,7 +142,7 @@ def parse(db, tx, message):
     except BalanceError:  # noqa: F405
         destination, flags, memo_bytes = None, None, None
         status = "invalid: insufficient balance for antispam fee for sweep"
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-exception-caught
         destination, flags, memo_bytes = None, None, None
         status = "invalid: could not unpack, " + str(err)
 

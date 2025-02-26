@@ -55,8 +55,8 @@ def parse_options_from_string(string):
     if len(string_list) == 2:
         try:
             options = int(string_list.pop())
-        except:  # noqa: E722
-            raise exceptions.OptionsError("options not an integer")  # noqa: B904
+        except Exception as e:  # noqa: E722 # pylint: disable=broad-exception-caught
+            raise exceptions.OptionsError("options not an integer") from e
         return options
     else:
         return False
@@ -177,7 +177,7 @@ def unpack(message, block_index, return_dict=False):
         except UnicodeDecodeError:
             text = ""
         status = "valid"
-    except struct.error as e:  # noqa: F841
+    except struct.error:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = "invalid: could not unpack"
     except AssertionError:
@@ -312,12 +312,10 @@ def parse(db, tx, message):
             if bet_match["tx0_bet_type"] < bet_match["tx1_bet_type"]:
                 bull_address = bet_match["tx0_address"]
                 bear_address = bet_match["tx1_address"]
-                bull_escrow = bet_match["forward_quantity"]
                 bear_escrow = bet_match["backward_quantity"]
             else:
                 bull_address = bet_match["tx1_address"]
                 bear_address = bet_match["tx0_address"]
-                bull_escrow = bet_match["backward_quantity"]  # noqa: F841
                 bear_escrow = bet_match["forward_quantity"]
 
             leverage = Fraction(bet_match["leverage"], 5040)

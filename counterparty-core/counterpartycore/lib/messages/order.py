@@ -350,7 +350,7 @@ def unpack(db, message, return_dict=False):
         give_asset = ledger.issuances.get_asset_name(db, give_id)
         get_asset = ledger.issuances.get_asset_name(db, get_id)
         status = "open"
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error):
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = (
             0,
             0,
@@ -515,7 +515,7 @@ def match(db, tx, block_index=None):
     for tx0 in order_matches:
         # Sanity check. Should never happen.
         if tx0["status"] != "open":
-            raise Exception(f"Order match is not open: {tx0}.")
+            raise exceptions.OrderError(f"Order match is not open: {tx0}.")
         order_match_id = helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])
         if not block_index:
             block_index = max(
@@ -814,7 +814,6 @@ def expire_orders(db, block_index):
     orders = ledger.markets.get_orders_to_expire(db, block_index)
     # Edge case: filled orders, and therefore not expired in the previous block,
     # re-ropened by order_match expiration in the previous block.
-    # TODO: protocol change: expire order matches then orders.
     orders += ledger.markets.get_orders_to_expire(db, block_index - 1)
     for order in orders:
         cancel_order(db, order, "expired", block_index, 0)  # tx_index=0 for block action
@@ -842,6 +841,7 @@ def expire_order_matches(db, block_index):
                         ledger.markets.get_order(db, order_hash=order_match["tx1_hash"])[0],
                         "expired",
                         block_index,
+                        0,
                     )
                 if order_match["forward_asset"] == "BTC" and order_match["status"] == "expired":
                     cancel_order(
@@ -849,6 +849,7 @@ def expire_order_matches(db, block_index):
                         ledger.markets.get_order(db, order_hash=order_match["tx0_hash"])[0],
                         "expired",
                         block_index,
+                        0,
                     )
 
     if protocol.after_block_or_test_network(block_index, 315000):  # Protocol change.

@@ -219,3 +219,7 @@ class CreditError(Exception):
 
 class ServerNotReady(Exception):
     pass
+
+
+class OrderError(Exception):
+    pass

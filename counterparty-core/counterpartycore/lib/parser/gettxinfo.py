@@ -27,7 +27,7 @@ def get_checksig(asm):
         OP_HASH160,  # noqa: F405
         OP_EQUALVERIFY,  # noqa: F405
         OP_CHECKSIG,  # noqa: F405
-    ) and type(pubkeyhash) == bytes:  # noqa: E721
+    ) and isinstance(pubkeyhash, bytes):  # noqa: E721
         return pubkeyhash
 
     raise exceptions.DecodeError("invalid OP_CHECKSIG")
@@ -37,12 +37,12 @@ def get_checkmultisig(asm):
     # N-of-2
     if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:3], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
+        if all([isinstance(pubkey, bytes) for pubkey in pubkeys]):  # noqa: E721
             return pubkeys, signatures_required
     # N-of-3
     if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:4], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
+        if all([isinstance(pubkey, bytes) for pubkey in pubkeys]):  # noqa: E721
             return pubkeys, signatures_required
     raise exceptions.DecodeError("invalid OP_CHECKMULTISIG")
 
@@ -115,7 +115,7 @@ def is_valid_der(der):
         if len(der) != 6 + rlength + slength:
             return False
         return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return False
 
 
@@ -557,9 +557,9 @@ def get_tx_info(db, decoded_tx, block_index, composing=False):
             db, decoded_tx, block_index, composing=composing
         )
         return source, destination, btc_amount, fee, data, dispensers_outs, utxos_info
-    except DecodeError as e:  # noqa: F841
+    except DecodeError:
         return b"", None, None, None, None, None, utxos_info
-    except BTCOnlyError as e:  # noqa: F841
+    except BTCOnlyError:
         return b"", None, None, None, None, None, utxos_info
     finally:
         # update utxo balances cache before parsing the transaction

@@ -42,7 +42,6 @@ def pubkey_to_p2whash(pubkey):
 
 def decode_data_push(arr, pos):
     pushlen = 0
-    data = b""  # noqa: F841
     opcode = bitcoinlib.core.script.CScriptOp(arr[pos])
     if opcode > 0 and opcode < bitcoinlib.core.script.OP_PUSHDATA1:
         pushlen = arr[pos]
@@ -122,13 +121,12 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                             and opcode <= bitcoinlib.core.script.OP_15
                         ):
                             # it's multisig
-                            req_sigs = opcode - bitcoinlib.core.script.OP_1 + 1  # noqa: F841
                             pos += 1
                             pubkey = None
                             num_sigs = 0
                             found_sigs = False
                             while not found_sigs:
-                                pos, npubkey = decode_data_push(redeem_script, pos)
+                                pos, _npubkey = decode_data_push(redeem_script, pos)
                                 num_sigs += 1
                                 if redeem_script[pos] - bitcoinlib.core.script.OP_1 + 1 == num_sigs:
                                     found_sigs = True
@@ -178,22 +176,21 @@ def decode_p2sh_input(asm, p2sh_is_segwit=False):
     """Looks at the scriptSig for the input of the p2sh-encoded data transaction
     [signature] [data] [OP_HASH160 ... OP_EQUAL]
     """
-    pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(
+    _pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(
         asm[-1], p2sh_is_segwit
     )
     if redeem_script_is_valid:
         # this is a signed transaction, so we got {sig[,sig]} {datachunk} {redeem_script}
         datachunk = found_data
-        redeem_script = asm[-1]  # asm[-2:]
     else:
-        pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(
+        _pubkey, source, redeem_script_is_valid, found_data = decode_data_redeem_script(
             asm[-1], p2sh_is_segwit
         )
         if not redeem_script_is_valid or len(asm) != 3:
             return None, None, None
 
         # this is an unsigned transaction (last is outputScript), so we got [datachunk] [redeem_script] [temporaryOutputScript]
-        datachunk, redeem_script, _substitute_script = asm
+        datachunk, _redeem_script, _substitute_script = asm
 
     data = datachunk
     if data[: len(config.PREFIX)] == config.PREFIX:

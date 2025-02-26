@@ -305,7 +305,7 @@ def unpack(message, return_dict=False):
             bool(int(divisible)),
             description,
         )
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
 
 
@@ -366,7 +366,7 @@ def parse(db, tx, message):
             "status": status,
         }
         ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
-        logger.info(f"Fair minter {tx['tx_hash']} is invalid: {status}")
+        logger.info("Fair minter %s is invalid: %s", tx["tx_hash"], status)
         return
 
     # determine status
@@ -441,7 +441,7 @@ def parse(db, tx, message):
         "pre_minted": pre_minted,
     }
     ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
-    logger.info(f"Fair minter opened for {asset_name} by {tx['source']}.")
+    logger.info("Fair minter opened for %s by %s.", asset_name, tx["source"])
 
     if not existing_asset:
         # Add to table of assets if new asset

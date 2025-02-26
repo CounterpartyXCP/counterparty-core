@@ -7,7 +7,7 @@ composite number and a colossally abundant number, and has 1-10, 12 as factors.
 
 All wagers are in XCP.
 
-Expiring a bet match doesn’t re‐open the constituent bets. (So all bets may be ‘filled’.)
+Expiring a bet match doesn't re‐open the constituent bets. (So all bets may be 'filled.')
 """
 
 import decimal
@@ -140,11 +140,11 @@ def validate(
     # Look at feed to be bet on.
     broadcasts = ledger.other.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
     if not broadcasts:
-        problems.append("feed doesn’t exist")
+        problems.append("feed doesn't exist")
     elif not broadcasts[-1]["text"]:
         problems.append("feed is locked")
     elif broadcasts[-1]["timestamp"] >= deadline:
-        problems.append("deadline in that feed’s past")
+        problems.append("deadline in that feed's past")
 
     if bet_type not in (0, 1, 2, 3):
         problems.append("unknown bet type")
@@ -462,19 +462,26 @@ def match(db, tx):
         if tx["block_index"] < 286000:
             tx0_inverse_odds = ledger.issuances.price(1, tx0_odds)  # Protocol change.
 
-        logger.debug(f"Tx0 Inverse Odds: {float(tx0_inverse_odds)}; Tx1 Odds: {float(tx1_odds)}")
+        logger.debug(
+            "Tx0 Inverse Odds: %(inverse_odds)s; Tx1 Odds: %(tx1_odds)s",
+            {"inverse_odds": float(tx0_inverse_odds), "tx1_odds": float(tx1_odds)},
+        )
         if tx0_inverse_odds > tx1_odds:
             logger.debug("Skipping: price mismatch.")
         else:
             logger.debug(
-                f"Potential forward quantities: {tx0_wager_remaining}, {int(ledger.issuances.price(tx1_wager_remaining, tx1_odds))}"
+                "Potential forward quantities: %(wager)s, %(price)s",
+                {
+                    "wager": tx0_wager_remaining,
+                    "price": int(ledger.issuances.price(tx1_wager_remaining, tx1_odds)),
+                },
             )
             forward_quantity = int(
                 min(tx0_wager_remaining, int(ledger.issuances.price(tx1_wager_remaining, tx1_odds)))
             )
-            logger.debug(f"Forward Quantity: {forward_quantity}")
+            logger.debug("Forward Quantity: %(quantity)s", {"quantity": forward_quantity})
             backward_quantity = round(forward_quantity / tx0_odds)
-            logger.debug(f"Backward Quantity: {backward_quantity}")
+            logger.debug("Backward Quantity: %(quantity)s", {"quantity": backward_quantity})
 
             if not forward_quantity:
                 logger.debug("Skipping: zero forward quantity.")
@@ -483,8 +490,6 @@ def match(db, tx):
                 if not backward_quantity:
                     logger.debug("Skipping: zero backward quantity.")
                     continue
-
-            bet_match_id = helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])  # noqa: F841
 
             # Debit the order.
             # Counterwager remainings may be negative.

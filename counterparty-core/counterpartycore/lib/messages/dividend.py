@@ -138,7 +138,6 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         return None, None, problems, 0
 
     # preserve order with old queries
-    # TODO: remove and update checkpoints
     if not protocol.is_test_network() and block_index in [313590, 313594]:
         outputs.append(outputs.pop(-3))
 
@@ -170,7 +169,9 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
     logger.info(
-        f"Total quantity to be distributed in dividends: {ledger.issuances.value_out(db, dividend_total, dividend_asset)} {dividend_asset}"
+        "Total quantity to be distributed in dividends: %s %s",
+        ledger.issuances.value_out(db, dividend_total, dividend_asset),
+        dividend_asset,
     )
 
     if dividend_asset == config.BTC:
@@ -201,7 +202,7 @@ def unpack(db, message, block_index, return_dict=False):
             status = "valid"
         else:
             raise exceptions.UnpackError
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error):
         dividend_asset, quantity_per_unit, asset = None, None, None
         status = "invalid: could not unpack"
 

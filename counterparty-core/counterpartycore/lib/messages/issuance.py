@@ -358,7 +358,7 @@ def compose(
         else:
             data = messagetype.pack(ID)
 
-        if description == None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
+        if description is None and protocol.enabled("issuance_description_special_null"):
             # a special message is created to be catched by the parse function
             curr_format = (
                 asset_format + f"{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s"
@@ -436,7 +436,7 @@ def compose(
         else:
             data = messagetype.pack(SUBASSET_ID)
 
-        if description == None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
+        if description is None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
             # a special message is created to be catched by the parse function
             curr_format = (
                 subasset_format
@@ -515,12 +515,13 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         call_date = None
         if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
             if not protocol.enabled("subassets", block_index=block_index):
-                logger.warning(f"subassets are not enabled at block {block_index}")
+                logger.warning("subassets are not enabled at block %s", block_index)
                 raise exceptions.UnpackError
 
             # parse a subasset original issuance message
             lock = None
             reset = None
+            compacted_subasset_length = 0
 
             if subasset_format_length <= 18:
                 asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(
