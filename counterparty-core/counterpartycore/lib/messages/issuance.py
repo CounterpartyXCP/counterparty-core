@@ -221,7 +221,7 @@ def validate(
         if quantity > config.MAX_INT:
             problems.append("total quantity overflow")
     else:
-        total = sum([issuance["quantity"] for issuance in issuances])
+        total = sum(issuance["quantity"] for issuance in issuances)
         if total + quantity > config.MAX_INT:
             problems.append("total quantity overflow")
 
