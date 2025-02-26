@@ -213,7 +213,7 @@ def update_order_match_status(db, order_match_id, status):
         order_match_id,
         update_data,
         "ORDER_MATCH_UPDATE",
-        {"order_match_id": id},
+        {"order_match_id": order_match_id},
     )
 
 

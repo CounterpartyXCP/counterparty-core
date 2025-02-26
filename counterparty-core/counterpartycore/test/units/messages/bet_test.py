@@ -213,7 +213,7 @@ def test_validate(ledger_db, defaults, current_block_index):
         15120,
         defaults["expiration"],
         current_block_index,
-    ) == (["deadline in that feed’s past", "negative deadline"], 15120)
+    ) == (["deadline in that feed's past", "negative deadline"], 15120)
 
     assert bet.validate(
         ledger_db,

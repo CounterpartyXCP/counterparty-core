@@ -67,7 +67,7 @@ def validate(db, source, destination, asset, quantity):
     if asset == config.BTC:
         raise exceptions.ValidateError(f"cannot destroy {config.BTC}")
 
-    if isinstance(quantity, int):
+    if not isinstance(quantity, int):
         raise exceptions.ValidateError("quantity not integer")
 
     if quantity > config.MAX_INT:

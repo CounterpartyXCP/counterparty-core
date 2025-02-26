@@ -315,7 +315,8 @@ def compose(
         asset_id
     )  # This will remove leading zeros in the numeric assets
 
-    (  # pylint: disable=unbalanced-tuple-unpacking
+    (
+        call_date,
         call_price,
         problems,
         _fee,

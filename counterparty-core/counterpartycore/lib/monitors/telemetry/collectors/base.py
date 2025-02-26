@@ -16,6 +16,9 @@ class TelemetryCollectorKwargs(TelemetryCollectorI):
     def collect(self):
         return self.static_attrs
 
+    def close(self):
+        pass
+
 
 class TelemetryCollectorBase(TelemetryCollectorKwargs):
     def __init__(self, db, **kwargs):

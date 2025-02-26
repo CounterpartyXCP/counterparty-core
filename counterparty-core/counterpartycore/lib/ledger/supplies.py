@@ -374,7 +374,7 @@ def supplies(db):
     """Return supplies."""
     d1 = creations(db)
     d2 = destructions(db)
-    return {key: value - d2.get(key, 0) for key, value in d1}
+    return {key: value - d2.get(key, 0) for key, value in d1.items()}
 
 
 def held(db):
