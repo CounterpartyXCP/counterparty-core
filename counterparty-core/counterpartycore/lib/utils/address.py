@@ -20,7 +20,7 @@ def is_pubkeyhash(monosig_address):
 def pubkeyhash_array(address):
     """Return PubKeyHashes from an address."""
     _signatures_required, pubs, _signatures_possible = multisig.extract_array(address)
-    if not all([is_pubkeyhash(pub) for pub in pubs]):
+    if not all(is_pubkeyhash(pub) for pub in pubs):
         raise exceptions.MultiSigAddressError(
             "Invalid PubKeyHashes. Multi-signature address must use PubKeyHashes, not public keys."
         )

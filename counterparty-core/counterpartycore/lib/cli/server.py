@@ -284,10 +284,10 @@ def initialise_config(
         config.BACKEND_PORT = int(config.BACKEND_PORT)
         if not (int(config.BACKEND_PORT) > 1 and int(config.BACKEND_PORT) < 65535):
             raise exceptions.ConfigurationError("invalid backend API port number")
-    except:  # noqa: E722
+    except Exception as e:  # noqa: E722 # pylint: disable=broad-exception-caught
         raise exceptions.ConfigurationError(  # noqa: B904
             "Please specific a valid port number backend-port configuration parameter"
-        )
+        ) from e
 
     # Backend Core RPC user (Bitcoin Core)
     if backend_user:

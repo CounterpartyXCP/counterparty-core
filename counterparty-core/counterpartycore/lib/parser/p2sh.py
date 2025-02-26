@@ -43,7 +43,7 @@ def pubkey_to_p2whash(pubkey):
 def decode_data_push(arr, pos):
     pushlen = 0
     opcode = bitcoinlib.core.script.CScriptOp(arr[pos])
-    if opcode > 0 and opcode < bitcoinlib.core.script.OP_PUSHDATA1:
+    if 0 < opcode < bitcoinlib.core.script.OP_PUSHDATA1:
         pushlen = arr[pos]
         pos += 1
     elif opcode == bitcoinlib.core.script.OP_PUSHDATA1:
@@ -64,7 +64,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
     found_data = b""
 
     if (
-        script_len == 41
+        script_len == 41  # pylint: disable=too-many-boolean-expressions
         and redeem_script[0] == bitcoinlib.core.script.OP_DROP
         and redeem_script[35] == bitcoinlib.core.script.OP_CHECKSIGVERIFY
         and redeem_script[37] == bitcoinlib.core.script.OP_DROP
@@ -80,7 +80,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
             source = pubkey_to_pubkeyhash(pubkey)
         redeem_script_is_valid = True
     elif (
-        script_len > 41
+        script_len > 41  # pylint: disable=too-many-boolean-expressions
         and redeem_script[0] == bitcoinlib.core.script.OP_DROP
         and redeem_script[script_len - 4] == bitcoinlib.core.script.OP_DROP
         and redeem_script[script_len - 3] == bitcoinlib.core.script.OP_DEPTH
@@ -99,8 +99,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
         try:
             opcode = bitcoinlib.core.script.CScriptOp(redeem_script[0])
             if (
-                opcode > bitcoinlib.core.script.OP_0
-                and opcode < bitcoinlib.core.script.OP_PUSHDATA1
+                bitcoinlib.core.script.OP_0 < opcode < bitcoinlib.core.script.OP_PUSHDATA1
                 or opcode
                 in (
                     bitcoinlib.core.script.OP_PUSHDATA1,

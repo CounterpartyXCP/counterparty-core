@@ -148,6 +148,7 @@ def get_schnorr_signature_sighash_flag(value):
         if len(value) == 65:
             return value[-1:]
         return b"\x01"  # SIGHASH_ALL
+    return None
 
 
 def collect_sighash_flags(script_sig, witnesses):

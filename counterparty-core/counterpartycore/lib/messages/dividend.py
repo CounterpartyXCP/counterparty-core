@@ -163,7 +163,7 @@ def compose(
     asset = ledger.issuances.resolve_subasset_longname(db, asset)
     dividend_asset = ledger.issuances.resolve_subasset_longname(db, dividend_asset)
 
-    dividend_total, outputs, problems, fee = validate(
+    dividend_total, outputs, problems, _fee = validate(
         db, source, quantity_per_unit, asset, dividend_asset, CurrentState().current_block_index()
     )
     if problems and not skip_validation:

@@ -1,8 +1,8 @@
 import logging
 import os
 
-import counterpartycore.lib.monitors.telemetry.util as util
 from counterpartycore.lib import config, ledger
+from counterpartycore.lib.monitors.telemetry import util
 from counterpartycore.lib.monitors.telemetry.collectors.interface import TelemetryCollectorI
 
 logger = logging.getLogger(config.LOGGER_NAME)

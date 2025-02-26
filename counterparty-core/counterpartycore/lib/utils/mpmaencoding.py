@@ -13,12 +13,12 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def _encode_construct_base_lut(snds):
     # t is a tuple of the form (asset, addr, amnt [, memo, is_hex])
-    return sorted(list(set([t[1] for t in snds])))  # Sorted to make list determinist
+    return sorted(list(set(t[1] for t in snds)))  # Sorted to make list determinist
 
 
 def _encode_construct_base_assets(sends):
     # t is a tuple of the form (asset, addr, amnt [, memo, is_hex])
-    return sorted(list(set([t[0] for t in sends])))  # Sorted to make list determinist
+    return sorted(list(set(t[0] for t in sends)))  # Sorted to make list determinist
 
 
 def _encode_construct_lut(sends):

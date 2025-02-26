@@ -345,7 +345,7 @@ def get_raw_mempool(db):
 
     chunks = helpers.chunkify(txhash_list, config.MAX_RPC_BATCH_SIZE)
 
-    logger.debug(f"Found {len(txhash_list)} transaction(s) in the raw mempool...")
+    logger.debug("Found %s transaction(s) in the raw mempool...", len(txhash_list))
     return chunks, timestamps
 
 
@@ -372,7 +372,7 @@ class RawMempoolParser(threading.Thread):
             counter += len(txhash_list)
         elapsed = time.time() - start
         logger.debug(
-            f"RawMempoolParser stopped. {counter} transactions processed in {elapsed:.2f} seconds."
+            "RawMempoolParser stopped. %d transactions processed in %.2f seconds.", counter, elapsed
         )
 
     def stop(self):
@@ -393,14 +393,14 @@ class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
 
     def restore(self):
         if os.path.exists(self.cache_path):
-            with open(self.cache_path, "r") as f:
+            with open(self.cache_path, "r", encoding="utf-8") as f:
                 self.not_suppported_txs = [line.strip() for line in f]
             logger.debug(
-                f"Restored {len(self.not_suppported_txs)} not supported transactions from cache"
+                "Restored %d not supported transactions from cache", len(self.not_suppported_txs)
             )
 
     def backup(self):
-        with open(self.cache_path, "w") as f:
+        with open(self.cache_path, "w", encoding="utf-8") as f:
             f.write("\n".join(self.not_suppported_txs[-200000:]))  # limit to 200k txs
         logger.trace(
             f"Backed up {len(self.not_suppported_txs)} not supported transactions to cache"

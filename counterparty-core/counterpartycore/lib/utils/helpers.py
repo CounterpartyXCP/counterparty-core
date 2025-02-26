@@ -81,7 +81,7 @@ def is_url(url):
 class ApiJsonEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
-            return "{0:.8f}".format(o)
+            return f"{o:.8f}"
         if isinstance(o, bytes):
             return o.hex()
         if callable(o):

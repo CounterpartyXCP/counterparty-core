@@ -116,18 +116,16 @@ class GunicornArbiter(Arbiter):
         logger = log.re_set_up("", api=True)
         self.init_loggers()
         try:
-            gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
+            gunicorn_util._setproctitle(f"worker [{self.proc_name}]")  # pylint: disable=protected-access
             logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()
             sys.exit(0)
-        except SystemExit:
-            raise
         except AppImportError:
             self.log.warning("Exception while loading the application", exc_info=True)
             sys.stderr.flush()
             sys.exit(self.APP_LOAD_ERROR)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             self.log.exception("Exception in worker process")
             if not worker.booted:
                 sys.exit(self.WORKER_BOOT_ERROR)
@@ -138,7 +136,7 @@ class GunicornArbiter(Arbiter):
                 worker.tmp.close()
                 sys.exit(-1)
                 # self.cfg.worker_exit(self, worker)
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 logger.warning("Exception during worker exit")
 
     def reap_workers(self):
@@ -191,10 +189,10 @@ class GunicornArbiter(Arbiter):
         self.workers_pids = []
 
 
-class GunicornApplication(gunicorn.app.base.BaseApplication):
+class GunicornApplication(gunicorn.app.base.BaseApplication):  # pylint: disable=abstract-method
     def __init__(self, app, args=None):
         self.options = {
-            "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
+            "bind": f"{config.API_HOST}:{config.API_PORT}",
             "timeout": 10,
             "graceful_timeout": 10,
             "max_requests": 1000,

@@ -531,11 +531,11 @@ def main():
     # Help message
     if args.help:
         parser.print_help()
-        exit(0)
+        sys.exit(0)
 
     if args.action is None:
         parser.print_help()
-        exit(1)
+        sys.exit(1)
 
     # Configuration and logging
     server.initialise_log_and_config(args)

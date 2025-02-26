@@ -74,11 +74,11 @@ POST_QUERIES = {
 
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
+    return dict(zip(fields, row))
 
 
 def build_consolidated_table(state_db, table_name):
-    logger.debug(f"Copying the consolidated table `{table_name}` to State DB...")
+    logger.debug("Copying the consolidated table `%s` to State DB...", table_name)
     start_time = time.time()
 
     # recreate table
@@ -135,7 +135,7 @@ def build_consolidated_table(state_db, table_name):
     for sql_index in indexes:
         state_db.execute(sql_index)
     logger.debug(
-        f"Copied consolidated table `{table_name}` in {time.time() - start_time:.2f} seconds"
+        "Copied consolidated table `%s` in %.2f seconds", table_name, time.time() - start_time
     )
 
 
@@ -156,14 +156,14 @@ def apply(db):
     if not attached:
         db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
-    for table in CONSOLIDATED_TABLES.keys():
+    for table in CONSOLIDATED_TABLES:
         build_consolidated_table(db, table)
 
     db.execute("""PRAGMA foreign_keys=ON""")
 
 
 def rollback(db):
-    for table in CONSOLIDATED_TABLES.keys():
+    for table in CONSOLIDATED_TABLES:
         db.execute(f"DROP TABLE {table}")
 
 

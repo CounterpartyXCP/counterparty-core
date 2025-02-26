@@ -117,8 +117,7 @@ def get_tx_info_legacy(decoded_tx, block_index):
                 if data_chunk[-8:] == config.PREFIX:
                     data += data_chunk[:-8]
                     break
-                else:
-                    data += data_chunk
+                data += data_chunk
 
         # Destination is the first output before the data.
         if not destination and not btc_amount and not data:
@@ -153,8 +152,7 @@ def get_tx_info_legacy(decoded_tx, block_index):
         address = get_address(script_pubkey, block_index)
         if not address:
             raise DecodeError("invalid scriptpubkey")
-        else:
-            source_list.append(address)
+        source_list.append(address)
 
     # Require that all possible source addresses be the same.
     if all(x == source_list[0] for x in source_list):

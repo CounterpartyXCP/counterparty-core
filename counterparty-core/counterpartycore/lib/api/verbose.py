@@ -19,7 +19,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def normalize_price(value):
     decimal.getcontext().prec = 32
-    return "{0:.16f}".format(D(value))
+    return f"{D(value):.16f}"
 
 
 def inject_issuances_and_block_times(ledger_db, state_db, result_list):

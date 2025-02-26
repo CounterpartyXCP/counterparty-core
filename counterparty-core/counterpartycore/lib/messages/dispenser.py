@@ -36,7 +36,7 @@ STATUS_CLOSED = 10
 STATUS_CLOSING = 11
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(CURR_DIR, "data", "get_oldest_tx.json")) as f:
+with open(os.path.join(CURR_DIR, "data", "get_oldest_tx.json"), encoding="utf-8") as f:
     GET_OLDEST_TX_DATA = json.load(f)
 
 
@@ -266,7 +266,8 @@ def compose(
     destination = []
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, asset_id, give_quantity, escrow_quantity, mainchainrate, status)
-    if (status == STATUS_OPEN_EMPTY_ADDRESS and open_address) or (
+    is_empty_address = status == STATUS_OPEN_EMPTY_ADDRESS and open_address
+    if is_empty_address or (
         protocol.enabled("dispenser_origin_permission_extended")
         and status == STATUS_CLOSED
         and open_address

@@ -397,7 +397,7 @@ def get_last_block(ledger_db):
     )
 
 
-def prepare_transactions_where(type, other_conditions=None):
+def prepare_transactions_where(type, other_conditions=None):  # pylint: disable=W0622
     where = []
     type_list = type.split(",")
     for transaction_type in type_list:
@@ -2801,7 +2801,7 @@ SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_"
 def get_orders(
     state_db,
     status: OrderStatus = "all",
-    get_asset: str = None,
+    get_asset: str = None,  # pylint: disable=W0621
     give_asset: str = None,
     cursor: str = None,
     limit: int = 100,
@@ -2840,7 +2840,7 @@ def get_orders_by_asset(
     state_db,
     asset: str,
     status: OrderStatus = "all",
-    get_asset: str = None,
+    get_asset: str = None,  # pylint: disable=W0621
     give_asset: str = None,
     cursor: str = None,
     limit: int = 100,

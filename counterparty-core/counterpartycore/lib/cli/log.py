@@ -35,11 +35,11 @@ SPINNER_STYLE = "bouncingBar"
 
 
 def trace(self, msg, *args, **kwargs):
-    self._log(logging.TRACE, msg, args, **kwargs)
+    self._log(logging.TRACE, msg, args, **kwargs)  # pylint: disable=protected-access
 
 
 def event(self, msg, *args, **kwargs):
-    self._log(logging.EVENT, msg, args, **kwargs)
+    self._log(logging.EVENT, msg, args, **kwargs)  # pylint: disable=protected-access
 
 
 def debug(self, msg, *args, **kwargs):
@@ -167,7 +167,7 @@ class CustomisedJSONFormatter(JSONFormatter):
         else:
             extra["block_index"] = None
 
-        return super(CustomisedJSONFormatter, self).json_record(message, extra, record)
+        return super().json_record(message, extra, record)
 
 
 class SQLiteFilter(logging.Filter):
@@ -190,13 +190,13 @@ def set_up(
     logging.Logger.trace = trace
     logging.Logger.event = event
 
-    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
-    for logger in loggers:
-        logger.handlers.clear()
-        logger.setLevel(logging.CRITICAL)
-        logger.propagate = False
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]  # pylint: disable=no-member
+    for logger_item in loggers:
+        logger_item.handlers.clear()
+        logger_item.setLevel(logging.CRITICAL)
+        logger_item.propagate = False
 
-    logger = logging.getLogger(config.LOGGER_NAME)
+    cli_logger = logging.getLogger(config.LOGGER_NAME)
 
     # Add the SQLite filter to the logger
     sqlite_filter = SQLiteFilter()
@@ -214,7 +214,7 @@ def set_up(
     elif verbose >= 3:
         log_level = logging.TRACE
 
-    logger.setLevel(log_level)
+    cli_logger.setLevel(log_level)
 
     # Create a lock for file handlers
     log_lock = threading.Lock()
@@ -235,7 +235,7 @@ def set_up(
                 original_emit(record)
 
         fileh.emit = locked_emit
-        logger.addHandler(fileh)
+        cli_logger.addHandler(fileh)
 
         multiprocessing_logging.install_mp_handler()
 
@@ -250,11 +250,11 @@ def set_up(
         else:
             console.setFormatter(CustomFormatter())
         console.addFilter(CustomFilter())
-        logger.addHandler(console)
+        cli_logger.addHandler(console)
 
     # Log unhandled errors.
     def handle_exception(exc_type, exc_value, exc_traceback):
-        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
+        cli_logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
         cprint("Unhandled Exception", "red", attrs=["bold"])
         traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stderr)
 
@@ -344,6 +344,7 @@ class Spinner:
     def __init__(self, step, done_message=None):
         self.halo = None
         self.done_message = done_message
+        self.start_time = None
         if not config.LOG_IN_CONSOLE:
             self.step = step
             self.halo = Halo(text=step, spinner=SPINNER_STYLE)
@@ -353,7 +354,7 @@ class Spinner:
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, _traceback):
         self.stop()
 
     def start(self):

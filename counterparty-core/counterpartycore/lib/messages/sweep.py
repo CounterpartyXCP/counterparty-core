@@ -6,7 +6,6 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
 )
-from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import address
@@ -139,7 +138,7 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         destination, flags, memo_bytes = None, None, None
         status = f"invalid: could not unpack ({e})"
-    except BalanceError:  # noqa: F405
+    except exceptions.BalanceError:  # noqa: F405
         destination, flags, memo_bytes = None, None, None
         status = "invalid: insufficient balance for antispam fee for sweep"
     except Exception as err:  # pylint: disable=broad-exception-caught
@@ -180,7 +179,7 @@ def parse(db, tx, message):
                     action="sweep fee",
                     event=tx["tx_hash"],
                 )
-        except BalanceError:  # noqa: F405
+        except exceptions.BalanceError:  # noqa: F405
             destination, flags, memo_bytes = None, None, None
             status = "invalid: insufficient balance for antispam fee for sweep"
 

@@ -12,13 +12,11 @@ D = decimal.Decimal
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-f"""Burn {config.BTC} to earn {config.XCP} during a special period of time."""
-
 ID = 60
 
 MAINNET_BURNS = {}
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(CURR_DIR + "/data/mainnet_burns.csv", "r") as f:
+with open(CURR_DIR + "/data/mainnet_burns.csv", "r", encoding="utf-8") as f:
     mainnet_burns_reader = csv.DictReader(f)
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line["tx_hash"]] = line

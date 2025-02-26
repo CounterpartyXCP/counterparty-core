@@ -14,8 +14,8 @@ def test_array(signatures_required, pubs, signatures_possible):
             int(signatures_required),
             int(signatures_possible),
         )
-    except (ValueError, TypeError):
-        raise exceptions.MultiSigAddressError("Signature values not integers.")  # noqa: B904
+    except (ValueError, TypeError) as e:
+        raise exceptions.MultiSigAddressError("Signature values not integers.") from e
     if signatures_required < 1 or signatures_required > 3:
         raise exceptions.MultiSigAddressError("Invalid signatures_required.")
     if signatures_possible < 2 or signatures_possible > 3:

@@ -77,11 +77,9 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
             and utxos_info[0] != ""
         ):
             return "utxomove"
-        if (
-            destination != config.UNSPENDABLE
-            and block_index >= protocol.get_change_block_index("dispensers")
-            and block_index < protocol.get_change_block_index("disable_vanilla_btc_dispense")
-        ):
+        if destination != config.UNSPENDABLE and protocol.get_change_block_index(
+            "disable_vanilla_btc_dispense"
+        ) > block_index >= protocol.get_change_block_index("dispensers"):
             return "dispense"
         return "unknown"
 

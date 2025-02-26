@@ -62,7 +62,7 @@ def unpack(message, return_dict=False):
                 "destination": destination,
             }
         return destination
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return None
 
 

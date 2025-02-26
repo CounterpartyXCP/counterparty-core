@@ -118,8 +118,8 @@ def update_transaction(db, tx, supported):
 
 
 def parse_tx(db, tx):
-    CurrentState().set_current_tx_hash(tx["tx_hash"])
     """Parse the transaction, return True for success."""
+    CurrentState().set_current_tx_hash(tx["tx_hash"])
     cursor = db.cursor()
 
     supported = True
@@ -441,7 +441,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
         assert block_index == CurrentState().current_block_index()
 
     if (
-        (
+        (  # pylint: disable=too-many-boolean-expressions
             source
             and (data or destination == config.UNSPENDABLE or dispensers_outs)  # counterparty tx
         )

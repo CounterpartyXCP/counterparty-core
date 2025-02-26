@@ -1,6 +1,6 @@
 import binascii
 
-from counterparty_rs import utils
+from counterparty_rs import utils  # pylint: disable=no-name-in-module
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.utils import opcodes
 

@@ -51,7 +51,8 @@ def get_json_response(response, retry=0):
     except json.decoder.JSONDecodeError as e:  # noqa: F841
         if response.status_code == 200:
             logger.warning(
-                f"Received invalid JSON with status 200 from Bitcoin Core: {response.text}. Retrying in 5 seconds...",
+                "Received invalid JSON with status 200 from Bitcoin Core: %s. Retrying in 5 seconds...",
+                response.text,
                 stack_info=config.VERBOSE > 0,
             )
             time.sleep(5)
@@ -94,11 +95,11 @@ def rpc_call(payload, retry=0):
             if response.status_code not in (200, 500):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             break
-        except KeyboardInterrupt:
-            raise
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.warning(
-                f"Could not connect to backend at `{clean_url_for_log(url)}`. (Attempt: {tries})",
+                "Could not connect to backend at `%s`. (Attempt: %s)",
+                clean_url_for_log(url),
+                tries,
                 stack_info=config.VERBOSE > 0,
             )
             time.sleep(5)
@@ -291,7 +292,7 @@ def createrawtransaction(inputs, outputs):
 
 
 def getrawmempool(verbose=False):
-    return rpc("getrawmempool", [True if verbose else False])
+    return rpc("getrawmempool", [bool(verbose)])
 
 
 @functools.lru_cache(maxsize=1000)
