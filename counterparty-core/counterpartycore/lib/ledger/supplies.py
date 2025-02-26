@@ -8,19 +8,19 @@ from counterpartycore.lib.parser import protocol
 def _get_holders(cursor, id_fields, hold_fields_1, exclude_empty_holders=False):
     save_records = {}
     for record in cursor:
-        id = " ".join([str(record[field]) for field in id_fields])
+        record_id = " ".join([str(record[field]) for field in id_fields])
         if id not in save_records:
-            save_records[id] = record
+            save_records[record_id] = record
             continue
-        if save_records[id]["rowid"] < record["rowid"]:
-            save_records[id] = record
+        if save_records[record_id]["rowid"] < record["rowid"]:
+            save_records[record_id] = record
             continue
-    holders = []
+    all_holders = []
     for holder in save_records.values():
         if holder[hold_fields_1["address_quantity"]] > 0 or (
             exclude_empty_holders == False and holder[hold_fields_1["address_quantity"]] == 0  # noqa: E712
         ):
-            holders.append(
+            all_holders.append(
                 {
                     "address": holder[hold_fields_1["address"]],
                     "address_quantity": holder[hold_fields_1["address_quantity"]],
@@ -29,12 +29,12 @@ def _get_holders(cursor, id_fields, hold_fields_1, exclude_empty_holders=False):
                     else None,
                 }
             )
-    return holders
+    return all_holders
 
 
 def holders(db, asset, exclude_empty_holders=False):
     """Return holders of the asset."""
-    holders = []
+    all_holders = []
     cursor = db.cursor()
 
     # Balances
@@ -46,7 +46,7 @@ def holders(db, asset, exclude_empty_holders=False):
     """
     bindings = (asset,)
     cursor.execute(query, bindings)
-    holders += _get_holders(
+    all_holders += _get_holders(
         cursor,
         ["asset", "address"],
         {"address": "address", "address_quantity": "quantity"},
@@ -62,7 +62,7 @@ def holders(db, asset, exclude_empty_holders=False):
 
     bindings = (asset,)
     cursor.execute(query, bindings)
-    holders += _get_holders(
+    all_holders += _get_holders(
         cursor,
         ["asset", "utxo"],
         {"address": "utxo", "address_quantity": "quantity"},
@@ -81,7 +81,7 @@ def holders(db, asset, exclude_empty_holders=False):
     """
     bindings = (asset, "open")
     cursor.execute(query, bindings)
-    holders += _get_holders(
+    all_holders += _get_holders(
         cursor,
         ["tx_hash"],
         {"address": "source", "address_quantity": "give_remaining", "escrow": "tx_hash"},
@@ -99,7 +99,7 @@ def holders(db, asset, exclude_empty_holders=False):
     """
     bindings = (asset, "pending")
     cursor.execute(query, bindings)
-    holders += _get_holders(
+    all_holders += _get_holders(
         cursor,
         ["id"],
         {"address": "tx0_address", "address_quantity": "forward_quantity", "escrow": "id"},
@@ -116,7 +116,7 @@ def holders(db, asset, exclude_empty_holders=False):
     """
     bindings = (asset, "pending")
     cursor.execute(query, bindings)
-    holders += _get_holders(
+    all_holders += _get_holders(
         cursor,
         ["id"],
         {"address": "tx1_address", "address_quantity": "backward_quantity", "escrow": "id"},
@@ -135,7 +135,7 @@ def holders(db, asset, exclude_empty_holders=False):
         """
         bindings = ("open",)
         cursor.execute(query, bindings)
-        holders += _get_holders(
+        all_holders += _get_holders(
             cursor,
             ["tx_hash"],
             {"address": "source", "address_quantity": "wager_remaining", "escrow": "tx_hash"},
@@ -151,7 +151,7 @@ def holders(db, asset, exclude_empty_holders=False):
         """
         bindings = ("pending",)
         cursor.execute(query, bindings)
-        holders += _get_holders(
+        all_holders += _get_holders(
             cursor,
             ["id"],
             {"address": "tx0_address", "address_quantity": "forward_quantity", "escrow": "id"},
@@ -169,7 +169,7 @@ def holders(db, asset, exclude_empty_holders=False):
         """
         bindings = ("open",)
         cursor.execute(query, bindings)
-        holders += _get_holders(
+        all_holders += _get_holders(
             cursor,
             ["tx_hash"],
             {"address": "source", "address_quantity": "wager", "escrow": "tx_hash"},
@@ -185,7 +185,7 @@ def holders(db, asset, exclude_empty_holders=False):
         """
         bindings = ("pending", "pending and resolved", "resolved and pending")
         cursor.execute(query, bindings)
-        holders += _get_holders(
+        all_holders += _get_holders(
             cursor,
             ["id"],
             {"address": "tx0_address", "address_quantity": "wager", "escrow": "id"},
@@ -206,7 +206,7 @@ def holders(db, asset, exclude_empty_holders=False):
         """
         bindings = (asset, 0)
         cursor.execute(query, bindings)
-        holders += _get_holders(
+        all_holders += _get_holders(
             cursor,
             ["tx_hash", "source", "asset", "satoshirate", "give_quantity"],
             {"address": "source", "address_quantity": "give_remaining"},

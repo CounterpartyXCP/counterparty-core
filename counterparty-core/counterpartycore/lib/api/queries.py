@@ -414,7 +414,7 @@ def prepare_transactions_where(type, other_conditions=None):
 
 def get_transactions(
     ledger_db,
-    type: TransactionType = "all",
+    type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 10,
@@ -1860,7 +1860,7 @@ def get_sweeps_by_address(
 def get_address_balances(
     state_db,
     address: str,
-    type: BalanceType = all,
+    type: BalanceType = all,  # pylint: disable=W0622
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -1945,7 +1945,7 @@ def utxos_with_balances(state_db, utxos: str):
 def get_balances_by_addresses(
     state_db,
     addresses: str,
-    type: BalanceType = "all",
+    type: BalanceType = "all",  # pylint: disable=W0622
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2036,7 +2036,7 @@ def get_balances_by_address_and_asset(
     state_db,
     address: str,
     asset: str,
-    type: BalanceType = "all",
+    type: BalanceType = "all",  # pylint: disable=W0622
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2729,7 +2729,7 @@ def get_dividend_disribution(
 def get_asset_balances(
     state_db,
     asset: str,
-    type: BalanceType = "all",
+    type: BalanceType = "all",  # pylint: disable=W0622
     cursor: str = None,
     limit: int = 100,
     offset: int = None,

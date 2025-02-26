@@ -238,6 +238,6 @@ def update_bet(db, tx_hash, update_data):
     insert_update(db, "bets", "tx_hash", tx_hash, update_data, "BET_UPDATE")
 
 
-def update_bet_match_status(db, id, status):
+def update_bet_match_status(db, bet_match_id, status):
     update_data = {"status": status}
-    insert_update(db, "bet_matches", "id", id, update_data, "BET_MATCH_UPDATE")
+    insert_update(db, "bet_matches", "id", bet_match_id, update_data, "BET_MATCH_UPDATE")

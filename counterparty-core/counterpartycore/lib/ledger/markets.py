@@ -203,11 +203,17 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
             OrdersCache(db).update_order(order["tx_hash"], update_data)
 
 
-def update_order_match_status(db, id, status):
+def update_order_match_status(db, order_match_id, status):
     update_data = {"status": status}
     # add `order_match_id` for backward compatibility
     insert_update(
-        db, "order_matches", "id", id, update_data, "ORDER_MATCH_UPDATE", {"order_match_id": id}
+        db,
+        "order_matches",
+        "id",
+        order_match_id,
+        update_data,
+        "ORDER_MATCH_UPDATE",
+        {"order_match_id": id},
     )
 
 

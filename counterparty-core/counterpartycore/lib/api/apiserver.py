@@ -590,7 +590,7 @@ class APIServer(object):
 
     def start(self, args, log_stream):
         if self.process is not None:
-            raise Exception("API Server is already running")
+            raise exceptions.APIError("API Server is already running")
         self.process = Process(
             name="API",
             target=run_apiserver,

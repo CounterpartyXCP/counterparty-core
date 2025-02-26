@@ -54,7 +54,7 @@ class ID:
     def __init__(self):
         # if file exists, read id from file
         # else create new id and write to file
-        id = None
+        user_id = None
 
         state_dir = appdirs.user_state_dir(
             appauthor=config.XCP_NAME, appname=config.APP_NAME, roaming=True
@@ -69,11 +69,11 @@ class ID:
             os.rename(node_uid_old_filepath, node_uid_filepath)
 
         if os.path.exists(node_uid_filepath):
-            with open(node_uid_filepath) as f:
-                id = f.read()
+            with open(node_uid_filepath, encoding="utf-8") as f:
+                user_id = f.read()
         else:
-            id = str(uuid4())
-            with open(node_uid_filepath, "w") as f:
-                f.write(id)
+            user_id = str(uuid4())
+            with open(node_uid_filepath, "w", encoding="utf-8") as f:
+                f.write(user_id)
 
-        self.id = id
+        self.id = user_id
