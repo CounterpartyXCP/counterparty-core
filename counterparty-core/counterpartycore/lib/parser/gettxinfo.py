@@ -10,8 +10,7 @@ from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import gettxinfolegacy, messagetype, p2sh, protocol
-from counterpartycore.lib.utils import base58, multisig, script
-from counterpartycore.lib.utils.opcodes import *  # noqa: F403
+from counterpartycore.lib.utils import base58, multisig, opcodes, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -23,10 +22,10 @@ def get_checksig(asm):
         raise exceptions.DecodeError("invalid OP_CHECKSIG") from None
 
     if (op_dup, op_hash160, op_equalverify, op_checksig) == (
-        OP_DUP,  # noqa: F405
-        OP_HASH160,  # noqa: F405
-        OP_EQUALVERIFY,  # noqa: F405
-        OP_CHECKSIG,  # noqa: F405
+        opcodes.OP_DUP,  # noqa: F405
+        opcodes.OP_HASH160,  # noqa: F405
+        opcodes.OP_EQUALVERIFY,  # noqa: F405
+        opcodes.OP_CHECKSIG,  # noqa: F405
     ) and isinstance(pubkeyhash, bytes):  # noqa: E721
         return pubkeyhash
 
@@ -35,12 +34,12 @@ def get_checksig(asm):
 
 def get_checkmultisig(asm):
     # N-of-2
-    if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:  # noqa: F405
+    if len(asm) == 5 and asm[3] == 2 and asm[4] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:3], asm[0]
         if all(isinstance(pubkey, bytes) for pubkey in pubkeys):
             return pubkeys, signatures_required
     # N-of-3
-    if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:  # noqa: F405
+    if len(asm) == 6 and asm[4] == 3 and asm[5] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:4], asm[0]
         if all(isinstance(pubkey, bytes) for pubkey in pubkeys):
             return pubkeys, signatures_required
@@ -242,15 +241,15 @@ def get_transaction_sources(decoded_tx):
 
         asm = script.script_to_asm(script_pubkey)
 
-        if asm[-1] == OP_CHECKSIG:  # noqa: F405
+        if asm[-1] == opcodes.OP_CHECKSIG:  # noqa: F405
             new_source, new_data = decode_checksig(asm, decoded_tx)
             if new_data or not new_source:
                 raise DecodeError("data in source")
-        elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
+        elif asm[-1] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
             new_source, new_data = decode_checkmultisig(asm, decoded_tx)
             if new_data or not new_source:
                 raise DecodeError("data in source")
-        elif asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:  # noqa: F405
+        elif asm[0] == opcodes.OP_HASH160 and asm[-1] == opcodes.OP_EQUAL and len(asm) == 3:  # noqa: F405
             new_source, new_data = decode_scripthash(asm)
             assert not new_data and new_source
         elif protocol.enabled("segwit_support") and asm[0] == b"":
@@ -461,7 +460,7 @@ def select_utxo_destination(vouts):
     for n, vout in enumerate(vouts):
         try:
             asm = script.script_to_asm(vout["script_pub_key"])
-            if asm[0] == OP_RETURN:  # noqa: F405
+            if asm[0] == opcodes.OP_RETURN:  # noqa: F405
                 continue
         except DecodeError:
             # invalid script are considered as no-OP_RETURN
@@ -494,7 +493,7 @@ def get_op_return_vout(decoded_tx):
     for n, vout in enumerate(decoded_tx["vout"]):
         try:
             asm = script.script_to_asm(vout["script_pub_key"])
-            if asm[0] == OP_RETURN:  # noqa: F405
+            if asm[0] == opcodes.OP_RETURN:  # noqa: F405
                 return n
         except DecodeError:
             pass

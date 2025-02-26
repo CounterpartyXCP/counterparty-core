@@ -20,7 +20,7 @@ def get_cursor(db):
         cursor.close()
 
 
-def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
+def insert_record(db, table_name, record, event, event_info=None):
     fields = list(record.keys())
     placeholders = ", ".join(["?" for _ in fields])
     query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608 # nosec B608
@@ -34,7 +34,7 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
                 f"SELECT * FROM {table_name} WHERE rowid = ?",  # noqa: S608 # nosec B608
                 (inserted_rowid,),
             ).fetchone()
-            if AssetCache in AssetCache._instances:
+            if AssetCache in AssetCache._instances:  # pylint: disable=protected-access
                 if table_name == "issuances":
                     AssetCache(db).add_issuance(new_record)
                 elif table_name == "destructions":
@@ -43,7 +43,12 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
                 AssetCache(db)  # initialization will add just created record to cache
 
     add_to_journal(
-        db, CurrentState().current_block_index(), "insert", table_name, event, record | event_info
+        db,
+        CurrentState().current_block_index(),
+        "insert",
+        table_name,
+        event,
+        record | (event_info or {}),
     )
 
 
@@ -84,7 +89,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     cursor.execute(insert_query, new_record)
     cursor.close()
     # Add event to journal
-    event_paylod = update_data | {id_name: id_value} | event_info or {}
+    event_paylod = update_data | {id_name: id_value} | (event_info or {})
     if "rowid" in event_paylod:
         del event_paylod["rowid"]
     add_to_journal(

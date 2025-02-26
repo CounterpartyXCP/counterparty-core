@@ -315,8 +315,7 @@ def compose(
         asset_id
     )  # This will remove leading zeros in the numeric assets
 
-    (
-        call_date,
+    (  # pylint: disable=unbalanced-tuple-unpacking
         call_price,
         problems,
         _fee,
@@ -513,7 +512,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         divisible = None
         callable_ = None
         call_date = None
-        if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
+        if message_type_id in [LR_SUBASSET_ID, SUBASSET_ID]:
             if not protocol.enabled("subassets", block_index=block_index):
                 logger.warning("subassets are not enabled at block %s", block_index)
                 raise exceptions.UnpackError

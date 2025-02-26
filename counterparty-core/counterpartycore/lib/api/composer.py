@@ -185,7 +185,7 @@ def is_valid_pubkey(pubkey):
     try:
         PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
         return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return False
 
 
@@ -265,7 +265,7 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
         raise exceptions.ComposeError(
             f"Pubkey not found for {source}, please provide it with the `multisig_pubkey` parameter"
         )
-    elif not is_valid_pubkey(multisig_pubkey):
+    if not is_valid_pubkey(multisig_pubkey):
         raise exceptions.ComposeError(f"Invalid multisig pubkey: {multisig_pubkey}")
     # generate pubkey pairs from data
     pubkey_pairs = data_to_pubkey_pairs(data, arc4_key)

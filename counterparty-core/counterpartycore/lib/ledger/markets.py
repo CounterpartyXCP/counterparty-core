@@ -171,7 +171,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
 
     where_source = ""
     if source is not None:
-        where_source = f" AND source = :source"  # noqa: F541
+        where_source = " AND source = :source"
         select_bindings["source"] = source
 
     # no sql injection here

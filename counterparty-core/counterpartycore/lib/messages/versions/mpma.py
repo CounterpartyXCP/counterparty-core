@@ -194,9 +194,9 @@ def parse(db, tx, message):
                 break
 
             if status == "valid":
-                plain_sends += map(lambda t: py34_tuple_append(asset_id, t), asset_credits)
+                plain_sends += map(lambda t: py34_tuple_append(asset_id, t), asset_credits)  # pylint: disable=cell-var-from-loop
                 all_credits += map(
-                    lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]},
+                    lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]},  # pylint: disable=cell-var-from-loop
                     asset_credits,
                 )
                 all_debits.append({"asset": asset_id, "quantity": total_sent})

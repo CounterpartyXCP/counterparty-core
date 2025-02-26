@@ -177,7 +177,7 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         asset, quantity, destination, memo_bytes = None, None, None, None
         status = f"invalid: could not unpack ({e})"
-    except:  # noqa: E722
+    except:  # noqa: E722 # pylint: disable=bare-except
         asset, quantity, destination, memo_bytes = None, None, None, None
         status = "invalid: could not unpack"
 

@@ -3,8 +3,7 @@ import os
 
 import counterpartycore.lib.monitors.telemetry.util as util
 from counterpartycore.lib import config, ledger
-
-from .interface import TelemetryCollectorI
+from counterpartycore.lib.monitors.telemetry.collectors.interface import TelemetryCollectorI
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -62,9 +61,6 @@ class TelemetryCollectorBase(TelemetryCollectorKwargs):
             or "DOCKER_HOST" in os.environ
             or "KUBERNETES_SERVICE_HOST" in os.environ
         )
-
-    def __read_config_with_default(self, key, default):
-        return getattr(config, key, default)
 
     def close(self):
         pass

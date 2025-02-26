@@ -18,7 +18,7 @@ def chunkify(l, n):  # noqa: E741
 
 
 def flat(z):
-    return [x for x in z]
+    return list(z)
 
 
 def accumulate(l):  # noqa: E741

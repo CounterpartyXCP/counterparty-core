@@ -192,7 +192,7 @@ class SanityError(Exception):
 
 class VersionError(Exception):
     def __init__(self, message, required_action, from_block_index=None):
-        super(VersionError, self).__init__(message)
+        super().__init__(message)
         self.required_action = required_action
         self.from_block_index = from_block_index
 

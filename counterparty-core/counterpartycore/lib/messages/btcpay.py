@@ -21,7 +21,7 @@ ID = 11
 def validate(db, source, order_match_id, block_index):
     problems = []
     order_match = None
-    order_matches = ledger.markets.get_order_match(db, id=order_match_id)
+    order_matches = ledger.markets.get_order_match(db, match_id=order_match_id)
     if len(order_matches) == 0:
         problems.append(f"no such order match {order_match_id}")
         return None, None, None, None, order_match, problems

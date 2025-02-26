@@ -135,7 +135,7 @@ def validate(
             )
 
         if len(open_dispensers) == 0 or open_dispensers[0]["status"] != STATUS_CLOSING:
-            if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
+            if status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
                 if len(open_dispensers) > 0:
                     max_refills = protocol.get_value_by_block_index("max_refills", block_index)
                     refilling_count = 0

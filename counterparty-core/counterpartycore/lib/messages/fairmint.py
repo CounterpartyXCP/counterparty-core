@@ -12,7 +12,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 ID = 91
 
 
-def D(value):
+def D(value):  # pylint: disable=invalid-name
     return decimal.Decimal(str(value))
 
 

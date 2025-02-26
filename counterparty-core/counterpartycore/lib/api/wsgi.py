@@ -37,11 +37,17 @@ def refresh_current_state(state_db, shared_backend_height):
 
     if current_backend_height > current_block_index:
         logger.debug(
-            f"Counterparty is currently behind Bitcoin Core. (Counterparty Block Height = {current_block_index}, Bitcoin Core Block Height = {current_block_count}, Network Block Height = {current_backend_height})"
+            "Counterparty is currently behind Bitcoin Core. (Counterparty Block Height = %s, Bitcoin Core Block Height = %s, Network Block Height = %s)",
+            current_block_index,
+            current_block_count,
+            current_backend_height,
         )
     elif current_backend_height < current_block_index:
         logger.debug(
-            f"Bitcoin Core is currently behind the network. (Counterparty Block Height = {current_block_index}, Bitcoin Core Block Height = {current_block_count}, Network Block Height = {current_backend_height}))"
+            "Bitcoin Core is currently behind the network. (Counterparty Block Height = %s, Bitcoin Core Block Height = %s, Network Block Height = %s)",
+            current_block_index,
+            current_block_count,
+            current_backend_height,
         )
 
 
@@ -225,7 +231,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.current_state_thread.start()
         return self.application
 
-    def run(self, server_ready_value, shared_backend_height):
+    def run(self, server_ready_value, shared_backend_height):  # pylint: disable=arguments-differ
         try:
             CurrentState().set_backend_height_value(shared_backend_height)
             self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
@@ -256,7 +262,7 @@ class WerkzeugApplication:
         global logger  # noqa F811  # pylint: disable=global-statement
         logger = log.re_set_up("", api=True)
 
-    def run(self, server_ready_value, shared_backend_height):
+    def run(self, server_ready_value, shared_backend_height):  # pylint: disable=arguments-differ
         self.server_ready_value = server_ready_value
         CurrentState().set_backend_height_value(shared_backend_height)
         self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
@@ -282,7 +288,7 @@ class WaitressApplication:
         global logger  # noqa F811 # pylint: disable=global-statement
         logger = log.re_set_up("", api=True)
 
-    def run(self, server_ready_value, shared_backend_height):
+    def run(self, server_ready_value, shared_backend_height):  # pylint: disable=arguments-differ
         self.server_ready_value = server_ready_value
         CurrentState().set_backend_height_value(shared_backend_height)
         self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)

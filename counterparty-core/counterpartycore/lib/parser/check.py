@@ -2,7 +2,6 @@ import binascii
 import hashlib
 import json
 import logging
-import warnings
 
 import requests
 
@@ -143,8 +142,7 @@ def check_change(protocol_change, change_name):
         explanation += f"Reason: ' {change_name} '. Please upgrade to the latest version and restart the server."
         if CurrentState().current_block_index() >= protocol_change["block_index"]:
             raise exceptions.VersionUpdateRequiredError(explanation)
-        else:
-            warnings.warn(explanation)  # noqa: B028
+        logger.warning(explanation)
 
 
 def software_version():

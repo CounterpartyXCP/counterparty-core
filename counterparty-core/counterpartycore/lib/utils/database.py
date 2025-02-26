@@ -132,7 +132,6 @@ class APSWConnectionPool:
                     # This should never happen, and yet it has happened..
                     # let's ignore this harmless error so as not to return a 500 error to the user.
                     logger.trace("ThreadingViolationError occurred while closing connection.")
-                    pass
 
     def close(self):
         logger.trace(

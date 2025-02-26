@@ -373,10 +373,10 @@ def initialise_config(
         config.RPC_PORT = int(config.RPC_PORT)
         if not (int(config.RPC_PORT) > 1 and int(config.RPC_PORT) < 65535):
             raise exceptions.ConfigurationError("invalid server API port number")
-    except:  # noqa: E722
-        raise exceptions.ConfigurationError(  # noqa: B904
+    except Exception as e:  # noqa: E722 # pylint: disable=broad-exception-caught
+        raise exceptions.ConfigurationError(
             "Please specific a valid port number rpc-port configuration parameter"
-        )
+        ) from e
 
     # Server API RPC user
     if rpc_user:
@@ -423,10 +423,10 @@ def initialise_config(
         config.API_PORT = int(config.API_PORT)
         if not (int(config.API_PORT) > 1 and int(config.API_PORT) < 65535):
             raise exceptions.ConfigurationError("invalid server API port number")
-    except:  # noqa: E722
-        raise exceptions.ConfigurationError(  # noqa: B904
+    except Exception as e:  # noqa: E722 # pylint: disable=broad-exception-caught
+        raise exceptions.ConfigurationError(
             "Please specific a valid port number rpc-port configuration parameter"
-        )
+        ) from e
 
     # ZMQ Publisher
     config.ENABLE_ZMQ_PUBLISHER = enable_zmq_publisher
@@ -446,10 +446,10 @@ def initialise_config(
         config.ZMQ_PUBLISHER_PORT = int(config.ZMQ_PUBLISHER_PORT)
         if not (int(config.ZMQ_PUBLISHER_PORT) > 1 and int(config.ZMQ_PUBLISHER_PORT) < 65535):
             raise exceptions.ConfigurationError("invalid ZeroMQ publisher port number")
-    except:  # noqa: E722
-        raise exceptions.ConfigurationError(  # noqa: B904
+    except Exception as e:  # noqa: E722 # pylint: disable=broad-exception-caught
+        raise exceptions.ConfigurationError(
             "Please specific a valid port number rpc-port configuration parameter"
-        )
+        ) from e
 
     # Server API user
     if api_user:

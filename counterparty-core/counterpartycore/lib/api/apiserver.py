@@ -70,10 +70,7 @@ def api_root():
 
     backend_height = CurrentState().current_backend_height()
     if backend_height is None:
-        if config.FORCE:
-            server_ready = True
-        else:
-            server_ready = False
+        server_ready = config.FORCE
     else:
         server_ready = counterparty_height >= backend_height
 

@@ -1,14 +1,13 @@
 import binascii
 import logging
 
-from arc4 import ARC4
+from arc4 import ARC4  # pylint: disable=no-name-in-module
 
 from counterpartycore.lib import backend, config
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import base58, script
-from counterpartycore.lib.utils.opcodes import *  # noqa: F403
+from counterpartycore.lib.utils import base58, opcodes, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -17,28 +16,28 @@ def get_pubkeyhash(scriptpubkey, block_index):
     asm = script.script_to_asm(scriptpubkey)
     if protocol.enabled("multisig_addresses", block_index=block_index):
         if len(asm) > 0:
-            if asm[0] == OP_DUP:  # noqa: F405
+            if asm[0] == opcodes.OP_DUP:  # noqa: F405
                 if (
                     len(asm) != 5
-                    or asm[1] != OP_HASH160  # noqa: F405
-                    or asm[3] != OP_EQUALVERIFY  # noqa: F405
-                    or asm[4] != OP_CHECKSIG  # noqa: F405
+                    or asm[1] != opcodes.OP_HASH160  # noqa: F405
+                    or asm[3] != opcodes.OP_EQUALVERIFY  # noqa: F405
+                    or asm[4] != opcodes.OP_CHECKSIG  # noqa: F405
                 ):
                     return None, None
                 return asm[2], config.ADDRESSVERSION
 
-            if (asm[0] == OP_HASH160) and protocol.enabled("p2sh_dispensers_support"):  # noqa: F405
-                if len(asm) != 3 or asm[-1] != OP_EQUAL:  # noqa: F405
+            if (asm[0] == opcodes.OP_HASH160) and protocol.enabled("p2sh_dispensers_support"):  # noqa: F405
+                if len(asm) != 3 or asm[-1] != opcodes.OP_EQUAL:  # noqa: F405
                     return None, None
                 return asm[1], config.P2SH_ADDRESSVERSION
         return None, None
 
     if (
         len(asm) != 5
-        or asm[0] != OP_DUP  # noqa: F405
-        or asm[1] != OP_HASH160  # noqa: F405
-        or asm[3] != OP_EQUALVERIFY  # noqa: F405
-        or asm[4] != OP_CHECKSIG  # noqa: F405
+        or asm[0] != opcodes.OP_DUP  # noqa: F405
+        or asm[1] != opcodes.OP_HASH160  # noqa: F405
+        or asm[3] != opcodes.OP_EQUALVERIFY  # noqa: F405
+        or asm[4] != opcodes.OP_CHECKSIG  # noqa: F405
     ):
         return None, None
 
@@ -90,13 +89,13 @@ def get_tx_info_legacy(decoded_tx, block_index):
 
         script_pub_key = vout["script_pub_key"]
 
-        # Sum data chunks to get data. (Can mix OP_RETURN and multi-sig.)
+        # Sum data chunks to get data. (Can mix opcodes.OP_RETURN and multi-sig.)
         asm = script.script_to_asm(script_pub_key)
-        if len(asm) == 2 and asm[0] == OP_RETURN:  # OP_RETURN  # noqa: F405
+        if len(asm) == 2 and asm[0] == opcodes.OP_RETURN:  # OP_RETURN  # noqa: F405
             data_chunk = asm[1]
             data += data_chunk
         elif (
-            len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG  # noqa: F405
+            len(asm) == 5 and asm[0] == 1 and asm[3] == 2 and asm[4] == opcodes.OP_CHECKMULTISIG  # noqa: F405
         ):  # Multi-sig
             data_pubkey = asm[2]
             data_chunk_length = data_pubkey[0]  # No ord() necessary.

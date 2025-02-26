@@ -214,7 +214,7 @@ def holders(db, asset, exclude_empty_holders=False):
         )
 
     cursor.close()
-    return holders
+    return all_holders
 
 
 def xcp_created(db):
@@ -286,7 +286,7 @@ def xcp_supply(db):
 def creations(db):
     """Return creations."""
     cursor = db.cursor()
-    creations = {config.XCP: xcp_created(db)}
+    all_creations = {config.XCP: xcp_created(db)}
     query = """
         SELECT asset, SUM(quantity) AS created
         FROM issuances
@@ -299,16 +299,16 @@ def creations(db):
     for issuance in cursor:
         asset = issuance["asset"]
         created = issuance["created"]
-        creations[asset] = created
+        all_creations[asset] = created
 
     cursor.close()
-    return creations
+    return all_creations
 
 
 def destructions(db):
     """Return destructions."""
     cursor = db.cursor()
-    destructions = {config.XCP: xcp_destroyed(db)}
+    all_destructions = {config.XCP: xcp_destroyed(db)}
     query = """
         SELECT asset, SUM(quantity) AS destroyed
         FROM destructions
@@ -321,10 +321,10 @@ def destructions(db):
     for destruction in cursor:
         asset = destruction["asset"]
         destroyed = destruction["destroyed"]
-        destructions[asset] = destroyed
+        all_destructions[asset] = destroyed
 
     cursor.close()
-    return destructions
+    return all_destructions
 
 
 def asset_issued_total_no_cache(db, asset):
@@ -483,10 +483,10 @@ def held(db):
 
     cursor = db.cursor()
     cursor.execute(sql)
-    held = {}
+    result = {}
     for row in cursor:
         asset = row["asset"]
         total = row["total"]
-        held[asset] = total
+        result[asset] = total
 
-    return held
+    return result

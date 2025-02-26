@@ -204,9 +204,9 @@ def get_rows(
         raise exceptions.APIError("Invalid order direction (ASC, DESC)")
     if not isinstance(limit, int):
         raise exceptions.APIError("Invalid limit")
-    elif config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
+    if config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
         raise exceptions.APIError(f"Limit should be lower or equal to {config.API_LIMIT_ROWS}")
-    elif config.API_LIMIT_ROWS != 0 and limit == 0:
+    if config.API_LIMIT_ROWS != 0 and limit == 0:
         raise exceptions.APIError("Limit should be greater than 0")
     if not isinstance(offset, int):
         raise exceptions.APIError("Invalid offset")
@@ -1098,7 +1098,7 @@ def create_app():
                 "id" in request_data and request_data["jsonrpc"] == "2.0" and request_data["method"]
             )
             # params may be omitted
-        except Exception:  # noqa: E722 # pylint: disable=broader-exception-caught
+        except Exception:  # noqa: E722 # pylint: disable=broad-exception-caught
             obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                 data="Invalid JSON-RPC 2.0 request format"
             )

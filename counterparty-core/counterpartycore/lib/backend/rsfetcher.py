@@ -6,7 +6,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from counterparty_rs import indexer
+from counterparty_rs import indexer  # pylint: disable=no-name-in-module
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import protocol

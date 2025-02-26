@@ -86,7 +86,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     """The only cancelling is an expiration."""
     # Skip order matches just expired as a penalty. (Not very efficient.)
     if not protocol.after_block_or_test_network(block_index, 314250):  # Protocol change.
-        order_matches = ledger.markets.get_order_match(db, id=order_match["id"])
+        order_matches = ledger.markets.get_order_match(db, match_id=order_match["id"])
         if order_matches and order_matches[0]["status"] == "expired":
             return
 
@@ -529,10 +529,14 @@ def match(db, tx, block_index=None):
         tx0_get_remaining = tx0["get_remaining"]
 
         # Ignore previous matches. (Both directions, just to be sure.)
-        if ledger.markets.get_order_match(db, id=helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])):
+        if ledger.markets.get_order_match(
+            db, match_id=helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])
+        ):
             logger.trace("Skipping: previous match")
             continue
-        if ledger.markets.get_order_match(db, id=helpers.make_id(tx1["tx_hash"], tx0["tx_hash"])):
+        if ledger.markets.get_order_match(
+            db, match_id=helpers.make_id(tx1["tx_hash"], tx0["tx_hash"])
+        ):
             logger.trace("Skipping: previous match")
             continue
 
@@ -546,7 +550,7 @@ def match(db, tx, block_index=None):
                 logger.trace("Skipping: negative give quantity remaining")
                 continue
             if (
-                block_index >= 292000 and block_index <= 310500 and not protocol.is_test_network()
+                310500 >= block_index >= 292000 and not protocol.is_test_network()
             ):  # Protocol changes
                 if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
                     logger.trace("Skipping: negative get quantity remaining")
