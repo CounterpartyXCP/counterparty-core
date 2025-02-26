@@ -2771,12 +2771,12 @@ def get_asset_balances(
 def prepare_where_status(status, arg_type, other_conditions=None):
     where = []
     statuses = status.split(",")
-    for status in statuses:
-        if status == "all":
+    for status_item in statuses:
+        if status_item == "all":
             where = [other_conditions] if other_conditions else []
             break
-        if status in typing.get_args(arg_type):
-            where_status = {"status": status}
+        if status_item in typing.get_args(arg_type):
+            where_status = {"status": status_item}
             if other_conditions:
                 where_status.update(other_conditions)
             where.append(where_status)

@@ -128,7 +128,7 @@ def validate(
 
     # For SQLite3
     if (
-        wager_quantity > config.MAX_INT
+        wager_quantity > config.MAX_INT  # pylint: disable=too-many-boolean-expressions
         or counterwager_quantity > config.MAX_INT
         or bet_type > config.MAX_INT
         or deadline > config.MAX_INT

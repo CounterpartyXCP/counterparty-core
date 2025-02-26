@@ -203,7 +203,6 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
 
     if status == "expired":
         # Record order match expiration.
-        cursor = db.cursor()  # noqa: F841
         bindings = {
             "order_match_id": order_match["id"],
             "tx0_address": order_match["tx0_address"],
@@ -545,7 +544,7 @@ def match(db, tx, block_index=None):
         tx0_fee_provided_remaining = tx0["fee_provided_remaining"]
 
         # Make sure that that both orders still have funds remaining (if order involves BTC, and so cannot be ‘filled’).
-        if tx0["give_asset"] == config.BTC or tx0["get_asset"] == config.BTC:  # Gratuitous
+        if config.BTC in [tx0["give_asset"], tx0["get_asset"]]:  # Gratuitous
             if tx0_give_remaining <= 0 or tx1_give_remaining <= 0:
                 logger.trace("Skipping: negative give quantity remaining")
                 continue
@@ -637,17 +636,19 @@ def match(db, tx, block_index=None):
                         )
 
                     logger.trace(
-                        f"Tx0 fee provided remaining: {tx0_fee_provided_remaining / config.UNIT}; required fee: {fee / config.UNIT}"
+                        "Tx0 fee provided remaining: %s; required fee: %s",
+                        tx0_fee_provided_remaining / config.UNIT,
+                        fee / config.UNIT,
                     )
                     if tx0_fee_provided_remaining < fee:
                         logger.trace("Skipping: tx0 fee provided remaining is too low.")
                         continue
-                    else:
-                        tx0_fee_provided_remaining -= fee
-                        if protocol.after_block_or_test_network(
-                            block_index, 287800
-                        ):  # Protocol change.
-                            tx1_fee_required_remaining -= fee
+
+                    tx0_fee_provided_remaining -= fee
+                    if protocol.after_block_or_test_network(
+                        block_index, 287800
+                    ):  # Protocol change.
+                        tx1_fee_required_remaining -= fee
 
                 elif tx1["give_asset"] == config.BTC:
                     if protocol.after_block_or_test_network(
@@ -664,17 +665,21 @@ def match(db, tx, block_index=None):
                         )
 
                     logger.trace(
-                        f"Tx1 fee provided remaining: {tx1_fee_provided_remaining / config.UNIT}; required fee: {fee / config.UNIT}"
+                        "Tx1 fee provided remaining: %(fee_provided)s; required fee: %(required_fee)s",
+                        {
+                            "fee_provided": tx1_fee_provided_remaining / config.UNIT,
+                            "required_fee": fee / config.UNIT,
+                        },
                     )
                     if tx1_fee_provided_remaining < fee:
                         logger.trace("Skipping: tx1 fee provided remaining is too low.")
                         continue
-                    else:
-                        tx1_fee_provided_remaining -= fee
-                        if protocol.after_block_or_test_network(
-                            block_index, 287800
-                        ):  # Protocol change.
-                            tx0_fee_required_remaining -= fee
+
+                    tx1_fee_provided_remaining -= fee
+                    if protocol.after_block_or_test_network(
+                        block_index, 287800
+                    ):  # Protocol change.
+                        tx0_fee_required_remaining -= fee
 
             else:  # Don’t deduct.
                 if tx1["get_asset"] == config.BTC:
@@ -722,7 +727,7 @@ def match(db, tx, block_index=None):
             if tx0_give_remaining <= 0 or (
                 tx0_get_remaining <= 0 and protocol.after_block_or_test_network(block_index, 292000)
             ):  # Protocol change
-                if tx0["give_asset"] != config.BTC and tx0["get_asset"] != config.BTC:
+                if config.BTC not in [tx0["give_asset"], tx0["get_asset"]]:
                     # Fill order, and recredit give_remaining.
                     tx0_status = "filled"
                     ledger.events.credit(
@@ -747,7 +752,7 @@ def match(db, tx, block_index=None):
             if tx1_give_remaining <= 0 or (
                 tx1_get_remaining <= 0 and protocol.after_block_or_test_network(block_index, 292000)
             ):  # Protocol change
-                if tx1["give_asset"] != config.BTC and tx1["get_asset"] != config.BTC:
+                if config.BTC not in [tx1["give_asset"], tx1["get_asset"]]:
                     # Fill order, and recredit give_remaining.
                     tx1_status = "filled"
                     ledger.events.credit(

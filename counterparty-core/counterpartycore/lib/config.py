@@ -1,7 +1,7 @@
 import os
 
-"""Variables prefixed with `DEFAULT` should be able to be overridden by
-configuration file and command‐line arguments."""
+# Variables prefixed with `DEFAULT` should be able to be overridden by
+# configuration file and command‐line arguments.
 
 UNIT = 100000000  # The same across assets.
 
@@ -9,7 +9,7 @@ UNIT = 100000000  # The same across assets.
 # Semantic Version
 __version__ = "10.10.0"  # for hatch
 VERSION_STRING = __version__
-version = VERSION_STRING.split("-")[0].split(".")
+version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
 VERSION_MINOR = int(version[1])
 VERSION_REVISION = int(version[2])

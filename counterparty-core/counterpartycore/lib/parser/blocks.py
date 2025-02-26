@@ -150,12 +150,12 @@ def parse_tx(db, tx):
                 or len(tx["source"].split("-")) > 1
                 or (tx["destination"] and len(tx["destination"].split("-")) > 1)
             ):
-                return
+                return False
 
             # Burns.
             if tx["destination"] == config.UNSPENDABLE:
                 burn.parse(db, tx)
-                return
+                return supported
 
             # Protocol change.
             rps_enabled = protocol.after_block_or_test_network(tx["block_index"], 308500)

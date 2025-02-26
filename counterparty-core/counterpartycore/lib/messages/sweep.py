@@ -57,7 +57,7 @@ def validate(db, source, destination, flags, memo, block_index):
 
     if flags > FLAGS_ALL:
         problems.append(f"invalid flags {flags}")
-    elif not (flags & (FLAG_BALANCES | FLAG_OWNERSHIP)):
+    elif not flags & (FLAG_BALANCES | FLAG_OWNERSHIP):
         problems.append("must specify which kind of transfer in flags")
 
     if memo and len(memo) > MAX_MEMO_LENGTH:
@@ -103,7 +103,7 @@ def unpack(message):
         short_address_bytes, flags, memo_bytes = struct.unpack(struct_format, message)
         if len(memo_bytes) == 0:
             memo_bytes = None
-        elif not (flags & FLAG_BINARY_MEMO):
+        elif not flags & FLAG_BINARY_MEMO:
             memo_bytes = memo_bytes.decode("utf-8")
 
         # unpack address

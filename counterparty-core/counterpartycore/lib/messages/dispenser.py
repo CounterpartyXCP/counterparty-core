@@ -60,7 +60,6 @@ def validate(
     oracle_address,
 ):
     problems = []
-    order_match = None  # noqa: F841
     asset_id = None
 
     if asset == config.BTC:
@@ -70,14 +69,14 @@ def validate(
     # resolve subassets
     asset = ledger.issuances.resolve_subasset_longname(db, asset)
 
-    if status == STATUS_OPEN or status == STATUS_OPEN_EMPTY_ADDRESS:
+    if status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
         if give_quantity <= 0:
             problems.append("give_quantity must be positive")
         if mainchainrate <= 0:
             problems.append("mainchainrate must be positive")
         if escrow_quantity < give_quantity:
             problems.append("escrow_quantity must be greater or equal than give_quantity")
-    elif not (status == STATUS_CLOSED):
+    elif status != STATUS_CLOSED:
         problems.append(f"invalid status {status}")
 
     cursor = db.cursor()
@@ -149,7 +148,7 @@ def validate(
                         open_dispensers[0]["satoshirate"] == mainchainrate
                         and open_dispensers[0]["give_quantity"] == give_quantity
                     ):
-                        if (max_refills > 0) and (refilling_count >= max_refills):
+                        if refilling_count >= max_refills > 0:
                             problems.append("the dispenser reached its maximum refilling")
                     else:
                         if open_dispensers[0]["satoshirate"] != mainchainrate:

@@ -315,7 +315,7 @@ def compose(
         asset_id
     )  # This will remove leading zeros in the numeric assets
 
-    (
+    (  # pylint: disable=unbalanced-tuple-unpacking
         call_date,
         call_price,
         problems,
@@ -748,7 +748,7 @@ def parse(db, tx, message, message_type_id):
     reissuance = None
     fee = 0
     if status == "valid":
-        (
+        (  # pylint: disable=unbalanced-tuple-unpacking
             call_date,
             call_price,
             problems,
