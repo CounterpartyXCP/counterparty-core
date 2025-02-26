@@ -217,7 +217,7 @@ def _decode_memo(stream):
         mlen = stream.read("uint:6")
         data = stream.read(f"bytes:{mlen}")
 
-        if not (is_hex):
+        if not is_hex:
             # is an utf8 string
             data = data.decode("utf-8")
 

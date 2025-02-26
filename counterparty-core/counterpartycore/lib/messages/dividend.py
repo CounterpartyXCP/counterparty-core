@@ -134,7 +134,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
     cursor.close()
 
-    if len(problems):
+    if len(problems) > 0:
         return None, None, problems, 0
 
     # preserve order with old queries

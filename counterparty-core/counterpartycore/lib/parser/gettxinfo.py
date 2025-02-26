@@ -37,12 +37,12 @@ def get_checkmultisig(asm):
     # N-of-2
     if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:3], asm[0]
-        if all([isinstance(pubkey, bytes) for pubkey in pubkeys]):  # noqa: E721
+        if all(isinstance(pubkey, bytes) for pubkey in pubkeys):
             return pubkeys, signatures_required
     # N-of-3
     if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:4], asm[0]
-        if all([isinstance(pubkey, bytes) for pubkey in pubkeys]):  # noqa: E721
+        if all(isinstance(pubkey, bytes) for pubkey in pubkeys):
             return pubkeys, signatures_required
     raise exceptions.DecodeError("invalid OP_CHECKMULTISIG")
 

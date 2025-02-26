@@ -41,7 +41,7 @@ def test_validate(ledger_db, defaults, current_block_index):
         5040,
         defaults["expiration"],
         current_block_index,
-    ) == (["feed doesn’t exist"], 5040)
+    ) == (["feed doesn't exist"], 5040)
 
     assert bet.validate(
         ledger_db,

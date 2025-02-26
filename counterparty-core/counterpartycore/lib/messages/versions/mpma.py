@@ -175,7 +175,7 @@ def parse(db, tx, message):
     all_debits = []
     all_credits = []
     if status == "valid":
-        for asset_id in unpacked.keys():
+        for asset_id, asset_credits in unpacked.items():
             try:
                 ledger.issuances.get_asset_name(db, asset_id)
             except exceptions.AssetNameError:
@@ -187,18 +187,17 @@ def parse(db, tx, message):
                 status = f"invalid: insufficient funds for asset {asset_id}, address {tx['source']} has no balance"
                 break
 
-            credits = unpacked[asset_id]
-
-            total_sent = reduce(lambda p, t: p + t[1], credits, 0)
+            total_sent = reduce(lambda p, t: p + t[1], asset_credits, 0)
 
             if balance < total_sent:
                 status = f"invalid: insufficient funds for asset {asset_id}, needs {total_sent}"
                 break
 
             if status == "valid":
-                plain_sends += map(lambda t: py34_tuple_append(asset_id, t), credits)
+                plain_sends += map(lambda t: py34_tuple_append(asset_id, t), asset_credits)
                 all_credits += map(
-                    lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]}, credits
+                    lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]},
+                    asset_credits,
                 )
                 all_debits.append({"asset": asset_id, "quantity": total_sent})
 

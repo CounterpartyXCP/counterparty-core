@@ -115,11 +115,8 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                     pos += 1
                     valid_sig = False
                     opcode = redeem_script[pos]
-                    if type(opcode) != type(""):  # noqa: E721
-                        if (
-                            opcode >= bitcoinlib.core.script.OP_2
-                            and opcode <= bitcoinlib.core.script.OP_15
-                        ):
+                    if not isinstance(opcode, str):
+                        if bitcoinlib.core.script.OP_2 <= opcode <= bitcoinlib.core.script.OP_15:
                             # it's multisig
                             pos += 1
                             pubkey = None
@@ -166,7 +163,7 @@ def decode_data_redeem_script(redeem_script, p2sh_is_segwit=False):
                                 and redeem_script[pos + 4 + unique_offfset_length]
                                 == bitcoinlib.core.script.OP_EQUAL
                             )
-        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
+        except Exception:  # pylint: disable=broad-except  # noqa: F841
             return None, None, False, None
 
     return pubkey, source, redeem_script_is_valid, found_data
