@@ -5,7 +5,10 @@ import logging
 
 import requests
 
-from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.ledger import blocks as ledger_blocks
+from counterpartycore.lib.ledger import issuances as ledger_issuances
+from counterpartycore.lib.ledger import supplies as ledger_supplies
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages.data import checkpoints
 from counterpartycore.lib.utils import database
@@ -101,8 +104,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
 def asset_conservation(db, stop_event=None):
     logger.debug("Checking for conservation of assets.")
     with db:
-        supplies = ledger.supplies.supplies(db)
-        held = ledger.supplies.held(db)
+        supplies = ledger_supplies.supplies(db)
+        held = ledger_supplies.held(db)
         for asset in supplies.keys():
             if stop_event is not None and stop_event.is_set():
                 logger.debug("Stop event received. Exiting asset conservation check...")
@@ -111,13 +114,13 @@ def asset_conservation(db, stop_event=None):
             asset_held = held[asset] if asset in held and held[asset] is not None else 0  # noqa: E711
             if asset_issued != asset_held:
                 raise exceptions.SanityError(
-                    f"{ledger.issuances.value_out(db, asset_issued, asset)} {asset} issued ≠ "
-                    f"{ledger.issuances.value_out(db, asset_held, asset)} {asset} held"
+                    f"{ledger_issuances.value_out(db, asset_issued, asset)} {asset} issued ≠ "
+                    f"{ledger_issuances.value_out(db, asset_held, asset)} {asset} held"
                 )
             logger.trace(
                 "%s has been conserved (%s %s both issued and held)",
                 asset,
-                ledger.issuances.value_out(db, asset_issued, asset),
+                ledger_issuances.value_out(db, asset_issued, asset),
                 asset,
             )
     logger.debug("All assets have been conserved.")
@@ -179,7 +182,7 @@ def software_version():
 def check_database_version(db, upgrade_actions_callback, database_name):
     # Update version if new database.
     with database.LedgerDBConnectionPool().connection() as ledger_db:
-        last_block_index = ledger.blocks.last_db_index(ledger_db)
+        last_block_index = ledger_blocks.last_db_index(ledger_db)
     if last_block_index <= config.BLOCK_FIRST:
         logger.debug("New database detected. Updating database version.")
         database.update_version(db)
@@ -195,7 +198,7 @@ def check_database_version(db, upgrade_actions_callback, database_name):
         logger.info("Database version mismatch. Required actions: %s", upgrade_actions)
         upgrade_actions_callback(db, upgrade_actions)
         # refresh the current block index
-        CurrentState().set_current_block_index(ledger.blocks.last_db_index(db))
+        CurrentState().set_current_block_index(ledger_blocks.last_db_index(db))
         # update the database version
         database.update_version(db)
     else:
