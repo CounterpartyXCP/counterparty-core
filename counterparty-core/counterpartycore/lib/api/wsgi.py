@@ -5,6 +5,7 @@ import os
 import signal
 import sys
 import threading
+import time
 
 import gunicorn.app.base
 import waitress
@@ -25,6 +26,19 @@ multiprocessing.set_start_method("spawn", force=True)
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
+class LazyLogger(metaclass=helpers.SingletonMeta):
+    def __init__(self):
+        self.last_message = None
+        self.last_print = 0
+        self.message_delay = 10
+
+    def debug(self, message, *args):
+        if self.last_print + self.message_delay < time.time():
+            logger.debug(message, *args)
+            self.last_message = message
+            self.last_print = time.time()
+
+
 def refresh_current_state(state_db, shared_backend_height):
     CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
 
@@ -36,14 +50,14 @@ def refresh_current_state(state_db, shared_backend_height):
         return
 
     if current_backend_height > current_block_index:
-        logger.debug(
+        LazyLogger().debug(
             "Counterparty is currently behind Bitcoin Core. (Counterparty Block Height = %s, Bitcoin Core Block Height = %s, Network Block Height = %s)",
             current_block_index,
             current_block_count,
             current_backend_height,
         )
     elif current_backend_height < current_block_index:
-        logger.debug(
+        LazyLogger().debug(
             "Bitcoin Core is currently behind the network. (Counterparty Block Height = %s, Bitcoin Core Block Height = %s, Network Block Height = %s)",
             current_block_index,
             current_block_count,
