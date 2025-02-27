@@ -1,5 +1,3 @@
-import binascii
-import hashlib
 import json
 import logging
 
@@ -9,19 +7,9 @@ from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages.data import checkpoints
 from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils.helpers import dhash_string
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-
-def dhash(text):
-    if not isinstance(text, bytes):
-        text = bytes(str(text), "utf-8")
-
-    return hashlib.sha256(hashlib.sha256(text).digest()).digest()
-
-
-def dhash_string(text):
-    return binascii.hexlify(dhash(text)).decode()
 
 
 def consensus_hash(db, field, previous_consensus_hash, content):

@@ -24,7 +24,7 @@ from counterpartycore.lib.cli import bootstrap, log
 from counterpartycore.lib.ledger.backendheight import BackendHeight
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, check, follow
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -338,7 +338,7 @@ def show_params():
 def generate_move_random_hash(move):
     move = int(move).to_bytes(2, byteorder="big")
     random_bin = os.urandom(16)
-    move_random_hash_bin = check.dhash(random_bin + move)
+    move_random_hash_bin = helpers.dhash(random_bin + move)
     return binascii.hexlify(random_bin).decode("utf8"), binascii.hexlify(
         move_random_hash_bin
     ).decode("utf8")

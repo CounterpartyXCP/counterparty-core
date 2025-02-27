@@ -1,4 +1,6 @@
+import binascii
 import decimal
+import hashlib
 import itertools
 import json
 import os
@@ -126,3 +128,14 @@ def is_process_alive(pid):
     except OSError:
         return False
     return True
+
+
+def dhash(text):
+    if not isinstance(text, bytes):
+        text = bytes(str(text), "utf-8")
+
+    return hashlib.sha256(hashlib.sha256(text).digest()).digest()
+
+
+def dhash_string(text):
+    return binascii.hexlify(dhash(text)).decode()

@@ -8,7 +8,8 @@ from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.balances import get_balance
 from counterpartycore.lib.ledger.caches import AssetCache, UTXOBalancesCache
 from counterpartycore.lib.ledger.currentstate import ConsensusHashBuilder, CurrentState
-from counterpartycore.lib.parser import check, protocol, utxosinfo
+from counterpartycore.lib.parser import protocol, utxosinfo
+from counterpartycore.lib.utils import helpers
 
 
 @contextmanager
@@ -150,7 +151,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
             previous_event_hash,
         ]
     )
-    event_hash = binascii.hexlify(check.dhash(event_hash_content)).decode("ascii")
+    event_hash = binascii.hexlify(helpers.dhash(event_hash_content)).decode("ascii")
     message_bindings = {
         "message_index": message_index,
         "block_index": block_index,
