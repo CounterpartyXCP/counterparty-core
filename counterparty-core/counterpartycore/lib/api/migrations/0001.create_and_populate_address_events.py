@@ -55,7 +55,7 @@ def apply(db):
 
     inserted = 0
     for event in cursor:
-        update_address_events(db, event)
+        update_address_events(db, event, no_cache=True)
         inserted += 1
         if inserted % 1000000 == 0:
             logger.trace(f"Inserted {inserted} address events")

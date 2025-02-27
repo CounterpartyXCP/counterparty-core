@@ -28,15 +28,3 @@ class AddressEventsCache(metaclass=helpers.SingletonMeta):
 
     def insert(self, address, event_index):
         self.cache_db.execute("INSERT INTO address_events VALUES (?, ?)", (address, event_index))
-
-    def search_events_indexes(self, addresses):
-        address_list = addresses.split(",")
-        sql = f"""
-            SELECT event_index
-            FROM address_events
-            WHERE address IN ({','.join(['?'] * len(address_list))})
-        """  # noqa S608 # nosec B608
-        cursor = self.cache_db.cursor()
-        cursor.execute(sql, address_list)
-        events_indexes = [event["event_index"] for event in cursor.fetchall()]
-        return events_indexes

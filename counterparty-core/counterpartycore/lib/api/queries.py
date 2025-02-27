@@ -841,7 +841,6 @@ def get_events_by_name(
 
 def get_events_by_addresses(
     ledger_db,
-    state_db,
     addresses: str,
     event_name: str = None,
     cursor: str = None,
