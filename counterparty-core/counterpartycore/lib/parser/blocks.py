@@ -6,6 +6,7 @@ Sieve blockchain for Counterparty transactions, and add them to the database.
 
 import binascii
 import decimal
+import glob
 import logging
 import os
 import struct
@@ -533,10 +534,10 @@ def rebuild_database(db, include_transactions=True):
     for table in tables_to_clean:
         cursor.execute(f"DROP TABLE IF EXISTS {table}")  # nosec B608
     cursor.execute("""PRAGMA foreign_keys=ON""")
-    for file in ["0001.initial_migration.sql", "0002.create_mempool_transactions_table.sql"]:
-        with open(
-            os.path.join(config.LEDGER_DB_MIGRATIONS_DIR, file), "r", encoding="utf-8"
-        ) as sql_file:
+
+    migration_files = sorted(glob.glob(os.path.join(config.LEDGER_DB_MIGRATIONS_DIR, "*.sql")))
+    for file in migration_files:
+        with open(file, "r", encoding="utf-8") as sql_file:
             db.execute(sql_file.read())
 
 
