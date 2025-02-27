@@ -86,12 +86,19 @@ class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):
     def append_to_block_journal(self, item):
         self.journal.append(item)
 
+    def append_to_block_migration(self, item):
+        self.migration.append(item)
+
     def block_ledger(self):
         return self.ledger
 
     def block_journal(self):
         return self.journal
 
+    def block_migration(self):
+        return self.migration
+
     def reset(self):
         self.ledger = []
         self.journal = []
+        self.migration = []
