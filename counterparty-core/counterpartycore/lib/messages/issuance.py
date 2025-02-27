@@ -35,7 +35,6 @@ DESCRIPTION_NULL_ACTION = "NULL"
 def validate(
     db,
     source,
-    destination,
     asset,
     quantity,
     divisible,
@@ -222,7 +221,7 @@ def validate(
         if quantity > config.MAX_INT:
             problems.append("total quantity overflow")
     else:
-        total = sum([issuance["quantity"] for issuance in issuances])
+        total = sum(issuance["quantity"] for issuance in issuances)
         if total + quantity > config.MAX_INT:
             problems.append("total quantity overflow")
 
@@ -311,26 +310,25 @@ def compose(
                 #   generate a random numeric asset id which will map to this subasset
                 asset = assetnames.generate_random_asset(subasset_longname)
 
-    asset_id = ledger.issuances.generate_asset_id(asset, CurrentState().current_block_index())
+    asset_id = ledger.issuances.generate_asset_id(asset)
     asset_name = ledger.issuances.generate_asset_name(
-        asset_id, CurrentState().current_block_index()
+        asset_id
     )  # This will remove leading zeros in the numeric assets
 
-    (
+    (  # pylint: disable=unbalanced-tuple-unpacking
         call_date,
         call_price,
         problems,
-        fee,
+        _fee,
         validated_description,
         divisible,
         lock,
         reset,
         reissuance,
-        reissued_asset_longname,
+        _reissued_asset_longname,
     ) = validate(
         db,
         source,
-        transfer_destination,
         asset_name,
         quantity,
         divisible,
@@ -360,7 +358,7 @@ def compose(
         else:
             data = messagetype.pack(ID)
 
-        if description == None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
+        if description is None and protocol.enabled("issuance_description_special_null"):
             # a special message is created to be catched by the parse function
             curr_format = (
                 asset_format + f"{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s"
@@ -438,7 +436,7 @@ def compose(
         else:
             data = messagetype.pack(SUBASSET_ID)
 
-        if description == None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
+        if description is None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
             # a special message is created to be catched by the parse function
             curr_format = (
                 subasset_format
@@ -510,14 +508,20 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
     # Unpack message.
     try:
         subasset_longname = None
-        if message_type_id == LR_SUBASSET_ID or message_type_id == SUBASSET_ID:
+        asset_id = None
+        quantity = None
+        divisible = None
+        callable_ = None
+        call_date = None
+        if message_type_id in [LR_SUBASSET_ID, SUBASSET_ID]:
             if not protocol.enabled("subassets", block_index=block_index):
-                logger.warning(f"subassets are not enabled at block {block_index}")
+                logger.warning("subassets are not enabled at block %s", block_index)
                 raise exceptions.UnpackError
 
             # parse a subasset original issuance message
             lock = None
             reset = None
+            compacted_subasset_length = 0
 
             if subasset_format_length <= 18:
                 asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(
@@ -534,7 +538,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
 
             description_length = len(message) - subasset_format_length - compacted_subasset_length
             if description_length < 0:
-                logger.warning(f"invalid subasset length: {compacted_subasset_length}")
+                logger.warning("invalid subasset length: %s", compacted_subasset_length)
                 raise exceptions.UnpackError
             messages_format = f">{compacted_subasset_length}s{description_length}s"
             compacted_subasset_longname, description = struct.unpack(
@@ -599,7 +603,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                     description,
                 ) = struct.unpack(curr_format, message)
 
-            call_price = round(call_price, 6)  # TODO: arbitrary
+            call_price = round(call_price, 6)
             try:
                 description = description.decode("utf-8")
             except UnicodeDecodeError:
@@ -624,16 +628,16 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                 "",
             )
         try:
-            asset = ledger.issuances.generate_asset_name(asset_id, block_index)
+            asset = ledger.issuances.generate_asset_name(asset_id)
 
             ##This is for backwards compatibility with assets names longer than 12 characters
             if asset.startswith("A"):
-                named_asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
+                named_asset = ledger.issuances.get_asset_name(db, asset_id)
 
                 if named_asset != 0:
                     asset = named_asset
 
-            if description == None:  # noqa: E711
+            if description is None:  # noqa: E711
                 try:
                     description = ledger.issuances.get_asset_description(db, asset)
                 except exceptions.AssetError:
@@ -643,7 +647,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         except exceptions.AssetIDError:
             asset = None
             status = "invalid: bad asset name"
-    except exceptions.UnpackError as e:  # noqa: F841
+    except exceptions.UnpackError:
         (
             asset_id,
             asset,
@@ -729,6 +733,7 @@ def parse(db, tx, message, message_type_id):
     ) = unpack(db, message, message_type_id, tx["block_index"])
     # parse and validate the subasset from the message
     subasset_parent = None
+    reissued_asset_longname = None
     if status == "valid" and subasset_longname is not None:  # Protocol change.
         try:
             # ensure the subasset_longname is valid
@@ -736,14 +741,14 @@ def parse(db, tx, message, message_type_id):
             subasset_parent, subasset_longname = assetnames.parse_subasset_from_asset_name(
                 subasset_longname, protocol.enabled("allow_subassets_on_numerics")
             )
-        except exceptions.AssetNameError as e:  # noqa: F841
+        except exceptions.AssetNameError:
             asset = None
             status = "invalid: bad subasset name"
 
     reissuance = None
     fee = 0
     if status == "valid":
-        (
+        (  # pylint: disable=unbalanced-tuple-unpacking
             call_date,
             call_price,
             problems,
@@ -757,7 +762,6 @@ def parse(db, tx, message, message_type_id):
         ) = validate(
             db,
             tx["source"],
-            tx["destination"],
             asset,
             quantity,
             divisible,

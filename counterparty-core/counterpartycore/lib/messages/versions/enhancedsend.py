@@ -4,7 +4,6 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages.versions import send1
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import address, helpers
@@ -17,7 +16,7 @@ MAX_MEMO_LENGTH = 34
 ID = 2  # 0x02
 
 
-def unpack(message, block_index):
+def unpack(message):
     try:
         # account for memo bytes
         memo_bytes_length = len(message) - LENGTH
@@ -35,7 +34,7 @@ def unpack(message, block_index):
         full_address = address.unpack(short_address_bytes)
 
         # asset id to name
-        asset = ledger.issuances.generate_asset_name(asset_id, block_index)
+        asset = ledger.issuances.generate_asset_name(asset_id)
         if asset == config.BTC:
             raise exceptions.AssetNameError(f"{config.BTC} not allowed")
 
@@ -56,7 +55,7 @@ def unpack(message, block_index):
     return unpacked
 
 
-def validate(db, source, destination, asset, quantity, memo_bytes, block_index):
+def validate(db, destination, asset, quantity, memo_bytes):
     problems = []
 
     if asset == config.BTC:
@@ -140,16 +139,14 @@ def compose(
         memo = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo)}s", memo)
 
-    block_index = CurrentState().current_block_index()
-
-    problems = validate(db, source, destination, asset, quantity, memo_bytes, block_index)
+    problems = validate(db, destination, asset, quantity, memo_bytes)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     if not skip_validation:
-        asset_id = ledger.issuances.get_asset_id(db, asset, block_index)
+        asset_id = ledger.issuances.get_asset_id(db, asset)
     else:
-        asset_id = ledger.issuances.generate_asset_id(asset, block_index)
+        asset_id = ledger.issuances.generate_asset_id(asset)
 
     short_address_bytes = address.pack(destination)
 
@@ -167,7 +164,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     try:
-        unpacked = unpack(message, tx["block_index"])
+        unpacked = unpack(message)
         asset, quantity, destination, memo_bytes = (
             unpacked["asset"],
             unpacked["quantity"],
@@ -180,7 +177,7 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         asset, quantity, destination, memo_bytes = None, None, None, None
         status = f"invalid: could not unpack ({e})"
-    except:  # noqa: E722
+    except:  # noqa: E722 # pylint: disable=bare-except
         asset, quantity, destination, memo_bytes = None, None, None, None
         status = "invalid: could not unpack"
 
@@ -191,9 +188,7 @@ def parse(db, tx, message):
             quantity = None
 
     if status == "valid":
-        problems = validate(
-            db, tx["source"], destination, asset, quantity, memo_bytes, tx["block_index"]
-        )
+        problems = validate(db, destination, asset, quantity, memo_bytes)
         if problems:
             status = "invalid: " + "; ".join(problems)
 

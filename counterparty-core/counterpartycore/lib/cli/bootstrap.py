@@ -26,7 +26,7 @@ def download_zst(data_dir, zst_url):
 
 
 def get_zst_callbacl(input_file_size):
-    def print_decompression_progress(total_input, total_output, read_data, write_data):
+    def print_decompression_progress(total_input, _total_output, _read_data, _write_data):
         percent = 100 * total_input / input_file_size
         print(f"Progress: {percent:.1f}%", end="\r")
 
@@ -54,9 +54,9 @@ def decompress_zst(zst_filepath):
     # input_file_size = os.path.getsize(zst_filepath)
     with io.open(filepath, "wb") as output_file:
         with open(zst_filepath, "rb") as input_file:
-            pyzstd.decompress_stream(input_file, output_file, read_size=16 * 1024)
+            pyzstd.decompress_stream(input_file, output_file, read_size=16 * 1024)  # pylint: disable=no-member
     os.remove(zst_filepath)
-    os.chmod(filepath, 0o660)
+    os.chmod(filepath, 0o660)  # nosec B103
     print(f"Decompressed {zst_filepath} in {time.time() - start_time:.2f}s")
     return filepath
 
@@ -65,13 +65,13 @@ def download_and_decompress(data_dir, zst_url):
     # download and decompress .tar.zst file
     print(f"Downloading and decompressing {zst_url}...")
     start_time = time.time()
-    response = urllib.request.urlopen(zst_url)  # nosec B310  # noqa: S310
     zst_filename = os.path.basename(zst_url)
     filename = zst_filename.replace(".latest.zst", "")
     filepath = os.path.join(data_dir, filename)
-    with io.open(filepath, "wb") as output_file:
-        pyzstd.decompress_stream(response, output_file, read_size=16 * 1024)
-    os.chmod(filepath, 0o660)
+    with urllib.request.urlopen(zst_url) as response:  # nosec B310  # noqa: S310
+        with io.open(filepath, "wb") as output_file:
+            pyzstd.decompress_stream(response, output_file, read_size=16 * 1024)  # pylint: disable=no-member
+    os.chmod(filepath, 0o660)  # nosec B103
     print(f"Downloaded and decompressed {zst_url} in {time.time() - start_time:.2f}s")
     return filepath
 
@@ -121,7 +121,7 @@ def verfif_and_decompress(zst_filepath, sig_url, decompressors_state):
     try:
         check_signature(zst_filepath, sig_url)
         decompress_zst(zst_filepath)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         cprint(f"Failed to verify and decompress {zst_filepath}: {e}", "red")
         decompressors_state.value = 1
 
@@ -146,7 +146,7 @@ def download_bootstrap_files(data_dir, files):
         # download .zst file
         try:
             zst_filepath = download_zst(data_dir, zst_url)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             cprint(f"Failed to download {zst_url}: {e}", "red")
             for decompressor in decompressors:
                 decompressor.kill()
@@ -180,7 +180,7 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
 
     confirmation_message = colored("Continue? (y/N): ", "magenta")
     if input(confirmation_message).lower() != "y":
-        exit()
+        sys.exit(0)
 
 
 def generate_urls(counterparty_zst_url):

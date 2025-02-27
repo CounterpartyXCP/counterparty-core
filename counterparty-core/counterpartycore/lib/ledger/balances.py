@@ -19,7 +19,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
         SELECT * FROM balances
         WHERE ({field_name} = ? AND asset = ?)
         ORDER BY rowid DESC LIMIT 1
-    """  # noqa: S608
+    """  # noqa: S608 # nosec B608
     bindings = (address, asset)
     balances = list(cursor.execute(query, bindings))
     cursor.close()
@@ -52,7 +52,7 @@ def get_address_balances(db, address: str):
         FROM balances
         WHERE {field_name} = ?
         GROUP BY {field_name}, asset
-    """  # noqa: S608
+    """  # noqa: S608 # nosec B608
     bindings = (address,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -74,7 +74,7 @@ def get_address_assets(db, address):
         FROM balances
         WHERE {field_name}=:address
         GROUP BY asset
-    """  # noqa: S608
+    """  # noqa: S608 # nosec B608
     bindings = {"address": address}
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -94,7 +94,7 @@ def get_balances_count(db, address):
             WHERE {field_name}=:address
             GROUP BY asset
         )
-    """  # noqa: S608
+    """  # noqa: S608 # nosec B608
     bindings = {"address": address}
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -119,7 +119,7 @@ def get_asset_balances(db, asset: str, exclude_zero_balances: bool = True):
             SELECT * FROM (
                 {query}
             ) WHERE quantity > 0
-        """  # nosec B608  # noqa: S608
+        """  # nosec B608  # noqa: S608 # nosec B608
     bindings = (asset,)
     cursor.execute(query, bindings)
     return cursor.fetchall()

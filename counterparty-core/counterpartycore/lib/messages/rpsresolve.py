@@ -10,5 +10,5 @@ logger = logging.getLogger(config.LOGGER_NAME)
 ID = 81
 
 
-def parse(db, tx, message):
-    rps.parse(db, tx, message)
+def parse(db, tx):
+    rps.parse(db, tx)

@@ -1,4 +1,6 @@
+import binascii
 import decimal
+import hashlib
 import itertools
 import json
 import os
@@ -18,7 +20,7 @@ def chunkify(l, n):  # noqa: E741
 
 
 def flat(z):
-    return [x for x in z]
+    return list(z)
 
 
 def accumulate(l):  # noqa: E741
@@ -27,9 +29,9 @@ def accumulate(l):  # noqa: E741
         yield key, sum(item[1] for item in subiter)
 
 
-def active_options(config, options):
+def active_options(given_config, options):
     """Checks if options active in some given config."""
-    return config & options == options
+    return given_config & options == options
 
 
 ID_SEPARATOR = "_"
@@ -81,7 +83,7 @@ def is_url(url):
 class ApiJsonEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
-            return "{0:.8f}".format(o)
+            return f"{o:.8f}"
         if isinstance(o, bytes):
             return o.hex()
         if callable(o):
@@ -125,5 +127,15 @@ def is_process_alive(pid):
         os.kill(pid, 0)
     except OSError:
         return False
-    else:
-        return True
+    return True
+
+
+def dhash(text):
+    if not isinstance(text, bytes):
+        text = bytes(str(text), "utf-8")
+
+    return hashlib.sha256(hashlib.sha256(text).digest()).digest()
+
+
+def dhash_string(text):
+    return binascii.hexlify(dhash(text)).decode()

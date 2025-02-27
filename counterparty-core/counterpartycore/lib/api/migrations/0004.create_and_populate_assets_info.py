@@ -15,7 +15,7 @@ __depends__ = {"0003.create_and_populate_all_expirations"}
 
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
+    return dict(zip(fields, row))
 
 
 def apply(db):
@@ -152,7 +152,7 @@ def apply(db):
     db.execute("DROP TABLE destructions_quantity")
     db.execute("DROP TABLE supplies")
 
-    logger.debug(f"Updated the `supply` field in {time.time() - start_time_supply:.2f} seconds")
+    logger.debug("Updated the `supply` field in %.2f seconds", time.time() - start_time_supply)
 
     db.execute("CREATE UNIQUE INDEX assets_info_asset_idx ON assets_info (asset)")
     db.execute("CREATE UNIQUE INDEX assets_info_asset_id_idx ON assets_info (asset_id)")
@@ -160,7 +160,7 @@ def apply(db):
     db.execute("CREATE INDEX assets_info_issuer_idx ON assets_info (issuer)")
     db.execute("CREATE INDEX assets_info_owner_idx ON assets_info (owner)")
 
-    logger.debug(f"Populated the `assets_info` table in {time.time() - start_time:.2f} seconds")
+    logger.debug("Populated the `assets_info` table in %.2f seconds", time.time() - start_time)
 
 
 def rollback(db):

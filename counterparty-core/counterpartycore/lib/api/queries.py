@@ -1,3 +1,5 @@
+# pylint: disable=too-many-lines
+
 import json
 import typing
 from typing import Literal
@@ -264,8 +266,8 @@ def select_rows(
     ):
         select += ", NULLIF(destination, '') AS destination"
 
-    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
-    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
+    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
 
     if wrap_where is not None:
         wrap_where_field = []
@@ -278,10 +280,10 @@ def select_rows(
             bindings_count.append(value)
         wrap_where_clause = " AND ".join(wrap_where_field)
         wrap_where_clause = f"WHERE {wrap_where_clause}"
-        query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608
-        query_count = f"SELECT COUNT(*) AS count FROM ({query_count}) {wrap_where_clause}"  # nosec B608  # noqa: S608
+        query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
+        query_count = f"SELECT COUNT(*) AS count FROM ({query_count}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
     else:
-        query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608
+        query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608 # nosec B608
 
     order_by = []
     if sort is not None:
@@ -303,7 +305,7 @@ def select_rows(
         order_by.append(f"{cursor_field} {order}")
     order_by_clause = f"ORDER BY {','.join(order_by)}"
 
-    query = f"{query} {order_by_clause} LIMIT ?"  # nosec B608  # noqa: S608
+    query = f"{query} {order_by_clause} LIMIT ?"  # nosec B608  # noqa: S608 # nosec B608
     bindings.append(limit + 1)
     if offset is not None:
         query = f"{query} OFFSET ?"
@@ -333,7 +335,7 @@ def select_rows(
 
     if table == "all_transactions":
         for row in result:
-            row["confirmed"] = True if row["confirmed"] == 1 else False
+            row["confirmed"] = bool(row["confirmed"])
 
     return QueryResult(result, next_cursor, table, result_count)
 
@@ -395,7 +397,7 @@ def get_last_block(ledger_db):
     )
 
 
-def prepare_transactions_where(type, other_conditions=None):
+def prepare_transactions_where(type, other_conditions=None):  # pylint: disable=W0622
     where = []
     type_list = type.split(",")
     for transaction_type in type_list:
@@ -412,7 +414,7 @@ def prepare_transactions_where(type, other_conditions=None):
 
 def get_transactions(
     ledger_db,
-    type: TransactionType = "all",
+    type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 10,
@@ -441,7 +443,7 @@ def get_transactions(
 def get_transactions_by_block(
     ledger_db,
     block_index: int,
-    type: TransactionType = "all",
+    type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 10,
@@ -472,7 +474,7 @@ def get_transactions_by_block(
 def get_transactions_by_address(
     ledger_db,
     address: str,
-    type: TransactionType = "all",
+    type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 10,
@@ -503,7 +505,7 @@ def get_transactions_by_address(
 def get_transactions_by_addresses(
     ledger_db,
     addresses: str,
-    type: TransactionType = "all",
+    type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
     cursor: str = None,
     limit: int = 100,
@@ -1858,7 +1860,7 @@ def get_sweeps_by_address(
 def get_address_balances(
     state_db,
     address: str,
-    type: BalanceType = all,
+    type: BalanceType = all,  # pylint: disable=W0622
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -1943,7 +1945,7 @@ def utxos_with_balances(state_db, utxos: str):
 def get_balances_by_addresses(
     state_db,
     addresses: str,
-    type: BalanceType = "all",
+    type: BalanceType = "all",  # pylint: disable=W0622
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2034,7 +2036,7 @@ def get_balances_by_address_and_asset(
     state_db,
     address: str,
     asset: str,
-    type: BalanceType = "all",
+    type: BalanceType = "all",  # pylint: disable=W0622
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2727,7 +2729,7 @@ def get_dividend_disribution(
 def get_asset_balances(
     state_db,
     asset: str,
-    type: BalanceType = "all",
+    type: BalanceType = "all",  # pylint: disable=W0622
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2769,12 +2771,12 @@ def get_asset_balances(
 def prepare_where_status(status, arg_type, other_conditions=None):
     where = []
     statuses = status.split(",")
-    for status in statuses:
-        if status == "all":
+    for status_item in statuses:
+        if status_item == "all":
             where = [other_conditions] if other_conditions else []
             break
-        if status in typing.get_args(arg_type):
-            where_status = {"status": status}
+        if status_item in typing.get_args(arg_type):
+            where_status = {"status": status_item}
             if other_conditions:
                 where_status.update(other_conditions)
             where.append(where_status)
@@ -2799,7 +2801,7 @@ SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_"
 def get_orders(
     state_db,
     status: OrderStatus = "all",
-    get_asset: str = None,
+    get_asset: str = None,  # pylint: disable=W0621
     give_asset: str = None,
     cursor: str = None,
     limit: int = 100,
@@ -2838,7 +2840,7 @@ def get_orders_by_asset(
     state_db,
     asset: str,
     status: OrderStatus = "all",
-    get_asset: str = None,
+    get_asset: str = None,  # pylint: disable=W0621
     give_asset: str = None,
     cursor: str = None,
     limit: int = 100,

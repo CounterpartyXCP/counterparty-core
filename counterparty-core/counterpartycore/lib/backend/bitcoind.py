@@ -10,7 +10,7 @@ from threading import current_thread
 
 import requests
 from bitcoinutils.keys import PublicKey
-from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
+from requests.exceptions import ChunkedEncodingError, ReadTimeout, Timeout
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.currentstate import CurrentState
@@ -51,7 +51,8 @@ def get_json_response(response, retry=0):
     except json.decoder.JSONDecodeError as e:  # noqa: F841
         if response.status_code == 200:
             logger.warning(
-                f"Received invalid JSON with status 200 from Bitcoin Core: {response.text}. Retrying in 5 seconds...",
+                "Received invalid JSON with status 200 from Bitcoin Core: %s. Retrying in 5 seconds...",
+                response.text,
                 stack_info=config.VERBOSE > 0,
             )
             time.sleep(5)
@@ -94,15 +95,15 @@ def rpc_call(payload, retry=0):
             if response.status_code not in (200, 500):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             break
-        except KeyboardInterrupt:
-            raise
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.warning(
-                f"Could not connect to backend at `{clean_url_for_log(url)}`. (Attempt: {tries})",
+                "Could not connect to backend at `%s`. (Attempt: %s)",
+                clean_url_for_log(url),
+                tries,
                 stack_info=config.VERBOSE > 0,
             )
             time.sleep(5)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             broken_error = e
             break
     if broken_error:
@@ -291,7 +292,7 @@ def createrawtransaction(inputs, outputs):
 
 
 def getrawmempool(verbose=False):
-    return rpc("getrawmempool", [True if verbose else False])
+    return rpc("getrawmempool", [bool(verbose)])
 
 
 @functools.lru_cache(maxsize=1000)
@@ -354,7 +355,6 @@ def satoshis_per_vbyte(
 
 
 def get_btc_supply(normalize=False):
-    f"""returns the total supply of {config.BTC} (based on what Bitcoin Core says the current block height is)"""  # noqa: B021
     block_count = getblockcount()
     blocks_remaining = block_count
     total_supply = 0
@@ -396,7 +396,10 @@ def wait_for_block(block_index):
     tip = get_chain_tip()
     while block_count < block_index:
         logger.debug(
-            f"Waiting for Bitcoin Core to process block {block_index}... (Bitcoin Core Block Height = {block_count}, Network Block Height = {tip})"
+            "Waiting for Bitcoin Core to process block %d... (Bitcoin Core Block Height = %d, Network Block Height = %d)",
+            block_index,
+            block_count,
+            tip,
         )
         time.sleep(10)
         block_count = getblockcount()
@@ -444,7 +447,7 @@ def sendrawtransaction(signedhex: str):
     """
     try:
         return rpc("sendrawtransaction", [signedhex])
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.BitcoindRPCError(f"Error broadcasting transaction: {str(e)}") from e
 
 
@@ -542,7 +545,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
 def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
     if vin_info is None:
-        logger.error(f"vin_info not found for vin {vin}")
+        logger.error("vin_info not found for vin %s", vin)
         try:
             vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
             is_segwit = vin_ctx["segwit"]
@@ -588,10 +591,10 @@ def complete_vins_info(decoded_tx, no_retry=False):
     return decoded_tx
 
 
-def get_transaction(tx_hash: str, format: str = "json"):
+def get_transaction(tx_hash: str, result_format: str = "json"):
     """
     Get a transaction from the blockchain
     :param tx_hash: The transaction hash (e.g. $LAST_TX_HASH)
     :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
-    return getrawtransaction(tx_hash, verbose=format == "json")
+    return getrawtransaction(tx_hash, verbose=result_format == "json")

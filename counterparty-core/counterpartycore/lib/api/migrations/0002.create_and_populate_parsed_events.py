@@ -14,7 +14,7 @@ __depends__ = {"0001.create_and_populate_address_events"}
 
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
+    return dict(zip(fields, row))
 
 
 def apply(db):
@@ -60,7 +60,7 @@ def apply(db):
     for sql in sqls:
         db.execute(sql)
 
-    logger.debug(f"Populated the `parsed_events` table in {time.time() - start_time:.2f} seconds")
+    logger.debug("Populated the `parsed_events` table in %.2f seconds", time.time() - start_time)
 
 
 def rollback(db):

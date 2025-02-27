@@ -1,7 +1,7 @@
 import time
 
 from counterpartycore.lib import config
-from counterpartycore.lib.ledger import currentstate
+from counterpartycore.lib.ledger import backendheight, currentstate
 from counterpartycore.lib.utils import database
 
 
@@ -37,9 +37,6 @@ def test_backend_height(monkeypatch):
     current_backend_height = 1000
     current_block_count = 980
 
-    def get_backend_height_mock():
-        return current_backend_height
-
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getblockcount", lambda: current_block_count
     )
@@ -47,7 +44,7 @@ def test_backend_height(monkeypatch):
         "counterpartycore.lib.backend.bitcoind.get_chain_tip", lambda: current_backend_height
     )
 
-    backend_height_thread = currentstate.BackendHeight()
+    backend_height_thread = backendheight.BackendHeight()
     currentstate.CurrentState().set_backend_height_value(
         backend_height_thread.shared_backend_height
     )
@@ -62,12 +59,12 @@ def test_backend_height(monkeypatch):
 
     try:
         backend_height_thread.start()
-        currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL = 0.1
+        backendheight.BACKEND_HEIGHT_REFRSH_INTERVAL = 0.1
 
         for _i in range(10):
             current_backend_height += 1
             current_block_count += 1
-            time.sleep(currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
+            time.sleep(backendheight.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
             assert (
                 backend_height_thread.shared_backend_height.value
                 == current_backend_height * 10e8 + current_block_count
@@ -77,7 +74,7 @@ def test_backend_height(monkeypatch):
     finally:
         backend_height_thread.stop()
 
-    backend_height_thread = currentstate.BackendHeight()
+    backend_height_thread = backendheight.BackendHeight()
 
     last_check_before = backend_height_thread.last_check
     config.API_ONLY = True
@@ -85,6 +82,6 @@ def test_backend_height(monkeypatch):
     assert backend_height_thread.last_check == last_check_before
 
     backend_height_thread.start()
-    time.sleep(currentstate.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
+    time.sleep(backendheight.BACKEND_HEIGHT_REFRSH_INTERVAL * 3)
     backend_height_thread.stop()
     assert backend_height_thread.last_check == last_check_before

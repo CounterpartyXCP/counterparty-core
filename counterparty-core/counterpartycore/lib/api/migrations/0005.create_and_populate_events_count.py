@@ -14,7 +14,7 @@ __depends__ = {"0004.create_and_populate_assets_info"}
 
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
+    return dict(zip(fields, row))
 
 
 def apply(db):
@@ -49,7 +49,7 @@ def apply(db):
 
     db.execute("""CREATE INDEX events_count_count_idx ON events_count (count)""")
 
-    logger.debug(f"Populated the `events_count` table in {time.time() - start_time:.2f} seconds")
+    logger.debug("Populated the `events_count` table in %.2f seconds", time.time() - start_time)
 
 
 def rollback(db):

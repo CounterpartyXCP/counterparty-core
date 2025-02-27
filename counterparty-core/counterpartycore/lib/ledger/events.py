@@ -8,7 +8,8 @@ from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.balances import get_balance
 from counterpartycore.lib.ledger.caches import AssetCache, UTXOBalancesCache
 from counterpartycore.lib.ledger.currentstate import ConsensusHashBuilder, CurrentState
-from counterpartycore.lib.parser import check, protocol, utxosinfo
+from counterpartycore.lib.parser import protocol, utxosinfo
+from counterpartycore.lib.utils import helpers
 
 
 @contextmanager
@@ -20,10 +21,10 @@ def get_cursor(db):
         cursor.close()
 
 
-def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
+def insert_record(db, table_name, record, event, event_info=None):
     fields = list(record.keys())
     placeholders = ", ".join(["?" for _ in fields])
-    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608
+    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608 # nosec B608
 
     with get_cursor(db) as cursor:
         cursor.execute(query, list(record.values()))
@@ -31,10 +32,10 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
             cursor.execute("SELECT last_insert_rowid() AS rowid")
             inserted_rowid = cursor.fetchone()["rowid"]
             new_record = cursor.execute(
-                f"SELECT * FROM {table_name} WHERE rowid = ?",  # noqa: S608
+                f"SELECT * FROM {table_name} WHERE rowid = ?",  # noqa: S608 # nosec B608
                 (inserted_rowid,),
             ).fetchone()
-            if AssetCache in AssetCache._instances:
+            if AssetCache in AssetCache._instances:  # pylint: disable=protected-access
                 if table_name == "issuances":
                     AssetCache(db).add_issuance(new_record)
                 elif table_name == "destructions":
@@ -43,14 +44,19 @@ def insert_record(db, table_name, record, event, event_info={}):  # noqa: B006
                 AssetCache(db)  # initialization will add just created record to cache
 
     add_to_journal(
-        db, CurrentState().current_block_index(), "insert", table_name, event, record | event_info
+        db,
+        CurrentState().current_block_index(),
+        "insert",
+        table_name,
+        event,
+        record | (event_info or {}),
     )
 
 
 # This function allows you to update a record using an INSERT.
 # The `block_index` and `rowid` fields allow you to
 # order updates and retrieve the row with the current data.
-def insert_update(db, table_name, id_name, id_value, update_data, event, event_info={}):  # noqa: B006
+def insert_update(db, table_name, id_name, id_value, update_data, event, event_info=None):  # noqa: B006
     cursor = db.cursor()
     # select records to update
     select_query = f"""
@@ -59,7 +65,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
         WHERE {id_name} = ?
         ORDER BY rowid DESC
         LIMIT 1
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     bindings = (id_value,)
     need_update_record = cursor.execute(select_query, bindings).fetchone()
 
@@ -72,7 +78,6 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     new_record["block_index"] = CurrentState().current_block_index()
     # let's keep the original tx_index so we can preserve order
     # with the old queries (ordered by default by old primary key)
-    # TODO: restore with protocol change and checkpoints update
     # if 'tx_index' in new_record:
     #    new_record['tx_index'] = tx_index
     # insert new record
@@ -81,11 +86,11 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     fields_name = ", ".join(new_record.keys())
     fields_values = ", ".join([f":{key}" for key in new_record.keys()])
     # no sql injection here
-    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608
+    insert_query = f"""INSERT INTO {table_name} ({fields_name}) VALUES ({fields_values})"""  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(insert_query, new_record)
     cursor.close()
     # Add event to journal
-    event_paylod = update_data | {id_name: id_value} | event_info
+    event_paylod = update_data | {id_name: id_value} | (event_info or {})
     if "rowid" in event_paylod:
         del event_paylod["rowid"]
     add_to_journal(
@@ -105,11 +110,11 @@ def last_message(db):
     messages = list(cursor.execute(query))
     if messages:
         assert len(messages) == 1
-        last_message = messages[0]
+        message = messages[0]
     else:
         raise exceptions.DatabaseError("No messages found.")
     cursor.close()
-    return last_message
+    return message
 
 
 # we are using a function here for testing purposes
@@ -146,7 +151,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
             previous_event_hash,
         ]
     )
-    event_hash = binascii.hexlify(check.dhash(event_hash_content)).decode("ascii")
+    event_hash = binascii.hexlify(helpers.dhash(event_hash_content)).decode("ascii")
     message_bindings = {
         "message_index": message_index,
         "block_index": block_index,
@@ -226,7 +231,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Debit given address by quantity of asset."""
     block_index = CurrentState().current_block_index()
 
-    if type(quantity) != int:  # noqa: E721
+    if not isinstance(quantity, int):  # noqa: E721
         raise exceptions.DebitError("Quantity must be an integer.")
     if quantity < 0:
         raise exceptions.DebitError("Negative quantity.")
@@ -304,7 +309,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Credit given address by quantity of asset."""
     block_index = CurrentState().current_block_index()
 
-    if type(quantity) != int:  # noqa: E721
+    if not isinstance(quantity, int):  # noqa: E721
         raise exceptions.CreditError("Quantity must be an integer.")
     if quantity < 0:
         raise exceptions.CreditError("Negative quantity.")
@@ -366,7 +371,7 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     if len(where) == 0:
         query = """SELECT * FROM messages ORDER BY message_index ASC LIMIT ?"""
     else:
-        query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC LIMIT ?"""  # nosec B608  # noqa: S608
+        query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC LIMIT ?"""  # nosec B608  # noqa: S608 # nosec B608
     bindings.append(limit)
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()

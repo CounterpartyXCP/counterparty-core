@@ -1,5 +1,4 @@
-#! /usr/bin/python3
-
+# pylint: disable=unused-import
 """
 The database connections are read‐only, so SQL injection attacks can’t be a
 problem.
@@ -133,11 +132,11 @@ CURRENT_API_STATUS_RESPONSE_JSON = None  # is updated by the APIStatusPoller
 
 
 def check_backend_state():
-    f"""Checks blocktime of last block to see if {config.BTC_NAME} Core is running behind."""  # noqa: B021
+    """Checks blocktime of last block to see if Bitcoin Core is running behind."""
     block_count = backend.bitcoind.getblockcount()
     block_hash = backend.bitcoind.getblockhash(block_count)
     cblock = backend.bitcoind.getblock(block_hash, verbosity=1)
-    time_behind = time.time() - cblock["time"]  # TODO: Block times are not very reliable.
+    time_behind = time.time() - cblock["time"]
     if time_behind > 60 * 60 * 2:  # Two hours.
         raise exceptions.BackendError(
             f"Bitcoind is running about {round(time_behind / 3600)} hours behind."
@@ -151,7 +150,6 @@ def check_backend_state():
     logger.debug("API Status Poller - Backend state check passed.")
 
 
-# TODO: ALL queries EVERYWHERE should be done with these methods
 def db_query(db, statement, bindings=(), callback=None, **callback_args):
     """Allow direct access to the database in a parametrized manner."""
     cursor = db.cursor()
@@ -189,17 +187,15 @@ def get_rows(
 ):
     """SELECT * FROM wrapper. Filters results based on a filter data structure (as used by the API)."""
 
-    if filters == None:  # noqa: E711
+    if filters is None:  # noqa: E711
         filters = []
 
     def value_to_marker(value):
         # if value is an array place holder is (?,?,?,..)
         if isinstance(value, list):
             return f"""({",".join(["?" for e in range(0, len(value))])})"""
-        else:
-            return """?"""
+        return """?"""
 
-    # TODO: Document that op can be anything that SQLite3 accepts.
     if not table or table.lower() not in API_TABLES:
         raise exceptions.APIError("Unknown table")
     if filterop and filterop.upper() not in ["OR", "AND"]:
@@ -208,13 +204,12 @@ def get_rows(
         raise exceptions.APIError("Invalid order direction (ASC, DESC)")
     if not isinstance(limit, int):
         raise exceptions.APIError("Invalid limit")
-    elif config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
+    if config.API_LIMIT_ROWS != 0 and limit > config.API_LIMIT_ROWS:
         raise exceptions.APIError(f"Limit should be lower or equal to {config.API_LIMIT_ROWS}")
-    elif config.API_LIMIT_ROWS != 0 and limit == 0:
+    if config.API_LIMIT_ROWS != 0 and limit == 0:
         raise exceptions.APIError("Limit should be greater than 0")
     if not isinstance(offset, int):
         raise exceptions.APIError("Invalid offset")
-    # TODO: accept an object:  {'field1':'ASC', 'field2': 'DESC'}
     if order_by and not re.compile("^[a-z0-9_]+$").match(order_by):
         raise exceptions.APIError("Invalid order_by, must be a field name")
 
@@ -225,15 +220,14 @@ def get_rows(
     elif not isinstance(filters, list):
         filters = []
 
-    # TODO: Document this! (Each filter can be an ordered list.)
     new_filters = []
     for filter_ in filters:
-        if type(filter_) in (list, tuple) and len(filter_) in [3, 4]:
+        if isinstance(filter_, (list, tuple)) and len(filter_) in [3, 4]:
             new_filter = {"field": filter_[0], "op": filter_[1], "value": filter_[2]}
             if len(filter_) == 4:
                 new_filter["case_sensitive"] = filter_[3]
             new_filters.append(new_filter)
-        elif type(filter_) == dict:  # noqa: E721
+        elif isinstance(filter_, dict):  # noqa: E721
             new_filters.append(filter_)
         else:
             raise exceptions.APIError("Unknown filter type")
@@ -274,13 +268,13 @@ def get_rows(
 
     # SELECT
     # no sql injection here
-    statement = f"""SELECT * FROM ({table})"""  # nosec B608  # noqa: S608
+    statement = f"""SELECT * FROM ({table})"""  # nosec B608  # noqa: S608 # nosec B608
     # WHERE
     bindings = []
     conditions = []
     for filter_ in filters:
         case_sensitive = False if "case_sensitive" not in filter_ else filter_["case_sensitive"]
-        if filter_["op"] == "LIKE" and case_sensitive == False:  # noqa: E712
+        if filter_["op"] == "LIKE" and not case_sensitive:  # noqa: E712
             filter_["field"] = f"""UPPER({filter_["field"]})"""
             filter_["value"] = filter_["value"].upper()
         marker = value_to_marker(filter_["value"])
@@ -292,17 +286,17 @@ def get_rows(
     # AND filters
     more_conditions = []
     if table not in ["balances", "order_matches", "bet_matches"]:
-        if start_block != None:  # noqa: E711
+        if start_block is not None:  # noqa: E711
             more_conditions.append("""block_index >= ?""")
             bindings.append(start_block)
-        if end_block != None:  # noqa: E711
+        if end_block is not None:  # noqa: E711
             more_conditions.append("""block_index <= ?""")
             bindings.append(end_block)
     elif table in ["order_matches", "bet_matches"]:
-        if start_block != None:  # noqa: E711
+        if start_block is not None:  # noqa: E711
             more_conditions.append("""tx0_block_index >= ?""")
             bindings.append(start_block)
-        if end_block != None:  # noqa: E711
+        if end_block is not None:  # noqa: E711
             more_conditions.append("""tx1_block_index <= ?""")
             bindings.append(end_block)
 
@@ -331,9 +325,9 @@ def get_rows(
         statement += f""" {" AND ".join(all_conditions)}"""
 
     # ORDER BY
-    if order_by != None:  # noqa: E711
+    if order_by is not None:  # noqa: E711
         statement += f""" ORDER BY {order_by}"""
-        if order_dir != None:  # noqa: E711
+        if order_dir is not None:  # noqa: E711
             statement += f""" {order_dir.upper()}"""
     # LIMIT
     if limit and limit > 0:
@@ -395,7 +389,7 @@ def adjust_get_balances_results(query_result, ledger_db):
 def adjust_get_destructions_results(query_result):
     filtered_results = []
     for destruction_row in list(query_result):
-        if type(destruction_row["tag"]) == bytes:  # noqa: E721
+        if isinstance(destruction_row["tag"], bytes):
             destruction_row["tag"] = destruction_row["tag"].decode("utf-8", "ignore")
 
         filtered_results.append(destruction_row)
@@ -413,8 +407,8 @@ def adjust_get_sends_memo_filters(filters):
             filter_["field"] = "memo"
             try:
                 filter_["value"] = bytes.fromhex(filter_["value"])
-            except ValueError as e:  # noqa: F841
-                raise exceptions.APIError("Invalid memo_hex value")  # noqa: B904
+            except ValueError as e:
+                raise exceptions.APIError("Invalid memo_hex value") from e
 
 
 def adjust_get_sends_results(query_result):
@@ -426,7 +420,7 @@ def adjust_get_sends_results(query_result):
                 send_row["memo_hex"] = None
                 send_row["memo"] = None
             else:
-                if type(send_row["memo"]) == str:  # noqa: E721
+                if isinstance(send_row["memo"], str):  # noqa: E721
                     send_row["memo"] = bytes(send_row["memo"], "utf-8")
 
                 send_row["memo_hex"] = binascii.hexlify(send_row["memo"]).decode("utf8")
@@ -488,13 +482,14 @@ class APIStatusPoller(threading.Thread):
 
     def run(self):
         logger.info("Starting v1 API Status Poller thread...")
-        global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603
+        global CURRENT_API_STATUS_CODE, CURRENT_API_STATUS_RESPONSE_JSON  # noqa: PLW0603 # pylint: disable=global-statement
 
         interval_if_ready = 5 * 60  # 5 minutes
         interval_if_not_ready = 60  # 1 minute
         interval = interval_if_not_ready
 
         while not self.stop_event.is_set():
+            code = 0
             try:
                 # Check that backend is running, communicable, and caught up with the blockchain.
                 # Check that the database has caught up with bitcoind.
@@ -543,8 +538,8 @@ def create_app():
         def get_method(**kwargs):
             try:
                 return get_rows(table=table, **kwargs)
-            except TypeError as e:  # TODO: generalise for all API methods
-                raise exceptions.APIError(str(e))  # noqa: B904
+            except TypeError as e:
+                raise exceptions.APIError(str(e)) from e
 
         return get_method
 
@@ -555,7 +550,7 @@ def create_app():
 
     @dispatcher.add_method
     def sql(query, bindings=None):
-        if bindings == None:  # noqa: E711
+        if bindings is None:  # noqa: E711
             bindings = []
         with LedgerDBConnectionPool().connection() as db:
             return db_query(db, query, tuple(bindings))
@@ -566,7 +561,7 @@ def create_app():
     # Generate dynamically create_{transaction} methods
     def generate_create_method(tx):
         def create_method(**kwargs):
-            transaction_args, common_args, private_key_wif = split_compose_params(**kwargs)
+            transaction_args, common_args, _private_key_wif = split_compose_params(**kwargs)
             extended_tx_info = old_style_api = False
             if "extended_tx_info" in common_args:
                 extended_tx_info = common_args["extended_tx_info"]
@@ -602,13 +597,13 @@ def create_app():
                     )  # filter out None
                     if old_style_api:
                         if len(tx_hexes) != 1:
-                            raise Exception("Can't do 2 TXs with old_style_api")
+                            raise exceptions.APIError("Can't do 2 TXs with old_style_api")
                         return tx_hexes[0]
-                    else:
-                        if len(tx_hexes) == 1:
-                            return tx_hexes[0]
-                        else:
-                            return tx_hexes
+
+                    if len(tx_hexes) == 1:
+                        return tx_hexes[0]
+
+                    return tx_hexes
             except (
                 TypeError,
                 exceptions.AddressError,
@@ -619,9 +614,9 @@ def create_app():
                 # TypeError happens when unexpected keyword arguments are passed in
                 error_msg = f"Error composing {tx} transaction via API: {str(error)}"
                 logger.trace(error_msg)
-                raise JSONRPCDispatchException(  # noqa: B904
+                raise JSONRPCDispatchException(
                     code=JSON_RPC_ERROR_API_COMPOSE, message=error_msg
-                )
+                ) from error
 
         return create_method
 
@@ -660,11 +655,10 @@ def create_app():
         with LedgerDBConnectionPool().connection() as db:
             if asset == "BTC":
                 return backend.bitcoind.get_btc_supply(normalize=False)
-            elif asset == "XCP":
+            if asset == "XCP":
                 return ledger.supplies.xcp_supply(db)
-            else:
-                asset = ledger.issuances.resolve_subasset_longname(db, asset)
-                return ledger.supplies.asset_supply(db, asset)
+            asset = ledger.issuances.resolve_subasset_longname(db, asset)
+            return ledger.supplies.asset_supply(db, asset)
 
     @dispatcher.add_method
     def get_xcp_supply():
@@ -683,19 +677,19 @@ def create_app():
             )
         assets_info = []
         with LedgerDBConnectionPool().connection() as db:
-            for asset in assets:
-                asset = ledger.issuances.resolve_subasset_longname(db, asset)  # noqa: PLW2901
+            for asset_item in assets:
+                final_asset = ledger.issuances.resolve_subasset_longname(db, asset_item)  # noqa: PLW2901
 
                 # BTC and XCP.
-                if asset in [config.BTC, config.XCP]:
-                    if asset == config.BTC:
+                if final_asset in [config.BTC, config.XCP]:
+                    if final_asset == config.BTC:
                         supply = backend.bitcoind.get_btc_supply(normalize=False)
                     else:
                         supply = ledger.supplies.xcp_supply(db)
 
                     assets_info.append(
                         {
-                            "asset": asset,
+                            "asset": final_asset,
                             "asset_longname": None,
                             "owner": None,
                             "divisible": True,
@@ -710,25 +704,24 @@ def create_app():
                 # User‐created asset.
                 cursor = db.cursor()
                 issuances = ledger.issuances.get_issuances(
-                    db, asset=asset, status="valid", first=True
+                    db, asset=final_asset, status="valid", first=True
                 )
                 cursor.close()
                 if not issuances:
                     continue  # asset not found, most likely
-                else:
-                    last_issuance = issuances[-1]
+                last_issuance = issuances[-1]
                 locked = False
                 for e in issuances:
                     if e["locked"]:
                         locked = True
                 assets_info.append(
                     {
-                        "asset": asset,
+                        "asset": final_asset,
                         "asset_longname": last_issuance["asset_longname"],
                         "owner": last_issuance["issuer"],
                         "divisible": bool(last_issuance["divisible"]),
                         "locked": locked,
-                        "supply": ledger.supplies.asset_supply(db, asset),
+                        "supply": ledger.supplies.asset_supply(db, final_asset),
                         "description": last_issuance["description"],
                         "issuer": last_issuance["issuer"],
                     }
@@ -783,7 +776,7 @@ def create_app():
             block_indexes_placeholder = f"{','.join(['?'] * len(block_indexes))}"
             # no sql injection here
             cursor.execute(
-                f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608
+                f"SELECT * FROM blocks WHERE block_index IN ({block_indexes_placeholder}) ORDER BY block_index ASC",  # nosec B608  # noqa: S608 # nosec B608
                 block_indexes,
             )
             blocks = cursor.fetchall()  # noqa: F811
@@ -822,12 +815,12 @@ def create_app():
 
             try:
                 last_message = ledger.events.last_message(db)
-            except:  # noqa: E722
+            except:  # noqa: E722  # pylint: disable=bare-except
                 last_message = None
 
         try:
             bitcoind_blocks_behind = backend.bitcoind.get_blocks_behind()
-        except:  # noqa: E722
+        except:  # noqa: E722  # pylint: disable=bare-except
             bitcoind_blocks_behind = latest_block_index if latest_block_index > 0 else 999999
         bitcoind_caught_up = bitcoind_blocks_behind <= 1
 
@@ -883,7 +876,7 @@ def create_app():
                 "destructions",
             ]:
                 # no sql injection here, element is hardcoded
-                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608  # noqa: S608
+                cursor.execute(f"SELECT COUNT(*) AS count FROM {element}")  # nosec B608  # noqa: S608 # nosec B608
                 count_list = cursor.fetchall()
                 assert len(count_list) == 1
                 counts[element] = count_list[0]["count"]
@@ -891,29 +884,13 @@ def create_app():
             return counts
 
     @dispatcher.add_method
-    def get_asset_names(longnames=False):
-        with LedgerDBConnectionPool().connection() as db:
-            all_assets = ledger.other.get_valid_assets(db)
-        if longnames:
-            names = [
-                {"asset": row["asset"], "asset_longname": row["asset_longname"]}
-                for row in all_assets
-            ]
-        else:
-            names = [row["asset"] for row in all_assets]
-        return names
-
-    @dispatcher.add_method
-    def get_asset_longnames():
-        return get_asset_names(longnames=True)
-
-    @dispatcher.add_method
     def get_holder_count(asset):
+        all_holders = []
         with LedgerDBConnectionPool().connection() as db:
             asset = ledger.issuances.resolve_subasset_longname(db, asset)
-            holders = ledger.supplies.holders(db, asset, True)
+            all_holders = ledger.supplies.holders(db, asset, True)
         addresses = []
-        for holder in holders:
+        for holder in all_holders:
             addresses.append(holder["address"])
         return {asset: len(set(addresses))}
 
@@ -925,10 +902,8 @@ def create_app():
         return holders
 
     @dispatcher.add_method
-    def search_raw_transactions(address, unconfirmed=True, only_tx_hashes=False):
-        return backend.electrs.get_history(
-            address, unconfirmed=unconfirmed, only_tx_hashes=only_tx_hashes
-        )
+    def search_raw_transactions(address, unconfirmed=True):
+        return backend.electrs.get_history(address, unconfirmed=unconfirmed)
 
     @dispatcher.add_method
     def get_unspent_txouts(address, unconfirmed=False, unspent_tx_hash=None, order_by=None):
@@ -937,13 +912,13 @@ def create_app():
         )
         if order_by is None:
             return results
-        else:
-            order_key = order_by
-            reverse = False
-            if order_key.startswith("-"):
-                order_key = order_key[1:]
-                reverse = True
-            return sorted(results, key=lambda x: x[order_key], reverse=reverse)
+
+        order_key = order_by
+        reverse = False
+        if order_key.startswith("-"):
+            order_key = order_key[1:]
+            reverse = True
+        return sorted(results, key=lambda x: x[order_key], reverse=reverse)
 
     @dispatcher.add_method
     def getrawtransaction(tx_hash, verbose=False):
@@ -981,19 +956,17 @@ def create_app():
         data = binascii.unhexlify(data_hex)
         message_type_id, message = messagetype.unpack(data)
 
-        # TODO: Enabled only for `send`.
         if message_type_id == send.ID:
             with LedgerDBConnectionPool().connection() as db:
-                unpacked = send.unpack(db, message, CurrentState().current_block_index())
+                unpacked = send.unpack(db, message)
         elif message_type_id == enhancedsend.ID:
-            unpacked = enhancedsend.unpack(message, CurrentState().current_block_index())
+            unpacked = enhancedsend.unpack(message)
         else:
             raise exceptions.APIError("unsupported message type")
         return message_type_id, unpacked
 
     @dispatcher.add_method
-    # TODO: Rename this method.
-    def search_pubkey(pubkeyhash, provided_pubkeys=None):
+    def search_pubkey(pubkeyhash):
         return backend.electrs.search_pubkey(pubkeyhash)
 
     @dispatcher.add_method
@@ -1009,22 +982,22 @@ def create_app():
                 dispensers = ledger.markets.get_dispenser_info(db, tx_index=tx_index)
 
             if len(dispensers) == 1:
-                dispenser = dispensers[0]
+                dispenser_info = dispensers[0]
                 oracle_price = ""
                 satoshi_price = ""
                 fiat_price = ""
                 oracle_price_last_updated = ""
                 oracle_fiat_label = ""
 
-                if dispenser["oracle_address"] != None:  # noqa: E711
-                    fiat_price = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
+                if dispenser_info["oracle_address"] is not None:  # noqa: E711
+                    fiat_price = helpers.satoshirate_to_fiat(dispenser_info["satoshirate"])
                     (
                         oracle_price,
-                        oracle_fee,
+                        _oracle_fee,
                         oracle_fiat_label,
                         oracle_price_last_updated,
                     ) = ledger.other.get_oracle_last_price(
-                        db, dispenser["oracle_address"], CurrentState().current_block_index()
+                        db, dispenser_info["oracle_address"], CurrentState().current_block_index()
                     )
 
                     if oracle_price > 0:
@@ -1033,23 +1006,23 @@ def create_app():
                         raise exceptions.APIError("Last oracle price is zero")
 
                 return {
-                    "tx_index": dispenser["tx_index"],
-                    "tx_hash": dispenser["tx_hash"],
-                    "block_index": dispenser["block_index"],
-                    "source": dispenser["source"],
-                    "asset": dispenser["asset"],
-                    "give_quantity": dispenser["give_quantity"],
-                    "escrow_quantity": dispenser["escrow_quantity"],
-                    "mainchainrate": dispenser["satoshirate"],
+                    "tx_index": dispenser_info["tx_index"],
+                    "tx_hash": dispenser_info["tx_hash"],
+                    "block_index": dispenser_info["block_index"],
+                    "source": dispenser_info["source"],
+                    "asset": dispenser_info["asset"],
+                    "give_quantity": dispenser_info["give_quantity"],
+                    "escrow_quantity": dispenser_info["escrow_quantity"],
+                    "mainchainrate": dispenser_info["satoshirate"],
                     "fiat_price": fiat_price,
                     "fiat_unit": oracle_fiat_label,
                     "oracle_price": oracle_price,
                     "satoshi_price": satoshi_price,
-                    "status": dispenser["status"],
-                    "give_remaining": dispenser["give_remaining"],
-                    "oracle_address": dispenser["oracle_address"],
+                    "status": dispenser_info["status"],
+                    "give_remaining": dispenser_info["give_remaining"],
+                    "oracle_address": dispenser_info["oracle_address"],
                     "oracle_price_last_updated": oracle_price_last_updated,
-                    "asset_longname": dispenser["asset_longname"],
+                    "asset_longname": dispenser_info["asset_longname"],
                 }
 
         return {}
@@ -1090,24 +1063,22 @@ def create_app():
                 request_json = flask.request.get_data().decode("utf-8")
                 response = handle_rpc_post(request_json)
                 return response
-            elif flask.request.method == "OPTIONS":
+            if flask.request.method == "OPTIONS":
                 response = handle_rpc_options()
                 return response
-            else:
-                error = "Invalid method."
-                return flask.Response(error, 405, mimetype="application/json")
-        elif request_path.startswith("v1/rest/"):
-            if flask.request.method == "GET" or flask.request.method == "POST":
+            error = "Invalid method."
+            return flask.Response(error, 405, mimetype="application/json")
+        if request_path.startswith("v1/rest/"):
+            if flask.request.method in ["GET", "POST"]:
                 # Pass the URL path without /REST/ part and Flask request object.
                 rest_path = args_path.split("/", 1)[1]
                 response = handle_rest(rest_path, flask.request)
                 return response
-            else:
-                error = "Invalid method."
-                return flask.Response(error, 405, mimetype="application/json")
-        else:
-            # Not found
-            return flask.Response(None, 404, mimetype="application/json")
+
+            error = "Invalid method."
+            return flask.Response(error, 405, mimetype="application/json")
+        # Not found
+        return flask.Response(None, 404, mimetype="application/json")
 
     ######################
     # JSON-RPC API
@@ -1127,7 +1098,7 @@ def create_app():
                 "id" in request_data and request_data["jsonrpc"] == "2.0" and request_data["method"]
             )
             # params may be omitted
-        except Exception:  # noqa: E722
+        except Exception:  # noqa: E722 # pylint: disable=broad-exception-caught
             obj_error = jsonrpc.exceptions.JSONRPCInvalidRequest(
                 data="Invalid JSON-RPC 2.0 request format"
             )
@@ -1195,17 +1166,17 @@ def create_app():
         query_data = {}
 
         if compose:
-            transaction_args, common_args, private_key_wif = split_compose_params(**extra_args)
+            transaction_args, common_args, _private_key_wif = split_compose_params(**extra_args)
 
             # Must have some additional transaction arguments.
-            if not len(transaction_args):
+            if len(transaction_args) == 0:
                 error = "No transaction arguments provided."
                 return flask.Response(error, 400, mimetype="application/json")
 
             # Compose the transaction.
             try:
                 with LedgerDBConnectionPool().connection() as db:
-                    query_data, data = composer.compose_transaction(
+                    query_data, _data = composer.compose_transaction(
                         db, query_type, transaction_args, common_args
                     )
             except (
@@ -1220,7 +1191,7 @@ def create_app():
                 return flask.Response(error_msg, 400, mimetype="application/json")
         else:
             # Need to de-generate extra_args to pass it through.
-            query_args = dict([item for item in extra_args])
+            query_args = dict(list(extra_args))
             operator = query_args.pop("op", "AND")
             # Put the data into specific dictionary format.
             data_filter = [
@@ -1240,7 +1211,7 @@ def create_app():
         # See which encoding to choose from.
         file_format = flask_request.headers["Accept"]
         # JSON as default.
-        if file_format == "application/json" or file_format == "*/*":
+        if file_format in ["application/json", "*/*"]:
             response_data = json.dumps(query_data)
         elif file_format == "application/xml":
             # Add document root for XML. Note when xmltodict encounters a list, it produces separate tags for every item.
@@ -1259,7 +1230,7 @@ def create_app():
 class APIServer(threading.Thread):
     """Handle JSON-RPC API calls."""
 
-    def __init__(self, db=None):
+    def __init__(self):
         self.is_ready = False
         self.server = None
         self.ctx = None

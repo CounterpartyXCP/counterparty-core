@@ -496,7 +496,7 @@ class RegtestNode:
             self.counterparty_server_process.terminate()
             self.counterparty_server_process.wait()
             self.kill_gunicorn_workers()
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             print(e)
             pass
 
@@ -1012,7 +1012,7 @@ class RegtestNode:
         self.mine_blocks(1)
         self.wait_for_counterparty_server()
         # wait for event to be parsed
-        # TODO:find a way to check the event is parsed
+        # find a way to check the event is parsed ?
         time.sleep(2)
 
         # check the dispenser is created

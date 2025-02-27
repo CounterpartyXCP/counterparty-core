@@ -73,7 +73,7 @@ def get_blocks_time(db, block_indexes):
         SELECT block_index, block_time
         FROM blocks
         WHERE block_index IN ({",".join(["?" for e in range(0, len(block_indexes))])})
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, block_indexes)
     blocks = cursor.fetchall()
     result = {}
@@ -108,7 +108,7 @@ def get_transactions(db, tx_hash=None, tx_index=None):
         bindings.append(tx_index)
     # no sql injection here
     if len(where) > 0:
-        query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+        query = f"""SELECT * FROM transactions WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608 # nosec B608
     else:
         query = "SELECT * FROM transactions"
     cursor.execute(query, tuple(bindings))

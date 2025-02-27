@@ -8,19 +8,18 @@ from counterpartycore.lib.messages.versions import mpma
 
 def test_unpack(defaults, current_block_index):
     with pytest.raises(exceptions.UnpackError, match="could not unpack"):
-        mpma.unpack(b"", current_block_index)
+        mpma.unpack(b"")
 
     with pytest.raises(exceptions.DecodeError, match="address list can't be empty"):
-        mpma.unpack(binascii.unhexlify("0000"), current_block_index)
+        mpma.unpack(binascii.unhexlify("0000"))
 
     with pytest.raises(exceptions.UnpackError, match="truncated data"):
-        mpma.unpack(binascii.unhexlify("0001ffff"), current_block_index)
+        mpma.unpack(binascii.unhexlify("0001ffff"))
 
     assert mpma.unpack(
         binascii.unhexlify(
             "00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400"
-        ),
-        current_block_index,
+        )
     ) == {
         "XCP": [
             (defaults["addresses"][2], defaults["quantity"]),
@@ -31,8 +30,7 @@ def test_unpack(defaults, current_block_index):
     assert mpma.unpack(
         binascii.unhexlify(
             "00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e100c4deadbeef8000000002faf0800"
-        ),
-        current_block_index,
+        )
     ) == {
         "XCP": [
             (defaults["addresses"][2], defaults["quantity"], binascii.unhexlify("DEADBEEF"), True),
@@ -43,8 +41,7 @@ def test_unpack(defaults, current_block_index):
     assert mpma.unpack(
         binascii.unhexlify(
             "00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e1008844454144424545468000000002faf0800"
-        ),
-        current_block_index,
+        )
     ) == {
         "XCP": [
             (defaults["addresses"][2], defaults["quantity"], "DEADBEEF", False),
@@ -55,8 +52,7 @@ def test_unpack(defaults, current_block_index):
     assert mpma.unpack(
         binascii.unhexlify(
             "00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000000000000000640000000017d784000000000002faf08020000000005f5e1000"
-        ),
-        current_block_index,
+        )
     ) == {
         "XCP": [
             (defaults["addresses"][3], defaults["quantity"]),
@@ -68,8 +64,7 @@ def test_unpack(defaults, current_block_index):
     assert mpma.unpack(
         binascii.unhexlify(
             "00036f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f6c39ee7c8f3a5ffa6121b0304a7a0de9d3d9a1526f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d9800000000017d784010006cad8dc7f0b66200000000000000014000000000000000440000000017d784000"
-        ),
-        current_block_index,
+        )
     ) == {
         "XCP": [(defaults["addresses"][3], defaults["quantity"])],
         "NODIVISIBLE": [(defaults["addresses"][1], 1)],
@@ -79,8 +74,7 @@ def test_unpack(defaults, current_block_index):
     assert mpma.unpack(
         binascii.unhexlify(
             "00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc2008000000002faf0800"
-        ),
-        current_block_index,
+        )
     ) == {
         "XCP": [
             (defaults["addresses"][2], defaults["quantity"], binascii.unhexlify("DEADBEEF"), True),
@@ -91,8 +85,7 @@ def test_unpack(defaults, current_block_index):
     assert mpma.unpack(
         binascii.unhexlify(
             "00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ecc4deadbeef8000000000000000c000000000bebc201897ddfbd5b0000000005f5e1000"
-        ),
-        current_block_index,
+        )
     ) == {
         "XCP": [
             (defaults["addresses"][2], defaults["quantity"], binascii.unhexlify("BEEFDEAD"), True),
@@ -103,8 +96,7 @@ def test_unpack(defaults, current_block_index):
     assert mpma.unpack(
         binascii.unhexlify(
             "00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e100000300026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec4000002896f8d2d990000000005f5e100400000000000000040000000005f5e10000"
-        ),
-        current_block_index,
+        )
     ) == {
         "DIVISIBLE": [(defaults["addresses"][1], defaults["quantity"])],
         "XCP": [(defaults["addresses"][2], defaults["quantity"])],
@@ -113,8 +105,7 @@ def test_unpack(defaults, current_block_index):
     assert mpma.unpack(
         binascii.unhexlify(
             "0004002e9943921a473dee1e04a579c1762ff6e9ac34e4006c7beeb1af092be778a2c0b8df639f2f8e9c987600a9055398b92818794b38b15794096f752167e25f00f3a6b6e4a093e5a5b9da76977a5270fd4d62553e40000091f59f36daf0000000271d94900180000004e3b29200200000009c76524002000000138eca4800806203d0c908232420000000000000000b000000000000000140024a67f0f279952000000000000000058000000000000000a00000000000000014000000908a3200cb000000000000000058000000000000000a000000000000000120000000000000002075410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ad0075740087"
-        ),
-        current_block_index,
+        )
     ) == {
         "MAFIACASH": [
             ("15FPgnpZuNyZLVLsyB6UdFicsVvWFJXNve", 42000000000),
@@ -142,8 +133,7 @@ def test_unpack(defaults, current_block_index):
     assert mpma.unpack(
         binascii.unhexlify(
             "00010042276049e5518791be2ffe2c301f5dfe9ef85dd0400001720034b0410000000000000001500000006a79811e000000000000000054000079cec1665f4800000000000000050000000ca91f2d660000000000000005402736c8de6e34d54000000000000001500c5e4c71e081ceb00000000000000054000000045dc03ec4000000000000000500004af1271cf5fc00000000000000054001e71f8464432780000000000000015000002e1e4191f0d0000000000000005400012bc4aaac2a54000000000000001500079c7e774e411c00000000000000054000000045dc0a6f00000000000000015000002e1e486f661000000000000000540001c807abe13908000000000000000475410426156245525daa71f2e84a40797bcf28099a2c508662a8a33324a703597b9aa2661a79a82ffb4caaa9b15f4094622fbfa85f8b9dc7381f991f5a265421391cc3ad0075740087"
-        ),
-        current_block_index,
+        )
     ) == {
         "BELLAMAFIA": [("172nmZbxDR6erc5PqNqV28fnMj7g6besru", 5)],
         "DONPABLO": [("172nmZbxDR6erc5PqNqV28fnMj7g6besru", 5)],
@@ -164,105 +154,83 @@ def test_unpack(defaults, current_block_index):
 
 
 def test_validate(ledger_db, defaults, current_block_index):
-    assert mpma.validate(ledger_db, defaults["addresses"][0], [], 1) == (
-        ["send list cannot be empty"]
-    )
+    assert mpma.validate(ledger_db, []) == (["send list cannot be empty"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [("XCP", defaults["addresses"][1], defaults["quantity"])],
-        1,
     ) == (["send list cannot have only one element"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], 0.1),
         ],
-        1,
     ) == ([f"quantities must be an int (in satoshis) for XCP to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], -defaults["quantity"]),
         ],
-        1,
     ) == ([f"negative quantity for XCP to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], 0),
         ],
-        1,
     ) == ([f"zero quantity for XCP to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], config.MAX_INT + 1),
         ],
-        1,
     ) == ([f"integer overflow for XCP to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", None, defaults["quantity"]),
         ],
-        1,
     ) == (["destination is required for XCP"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("BTC", defaults["addresses"][1], defaults["quantity"]),
         ],
-        1,
     ) == ([f"cannot send BTC to {defaults['addresses'][1]}"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][1], defaults["quantity"]),
         ],
-        1,
     ) == ([])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][2], defaults["quantity"] + 1),
         ],
-        1,
     ) == (["cannot specify more than once a destination per asset"])
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][6], defaults["quantity"], "DEADBEEF", True),
         ],
-        1,
     ) == ([])
 
     ledger.events.insert_record(
@@ -278,12 +246,10 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     assert mpma.validate(
         ledger_db,
-        defaults["addresses"][0],
         [
             ("XCP", defaults["addresses"][2], defaults["quantity"]),
             ("XCP", defaults["addresses"][6], defaults["quantity"]),
         ],
-        1,
     ) == ([f"destination {defaults['addresses'][6]} requires memo"])
 
 

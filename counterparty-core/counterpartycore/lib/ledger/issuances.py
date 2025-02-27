@@ -17,11 +17,11 @@ from counterpartycore.lib.utils import assetnames
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def generate_asset_id(asset_name, block_index):
+def generate_asset_id(asset_name):
     """Create asset_id from asset_name."""
     if asset_name == config.BTC:
         return 0
-    elif asset_name == config.XCP:
+    if asset_name == config.XCP:
         return 1
 
     if len(asset_name) < 4:
@@ -33,15 +33,15 @@ def generate_asset_id(asset_name, block_index):
             # Must be numeric.
             try:
                 asset_id = int(asset_name[1:])
-            except ValueError:
-                raise exceptions.AssetNameError("non‐numeric asset name starts with ‘A’")  # noqa: B904
+            except ValueError as e:
+                raise exceptions.AssetNameError("non‐numeric asset name starts with ‘A’") from e
 
             # Number must be in range.
-            if not (26**12 + 1 <= asset_id <= 2**64 - 1):
+            if not 26**12 + 1 <= asset_id <= 2**64 - 1:
                 raise exceptions.AssetNameError("numeric asset name not in range")
 
             return asset_id
-        elif len(asset_name) >= 13:
+        if len(asset_name) >= 13:
             raise exceptions.AssetNameError("long asset names must be numeric")
 
     if asset_name[0] == "A":
@@ -63,11 +63,11 @@ def generate_asset_id(asset_name, block_index):
     return asset_id
 
 
-def generate_asset_name(asset_id, block_index):
+def generate_asset_name(asset_id):
     """Create asset_name from asset_id."""
     if asset_id == 0:
         return config.BTC
-    elif asset_id == 1:
+    if asset_id == 1:
         return config.XCP
 
     if asset_id < 26**3:
@@ -89,16 +89,13 @@ def generate_asset_name(asset_id, block_index):
         res.append(assetnames.B26_DIGITS[r])
     asset_name = "".join(res[::-1])
 
-    """
-    return asset_name + checksum.compute(asset_name)
-    """
     return asset_name
 
 
-def get_asset_id(db, asset_name, block_index):
+def get_asset_id(db, asset_name):
     """Return asset_id from asset_name."""
     if not protocol.enabled("hotfix_numeric_assets"):
-        return generate_asset_id(asset_name, block_index)
+        return generate_asset_id(asset_name)
     cursor = db.cursor()
     query = """
         SELECT * FROM assets
@@ -109,14 +106,13 @@ def get_asset_id(db, asset_name, block_index):
     assets = list(cursor)
     if len(assets) == 1:
         return int(assets[0]["asset_id"])
-    else:
-        raise exceptions.AssetError(f"No such asset: {asset_name}")
+    raise exceptions.AssetError(f"No such asset: {asset_name}")
 
 
-def get_asset_name(db, asset_id, block_index):
+def get_asset_name(db, asset_id):
     """Return asset_name from asset_id."""
     if not protocol.enabled("hotfix_numeric_assets"):
-        return generate_asset_name(asset_id, block_index)
+        return generate_asset_name(asset_id)
     cursor = db.cursor()
     query = """
         SELECT * FROM assets
@@ -127,8 +123,7 @@ def get_asset_name(db, asset_id, block_index):
     assets = list(cursor)
     if len(assets) == 1:
         return assets[0]["asset_name"]
-    elif not assets:
-        return 0  # Strange, I know…
+    return 0  # Strange, I know…
 
 
 # If asset_name is an existing subasset (PARENT.child) then return the corresponding numeric asset name (A12345)
@@ -140,8 +135,8 @@ def resolve_subasset_longname(db, asset_name):
             _subasset_parent, subasset_longname = assetnames.parse_subasset_from_asset_name(
                 asset_name, protocol.enabled("allow_subassets_on_numerics")
             )
-        except Exception as e:  # noqa: F841
-            logger.warning(f"Invalid subasset {asset_name}")
+        except Exception:  # pylint: disable=broad-except  # noqa: F841
+            logger.warning("Invalid subasset %s", asset_name)
             subasset_longname = None
 
         if subasset_longname is not None:
@@ -164,19 +159,19 @@ def is_divisible(db, asset):
     """Check if the asset is divisible."""
     if asset in (config.BTC, config.XCP):
         return True
-    else:
-        cursor = db.cursor()
-        query = """
-            SELECT * FROM issuances
-            WHERE (status = ? AND asset = ?)
-            ORDER BY tx_index DESC
-        """
-        bindings = ("valid", asset)
-        cursor.execute(query, bindings)
-        issuances = cursor.fetchall()
-        if not issuances:
-            raise exceptions.AssetError(f"No such asset: {asset}")
-        return issuances[0]["divisible"]
+
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM issuances
+        WHERE (status = ? AND asset = ?)
+        ORDER BY tx_index DESC
+    """
+    bindings = ("valid", asset)
+    cursor.execute(query, bindings)
+    issuances = cursor.fetchall()
+    if not issuances:
+        raise exceptions.AssetError(f"No such asset: {asset}")
+    return issuances[0]["divisible"]
 
 
 def value_input(quantity, asset, divisible):
@@ -184,21 +179,21 @@ def value_input(quantity, asset, divisible):
         return round(quantity)
 
     if asset in ("value", "fraction", "price", "odds"):
-        return float(quantity)  # TODO: Float?!
+        return float(quantity)
 
     if divisible:
         quantity = D(quantity) * config.UNIT
         if quantity == quantity.to_integral():
             return int(quantity)
-        else:
-            raise exceptions.QuantityError(
-                "Divisible assets have only eight decimal places of precision."
-            )
-    else:
-        quantity = D(quantity)
-        if quantity != round(quantity):
-            raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
-        return round(quantity)
+
+        raise exceptions.QuantityError(
+            "Divisible assets have only eight decimal places of precision."
+        )
+
+    quantity = D(quantity)
+    if quantity != round(quantity):
+        raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
+    return round(quantity)
 
 
 def norm(num, places):
@@ -220,23 +215,22 @@ def value_output(quantity, asset, divisible):
         quantity = D(quantity) / D(config.UNIT)
         if quantity == quantity.to_integral():
             return str(quantity) + ".0"  # For divisible assets, display the decimal point.
-        else:
-            return norm(quantity, 8)
-    else:
-        quantity = D(quantity)
-        if quantity != round(quantity):
-            raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
-        return round(quantity)
+        return norm(quantity, 8)
+
+    quantity = D(quantity)
+    if quantity != round(quantity):
+        raise exceptions.QuantityError("Fractional quantities of indivisible assets.")
+    return round(quantity)
 
 
 def value_out(db, quantity, asset, divisible=None):
-    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:  # noqa: E711
+    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible is None:
         divisible = is_divisible(db, asset)
     return value_output(quantity, asset, divisible)
 
 
 def value_in(db, quantity, asset, divisible=None):
-    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible == None:  # noqa: E711
+    if asset not in ["leverage", "value", "fraction", "price", "odds"] and divisible is None:
         divisible = is_divisible(db, asset)
     return value_input(quantity, asset, divisible)
 
@@ -247,47 +241,47 @@ def price(numerator, denominator):
         CurrentState().current_block_index(), 294500
     ):  # Protocol change.
         return fractions.Fraction(numerator, denominator)
-    else:
-        numerator = D(numerator)
-        denominator = D(denominator)
-        return D(numerator / denominator)
+
+    numerator = D(numerator)
+    denominator = D(denominator)
+    return D(numerator / denominator)
 
 
 def get_asset_issuer(db, asset):
     """Check if the asset is divisible."""
     if asset in (config.BTC, config.XCP):
         return True
-    else:
-        cursor = db.cursor()
-        query = """
-            SELECT * FROM issuances
-            WHERE (status = ? AND asset = ?)
-            ORDER BY tx_index DESC
-        """
-        bindings = ("valid", asset)
-        cursor.execute(query, bindings)
-        issuances = cursor.fetchall()
-        if not issuances:
-            raise exceptions.AssetError(f"No such asset: {asset}")
-        return issuances[0]["issuer"]
+
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM issuances
+        WHERE (status = ? AND asset = ?)
+        ORDER BY tx_index DESC
+    """
+    bindings = ("valid", asset)
+    cursor.execute(query, bindings)
+    issuances = cursor.fetchall()
+    if not issuances:
+        raise exceptions.AssetError(f"No such asset: {asset}")
+    return issuances[0]["issuer"]
 
 
 def get_asset_description(db, asset):
     if asset in (config.BTC, config.XCP):
         return ""
-    else:
-        cursor = db.cursor()
-        query = """
-            SELECT * FROM issuances
-            WHERE (status = ? AND asset = ?)
-            ORDER BY tx_index DESC
-        """
-        bindings = ("valid", asset)
-        cursor.execute(query, bindings)
-        issuances = cursor.fetchall()
-        if not issuances:
-            raise exceptions.AssetError(f"No such asset: {asset}")
-        return issuances[0]["description"]
+
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM issuances
+        WHERE (status = ? AND asset = ?)
+        ORDER BY tx_index DESC
+    """
+    bindings = ("valid", asset)
+    cursor.execute(query, bindings)
+    issuances = cursor.fetchall()
+    if not issuances:
+        raise exceptions.AssetError(f"No such asset: {asset}")
+    return issuances[0]["description"]
 
 
 def get_issuances_count(db, address):
@@ -324,7 +318,7 @@ def get_assets_last_issuance(state_db, asset_list):
         query = f"""
             SELECT {", ".join(fields)} FROM assets_info
             WHERE asset IN ({",".join(["?"] * len(asset_name_list))})
-        """  # nosec B608  # noqa: S608
+        """  # nosec B608  # noqa: S608 # nosec B608
         cursor.execute(query, asset_name_list)
         assets_info += cursor.fetchall()
 
@@ -333,7 +327,7 @@ def get_assets_last_issuance(state_db, asset_list):
         query = f"""
             SELECT {", ".join(fields)} FROM assets_info
             WHERE asset_longname IN ({",".join(["?"] * len(asset_longname_list))})
-        """  # nosec B608  # noqa: S608
+        """  # nosec B608  # noqa: S608 # nosec B608
         cursor.execute(query, asset_longname_list)
         assets_info += cursor.fetchall()
 
@@ -392,7 +386,7 @@ def get_issuances(
         where.append("block_index = ?")
         bindings.append(block_index)
     # no sql injection here
-    query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    query = f"""SELECT * FROM issuances WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608 # nosec B608
     if protocol.enabled("fix_get_issuances", current_block_index):
         order_fields = "rowid, tx_index"
     else:
@@ -433,7 +427,7 @@ def get_asset(db, asset):
         SELECT * FROM issuances
         WHERE ({name_field} = ? AND status = ?)
         ORDER BY tx_index DESC
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     bindings = (asset, "valid")
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
@@ -447,7 +441,7 @@ def get_asset(db, asset):
             break
 
     asset = issuances[0]
-    asset["supply"] = asset_supply(db, issuance["asset"])
+    asset["supply"] = asset_supply(db, issuances[0]["asset"])
     asset["locked"] = locked
     return asset
 

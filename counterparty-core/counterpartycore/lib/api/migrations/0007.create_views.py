@@ -79,7 +79,7 @@ def apply(db):
             FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
     """)
 
-    logger.debug(f"Built views in {time.time() - start_time:.2f} seconds")
+    logger.debug("Built views in %.2f seconds", time.time() - start_time)
 
 
 def rollback(db):

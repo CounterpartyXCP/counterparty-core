@@ -24,7 +24,7 @@ jobs:
           - name: Mainnet API Load
             test-path: integrations/load_test.py
             os: Linux-Large-1
-            only_on_develop: false
+            only_on_develop: true
             no_cov_report: true
 
           # bootstrap, reparse 1000 blocks,

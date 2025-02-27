@@ -35,18 +35,18 @@ SPINNER_STYLE = "bouncingBar"
 
 
 def trace(self, msg, *args, **kwargs):
-    self._log(logging.TRACE, msg, args, **kwargs)
+    self._log(logging.TRACE, msg, args, **kwargs)  # pylint: disable=protected-access
 
 
 def event(self, msg, *args, **kwargs):
-    self._log(logging.EVENT, msg, args, **kwargs)
+    self._log(logging.EVENT, msg, args, **kwargs)  # pylint: disable=protected-access
 
 
 def debug(self, msg, *args, **kwargs):
-    self._log(logging.DEBUG, msg, args, **kwargs)
+    self._log(logging.DEBUG, msg, args, **kwargs)  # pylint: disable=protected-access
 
 
-def formatTime(record, datefmt=None):
+def format_time(record, _datefmt=None):
     date = datetime.fromtimestamp(record.created, tzlocal())
     date_string = date.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + date.strftime("%z")
     # same as Rust log format
@@ -132,7 +132,7 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_format)
         if isinstance(record.args, dict):
             record.args = truncate_fields(record.args)
-        formatter.formatTime = formatTime
+        formatter.formatTime = format_time
         return formatter.format(record)
 
 
@@ -167,7 +167,7 @@ class CustomisedJSONFormatter(JSONFormatter):
         else:
             extra["block_index"] = None
 
-        return super(CustomisedJSONFormatter, self).json_record(message, extra, record)
+        return super().json_record(message, extra, record)
 
 
 class SQLiteFilter(logging.Filter):
@@ -190,13 +190,13 @@ def set_up(
     logging.Logger.trace = trace
     logging.Logger.event = event
 
-    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
-    for logger in loggers:
-        logger.handlers.clear()
-        logger.setLevel(logging.CRITICAL)
-        logger.propagate = False
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]  # pylint: disable=no-member
+    for logger_item in loggers:
+        logger_item.handlers.clear()
+        logger_item.setLevel(logging.CRITICAL)
+        logger_item.propagate = False
 
-    logger = logging.getLogger(config.LOGGER_NAME)
+    cli_logger = logging.getLogger(config.LOGGER_NAME)
 
     # Add the SQLite filter to the logger
     sqlite_filter = SQLiteFilter()
@@ -214,7 +214,7 @@ def set_up(
     elif verbose >= 3:
         log_level = logging.TRACE
 
-    logger.setLevel(log_level)
+    cli_logger.setLevel(log_level)
 
     # Create a lock for file handlers
     log_lock = threading.Lock()
@@ -235,7 +235,7 @@ def set_up(
                 original_emit(record)
 
         fileh.emit = locked_emit
-        logger.addHandler(fileh)
+        cli_logger.addHandler(fileh)
 
         multiprocessing_logging.install_mp_handler()
 
@@ -250,11 +250,11 @@ def set_up(
         else:
             console.setFormatter(CustomFormatter())
         console.addFilter(CustomFilter())
-        logger.addHandler(console)
+        cli_logger.addHandler(console)
 
     # Log unhandled errors.
     def handle_exception(exc_type, exc_value, exc_traceback):
-        logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
+        cli_logger.error("Unhandled Exception", exc_info=(exc_type, exc_value, exc_traceback))
         cprint("Unhandled Exception", "red", attrs=["bold"])
         traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stderr)
 
@@ -344,6 +344,7 @@ class Spinner:
     def __init__(self, step, done_message=None):
         self.halo = None
         self.done_message = done_message
+        self.start_time = None
         if not config.LOG_IN_CONSOLE:
             self.step = step
             self.halo = Halo(text=step, spinner=SPINNER_STYLE)
@@ -353,7 +354,7 @@ class Spinner:
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, _traceback):
         self.stop()
 
     def start(self):
@@ -386,12 +387,12 @@ class ZmqPublisher(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
-        self.socket.bind("tcp://*:%s" % config.ZMQ_PUBLISHER_PORT)
+        self.socket.bind(f"tcp://*:{config.ZMQ_PUBLISHER_PORT}")
 
-    def publish_event(self, event):
-        logger.trace("Publishing event: %s", event["event"])
+    def publish_event(self, new_event):
+        logger.trace("Publishing event: %s", new_event["event"])
         self.socket.send_multipart(
-            [event["event"].encode("utf-8"), helpers.to_json(event).encode("utf-8")]
+            [new_event["event"].encode("utf-8"), helpers.to_json(new_event).encode("utf-8")]
         )
 
     def close(self):

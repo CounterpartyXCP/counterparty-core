@@ -1,7 +1,7 @@
 import os
 
-"""Variables prefixed with `DEFAULT` should be able to be overridden by
-configuration file and command‐line arguments."""
+# Variables prefixed with `DEFAULT` should be able to be overridden by
+# configuration file and command‐line arguments.
 
 UNIT = 100000000  # The same across assets.
 
@@ -9,7 +9,7 @@ UNIT = 100000000  # The same across assets.
 # Semantic Version
 __version__ = "10.10.0"  # for hatch
 VERSION_STRING = __version__
-version = VERSION_STRING.split("-")[0].split(".")
+version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
 VERSION_MINOR = int(version[1])
 VERSION_REVISION = int(version[2])
@@ -153,7 +153,7 @@ BURN_END_REGTEST = 150000000
 
 # Protocol defaults
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
-DEFAULT_REGULAR_DUST_SIZE = 546  # TODO: Revisit when dust size is adjusted in bitcoin core
+DEFAULT_REGULAR_DUST_SIZE = 546
 DEFAULT_MULTISIG_DUST_SIZE = 1000  # OMFG: We been overpaying by 10x for years (7800!=780) <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
 DEFAULT_OP_RETURN_VALUE = 0
 DEFAULT_FEE_PER_KB_ESTIMATE_SMART = 1024
@@ -236,7 +236,7 @@ NO_TELEMETRY = False
 TELEMETRY_INTERVAL = 5 * 60
 INFLUX_DB_URL = "http://telemetry.counterparty.io:8086"
 INFLUX_DB_TOKEN = (
-    "7iViyy6TEVwmpH-YPE7shO36fzfGsyVYm0DC2tuLv0ZDTLp5uqRTW2Zv9IBcujF5zQRV6mauGdb1W3n7UrUu6A=="  # noqa: S105
+    "7iViyy6TEVwmpH-YPE7shO36fzfGsyVYm0DC2tuLv0ZDTLp5uqRTW2Zv9IBcujF5zQRV6mauGdb1W3n7UrUu6A=="  # noqa S105 # nosec B105
 )
 INFLUX_DB_ORG = "counterparty"
 INFLUX_DB_BUCKET = "node-telemetry"

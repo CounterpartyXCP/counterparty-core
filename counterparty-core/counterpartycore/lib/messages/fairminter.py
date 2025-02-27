@@ -3,7 +3,6 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import assetnames
 
@@ -77,9 +76,9 @@ def validate(
 
     # check asset name format
     try:
-        ledger.issuances.generate_asset_id(asset, CurrentState().current_block_index())
+        ledger.issuances.generate_asset_id(asset)
         if asset_parent != "":
-            ledger.issuances.generate_asset_id(asset_parent, CurrentState().current_block_index())
+            ledger.issuances.generate_asset_id(asset_parent)
     except exceptions.AssetNameError as e:
         problems.append(f"Invalid asset name: {e}")
 
@@ -306,7 +305,7 @@ def unpack(message, return_dict=False):
             bool(int(divisible)),
             description,
         )
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
 
 
@@ -367,14 +366,14 @@ def parse(db, tx, message):
             "status": status,
         }
         ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
-        logger.info(f"Fair minter {tx['tx_hash']} is invalid: {status}")
+        logger.info("Fair minter %s is invalid: %s", tx["tx_hash"], status)
         return
 
     # determine status
     status = "pending"
     if start_block == 0 or tx["block_index"] >= start_block:
         status = "open"
-    if end_block > 0 and tx["block_index"] > end_block:
+    if tx["block_index"] > end_block > 0:
         status = "closed"
 
     existing_asset = ledger.issuances.get_asset(db, asset)
@@ -442,11 +441,11 @@ def parse(db, tx, message):
         "pre_minted": pre_minted,
     }
     ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
-    logger.info(f"Fair minter opened for {asset_name} by {tx['source']}.")
+    logger.info("Fair minter opened for %s by %s.", asset_name, tx["source"])
 
     if not existing_asset:
         # Add to table of assets if new asset
-        asset_id = ledger.issuances.generate_asset_id(asset_name, tx["block_index"])
+        asset_id = ledger.issuances.generate_asset_id(asset_name)
         bindings = {
             "asset_id": str(asset_id),
             "asset_name": asset_name,

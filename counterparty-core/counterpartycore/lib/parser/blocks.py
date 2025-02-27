@@ -113,13 +113,13 @@ def update_transaction(db, tx, supported):
             {"supported": False, "tx_hash": tx["tx_hash"]},
         )
         if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
-            logger.info(f"Unsupported transaction: hash {tx['tx_hash']}; data {tx['data']}")
+            logger.info("Unsupported transaction: hash %s; data %s", tx["tx_hash"], tx["data"])
         cursor.close()
 
 
 def parse_tx(db, tx):
-    CurrentState().set_current_tx_hash(tx["tx_hash"])
     """Parse the transaction, return True for success."""
+    CurrentState().set_current_tx_hash(tx["tx_hash"])
     cursor = db.cursor()
 
     supported = True
@@ -150,12 +150,12 @@ def parse_tx(db, tx):
                 or len(tx["source"].split("-")) > 1
                 or (tx["destination"] and len(tx["destination"].split("-")) > 1)
             ):
-                return
+                return False
 
             # Burns.
             if tx["destination"] == config.UNSPENDABLE:
                 burn.parse(db, tx)
-                return
+                return supported
 
             # Protocol change.
             rps_enabled = protocol.after_block_or_test_network(tx["block_index"], 308500)
@@ -196,9 +196,9 @@ def parse_tx(db, tx):
             elif message_type_id == cancel.ID:
                 cancel.parse(db, tx, message)
             elif message_type_id == rps.ID and rps_enabled:
-                rps.parse(db, tx, message)
+                rps.parse(db, tx)
             elif message_type_id == rpsresolve.ID and rps_enabled:
-                rpsresolve.parse(db, tx, message)
+                rpsresolve.parse(db, tx)
             elif message_type_id == destroy.ID and protocol.enabled(
                 "destroy_reactivated", block_index=tx["block_index"]
             ):
@@ -240,7 +240,7 @@ def parse_tx(db, tx):
             if protocol.enabled("spend_utxo_to_detach") and message_type_id == attach.ID:
                 moved = move.move_assets(db, tx)
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ParseTransactionError(f"{e}") from e
     finally:
         cursor.close()
@@ -353,7 +353,7 @@ def parse_block(
                 f"{tx['tx_hash']}{tx['source']}{tx['destination']}{tx['btc_amount']}{tx['fee']}{data}"
             )
         except exceptions.ParseTransactionError as e:
-            logger.warning(f"ParseTransactionError for tx {tx['tx_hash']}: {e}")
+            logger.warning("ParseTransactionError for tx %s: %s", tx["tx_hash"], e)
             raise e
             # pass
 
@@ -362,16 +362,16 @@ def parse_block(
 
     if block_index != config.MEMPOOL_BLOCK_INDEX:
         # Calculate consensus hashes.
-        new_txlist_hash, found_txlist_hash = check.consensus_hash(
+        new_txlist_hash, _found_txlist_hash = check.consensus_hash(
             db, "txlist_hash", previous_txlist_hash, txlist
         )
-        new_ledger_hash, found_ledger_hash = check.consensus_hash(
+        new_ledger_hash, _found_ledger_hash = check.consensus_hash(
             db,
             "ledger_hash",
             previous_ledger_hash,
             ledger.currentstate.ConsensusHashBuilder().block_ledger(),
         )
-        new_messages_hash, found_messages_hash = check.consensus_hash(
+        new_messages_hash, _found_messages_hash = check.consensus_hash(
             db,
             "messages_hash",
             previous_messages_hash,
@@ -421,7 +421,7 @@ def parse_block(
 
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
-    assert type(tx_hash) == str  # noqa: E721
+    assert isinstance(tx_hash, str)
     CurrentState().set_current_tx_hash(tx_hash)
     cursor = db.cursor()
 
@@ -441,7 +441,7 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
         assert block_index == CurrentState().current_block_index()
 
     if (
-        (
+        (  # pylint: disable=too-many-boolean-expressions
             source
             and (data or destination == config.UNSPENDABLE or dispensers_outs)  # counterparty tx
         )
@@ -492,16 +492,15 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
         cursor.close()
 
         return tx_index + 1
-    else:
-        pass
+
     CurrentState().set_current_tx_hash(None)
     return tx_index
 
 
 def clean_table_from(cursor, table, block_index):
-    logger.debug(f"Rolling back table `{table}`...")
+    logger.debug("Rolling back table `%s`...", table)
     # internal function, no sql injection here
-    cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608  # noqa: S608
+    cursor.execute(f"""DELETE FROM {table} WHERE block_index >= ?""", (block_index,))  # nosec B608  # noqa: S608 # nosec B608
 
 
 def clean_messages_tables(db, block_index=0):
@@ -535,7 +534,9 @@ def rebuild_database(db, include_transactions=True):
         cursor.execute(f"DROP TABLE IF EXISTS {table}")  # nosec B608
     cursor.execute("""PRAGMA foreign_keys=ON""")
     for file in ["0001.initial_migration.sql", "0002.create_mempool_transactions_table.sql"]:
-        with open(os.path.join(config.LEDGER_DB_MIGRATIONS_DIR, file), "r") as sql_file:
+        with open(
+            os.path.join(config.LEDGER_DB_MIGRATIONS_DIR, file), "r", encoding="utf-8"
+        ) as sql_file:
             db.execute(sql_file.read())
 
 
@@ -692,13 +693,13 @@ def handle_reorg(db):
             current_block_hash = backend.bitcoind.getblockhash(previous_block_index + 1)
         except exceptions.BlockOutOfRange:
             # current block is not in the blockchain
-            logger.debug(f"Current block is not in the blockchain ({previous_block_index + 1}).")
+            logger.debug("Current block is not in the blockchain (%s).", previous_block_index + 1)
             previous_block_index -= 1
             continue
 
         if previous_block_hash != ledger.blocks.get_block_hash(db, previous_block_index):
             # hashes don't match
-            logger.debug(f"Hashes don't match ({previous_block_index}).")
+            logger.debug("Hashes don't match (%s).", previous_block_index)
             previous_block_index -= 1
             continue
 
@@ -758,7 +759,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
     assert previous_block["block_index"] == decoded_block["block_index"] - 1
 
     with db:  # ensure all the block or nothing
-        logger.info(f"Block {decoded_block['block_index']}", extra={"bold": True})
+        logger.info("Block %s", decoded_block["block_index"], extra={"bold": True})
         # insert block
         block_bindings = {
             "block_index": decoded_block["block_index"],
@@ -818,7 +819,7 @@ def rollback_empty_block(db):
     block = cursor.fetchone()
     if block:
         logger.warning(
-            f"Ledger hashes are empty from block {block['block_index']}. Rolling back..."
+            "Ledger hashes are empty from block %s. Rolling back...", block["block_index"]
         )
         rollback(db, block_index=block["block_index"], force=True)
 
@@ -845,16 +846,15 @@ def start_rsfetcher():
     fetcher = rsfetcher.RSFetcher()
     try:
         fetcher.start(CurrentState().current_block_index() + 1)
-    except exceptions.InvalidVersion as e:
-        logger.error(e)
-        raise e
-    except Exception as e:
-        logger.warning(f"Failed to start RSFetcher ({e}). Retrying in 5 seconds...")
+    except exceptions.InvalidVersion as e1:
+        logger.error(e1)
+        raise e1
+    except Exception as e2:  # pylint: disable=broad-except
+        logger.warning("Failed to start RSFetcher (%s). Retrying in 5 seconds...", e2)
         try:
             fetcher.stop()
-        except Exception as e:
-            logger.debug(f"Failed to stop RSFetcher ({e}).")
-            pass
+        except Exception as e3:  # pylint: disable=broad-except
+            logger.debug("Failed to stop RSFetcher (%s).", e3)
         time.sleep(5)
         return start_rsfetcher()
     return fetcher
@@ -877,7 +877,7 @@ def create_events_indexes(db):
     database.set_config_value(db, "EVENTS_INDEXES_CREATED", "True")
 
 
-def catch_up(db, check_asset_conservation=True):
+def catch_up(db):
     logger.info("Catching up...")
 
     fetcher = None
@@ -931,7 +931,7 @@ def catch_up(db, check_asset_conservation=True):
             block_height = decoded_block.get("height")
             fetch_time_end = time.time()
             fetch_duration = fetch_time_end - fetch_time_start
-            logger.debug(f"Block {block_height} fetched. ({fetch_duration:.6f}s)")
+            logger.debug("Block %s fetched. (%.6fs)", block_height, fetch_duration)
 
             # Check for gaps in the blockchain
             assert block_height <= CurrentState().current_block_index() + 1
@@ -949,7 +949,13 @@ def catch_up(db, check_asset_conservation=True):
             parsed_blocks += 1
             formatted_duration = helpers.format_duration(time.time() - start_time)
             logger.debug(
-                f"Block {CurrentState().current_block_index()}/{block_count} parsed, for {parsed_blocks} blocks in {formatted_duration}."
+                "Block %(current)s/%(total)s parsed, for %(parsed)s blocks in %(duration)s.",
+                {
+                    "current": CurrentState().current_block_index(),
+                    "total": block_count,
+                    "parsed": parsed_blocks,
+                    "duration": formatted_duration,
+                },
             )
 
             # Refresh block count.

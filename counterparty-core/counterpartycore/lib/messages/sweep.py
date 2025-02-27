@@ -6,7 +6,6 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
 )
-from counterpartycore.lib.exceptions import *  # noqa: F403
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import address
@@ -58,7 +57,7 @@ def validate(db, source, destination, flags, memo, block_index):
 
     if flags > FLAGS_ALL:
         problems.append(f"invalid flags {flags}")
-    elif not (flags & (FLAG_BALANCES | FLAG_OWNERSHIP)):
+    elif not flags & (FLAG_BALANCES | FLAG_OWNERSHIP):
         problems.append("must specify which kind of transfer in flags")
 
     if memo and len(memo) > MAX_MEMO_LENGTH:
@@ -79,7 +78,7 @@ def compose(
         memo = struct.pack(f">{len(memo)}s", memo)
 
     block_index = CurrentState().current_block_index()
-    problems, total_fee = validate(db, source, destination, flags, memo, block_index)
+    problems, _total_fee = validate(db, source, destination, flags, memo, block_index)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
@@ -104,14 +103,14 @@ def unpack(message):
         short_address_bytes, flags, memo_bytes = struct.unpack(struct_format, message)
         if len(memo_bytes) == 0:
             memo_bytes = None
-        elif not (flags & FLAG_BINARY_MEMO):
+        elif not flags & FLAG_BINARY_MEMO:
             memo_bytes = memo_bytes.decode("utf-8")
 
         # unpack address
         full_address = address.unpack(short_address_bytes)
     except struct.error as e:
-        logger.warning(f"sweep send unpack error: {e}")
-        raise exceptions.UnpackError("could not unpack")  # noqa: B904
+        logger.warning("sweep send unpack error: %s", e)
+        raise exceptions.UnpackError("could not unpack") from e
 
     unpacked = {
         "destination": full_address,
@@ -139,10 +138,10 @@ def parse(db, tx, message):
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:
         destination, flags, memo_bytes = None, None, None
         status = f"invalid: could not unpack ({e})"
-    except BalanceError:  # noqa: F405
+    except exceptions.BalanceError:  # noqa: F405
         destination, flags, memo_bytes = None, None, None
         status = "invalid: insufficient balance for antispam fee for sweep"
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-exception-caught
         destination, flags, memo_bytes = None, None, None
         status = "invalid: could not unpack, " + str(err)
 
@@ -180,7 +179,7 @@ def parse(db, tx, message):
                     action="sweep fee",
                     event=tx["tx_hash"],
                 )
-        except BalanceError:  # noqa: F405
+        except exceptions.BalanceError:  # noqa: F405
             destination, flags, memo_bytes = None, None, None
             status = "invalid: insufficient balance for antispam fee for sweep"
 

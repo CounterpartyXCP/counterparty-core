@@ -9,6 +9,7 @@ from termcolor import cprint
 from counterpartycore.lib import config
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import bootstrap, server, setup
+from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.monitors import sentry
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -531,14 +532,14 @@ def main():
     # Help message
     if args.help:
         parser.print_help()
-        exit(0)
+        sys.exit(0)
 
     if args.action is None:
         parser.print_help()
-        exit(1)
+        sys.exit(1)
 
     # Configuration and logging
-    server.initialise_log_and_config(args)
+    initialise_log_and_config(args)
 
     welcome_message(args.action, server_configfile)
 

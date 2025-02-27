@@ -12,7 +12,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 ID = 91
 
 
-def D(value):
+def D(value):  # pylint: disable=invalid-name
     return decimal.Decimal(str(value))
 
 
@@ -105,7 +105,7 @@ def unpack(message, return_dict=False):
             return {"asset": asset, "quantity": int(quantity)}
 
         return (asset, int(quantity))
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return ("", 0)
 
 
@@ -125,7 +125,7 @@ def parse(db, tx, message):
             "status": status,
         }
         ledger.events.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
-        logger.info(f"Fairmint {tx['tx_hash']} is invalid: {status}")
+        logger.info("Fairmint %s  is invalid: %s", tx["tx_hash"], status)
         return
 
     # get corresponding fairminter
@@ -294,5 +294,9 @@ def parse(db, tx, message):
 
     # log
     logger.info(
-        f"{earn_quantity + commission} {asset} minted for {paid_quantity} XCP by {tx['source']}"
+        "%s %s minted for %s XCP by %s",
+        earn_quantity + commission,
+        asset,
+        paid_quantity,
+        tx["source"],
     )

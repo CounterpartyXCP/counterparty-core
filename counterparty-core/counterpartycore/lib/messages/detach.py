@@ -62,7 +62,7 @@ def unpack(message, return_dict=False):
                 "destination": destination,
             }
         return destination
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return None
 
 
@@ -99,7 +99,8 @@ def detach_assets(db, tx, source, destination=None):
         if detach_destination is not None:
             try:
                 address.validate(detach_destination)
-            except Exception:  # let's catch all exceptions here
+            # let's catch all exceptions here
+            except Exception:  # pylint: disable=broad-exception-caught
                 detach_destination = None
         # if no destination is provided, we credit the asset to utxo_address
         if detach_destination is None:

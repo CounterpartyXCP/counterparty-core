@@ -71,7 +71,7 @@ def start_blockchain_watcher(db):
         logger.error(e)
         logger.warning("Sleeping 5 seconds, catching up again, then retrying...")
         time.sleep(5)
-        blocks.catch_up(db, check_asset_conservation=False)
+        blocks.catch_up(db)
         return start_blockchain_watcher(db)
 
 
@@ -135,7 +135,7 @@ class BlockchainWatcher:
             if previous_block is None:
                 # catch up with rpc if previous block is missing
                 logger.debug("Previous block is missing. Catching up...")
-                blocks.catch_up(self.db, check_asset_conservation=False)
+                blocks.catch_up(self.db)
             else:
                 blocks.parse_new_block(self.db, decoded_block)
             if not config.NO_MEMPOOL:
@@ -231,14 +231,14 @@ class BlockchainWatcher:
                 logger.trace("No message available in topic `%s`", topic_name)
                 return
             raise e
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.error("Error receiving message: %s. Reconnecting...", e)
             capture_exception(e)
             self.connect_to_zmq()
             return
         try:
             self.receive_message(topic, body, seq)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.error("Error processing message: %s", e)
             # import traceback
             # print(traceback.format_exc())  # for debugging
@@ -257,7 +257,7 @@ class BlockchainWatcher:
         self.check_software_version_if_needed()
         late_since = None
 
-        while True and not self.stop_event.is_set():
+        while not self.stop_event.is_set():
             try:
                 if not config.NO_MEMPOOL:
                     if len(RAW_MEMPOOL) > 0:
@@ -286,7 +286,7 @@ class BlockchainWatcher:
                         late_since = None
                     if late_since is not None and time.time() - late_since > 60:
                         logger.warning("ZMQ is late. Catching up...")
-                        blocks.catch_up(self.db, check_asset_conservation=False)
+                        blocks.catch_up(self.db)
                         late_since = None
 
                 # Yield control to the event loop to allow other tasks to run
@@ -294,7 +294,7 @@ class BlockchainWatcher:
             except asyncio.CancelledError:
                 logger.debug("BlockchainWatcher.handle() was cancelled.")
                 break  # Exit the loop if the task is cancelled
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 logger.error("Error in handle loop: %s", e)
                 capture_exception(e)
                 # import traceback
@@ -345,7 +345,7 @@ def get_raw_mempool(db):
 
     chunks = helpers.chunkify(txhash_list, config.MAX_RPC_BATCH_SIZE)
 
-    logger.debug(f"Found {len(txhash_list)} transaction(s) in the raw mempool...")
+    logger.debug("Found %s transaction(s) in the raw mempool...", len(txhash_list))
     return chunks, timestamps
 
 
@@ -372,7 +372,7 @@ class RawMempoolParser(threading.Thread):
             counter += len(txhash_list)
         elapsed = time.time() - start
         logger.debug(
-            f"RawMempoolParser stopped. {counter} transactions processed in {elapsed:.2f} seconds."
+            "RawMempoolParser stopped. %d transactions processed in %.2f seconds.", counter, elapsed
         )
 
     def stop(self):
@@ -393,14 +393,14 @@ class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
 
     def restore(self):
         if os.path.exists(self.cache_path):
-            with open(self.cache_path, "r") as f:
+            with open(self.cache_path, "r", encoding="utf-8") as f:
                 self.not_suppported_txs = [line.strip() for line in f]
             logger.debug(
-                f"Restored {len(self.not_suppported_txs)} not supported transactions from cache"
+                "Restored %d not supported transactions from cache", len(self.not_suppported_txs)
             )
 
     def backup(self):
-        with open(self.cache_path, "w") as f:
+        with open(self.cache_path, "w", encoding="utf-8") as f:
             f.write("\n".join(self.not_suppported_txs[-200000:]))  # limit to 200k txs
         logger.trace(
             f"Backed up {len(self.not_suppported_txs)} not supported transactions to cache"

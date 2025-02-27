@@ -19,7 +19,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def normalize_price(value):
     decimal.getcontext().prec = 32
-    return "{0:.16f}".format(D(value))
+    return f"{D(value):.16f}"
 
 
 def inject_issuances_and_block_times(ledger_db, state_db, result_list):
@@ -376,7 +376,7 @@ def inject_normalized_quantities(result_list):
 def inject_fiat_price(ledger_db, dispenser):
     if "satoshirate" not in dispenser:
         return dispenser
-    if dispenser["oracle_address"] != None:  # noqa: E711
+    if dispenser["oracle_address"] is not None:  # noqa: E711
         dispenser["fiat_price"] = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
         (
             dispenser["oracle_price"],
@@ -476,7 +476,7 @@ def inject_transactions_events(ledger_db, state_db, result_list):
         FROM messages 
         WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))}) 
         AND event NOT IN ({",".join("?" * len(exclude_events))})
-    """  # noqa S608
+    """  # noqa S608 # nosec B608
     events = cursor.execute(sql, transaction_hashes + exclude_events).fetchall()
     for event in events:
         event["params"] = json.loads(event["params"])

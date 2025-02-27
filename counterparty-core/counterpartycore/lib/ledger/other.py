@@ -50,7 +50,7 @@ def get_broadcasts_by_source(db, address: str, status: str = "valid", order_by: 
         SELECT * FROM broadcasts
         WHERE (status = ? AND source = ?)
         ORDER BY tx_index {order_by}
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     bindings = (status, address)
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -77,7 +77,7 @@ def get_burns(db, address: str = None, status: str = "valid"):
         where.append("source = ?")
         bindings.append(address)
     # no sql injection here
-    query = f"""SELECT * FROM burns WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608
+    query = f"""SELECT * FROM burns WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -95,7 +95,7 @@ def get_addresses(db, address=None):
         where.append("address = ?")
         bindings.append(address)
     # no sql injection here
-    query = f"""SELECT *, MAX(rowid) AS rowid FROM addresses WHERE ({" AND ".join(where)}) GROUP BY address"""  # nosec B608  # noqa: S608
+    query = f"""SELECT *, MAX(rowid) AS rowid FROM addresses WHERE ({" AND ".join(where)}) GROUP BY address"""  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
@@ -133,9 +133,9 @@ def get_pending_bet_matches(db, feed_address, order_by=None):
         ) WHERE status = ?
     """
     if order_by is not None:
-        query += f""" ORDER BY {order_by}"""
+        query += f" ORDER BY {order_by}"
     else:
-        query += f""" ORDER BY rowid"""  # noqa: F541
+        query += " ORDER BY rowid"
     bindings = (feed_address, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -238,6 +238,6 @@ def update_bet(db, tx_hash, update_data):
     insert_update(db, "bets", "tx_hash", tx_hash, update_data, "BET_UPDATE")
 
 
-def update_bet_match_status(db, id, status):
+def update_bet_match_status(db, bet_match_id, status):
     update_data = {"status": status}
-    insert_update(db, "bet_matches", "id", id, update_data, "BET_MATCH_UPDATE")
+    insert_update(db, "bet_matches", "id", bet_match_id, update_data, "BET_MATCH_UPDATE")

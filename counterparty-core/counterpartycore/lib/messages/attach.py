@@ -136,7 +136,7 @@ def unpack(message, return_dict=False):
             }
 
         return (asset, int(quantity), destination_vout)
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return "", 0, None
 
 

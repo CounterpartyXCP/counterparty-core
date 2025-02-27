@@ -7,7 +7,7 @@ import pytest
 from bitcoinutils.transactions import Transaction
 from counterpartycore.lib import config
 from counterpartycore.lib.api import composer, dbbuilder
-from counterpartycore.lib.cli import server
+from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.lib.ledger import caches
 from counterpartycore.lib.ledger.currentstate import CurrentState
@@ -59,7 +59,7 @@ def initialise_config():
     # initialise config variables
     parser = arg_parser(no_config_file=True)
     args = parser.parse_args(["--regtest", "--data-dir", DATA_DIR, "-vv"])
-    server.initialise_log_and_config(args)
+    initialise_log_and_config(args)
 
 
 def prepare_empty_database(bitcoind_mock):
@@ -192,7 +192,7 @@ def check_record(ledger_db, record):
         value = cursor.execute(sql).fetchall()[0][field]
         assert value == record["value"]
     else:
-        sql = f"SELECT COUNT(*) AS count FROM {record['table']} WHERE "  # noqa: S608
+        sql = f"SELECT COUNT(*) AS count FROM {record['table']} WHERE "  # noqa: S608 # nosec B608
         bindings = []
         conditions = []
         fields = []
@@ -206,7 +206,7 @@ def check_record(ledger_db, record):
         ok = (record.get("not", False) and count == 0) or count == 1
         if not ok:
             last_record = cursor.execute(
-                f"SELECT {', '.join(fields)} FROM {record['table']} ORDER BY rowid DESC LIMIT 1"  # noqa: S608
+                f"SELECT {', '.join(fields)} FROM {record['table']} ORDER BY rowid DESC LIMIT 1"  # noqa: S608 # nosec B608
             ).fetchone()
             print("test output", helpers.to_json(last_record, sort_keys=True))
             print("expected output", helpers.to_json(record["values"], sort_keys=True))
