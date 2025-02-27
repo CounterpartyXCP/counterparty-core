@@ -9,15 +9,15 @@
 
 ## Bugfixes
 
-- Handle correctly errors in subprocess when bootstrapping
+- Handle errors correctly in subprocess when bootstrapping
 - Fix `getrawtransaction_batch()` for batches greater than `config.MAX_RPC_BATCH_SIZE`
-- Better error handling for port taken
-- Fix ungraceful ZeroMQ Failure
-- Fix Conservation Check Failing Ungracefull
-- Cleaner Gunicorn Shutdown
+- Better error handling for port in use
+- Fix ungraceful ZeroMQ failure
+- Fix conservation check failing ungracefully
+- Cleaner Gunicorn shutdown
 - Fix ungraceful Waitress shutdown
-- Handle correctly RSFetcher version mismatch error
-- Handle correctly errors in Counterparty Server version checking
+- Handle RSFetcher version mismatch error correctly
+- Handle Counterparty Server version checking errors correctly
 
 ## Codebase
 
@@ -41,10 +41,11 @@
 
 ## CLI
 
-- Accepts `--catch-up` flag before the command
-- Add a locust runner to test local node (`python3 counterpartycore/test/integration/locustrunner.py` will start Locust Web UI on http://localhost:8089/).
+- Accept `--catch-up` flag before the command
+- Add a locust runner to test local node (`python3 counterpartycore/test/integration/locustrunner.py` will start Locust Web UI on http://localhost:8089/)
 - Add `--profile` CLI flag that enables cProfile during catchup and dumps the results to the console after it is complete
-- Add `--rebuild` command: re-synced from scratch and stop the server
+- Add `--rebuild` command: re-sync from scratch and stop the server
+- Add memory database cache for `address_events` table
 
 # Credits
 
