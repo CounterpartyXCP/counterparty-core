@@ -105,7 +105,7 @@ class TestHelper:
 
     @staticmethod
     @contextmanager
-    def capture_log(caplog, message):
+    def capture_log(caplog, message, not_in=False):
         logger = logging.getLogger(config.LOGGER_NAME)
         caplog.at_level(6, logger=config.LOGGER_NAME)
         logger.propagate = True
@@ -113,9 +113,15 @@ class TestHelper:
         logger.propagate = False
         if isinstance(message, list):
             for m in message:
-                assert m in caplog.text
+                if not_in:
+                    assert m not in caplog.text
+                else:
+                    assert m in caplog.text
         else:
-            assert message in caplog.text
+            if not_in:
+                assert message not in caplog.text
+            else:
+                assert message in caplog.text
 
 
 @pytest.fixture
