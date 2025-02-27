@@ -4,6 +4,7 @@ import time
 from io import StringIO
 
 from counterpartycore.lib.cli import server
+from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.test.integrations import reparsetest
 
@@ -43,7 +44,7 @@ def test_shutdown():
         )
 
         log_stream = StringIO()
-        server.initialise_log_and_config(args, log_stream=log_stream)
+        initialise_log_and_config(args, log_stream=log_stream)
 
         test_duration = random.randint(1, 60)  # noqa S311
         start_time = time.time()

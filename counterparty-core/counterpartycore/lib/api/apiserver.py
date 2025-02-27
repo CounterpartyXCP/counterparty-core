@@ -21,7 +21,7 @@ from sentry_sdk import start_span as start_sentry_span
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, verbose, wsgi
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
-from counterpartycore.lib.cli import server
+from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
@@ -506,9 +506,7 @@ def run_apiserver(
 
         # Initialize Sentry, logging, config, etc.
         sentry.init()
-        server.initialise_log_and_config(
-            argparse.Namespace(**args), api=True, log_stream=log_stream
-        )
+        initialise_log_and_config(argparse.Namespace(**args), api=True, log_stream=log_stream)
 
         database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
 

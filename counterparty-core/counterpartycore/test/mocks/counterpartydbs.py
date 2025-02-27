@@ -7,7 +7,7 @@ import pytest
 from bitcoinutils.transactions import Transaction
 from counterpartycore.lib import config
 from counterpartycore.lib.api import composer, dbbuilder
-from counterpartycore.lib.cli import server
+from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.lib.ledger import caches
 from counterpartycore.lib.ledger.currentstate import CurrentState
@@ -59,7 +59,7 @@ def initialise_config():
     # initialise config variables
     parser = arg_parser(no_config_file=True)
     args = parser.parse_args(["--regtest", "--data-dir", DATA_DIR, "-vv"])
-    server.initialise_log_and_config(args)
+    initialise_log_and_config(args)
 
 
 def prepare_empty_database(bitcoind_mock):
