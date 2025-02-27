@@ -30,6 +30,11 @@ def test_lazy_logger(caplog, test_helpers):
     assert lazy_logger.last_print > last_print
     last_print = lazy_logger.last_print
 
+    with test_helpers.capture_log(caplog, "Hello", not_in=True):
+        lazy_logger.debug("Hello")
+    assert lazy_logger.last_print == last_print
+
+    time.sleep(0.2)
     with test_helpers.capture_log(caplog, "Hello"):
         lazy_logger.debug("Hello")
     assert lazy_logger.last_print > last_print
