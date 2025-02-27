@@ -19,7 +19,7 @@ from sentry_sdk import configure_scope as configure_sentry_scope
 from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, verbose, wsgi
+from counterpartycore.lib.api import apiwatcher, caches, dbbuilder, queries, verbose, wsgi
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
@@ -514,6 +514,9 @@ def run_apiserver(
             config.STATE_DATABASE, read_only=False, check_wal=False
         )
         check_database_version(state_db)
+
+        # Initialize caches
+        caches.AddressEventsCache()
 
         watcher = apiwatcher.APIWatcher(state_db)
         watcher.start()
