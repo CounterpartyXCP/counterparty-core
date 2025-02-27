@@ -33,7 +33,7 @@ class LazyLogger(metaclass=helpers.SingletonMeta):
         self.message_delay = 10
 
     def debug(self, message, *args):
-        if message != self.last_message or self.last_print + self.message_delay < time.time():
+        if self.last_print + self.message_delay < time.time():
             logger.debug(message, *args)
             self.last_message = message
             self.last_print = time.time()
