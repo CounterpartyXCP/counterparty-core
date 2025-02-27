@@ -26,6 +26,7 @@
 - Create events indexes after catch up
 - Make RPC calls to get transactions inputs info with RSFetcher
 - Make RSFetcher compatible with HTTPS
+- Fix all code scanner alerts (Bandit, CodeQL, Pylint)
 
 ## API
 
