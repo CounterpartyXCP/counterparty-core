@@ -28,6 +28,7 @@
 - Make RSFetcher compatible with HTTPS
 - Fix all code scanner alerts (Bandit, CodeQL, Pylint)
 - Print debug message when Counterparty is behind Bitcoin Core only every 10 seconds
+- Add missing indexes in table `sends`
 
 ## API
 

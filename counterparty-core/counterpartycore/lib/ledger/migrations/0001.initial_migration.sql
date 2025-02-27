@@ -98,7 +98,12 @@ CREATE TABLE IF NOT EXISTS "sends"(
                               asset TEXT,
                               quantity INTEGER,
                               status TEXT,
-                              msg_index INTEGER DEFAULT 0, memo BLOB, fee_paid INTEGER DEFAULT 0, send_type TEXT, source_address TEXT, destination_address TEXT,
+                              msg_index INTEGER DEFAULT 0,
+                              memo BLOB,
+                              fee_paid INTEGER DEFAULT 0,
+                              send_type TEXT,
+                              source_address TEXT,
+                              destination_address TEXT,
                               PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index, tx_hash, block_index) REFERENCES transactions(tx_index, tx_hash, block_index),
                               UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL);
