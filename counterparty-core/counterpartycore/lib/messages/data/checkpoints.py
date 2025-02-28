@@ -890,4 +890,24 @@ CHECKPOINTS_TESTNET4 = {
         "ledger_hash": "f36214245193fe4e2ff273afb9d9a09fd536bcd86f795782bd99026b54a66843",
         "txlist_hash": "17af3a72503c8911a047d370da48ccce881c8dffa558f6287cfccbcde7e45c2b",
     },
+    68000: {
+        "ledger_hash": "961f692f4f57f49d3bc4735232e0f1c1613926ce22bea22b3b92b591dfaa9a42",
+        "txlist_hash": "f62e6a6a912759d208c5ee5a8edb5b4b75b21e8947a466c3ea68b9ef3e5609f9",
+    },
+    69000: {
+        "ledger_hash": "6968e16187946504dee94708c5774b99b29f95cf905495bcac3c2994ed76f0b0",
+        "txlist_hash": "3bb43318a5c83558ac4a9c8b0da7e2bb9b4022042e83504080f8d5e967fadf84",
+    },
+    70000: {
+        "ledger_hash": "dba4d6b118f1721dee8b717d7f89acdedc9f6476a1dd2bb1fa8bf28925920171",
+        "txlist_hash": "b9618d0dd4574b0fd55b31a4ae5956973f31ce234cc44a2252017c2547dc1572",
+    },
+    71000: {
+        "ledger_hash": "",
+        "txlist_hash": "",
+    },
+    72000: {
+        "ledger_hash": "",
+        "txlist_hash": "",
+    },
 }
