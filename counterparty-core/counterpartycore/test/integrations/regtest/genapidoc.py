@@ -239,7 +239,7 @@ def gen_blueprint(db):
                 continue
             else:
                 query_params.append(arg["name"])
-        blueprint_path += f'{{?{",".join(query_params)}}}' if query_params else ""
+        blueprint_path += f"{{?{','.join(query_params)}}}" if query_params else ""
         md += f"[GET {blueprint_path}]\n\n"
 
         md += route["description"].strip()
