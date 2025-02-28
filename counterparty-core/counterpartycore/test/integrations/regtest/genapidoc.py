@@ -272,7 +272,7 @@ def gen_blueprint(db):
                     example_arg = ": `true`"
                 md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
                 if not arg["required"]:
-                    md += f"        + Default: `{arg.get('default', '') or 'omitted'}`\n"
+                    md += f"        + Default: `{arg.get('default', '') or 'null'}`\n"
                 if "members" in arg:
                     md += "        + Members\n"
                     for member in arg["members"]:
