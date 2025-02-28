@@ -13,7 +13,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def consensus_hash(db, field, previous_consensus_hash, content):
-    assert field in ("ledger_hash", "txlist_hash", "messages_hash")
+    assert field in ("ledger_hash", "txlist_hash", "messages_hash", "migration_hash")
 
     cursor = db.cursor()
     block_index = CurrentState().current_block_index()
@@ -58,7 +58,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         ]
         or None
     )
-    if found_hash and field != "messages_hash":
+    if found_hash and field not in ["messages_hash", "migration_hash"]:
         # Check against existing value.
         if calculated_hash != found_hash:
             raise exceptions.ConsensusError(
@@ -76,7 +76,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         network_checkpoints = checkpoints.CHECKPOINTS_MAINNET
 
     if (
-        field != "messages_hash"
+        field not in ["messages_hash", "migration_hash"]
         and block_index in network_checkpoints
         and network_checkpoints[block_index][field] != calculated_hash
     ):

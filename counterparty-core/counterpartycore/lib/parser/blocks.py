@@ -309,6 +309,7 @@ def parse_block(
     previous_ledger_hash=None,
     previous_txlist_hash=None,
     previous_messages_hash=None,
+    previous_migration_hash=None,
     reparsing=False,
 ):
     """Parse the block, return hash of new ledger, txlist and messages.
@@ -378,6 +379,14 @@ def parse_block(
             previous_messages_hash,
             ledger.currentstate.ConsensusHashBuilder().block_journal(),
         )
+        new_migration_hash, _found_migration_hash = check.consensus_hash(
+            db,
+            "migration_hash",
+            previous_migration_hash,
+            ledger.currentstate.ConsensusHashBuilder().block_migration(),
+        )
+
+        # Update block
 
         update_block_query = """
             UPDATE blocks
@@ -385,6 +394,7 @@ def parse_block(
                 txlist_hash=:txlist_hash,
                 ledger_hash=:ledger_hash,
                 messages_hash=:messages_hash,
+                migration_hash=:migration_hash,
                 transaction_count=:transaction_count
             WHERE block_index=:block_index
         """
@@ -392,6 +402,7 @@ def parse_block(
             "txlist_hash": new_txlist_hash,
             "ledger_hash": new_ledger_hash,
             "messages_hash": new_messages_hash,
+            "migration_hash": new_migration_hash,
             "transaction_count": len(transactions),
             "block_index": block_index,
         }
@@ -409,16 +420,17 @@ def parse_block(
                 "ledger_hash": new_ledger_hash,
                 "txlist_hash": new_txlist_hash,
                 "messages_hash": new_messages_hash,
+                "migration_hash": new_migration_hash,
                 "transaction_count": len(transactions),
             },
         )
 
         cursor.close()
 
-        return new_ledger_hash, new_txlist_hash, new_messages_hash
+        return new_ledger_hash, new_txlist_hash, new_messages_hash, new_migration_hash
 
     cursor.close()
-    return None, None, None
+    return None, None, None, None
 
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
@@ -646,6 +658,7 @@ def reparse(db, block_index=0):
                 previous_ledger_hash = previous_block["ledger_hash"]
                 previous_txlist_hash = previous_block["txlist_hash"]
                 previous_messages_hash = previous_block["messages_hash"]
+                previous_migration_hash = previous_block["migration_hash"]
             parse_block(
                 db,
                 block["block_index"],
@@ -653,6 +666,7 @@ def reparse(db, block_index=0):
                 previous_ledger_hash=previous_ledger_hash,
                 previous_txlist_hash=previous_txlist_hash,
                 previous_messages_hash=previous_messages_hash,
+                previous_migration_hash=previous_migration_hash,
                 reparsing=True,
             )
             block_parsed_count += 1
@@ -739,6 +753,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
             "ledger_hash": None,
             "txlist_hash": None,
             "messages_hash": None,
+            "migration_hash": None,
             "block_index": config.BLOCK_FIRST - 1,
         }
     else:
@@ -783,18 +798,24 @@ def parse_new_block(db, decoded_block, tx_index=None):
                 decoded_tx=transaction,
             )
         # Parse the transactions in the block.
-        new_ledger_hash, new_txlist_hash, new_messages_hash = parse_block(
+        new_ledger_hash, new_txlist_hash, new_messages_hash, new_migration_hash = parse_block(
             db,
             decoded_block["block_index"],
             decoded_block["block_time"],
             previous_ledger_hash=previous_block["ledger_hash"],
             previous_txlist_hash=previous_block["txlist_hash"],
             previous_messages_hash=previous_block["messages_hash"],
+            previous_migration_hash=previous_block["migration_hash"],
         )
 
         duration = time.time() - start_time
 
-        log_message = "Block %(block_index)s - Parsing complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
+        log_message = "Block %(block_index)s - Parsing complete. "
+        log_message += "L: %(ledger_hash)s, "
+        log_message += "L2: %(migration_hash)s, "
+        log_message += "TX: %(txlist_hash)s, "
+        log_message += "M: %(messages_hash)s "
+        log_message += "(%(duration).2fs)"
         logger.info(
             log_message,
             {
@@ -802,6 +823,7 @@ def parse_new_block(db, decoded_block, tx_index=None):
                 "ledger_hash": new_ledger_hash,
                 "txlist_hash": new_txlist_hash,
                 "messages_hash": new_messages_hash,
+                "migration_hash": new_migration_hash,
                 "duration": duration,
             },
         )
