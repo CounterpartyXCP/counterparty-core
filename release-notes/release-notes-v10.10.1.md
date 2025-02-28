@@ -3,6 +3,35 @@
 
 # Upgrading
 
+Breaking Changes:
+The commands `get_asset_names` and `get_asset_longnames` have been removed from API v1. If you are using these commands, you must replace them with the following endpoint: `/v2/assets`.
+
+**IMPORTANT**
+- If you are running a version lower than 10.9.0, you must first update to 10.9.0 and only then install v10.10.0.
+
+Download the latest version of `counterparty-core` and restart `counterparty-server`.
+
+With Docker Compose:
+
+```bash
+cd counterparty-core
+git pull
+docker compose stop counterparty-core
+docker compose --profile mainnet up -d
+```
+
+or use `ctrl-c` to interrupt the server:
+
+```bash
+cd counterparty-core
+git pull
+cd counterparty-rs
+pip install -e .
+cd ../counterpaty-core
+pip install -e .
+counterparty-server start
+```
+
 # ChangeLog
 
 ## Protocol Changes
