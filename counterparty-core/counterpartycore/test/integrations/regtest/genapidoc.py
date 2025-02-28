@@ -270,7 +270,7 @@ def gen_blueprint(db):
                     example_arg = f": `{example_args[arg['name']]}`"
                 elif arg["name"] == "verbose":
                     example_arg = ": `true`"
-                md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
+                md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description.replace('_', '-')}\n"
                 if not arg["required"]:
                     md += f"        + Default: `{arg.get('default', '') or 'null'}`\n"
                 if "members" in arg:
