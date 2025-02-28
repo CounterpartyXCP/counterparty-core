@@ -186,7 +186,7 @@ def prepare_args(route, **kwargs):
             continue
 
         str_arg = query_params().get(arg_name)
-        if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() == "none":
+        if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() in ["none", "null"]:
             str_arg = None
         if str_arg is None and arg["required"]:
             raise ValueError(f"Missing required parameter: {arg_name}")

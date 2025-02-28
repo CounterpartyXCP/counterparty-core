@@ -10,7 +10,12 @@ from threading import current_thread
 
 import requests
 from bitcoinutils.keys import PublicKey
-from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
+from requests.exceptions import (  # pylint: disable=redefined-builtin
+    ChunkedEncodingError,
+    ConnectionError,
+    ReadTimeout,
+    Timeout,
+)
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.currentstate import CurrentState
