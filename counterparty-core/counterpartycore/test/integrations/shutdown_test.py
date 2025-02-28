@@ -46,7 +46,9 @@ def test_shutdown():
         log_stream = StringIO()
         initialise_log_and_config(args, log_stream=log_stream)
 
-        test_duration = random.randint(1, 60)  # noqa S311
+        # Let it have at least 10 seconds
+        # to start essential components
+        test_duration = random.randint(10, 60)  # noqa S311
         start_time = time.time()
 
         print("Test duration: ", test_duration)
