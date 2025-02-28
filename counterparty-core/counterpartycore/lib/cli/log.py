@@ -296,6 +296,7 @@ HASH_FIELD = [
     "order_hash",
     "rps_hash",
     "ledger_hash",
+    "migration_hash",
     "txlist_hash",
     "messages_hash",
     "offer_hash",
