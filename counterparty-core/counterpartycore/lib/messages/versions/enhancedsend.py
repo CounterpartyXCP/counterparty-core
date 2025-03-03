@@ -3,6 +3,8 @@
 import logging
 import struct
 
+from counterparty_rs import utils  # pylint: disable=no-name-in-module
+
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.versions import send1
 from counterpartycore.lib.parser import messagetype, protocol
@@ -16,7 +18,41 @@ MAX_MEMO_LENGTH = 34
 ID = 2  # 0x02
 
 
+def new_unpack(message):
+    try:
+        data_content = struct.unpack(f">{len(message)}s", message)[0].split(b"|")
+        arg_count = len(data_content)
+        (
+            asset_id_bytes,
+            quantity_bytes,
+            short_address_bytes,
+        ) = data_content[0 : arg_count - 1]
+        # The memo is placed last to be able to contain `|`.
+        memo_bytes = b"|".join(data_content[arg_count - 1 :])
+
+        asset_id = helpers.bytes_to_int(asset_id_bytes)
+        asset = ledger.issuances.generate_asset_name(asset_id)
+        if asset == config.BTC:
+            raise exceptions.AssetNameError(f"{config.BTC} not allowed")
+
+        quantity = helpers.bytes_to_int(quantity_bytes)
+
+        full_address = utils.unpack_address(short_address_bytes)
+
+        return {
+            "asset": asset,
+            "quantity": quantity,
+            "address": full_address,
+            "memo": memo_bytes,
+        }
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        raise exceptions.UnpackError("could not unpack") from e
+
+
 def unpack(message):
+    if protocol.enabled("taproot_support"):
+        return new_unpack(message)
+
     try:
         # account for memo bytes
         memo_bytes_length = len(message) - LENGTH
@@ -136,8 +172,7 @@ def compose(
     elif memo_is_hex:
         memo_bytes = bytes.fromhex(memo)
     else:
-        memo = memo.encode("utf-8")
-        memo_bytes = struct.pack(f">{len(memo)}s", memo)
+        memo_bytes = memo.encode("utf-8")
 
     problems = validate(db, destination, asset, quantity, memo_bytes)
     if problems and not skip_validation:
@@ -150,9 +185,22 @@ def compose(
 
     short_address_bytes = address.pack(destination)
 
-    data = messagetype.pack(ID)
-    data += struct.pack(FORMAT, asset_id, quantity, short_address_bytes)
-    data += memo_bytes
+    if protocol.enabled("taproot_support"):
+        data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
+        data_content = b"|".join(
+            [
+                helpers.int_to_bytes(asset_id),
+                helpers.int_to_bytes(quantity),
+                short_address_bytes,
+                memo_bytes,
+            ]
+        )
+        data += struct.pack(f">{len(data_content)}s", data_content)
+    else:
+        memo_bytes = struct.pack(f">{len(memo)}s", memo)
+        data = messagetype.pack(ID)
+        data += struct.pack(FORMAT, asset_id, quantity, short_address_bytes)
+        data += memo_bytes
 
     cursor.close()
     # return an empty array as the second argument because we don't need to send BTC dust to the recipient

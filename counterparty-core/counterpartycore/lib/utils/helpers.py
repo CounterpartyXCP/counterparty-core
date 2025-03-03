@@ -139,3 +139,15 @@ def dhash(text):
 
 def dhash_string(text):
     return binascii.hexlify(dhash(text)).decode()
+
+
+def int_to_bytes(integer_in: int) -> bytes:
+    if integer_in == 0:
+        return b"\x00"
+    binary = bin(integer_in)[2:]
+    byte_length = (len(binary) + 7) // 8
+    return integer_in.to_bytes(byte_length, "little")
+
+
+def bytes_to_int(bytes_in: bytes) -> int:
+    return int.from_bytes(bytes_in, "little")
