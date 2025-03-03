@@ -19,5 +19,5 @@ def test_taproot_scenario_2(empty_ledger_db, bitcoind_mock, defaults):
         defaults,
         defaults["addresses"][0],
         defaults["p2tr_addresses"][0],
-        "",
+        "4330fdfa070eb72f65742a23fe9e68bbf2e67c55d28ad4b85ad11288f2eeb7ab",
     )

@@ -3,8 +3,6 @@
 import logging
 import struct
 
-from counterparty_rs import utils  # pylint: disable=no-name-in-module
-
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.versions import send1
 from counterpartycore.lib.parser import messagetype, protocol
@@ -21,6 +19,7 @@ ID = 2  # 0x02
 def new_unpack(message):
     try:
         data_content = struct.unpack(f">{len(message)}s", message)[0].split(b"|")
+        logger.warning(f"data_content unpack: {data_content}")
         arg_count = len(data_content)
         (
             asset_id_bytes,
@@ -37,7 +36,7 @@ def new_unpack(message):
 
         quantity = helpers.bytes_to_int(quantity_bytes)
 
-        full_address = utils.unpack_address(short_address_bytes)
+        full_address = address.unpack(short_address_bytes)
 
         return {
             "asset": asset,
@@ -46,6 +45,7 @@ def new_unpack(message):
             "memo": memo_bytes,
         }
     except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(f"enhanced send unpack error: {e}")
         raise exceptions.UnpackError("could not unpack") from e
 
 
@@ -195,6 +195,7 @@ def compose(
                 memo_bytes,
             ]
         )
+        logger.warning(f"data_content: {data_content}")
         data += struct.pack(f">{len(data_content)}s", data_content)
     else:
         memo_bytes = struct.pack(f">{len(memo)}s", memo)

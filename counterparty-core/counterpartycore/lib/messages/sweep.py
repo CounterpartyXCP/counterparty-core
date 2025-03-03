@@ -8,7 +8,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import address
+from counterpartycore.lib.utils import address, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -70,28 +70,69 @@ def compose(
     db, source: str, destination: str, flags: int, memo: str, skip_validation: bool = False
 ):
     if memo is None:
-        memo = b""
+        memo_bytes = b""
     elif flags & FLAG_BINARY_MEMO:
-        memo = bytes.fromhex(memo)
+        memo_bytes = bytes.fromhex(memo)
     else:
-        memo = memo.encode("utf-8")
-        memo = struct.pack(f">{len(memo)}s", memo)
+        memo_bytes = memo.encode("utf-8")
+        memo_bytes = struct.pack(f">{len(memo)}s", memo)
 
     block_index = CurrentState().current_block_index()
-    problems, _total_fee = validate(db, source, destination, flags, memo, block_index)
+    problems, _total_fee = validate(db, source, destination, flags, memo_bytes, block_index)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     short_address_bytes = address.pack(destination)
 
-    data = messagetype.pack(ID)
-    data += struct.pack(FORMAT, short_address_bytes, flags)
-    data += memo
+    if protocol.enabled("taproot_support"):
+        data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
+        data_content = b"|".join(
+            [
+                short_address_bytes,
+                helpers.int_to_bytes(flags),
+                memo_bytes,
+            ]
+        )
+        logger.warning(f"data_content: {data_content}")
+        data += struct.pack(f">{len(data_content)}s", data_content)
+    else:
+        data = messagetype.pack(ID)
+        data += struct.pack(FORMAT, short_address_bytes, flags)
+        data += memo
 
     return (source, [], data)
 
 
+def new_unpack(message):
+    try:
+        data_content = struct.unpack(f">{len(message)}s", message)[0].split(b"|")
+        logger.warning(f"data_content unpack: {data_content}")
+        arg_count = len(data_content)
+        (
+            short_address_bytes,
+            flags_bytes,
+        ) = data_content[0 : arg_count - 1]
+        # The memo is placed last to be able to contain `|`.
+        memo_bytes = b"|".join(data_content[arg_count - 1 :])
+
+        flags = helpers.bytes_to_int(flags_bytes)
+
+        full_address = address.unpack(short_address_bytes)
+
+        return {
+            "destination": full_address,
+            "flags": flags,
+            "memo": memo_bytes,
+        }
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error(f"sweep unpack error: {e}")
+        raise exceptions.UnpackError("could not unpack") from e
+
+
 def unpack(message):
+    if protocol.enabled("taproot_support"):
+        return new_unpack(message)
+
     try:
         memo_bytes_length = len(message) - LENGTH
         if memo_bytes_length < 0:
@@ -105,7 +146,6 @@ def unpack(message):
             memo_bytes = None
         elif not flags & FLAG_BINARY_MEMO:
             memo_bytes = memo_bytes.decode("utf-8")
-
         # unpack address
         full_address = address.unpack(short_address_bytes)
     except struct.error as e:
@@ -128,6 +168,7 @@ def parse(db, tx, message):
     # Unpack message.
     try:
         unpacked = unpack(message)
+        logger.warning("unpacked: %s", unpacked)
         destination, flags, memo_bytes = (
             unpacked["destination"],
             unpacked["flags"],
