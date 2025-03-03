@@ -3,13 +3,10 @@
 
 # Upgrading
 
-Breaking Changes:
-The commands `get_asset_names` and `get_asset_longnames` have been removed from API v1. If you are using these commands, you must replace them with the following endpoint: `/v2/assets`.
+**Breaking Changes:**
+The commands `get_asset_names` and `get_asset_longnames` have been removed from API v1, as they are buggy and extremely non-performant. If you are using these endpoints, you must replace them with `/v2/assets`.
 
-**IMPORTANT**
-- If you are running a version lower than 10.9.0, you must first update to 10.9.0 and only then install v10.10.0.
-
-Download the latest version of `counterparty-core` and restart `counterparty-server`.
+To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
 With Docker Compose:
 
@@ -47,6 +44,7 @@ counterparty-server start
 - Fix ungraceful Waitress shutdown
 - Handle RSFetcher version mismatch error correctly
 - Handle Counterparty Server version checking errors correctly
+- Fixed handling of `TypeError` in API calls
 
 ## Codebase
 

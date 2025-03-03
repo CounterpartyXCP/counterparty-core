@@ -186,7 +186,7 @@ def prepare_args(route, **kwargs):
             continue
 
         str_arg = query_params().get(arg_name)
-        if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() == "none":
+        if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() in ["none", "null"]:
             str_arg = None
         if str_arg is None and arg["required"]:
             raise ValueError(f"Missing required parameter: {arg_name}")
@@ -335,7 +335,7 @@ def handle_route(**kwargs):
         # parse args
         try:
             function_args = prepare_args(route, **kwargs)
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
 
         logger.trace(f"API Request - Arguments: {function_args}")
