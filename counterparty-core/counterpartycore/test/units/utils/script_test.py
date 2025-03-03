@@ -162,7 +162,7 @@ def test_decode_p2w():
     )
     # correct address
     assert (
-        utils.script_to_address3(script_pubkey, "mainnet")
+        utils.script_to_address(script_pubkey, "mainnet")
         == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrthqukll5gn9xuqfq5n673smy4m63"
     )
     # incorrect address
@@ -176,11 +176,6 @@ def test_decode_p2w():
     )
     # correct address
     assert (
-        utils.script_to_address3(script_pubkey, "mainnet")
+        utils.script_to_address(script_pubkey, "mainnet")
         == "bc1qwzrryqr3ja8w7hnja2spmkgfdcgvqwp5swz4af4ngsjecfz0w0pqud7k38"
-    )
-    # incorrect address
-    assert (
-        utils.script_to_address2(script_pubkey, "mainnet")
-        == "bc1qwzrryqr3ja8w7hnja2spmkgfdcgvqwp5wgm2h7"
     )
