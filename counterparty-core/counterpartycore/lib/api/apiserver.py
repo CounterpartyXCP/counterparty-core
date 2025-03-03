@@ -362,9 +362,8 @@ def handle_route(**kwargs):
         ) as e:
             return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
         except Exception as e:  # pylint: disable=broad-except
-            import traceback
-
-            print(traceback.format_exc())
+            # import traceback
+            # print(traceback.format_exc())
             capture_exception(e)
             logger.error("Error in API: %s", e)
             return return_result(
@@ -413,9 +412,8 @@ def handle_route(**kwargs):
             query_args=query_args,
         )
     except Exception as e:  # pylint: disable=broad-except
-        import traceback
-
-        print(traceback.format_exc())
+        # import traceback
+        # print(traceback.format_exc())
         capture_exception(e)
         logger.error("Error in API: %s", e)
         return return_result(500, error="Internal server error")
