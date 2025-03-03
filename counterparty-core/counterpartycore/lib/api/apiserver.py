@@ -356,6 +356,7 @@ def handle_route(**kwargs):
             CBitcoinAddressError,
             exceptions.AddressError,
             exceptions.ElectrsError,
+            exceptions.DatabaseError,
             OverflowError,
             TypeError,
         ) as e:
