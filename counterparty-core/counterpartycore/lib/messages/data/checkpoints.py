@@ -1047,6 +1047,7 @@ CHECKPOINTS_REGTEST = {
     config.BLOCK_FIRST_REGTEST: {
         "ledger_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
         "txlist_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
+        "migration_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
     },
 }
 
