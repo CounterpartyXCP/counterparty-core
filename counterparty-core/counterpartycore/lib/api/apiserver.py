@@ -335,7 +335,7 @@ def handle_route(**kwargs):
         # parse args
         try:
             function_args = prepare_args(route, **kwargs)
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
 
         logger.trace(f"API Request - Arguments: {function_args}")
