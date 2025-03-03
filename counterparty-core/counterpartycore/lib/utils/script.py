@@ -25,7 +25,7 @@ def script_to_address(scriptpubkey):
         script = (
             bytes(scriptpubkey, "utf-8") if isinstance(scriptpubkey, str) else bytes(scriptpubkey)
         )  # noqa: E721
-        return utils.script_to_address(script, config.NETWORK_NAME)
+        return utils.script_to_address3(script, config.NETWORK_NAME)
     except BaseException as e:
         raise exceptions.DecodeError("scriptpubkey decoding error") from e
 

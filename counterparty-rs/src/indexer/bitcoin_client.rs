@@ -4,7 +4,7 @@ use std::iter::repeat;
 use std::thread::JoinHandle;
 
 use crate::b58::b58_encode;
-use crate::utils::script_to_address;
+use crate::utils::script_to_address3;
 use bitcoin::{
     consensus::serialize,
     hashes::{hex::prelude::*, ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
@@ -353,7 +353,7 @@ fn parse_vout(
             txid, vi
         )));
     } else if config.segwit_supported(height) && is_valid_segwit_script(&vout.script_pubkey) {
-        let destination = script_to_address(
+        let destination = script_to_address3(
             vout.script_pubkey.as_bytes().to_vec(),
             config.network.to_string().as_str(),
         )

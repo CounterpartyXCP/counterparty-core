@@ -58,7 +58,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         ]
         or None
     )
-    if found_hash and field not in ["messages_hash", "migration_hash"]:
+    if found_hash and field not in ["messages_hash", "ledger_hash"]:
         # Check against existing value.
         if calculated_hash != found_hash:
             raise exceptions.ConsensusError(
@@ -76,7 +76,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         network_checkpoints = checkpoints.CHECKPOINTS_MAINNET
 
     if (
-        field not in ["messages_hash", "migration_hash"]
+        field not in ["messages_hash", "ledger_hash"]
         and block_index in network_checkpoints
         and network_checkpoints[block_index][field] != calculated_hash
     ):
