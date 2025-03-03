@@ -330,7 +330,7 @@ def run_item(node, item, context):
             .replace("$BLOCK_HASH", block_hash)
             .replace("$TX_INDEX", str(tx_index))
             .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
-            .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))  # TODO: make it more generic
+            .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))
             .replace("$BLOCK_INDEX + 1", str(node.block_count + 1))
             .replace("$BLOCK_INDEX + 2", str(node.block_count + 2))
             .replace("$BLOCK_INDEX", str(node.block_count))
@@ -401,6 +401,10 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
         while not regtest_node_thread.ready():
             time.sleep(1)
 
+        server_status = regtest_node_thread.node.api_call("")
+        assert server_status["result"]["server_ready"]
+        assert server_status["result"]["ledger_state"] == "Following"
+
         context = {}
 
         check_api_v1(regtest_node_thread.node)
@@ -457,7 +461,7 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
     except KeyboardInterrupt:
         print(regtest_node_thread.node.server_out.getvalue())
         pass
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         print(regtest_node_thread.node.server_out.getvalue())
         raise e
     finally:

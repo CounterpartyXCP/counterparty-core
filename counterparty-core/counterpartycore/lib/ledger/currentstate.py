@@ -1,54 +1,15 @@
 import logging
-import threading
-import time
-from multiprocessing import Value
 
-from counterpartycore.lib import backend, config
+from counterpartycore.lib import config
 from counterpartycore.lib.ledger import blocks
 from counterpartycore.lib.utils import helpers
-from counterpartycore.lib.utils.database import LedgerDBConnectionPool
+from counterpartycore.lib.utils.database import (
+    LedgerDBConnectionPool,
+    get_config_value,
+    set_config_value,
+)
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-BACKEND_HEIGHT_REFRSH_INTERVAL = 3
-
-
-def get_backend_height():
-    block_count = backend.bitcoind.getblockcount()
-    blocks_behind = backend.bitcoind.get_blocks_behind()
-    return block_count + blocks_behind
-
-
-class BackendHeight(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self, name="BackendHeight")
-        self.last_check = 0
-        self.stop_event = threading.Event()
-        self.shared_backend_height = Value("i", 0)
-        self.refresh()
-
-    def run(self):
-        if config.API_ONLY:
-            return
-        try:
-            while not self.stop_event.is_set():
-                if time.time() - self.last_check > BACKEND_HEIGHT_REFRSH_INTERVAL:
-                    self.refresh()
-                self.stop_event.wait(0.1)
-        finally:
-            logger.info("BackendHeight Thread stopped.")
-
-    def refresh(self):
-        if config.API_ONLY:
-            return
-        logger.trace("Updating backend height...")
-        self.shared_backend_height.value = get_backend_height()
-        self.last_check = time.time()
-
-    def stop(self):
-        self.stop_event.set()
-        logger.info("Stopping BackendHeight thread...")
-        self.join()
 
 
 class CurrentState(metaclass=helpers.SingletonMeta):
@@ -65,9 +26,9 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def get(self, key):
         return self.state.get(key)
 
-    def set_current_block_index(self, block_index):
+    def set_current_block_index(self, block_index, skip_lock_time=False):
         self.state["CURRENT_BLOCK_INDEX"] = block_index
-        if block_index:
+        if block_index and not skip_lock_time:
             with LedgerDBConnectionPool().connection() as ledger_db:
                 last_block = blocks.get_block(ledger_db, CurrentState().current_block_index())
             if last_block:
@@ -81,8 +42,9 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def set_parsing_mempool(self, parsing_mempool):
         self.state["PARSING_MEMPOOL"] = parsing_mempool
 
-    def set_block_parser_status(self, status):
-        self.state["BLOCK_PARSER_STATUS"] = status
+    def set_ledger_state(self, ledger_db, status):
+        # use db to share Ledger state with other processes
+        set_config_value(ledger_db, "LEDGER_STATE", status)
 
     def current_block_index(self):
         return self.state.get("CURRENT_BLOCK_INDEX")
@@ -96,7 +58,12 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def current_backend_height(self):
         if "BACKEND_HEIGHT_VALUE" not in self.state:
             return None
-        return self.state["BACKEND_HEIGHT_VALUE"].value
+        return int(self.state["BACKEND_HEIGHT_VALUE"].value // 10e8)
+
+    def current_block_count(self):
+        if "BACKEND_HEIGHT_VALUE" not in self.state:
+            return None
+        return int(self.state["BACKEND_HEIGHT_VALUE"].value % 10e8)
 
     def current_tx_hash(self):
         return self.state.get("CURRENT_TX_HASH")
@@ -104,8 +71,9 @@ class CurrentState(metaclass=helpers.SingletonMeta):
     def parsing_mempool(self):
         return self.state.get("PARSING_MEMPOOL")
 
-    def block_parser_status(self):
-        return self.state.get("BLOCK_PARSER_STATUS", "starting")
+    def ledger_state(self):
+        with LedgerDBConnectionPool().connection() as ledger_db:
+            return get_config_value(ledger_db, "LEDGER_STATE") or "Starting"
 
 
 class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):

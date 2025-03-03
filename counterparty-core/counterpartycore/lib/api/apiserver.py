@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import os
 import signal
+import sys
 import threading
 import time
 from collections import OrderedDict
@@ -18,9 +19,9 @@ from sentry_sdk import configure_scope as configure_sentry_scope
 from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.api import apiwatcher, dbbuilder, queries, verbose, wsgi
+from counterpartycore.lib.api import apiwatcher, caches, dbbuilder, queries, verbose, wsgi
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
-from counterpartycore.lib.cli import server
+from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
@@ -49,13 +50,6 @@ def verify_password(username, password):
 
 
 def is_server_ready():
-    # TODO: find a way to mock this function for testing
-    try:
-        if request.url_root == "http://localhost:10009/":
-            return True
-    except RuntimeError:
-        pass
-
     if CurrentState().current_backend_height() is None:
         return False
     if CurrentState().current_block_index() in [
@@ -76,10 +70,7 @@ def api_root():
 
     backend_height = CurrentState().current_backend_height()
     if backend_height is None:
-        if config.FORCE:
-            server_ready = True
-        else:
-            server_ready = False
+        server_ready = config.FORCE
     else:
         server_ready = counterparty_height >= backend_height
 
@@ -89,6 +80,7 @@ def api_root():
         "version": config.VERSION_STRING,
         "backend_height": CurrentState().current_backend_height(),
         "counterparty_height": counterparty_height,
+        "ledger_state": CurrentState().ledger_state(),
         "documentation": "https://counterpartycore.docs.apiary.io/",
         "routes": f"{request.url_root}v2/routes",
         "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
@@ -163,6 +155,7 @@ def return_result(
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
     response.headers["X-BITCOIN-HEIGHT"] = CurrentState().current_backend_height()
+    response.headers["X-LEDGER-STATE"] = CurrentState().ledger_state()
     response.headers["Content-Type"] = "application/json"
     set_cors_headers(response)
 
@@ -193,7 +186,7 @@ def prepare_args(route, **kwargs):
             continue
 
         str_arg = query_params().get(arg_name)
-        if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() == "none":
+        if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() in ["none", "null"]:
             str_arg = None
         if str_arg is None and arg["required"]:
             raise ValueError(f"Missing required parameter: {arg_name}")
@@ -252,8 +245,7 @@ def execute_api_function(rule, route, function_args):
             result = BLOCK_CACHE[cache_key]
             sentry_get_span.set_data("cache.hit", True)
             return result
-        else:
-            sentry_get_span.set_data("cache.hit", False)
+        sentry_get_span.set_data("cache.hit", False)
 
     with start_sentry_span(op="cache.put") as sentry_put_span:
         needed_db = function_needs_db(route["function"])
@@ -275,6 +267,7 @@ def execute_api_function(rule, route, function_args):
             and is_cachable(rule)
             and route["function"].__name__ != "redirect_to_api_v1"
             and not request.path.startswith("/v2/mempool/")
+            and "show_unconfirmed=true" not in request.url
         ):
             sentry_put_span.set_data("cache.key", cache_key)
             BLOCK_CACHE[cache_key] = result
@@ -342,7 +335,7 @@ def handle_route(**kwargs):
         # parse args
         try:
             function_args = prepare_args(route, **kwargs)
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
 
         logger.trace(f"API Request - Arguments: {function_args}")
@@ -367,7 +360,7 @@ def handle_route(**kwargs):
             TypeError,
         ) as e:
             return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             # import traceback
             # print(traceback.format_exc())
             capture_exception(e)
@@ -417,13 +410,13 @@ def handle_route(**kwargs):
             start_time=start_time,
             query_args=query_args,
         )
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         capture_exception(e)
         logger.error("Error in API: %s", e)
         return return_result(500, error="Internal server error")
 
 
-def handle_not_found(error):
+def handle_not_found(_error):
     return return_result(404, error="Not found")
 
 
@@ -499,9 +492,8 @@ def run_apiserver(
 ):
     logger.info("Starting API Server process...")
 
-    def handle_interrupt_signal(signum, frame):
-        logger.warning("Keyboard interrupt received. Shutting down...")
-        raise KeyboardInterrupt
+    def handle_interrupt_signal(_signum, _frame):
+        pass
 
     wsgi_server = None
     parent_checker = None
@@ -514,9 +506,7 @@ def run_apiserver(
 
         # Initialize Sentry, logging, config, etc.
         sentry.init()
-        server.initialise_log_and_config(
-            argparse.Namespace(**args), api=True, log_stream=log_stream
-        )
+        initialise_log_and_config(argparse.Namespace(**args), api=True, log_stream=log_stream)
 
         database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
 
@@ -525,13 +515,20 @@ def run_apiserver(
         )
         check_database_version(state_db)
 
+        # Initialize caches
+        caches.AddressEventsCache()
+
         watcher = apiwatcher.APIWatcher(state_db)
         watcher.start()
 
         app = init_flask_app()
         app.shared_backend_height = shared_backend_height
 
-        wsgi_server = wsgi.WSGIApplication(app, args=args)
+        try:
+            wsgi_server = wsgi.WSGIApplication(app, args=args)
+        except OSError as e:
+            logger.error("Error starting WSGI Server: %s", e)
+            sys.exit(1)
 
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid)
@@ -541,9 +538,6 @@ def run_apiserver(
         server_ready_value.value = 1
 
         wsgi_server.run(server_ready_value, shared_backend_height)
-
-    except KeyboardInterrupt:
-        pass
 
     finally:
         logger.info("Stopping API Server...")
@@ -561,6 +555,7 @@ def run_apiserver(
             watcher.join()
 
         logger.info("API Server stopped.")
+        server_ready_value.value = 2
 
 
 # This thread is used for the following two reasons:
@@ -585,7 +580,7 @@ class ParentProcessChecker(threading.Thread):
             pass
 
 
-class APIServer(object):
+class APIServer:
     def __init__(self, stop_event, shared_backend_height):
         self.process = None
         self.server_ready_value = Value("I", 0)
@@ -594,7 +589,7 @@ class APIServer(object):
 
     def start(self, args, log_stream):
         if self.process is not None:
-            raise Exception("API Server is already running")
+            raise exceptions.APIError("API Server is already running")
         self.process = Process(
             name="API",
             target=run_apiserver,
@@ -610,8 +605,8 @@ class APIServer(object):
         try:
             self.process.start()
             logger.info("API PID: %s", self.process.pid)
-        except Exception as e:
-            logger.error(f"Error starting API Server: {e}")
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Error starting API Server: %s", e)
             raise e
         return self.process
 

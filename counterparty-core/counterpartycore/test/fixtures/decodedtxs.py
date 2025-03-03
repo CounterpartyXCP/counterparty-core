@@ -6,6 +6,7 @@ DECODED_TX_1 = {
     "vsize": 4069,
     "weight": 16276,
     "locktime": 0,
+    "segwit": False,
     "vin": [
         {
             "txid": "0c9c04b3ff7334aadddb8197ca786252e8c620139a2acbd9a009da9b35bacf96",
@@ -28,6 +29,7 @@ DECODED_TX_1 = {
                 "address": "bc1p3j2hfvey72u9e9eaduljzhqpsyy23ru60wwpy3mfeqxg40m4345ss4x2ak",
                 "type": "witness_v1_taproot",
             },
+            "script_pub_key": "51208c9574b324f2b85c973d6f3f215c018108a88f9a7b9c124769c80c8abf758d69",
         },
         {
             "value": 0.00000676,

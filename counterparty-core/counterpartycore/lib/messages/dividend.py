@@ -67,12 +67,12 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     exclude_empty = False
     if protocol.enabled("zero_quantity_value_adjustment_1"):
         exclude_empty = True
-    holders = ledger.supplies.holders(db, asset, exclude_empty, block_index=block_index)
+    asset_holders = ledger.supplies.holders(db, asset, exclude_empty)
 
     outputs = []
     addresses = []
     dividend_total = 0
-    for holder in holders:
+    for holder in asset_holders:
         if block_index < 294500 and not protocol.is_test_network():  # Protocol change.
             if holder["escrow"]:
                 continue
@@ -134,20 +134,19 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
 
     cursor.close()
 
-    if len(problems):
+    if len(problems) > 0:
         return None, None, problems, 0
 
     # preserve order with old queries
-    # TODO: remove and update checkpoints
     if not protocol.is_test_network() and block_index in [313590, 313594]:
         outputs.append(outputs.pop(-3))
 
     return dividend_total, outputs, problems, fee
 
 
-def get_estimate_xcp_fee(db, asset, block_index):
-    holders = ledger.supplies.holders(db, asset, True, block_index=block_index)
-    addresses = [holder["address"] for holder in holders]
+def get_estimate_xcp_fee(db, asset):
+    all_holders = ledger.supplies.holders(db, asset, True)
+    addresses = [holder["address"] for holder in all_holders]
     holder_count = len(set(addresses))
     return int(0.0002 * config.UNIT * holder_count)
 
@@ -164,13 +163,15 @@ def compose(
     asset = ledger.issuances.resolve_subasset_longname(db, asset)
     dividend_asset = ledger.issuances.resolve_subasset_longname(db, dividend_asset)
 
-    dividend_total, outputs, problems, fee = validate(
+    dividend_total, outputs, problems, _fee = validate(
         db, source, quantity_per_unit, asset, dividend_asset, CurrentState().current_block_index()
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
     logger.info(
-        f"Total quantity to be distributed in dividends: {ledger.issuances.value_out(db, dividend_total, dividend_asset)} {dividend_asset}"
+        "Total quantity to be distributed in dividends: %s %s",
+        ledger.issuances.value_out(db, dividend_total, dividend_asset),
+        dividend_asset,
     )
 
     if dividend_asset == config.BTC:
@@ -180,10 +181,8 @@ def compose(
             None,
         )
 
-    asset_id = ledger.issuances.get_asset_id(db, asset, CurrentState().current_block_index())
-    dividend_asset_id = ledger.issuances.get_asset_id(
-        db, dividend_asset, CurrentState().current_block_index()
-    )
+    asset_id = ledger.issuances.get_asset_id(db, asset)
+    dividend_asset_id = ledger.issuances.get_asset_id(db, dividend_asset)
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT_2, quantity_per_unit, asset_id, dividend_asset_id)
     return (source, [], data)
@@ -193,17 +192,17 @@ def unpack(db, message, block_index, return_dict=False):
     try:
         if protocol.after_block_or_test_network(block_index, 288151) and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
-            asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
-            dividend_asset = ledger.issuances.get_asset_name(db, dividend_asset_id, block_index)
+            asset = ledger.issuances.get_asset_name(db, asset_id)
+            dividend_asset = ledger.issuances.get_asset_name(db, dividend_asset_id)
             status = "valid"
         elif len(message) == LENGTH_1:
             quantity_per_unit, asset_id = struct.unpack(FORMAT_1, message)
-            asset = ledger.issuances.get_asset_name(db, asset_id, block_index)
+            asset = ledger.issuances.get_asset_name(db, asset_id)
             dividend_asset = config.XCP
             status = "valid"
         else:
             raise exceptions.UnpackError
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error):
         dividend_asset, quantity_per_unit, asset = None, None, None
         status = "invalid: could not unpack"
 

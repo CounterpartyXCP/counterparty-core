@@ -1,13 +1,12 @@
 import logging
 import os
 import queue
-import random
 import shutil
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from counterparty_rs import indexer
+from counterparty_rs import indexer  # pylint: disable=no-name-in-module
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import protocol
@@ -22,11 +21,11 @@ PREFETCH_QUEUE_SIZE = 20
 def delete_database_directory():
     if os.path.isdir(config.FETCHER_DB_OLD):
         shutil.rmtree(config.FETCHER_DB_OLD)
-        logger.debug(f"RSFetcher - Deleted old database at {config.FETCHER_DB_OLD}")
+        logger.debug("RSFetcher - Deleted old database at %s", config.FETCHER_DB_OLD)
 
     if os.path.isdir(config.FETCHER_DB):
         shutil.rmtree(config.FETCHER_DB)
-        logger.debug(f"RSFetcher - Reset database at {config.FETCHER_DB}")
+        logger.debug("RSFetcher - Reset database at %s", config.FETCHER_DB)
 
 
 class RSFetcher(metaclass=helpers.SingletonMeta):
@@ -64,7 +63,6 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                 self.config["log_level"] = config.LOG_LEVEL_STRING
         else:
             logger.warning("Using custom indexer config.")
-            print(indexer_config)
             self.config = indexer_config
         self.config["network"] = config.NETWORK_NAME
         self.fetcher = None
@@ -103,8 +101,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
         self.prefetch_task = self.executor.submit(self.prefetch_blocks)
         self.prefetch_queue_initialized = False
 
-    def get_block(self, retry=0):
-        logger.trace("Fetching block with Rust backend.")
+    def get_block(self):
         block = self.get_prefetched_block()
 
         if block is None:
@@ -113,7 +110,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
 
         # Handle potentially out-of-order blocks
         if block["height"] != self.next_height:
-            logger.warning(f"Received block {block['height']} when expecting {self.next_height}")
+            logger.warning("Received block %s when expecting %s", block["height"], self.next_height)
             self.next_height = block["height"]
 
         self.next_height += 1
@@ -141,18 +138,20 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
             # If stopped and queue is empty
             logger.debug("Fetcher stopped and prefetch queue is empty.")
             return None
-        except Exception as e:
-            logger.error(f"Error getting prefetched block: {e}")
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Error getting prefetched block: %s", e)
             raise e
 
     def prefetch_blocks(self):
         logger.debug("Starting to prefetch blocks...")
         expected_height = self.next_height
         self.running = True
+        retry = 0
         while not self.stopped_event.is_set():
             try:
                 block = self.fetcher.get_block_non_blocking()
                 if block is not None:
+                    retry = 0
                     while not self.stopped_event.is_set():
                         try:
                             self.prefetch_queue.put(block, timeout=1)
@@ -176,10 +175,13 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                             logger.debug("Prefetch queue is full; waiting...")
                             time.sleep(0.1)
                 elif not self.stopped_event.is_set():
-                    logger.debug("No block fetched. Waiting before next fetch.")
+                    retry += 1
+                    logger.debug(
+                        "Waiting to prefetch block %s...(%.1fs)", expected_height, retry / 10
+                    )
                     # Use Event's wait method instead of time.sleep for better responsiveness
-                    self.stopped_event.wait(timeout=random.uniform(0.2, 0.7))  # noqa: S311
-            except Exception as e:
+                    self.stopped_event.wait(retry / 10)  # noqa: S311
+            except Exception as e:  # pylint: disable=broad-except
                 if str(e) == "Stopped error":
                     logger.warning(
                         "RSFetcher thread found stopped due to an error. Restarting in 5 seconds..."
@@ -204,8 +206,8 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
             if self.fetcher:
                 self.fetcher.stop()
                 logger.debug("Fetcher stopped.")
-        except Exception as e:
-            logger.error(f"Error during stop: {e}")
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Error during stop: %s", e)
             if str(e) != "Stopped error":
                 raise e
         finally:
@@ -221,5 +223,5 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
 
 
 def stop():
-    if RSFetcher in RSFetcher._instances and RSFetcher._instances[RSFetcher] is not None:
+    if RSFetcher in RSFetcher._instances and RSFetcher._instances[RSFetcher] is not None:  # pylint: disable=protected-access
         RSFetcher().stop()

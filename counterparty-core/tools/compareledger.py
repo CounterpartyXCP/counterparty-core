@@ -26,7 +26,7 @@ def get_ledger(database_file):
             UNION ALL
             SELECT 'debits' as table_name, {debit_fields} FROM debits WHERE block_index < {LAST_BLOCK}
             ORDER BY block_index DESC
-            """  # noqa: S608
+            """  # noqa: S608 # nosec B608
 
     cursor.execute(query)
 
@@ -51,7 +51,7 @@ def compare_block_ledger(database_file_1, database_file_2, block_index):
             UNION ALL
             SELECT 'debits' as table_name, {debit_fields} FROM debits WHERE block_index = ?
             ORDER BY block_index DESC
-            """  # noqa: S608
+            """  # noqa: S608 # nosec B608
     movements1 = cursor1.execute(query, (block_index, block_index)).fetchall()
     movements2 = cursor2.execute(query, (block_index, block_index)).fetchall()
     block1_str = "\n".join([", ".join([str(x) for x in mvnt]) for mvnt in movements1])
@@ -72,7 +72,7 @@ def compare_txlist(database_file_1, database_file_2, block_index):
     db2 = apsw.Connection(database_file_2, flags=apsw.SQLITE_OPEN_READONLY)
     cursor2 = db2.cursor()
 
-    query = f"""SELECT * FROM transactions WHERE block_index = {block_index} ORDER BY tx_index"""  # noqa: S608
+    query = f"""SELECT * FROM transactions WHERE block_index = {block_index} ORDER BY tx_index"""  # noqa: S608 # nosec B608
 
     liste1 = cursor1.execute(query).fetchall()
     liste2 = cursor2.execute(query).fetchall()
@@ -94,13 +94,13 @@ def check_hashes(database_file_1, database_file_2, hash_name="ledger_hash"):
     db2 = apsw.Connection(database_file_2, flags=apsw.SQLITE_OPEN_READONLY)
     cursor2 = db2.cursor()
 
-    query = f"""SELECT block_index, {hash_name} FROM blocks WHERE block_index < {LAST_BLOCK} ORDER BY block_index """  # noqa: S608
+    query = f"""SELECT block_index, {hash_name} FROM blocks WHERE block_index < {LAST_BLOCK} ORDER BY block_index """  # noqa: S608 # nosec B608
 
     cursor1.execute(query)
     for block1 in cursor1:
         block2 = cursor2.execute(
-            f"SELECT block_index, {hash_name} FROM blocks WHERE block_index = ?",  # noqa: S608
-            (block1[0],),  # noqa: S608
+            f"SELECT block_index, {hash_name} FROM blocks WHERE block_index = ?",  # noqa: S608 # nosec B608
+            (block1[0],),  # noqa: S608 # nosec B608
         ).fetchone()
         if block1[1] != block2[1]:
             print(block1[0], block1[1], block2[1])
@@ -149,7 +149,7 @@ def get_last_block(database_file_1, database_file_2):
 database_file_1 = sys.argv[1]
 database_file_2 = sys.argv[2]
 
-LAST_BLOCK = 650000
+LAST_BLOCK = 750000
 # compare_ledger(database_file_1, database_file_2)
 check_hashes(database_file_1, database_file_2, "ledger_hash")
 # get_checkpoints(database_file_1)

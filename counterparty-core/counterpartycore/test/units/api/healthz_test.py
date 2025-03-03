@@ -9,11 +9,7 @@ def set_mainnet_network(monkeypatch, block_index=400000):
     bitcoinlib.SelectParams("mainnet")
     config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
     CurrentState().set_current_block_index(block_index)
-    monkeypatch.setattr(
-        "counterpartycore.lib.ledger.currentstate.get_backend_height", lambda: block_index
-    )
     CurrentState().last_update = 0
-    assert CurrentState().current_backend_height() == block_index
 
 
 def restore_network():

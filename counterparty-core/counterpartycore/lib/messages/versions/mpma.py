@@ -6,7 +6,6 @@ from itertools import groupby
 from bitstring import ReadError
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 from counterpartycore.lib.utils.mpmaencoding import (
@@ -30,20 +29,20 @@ def py34_tuple_append(first_elem, t):
 
 
 ## expected functions for message version
-def unpack(message, block_index):
+def unpack(message):
     try:
-        unpacked = _decode_mpma_send_decode(message, block_index)
-    except struct.error as e:  # noqa: F841
-        raise exceptions.UnpackError("could not unpack")  # noqa: B904
-    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:  # noqa: F841
-        raise exceptions.UnpackError("invalid asset in mpma send")  # noqa: B904
-    except ReadError as e:  # noqa: F841
-        raise exceptions.UnpackError("truncated data")  # noqa: B904
+        unpacked = _decode_mpma_send_decode(message)
+    except struct.error as e:
+        raise exceptions.UnpackError("could not unpack") from e
+    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
+        raise exceptions.UnpackError("invalid asset in mpma send") from e
+    except ReadError as e:
+        raise exceptions.UnpackError("truncated data") from e
 
     return unpacked
 
 
-def validate(db, source, asset_dest_quant_list, block_index):
+def validate(db, asset_dest_quant_list):
     problems = []
 
     if len(asset_dest_quant_list) == 0:
@@ -143,21 +142,17 @@ def compose(
         if balance < quantity and not skip_validation:
             raise exceptions.ComposeError(f"insufficient funds for {asset}")
 
-    block_index = CurrentState().current_block_index()
-
     cursor.close()
 
-    problems = validate(db, source, asset_dest_quant_list, block_index)
+    problems = validate(db, asset_dest_quant_list)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     data = messagetype.pack(ID)
 
     try:
-        data += _encode_mpma_send(
-            db, asset_dest_quant_list, block_index, memo=memo, memo_is_hex=memo_is_hex
-        )
-    except Exception as e:
+        data += _encode_mpma_send(db, asset_dest_quant_list, memo=memo, memo_is_hex=memo_is_hex)
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError(f"couldn't encode MPMA send: {e}") from e
 
     return (source, [], data)
@@ -165,13 +160,13 @@ def compose(
 
 def parse(db, tx, message):
     try:
-        unpacked = unpack(message, tx["block_index"])
+        unpacked = unpack(message)
         status = "valid"
-    except struct.error as e:  # noqa: F841
+    except struct.error:
         status = "invalid: truncated message"
-    except (exceptions.AssetNameError, exceptions.AssetIDError) as e:  # noqa: F841
+    except (exceptions.AssetNameError, exceptions.AssetIDError):
         status = "invalid: invalid asset name/id"
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         status = f"invalid: couldn't unpack; {e}"
 
     cursor = db.cursor()
@@ -180,10 +175,10 @@ def parse(db, tx, message):
     all_debits = []
     all_credits = []
     if status == "valid":
-        for asset_id in unpacked:
+        for asset_id, asset_credits in unpacked.items():
             try:
-                asset = ledger.issuances.get_asset_name(db, asset_id, tx["block_index"])  # noqa: F841
-            except exceptions.AssetNameError as e:  # noqa: F841
+                ledger.issuances.get_asset_name(db, asset_id)
+            except exceptions.AssetNameError:
                 status = f"invalid: asset {asset_id} invalid at block index {tx['block_index']}"
                 break
 
@@ -192,23 +187,22 @@ def parse(db, tx, message):
                 status = f"invalid: insufficient funds for asset {asset_id}, address {tx['source']} has no balance"
                 break
 
-            credits = unpacked[asset_id]
-
-            total_sent = reduce(lambda p, t: p + t[1], credits, 0)
+            total_sent = reduce(lambda p, t: p + t[1], asset_credits, 0)
 
             if balance < total_sent:
                 status = f"invalid: insufficient funds for asset {asset_id}, needs {total_sent}"
                 break
 
             if status == "valid":
-                plain_sends += map(lambda t: py34_tuple_append(asset_id, t), credits)
+                plain_sends += map(lambda t: py34_tuple_append(asset_id, t), asset_credits)  # pylint: disable=cell-var-from-loop
                 all_credits += map(
-                    lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]}, credits
+                    lambda t: {"asset": asset_id, "destination": t[0], "quantity": t[1]},  # pylint: disable=cell-var-from-loop
+                    asset_credits,
                 )
                 all_debits.append({"asset": asset_id, "quantity": total_sent})
 
     if status == "valid":
-        problems = validate(db, tx["source"], plain_sends, tx["block_index"])
+        problems = validate(db, plain_sends)
 
         if problems:
             status = "invalid:" + "; ".join(problems)

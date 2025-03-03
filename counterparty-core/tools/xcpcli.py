@@ -210,6 +210,6 @@ def execute_command():
 if __name__ == "__main__":
     try:
         execute_command()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         cprint(e, "red")
         exit(1)

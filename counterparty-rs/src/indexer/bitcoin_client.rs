@@ -1,6 +1,7 @@
 use std::cmp::min;
+use std::collections::HashMap;
 use std::iter::repeat;
-use std::{collections::HashMap, sync::Arc, thread::JoinHandle};
+use std::thread::JoinHandle;
 
 use crate::b58::b58_encode;
 use crate::utils::script_to_address;
@@ -14,11 +15,15 @@ use bitcoin::{
     script::Instruction::{Op, PushBytes},
     Block, BlockHash, Script, TxOut,
 };
-use bitcoincore_rpc::bitcoin::script::Instruction;
-use bitcoincore_rpc::{Auth, Client, RpcApi};
+
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
+
+use crate::indexer::block::VinOutput;
+use crate::indexer::rpc_client::{BatchRpcClient, BATCH_CLIENT};
+
+use std::sync::Arc;
 
 use super::{
     block::{
@@ -29,11 +34,10 @@ use super::{
     types::{
         entry::{
             BlockAtHeightHasHash, BlockAtHeightSpentOutputInTx,
-            ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxInBlockAtHeight, TxidVoutPrefix,
-            WritableEntry,
+            ScriptHashHasOutputsInBlockAtHeight, ToEntry, TxInBlockAtHeight, WritableEntry,
         },
         error::Error,
-        pipeline::{BlockHasEntries, BlockHasOutputs, BlockHasPrevBlockHash},
+        pipeline::{BlockHasEntries, BlockHasPrevBlockHash},
     },
     workers::new_worker_pool,
 };
@@ -152,9 +156,9 @@ fn parse_vout(
         }
         let pb = match instructions.get(2) {
             Some(Ok(instruction)) => match instruction {
-                Instruction::Op(OP_PUSHNUM_1) => vec![1],
-                Instruction::PushBytes(bytes) => bytes.as_bytes().to_vec(),
-                Instruction::Op(op) => vec![op.to_u8()],
+                Op(OP_PUSHNUM_1) => vec![1],
+                PushBytes(bytes) => bytes.as_bytes().to_vec(),
+                Op(op) => vec![op.to_u8()],
             },
             Some(Err(_)) => vec![],
             None => vec![],
@@ -374,7 +378,7 @@ fn parse_vout(
 }
 
 pub fn parse_transaction(
-    tx: &bitcoin::blockdata::transaction::Transaction,
+    tx: &bitcoin::Transaction,
     config: &Config,
     height: u32,
     parse_vouts: bool,
@@ -383,31 +387,14 @@ pub fn parse_transaction(
     let mut vins = Vec::new();
     let mut segwit = false;
     let mut vtxinwit: Vec<Vec<String>> = Vec::new();
-    let mut key = Vec::new();
-    for vin in tx.input.iter() {
-        if key.is_empty() {
-            key = vin.previous_output.txid.to_byte_array().to_vec();
-            key.reverse();
-        }
-        let hash = vin.previous_output.txid.to_string();
-        if !vin.witness.is_empty() {
-            vtxinwit.push(
-                vin.witness
-                    .iter()
-                    .map(|w| w.as_hex().to_string())
-                    .collect::<Vec<_>>(),
-            );
-            segwit = true;
-        } else {
-            vtxinwit.push(Vec::new());
-        }
-        vins.push(Vin {
-            hash,
-            n: vin.previous_output.vout,
-            sequence: vin.sequence.0,
-            script_sig: vin.script_sig.to_bytes(),
-        })
-    }
+
+    let key = if !tx.input.is_empty() {
+        let mut key = tx.input[0].previous_output.txid.to_byte_array().to_vec();
+        key.reverse();
+        key
+    } else {
+        Vec::new()
+    };
 
     let mut vouts = Vec::new();
     let mut destinations = Vec::new();
@@ -473,11 +460,80 @@ pub fn parse_transaction(
                 destinations,
                 btc_amount,
                 fee,
-                data,
+                data: data.clone(),
                 potential_dispensers,
             })
         };
     }
+
+    // Try to get previous transactions info if RPC is available and data is not empty
+    let mut prev_txs = vec![None; tx.input.len()];
+    if !data.is_empty() {
+        if BATCH_CLIENT.lock().unwrap().is_none() {
+            *BATCH_CLIENT.lock().unwrap() = Some(
+                BatchRpcClient::new(
+                    config.rpc_address.clone(),
+                    config.rpc_user.clone(),
+                    config.rpc_password.clone(),
+                )
+                .unwrap(),
+            );
+        }
+
+        if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
+            let input_txids: Vec<_> = tx
+                .input
+                .iter()
+                .map(|vin| vin.previous_output.txid)
+                .collect();
+            prev_txs = batch_client
+                .get_transactions(&input_txids)
+                .unwrap_or_default();
+        }
+    }
+
+    // Always process all inputs
+    for (i, vin) in tx.input.iter().enumerate() {
+        if !vin.witness.is_empty() {
+            vtxinwit.push(
+                vin.witness
+                    .iter()
+                    .map(|w| w.as_hex().to_string())
+                    .collect::<Vec<_>>(),
+            );
+            segwit = true;
+        } else {
+            vtxinwit.push(Vec::new());
+        }
+    }
+
+    for (i, vin) in tx.input.iter().enumerate() {
+        let hash = vin.previous_output.txid.to_string();
+        let vin_info = prev_txs.get(i).and_then(|prev_tx| {
+            prev_tx.as_ref().and_then(|tx| {
+                let vout_idx = vin.previous_output.vout as usize;
+
+                let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
+                    tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
+                });
+
+                tx.output.get(vout_idx).map(|output| VinOutput {
+                    value: output.value.to_sat(),
+                    script_pub_key: output.script_pubkey.to_bytes(),
+                    is_segwit: is_segwit,
+                })
+            })
+        });
+
+        vins.push(Vin {
+            hash,
+            n: vin.previous_output.vout,
+            sequence: vin.sequence.0,
+            script_sig: vin.script_sig.to_bytes(),
+            info: vin_info,
+        });
+    }
+
     let tx_id = tx.compute_txid().to_string();
     let tx_hash;
     if segwit && config.correct_segwit_txids_enabled(height) {
@@ -485,13 +541,14 @@ pub fn parse_transaction(
     } else {
         tx_hash = Sha256dHash::hash(&tx_bytes).to_string();
     }
+
     Transaction {
         version: tx.version.0,
         segwit,
         coinbase: tx.is_coinbase(),
         lock_time: tx.lock_time.to_consensus_u32(),
-        tx_id: tx_id,
-        tx_hash: tx_hash,
+        tx_id,
+        tx_hash,
         vtxinwit,
         vin: vins,
         vout: vouts,
@@ -550,26 +607,6 @@ impl BlockHasPrevBlockHash for Block {
     }
 }
 
-impl BlockHasOutputs for Block {
-    fn get_script_hash_outputs(&self, script_hash: [u8; 20]) -> Vec<(TxidVoutPrefix, u64)> {
-        let mut outputs = Vec::new();
-        for tx in self.txdata.iter() {
-            for (i, o) in tx.output.iter().enumerate() {
-                if script_hash == o.script_pubkey.script_hash().as_byte_array().as_ref() {
-                    outputs.push((
-                        TxidVoutPrefix {
-                            txid: tx.compute_txid().to_byte_array(),
-                            vout: i as u32,
-                        },
-                        o.value.to_sat(),
-                    ));
-                }
-            }
-        }
-        outputs
-    }
-}
-
 pub trait BitcoinRpc<B>: Send + Clone + 'static {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error>;
     fn get_block(&self, hash: &BlockHash) -> Result<Box<B>, Error>;
@@ -619,12 +656,13 @@ pub struct BitcoinClient {
 
 impl BitcoinClient {
     pub fn new(config: &Config, stopper: Stopper, n: usize) -> Result<Self, Error> {
-        Ok(BitcoinClient {
+        let client = Self {
             n,
             config: config.clone(),
             stopper,
             channels: Channels::new(n),
-        })
+        };
+        Ok(client)
     }
 
     pub fn start(&self) -> Result<Vec<JoinHandle<Result<(), Error>>>, Error> {
@@ -722,15 +760,17 @@ impl BitcoinRpc<Block> for BitcoinClient {
 
 #[derive(Clone)]
 struct BitcoinClientInner {
-    client: Arc<Client>,
+    client: Arc<BatchRpcClient>,
 }
 
 impl BitcoinClientInner {
     fn new(config: &Config) -> Result<Self, Error> {
-        let client = Client::new(
-            &config.rpc_address,
-            Auth::UserPass(config.rpc_user.clone(), config.rpc_password.clone()),
-        )?;
+        let client = BatchRpcClient::new(
+            config.rpc_address.clone(),
+            config.rpc_user.clone(),
+            config.rpc_password.clone(),
+        )
+        .map_err(|e| Error::BitcoinRpc(format!("Failed to create BatchRpcClient: {:#?}", e)))?;
 
         Ok(BitcoinClientInner {
             client: Arc::new(client),
@@ -740,26 +780,43 @@ impl BitcoinClientInner {
 
 impl BitcoinRpc<Block> for BitcoinClientInner {
     fn get_block_hash(&self, height: u32) -> Result<BlockHash, Error> {
-        Ok(self.client.get_block_hash(height as u64)?)
+        self.client
+            .get_block_hash(height)
+            .map_err(|e| Error::BitcoinRpc(format!("Failed to get block hash: {:#?}", e)))
     }
 
     fn get_block(&self, hash: &BlockHash) -> Result<Box<Block>, Error> {
-        Ok(Box::new(self.client.get_block(hash)?))
+        self.client
+            .get_block(hash)
+            .map(Box::new)
+            .map_err(|e| Error::BitcoinRpc(format!("Failed to get block: {:#?}", e)))
     }
 
     fn get_blockchain_height(&self) -> Result<u32, Error> {
-        Ok(self.client.get_blockchain_info()?.blocks as u32)
+        self.client
+            .get_blockchain_info()
+            .map_err(|e| Error::BitcoinRpc(format!("Failed to get blockchain info: {:#?}", e)))
+            .and_then(|info| {
+                info["blocks"]
+                    .as_u64()
+                    .ok_or_else(|| {
+                        Error::BitcoinRpc("Invalid blocks field in blockchain info".into())
+                    })
+                    .map(|h| h as u32)
+            })
     }
 }
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
-    use bitcoincore_rpc::bitcoin::{
+    use bitcoin::hashes::{sha256d, Hash};
+    use bitcoin::{
         absolute::LockTime,
         block::{self, Header},
-        transaction, Amount, CompactTarget, OutPoint, ScriptBuf, ScriptHash, Sequence, Transaction,
-        TxIn, TxMerkleNode, TxOut, Txid, Witness,
+        transaction::Version,
+        Amount, CompactTarget, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxMerkleNode,
+        TxOut, Txid, Witness,
     };
 
     use crate::indexer::{
@@ -772,19 +829,26 @@ mod tests {
     #[test]
     fn test_get_entries() {
         let height = 2;
-        let script_pubkey = ScriptBuf::new_p2sh(&ScriptHash::from_byte_array(test_h160_hash(0)));
+
+        let script_pubkey = ScriptBuf::from_bytes(test_h160_hash(0).to_vec());
+
         let tx_in = TxIn {
-            previous_output: OutPoint::new(Txid::from_slice(&test_sha256_hash(0)).unwrap(), 1),
+            previous_output: OutPoint {
+                txid: Txid::from_raw_hash(sha256d::Hash::from_slice(&test_sha256_hash(0)).unwrap()),
+                vout: 1,
+            },
             script_sig: ScriptBuf::from_bytes(test_h160_hash(0).to_vec()),
-            sequence: Sequence(0xFFFFFFFF),
-            witness: Witness::new(),
+            sequence: Sequence::MAX,
+            witness: Witness::default(),
         };
+
         let tx_out = TxOut {
-            value: Amount::MIN,
+            value: Amount::from_sat(1),
             script_pubkey: script_pubkey.clone(),
         };
+
         let tx = Transaction {
-            version: transaction::Version::ONE,
+            version: Version::ONE,
             lock_time: LockTime::ZERO,
             input: vec![tx_in],
             output: vec![tx_out],
@@ -794,7 +858,9 @@ mod tests {
             header: Header {
                 version: block::Version::ONE,
                 prev_blockhash: test_block_hash(1),
-                merkle_root: TxMerkleNode::from_slice(&test_sha256_hash(height)).unwrap(),
+                merkle_root: TxMerkleNode::from_raw_hash(
+                    sha256d::Hash::from_slice(&test_sha256_hash(height)).unwrap(),
+                ),
                 time: 1234567890,
                 bits: CompactTarget::default(),
                 nonce: 0,
@@ -822,7 +888,10 @@ mod tests {
 
         let entry = entries.get(3).unwrap().to_entry();
         let e = ScriptHashHasOutputsInBlockAtHeight::from_entry(entry).unwrap();
-        assert_eq!(e.script_hash, script_pubkey.script_hash().to_byte_array());
+        assert_eq!(
+            e.script_hash.to_vec(),
+            script_pubkey.script_hash().as_byte_array().to_vec()
+        );
         assert_eq!(e.height, height);
     }
 }

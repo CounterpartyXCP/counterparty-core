@@ -1,22 +1,15 @@
-use bitcoincore_rpc::bitcoin::BlockHash;
+use bitcoin::BlockHash;
 use crossbeam_channel::{Receiver, Sender};
 
 use crate::indexer::block::{Block, ToBlock};
 use crate::indexer::config::{Config, Mode};
 
-use super::{
-    entry::{ToEntry, TxidVoutPrefix},
-    error::Error,
-};
+use super::{entry::ToEntry, error::Error};
 
 pub type ChanOut = (Sender<Box<Block>>, Receiver<Box<Block>>);
 
 pub trait BlockHasEntries {
     fn get_entries(&self, mode: Mode, height: u32) -> Vec<Box<dyn ToEntry>>;
-}
-
-pub trait BlockHasOutputs {
-    fn get_script_hash_outputs(&self, script_hash: [u8; 20]) -> Vec<(TxidVoutPrefix, u64)>;
 }
 
 pub trait BlockHasPrevBlockHash {

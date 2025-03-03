@@ -1,7 +1,7 @@
 use std::cmp::max;
 
 use crossbeam_channel::bounded;
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::indexer::{
     bitcoin_client::BitcoinClient, config::Config, database::Database, logging::setup_logging,
@@ -16,11 +16,11 @@ pub fn new(config: Config) -> Result<Indexer, Error> {
     let stopper = Stopper::new();
     let client = BitcoinClient::new(&config, stopper.clone(), parallelism.into())?;
     let handles = client.start()?;
-    info!("Connecting to database: {}", config.db_dir);
+    debug!("Connecting to database: {}", config.db_dir);
     let db = Database::new(config.db_dir.to_string())?;
-    info!("Connected");
+    debug!("Connected");
     let chan = bounded(64);
-    info!("Initialized");
+    debug!("Initialized");
 
     Ok(Indexer {
         config,

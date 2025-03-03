@@ -1,7 +1,7 @@
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 use std::thread;
 
-use bitcoincore_rpc::bitcoin::{hashes::Hash, BlockHash};
+use bitcoin::{hashes::Hash, BlockHash};
 use crossbeam_channel::{unbounded, Receiver, Sender};
 
 use super::{stopper::Stopper, types::error::Error};

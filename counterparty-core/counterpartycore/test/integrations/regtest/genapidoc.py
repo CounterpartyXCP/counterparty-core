@@ -233,14 +233,13 @@ def gen_blueprint(db):
 
         md += f"\n### {title} "
 
-        first_query_arg = True
+        query_params = []
         for arg in route["args"]:
             if f"{{{arg['name']}}}" in blueprint_path:
                 continue
             else:
-                prefix = "?" if first_query_arg else "&"
-                first_query_arg = False
-                blueprint_path += f"{{{prefix}{arg['name']}}}"
+                query_params.append(arg["name"])
+        blueprint_path += f"{{?{','.join(query_params)}}}" if query_params else ""
         md += f"[GET {blueprint_path}]\n\n"
 
         md += route["description"].strip()
@@ -271,9 +270,9 @@ def gen_blueprint(db):
                     example_arg = f": `{example_args[arg['name']]}`"
                 elif arg["name"] == "verbose":
                     example_arg = ": `true`"
-                md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description}\n"
+                md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description.replace('_', '-')}\n"
                 if not arg["required"]:
-                    md += f"        + Default: `{arg.get('default', '')}`\n"
+                    md += f"        + Default: `{arg.get('default', '') or 'null'}`\n"
                 if "members" in arg:
                     md += "        + Members\n"
                     for member in arg["members"]:
@@ -626,9 +625,9 @@ if __name__ == "__main__":
     print("Generating API documentation...")
     data_dir = sys.argv[1] if len(sys.argv) > 1 else "regtestnode"
     print(f"Using data directory: {data_dir}")
-    assert os.path.exists(
-        f"{data_dir}/counterparty.regtest.db"
-    ), f"Data directory {data_dir} does not exist."
+    assert os.path.exists(f"{data_dir}/counterparty.regtest.db"), (
+        f"Data directory {data_dir} does not exist."
+    )
     db = database.get_db_connection(
         f"{data_dir}/counterparty.regtest.db", read_only=True, check_wal=False
     )

@@ -5,7 +5,7 @@ FROM ubuntu:22.04
 
 RUN apt update
 # install dependencies
-RUN apt install -y python3 python3-dev python3-pip libleveldb-dev curl gnupg libclang-dev
+RUN apt install -y python3 python3-dev python3-pip libleveldb-dev curl gnupg libclang-dev pkg-config libssl-dev
 
 # install rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y

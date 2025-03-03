@@ -1,0 +1,22 @@
+name: Ruff Scanner
+
+on:
+  push:
+    branches: "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chartboost/ruff-action@v1
+        with:
+          args: "format --check"
+          version: 0.9.7
+      - uses: chartboost/ruff-action@v1
+        with:
+          version: 0.9.7

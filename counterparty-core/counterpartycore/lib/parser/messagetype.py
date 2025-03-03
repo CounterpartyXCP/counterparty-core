@@ -12,11 +12,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def pack(message_type_id, block_index=None):
     # pack message ID into 1 byte if not zero
-    if (
-        protocol.enabled("short_tx_type_id", block_index)
-        and message_type_id > 0
-        and message_type_id < 256
-    ):
+    if protocol.enabled("short_tx_type_id", block_index) and 0 < message_type_id < 256:
         return struct.pack(config.SHORT_TXTYPE_FORMAT, message_type_id)
 
     # pack into 4 bytes
@@ -45,7 +41,7 @@ def unpack(packed_data, block_index=None):
 
 
 def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_index: int):
-    TRANSACTION_TYPE_BY_ID = {
+    type_by_id = {
         messages.bet.ID: "bet",
         messages.broadcast.ID: "broadcast",
         messages.btcpay.ID: "btcpay",
@@ -81,11 +77,9 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
             and utxos_info[0] != ""
         ):
             return "utxomove"
-        if (
-            destination != config.UNSPENDABLE
-            and block_index >= protocol.get_change_block_index("dispensers")
-            and block_index < protocol.get_change_block_index("disable_vanilla_btc_dispense")
-        ):
+        if destination != config.UNSPENDABLE and protocol.get_change_block_index(
+            "disable_vanilla_btc_dispense"
+        ) > block_index >= protocol.get_change_block_index("dispensers"):
             return "dispense"
         return "unknown"
 
@@ -100,7 +94,7 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
         if data[: len(config.PREFIX)] == config.PREFIX:
             data = data[len(config.PREFIX) :]
         message_type_id, message = unpack(data)
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return "unknown"
 
     if message_type_id == messages.utxo.ID:
@@ -109,7 +103,7 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
             if utxosinfo.is_utxo_format(message_data["source"]):
                 return "detach"
             return "attach"
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             return "unknown"
 
-    return TRANSACTION_TYPE_BY_ID.get(message_type_id, "unknown")
+    return type_by_id.get(message_type_id, "unknown")

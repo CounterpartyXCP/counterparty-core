@@ -82,5 +82,4 @@ In addition to resolving the above frontrunning vulnerability, this update bring
 * OpenStamp
 * DerpHerpenstein
 * Ouziel Slama
-* Wilfred Denton
 * Adam Krellenstein

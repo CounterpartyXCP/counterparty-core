@@ -1,5 +1,3 @@
-# TODO: after "spend_utxo_to_detach" activation refactor like rps.py
-
 import logging
 import struct
 
@@ -151,7 +149,7 @@ def unpack(message, return_dict=False):
             }
 
         return (source, destination, asset, int(quantity))
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.UnpackError(f"Cannot unpack utxo message: {e}") from e
 
 

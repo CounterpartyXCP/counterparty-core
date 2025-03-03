@@ -5,26 +5,39 @@ from counterpartycore.lib.messages import detach
 DUMMY_UTXO = 64 * "0" + ":1"
 
 
+def get_utxo(ledger_db, address):
+    return ledger_db.execute(
+        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        (address,),
+    ).fetchone()["utxo"]
+
+
 def test_validate(defaults):
     assert detach.validate(DUMMY_UTXO) == []
     assert detach.validate(defaults["addresses"][0]) == ["source must be a UTXO"]
 
 
 def test_compose(ledger_db, defaults):
-    assert detach.compose(ledger_db, DUMMY_UTXO, defaults["addresses"][1]) == (
-        DUMMY_UTXO,
+    utxo = get_utxo(ledger_db, defaults["addresses"][0])
+
+    assert detach.compose(ledger_db, utxo, defaults["addresses"][1]) == (
+        utxo,
         [],
         bytes(f"f{defaults['addresses'][1]}", "utf-8"),
     )
 
-    assert detach.compose(ledger_db, DUMMY_UTXO) == (
-        DUMMY_UTXO,
+    assert detach.compose(ledger_db, utxo) == (
+        utxo,
         [],
         b"f0",
     )
 
     with pytest.raises(exceptions.ComposeError, match="destination must be an address"):
-        detach.compose(ledger_db, DUMMY_UTXO, DUMMY_UTXO)
+        detach.compose(ledger_db, utxo, DUMMY_UTXO)
+
+    with pytest.raises(exceptions.ComposeError, match="no assets to detach"):
+        detach.compose(ledger_db, DUMMY_UTXO)
+        detach.compose(ledger_db, DUMMY_UTXO, defaults["addresses"][1])
 
 
 def test_unpack(defaults):
@@ -33,13 +46,6 @@ def test_unpack(defaults):
     assert detach.unpack(bytes(defaults["addresses"][1], "utf-8"), True) == {
         "destination": defaults["addresses"][1]
     }
-
-
-def get_utxo(ledger_db, address):
-    return ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
-        (address,),
-    ).fetchone()["utxo"]
 
 
 def test_parse_detach_to_destination(ledger_db, blockchain_mock, defaults, test_helpers):

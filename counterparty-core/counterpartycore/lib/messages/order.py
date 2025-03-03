@@ -21,7 +21,7 @@ LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
 
 
-def exact_penalty(db, address, block_index, order_match_id, tx_index):
+def exact_penalty(db, address, block_index, tx_index):
     # Penalize addresses that don’t make BTC payments. If an address lets an
     # order match expire, expire sell BTC orders from that address.
     cursor = db.cursor()
@@ -38,7 +38,6 @@ def exact_penalty(db, address, block_index, order_match_id, tx_index):
             cancel_order_match(db, bad_order_match, "expired", block_index, tx_index)
 
     cursor.close()
-    return
 
 
 def cancel_order(db, order, status, block_index, tx_index):
@@ -87,7 +86,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     """The only cancelling is an expiration."""
     # Skip order matches just expired as a penalty. (Not very efficient.)
     if not protocol.after_block_or_test_network(block_index, 314250):  # Protocol change.
-        order_matches = ledger.markets.get_order_match(db, id=order_match["id"])
+        order_matches = ledger.markets.get_order_match(db, match_id=order_match["id"])
         if order_matches and order_matches[0]["status"] == "expired":
             return
 
@@ -188,9 +187,9 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
     # Penalize tardiness.
     if protocol.after_block_or_test_network(block_index, 313900):  # Protocol change.
         if tx0_order["status"] == "expired" and order_match["forward_asset"] == config.BTC:
-            exact_penalty(db, order_match["tx0_address"], block_index, order_match["id"], tx_index)
+            exact_penalty(db, order_match["tx0_address"], block_index, tx_index)
         if tx1_order["status"] == "expired" and order_match["backward_asset"] == config.BTC:
-            exact_penalty(db, order_match["tx1_address"], block_index, order_match["id"], tx_index)
+            exact_penalty(db, order_match["tx1_address"], block_index, tx_index)
 
     # Re‐match.
     if protocol.after_block_or_test_network(block_index, 310000):  # Protocol change.
@@ -204,7 +203,6 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
 
     if status == "expired":
         # Record order match expiration.
-        cursor = db.cursor()  # noqa: F841
         bindings = {
             "order_match_id": order_match["id"],
             "tx0_address": order_match["tx0_address"],
@@ -228,7 +226,6 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
 
 def validate(
     db,
-    source,
     give_asset,
     give_quantity,
     get_asset,
@@ -320,7 +317,6 @@ def compose(
 
     problems = validate(
         db,
-        source,
         give_asset,
         give_quantity,
         get_asset,
@@ -332,8 +328,8 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    give_id = ledger.issuances.get_asset_id(db, give_asset, CurrentState().current_block_index())
-    get_id = ledger.issuances.get_asset_id(db, get_asset, CurrentState().current_block_index())
+    give_id = ledger.issuances.get_asset_id(db, give_asset)
+    get_id = ledger.issuances.get_asset_id(db, get_asset)
     data = messagetype.pack(ID)
     data += struct.pack(
         FORMAT, give_id, give_quantity, get_id, get_quantity, expiration, fee_required
@@ -342,17 +338,17 @@ def compose(
     return (source, [], data)
 
 
-def unpack(db, message, block_index, return_dict=False):
+def unpack(db, message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         give_id, give_quantity, get_id, get_quantity, expiration, fee_required = struct.unpack(
             FORMAT, message
         )
-        give_asset = ledger.issuances.get_asset_name(db, give_id, block_index)
-        get_asset = ledger.issuances.get_asset_name(db, get_id, block_index)
+        give_asset = ledger.issuances.get_asset_name(db, give_id)
+        get_asset = ledger.issuances.get_asset_name(db, get_id)
         status = "open"
-    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error) as e:  # noqa: F841
+    except (exceptions.UnpackError, exceptions.AssetNameError, struct.error):
         give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required = (
             0,
             0,
@@ -381,7 +377,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     (give_asset, give_quantity, get_asset, get_quantity, expiration, fee_required, status) = unpack(
-        db, message, tx["block_index"]
+        db, message
     )
 
     price = 0
@@ -403,7 +399,6 @@ def parse(db, tx, message):
 
         problems = validate(
             db,
-            tx["source"],
             give_asset,
             give_quantity,
             get_asset,
@@ -486,11 +481,11 @@ def match(db, tx, block_index=None):
     if not orders:
         cursor.close()
         return
-    else:
-        assert len(orders) == 1
-        if orders[0]["status"] != "open":
-            cursor.close()
-            return
+
+    assert len(orders) == 1
+    if orders[0]["status"] != "open":
+        cursor.close()
+        return
 
     tx1 = orders[0]
 
@@ -518,7 +513,7 @@ def match(db, tx, block_index=None):
     for tx0 in order_matches:
         # Sanity check. Should never happen.
         if tx0["status"] != "open":
-            raise Exception(f"Order match is not open: {tx0}.")
+            raise exceptions.OrderError(f"Order match is not open: {tx0}.")
         order_match_id = helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])
         if not block_index:
             block_index = max(
@@ -533,10 +528,14 @@ def match(db, tx, block_index=None):
         tx0_get_remaining = tx0["get_remaining"]
 
         # Ignore previous matches. (Both directions, just to be sure.)
-        if ledger.markets.get_order_match(db, id=helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])):
+        if ledger.markets.get_order_match(
+            db, match_id=helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])
+        ):
             logger.trace("Skipping: previous match")
             continue
-        if ledger.markets.get_order_match(db, id=helpers.make_id(tx1["tx_hash"], tx0["tx_hash"])):
+        if ledger.markets.get_order_match(
+            db, match_id=helpers.make_id(tx1["tx_hash"], tx0["tx_hash"])
+        ):
             logger.trace("Skipping: previous match")
             continue
 
@@ -545,12 +544,12 @@ def match(db, tx, block_index=None):
         tx0_fee_provided_remaining = tx0["fee_provided_remaining"]
 
         # Make sure that that both orders still have funds remaining (if order involves BTC, and so cannot be ‘filled’).
-        if tx0["give_asset"] == config.BTC or tx0["get_asset"] == config.BTC:  # Gratuitous
+        if config.BTC in [tx0["give_asset"], tx0["get_asset"]]:  # Gratuitous
             if tx0_give_remaining <= 0 or tx1_give_remaining <= 0:
                 logger.trace("Skipping: negative give quantity remaining")
                 continue
             if (
-                block_index >= 292000 and block_index <= 310500 and not protocol.is_test_network()
+                310500 >= block_index >= 292000 and not protocol.is_test_network()
             ):  # Protocol changes
                 if tx0_get_remaining <= 0 or tx1_get_remaining <= 0:
                     logger.trace("Skipping: negative get quantity remaining")
@@ -637,17 +636,19 @@ def match(db, tx, block_index=None):
                         )
 
                     logger.trace(
-                        f"Tx0 fee provided remaining: {tx0_fee_provided_remaining / config.UNIT}; required fee: {fee / config.UNIT}"
+                        "Tx0 fee provided remaining: %s; required fee: %s",
+                        tx0_fee_provided_remaining / config.UNIT,
+                        fee / config.UNIT,
                     )
                     if tx0_fee_provided_remaining < fee:
                         logger.trace("Skipping: tx0 fee provided remaining is too low.")
                         continue
-                    else:
-                        tx0_fee_provided_remaining -= fee
-                        if protocol.after_block_or_test_network(
-                            block_index, 287800
-                        ):  # Protocol change.
-                            tx1_fee_required_remaining -= fee
+
+                    tx0_fee_provided_remaining -= fee
+                    if protocol.after_block_or_test_network(
+                        block_index, 287800
+                    ):  # Protocol change.
+                        tx1_fee_required_remaining -= fee
 
                 elif tx1["give_asset"] == config.BTC:
                     if protocol.after_block_or_test_network(
@@ -664,17 +665,21 @@ def match(db, tx, block_index=None):
                         )
 
                     logger.trace(
-                        f"Tx1 fee provided remaining: {tx1_fee_provided_remaining / config.UNIT}; required fee: {fee / config.UNIT}"
+                        "Tx1 fee provided remaining: %(fee_provided)s; required fee: %(required_fee)s",
+                        {
+                            "fee_provided": tx1_fee_provided_remaining / config.UNIT,
+                            "required_fee": fee / config.UNIT,
+                        },
                     )
                     if tx1_fee_provided_remaining < fee:
                         logger.trace("Skipping: tx1 fee provided remaining is too low.")
                         continue
-                    else:
-                        tx1_fee_provided_remaining -= fee
-                        if protocol.after_block_or_test_network(
-                            block_index, 287800
-                        ):  # Protocol change.
-                            tx0_fee_required_remaining -= fee
+
+                    tx1_fee_provided_remaining -= fee
+                    if protocol.after_block_or_test_network(
+                        block_index, 287800
+                    ):  # Protocol change.
+                        tx0_fee_required_remaining -= fee
 
             else:  # Don’t deduct.
                 if tx1["get_asset"] == config.BTC:
@@ -722,7 +727,7 @@ def match(db, tx, block_index=None):
             if tx0_give_remaining <= 0 or (
                 tx0_get_remaining <= 0 and protocol.after_block_or_test_network(block_index, 292000)
             ):  # Protocol change
-                if tx0["give_asset"] != config.BTC and tx0["get_asset"] != config.BTC:
+                if config.BTC not in [tx0["give_asset"], tx0["get_asset"]]:
                     # Fill order, and recredit give_remaining.
                     tx0_status = "filled"
                     ledger.events.credit(
@@ -747,7 +752,7 @@ def match(db, tx, block_index=None):
             if tx1_give_remaining <= 0 or (
                 tx1_get_remaining <= 0 and protocol.after_block_or_test_network(block_index, 292000)
             ):  # Protocol change
-                if tx1["give_asset"] != config.BTC and tx1["get_asset"] != config.BTC:
+                if config.BTC not in [tx1["give_asset"], tx1["get_asset"]]:
                     # Fill order, and recredit give_remaining.
                     tx1_status = "filled"
                     ledger.events.credit(
@@ -817,7 +822,6 @@ def expire_orders(db, block_index):
     orders = ledger.markets.get_orders_to_expire(db, block_index)
     # Edge case: filled orders, and therefore not expired in the previous block,
     # re-ropened by order_match expiration in the previous block.
-    # TODO: protocol change: expire order matches then orders.
     orders += ledger.markets.get_orders_to_expire(db, block_index - 1)
     for order in orders:
         cancel_order(db, order, "expired", block_index, 0)  # tx_index=0 for block action
@@ -845,6 +849,7 @@ def expire_order_matches(db, block_index):
                         ledger.markets.get_order(db, order_hash=order_match["tx1_hash"])[0],
                         "expired",
                         block_index,
+                        0,
                     )
                 if order_match["forward_asset"] == "BTC" and order_match["status"] == "expired":
                     cancel_order(
@@ -852,6 +857,7 @@ def expire_order_matches(db, block_index):
                         ledger.markets.get_order(db, order_hash=order_match["tx0_hash"])[0],
                         "expired",
                         block_index,
+                        0,
                     )
 
     if protocol.after_block_or_test_network(block_index, 315000):  # Protocol change.

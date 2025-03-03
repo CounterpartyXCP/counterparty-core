@@ -7,7 +7,7 @@ use std::{
 
 use crossbeam_channel::{after, select, unbounded, Receiver, Sender};
 use rand::{thread_rng, Rng};
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 use uuid::Uuid;
 
 use super::{stopper::Stopper, types::error::Error};
@@ -59,7 +59,7 @@ where
                         return Err(Error::OperationCancelled(error_message));
                     },
                     recv(retry_timer) -> _ => {
-                        debug!("{} Retrying after error: {:?}", error_message, e);
+                        debug!("{} Retrying after: {:?}", error_message, e);
                     },
                     recv(timeout_timer) -> _ => {
                         stopper.unsubscribe(id)?;
@@ -95,11 +95,11 @@ pub fn timed<T, F>(m: String, f: F) -> Result<T, Error>
 where
     F: FnOnce() -> Result<T, Error>,
 {
-    info!("{}...", m);
+    debug!("{}...", m);
     let start = Instant::now();
     let result = f();
     let duration = start.elapsed();
-    info!("{} took {:?}", m, duration);
+    debug!("{} took {:?}", m, duration);
     result
 }
 

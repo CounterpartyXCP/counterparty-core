@@ -12,19 +12,17 @@ D = decimal.Decimal
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-f"""Burn {config.BTC} to earn {config.XCP} during a special period of time."""
-
 ID = 60
 
 MAINNET_BURNS = {}
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(CURR_DIR + "/data/mainnet_burns.csv", "r") as f:
+with open(CURR_DIR + "/data/mainnet_burns.csv", "r", encoding="utf-8") as f:
     mainnet_burns_reader = csv.DictReader(f)
     for line in mainnet_burns_reader:
         MAINNET_BURNS[line["tx_hash"]] = line
 
 
-def validate(db, source, destination, quantity, block_index, overburn=False):
+def validate(destination, quantity, block_index):
     problems = []
 
     # Check destination address.
@@ -50,15 +48,13 @@ def validate(db, source, destination, quantity, block_index, overburn=False):
 def compose(db, source: str, quantity: int, overburn: bool = False, skip_validation: bool = False):
     cursor = db.cursor()
     destination = config.UNSPENDABLE
-    problems = validate(
-        db, source, destination, quantity, CurrentState().current_block_index(), overburn=overburn
-    )
+    problems = validate(destination, quantity, CurrentState().current_block_index())
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     # Check that a maximum of 1 BTC total is burned per address.
     burns = ledger.other.get_burns(db, source)
-    already_burned = sum([burn["burned"] for burn in burns])
+    already_burned = sum(burn["burned"] for burn in burns)
 
     if quantity > (1 * config.UNIT - already_burned) and not overburn:
         raise exceptions.ComposeError(f"1 {config.BTC} may be burned per address")
@@ -67,7 +63,7 @@ def compose(db, source: str, quantity: int, overburn: bool = False, skip_validat
     return (source, [(destination, quantity)], None)
 
 
-def parse(db, tx, message=None):
+def parse(db, tx):
     burn_parse_cursor = db.cursor()
 
     if protocol.is_test_network():
@@ -76,17 +72,14 @@ def parse(db, tx, message=None):
 
         if status == "valid":
             problems = validate(
-                db,
-                tx["source"],
                 tx["destination"],
                 tx["btc_amount"],
                 tx["block_index"],
-                overburn=False,
             )
             if problems:
                 status = "invalid: " + "; ".join(problems)
 
-            if tx["btc_amount"] != None:  # noqa: E711
+            if tx["btc_amount"] is not None:  # noqa: E711
                 sent = tx["btc_amount"]
             else:
                 sent = 0
@@ -94,7 +87,7 @@ def parse(db, tx, message=None):
         if status == "valid":
             # Calculate quantity of XCP earned. (Maximum 1 BTC in total, ever.)
             burns = ledger.other.get_burns(db, tx["source"])
-            already_burned = sum([burn["burned"] for burn in burns])
+            already_burned = sum(burn["burned"] for burn in burns)
             one = 1 * config.UNIT
             max_burn = one - already_burned
             if sent > max_burn:
@@ -130,30 +123,29 @@ def parse(db, tx, message=None):
         # Mainnet burns are hard‐coded.
 
         try:
-            line = MAINNET_BURNS[tx["tx_hash"]]
+            row = MAINNET_BURNS[tx["tx_hash"]]
         except KeyError:
             return
 
         ledger.events.credit(
             db,
-            line["source"],
+            row["source"],
             config.XCP,
-            int(line["earned"]),
+            int(row["earned"]),
             tx["tx_index"],
             action="burn",
-            event=line["tx_hash"],
+            event=row["tx_hash"],
         )
 
         tx_index = int(tx["tx_index"])
-        tx_hash = line["tx_hash"]
-        block_index = int(line["block_index"])
-        source = line["source"]
-        burned = int(line["burned"])
-        earned = int(line["earned"])
+        tx_hash = row["tx_hash"]
+        block_index = int(row["block_index"])
+        source = row["source"]
+        burned = int(row["burned"])
+        earned = int(row["earned"])
         status = "valid"
 
     # Add parsed transaction to message-type–specific table.
-    # TODO: store sent in table
     bindings = {
         "tx_index": tx_index,
         "tx_hash": tx_hash,

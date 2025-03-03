@@ -1,9 +1,5 @@
-import binascii
-import hashlib
 import json
 import logging
-import sys
-import warnings
 
 import requests
 
@@ -11,19 +7,9 @@ from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages.data import checkpoints
 from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils.helpers import dhash_string
 
 logger = logging.getLogger(config.LOGGER_NAME)
-
-
-def dhash(text):
-    if not isinstance(text, bytes):
-        text = bytes(str(text), "utf-8")
-
-    return hashlib.sha256(hashlib.sha256(text).digest()).digest()
-
-
-def dhash_string(text):
-    return binascii.hexlify(dhash(text)).decode()
 
 
 def consensus_hash(db, field, previous_consensus_hash, content):
@@ -110,20 +96,17 @@ def asset_conservation(db, stop_event=None):
                 logger.debug("Stop event received. Exiting asset conservation check...")
                 return
             asset_issued = supplies[asset]
-            asset_held = held[asset] if asset in held and held[asset] != None else 0  # noqa: E711
+            asset_held = held[asset] if asset in held and held[asset] is not None else 0  # noqa: E711
             if asset_issued != asset_held:
                 raise exceptions.SanityError(
-                    "{} {} issued ≠ {} {} held".format(
-                        ledger.issuances.value_out(db, asset_issued, asset),
-                        asset,
-                        ledger.issuances.value_out(db, asset_held, asset),
-                        asset,
-                    )
+                    f"{ledger.issuances.value_out(db, asset_issued, asset)} {asset} issued ≠ "
+                    f"{ledger.issuances.value_out(db, asset_held, asset)} {asset} held"
                 )
             logger.trace(
-                "{} has been conserved ({} {} both issued and held)".format(
-                    asset, ledger.issuances.value_out(db, asset_issued, asset), asset
-                )
+                "%s has been conserved (%s %s both issued and held)",
+                asset,
+                ledger.issuances.value_out(db, asset_issued, asset),
+                asset,
             )
     logger.debug("All assets have been conserved.")
 
@@ -147,13 +130,12 @@ def check_change(protocol_change, change_name):
         explanation += f"Reason: ' {change_name} '. Please upgrade to the latest version and restart the server."
         if CurrentState().current_block_index() >= protocol_change["block_index"]:
             raise exceptions.VersionUpdateRequiredError(explanation)
-        else:
-            warnings.warn(explanation)  # noqa: B028
+        logger.warning(explanation)
 
 
 def software_version():
     if config.FORCE:
-        return
+        return True
     logger.debug("Checking Counterparty version...")
 
     try:
@@ -167,17 +149,16 @@ def software_version():
         ValueError,
         requests.exceptions.ReadTimeout,
         TimeoutError,
-    ):
-        logger.warning("Unable to check Counterparty version.")
-        return False
+        json.decoder.JSONDecodeError,
+    ) as e:
+        logger.error(e, exc_info=True)
+        raise exceptions.VersionCheckError(
+            "Unable to check Counterparty version. Use --force to ignore verfication."
+        ) from e
 
     for change_name in versions:
         protocol_change = versions[change_name]
-        try:
-            check_change(protocol_change, change_name)
-        except exceptions.VersionUpdateRequiredError:  # noqa: F841
-            logger.error("Version Update Required")
-            sys.exit(config.EXITCODE_UPDATE_REQUIRED)
+        check_change(protocol_change, change_name)
 
     logger.debug("Version check passed.")
     return True
@@ -206,4 +187,4 @@ def check_database_version(db, upgrade_actions_callback, database_name):
         # update the database version
         database.update_version(db)
     else:
-        logger.debug(f"{database_name} database is up to date.")
+        logger.debug("%s database is up to date.", database_name)

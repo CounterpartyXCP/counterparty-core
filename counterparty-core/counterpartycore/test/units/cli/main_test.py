@@ -77,4 +77,5 @@ def test_argparser():
         "config_file": None,
         "catch_up": "normal",
         "api_only": False,
+        "profile": False,
     }

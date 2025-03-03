@@ -10,9 +10,15 @@ from threading import current_thread
 
 import requests
 from bitcoinutils.keys import PublicKey
-from requests.exceptions import ChunkedEncodingError, ConnectionError, ReadTimeout, Timeout
+from requests.exceptions import (  # pylint: disable=redefined-builtin
+    ChunkedEncodingError,
+    ConnectionError,
+    ReadTimeout,
+    Timeout,
+)
 
 from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import deserialize, utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -36,6 +42,8 @@ def clean_url_for_log(url):
 
 # for testing
 def should_retry():
+    if CurrentState().ledger_state() == "Stopping":
+        return False
     return True
 
 
@@ -48,8 +56,9 @@ def get_json_response(response, retry=0):
     except json.decoder.JSONDecodeError as e:  # noqa: F841
         if response.status_code == 200:
             logger.warning(
-                f"Received invalid JSON with status 200 from Bitcoin Core: {response.text}. Retrying in 5 seconds...",
-                stack_info=True,
+                "Received invalid JSON with status 200 from Bitcoin Core: %s. Retrying in 5 seconds...",
+                response.text,
+                stack_info=config.VERBOSE > 0,
             )
             time.sleep(5)
             if retry < 5:
@@ -91,15 +100,15 @@ def rpc_call(payload, retry=0):
             if response.status_code not in (200, 500):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             break
-        except KeyboardInterrupt:
-            raise
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
             logger.warning(
-                f"Could not connect to backend at `{clean_url_for_log(url)}`. (Attempt: {tries})",
-                stack_info=True,
+                "Could not connect to backend at `%s`. (Attempt: %s)",
+                clean_url_for_log(url),
+                tries,
+                stack_info=config.VERBOSE > 0,
             )
             time.sleep(5)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             broken_error = e
             break
     if broken_error:
@@ -124,7 +133,7 @@ def rpc_call(payload, retry=0):
         warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
         if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
             warning_message += f" Is `txindex` enabled in {config.BTC_NAME} Core?"
-        logger.warning(warning_message, stack_info=True)
+        logger.warning(warning_message, stack_info=config.VERBOSE > 0)
         if should_retry():
             # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
             # seconds to start, this'll hit the maximum recursion depth limit.
@@ -171,16 +180,10 @@ def rpc(method, params, no_retry=False):
     return rpc_call(payload)
 
 
-# no retry for requests from the API
-def safe_rpc(method, params):
+def safe_rpc_payload(payload):
     start_time = time.time()
+    method = payload["method"] if isinstance(payload, dict) else payload[0]["method"]
     try:
-        payload = {
-            "method": method,
-            "params": params,
-            "jsonrpc": "2.0",
-            "id": 0,
-        }
         response = requests.post(
             config.BACKEND_URL,
             data=json.dumps(payload),
@@ -193,6 +196,8 @@ def safe_rpc(method, params):
                 f"Cannot communicate with Bitcoin Core at `{clean_url_for_log(config.BACKEND_URL)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
             )
         response = response.json()
+        if isinstance(response, list):
+            return response
         if "result" not in response and "error" in response:
             if response["error"] is None or "message" not in response["error"]:
                 message = "Unknown error"
@@ -207,6 +212,17 @@ def safe_rpc(method, params):
     finally:
         elapsed = time.time() - start_time
         logger.trace(f"Bitcoin Core RPC call {method} took {elapsed:.3f}s")
+
+
+# no retry for requests from the API
+def safe_rpc(method, params):
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    return safe_rpc_payload(payload)
 
 
 def getblockcount():
@@ -235,35 +251,45 @@ def getrawtransaction(tx_hash, verbose=False, no_retry=False):
     return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0], no_retry=no_retry)
 
 
-def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False):
+def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False, no_retry=False):
     if len(tx_hashes) == 0:
         return {}
-    if len(tx_hashes) > config.MAX_RPC_BATCH_SIZE:
-        raise exceptions.BitcoindRPCError("Too many transactions requested")
 
-    payload = [
-        {
-            "method": "getrawtransaction",
-            "params": [tx_hash, 1 if verbose else 0],
-            "jsonrpc": "2.0",
-            "id": i,
-        }
-        for i, tx_hash in enumerate(tx_hashes)
-    ]
-    results = rpc_call(payload)
+    # Process transactions in batches of MAX_RPC_BATCH_SIZE
+    all_raw_transactions = {} if return_dict else []
 
-    if return_dict:
-        raw_transactions = {}
-        for result in results:
-            if "result" in result and result["result"] is not None:
-                raw_transactions[tx_hashes[result["id"]]] = result["result"]
-    else:
-        raw_transactions = []
-        for result in results:
-            if "result" in result and result["result"] is not None:
-                raw_transactions.append(result["result"])
+    for i in range(0, len(tx_hashes), config.MAX_RPC_BATCH_SIZE):
+        batch = tx_hashes[i : i + config.MAX_RPC_BATCH_SIZE]
 
-    return raw_transactions
+        payload = [
+            {
+                "method": "getrawtransaction",
+                "params": [tx_hash, 1 if verbose else 0],
+                "jsonrpc": "2.0",
+                "id": j,
+            }
+            for j, tx_hash in enumerate(batch)
+        ]
+
+        if no_retry:
+            batch_results = safe_rpc_payload(payload)
+        else:
+            batch_results = rpc_call(payload)
+
+        # Process results for this batch
+        if return_dict:
+            for result in batch_results:
+                if "result" in result and result["result"] is not None:
+                    # Use the batch array to get the correct tx_hash
+                    batch_index = result["id"]
+                    tx_hash = batch[batch_index]
+                    all_raw_transactions[tx_hash] = result["result"]
+        else:
+            for result in batch_results:
+                if "result" in result and result["result"] is not None:
+                    all_raw_transactions.append(result["result"])
+
+    return all_raw_transactions
 
 
 def createrawtransaction(inputs, outputs):
@@ -271,7 +297,7 @@ def createrawtransaction(inputs, outputs):
 
 
 def getrawmempool(verbose=False):
-    return rpc("getrawmempool", [True if verbose else False])
+    return rpc("getrawmempool", [bool(verbose)])
 
 
 @functools.lru_cache(maxsize=1000)
@@ -334,7 +360,6 @@ def satoshis_per_vbyte(
 
 
 def get_btc_supply(normalize=False):
-    f"""returns the total supply of {config.BTC} (based on what Bitcoin Core says the current block height is)"""  # noqa: B021
     block_count = getblockcount()
     blocks_remaining = block_count
     total_supply = 0
@@ -373,8 +398,14 @@ def get_mempool_info():
 
 def wait_for_block(block_index):
     block_count = getblockcount()
+    tip = get_chain_tip()
     while block_count < block_index:
-        logger.debug(f"Waiting for bitcoind to catch up {block_index - block_count} blocks...")
+        logger.debug(
+            "Waiting for Bitcoin Core to process block %d... (Bitcoin Core Block Height = %d, Network Block Height = %d)",
+            block_index,
+            block_count,
+            tip,
+        )
         time.sleep(10)
         block_count = getblockcount()
 
@@ -421,7 +452,7 @@ def sendrawtransaction(signedhex: str):
     """
     try:
         return rpc("sendrawtransaction", [signedhex])
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.BitcoindRPCError(f"Error broadcasting transaction: {str(e)}") from e
 
 
@@ -517,20 +548,58 @@ def list_unspent(source, allow_unconfirmed_inputs):
 
 
 def get_vin_info(vin, no_retry=False):
-    # Note: We don't know what block the `vin` is in, and the block might
-    # have been from a while ago, so this call may not hit the cache.
-    vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
+    vin_info = vin.get("info")
+    if vin_info is None:
+        logger.error("vin_info not found for vin %s", vin)
+        try:
+            vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
+            is_segwit = vin_ctx["segwit"]
+            vout = vin_ctx["vout"][vin["n"]]
+            return vout["value"], vout["script_pub_key"], is_segwit
+        except exceptions.BitcoindRPCError as e:
+            raise exceptions.DecodeError("vin not found") from e
+    else:
+        return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
 
-    is_segwit = vin_ctx["segwit"]
-    vout = vin_ctx["vout"][vin["n"]]
 
-    return vout["value"], vout["script_pub_key"], is_segwit
+def get_vins_info(vins, no_retry=False):
+    hashes = [vin["hash"] for vin in vins]
+    inputs_txs = getrawtransaction_batch(hashes, verbose=False, return_dict=True, no_retry=no_retry)
+
+    vins_info = []
+    for vin in vins:
+        raw_input_tx = inputs_txs[vin["hash"]]
+        input_tx = deserialize.deserialize_tx(raw_input_tx)
+        vout = input_tx["vout"][vin["n"]]
+        is_segwit = input_tx["segwit"]
+        vins_info.append((vout["value"], vout["script_pub_key"], is_segwit))
+
+    return vins_info
 
 
-def get_transaction(tx_hash: str, format: str = "json"):
+def complete_vins_info(decoded_tx, no_retry=False):
+    missing_vins = []
+    for vin in decoded_tx["vin"]:
+        if "info" not in vin or vin["info"] is None:
+            missing_vins.append(vin)
+
+    if len(missing_vins) > 0:
+        missing_vins_info = get_vins_info(missing_vins, no_retry=no_retry)
+        for i, vin in enumerate(missing_vins):
+            vin_info = missing_vins_info[i]
+            vin["info"] = {
+                "value": vin_info[0],
+                "script_pub_key": vin_info[1],
+                "is_segwit": vin_info[2],
+            }
+
+    return decoded_tx
+
+
+def get_transaction(tx_hash: str, result_format: str = "json"):
     """
     Get a transaction from the blockchain
     :param tx_hash: The transaction hash (e.g. $LAST_TX_HASH)
     :param format: Whether to return JSON output or raw hex (e.g. hex)
     """
-    return getrawtransaction(tx_hash, verbose=format == "json")
+    return getrawtransaction(tx_hash, verbose=result_format == "json")

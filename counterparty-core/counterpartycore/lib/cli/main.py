@@ -9,6 +9,7 @@ from termcolor import cprint
 from counterpartycore.lib import config
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.cli import bootstrap, server, setup
+from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.monitors import sentry
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -385,6 +386,22 @@ CONFIG_ARGS = [
             "help": "Don't parse new blocks, only run the API server",
         },
     ],
+    [
+        ("--catch-up",),
+        {
+            "choices": ["normal", "bootstrap", "bootstrap-always"],
+            "default": "normal",
+            "help": "Catch up mode (default: normal)",
+        },
+    ],
+    [
+        ("--profile",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Enable cProfile profiling for catchup; dumps output to a file in the cache dir",
+        },
+    ],
 ]
 
 
@@ -457,13 +474,12 @@ def arg_parser(no_config_file=False, app_name=APP_NAME):
 
     parser_server = subparsers.add_parser("start", help="run the server")
     parser_server.add_argument("--config-file", help="the path to the configuration file")
-    parser_server.add_argument(
-        "--catch-up",
-        choices=["normal", "bootstrap", "bootstrap-always"],
-        default="normal",
-        help="Catch up mode (default: normal)",
-    )
     setup.add_config_arguments(parser_server, CONFIG_ARGS, configfile)
+
+    parser_rebuild = subparsers.add_parser(
+        "rebuild", help="re-sync from scratch and stop the server"
+    )
+    setup.add_config_arguments(parser_rebuild, CONFIG_ARGS, configfile)
 
     parser_reparse = subparsers.add_parser(
         "reparse", help="reparse all transactions in the database"
@@ -516,14 +532,14 @@ def main():
     # Help message
     if args.help:
         parser.print_help()
-        exit(0)
+        sys.exit(0)
 
     if args.action is None:
         parser.print_help()
-        exit(1)
+        sys.exit(1)
 
     # Configuration and logging
-    server.initialise_log_and_config(args)
+    initialise_log_and_config(args)
 
     welcome_message(args.action, server_configfile)
 
@@ -540,6 +556,9 @@ def main():
 
     elif args.action == "start":
         server.start_all(args)
+
+    elif args.action == "rebuild":
+        server.rebuild(args)
 
     elif args.action == "show-params":
         server.show_params()

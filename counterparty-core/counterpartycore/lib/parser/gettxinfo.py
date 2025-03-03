@@ -3,15 +3,14 @@ import logging
 import struct
 from io import BytesIO
 
-from arc4 import ARC4
+from arc4 import ARC4  # pylint: disable=no-name-in-module
 
 from counterpartycore.lib import backend, config, exceptions, ledger
 from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import gettxinfolegacy, messagetype, p2sh, protocol
-from counterpartycore.lib.utils import base58, multisig, script
-from counterpartycore.lib.utils.opcodes import *  # noqa: F403
+from counterpartycore.lib.utils import base58, multisig, opcodes, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -23,11 +22,11 @@ def get_checksig(asm):
         raise exceptions.DecodeError("invalid OP_CHECKSIG") from None
 
     if (op_dup, op_hash160, op_equalverify, op_checksig) == (
-        OP_DUP,  # noqa: F405
-        OP_HASH160,  # noqa: F405
-        OP_EQUALVERIFY,  # noqa: F405
-        OP_CHECKSIG,  # noqa: F405
-    ) and type(pubkeyhash) == bytes:  # noqa: E721
+        opcodes.OP_DUP,  # noqa: F405
+        opcodes.OP_HASH160,  # noqa: F405
+        opcodes.OP_EQUALVERIFY,  # noqa: F405
+        opcodes.OP_CHECKSIG,  # noqa: F405
+    ) and isinstance(pubkeyhash, bytes):  # noqa: E721
         return pubkeyhash
 
     raise exceptions.DecodeError("invalid OP_CHECKSIG")
@@ -35,14 +34,14 @@ def get_checksig(asm):
 
 def get_checkmultisig(asm):
     # N-of-2
-    if len(asm) == 5 and asm[3] == 2 and asm[4] == OP_CHECKMULTISIG:  # noqa: F405
+    if len(asm) == 5 and asm[3] == 2 and asm[4] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:3], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
+        if all(isinstance(pubkey, bytes) for pubkey in pubkeys):
             return pubkeys, signatures_required
     # N-of-3
-    if len(asm) == 6 and asm[4] == 3 and asm[5] == OP_CHECKMULTISIG:  # noqa: F405
+    if len(asm) == 6 and asm[4] == 3 and asm[5] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
         pubkeys, signatures_required = asm[1:4], asm[0]
-        if all([type(pubkey) == bytes for pubkey in pubkeys]):  # noqa: E721
+        if all(isinstance(pubkey, bytes) for pubkey in pubkeys):
             return pubkeys, signatures_required
     raise exceptions.DecodeError("invalid OP_CHECKMULTISIG")
 
@@ -115,7 +114,7 @@ def is_valid_der(der):
         if len(der) != 6 + rlength + slength:
             return False
         return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return False
 
 
@@ -149,6 +148,7 @@ def get_schnorr_signature_sighash_flag(value):
         if len(value) == 65:
             return value[-1:]
         return b"\x01"  # SIGHASH_ALL
+    return None
 
 
 def collect_sighash_flags(script_sig, witnesses):
@@ -185,12 +185,11 @@ def collect_sighash_flags(script_sig, witnesses):
         return flags
 
     # Other cases
-    if len(witnesses) >= 3:
-        for item in witnesses:
-            flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
-            if flag is not None:
-                flags.append(flag)
-        return flags
+    for item in witnesses:
+        flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
+        if flag is not None:
+            flags.append(flag)
+    return flags
 
 
 class SighashFlagError(DecodeError):
@@ -230,27 +229,28 @@ def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
 
+    decoded_tx = backend.bitcoind.complete_vins_info(
+        decoded_tx, no_retry=CurrentState().parsing_mempool()
+    )
+
     for vin in decoded_tx["vin"]:  # Loop through inputs.
-        try:
-            vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(
-                vin, no_retry=CurrentState().parsing_mempool()
-            )
-        except exceptions.BitcoindRPCError as e:
-            raise DecodeError("vin not found") from e
+        vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(
+            vin, no_retry=CurrentState().parsing_mempool()
+        )
 
         outputs_value += vout_value
 
         asm = script.script_to_asm(script_pubkey)
 
-        if asm[-1] == OP_CHECKSIG:  # noqa: F405
+        if asm[-1] == opcodes.OP_CHECKSIG:  # noqa: F405
             new_source, new_data = decode_checksig(asm, decoded_tx)
             if new_data or not new_source:
                 raise DecodeError("data in source")
-        elif asm[-1] == OP_CHECKMULTISIG:  # noqa: F405
+        elif asm[-1] == opcodes.OP_CHECKMULTISIG:  # noqa: F405
             new_source, new_data = decode_checkmultisig(asm, decoded_tx)
             if new_data or not new_source:
                 raise DecodeError("data in source")
-        elif asm[0] == OP_HASH160 and asm[-1] == OP_EQUAL and len(asm) == 3:  # noqa: F405
+        elif asm[0] == opcodes.OP_HASH160 and asm[-1] == opcodes.OP_EQUAL and len(asm) == 3:  # noqa: F405
             new_source, new_data = decode_scripthash(asm)
             assert not new_data and new_source
         elif protocol.enabled("segwit_support") and asm[0] == b"":
@@ -275,8 +275,14 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
     data = b""
     outputs_value = 0
 
+    decoded_tx = backend.bitcoind.complete_vins_info(
+        decoded_tx, no_retry=CurrentState().parsing_mempool()
+    )
+
     for vin in decoded_tx["vin"]:
-        vout_value, _script_pubkey, is_segwit = backend.bitcoind.get_vin_info(vin)
+        vout_value, _script_pubkey, is_segwit = backend.bitcoind.get_vin_info(
+            vin, no_retry=CurrentState().parsing_mempool()
+        )
 
         if protocol.enabled("prevout_segwit_fix"):
             prevout_is_segwit = is_segwit
@@ -441,22 +447,21 @@ def _get_tx_info(db, decoded_tx, block_index, p2sh_is_segwit=False, composing=Fa
             p2sh_is_segwit=p2sh_is_segwit,
             composing=composing,
         )
-    elif protocol.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
+    if protocol.enabled("multisig_addresses", block_index=block_index):  # Protocol change.
         return get_tx_info_new(
             db,
             decoded_tx,
             block_index,
             composing=composing,
         )
-    else:
-        return gettxinfolegacy.get_tx_info_legacy(decoded_tx, block_index)
+    return gettxinfolegacy.get_tx_info_legacy(decoded_tx, block_index)
 
 
 def select_utxo_destination(vouts):
     for n, vout in enumerate(vouts):
         try:
             asm = script.script_to_asm(vout["script_pub_key"])
-            if asm[0] == OP_RETURN:  # noqa: F405
+            if asm[0] == opcodes.OP_RETURN:  # noqa: F405
                 continue
         except DecodeError:
             # invalid script are considered as no-OP_RETURN
@@ -489,7 +494,7 @@ def get_op_return_vout(decoded_tx):
     for n, vout in enumerate(decoded_tx["vout"]):
         try:
             asm = script.script_to_asm(vout["script_pub_key"])
-            if asm[0] == OP_RETURN:  # noqa: F405
+            if asm[0] == opcodes.OP_RETURN:  # noqa: F405
                 return n
         except DecodeError:
             pass
@@ -550,9 +555,9 @@ def get_tx_info(db, decoded_tx, block_index, composing=False):
             db, decoded_tx, block_index, composing=composing
         )
         return source, destination, btc_amount, fee, data, dispensers_outs, utxos_info
-    except DecodeError as e:  # noqa: F841
+    except DecodeError:
         return b"", None, None, None, None, None, utxos_info
-    except BTCOnlyError as e:  # noqa: F841
+    except BTCOnlyError:
         return b"", None, None, None, None, None, utxos_info
     finally:
         # update utxo balances cache before parsing the transaction

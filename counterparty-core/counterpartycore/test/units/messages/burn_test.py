@@ -6,8 +6,6 @@ from counterpartycore.lib.messages import burn
 def test_validate(ledger_db, defaults):
     assert (
         burn.validate(
-            ledger_db,
-            defaults["addresses"][0],
             defaults["unspendable"],
             defaults["burn_quantity"],
             config.BURN_START,
@@ -16,56 +14,42 @@ def test_validate(ledger_db, defaults):
     )
 
     assert burn.validate(
-        ledger_db,
-        defaults["addresses"][0],
         defaults["unspendable"],
         1.1 * defaults["burn_quantity"],
         config.BURN_START,
     ) == ["quantity must be in satoshis"]
 
     assert burn.validate(
-        ledger_db,
-        defaults["addresses"][0],
         defaults["addresses"][1],
         defaults["burn_quantity"],
         config.BURN_START,
     ) == ["wrong destination address"]
 
     assert burn.validate(
-        ledger_db,
-        defaults["addresses"][0],
         defaults["unspendable"],
         -1 * defaults["burn_quantity"],
         config.BURN_START,
     ) == ["negative quantity"]
 
     assert burn.validate(
-        ledger_db,
-        defaults["addresses"][0],
         defaults["unspendable"],
         defaults["burn_quantity"],
         config.BURN_START - 2,
     ) == ["too early"]
 
     assert burn.validate(
-        ledger_db,
-        defaults["addresses"][0],
         defaults["unspendable"],
         defaults["burn_quantity"],
         config.BURN_END + 1,
     ) == ["too late"]
 
     assert burn.validate(
-        ledger_db,
-        defaults["addresses"][0],
         defaults["addresses"][1],
         1.1 * defaults["burn_quantity"],
         config.BURN_START - 2,
     ) == ["wrong destination address", "quantity must be in satoshis"]
 
     assert burn.validate(
-        ledger_db,
-        defaults["addresses"][0],
         defaults["addresses"][1],
         defaults["burn_quantity"],
         config.BURN_START - 2,
@@ -73,8 +57,6 @@ def test_validate(ledger_db, defaults):
 
     assert (
         burn.validate(
-            ledger_db,
-            defaults["p2ms_addresses"][0],
             defaults["unspendable"],
             defaults["burn_quantity"],
             config.BURN_START,
@@ -84,8 +66,6 @@ def test_validate(ledger_db, defaults):
 
     assert (
         burn.validate(
-            ledger_db,
-            defaults["p2sh_addresses"][0],
             defaults["unspendable"],
             defaults["burn_quantity"],
             config.BURN_START,
@@ -122,8 +102,7 @@ def test_parse_burn_legacy_address(
         defaults["unspendable"],
         btc_amount=defaults["burn_quantity"],
     )
-    message = b""
-    burn.parse(ledger_db, tx, message)
+    burn.parse(ledger_db, tx)
 
     test_helpers.check_records(
         ledger_db,
@@ -161,8 +140,7 @@ def test_parse_burn_multisig_address(
     tx = blockchain_mock.dummy_tx(
         ledger_db, defaults["p2ms_addresses"][0], defaults["unspendable"], btc_amount=50000000
     )
-    message = b""
-    burn.parse(ledger_db, tx, message)
+    burn.parse(ledger_db, tx)
 
     test_helpers.check_records(
         ledger_db,

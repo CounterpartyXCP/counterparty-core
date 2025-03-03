@@ -16,7 +16,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 # generate commented config file from arguments list (client.CONFIG_ARGS and server.CONFIG_ARGS) and known values
-def generate_config_file(filename, config_args, known_config={}, overwrite=False):  # noqa: B006
+def generate_config_file(filename, config_args, known_config=None, overwrite=False):  # noqa: B006
     if not overwrite and os.path.exists(filename):
         return
 
@@ -32,7 +32,7 @@ def generate_config_file(filename, config_args, known_config={}, overwrite=False
         key = arg[0][-1].replace("--", "")
         value = None
 
-        if key in known_config:
+        if known_config is not None and key in known_config:
             value = known_config[key]
         elif "default" in arg[1]:
             value = arg[1]["default"]
@@ -70,7 +70,7 @@ def extract_bitcoincore_config():
     # Extract contents of bitcoin.conf to build service_url
     if os.path.exists(btc_conf_file):
         conf = {}
-        with open(btc_conf_file, "r") as fd:
+        with open(btc_conf_file, "r", encoding="utf-8") as fd:
             # Bitcoin Core accepts empty rpcuser, not specified in btc_conf_file
             for line in fd.readlines():
                 if "#" in line or "=" not in line:
@@ -141,7 +141,7 @@ def read_config_file(default_config_file, config_file_path=None):
             fp.seek(-bomlen, os.SEEK_CUR)
             fp.truncate()
 
-    logger.debug(f"Loading configuration file: `{config_file_path}`")
+    logger.debug("Loading configuration file: `%s`", config_file_path)
     configfile = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes=("#", ";"))
     with codecs.open(config_file_path, "r", encoding="utf8") as fp:
         configfile.read_file(fp)

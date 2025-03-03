@@ -1,0 +1,25 @@
+name: Bandit Scanner
+
+on:
+  push:
+    branches: "**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Bandit:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Bandit Scan
+        uses: shundor/python-bandit-scan@9cc5aa4a006482b8a7f91134412df6772dbda22c
+        with: # optional arguments
+          exit_zero: true # optional, default is DEFAULT
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information.
+          excluded_paths: "*/test/*,*/counterparty-core/tools/*" # optional, default is DEFAULT
+          skips: "B101" # optional, default is DEFAULT

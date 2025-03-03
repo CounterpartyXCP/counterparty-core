@@ -14,7 +14,7 @@ __depends__ = {"0008.create_config_table"}
 
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
+    return dict(zip(fields, row))
 
 
 def apply(db):
@@ -52,7 +52,7 @@ def apply(db):
     )
 
     logger.debug(
-        f"Populated the `transaction_types_count` table in {time.time() - start_time:.2f} seconds"
+        "Populated the `transaction_types_count` table in %.2f seconds", time.time() - start_time
     )
 
 

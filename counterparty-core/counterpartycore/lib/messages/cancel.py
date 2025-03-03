@@ -21,7 +21,6 @@ ID = 70
 def validate(db, source, offer_hash):
     problems = []
 
-    # TODO: make query only if necessary
     orders = ledger.markets.get_order(db, order_hash=offer_hash)
     bets = ledger.other.get_bet(db, bet_hash=offer_hash)
 
@@ -47,7 +46,7 @@ def validate(db, source, offer_hash):
 
 def compose(db, source: str, offer_hash: str, skip_validation: bool = False):
     # Check that offer exists.
-    offer, offer_type, problems = validate(db, source, offer_hash)
+    _offer, _offer_type, problems = validate(db, source, offer_hash)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
@@ -64,7 +63,7 @@ def unpack(message, return_dict=False):
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
         offer_hash = binascii.hexlify(offer_hash_bytes).decode("utf-8")
         status = "valid"
-    except (exceptions.UnpackError, struct.error) as e:  # noqa: F841
+    except (exceptions.UnpackError, struct.error):
         offer_hash = None
         status = "invalid: could not unpack"
     if return_dict:
@@ -92,7 +91,7 @@ def parse(db, tx, message):
             order.cancel_order(db, offer, "cancelled", tx["block_index"], tx["tx_index"])
         # Cancel if bet.
         elif offer_type == "bet":
-            bet.cancel_bet(db, offer, "cancelled", tx["block_index"], tx["tx_index"])
+            bet.cancel_bet(db, offer, "cancelled", tx["tx_index"])
         # If neither order or bet, mark as invalid.
         else:
             assert False  # noqa: B011
@@ -116,6 +115,3 @@ def parse(db, tx, message):
     logger.info("Cancel %(offer_type)s %(offer_hash)s (%(tx_hash)s) [%(status)s]", log_data)
 
     cursor.close()
-
-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

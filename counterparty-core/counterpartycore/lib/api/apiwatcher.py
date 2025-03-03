@@ -4,7 +4,7 @@ import threading
 import time
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.api import caches, dbbuilder
 from counterpartycore.lib.parser import utxosinfo
 from counterpartycore.lib.utils import database
 from counterpartycore.lib.utils.helpers import format_duration
@@ -190,7 +190,7 @@ def update_event_to_sql(event):
         where_bindings.append(event_bindings[id_field_name])
     where_clause = " AND ".join(where)
 
-    sql = f"UPDATE {event['category']} SET {sets_clause} WHERE {where_clause}"  # noqa: S608
+    sql = f"UPDATE {event['category']} SET {sets_clause} WHERE {where_clause}"  # noqa: S608 # nosec B608
 
     return sql, sql_bindings
 
@@ -213,7 +213,7 @@ def search_address_from_utxo(state_db, utxo):
     return None
 
 
-def update_address_events(state_db, event):
+def update_address_events(state_db, event, no_cache=False):
     if event["event"] not in EVENTS_ADDRESS_FIELDS:
         return
     event_bindings = json.loads(event["bindings"])
@@ -234,6 +234,8 @@ def update_address_events(state_db, event):
                 "block_index": event["block_index"],
             },
         )
+        if not no_cache:
+            caches.AddressEventsCache().insert(address, event["message_index"])
         if utxosinfo.is_utxo_format(address):
             utxo_address = search_address_from_utxo(state_db, address)
             if utxo_address is not None:
@@ -245,6 +247,8 @@ def update_address_events(state_db, event):
                         "block_index": event["block_index"],
                     },
                 )
+                if not no_cache:
+                    caches.AddressEventsCache().insert(utxo_address, event["message_index"])
 
 
 def update_all_expiration(state_db, event):
@@ -329,7 +333,7 @@ def update_assets_info(state_db, event):
             set_data.append("issuer = :issuer")
         set_data = ", ".join(set_data)
 
-        sql = f"UPDATE assets_info SET {set_data} WHERE asset = :asset"  # noqa: S608
+        sql = f"UPDATE assets_info SET {set_data} WHERE asset = :asset"  # noqa: S608 # nosec B608
         cursor = state_db.cursor()
         cursor.execute(sql, event_bindings)
         return
@@ -427,7 +431,7 @@ def update_balances(state_db, event):
         address_or_utxo = event_bindings["utxo"]
     event_bindings["address_or_utxo"] = address_or_utxo
 
-    sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608
+    sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608 # nosec B608
     existing_balance = fetch_one(state_db, sql, event_bindings)
 
     if existing_balance is not None:
@@ -435,12 +439,12 @@ def update_balances(state_db, event):
             UPDATE balances
             SET quantity = quantity + :quantity
             WHERE {field_name} = :address_or_utxo AND asset = :asset
-            """  # noqa: S608
+            """  # noqa: S608 # nosec B608
     else:
         sql = f"""
             INSERT INTO balances ({field_name}, asset, quantity, utxo_address)
             VALUES (:address_or_utxo, :asset, :quantity, :utxo_address)
-            """  # noqa: S608
+            """  # noqa: S608 # nosec B608
     utxo_address = None
     if "utxo_address" in event_bindings:
         utxo_address = event_bindings["utxo_address"]
@@ -557,7 +561,7 @@ def catch_up(ledger_db, state_db, watcher=None):
     check_reorg(ledger_db, state_db)
     event_to_parse_count = get_event_to_parse_count(ledger_db, state_db)
     if event_to_parse_count > 0:
-        logger.debug(f"{event_to_parse_count} events to catch up...")
+        logger.debug("%s events to catch up...", event_to_parse_count)
         start_time = time.time()
         event_parsed = 0
         next_event = get_next_event_to_parse(ledger_db, state_db)
@@ -567,12 +571,15 @@ def catch_up(ledger_db, state_db, watcher=None):
             if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
                 logger.debug(
-                    f"{event_parsed} / {event_to_parse_count} events parsed. ({format_duration(duration)})"
+                    "%s / %s events parsed. (%s)",
+                    event_parsed,
+                    event_to_parse_count,
+                    format_duration(duration),
                 )
             next_event = get_next_event_to_parse(ledger_db, state_db)
         if watcher is None or not watcher.stop_event.is_set():
             duration = time.time() - start_time
-            logger.info(f"Catch up completed. ({format_duration(duration)})")
+            logger.info("Catch up completed. (%s)", format_duration(duration))
     else:
         logger.info("Catch up completed.")
 
@@ -615,8 +622,8 @@ def check_reorg(ledger_db, state_db):
         target_block_index = 0
         if matching_event is not None:
             target_block_index = matching_event["block_index"] + 1
-        logger.warning(f"Blockchain reorganization detected at Block {target_block_index}")
-        logger.info(f"Rolling back to block: {target_block_index}")
+        logger.warning("Blockchain reorganization detected at Block %s", target_block_index)
+        logger.info("Rolling back to block: %s", target_block_index)
         dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
 
 

@@ -13,7 +13,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
+    return dict(zip(fields, row))
 
 
 def apply(db):
@@ -49,13 +49,13 @@ def apply(db):
         SELECT event, bindings, message_index, block_index
         FROM ledger_db.messages WHERE event IN ({placeholders})
         ORDER BY message_index
-    """  # noqa S608
+    """  # noqa S608 # nosec B608
 
     cursor.execute(sql, event_names)
 
     inserted = 0
     for event in cursor:
-        update_address_events(db, event)
+        update_address_events(db, event, no_cache=True)
         inserted += 1
         if inserted % 1000000 == 0:
             logger.trace(f"Inserted {inserted} address events")
@@ -66,7 +66,7 @@ def apply(db):
 
     cursor.close()
 
-    logger.debug(f"Populated `address_events` table in {time.time() - start_time:.2f} seconds")
+    logger.debug("Populated `address_events` table in %.2f seconds", time.time() - start_time)
 
 
 def rollback(db):

@@ -1,9 +1,12 @@
+# pylint: disable=too-many-lines
+
 import json
 import typing
 from typing import Literal
 
 from sentry_sdk import start_span as start_sentry_span
 
+from counterpartycore.lib.api import caches
 from counterpartycore.lib.utils.helpers import divide
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
@@ -180,6 +183,9 @@ def select_rows(
     if offset is not None or sort is not None:
         last_cursor = None
 
+    if table == "all_transactions":
+        cursor_field = "tx_index"
+
     cursor = db.cursor()
 
     if where is None:
@@ -256,13 +262,13 @@ def select_rows(
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
     if (
-        table in ["transactions", "sends", "btcpays", "sweeps", "dispenses"]
+        table in ["all_transactions", "transactions", "sends", "btcpays", "sweeps", "dispenses"]
         and "COUNT(*)" not in select
     ):
         select += ", NULLIF(destination, '') AS destination"
 
-    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608
-    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608
+    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
 
     if wrap_where is not None:
         wrap_where_field = []
@@ -275,10 +281,10 @@ def select_rows(
             bindings_count.append(value)
         wrap_where_clause = " AND ".join(wrap_where_field)
         wrap_where_clause = f"WHERE {wrap_where_clause}"
-        query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608
-        query_count = f"SELECT COUNT(*) AS count FROM ({query_count}) {wrap_where_clause}"  # nosec B608  # noqa: S608
+        query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
+        query_count = f"SELECT COUNT(*) AS count FROM ({query_count}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
     else:
-        query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608
+        query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608 # nosec B608
 
     order_by = []
     if sort is not None:
@@ -293,11 +299,14 @@ def select_rows(
                 sort_order = "ASC"
             if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
                 order_by.append(f"{sort_name} {sort_order.upper()}")
+    elif table == "all_transactions":
+        order_by.append("confirmed ASC")
+        order_by.append(f"{cursor_field} {order}")
     if len(order_by) == 0:
         order_by.append(f"{cursor_field} {order}")
     order_by_clause = f"ORDER BY {','.join(order_by)}"
 
-    query = f"{query} {order_by_clause} LIMIT ?"  # nosec B608  # noqa: S608
+    query = f"{query} {order_by_clause} LIMIT ?"  # nosec B608  # noqa: S608 # nosec B608
     bindings.append(limit + 1)
     if offset is not None:
         query = f"{query} OFFSET ?"
@@ -325,6 +334,10 @@ def select_rows(
                 break
             row["params"] = json.loads(row["params"])
 
+    if table == "all_transactions":
+        for row in result:
+            row["confirmed"] = bool(row["confirmed"])
+
     return QueryResult(result, next_cursor, table, result_count)
 
 
@@ -340,10 +353,10 @@ GET_BLOCKS_WHERE = {
 }
 
 
-def get_blocks(ledger_db, cursor: str = None, limit: int = 10, offset: int = None):
+def get_blocks(ledger_db, cursor: int = None, limit: int = 10, offset: int = None):
     """
     Returns the list of the last ten blocks
-    :param str cursor: The index of the most recent block to return (e.g. $LAST_BLOCK_INDEX)
+    :param int cursor: The index of the most recent block to return (e.g. $LAST_BLOCK_INDEX)
     :param int limit: The number of blocks to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -385,7 +398,7 @@ def get_last_block(ledger_db):
     )
 
 
-def prepare_transactions_where(type, other_conditions=None):
+def prepare_transactions_where(type, other_conditions=None):  # pylint: disable=W0622
     where = []
     type_list = type.split(",")
     for transaction_type in type_list:
@@ -402,21 +415,24 @@ def prepare_transactions_where(type, other_conditions=None):
 
 def get_transactions(
     ledger_db,
-    type: TransactionType = "all",
-    cursor: str = None,
+    type: TransactionType = "all",  # pylint: disable=W0622
+    show_unconfirmed: bool = False,
+    cursor: int = None,
     limit: int = 10,
     offset: int = None,
 ):
     """
     Returns the list of the last ten transactions
     :param str type: The type of the transaction to return
-    :param str cursor: The index of the most recent transactions to return (e.g. $LAST_TX_INDEX)
+    :param bool show_unconfirmed: Show unconfirmed transactions
+    :param int cursor: The index of the most recent transactions to return (e.g. $LAST_TX_INDEX)
     :param int limit: The number of transactions to return (e.g. 2)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         cursor_field="tx_index",
         last_cursor=cursor,
         limit=limit,
@@ -428,8 +444,9 @@ def get_transactions(
 def get_transactions_by_block(
     ledger_db,
     block_index: int,
-    type: TransactionType = "all",
-    cursor: str = None,
+    type: TransactionType = "all",  # pylint: disable=W0622
+    show_unconfirmed: bool = False,
+    cursor: int = None,
     limit: int = 10,
     offset: int = None,
 ):
@@ -437,14 +454,16 @@ def get_transactions_by_block(
     Returns the transactions of a block
     :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
     :param str type: The type of the transaction to return
-    :param str cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
+    :param bool show_unconfirmed: Show unconfirmed transactions
+    :param int cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     where = {"block_index": block_index}
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
@@ -456,8 +475,9 @@ def get_transactions_by_block(
 def get_transactions_by_address(
     ledger_db,
     address: str,
-    type: TransactionType = "all",
-    cursor: str = None,
+    type: TransactionType = "all",  # pylint: disable=W0622
+    show_unconfirmed: bool = False,
+    cursor: int = None,
     limit: int = 10,
     offset: int = None,
 ):
@@ -465,14 +485,16 @@ def get_transactions_by_address(
     Returns the transactions of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str type: The type of the transaction to return
-    :param str cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
+    :param bool show_unconfirmed: Show unconfirmed transactions
+    :param int cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source": address}
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
@@ -484,8 +506,9 @@ def get_transactions_by_address(
 def get_transactions_by_addresses(
     ledger_db,
     addresses: str,
-    type: TransactionType = "all",
-    cursor: str = None,
+    type: TransactionType = "all",  # pylint: disable=W0622
+    show_unconfirmed: bool = False,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -493,14 +516,16 @@ def get_transactions_by_addresses(
     Returns the transactions of a list of addresses
     :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_1,$ADDRESS_2)
     :param str type: The type of the transaction to return
-    :param str cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
+    :param bool show_unconfirmed: Show unconfirmed transactions
+    :param int cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source__in": addresses.split(",")}
+    table_name = "all_transactions" if show_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         where=prepare_transactions_where(type, where),
         cursor_field="tx_index",
         last_cursor=cursor,
@@ -522,14 +547,18 @@ def get_transaction_types_count(state_db):
     )
 
 
-def get_transaction_types_count_by_block(ledger_db, block_index: int):
+def get_transaction_types_count_by_block(
+    ledger_db, block_index: int, count_unconfirmed: bool = False
+):
     """
     Returns the count of each transaction type
     :param int block_index: The index of the block to return (e.g. $LAST_TX_INDEX)
+    :param bool count_unconfirmed: Count unconfirmed transactions
     """
+    table_name = "all_transactions" if count_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         select="transaction_type, COUNT(*) AS count",
         where={"block_index": block_index},
         group_by="transaction_type",
@@ -538,13 +567,18 @@ def get_transaction_types_count_by_block(ledger_db, block_index: int):
     )
 
 
-def get_transaction_types_count_by_address(ledger_db, address: str):
+def get_transaction_types_count_by_address(
+    ledger_db, address: str, count_unconfirmed: bool = False
+):
     """
     Returns the count of each transaction type
+    :param str address: The address to return (e.g. $ADDRESS_1)
+    :param bool count_unconfirmed: Count unconfirmed transactions
     """
+    table_name = "all_transactions" if count_unconfirmed else "transactions"
     return select_rows(
         ledger_db,
-        "transactions",
+        table_name,
         select="transaction_type, COUNT(*) AS count",
         where={"source": address},
         group_by="transaction_type",
@@ -560,7 +594,7 @@ def get_transaction_by_hash(ledger_db, tx_hash: str):
     """
     return select_row(
         ledger_db,
-        "transactions",
+        "all_transactions",
         where={"tx_hash": tx_hash},
     )
 
@@ -572,18 +606,18 @@ def get_transaction_by_tx_index(ledger_db, tx_index: int):
     """
     return select_row(
         ledger_db,
-        "transactions",
+        "all_transactions",
         where={"tx_index": tx_index},
     )
 
 
 def get_all_events(
-    ledger_db, event_name: str = None, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, event_name: str = None, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns all events
     :param str event_name: Comma separated list of events to return
-    :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
+    :param int cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -606,7 +640,7 @@ def get_events_by_block(
     ledger_db,
     block_index: int,
     event_name: str = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -614,7 +648,7 @@ def get_events_by_block(
     Returns the events of a block
     :param int block_index: The index of the block to return (e.g. $LAST_EVENT_BLOCK)
     :param str event_name: Comma separated list of events to return
-    :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
+    :param int cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -637,7 +671,7 @@ def get_events_by_transaction_hash(
     ledger_db,
     tx_hash: str,
     event_name: str = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -645,7 +679,7 @@ def get_events_by_transaction_hash(
     Returns the events of a transaction
     :param str tx_hash: The hash of the transaction to return (e.g. $LAST_EVENT_TX_HASH)
     :param str event_name: Comma separated list of events to return
-    :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
+    :param int cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -665,13 +699,13 @@ def get_events_by_transaction_hash(
 
 
 def get_events_by_transaction_hash_and_event(
-    ledger_db, tx_hash: str, event: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, tx_hash: str, event: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the events of a transaction
     :param str tx_hash: The hash of the transaction to return (e.g. $LAST_EVENT_TX_HASH)
     :param str event: The event to filter by (e.g. CREDIT)
-    :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
+    :param int cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -691,7 +725,7 @@ def get_events_by_transaction_index(
     ledger_db,
     tx_index: int,
     event_name: str = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -699,7 +733,7 @@ def get_events_by_transaction_index(
     Returns the events of a transaction
     :param str tx_index: The index of the transaction to return (e.g. $LAST_EVENT_TX_INDEX)
     :param str event_name: Comma separated list of events to return
-    :param str cursor: The last event index to return
+    :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -717,13 +751,13 @@ def get_events_by_transaction_index(
 
 
 def get_events_by_transaction_index_and_event(
-    ledger_db, tx_index: int, event: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, tx_index: int, event: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the events of a transaction
     :param str tx_index: The index of the transaction to return (e.g. $LAST_EVENT_TX_INDEX)
     :param str event: The event to filter by (e.g. CREDIT)
-    :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
+    :param int cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -744,7 +778,7 @@ def get_events_by_block_and_event(
     ledger_db,
     block_index: int,
     event: str,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -752,7 +786,7 @@ def get_events_by_block_and_event(
     Returns the events of a block filtered by event
     :param int block_index: The index of the block to return (e.g. $LAST_EVENT_BLOCK)
     :param str event: The event to filter by (e.g. CREDIT)
-    :param str cursor: The last event index to return
+    :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -784,12 +818,12 @@ def get_event_by_index(ledger_db, event_index: int):
 
 
 def get_events_by_name(
-    ledger_db, event: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, event: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the events filtered by event name
     :param str event: The event to return (e.g. CREDIT)
-    :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
+    :param int cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -807,10 +841,9 @@ def get_events_by_name(
 
 def get_events_by_addresses(
     ledger_db,
-    state_db,
     addresses: str,
     event_name: str = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -818,12 +851,12 @@ def get_events_by_addresses(
     Returns the events of a list of addresses
     :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_1,$ADDRESS_2)
     :param str event_name: Comma separated list of events to return
-    :param str cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
+    :param int cursor: The last event index to return (e.g. $LAST_EVENT_INDEX)
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     events = select_rows(
-        state_db,
+        caches.AddressEventsCache().cache_db,
         "address_events",
         where=[{"address__in": addresses.split(",")}],
         cursor_field="event_index",
@@ -852,7 +885,7 @@ def get_all_mempool_events(
     ledger_db,
     event_name: str = None,
     addresses: str = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -860,7 +893,7 @@ def get_all_mempool_events(
     Returns all mempool events
     :param str event_name: Comma separated list of events to return
     :param str addresses: Comma separated list of addresses to return
-    :param str cursor: The last event index to return
+    :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -891,12 +924,12 @@ def get_all_mempool_events(
 
 
 def get_mempool_events_by_name(
-    ledger_db, event: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, event: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the mempool events filtered by event name
     :param str event: The event to return (e.g. CREDIT)
-    :param str cursor: The last event index to return
+    :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -916,7 +949,7 @@ def get_mempool_events_by_tx_hash(
     ledger_db,
     tx_hash: str,
     event_name: str = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -924,7 +957,7 @@ def get_mempool_events_by_tx_hash(
     Returns the mempool events filtered by transaction hash
     :param str tx_hash: The hash of the transaction to return (e.g. $LAST_MEMPOOL_TX_HASH)
     :param str event_name: Comma separated list of events to return
-    :param str cursor: The last event index to return
+    :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -944,13 +977,13 @@ def get_mempool_events_by_tx_hash(
 
 
 def get_mempool_events_by_addresses(
-    ledger_db, addresses: str, event_name: str = None, cursor: str = None, limit: int = 100
+    ledger_db, addresses: str, event_name: str = None, cursor: int = None, limit: int = 100
 ):
     """
     Returns the mempool events of a list of addresses
     :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_3,$ADDRESS_4)
     :param str event_name: Comma separated list of events to return
-    :param str cursor: The last event index to return
+    :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     """
     where = []
@@ -977,7 +1010,7 @@ def get_event_counts_by_block(
     """
     Returns the event counts of a block
     :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
-    :param str cursor: The last event index to return
+    :param str cursor: The last event name to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1006,10 +1039,10 @@ def get_event_count(state_db, event: str):
     )
 
 
-def get_all_events_counts(state_db, cursor: str = None, limit: int = 100, offset: int = None):
+def get_all_events_counts(state_db, cursor: int = None, limit: int = 100, offset: int = None):
     """
     Returns the event counts of all blocks
-    :param str cursor: The last event index to return
+    :param int cursor: The last event index to return
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1026,7 +1059,7 @@ def get_credits_by_block(
     ledger_db,
     block_index: int,
     action: CreditAction = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1034,7 +1067,7 @@ def get_credits_by_block(
     Returns the credits of a block
     :param int block_index: The index of the block to return (e.g. $LAST_CREDIT_BLOCK)
     :param str action: The action to filter by
-    :param str cursor: The last credit index to return
+    :param int cursor: The last credit index to return
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1055,7 +1088,7 @@ def get_credits_by_address(
     ledger_db,
     address: str,
     action: CreditAction = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1063,7 +1096,7 @@ def get_credits_by_address(
     Returns the credits of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str action: The action to filter by
-    :param str cursor: The last index of the credits to return
+    :param int cursor: The last index of the credits to return
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1080,7 +1113,7 @@ def get_credits_by_asset(
     ledger_db,
     asset: str,
     action: CreditAction = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1088,7 +1121,7 @@ def get_credits_by_asset(
     Returns the credits of an asset
     :param str asset: The asset to return (e.g. $ASSET_1)
     :param str action: The action to filter by
-    :param str cursor: The last index of the credits to return
+    :param int cursor: The last index of the credits to return
     :param int limit: The maximum number of credits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1104,7 +1137,7 @@ def get_debits_by_block(
     ledger_db,
     block_index: int,
     action: DebitAction = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1112,7 +1145,7 @@ def get_debits_by_block(
     Returns the debits of a block
     :param int block_index: The index of the block to return (e.g. $LAST_DEBIT_BLOCK)
     :param str action: The action to filter by
-    :param str cursor: The last index of the debits to return
+    :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1133,7 +1166,7 @@ def get_debits_by_address(
     ledger_db,
     address: str,
     action: DebitAction = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1141,7 +1174,7 @@ def get_debits_by_address(
     Returns the debits of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str action: The action to filter by
-    :param str cursor: The last index of the debits to return
+    :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1158,7 +1191,7 @@ def get_debits_by_asset(
     ledger_db,
     asset: str,
     action: DebitAction = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1166,7 +1199,7 @@ def get_debits_by_asset(
     Returns the debits of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param str action: The action to filter by
-    :param str cursor: The last index of the debits to return
+    :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1203,12 +1236,12 @@ def prepare_sends_where(send_type: SendType, other_conditions=None):
 
 
 def get_sends(
-    ledger_db, send_type: SendType = "all", cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, send_type: SendType = "all", cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns all the sends include Enhanced and MPMA sends
     :param str send_type: The type of the send to return
-    :param str cursor: The last index of the debits to return
+    :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1226,7 +1259,7 @@ def get_sends_by_block(
     ledger_db,
     block_index: int,
     send_type: SendType = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1234,7 +1267,7 @@ def get_sends_by_block(
     Returns the sends, include Enhanced and MPMA sends, of a block
     :param int block_index: The index of the block to return (e.g. $LAST_SEND_BLOCK)
     :param str send_type: The type of the send to return
-    :param str cursor: The last index of the debits to return
+    :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1252,7 +1285,7 @@ def get_sends_by_transaction_hash(
     ledger_db,
     tx_hash: str,
     send_type: SendType = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1260,7 +1293,7 @@ def get_sends_by_transaction_hash(
     Returns the sends, include Enhanced and MPMA sends, of a block
     :param str tx_hash: The hash of the transaction to return (e.g. $LAST_SEND_TX_HASH)
     :param str send_type: The type of the send to return
-    :param str cursor: The last index of the debits to return
+    :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1278,7 +1311,7 @@ def get_sends_by_asset(
     ledger_db,
     asset: str,
     send_type: SendType = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1286,7 +1319,7 @@ def get_sends_by_asset(
     Returns the sends, include Enhanced and MPMA sends, of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param str send_type: The type of the send to return
-    :param str cursor: The last index of the debits to return
+    :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1301,12 +1334,12 @@ def get_sends_by_asset(
 
 
 def get_expirations(
-    state_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    state_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the expirations of a block
     :param int block_index: The index of the block to return (e.g. $LAST_ORDER_EXPIRATION_BLOCK)
-    :param str cursor: The last index of the expirations to return
+    :param int cursor: The last index of the expirations to return
     :param int limit: The maximum number of expirations to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1321,12 +1354,12 @@ def get_expirations(
 
 
 def get_cancels(
-    ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the cancels of a block
     :param int block_index: The index of the block to return (e.g. $LAST_CANCEL_BLOCK)
-    :param str cursor: The last index of the cancels to return
+    :param int cursor: The last index of the cancels to return
     :param int limit: The maximum number of cancels to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1340,10 +1373,10 @@ def get_cancels(
     )
 
 
-def get_all_valid_destructions(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+def get_all_valid_destructions(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
     """
     Returns the destructions of a block
-    :param str cursor: The last index of the destructions to return
+    :param int cursor: The last index of the destructions to return
     :param int limit: The maximum number of destructions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1358,12 +1391,12 @@ def get_all_valid_destructions(ledger_db, cursor: str = None, limit: int = 100, 
 
 
 def get_valid_destructions_by_block(
-    ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the destructions of a block
     :param int block_index: The index of the block to return (e.g. $LAST_DESTRUCTION_BLOCK)
-    :param str cursor: The last index of the destructions to return
+    :param int cursor: The last index of the destructions to return
     :param int limit: The maximum number of destructions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1378,12 +1411,12 @@ def get_valid_destructions_by_block(
 
 
 def get_valid_destructions_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the destructions of a block
     :param str address: The address to return (e.g. $ADDRESS_1)
-    :param str cursor: The last index of the destructions to return
+    :param int cursor: The last index of the destructions to return
     :param int limit: The maximum number of destructions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1398,12 +1431,12 @@ def get_valid_destructions_by_address(
 
 
 def get_valid_destructions_by_asset(
-    ledger_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the destructions of a block
     :param str asset: The asset to return (e.g. XCP)
-    :param str cursor: The last index of the destructions to return
+    :param int cursor: The last index of the destructions to return
     :param int limit: The maximum number of destructions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1439,13 +1472,13 @@ def prepare_issuance_where(asset_events, other_conditions=None):
 def get_issuances(
     ledger_db,
     asset_events: IssuancesAssetEvents = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
     """
     Returns all the issuances
-    :param str cursor: The last index of the issuances to return
+    :param int cursor: The last index of the issuances to return
     :param str asset_events: Filter result by one or several comma separated asset events
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -1465,7 +1498,7 @@ def get_issuances_by_block(
     ledger_db,
     block_index: int,
     asset_events: IssuancesAssetEvents = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1473,7 +1506,7 @@ def get_issuances_by_block(
     Returns the issuances of a block
     :param int block_index: The index of the block to return (e.g. $LAST_ISSUANCE_BLOCK)
     :param str asset_events: Filter result by one or several comma separated asset events
-    :param str cursor: The last index of the issuances to return
+    :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1500,7 +1533,7 @@ def get_issuances_by_asset(
     ledger_db,
     asset: str,
     asset_events: IssuancesAssetEvents = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1508,7 +1541,7 @@ def get_issuances_by_asset(
     Returns the issuances of an asset
     :param str asset: The asset to return (e.g. $ASSET_1)
     :param str asset_events: Filter result by one or several comma separated asset events
-    :param str cursor: The last index of the issuances to return
+    :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1531,7 +1564,7 @@ def get_issuances_by_address(
     ledger_db,
     address: str,
     asset_events: IssuancesAssetEvents = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1539,7 +1572,7 @@ def get_issuances_by_address(
     Returns the issuances of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset_events: Filter result by one or several comma separated asset events
-    :param str cursor: The last index of the issuances to return
+    :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1554,10 +1587,10 @@ def get_issuances_by_address(
     )
 
 
-def get_dispenses(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+def get_dispenses(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
     """
     Returns all the dispenses
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1574,7 +1607,7 @@ def get_dispense(ledger_db, tx_hash: str):
     """
     Returns all the dispenses
     :param str tx_hash: The hash of the transaction to return
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1586,12 +1619,12 @@ def get_dispense(ledger_db, tx_hash: str):
 
 
 def get_dispenses_by_block(
-    ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the dispenses of a block
     :param int block_index: The index of the block to return (e.g. $LAST_DISPENSE_BLOCK)
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1606,12 +1639,12 @@ def get_dispenses_by_block(
 
 
 def get_dispenses_by_transaction_hash(
-    ledger_db, tx_hash: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the dispenses of a block
     :param str tx_hash: The hash of the transaction to return (e.g. $LAST_DISPENSE_TX_HASH)
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1626,12 +1659,12 @@ def get_dispenses_by_transaction_hash(
 
 
 def get_dispenses_by_dispenser(
-    ledger_db, dispenser_hash: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, dispenser_hash: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the dispenses of a dispenser
     :param str dispenser_hash: The hash of the dispenser to return (e.g. $DISPENSER_TX_HASH_1)
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1646,12 +1679,12 @@ def get_dispenses_by_dispenser(
 
 
 def get_dispenses_by_source(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the dispenses of a source
     :param str address: The address to return (e.g. $ADDRESS_1)
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1666,12 +1699,12 @@ def get_dispenses_by_source(
 
 
 def get_dispenses_by_destination(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the dispenses of a destination
     :param str address: The address to return (e.g. $ADDRESS_2)
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1689,7 +1722,7 @@ def get_dispenses_by_asset(
     ledger_db,
     asset: str,
     block_index: int = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -1697,7 +1730,7 @@ def get_dispenses_by_asset(
     Returns the dispenses of an asset
     :param str asset: The asset to return (e.g. XCP)
     :param int block_index: The index of the block to return
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1715,13 +1748,13 @@ def get_dispenses_by_asset(
 
 
 def get_dispenses_by_source_and_asset(
-    ledger_db, address: str, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, asset: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the dispenses of an address and an asset
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset: The asset to return (e.g. XCP)
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1736,13 +1769,13 @@ def get_dispenses_by_source_and_asset(
 
 
 def get_dispenses_by_destination_and_asset(
-    ledger_db, address: str, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, asset: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the dispenses of an address and an asset
     :param str address: The address to return (e.g. $ADDRESS_2)
     :param str asset: The asset to return (e.g. XCP)
-    :param str cursor: The last index of the dispenses to return
+    :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1756,10 +1789,10 @@ def get_dispenses_by_destination_and_asset(
     )
 
 
-def get_sweeps(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+def get_sweeps(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
     """
     Returns all sweeps
-    :param str cursor: The last index of the sweeps to return
+    :param int cursor: The last index of the sweeps to return
     :param int limit: The maximum number of sweeps to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1773,12 +1806,12 @@ def get_sweeps(ledger_db, cursor: str = None, limit: int = 100, offset: int = No
 
 
 def get_sweeps_by_block(
-    ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the sweeps of a block
     :param int block_index: The index of the block to return (e.g. $LAST_SWEEP_BLOCK)
-    :param str cursor: The last index of the sweeps to return
+    :param int cursor: The last index of the sweeps to return
     :param int limit: The maximum number of sweeps to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1805,12 +1838,12 @@ def get_sweep_by_transaction_hash(ledger_db, tx_hash: str):
 
 
 def get_sweeps_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the sweeps of an address
     :param str address: The address to return (e.g. $ADDRESS_3)
-    :param str cursor: The last index of the sweeps to return
+    :param int cursor: The last index of the sweeps to return
     :param int limit: The maximum number of sweeps to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1827,8 +1860,8 @@ def get_sweeps_by_address(
 def get_address_balances(
     state_db,
     address: str,
-    type: BalanceType = all,
-    cursor: str = None,
+    type: BalanceType = all,  # pylint: disable=W0622
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -1837,7 +1870,7 @@ def get_address_balances(
     Returns the balances of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str type: The type of balances to return
-    :param str cursor: The last index of the balances to return
+    :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
@@ -1864,12 +1897,12 @@ def get_address_balances(
 
 
 def get_utxo_balances(
-    state_db, utxo: str, cursor: str = None, limit: int = 100, offset: int = None
+    state_db, utxo: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the balances of an utxo
     :param str utxo: The utxo to return (e.g. $UTXO_WITH_BALANCE)
-    :param str cursor: The last index of the balances to return
+    :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -1912,7 +1945,7 @@ def utxos_with_balances(state_db, utxos: str):
 def get_balances_by_addresses(
     state_db,
     addresses: str,
-    type: BalanceType = "all",
+    type: BalanceType = "all",  # pylint: disable=W0622
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -2003,8 +2036,8 @@ def get_balances_by_address_and_asset(
     state_db,
     address: str,
     asset: str,
-    type: BalanceType = "all",
-    cursor: str = None,
+    type: BalanceType = "all",  # pylint: disable=W0622
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -2013,7 +2046,7 @@ def get_balances_by_address_and_asset(
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset: The asset to return (e.g. XCP)
     :param str type: The type of balances to return
-    :param str cursor: The last index of the balances to return
+    :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2051,12 +2084,12 @@ def get_balances_by_asset_and_address(state_db, asset: str, address: str):
 
 
 def get_bets(
-    state_db, status: BetStatus = "open", cursor: str = None, limit: int = 100, offset: int = None
+    state_db, status: BetStatus = "open", cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the bets of a feed
     :param str status: The status of the bet (e.g. filled)
-    :param str cursor: The last index of the bets to return
+    :param int cursor: The last index of the bets to return
     :param int limit: The maximum number of bets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2074,7 +2107,7 @@ def get_bet_by_feed(
     state_db,
     address: str,
     status: BetStatus = "open",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -2082,7 +2115,7 @@ def get_bet_by_feed(
     Returns the bets of a feed
     :param str address: The address of the feed (e.g. $ADDRESS_1)
     :param str status: The status of the bet (e.g. filled)
-    :param str cursor: The last index of the bets to return
+    :param int cursor: The last index of the bets to return
     :param int limit: The maximum number of bets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2098,13 +2131,13 @@ def get_bet_by_feed(
 
 def get_valid_broadcasts(
     ledger_db,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
     """
     Returns all valid broadcasts
-    :param str cursor: The last index of the broadcasts to return
+    :param int cursor: The last index of the broadcasts to return
     :param int limit: The maximum number of broadcasts to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2122,14 +2155,14 @@ def get_valid_broadcasts(
 def get_broadcasts_by_source(
     ledger_db,
     address: str,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
     """
     Returns the broadcasts of a source
     :param str address: The address to return (e.g. $ADDRESS_1)
-    :param str cursor: The last index of the broadcasts to return
+    :param int cursor: The last index of the broadcasts to return
     :param int limit: The maximum number of broadcasts to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2157,12 +2190,12 @@ def get_broadcast_by_transaction_hash(ledger_db, tx_hash: str):
 
 
 def get_burns_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the burns of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
-    :param str cursor: The last index of the burns to return
+    :param int cursor: The last index of the burns to return
     :param int limit: The maximum number of burns to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2180,7 +2213,7 @@ def get_sends_by_address(
     ledger_db,
     address: str,
     send_type: SendType = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -2188,7 +2221,7 @@ def get_sends_by_address(
     Returns the sends, include Enhanced and MPMA sends, of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str send_type: The type of sends to return
-    :param str cursor: The last index of the sends to return
+    :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2215,7 +2248,7 @@ def get_sends_by_address_and_asset(
     address: str,
     asset: str,
     send_type: SendType = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -2224,7 +2257,7 @@ def get_sends_by_address_and_asset(
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str asset: The asset to return (e.g. $ASSET_5)
     :param str send_type: The type of sends to return
-    :param str cursor: The last index of the sends to return
+    :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2250,7 +2283,7 @@ def get_receive_by_address(
     ledger_db,
     address: str,
     send_type: SendType = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -2258,7 +2291,7 @@ def get_receive_by_address(
     Returns the receives of an address
     :param str address: The address to return (e.g. $ADDRESS_5)
     :param str send_type: The type of sends to return
-    :param str cursor: The last index of the sends to return
+    :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2277,7 +2310,7 @@ def get_receive_by_address_and_asset(
     address: str,
     asset: str,
     send_type: SendType = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -2286,7 +2319,7 @@ def get_receive_by_address_and_asset(
     :param str address: The address to return (e.g. $ADDRESS_5)
     :param str asset: The asset to return (e.g. $ASSET_5)
     :param str send_type: The type of sends to return
-    :param str cursor: The last index of the sends to return
+    :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2332,7 +2365,7 @@ def get_dispensers(
     state_db,
     status: DispenserStatus = "all",
     exclude_with_oracle: bool = False,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -2341,7 +2374,7 @@ def get_dispensers(
     Returns all dispensers
     :param str status: The status of the dispensers to return
     :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
-    :param str cursor: The last index of the dispensers to return
+    :param int cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. block_index:asc)
@@ -2364,7 +2397,7 @@ def get_dispensers_by_address(
     address: str,
     status: DispenserStatus = "all",
     exclude_with_oracle: bool = False,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -2374,7 +2407,7 @@ def get_dispensers_by_address(
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str status: The status of the dispensers to return
     :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
-    :param str cursor: The last index of the dispensers to return
+    :param int cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)
@@ -2398,7 +2431,7 @@ def get_dispensers_by_asset(
     asset: str,
     status: DispenserStatus = "all",
     exclude_with_oracle: bool = False,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -2408,7 +2441,7 @@ def get_dispensers_by_asset(
     :param str asset: The asset to return (e.g. XCP)
     :param str status: The status of the dispensers to return
     :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
-    :param str cursor: The last index of the dispensers to return
+    :param int cursor: The last index of the dispensers to return
     :param int limit: The maximum number of dispensers to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)
@@ -2443,12 +2476,12 @@ def get_dispenser_by_address_and_asset(state_db, address: str, asset: str):
 
 
 def get_valid_assets(
-    state_db, named: bool = None, cursor: str = None, limit: int = 100, offset: int = None
+    state_db, named: bool = None, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the valid assets
     :param bool named: Whether to return only named assets (e.g. true)
-    :param str cursor: The last index of the assets to return
+    :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2483,12 +2516,12 @@ def get_asset(state_db, asset: str):
 
 
 def get_subassets_by_asset(
-    state_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    state_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns asset subassets
     :param str asset: The name of the asset to return (e.g. $ASSET_7)
-    :param str cursor: The last index of the assets to return
+    :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2507,7 +2540,7 @@ def get_valid_assets_by_issuer(
     state_db,
     address: str,
     named: bool = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -2515,7 +2548,7 @@ def get_valid_assets_by_issuer(
     Returns the valid assets issued by an address
     :param str address: The issuer to return (e.g. $ADDRESS_1)
     :param bool named: Whether to return only named assets (e.g. true)
-    :param str cursor: The last index of the assets to return
+    :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2540,7 +2573,7 @@ def get_valid_assets_by_owner(
     state_db,
     address: str,
     named: bool = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -2548,7 +2581,7 @@ def get_valid_assets_by_owner(
     Returns the valid assets owned by an address
     :param str address: The owner to return (e.g. $ADDRESS_1)
     :param bool named: Whether to return only named assets (e.g. true)
-    :param str cursor: The last index of the assets to return
+    :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2573,7 +2606,7 @@ def get_valid_assets_by_issuer_or_owner(
     state_db,
     address: str,
     named: bool = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -2581,7 +2614,7 @@ def get_valid_assets_by_issuer_or_owner(
     Returns the valid assets issued or owned by an address
     :param str address: The issuer or owner to return (e.g. $ADDRESS_1)
     :param bool named: Whether to return only named assets (e.g. true)
-    :param str cursor: The last index of the assets to return
+    :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2604,10 +2637,10 @@ def get_valid_assets_by_issuer_or_owner(
     )
 
 
-def get_dividends(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+def get_dividends(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
     """
     Returns all the dividends
-    :param str cursor: The last index of the dividend to return
+    :param int cursor: The last index of the dividend to return
     :param int limit: The maximum number of dividend to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2634,12 +2667,12 @@ def get_dividend(ledger_db, dividend_hash: str):
 
 
 def get_dividends_by_asset(
-    ledger_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the dividends of an asset
     :param str asset: The asset to return (e.g. $ASSET_5)
-    :param str cursor: The last index of the dividend to return
+    :param int cursor: The last index of the dividend to return
     :param int limit: The maximum number of dividend to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2654,12 +2687,12 @@ def get_dividends_by_asset(
 
 
 def get_dividends_distributed_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the dividends distributed by an address
     :param str address: The address to return (e.g. $ADDRESS_1)
-    :param str cursor: The last index of the assets to return
+    :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2674,12 +2707,12 @@ def get_dividends_distributed_by_address(
 
 
 def get_dividend_disribution(
-    ledger_db, dividend_hash: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, dividend_hash: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns a dividend distribution by its hash
     :param str dividend_hash: The hash of the dividend distribution to return (e.g. $LAST_DIVIDEND_TX_HASH)
-    :param str cursor: The last index of the credit to return
+    :param int cursor: The last index of the credit to return
     :param int limit: The maximum number of credit to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -2696,8 +2729,8 @@ def get_dividend_disribution(
 def get_asset_balances(
     state_db,
     asset: str,
-    type: BalanceType = "all",
-    cursor: str = None,
+    type: BalanceType = "all",  # pylint: disable=W0622
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -2706,7 +2739,7 @@ def get_asset_balances(
     Returns the asset balances
     :param str asset: The asset to return (e.g. $ASSET_1)
     :param str type: The type of balances to return
-    :param str cursor: The last index of the balances to return
+    :param int cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
@@ -2738,12 +2771,12 @@ def get_asset_balances(
 def prepare_where_status(status, arg_type, other_conditions=None):
     where = []
     statuses = status.split(",")
-    for status in statuses:
-        if status == "all":
+    for status_item in statuses:
+        if status_item == "all":
             where = [other_conditions] if other_conditions else []
             break
-        if status in typing.get_args(arg_type):
-            where_status = {"status": status}
+        if status_item in typing.get_args(arg_type):
+            where_status = {"status": status_item}
             if other_conditions:
                 where_status.update(other_conditions)
             where.append(where_status)
@@ -2768,9 +2801,9 @@ SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_"
 def get_orders(
     state_db,
     status: OrderStatus = "all",
-    get_asset: str = None,
+    get_asset: str = None,  # pylint: disable=W0621
     give_asset: str = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -2780,7 +2813,7 @@ def get_orders(
     :param str status: The status of the orders to return
     :param str get_asset: The get asset to return
     :param str give_asset: The give asset to return
-    :param str cursor: The last index of the orders to return
+    :param int cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
@@ -2807,9 +2840,9 @@ def get_orders_by_asset(
     state_db,
     asset: str,
     status: OrderStatus = "all",
-    get_asset: str = None,
+    get_asset: str = None,  # pylint: disable=W0621
     give_asset: str = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -2820,7 +2853,7 @@ def get_orders_by_asset(
     :param str status: The status of the orders to return
     :param str get_asset: The get asset to return
     :param str give_asset: The give asset to return
-    :param str cursor: The last index of the orders to return
+    :param int cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
@@ -2855,7 +2888,7 @@ def get_orders_by_address(
     state_db,
     address: str,
     status: OrderStatus = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -2864,7 +2897,7 @@ def get_orders_by_address(
     Returns the orders of an address
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str status: The status of the orders to return
-    :param str cursor: The last index of the orders to return
+    :param int cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
@@ -2887,7 +2920,7 @@ def get_orders_by_two_assets(
     asset1: str,
     asset2: str,
     status: OrderStatus = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -2897,7 +2930,7 @@ def get_orders_by_two_assets(
     :param str asset1: The first asset to return (e.g. BTC)
     :param str asset2: The second asset to return (e.g. XCP)
     :param str status: The status of the orders to return
-    :param str cursor: The last index of the orders to return
+    :param int cursor: The last index of the orders to return
     :param int limit: The maximum number of orders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the orders to return (overrides the `cursor` parameter) (e.g. expiration:desc)
@@ -2934,7 +2967,7 @@ def get_asset_holders(
     """
     Returns the holders of an asset
     :param str asset: The asset to return (e.g. $ASSET_1)
-    :param str cursor: The last index of the holder to return
+    :param str cursor: The last cursor of the holder to return
     :param int limit: The maximum number of holders to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the holders to return (overrides the `cursor` parameter) (e.g. quantity:desc)
@@ -2970,7 +3003,7 @@ def get_all_order_matches(
     state_db,
     status: OrderMatchesStatus = "all",
     block_index: int = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -2979,7 +3012,7 @@ def get_all_order_matches(
     Returns all the order matches
     :param str status: The status of the order matches to return
     :param int block_index: The block index of the order matches to return
-    :param str cursor: The last index of the order matches to return
+    :param int cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
@@ -3002,7 +3035,7 @@ def get_order_matches_by_order(
     order_hash: str,
     status: OrderMatchesStatus = "all",
     block_index: int = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -3012,7 +3045,7 @@ def get_order_matches_by_order(
     :param str order_hash: The hash of the transaction that created the order (e.g. $ORDER_WITH_MATCH_HASH)
     :param str status: The status of the order matches to return
     :param int block_index: The block index of the order matches to return
-    :param str cursor: The last index of the order matches to return
+    :param int cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
@@ -3040,7 +3073,7 @@ def get_order_matches_by_asset(
     forward_asset: str = None,
     backward_asset: str = None,
     block_index: int = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -3052,7 +3085,7 @@ def get_order_matches_by_asset(
     :param str forward_asset: The forward asset to return
     :param str backward_asset: The backward asset to return
     :param int block_index: The block index of the order matches to return
-    :param str cursor: The last index of the order matches to return
+    :param int cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
@@ -3091,7 +3124,7 @@ def get_order_matches_by_two_assets(
     asset2: str,
     status: OrderMatchesStatus = "all",
     block_index: int = None,
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
     sort: str = None,
@@ -3102,7 +3135,7 @@ def get_order_matches_by_two_assets(
     :param str asset2: The second asset to return (e.g. XCP)
     :param str status: The status of the order matches to return
     :param int block_index: The block index of the order matches to return
-    :param str cursor: The last index of the order matches to return
+    :param int cursor: The last index of the order matches to return
     :param int limit: The maximum number of order matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the order matches to return (overrides the `cursor` parameter) (e.g. forward_quantity:desc)
@@ -3136,12 +3169,12 @@ def get_order_matches_by_two_assets(
 
 
 def get_btcpays_by_order(
-    ledger_db, order_hash: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, order_hash: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the BTC pays of an order
     :param str order_hash: The hash of the transaction that created the order (e.g. $ORDER_WITH_BTCPAY_HASH)
-    :param str cursor: The last index of the resolutions to return
+    :param int cursor: The last index of the resolutions to return
     :param int limit: The maximum number of resolutions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -3171,7 +3204,7 @@ def get_bet_matches_by_bet(
     state_db,
     bet_hash: str,
     status: BetMatchesStatus = "pending",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -3179,7 +3212,7 @@ def get_bet_matches_by_bet(
     Returns the bet matches of a bet
     :param str bet_hash: The hash of the transaction that created the bet (e.g. 5d097b4729cb74d927b4458d365beb811a26fcee7f8712f049ecbe780eb496ed)
     :param str status: The status of the bet matches (e.g. expired)
-    :param str cursor: The last index of the bet matches to return
+    :param int cursor: The last index of the bet matches to return
     :param int limit: The maximum number of bet matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -3197,12 +3230,12 @@ def get_bet_matches_by_bet(
 
 
 def get_resolutions_by_bet(
-    ledger_db, bet_hash: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, bet_hash: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the resolutions of a bet
     :param str bet_hash: The hash of the transaction that created the bet (e.g. 36bbbb7dbd85054dac140a8ad8204eda2ee859545528bd2a9da69ad77c277ace)
-    :param str cursor: The last index of the resolutions to return
+    :param int cursor: The last index of the resolutions to return
     :param int limit: The maximum number of resolutions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -3216,11 +3249,11 @@ def get_resolutions_by_bet(
     )
 
 
-def get_all_burns(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+def get_all_burns(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
     """
     Returns the burns
     :param str status: The status of the burns to return (e.g. valid)
-    :param str cursor: The last index of the burns to return
+    :param int cursor: The last index of the burns to return
     :param int limit: The maximum number of burns to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -3254,14 +3287,14 @@ def prepare_fairminters_where(status, other_conditions=None):
 def get_all_fairminters(
     state_db,
     status: FairmintersStatus = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
     """
     Returns all fairminters
     :param str status: The status of the fairminters to return
-    :param str cursor: The last index of the fairminter to return
+    :param int cursor: The last index of the fairminter to return
     :param int limit: The maximum number of fairminter to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -3287,7 +3320,7 @@ def get_fairminters_by_block(
     state_db,
     block_index: int,
     status: FairmintersStatus = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -3295,7 +3328,7 @@ def get_fairminters_by_block(
     Returns the fairminters by its block index
     :param int block_index: The block index of the fairminter to return (e.g. $LAST_FAIRMINTER_BLOCK)
     :param str status: The status of the fairminters to return
-    :param str cursor: The last index of the fairminter to return
+    :param int cursor: The last index of the fairminter to return
     :param int limit: The maximum number of fairminter to return (e.g. 5)
     :param int offset: The number of lines to skip before
     """
@@ -3309,7 +3342,7 @@ def get_fairminters_by_asset(
     state_db,
     asset: str,
     status: FairmintersStatus = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -3331,7 +3364,7 @@ def get_fairminters_by_address(
     state_db,
     address: str,
     status: FairmintersStatus = "all",
-    cursor: str = None,
+    cursor: int = None,
     limit: int = 100,
     offset: int = None,
 ):
@@ -3347,7 +3380,7 @@ def get_fairminters_by_address(
 
 
 def get_fairmints_by_fairminter(
-    ledger_db, tx_hash: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the mints by fairminter
@@ -3364,7 +3397,7 @@ def get_fairmints_by_fairminter(
 
 
 def get_fairmints_by_address(
-    ledger_db, address: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the mints by address
@@ -3381,7 +3414,7 @@ def get_fairmints_by_address(
 
 
 def get_fairmints_by_asset(
-    ledger_db, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the mints by asset
@@ -3398,7 +3431,7 @@ def get_fairmints_by_asset(
 
 
 def get_fairmints_by_address_and_asset(
-    ledger_db, address: str, asset: str, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, address: str, asset: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the mints by address and asset
@@ -3415,10 +3448,10 @@ def get_fairmints_by_address_and_asset(
     )
 
 
-def get_all_fairmints(ledger_db, cursor: str = None, limit: int = 100, offset: int = None):
+def get_all_fairmints(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
     """
     Returns all fairmints
-    :param str cursor: The last index of the fairmint to return
+    :param int cursor: The last index of the fairmint to return
     :param int limit: The maximum number of fairmint to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
@@ -3438,12 +3471,12 @@ def get_fairmint(ledger_db, tx_hash: str):
 
 
 def get_fairmints_by_block(
-    ledger_db, block_index: int, cursor: str = None, limit: int = 100, offset: int = None
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the fairmints by its block index
     :param int block_index: The block index of the fairmint to return (e.g. $LAST_FAIRMINT_BLOCK)
-    :param str cursor: The last index of the fairmint to return
+    :param int cursor: The last index of the fairmint to return
     :param int limit: The maximum number of fairmint to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """

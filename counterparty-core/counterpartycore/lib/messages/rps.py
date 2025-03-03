@@ -30,7 +30,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 ID = 80
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(CURR_DIR, "data", "rps_events.json")) as f:
+with open(os.path.join(CURR_DIR, "data", "rps_events.json"), encoding="utf-8") as f:
     RPS_EVENTS = json.load(f)
 
 
@@ -42,7 +42,7 @@ def replay_events(db, key):
         ledger.events.replay_events(db, events)
 
 
-def parse(db, tx, message):
+def parse(db, tx):
     logger.debug(
         "Replay RPS events for transaction %(tx_hash)s",
         {

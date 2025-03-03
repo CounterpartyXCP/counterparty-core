@@ -43,14 +43,14 @@ def get_pending_btc_order_matches(db, address):
     return cursor.fetchall()
 
 
-def get_order_match(db, id):
+def get_order_match(db, match_id):
     cursor = db.cursor()
     query = """
         SELECT *, rowid
         FROM order_matches
         WHERE id = ?
         ORDER BY rowid DESC LIMIT 1"""
-    bindings = (id,)
+    bindings = (match_id,)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -146,7 +146,7 @@ def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
 
 
 def get_matching_orders(db, tx_hash, give_asset, get_asset):
-    if CurrentState().block_parser_status() == "catching up":
+    if CurrentState().ledger_state() == "Catching Up":
         return OrdersCache(db).get_matching_orders(tx_hash, give_asset, get_asset)
     return get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset)
 
@@ -171,7 +171,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
 
     where_source = ""
     if source is not None:
-        where_source = f" AND source = :source"  # noqa: F541
+        where_source = " AND source = :source"
         select_bindings["source"] = source
 
     # no sql injection here
@@ -184,7 +184,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
                 {where_source}
             GROUP BY tx_hash
         ) WHERE give_remaining = 0 OR get_remaining = 0
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
 
     cursor = db.cursor()
     cursor.execute(select_query, select_bindings)
@@ -203,11 +203,17 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
             OrdersCache(db).update_order(order["tx_hash"], update_data)
 
 
-def update_order_match_status(db, id, status):
+def update_order_match_status(db, order_match_id, status):
     update_data = {"status": status}
     # add `order_match_id` for backward compatibility
     insert_update(
-        db, "order_matches", "id", id, update_data, "ORDER_MATCH_UPDATE", {"order_match_id": id}
+        db,
+        "order_matches",
+        "id",
+        order_match_id,
+        update_data,
+        "ORDER_MATCH_UPDATE",
+        {"order_match_id": order_match_id},
     )
 
 
@@ -241,18 +247,18 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
             FROM dispensers
             WHERE ({" AND ".join(where)})
             ORDER BY rowid DESC LIMIT 1
-        """  # nosec B608  # noqa: S608
+        """  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 
 
 def get_dispensers_info(db, tx_hash_list):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT *, MAX(rowid) AS rowid FROM dispensers
-        WHERE tx_hash IN ({})
+        WHERE tx_hash IN ({",".join(["?" for e in range(0, len(tx_hash_list))])})
         GROUP BY tx_hash
-    """.format(",".join(["?" for e in range(0, len(tx_hash_list))]))  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tx_hash_list)
     dispensers = cursor.fetchall()
     result = {}
@@ -323,7 +329,6 @@ def get_dispensers(
     asset=None,
     origin=None,
     status=None,
-    tx_hash=None,
     order_by=None,
     group_by=None,
 ):
@@ -369,7 +374,7 @@ def get_dispensers(
             {group_clause}
         ) {second_where_str}
         {order_clause}
-    """  # nosec B608  # noqa: S608
+    """  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()
 

@@ -180,13 +180,13 @@ def compose_dividend(
     return composer.compose_transaction(db, "dividend", params, construct_params)
 
 
-def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa
+def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa # pylint: disable=W0613
     """
     Returns the estimated fee for issuing a dividend.
     :param address: The address that will be issuing the dividend (e.g. $ADDRESS_1)
     :param asset: The asset or subasset that the dividends are being rewarded on (e.g. MYASSETA)
     """
-    return messages.dividend.get_estimate_xcp_fee(db, asset, CurrentState().current_block_index())
+    return messages.dividend.get_estimate_xcp_fee(db, asset)
 
 
 def compose_issuance(
@@ -505,7 +505,7 @@ def compose_attach(
     return composer.compose_transaction(db, "attach", params, construct_params)
 
 
-def get_attach_estimate_xcp_fee(db, address: str = None):  # noqa
+def get_attach_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
     """
     Returns the estimated fee for attaching assets to a UTXO.
     :param address: The address from which the assets are attached (e.g. $ADDRESS_1)
@@ -553,7 +553,7 @@ def info_by_tx_hash(db, tx_hash: str):
     """
     try:
         rawtransaction = backend.bitcoind.getrawtransaction(tx_hash)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError("Invalid transaction") from e
     return info(db, rawtransaction)
 
@@ -570,7 +570,7 @@ def info(db, rawtransaction: str, block_index: int = None):
             parse_vouts=True,
             block_index=block_index,
         )
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError("Invalid rawtransaction") from e
 
     try:
@@ -608,7 +608,7 @@ def unpack(db, datahex: str, block_index: int = None):
     """
     try:
         data = binascii.unhexlify(datahex)
-    except Exception as e:  # noqa
+    except Exception as e:  # pylint: disable=broad-except  # noqa
         raise exceptions.UnpackError("Data must be in hexadecimal format") from e
 
     if data[: len(config.PREFIX)] == config.PREFIX:
@@ -667,19 +667,19 @@ def unpack(db, datahex: str, block_index: int = None):
         # Order
         elif message_type_id == messages.order.ID:
             message_type_name = "order"
-            message_data = messages.order.unpack(db, message, block_index, return_dict=True)
+            message_data = messages.order.unpack(db, message, return_dict=True)
         # Send
         elif message_type_id == messages.send.ID:
             message_type_name = "send"
-            message_data = messages.send.unpack(db, message, block_index)
+            message_data = messages.send.unpack(db, message)
         # Enhanced send
         elif message_type_id == messages.versions.enhancedsend.ID:
             message_type_name = "enhanced_send"
-            message_data = messages.versions.enhancedsend.unpack(message, block_index)
+            message_data = messages.versions.enhancedsend.unpack(message)
         # MPMA send
         elif message_type_id == messages.versions.mpma.ID:
             message_type_name = "mpma_send"
-            mpma_message_data = messages.versions.mpma.unpack(message, block_index)
+            mpma_message_data = messages.versions.mpma.unpack(message)
             message_data = []
             for asset_name, send_info in mpma_message_data.items():
                 message_data.append(

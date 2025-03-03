@@ -55,20 +55,19 @@ def parse_options_from_string(string):
     if len(string_list) == 2:
         try:
             options = int(string_list.pop())
-        except:  # noqa: E722
-            raise exceptions.OptionsError("options not an integer")  # noqa: B904
+        except Exception as e:  # noqa: E722 # pylint: disable=broad-exception-caught
+            raise exceptions.OptionsError("options not an integer") from e
         return options
-    else:
-        return False
+    return False
 
 
 def validate_address_options(options):
     """Ensure the options are all valid and in range."""
     if (options > config.MAX_INT) or (options < 0):
         raise exceptions.OptionsError("options integer overflow")
-    elif options > config.ADDRESS_OPTION_MAX_VALUE:
+    if options > config.ADDRESS_OPTION_MAX_VALUE:
         raise exceptions.OptionsError("options out of range")
-    elif not helpers.active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
+    if not helpers.active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
         raise exceptions.OptionsError("options not possible")
 
 
@@ -177,7 +176,7 @@ def unpack(message, block_index, return_dict=False):
         except UnicodeDecodeError:
             text = ""
         status = "valid"
-    except struct.error as e:  # noqa: F841
+    except struct.error:
         timestamp, value, fee_fraction_int, text = 0, None, 0, None
         status = "invalid: could not unpack"
     except AssertionError:
@@ -264,11 +263,11 @@ def parse(db, tx, message):
         # Cancel Open Bets?
         if value == -2:
             for i in ledger.other.get_bet_by_feed(db, tx["source"], status="open"):
-                bet.cancel_bet(db, i, "dropped", tx["block_index"], tx["tx_index"])
+                bet.cancel_bet(db, i, "dropped", tx["tx_index"])
         # Cancel Pending Bet Matches?
         if value == -3:
             for bet_match in ledger.other.get_pending_bet_matches(db, tx["source"]):
-                bet.cancel_bet_match(db, bet_match, "dropped", tx["block_index"], tx["tx_index"])
+                bet.cancel_bet_match(db, bet_match, "dropped", tx["tx_index"])
         cursor.close()
         return
 
@@ -312,12 +311,10 @@ def parse(db, tx, message):
             if bet_match["tx0_bet_type"] < bet_match["tx1_bet_type"]:
                 bull_address = bet_match["tx0_address"]
                 bear_address = bet_match["tx1_address"]
-                bull_escrow = bet_match["forward_quantity"]
                 bear_escrow = bet_match["backward_quantity"]
             else:
                 bull_address = bet_match["tx1_address"]
                 bear_address = bet_match["tx0_address"]
-                bull_escrow = bet_match["backward_quantity"]  # noqa: F841
                 bear_escrow = bet_match["forward_quantity"]
 
             leverage = Fraction(bet_match["leverage"], 5040)

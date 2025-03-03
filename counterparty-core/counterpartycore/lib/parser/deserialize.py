@@ -1,4 +1,4 @@
-from counterparty_rs import indexer
+from counterparty_rs import indexer  # pylint: disable=no-name-in-module
 
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.currentstate import CurrentState

@@ -1,6 +1,6 @@
 import logging
 
-from interface import TelemetryClientI
+from counterpartycore.lib.monitors.telemetry.clients.interface import TelemetryClientI
 
 # IMPLEMENTATIONS
 

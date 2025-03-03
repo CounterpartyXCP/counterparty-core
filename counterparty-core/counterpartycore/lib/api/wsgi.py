@@ -5,6 +5,7 @@ import os
 import signal
 import sys
 import threading
+import time
 
 import gunicorn.app.base
 import waitress
@@ -25,22 +26,42 @@ multiprocessing.set_start_method("spawn", force=True)
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
+class LazyLogger(metaclass=helpers.SingletonMeta):
+    def __init__(self):
+        self.last_message = None
+        self.last_print = 0
+        self.message_delay = 10
+
+    def debug(self, message, *args):
+        if self.last_print + self.message_delay < time.time():
+            logger.debug(message, *args)
+            self.last_message = message
+            self.last_print = time.time()
+
+
 def refresh_current_state(state_db, shared_backend_height):
     CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
 
     current_block_index = CurrentState().current_block_index()
-    current_backend_height = shared_backend_height.value
+    current_backend_height = int(shared_backend_height.value // 10e8)
+    current_block_count = int(shared_backend_height.value % 10e8)
 
     if config.API_ONLY:
         return
 
     if current_backend_height > current_block_index:
-        logger.debug(
-            f"Counterparty is currently behind Bitcoin Core. ({current_block_index} < {current_backend_height})"
+        LazyLogger().debug(
+            "Counterparty is currently behind Bitcoin Core. (Counterparty Block Height = %s, Bitcoin Core Block Height = %s, Network Block Height = %s)",
+            current_block_index,
+            current_block_count,
+            current_backend_height,
         )
     elif current_backend_height < current_block_index:
-        logger.debug(
-            f"Bitcoin Core is currently behind the network. ({current_block_index} > {current_backend_height})"
+        LazyLogger().debug(
+            "Bitcoin Core is currently behind the network. (Counterparty Block Height = %s, Bitcoin Core Block Height = %s, Network Block Height = %s)",
+            current_block_index,
+            current_block_count,
+            current_backend_height,
         )
 
 
@@ -104,23 +125,21 @@ class GunicornArbiter(Arbiter):
             return pid
 
         # Child process
-        global logger  # noqa F811
+        global logger  # noqa F811 # pylint: disable=global-statement
         worker.pid = os.getpid()
         logger = log.re_set_up("", api=True)
         self.init_loggers()
         try:
-            gunicorn_util._setproctitle(f"worker [{self.proc_name}]")
+            gunicorn_util._setproctitle(f"worker [{self.proc_name}]")  # pylint: disable=protected-access
             logger.debug("Booting Gunicorn worker with pid: %s", worker.pid)
             self.cfg.post_fork(self, worker)
             worker.init_process()
             sys.exit(0)
-        except SystemExit:
-            raise
         except AppImportError:
             self.log.warning("Exception while loading the application", exc_info=True)
             sys.stderr.flush()
             sys.exit(self.APP_LOAD_ERROR)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             self.log.exception("Exception in worker process")
             if not worker.booted:
                 sys.exit(self.WORKER_BOOT_ERROR)
@@ -129,8 +148,9 @@ class GunicornArbiter(Arbiter):
             logger.info("Worker exiting (pid: %s)", worker.pid)
             try:
                 worker.tmp.close()
-                self.cfg.worker_exit(self, worker)
-            except Exception:
+                sys.exit(-1)
+                # self.cfg.worker_exit(self, worker)
+            except Exception:  # pylint: disable=broad-exception-caught
                 logger.warning("Exception during worker exit")
 
     def reap_workers(self):
@@ -179,14 +199,14 @@ class GunicornArbiter(Arbiter):
             stopped = [not helpers.is_process_alive(pid) for pid in self.workers_pids]
             if all(stopped):
                 break
-        logger.info(f"All workers killed: {self.workers_pids}")
+        logger.info("All workers killed: %s", self.workers_pids)
         self.workers_pids = []
 
 
-class GunicornApplication(gunicorn.app.base.BaseApplication):
+class GunicornApplication(gunicorn.app.base.BaseApplication):  # pylint: disable=abstract-method
     def __init__(self, app, args=None):
         self.options = {
-            "bind": "%s:%s" % (config.API_HOST, config.API_PORT),
+            "bind": f"{config.API_HOST}:{config.API_PORT}",
             "timeout": 10,
             "graceful_timeout": 10,
             "max_requests": 1000,
@@ -205,8 +225,9 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.arbiter = None
         self.ledger_db = None
         self.state_db = None
-
+        self.current_state_thread = None
         self.master_pid = os.getpid()
+        self.server_ready_value = None
         super().__init__()
 
     def load_config(self):
@@ -222,7 +243,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
         self.current_state_thread.start()
         return self.application
 
-    def run(self, server_ready_value, shared_backend_height):
+    def run(self, server_ready_value, shared_backend_height):  # pylint: disable=arguments-differ
         try:
             CurrentState().set_backend_height_value(shared_backend_height)
             self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
@@ -235,7 +256,8 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):
             sys.exit(1)
 
     def stop(self):
-        self.current_state_thread.stop()
+        if self.current_state_thread:
+            self.current_state_thread.stop()
         if self.arbiter and self.master_pid == os.getpid():
             logger.info("Stopping Gunicorn")
             self.arbiter.kill_all_workers()
@@ -247,10 +269,12 @@ class WerkzeugApplication:
         self.app = app
         self.args = args
         self.server = make_server(config.API_HOST, config.API_PORT, self.app, threaded=True)
-        global logger  # noqa F811
+        self.current_state_thread = None
+        self.server_ready_value = None
+        global logger  # noqa F811  # pylint: disable=global-statement
         logger = log.re_set_up("", api=True)
 
-    def run(self, server_ready_value, shared_backend_height):
+    def run(self, server_ready_value, shared_backend_height):  # pylint: disable=arguments-differ
         self.server_ready_value = server_ready_value
         CurrentState().set_backend_height_value(shared_backend_height)
         self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
@@ -271,15 +295,25 @@ class WaitressApplication:
         self.server = waitress.server.create_server(
             self.app, host=config.API_HOST, port=config.API_PORT, threads=config.WAITRESS_THREADS
         )
-        global logger  # noqa F811
+        self.current_state_thread = None
+        self.server_ready_value = None
+        global logger  # noqa F811 # pylint: disable=global-statement
         logger = log.re_set_up("", api=True)
 
-    def run(self, server_ready_value, shared_backend_height):
+    def run(self, server_ready_value, shared_backend_height):  # pylint: disable=arguments-differ
         self.server_ready_value = server_ready_value
         CurrentState().set_backend_height_value(shared_backend_height)
         self.current_state_thread = NodeStatusCheckerThread(shared_backend_height)
         self.current_state_thread.start()
-        self.server.run()
+        try:
+            self.server.run()
+        except OSError as e:
+            if e.errno == 9:
+                logger.debug(
+                    "Ignoring OSError [Errno 9] Bad file descriptor during waitress server shutdown."
+                )
+            else:
+                raise
 
     def stop(self):
         self.current_state_thread.stop()
@@ -291,7 +325,7 @@ class WSGIApplication:
     def __init__(self, app, args=None):
         self.app = app
         self.args = args
-        logger.info(f"Starting WSGI Server: {config.WSGI_SERVER}")
+        logger.info("Starting WSGI Server: %s", config.WSGI_SERVER)
         if config.WSGI_SERVER == "gunicorn":
             self.server = GunicornApplication(self.app, self.args)
         elif config.WSGI_SERVER == "werkzeug":
@@ -299,7 +333,7 @@ class WSGIApplication:
         else:
             self.server = WaitressApplication(self.app, self.args)
 
-    def run(self, server_ready_value, shared_backend_height):
+    def run(self, server_ready_value, shared_backend_height):  # pylint: disable=arguments-differ
         logger.info("Starting WSGI Server thread...")
         self.server.run(server_ready_value, shared_backend_height)
 

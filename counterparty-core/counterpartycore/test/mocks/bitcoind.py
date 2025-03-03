@@ -1,11 +1,13 @@
 import binascii
+import ctypes
 import sys
 import time
 import traceback
+from multiprocessing import Value
 
 import pytest
 from bitcoinutils.keys import PublicKey
-from counterpartycore.lib import config, parser
+from counterpartycore.lib import backend, config, exceptions, parser
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, check, deserialize
@@ -53,7 +55,9 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
     def get_vin_info(self, vin):
         source = self.source_by_txid[vin["hash"]]
         value = int(10 * config.UNIT)
-        script_pub_key = composer.address_to_script_pub_key(source, network="regtest").to_hex()
+        script_pub_key = composer.address_to_script_pub_key(
+            source, network=config.NETWORK_NAME
+        ).to_hex()
         is_segwit = composer.is_segwit_output(script_pub_key)
         return value, script_pub_key, is_segwit
 
@@ -134,8 +138,18 @@ def list_unspent(source, allow_unconfirmed_inputs=True):
     return BlockchainMock().list_unspent(source, allow_unconfirmed_inputs)
 
 
+def get_vins_info(vins, no_retry=False):
+    try:
+        return [BlockchainMock().get_vin_info(vin) for vin in vins]
+    except KeyError as e:
+        raise exceptions.DecodeError("vin not found") from e
+
+
 def get_vin_info(vin, no_retry=False):
-    return BlockchainMock().get_vin_info(vin)
+    try:
+        return BlockchainMock().get_vin_info(vin)
+    except KeyError as e:
+        raise exceptions.DecodeError("vin not found") from e
 
 
 def get_utxo_address_and_value(utxo, no_retry=False):
@@ -157,6 +171,7 @@ def mine_block(db, transactions):
         "transactions": transactions,
     }
     blocks.parse_new_block(db, decoded_block)
+    CurrentState().state["BACKEND_HEIGHT_VALUE"].value = int(block_index * 10e8 + block_index)
 
 
 def mine_empty_blocks(db, blocks):
@@ -199,7 +214,8 @@ def monkeymodule():
 
 
 original_is_valid_der = parser.gettxinfo.is_valid_der
-original_current_backend_height = CurrentState.current_backend_height
+original_get_vin_info = backend.bitcoind.get_vin_info
+original_get_vins_info = backend.bitcoind.get_vins_info
 
 
 @pytest.fixture(scope="session")
@@ -209,16 +225,26 @@ def bitcoind_mock(monkeymodule):
     backend_module = "counterpartycore.lib.backend"
     monkeymodule.setattr(f"{bitcoind_module}.list_unspent", list_unspent)
     monkeymodule.setattr(f"{bitcoind_module}.satoshis_per_vbyte", satoshis_per_vbyte)
+    monkeymodule.setattr(f"{bitcoind_module}.get_vins_info", get_vins_info)
     monkeymodule.setattr(f"{bitcoind_module}.get_vin_info", get_vin_info)
     monkeymodule.setattr(f"{bitcoind_module}.convert_to_psbt", lambda x: x)
     monkeymodule.setattr(
         f"{bitcoind_module}.get_utxo_address_and_value", get_utxo_address_and_value
     )
+    monkeymodule.setattr(
+        f"{bitcoind_module}.getblockcount", lambda: CurrentState().current_block_index()
+    )
+    monkeymodule.setattr(
+        f"{bitcoind_module}.get_chain_tip", lambda: CurrentState().current_block_index()
+    )
+
     monkeymodule.setattr(f"{gettxinfo_module}.is_valid_der", is_valid_der)
     monkeymodule.setattr(f"{backend_module}.search_pubkey", search_pubkey)
     monkeymodule.setattr("counterpartycore.lib.messages.bet.date_passed", lambda x: False)
+    monkeymodule.setattr("counterpartycore.lib.api.apiserver.is_server_ready", lambda: True)
 
-    monkeymodule.setattr(CurrentState, "current_backend_height", lambda x: x.current_block_index())
+    shared_backend_height = Value(ctypes.c_ulong, 0)
+    CurrentState().set_backend_height_value(shared_backend_height)
 
     return sys.modules[__name__]
 

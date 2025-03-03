@@ -1,4 +1,4 @@
-from .base import TelemetryCollectorBase
+from counterpartycore.lib.monitors.telemetry.collectors.base import TelemetryCollectorBase
 
 
 class TelemetryCollectorInfluxDB(TelemetryCollectorBase):

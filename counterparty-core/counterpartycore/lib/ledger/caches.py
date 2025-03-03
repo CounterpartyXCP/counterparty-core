@@ -55,7 +55,7 @@ class AssetCache(metaclass=helpers.SingletonMeta):
         for count in all_counts:
             self.assets_total_destroyed[count["asset"]] = count["total"]
 
-        logger.debug(f"Asset cache initialised in {duration:.2f} seconds")
+        logger.debug("Asset cache initialised in %.2f seconds", duration)
 
     def add_issuance(self, issuance):
         if "rowid" in issuance:
@@ -185,7 +185,7 @@ class OrdersCache(metaclass=helpers.SingletonMeta):
             set_data.append("block_index = :block_index")
         bindings["block_index"] = CurrentState().current_block_index()
         set_data = ", ".join(set_data)
-        sql = f"""UPDATE orders SET {set_data} WHERE tx_hash = :tx_hash"""  # noqa S608
+        sql = f"""UPDATE orders SET {set_data} WHERE tx_hash = :tx_hash"""  # noqa S608 # nosec B608
         cursor = self.cache_db.cursor()
         cursor.execute(sql, bindings)
         self.clean_filled_orders()

@@ -11,7 +11,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "ASSET",
         1000,
         True,
@@ -29,7 +28,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["p2sh_addresses"][0],
-        None,
         "ASSET",
         1000,
         True,
@@ -47,7 +45,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][2],
-        None,
         "DIVIDEND",
         1000,
         False,
@@ -76,7 +73,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "BTC",
         1000,
         True,
@@ -105,7 +101,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "XCP",
         1000,
         True,
@@ -134,7 +129,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "NOSATOSHI",
         1000.5,
         True,
@@ -152,7 +146,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "CALLPRICEFLOAT",
         1000,
         True,
@@ -170,7 +163,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "CALLPRICEINT",
         1000,
         True,
@@ -188,7 +180,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "CALLPRICESTR",
         1000,
         True,
@@ -206,7 +197,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "CALLDATEINT",
         1000,
         True,
@@ -224,7 +214,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "CALLDATEFLOAT",
         1000,
         True,
@@ -251,7 +240,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "CALLDATESTR",
         1000,
         True,
@@ -278,7 +266,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "NEGVALUES",
         -1000,
         True,
@@ -307,7 +294,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][2],
-        None,
         "DIVISIBLE",
         1000,
         True,
@@ -336,7 +322,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "LOCKED",
         1000,
         True,
@@ -365,7 +350,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "BSSET",
         1000,
         True,
@@ -395,7 +379,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        defaults["addresses"][1],
         "BSSET",
         1000,
         True,
@@ -413,7 +396,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][2],
-        None,
         "BSSET",
         1000,
         True,
@@ -442,7 +424,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "BSSET",
         2**63,
         True,
@@ -472,7 +453,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        defaults["addresses"][1],
         "DIVISIBLE",
         1000,
         True,
@@ -490,7 +470,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "MAXIMUM",
         2**63 - 1,
         True,
@@ -519,7 +498,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "DIVISIBLE",
         2**63 - 1,
         True,
@@ -550,7 +528,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         assert issuance.validate(
             ledger_db,
             defaults["addresses"][0],
-            None,
             f"A{26**12 + 1}",
             1000,
             True,
@@ -581,7 +558,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         assert issuance.validate(
             ledger_db,
             defaults["addresses"][1],
-            None,
             f"A{26**12 + 1}",
             100000000,
             True,
@@ -612,7 +588,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         assert issuance.validate(
             ledger_db,
             defaults["addresses"][0],
-            None,
             f"A{26**12 + 1}",
             100000000,
             True,
@@ -644,7 +619,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         assert issuance.validate(
             ledger_db,
             defaults["addresses"][0],
-            None,
             f"A{26**12 + 1}",
             100000000,
             True,
@@ -678,7 +652,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         asset_name,
         200000000,
         True,
@@ -709,7 +682,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         assert issuance.validate(
             ledger_db,
             defaults["addresses"][0],
-            None,
             "UNRELATED",
             1000,
             True,
@@ -738,7 +710,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][0],
-        None,
         "UNRELATED",
         1000,
         True,
@@ -771,7 +742,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         assert issuance.validate(
             ledger_db,
             defaults["addresses"][6],
-            None,
             "LOCKEDPREV",
             1000,
             True,
@@ -791,7 +761,6 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
         defaults["addresses"][6],
-        None,
         "LOCKEDPREV",
         1000,
         True,

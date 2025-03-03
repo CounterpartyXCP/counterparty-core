@@ -7,7 +7,7 @@ composite number and a colossally abundant number, and has 1-10, 12 as factors.
 
 All wagers are in XCP.
 
-Expiring a bet match doesn’t re‐open the constituent bets. (So all bets may be ‘filled’.)
+Expiring a bet match doesn't re‐open the constituent bets. (So all bets may be 'filled.')
 """
 
 import decimal
@@ -39,7 +39,7 @@ def date_passed(date):
     return date <= int(time.time())
 
 
-def cancel_bet(db, bet, status, block_index, tx_index):
+def cancel_bet(db, bet, status, tx_index):
     # Update status of bet.
     set_data = {"status": status}
     ledger.other.update_bet(db, bet["tx_hash"], set_data)
@@ -61,7 +61,7 @@ def cancel_bet(db, bet, status, block_index, tx_index):
     )
 
 
-def cancel_bet_match(db, bet_match, status, block_index, tx_index):
+def cancel_bet_match(db, bet_match, status, tx_index):
     # Does not re‐open, re‐fill, etc. constituent bets.
     # Recredit tx0 address.
     ledger.events.credit(
@@ -105,15 +105,12 @@ def get_fee_fraction(db, feed_address):
         fee_fraction_int = last_broadcast["fee_fraction_int"]
         if fee_fraction_int:
             return fee_fraction_int / 1e8
-        else:
-            return 0
-    else:
         return 0
+    return 0
 
 
 def validate(
     db,
-    source,
     feed_address,
     bet_type,
     deadline,
@@ -131,7 +128,7 @@ def validate(
 
     # For SQLite3
     if (
-        wager_quantity > config.MAX_INT
+        wager_quantity > config.MAX_INT  # pylint: disable=too-many-boolean-expressions
         or counterwager_quantity > config.MAX_INT
         or bet_type > config.MAX_INT
         or deadline > config.MAX_INT
@@ -143,11 +140,11 @@ def validate(
     # Look at feed to be bet on.
     broadcasts = ledger.other.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
     if not broadcasts:
-        problems.append("feed doesn’t exist")
+        problems.append("feed doesn't exist")
     elif not broadcasts[-1]["text"]:
         problems.append("feed is locked")
     elif broadcasts[-1]["timestamp"] >= deadline:
-        problems.append("deadline in that feed’s past")
+        problems.append("deadline in that feed's past")
 
     if bet_type not in (0, 1, 2, 3):
         problems.append("unknown bet type")
@@ -218,7 +215,6 @@ def compose(
 
     problems, leverage = validate(
         db,
-        source,
         feed_address,
         bet_type,
         deadline,
@@ -333,7 +329,6 @@ def parse(db, tx, message):
 
         problems, leverage = validate(
             db,
-            tx["source"],
             feed_address,
             bet_type,
             deadline,
@@ -396,10 +391,11 @@ def match(db, tx):
     bets = ledger.other.get_bet(db, bet_hash=tx["tx_hash"])
     if not bets:
         return
-    else:
-        assert len(bets) == 1
-        if bets[0]["status"] != "open":
-            return
+
+    assert len(bets) == 1
+    if bets[0]["status"] != "open":
+        return
+
     tx1 = bets[0]
 
     # Get counterbet_type.
@@ -427,7 +423,7 @@ def match(db, tx):
         if tx1_status != "open":
             break
 
-        logger.debug("Considering: " + tx0["tx_hash"])
+        logger.debug("Considering: %s", tx0["tx_hash"])
         tx0_wager_remaining = tx0["wager_remaining"]
         tx0_counterwager_remaining = tx0["counterwager_remaining"]
 
@@ -467,19 +463,26 @@ def match(db, tx):
         if tx["block_index"] < 286000:
             tx0_inverse_odds = ledger.issuances.price(1, tx0_odds)  # Protocol change.
 
-        logger.debug(f"Tx0 Inverse Odds: {float(tx0_inverse_odds)}; Tx1 Odds: {float(tx1_odds)}")
+        logger.debug(
+            "Tx0 Inverse Odds: %(inverse_odds)s; Tx1 Odds: %(tx1_odds)s",
+            {"inverse_odds": float(tx0_inverse_odds), "tx1_odds": float(tx1_odds)},
+        )
         if tx0_inverse_odds > tx1_odds:
             logger.debug("Skipping: price mismatch.")
         else:
             logger.debug(
-                f"Potential forward quantities: {tx0_wager_remaining}, {int(ledger.issuances.price(tx1_wager_remaining, tx1_odds))}"
+                "Potential forward quantities: %(wager)s, %(price)s",
+                {
+                    "wager": tx0_wager_remaining,
+                    "price": int(ledger.issuances.price(tx1_wager_remaining, tx1_odds)),
+                },
             )
             forward_quantity = int(
                 min(tx0_wager_remaining, int(ledger.issuances.price(tx1_wager_remaining, tx1_odds)))
             )
-            logger.debug(f"Forward Quantity: {forward_quantity}")
+            logger.debug("Forward Quantity: %(quantity)s", {"quantity": forward_quantity})
             backward_quantity = round(forward_quantity / tx0_odds)
-            logger.debug(f"Backward Quantity: {backward_quantity}")
+            logger.debug("Backward Quantity: %(quantity)s", {"quantity": backward_quantity})
 
             if not forward_quantity:
                 logger.debug("Skipping: zero forward quantity.")
@@ -488,8 +491,6 @@ def match(db, tx):
                 if not backward_quantity:
                     logger.debug("Skipping: zero backward quantity.")
                     continue
-
-            bet_match_id = helpers.make_id(tx0["tx_hash"], tx1["tx_hash"])  # noqa: F841
 
             # Debit the order.
             # Counterwager remainings may be negative.
@@ -588,7 +589,7 @@ def match(db, tx):
             }
             ledger.events.insert_record(db, "bet_matches", bindings, "BET_MATCH")
             logger.info(
-                "Bet match %(tx0_index)s for %(forward_quantity)s XCP against %(backward_quantity)s XCP on %(feed_address)s",
+                "Bet Match: tx0_index=%(tx0_index)s, forward=%(forward_quantity)s XCP, backward=%(backward_quantity)s XCP, feed=%(feed_address)s",
                 bindings,
             )
 
@@ -601,7 +602,7 @@ def expire(db, block_index, block_time):
     # Expire bets and give refunds for the quantity wager_remaining.
     for bet in ledger.other.get_bets_to_expire(db, block_index):
         # use tx_index=0 for block actions
-        cancel_bet(db, bet, "expired", block_index, 0)
+        cancel_bet(db, bet, "expired", 0)
 
         # Record bet expiration.
         bindings = {
@@ -611,12 +612,12 @@ def expire(db, block_index, block_time):
             "block_index": block_index,
         }
         ledger.events.insert_record(db, "bet_expirations", bindings, "BET_EXPIRATION")
-        logger.info("Bet Expiration %(bet_hash)s", bindings)
+        logger.info("Bet expired: %(bet_hash)s", bindings)
 
     # Expire bet matches whose deadline is more than two weeks before the current block time.
     for bet_match in ledger.other.get_bet_matches_to_expire(db, block_time):
         # use tx_index=0 for block actions
-        cancel_bet_match(db, bet_match, "expired", block_index, 0)
+        cancel_bet_match(db, bet_match, "expired", 0)
 
         # Record bet match expiration.
         bindings = {
