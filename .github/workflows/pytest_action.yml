@@ -58,6 +58,7 @@ jobs:
           sudo cp bitcoin-28.0/bin/bitcoind /usr/local/bin/bitcoind
           sudo cp bitcoin-28.0/bin/bitcoin-wallet /usr/local/bin/bitcoin-wallet
           npm install dredd --global
+          rustup toolchain install 1.83-x86_64-unknown-linux-gnu
           git clone https://github.com/mempool/electrs && cd electrs
           cargo install --path=.
 
