@@ -44,6 +44,7 @@ counterparty-server start
 - Fix ungraceful Waitress shutdown
 - Handle RSFetcher version mismatch error correctly
 - Handle Counterparty Server version checking errors correctly
+- Fixed handling of `TypeError` in API calls
 
 ## Codebase
 
