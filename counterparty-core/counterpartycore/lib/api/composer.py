@@ -67,7 +67,8 @@ def is_address_script(address, script_pub_key):
         ]
         script_address = f"{asm[0]}_{'_'.join(addresses)}_{asm[-2]}"
     else:
-        script_address = script.script_to_address2(script_pub_key)
+        script_address = script.script_to_address(script_pub_key)
+    print(address, script_address)
     return address == script_address
 
 

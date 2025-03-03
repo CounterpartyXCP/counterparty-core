@@ -253,7 +253,7 @@ def get_transaction_sources(decoded_tx):
         elif asm[0] == opcodes.OP_HASH160 and asm[-1] == opcodes.OP_EQUAL and len(asm) == 3:  # noqa: F405
             new_source, new_data = decode_scripthash(asm)
             assert not new_data and new_source
-        elif protocol.enabled("segwit_support") and asm[0] == b"":
+        elif protocol.enabled("segwit_support") and asm[0] in [b"", b"\x01"]:
             # Segwit output
             new_source = script.script_to_address(script_pubkey)
             new_data = None

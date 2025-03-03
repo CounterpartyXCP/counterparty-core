@@ -2047,3 +2047,53 @@ def test_compose_attach(ledger_db, defaults):
                 "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:546:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
             },
         )
+
+
+def test_compose_taproot(ledger_db, defaults):
+    script_pubkey = composer.address_to_script_pub_key(defaults["p2tr_addresses"][0])
+    script_pubkey = script_pubkey.to_hex()
+
+    params = {
+        "source": defaults["p2tr_addresses"][0],
+        "asset": "XCP",
+        "quantity": 10,
+        "destination": defaults["addresses"][1],
+    }
+    construct_params = {
+        "verbose": True,
+        "inputs_set": f"ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:1052:{script_pubkey}",
+        "disable_utxo_locks": True,
+        "validate": False,
+    }
+
+    result = composer.compose_transaction(
+        ledger_db,
+        "send",
+        params,
+        construct_params,
+    )
+
+    assert result == {
+        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000306a2e3d5b4af14ef23843673dd7ada4dc727a020865759e9fba5ae415be70194634d5bc65170687d48129041cf454dc3cca020000000000002251208790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad4426415600000000",
+        "btc_in": 1052,
+        "btc_out": 0,
+        "btc_change": 714,
+        "btc_fee": 338,
+        "data": b"CNTRPRTY\x02\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\no\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec",
+        "lock_scripts": ["51208790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad44264156"],
+        "inputs_values": [1052],
+        "signed_tx_estimated_size": {"vsize": 169, "adjusted_vsize": 169, "sigops_count": 0},
+        "psbt": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000306a2e3d5b4af14ef23843673dd7ada4dc727a020865759e9fba5ae415be70194634d5bc65170687d48129041cf454dc3cca020000000000002251208790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad4426415600000000",
+        "params": {
+            "source": "bcrt1ps7gfq0h0hwu2cql9azz0wcf8rphr6xxeeyenrugd6yf263pxg9tqzsj5ec",
+            "asset": "XCP",
+            "quantity": 10,
+            "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+            "memo": None,
+            "memo_is_hex": False,
+            "use_enhanced_send": None,
+            "skip_validation": True,
+            "no_dispense": False,
+        },
+        "name": "send",
+    }
