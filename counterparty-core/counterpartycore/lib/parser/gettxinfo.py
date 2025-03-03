@@ -253,7 +253,9 @@ def get_transaction_sources(decoded_tx):
         elif asm[0] == opcodes.OP_HASH160 and asm[-1] == opcodes.OP_EQUAL and len(asm) == 3:  # noqa: F405
             new_source, new_data = decode_scripthash(asm)
             assert not new_data and new_source
-        elif protocol.enabled("segwit_support") and asm[0] in [b"", b"\x01"]:
+        elif (protocol.enabled("segwit_support") and asm[0] == b"") or (
+            protocol.enabled("taproot_support") and asm[0] == b"\x01"
+        ):
             # Segwit output
             new_source = script.script_to_address(script_pubkey)
             new_data = None
@@ -352,7 +354,6 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-
     # Ignore coinbase transactions.
     if decoded_tx["coinbase"]:
         raise DecodeError("coinbase transaction")
