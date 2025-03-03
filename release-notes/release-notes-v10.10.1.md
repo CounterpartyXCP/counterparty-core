@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v10.10.1 (2025-03-03)
 
-This release includes two major improvements to the Counterparty Core codebase: (1) faster and more reliable node shutdown, (2) ~40% faster initial node catchup. It also includes a number of usability improvements to the API and CLI, as well as bugfixes.
+This release includes two major improvements to the Counterparty Core codebase: (1) faster and more reliable node shutdown, (2) ~50% faster initial node catchup. It also includes a number of usability improvements to the API and CLI, as well as bugfixes.
 
 # Upgrading
 
