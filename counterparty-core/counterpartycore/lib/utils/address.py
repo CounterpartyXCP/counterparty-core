@@ -1,3 +1,5 @@
+import logging
+
 import bitcoin
 from bitcoin.bech32 import CBech32Data
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2trAddress, P2wpkhAddress
@@ -6,6 +8,8 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.parser.protocol import enabled
 from counterpartycore.lib.utils import base58, helpers, multisig
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def is_pubkeyhash(monosig_address):
@@ -77,9 +81,10 @@ def pack(address):
     if enabled("taproot_support"):
         try:
             packed = bytes(utils.pack_address(address, config.NETWORK_NAME))
-            print("packed", packed)
+            logger.warning(f"{address} packed: {packed}")
             return packed
         except Exception as e:  # pylint: disable=broad-except  # noqa: F841
+            logger.error(f"Error packing address: {e}")
             raise exceptions.AddressError(  # noqa: B904
                 f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
             ) from e
@@ -118,8 +123,12 @@ def unpack(short_address_bytes):
     """
     if enabled("taproot_support"):
         try:
-            return utils.unpack_address(short_address_bytes, config.NETWORK_NAME)
+            logger.warning(f"short_address_bytes: {short_address_bytes}")
+            unpacked = utils.unpack_address(short_address_bytes, config.NETWORK_NAME)
+            logger.warning(f"unpacked: {unpacked}")
+            return unpacked
         except Exception as e:  # pylint: disable=broad-except  # noqa: F841
+            logger.error(f"Error unpacking address: {e}")
             raise exceptions.DecodeError(  # noqa: B904
                 f"T{short_address_bytes} is not a valid packed bitcoin address ({config.NETWORK_NAME})"
             ) from e
