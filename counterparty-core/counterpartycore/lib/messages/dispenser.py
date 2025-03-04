@@ -18,8 +18,9 @@ from counterpartycore.lib import (
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
-from counterpartycore.lib.utils.address import pack as address_pack
-from counterpartycore.lib.utils.address import unpack as address_unpack
+from counterpartycore.lib.utils.address import pack as address_pack_new
+from counterpartycore.lib.utils.address import pack_legacy as address_pack
+from counterpartycore.lib.utils.address import unpack_legacy as address_unpack
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -246,6 +247,9 @@ def compose(
     oracle_address: str = None,
     skip_validation: bool = False,
 ):
+    if address_pack(oracle_address) != address_pack_new(oracle_address):
+        raise exceptions.ComposeError("Oracle address not supported by dispenser")
+
     asset_id, problems = validate(
         db,
         source,
