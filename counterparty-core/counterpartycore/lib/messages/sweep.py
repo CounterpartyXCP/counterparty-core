@@ -88,7 +88,7 @@ def compose(
         data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
         data += helpers.encode_data(
             short_address_bytes,
-            helpers.int_to_bytes(flags),
+            flags,
             memo_bytes,
         )
         logger.warning(f"data_content: {data}")
@@ -102,18 +102,9 @@ def compose(
 
 def new_unpack(message):
     try:
-        data_content = struct.unpack(f">{len(message)}s", message)[0].split(b"|")
-        logger.warning(f"data_content unpack: {data_content}")
-        arg_count = len(data_content)
-        (
-            short_address_bytes,
-            flags_bytes,
-        ) = data_content[0 : arg_count - 1]
-        # The memo is placed last to be able to contain `|`.
-        memo_bytes = b"|".join(data_content[arg_count - 1 :])
+        (short_address_bytes, flags_bytes, memo_bytes) = helpers.decode_data(message)
 
         flags = helpers.bytes_to_int(flags_bytes)
-
         full_address = address.unpack(short_address_bytes)
 
         return {
