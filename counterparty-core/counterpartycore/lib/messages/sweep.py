@@ -75,7 +75,7 @@ def compose(
         memo_bytes = bytes.fromhex(memo)
     else:
         memo_bytes = memo.encode("utf-8")
-        memo_bytes = struct.pack(f">{len(memo)}s", memo)
+        memo_bytes = struct.pack(f">{len(memo_bytes)}s", memo_bytes)
 
     block_index = CurrentState().current_block_index()
     problems, _total_fee = validate(db, source, destination, flags, memo_bytes, block_index)
@@ -98,7 +98,7 @@ def compose(
     else:
         data = messagetype.pack(ID)
         data += struct.pack(FORMAT, short_address_bytes, flags)
-        data += memo
+        data += memo_bytes
 
     return (source, [], data)
 

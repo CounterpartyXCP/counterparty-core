@@ -173,6 +173,7 @@ def compose(
         memo_bytes = bytes.fromhex(memo)
     else:
         memo_bytes = memo.encode("utf-8")
+        memo_bytes = struct.pack(f">{len(memo_bytes)}s", memo_bytes)
 
     problems = validate(db, destination, asset, quantity, memo_bytes)
     if problems and not skip_validation:
@@ -195,13 +196,13 @@ def compose(
                 memo_bytes,
             ]
         )
-        logger.warning(f"data_content: {data_content}")
         data += struct.pack(f">{len(data_content)}s", data_content)
+        logger.warning(f"data1: {data}")
     else:
-        memo_bytes = struct.pack(f">{len(memo)}s", memo)
         data = messagetype.pack(ID)
         data += struct.pack(FORMAT, asset_id, quantity, short_address_bytes)
         data += memo_bytes
+        logger.warning(f"data2: {data}")
 
     cursor.close()
     # return an empty array as the second argument because we don't need to send BTC dust to the recipient

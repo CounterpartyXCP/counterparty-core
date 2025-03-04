@@ -100,6 +100,7 @@ def pack(address):
             try:
                 validate(address)  # This will check if the address is valid
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
+                print("short_address_bytes", short_address_bytes)
                 return short_address_bytes
             except Exception as e:  # pylint: disable=broad-except  # noqa: F841
                 raise exceptions.AddressError(  # noqa: B904
