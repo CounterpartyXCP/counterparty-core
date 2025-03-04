@@ -363,3 +363,11 @@ def test_get_transactions(apiv2_client, monkeypatch):
     assert "unpacked_data" in result[0]
     assert "error" in result[0]["unpacked_data"]
     assert result[0]["unpacked_data"]["error"] == "Could not unpack data"
+
+
+def test_get_all_transactions_verbose(apiv2_client):
+    url = "/v2/transactions?verbose=true&show_unconfirmed=true"
+    result = apiv2_client.get(url).json["result"]
+    for tx in result:
+        assert "unpacked_data" in tx
+        assert "message_data" in tx["unpacked_data"]
