@@ -74,18 +74,7 @@ def validate(address, allow_p2sh=True):
                 raise e
 
 
-def pack(address):
-    """
-    Converts a base58 bitcoin address into a 21 byte bytes object
-    """
-    if enabled("taproot_support"):
-        try:
-            return bytes(utils.pack_address(address, config.NETWORK_NAME))
-        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
-            raise exceptions.AddressError(  # noqa: B904
-                f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
-            ) from e
-
+def pack_legacy(address):
     if enabled("segwit_support"):
         try:
             bech32 = bitcoin.bech32.CBech32Data(address)
@@ -114,19 +103,22 @@ def pack(address):
         raise e
 
 
-# retuns both the message type id and the remainder of the message data
-def unpack(short_address_bytes):
+def pack(address):
     """
-    Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
+    Converts a base58 bitcoin address into a 21 byte bytes object
     """
     if enabled("taproot_support"):
         try:
-            return utils.unpack_address(short_address_bytes, config.NETWORK_NAME)
+            return bytes(utils.pack_address(address, config.NETWORK_NAME))
         except Exception as e:  # pylint: disable=broad-except  # noqa: F841
-            raise exceptions.DecodeError(  # noqa: B904
-                f"T{short_address_bytes} is not a valid packed bitcoin address ({config.NETWORK_NAME})"
+            raise exceptions.AddressError(  # noqa: B904
+                f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
             ) from e
 
+    return pack_legacy(address)
+
+
+def unpack_legacy(short_address_bytes):
     if short_address_bytes == b"":
         raise exceptions.UnpackError
 
@@ -142,6 +134,22 @@ def unpack(short_address_bytes):
 
     check = bitcoin.core.Hash(short_address_bytes)[0:4]
     return bitcoin.base58.encode(short_address_bytes + check)
+
+
+# retuns both the message type id and the remainder of the message data
+def unpack(short_address_bytes):
+    """
+    Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
+    """
+    if enabled("taproot_support"):
+        try:
+            return utils.unpack_address(short_address_bytes, config.NETWORK_NAME)
+        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
+            raise exceptions.DecodeError(  # noqa: B904
+                f"T{short_address_bytes} is not a valid packed bitcoin address ({config.NETWORK_NAME})"
+            ) from e
+
+    return unpack_legacy(short_address_bytes)
 
 
 def is_valid_address(address, network=None):
