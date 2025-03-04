@@ -33,6 +33,7 @@ counterparty-server start
 
 - Fix verbose mode when unpack fails
 - Handle correctly `DatabaseError` on API calls
+- Fix verbose mode in get transactions endpoints
 
 ## Codebase
 
