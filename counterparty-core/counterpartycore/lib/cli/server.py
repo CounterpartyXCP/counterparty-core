@@ -253,8 +253,10 @@ def rebuild(args):
 
 
 def reparse(block_index):
+    database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
     ledger_db = database.initialise_db()
     CurrentState().set_current_block_index(ledger.blocks.last_db_index(ledger_db))
+    blocks.check_database_version(ledger_db)
 
     last_block = ledger.blocks.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:
@@ -274,8 +276,10 @@ def reparse(block_index):
 
 
 def rollback(block_index=None):
+    database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
     ledger_db = database.initialise_db()
     CurrentState().set_current_block_index(ledger.blocks.last_db_index(ledger_db))
+    blocks.check_database_version(ledger_db)
 
     last_block = ledger.blocks.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:
