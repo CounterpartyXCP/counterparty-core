@@ -356,6 +356,7 @@ def handle_route(**kwargs):
             CBitcoinAddressError,
             exceptions.AddressError,
             exceptions.ElectrsError,
+            exceptions.DatabaseError,
             OverflowError,
             TypeError,
         ) as e:
@@ -411,6 +412,8 @@ def handle_route(**kwargs):
             query_args=query_args,
         )
     except Exception as e:  # pylint: disable=broad-except
+        # import traceback
+        # print(traceback.format_exc())
         capture_exception(e)
         logger.error("Error in API: %s", e)
         return return_result(500, error="Internal server error")
