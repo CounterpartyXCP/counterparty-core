@@ -18,16 +18,9 @@ ID = 2  # 0x02
 
 def new_unpack(message):
     try:
-        data_content = struct.unpack(f">{len(message)}s", message)[0].split(b"|")
-        logger.warning(f"data_content unpack: {data_content}")
-        arg_count = len(data_content)
-        (
-            asset_id_bytes,
-            quantity_bytes,
-            short_address_bytes,
-        ) = data_content[0 : arg_count - 1]
-        # The memo is placed last to be able to contain `|`.
-        memo_bytes = b"|".join(data_content[arg_count - 1 :])
+        (asset_id_bytes, quantity_bytes, short_address_bytes, memo_bytes) = helpers.decode_data(
+            message
+        )
 
         asset_id = helpers.bytes_to_int(asset_id_bytes)
         asset = ledger.issuances.generate_asset_name(asset_id)
@@ -188,15 +181,12 @@ def compose(
 
     if protocol.enabled("taproot_support"):
         data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
-        data_content = b"|".join(
-            [
-                helpers.int_to_bytes(asset_id),
-                helpers.int_to_bytes(quantity),
-                short_address_bytes,
-                memo_bytes,
-            ]
+        data += helpers.encode_data(
+            asset_id,
+            quantity,
+            short_address_bytes,
+            memo_bytes,
         )
-        data += struct.pack(f">{len(data_content)}s", data_content)
         logger.warning(f"data1: {data}")
     else:
         data = messagetype.pack(ID)

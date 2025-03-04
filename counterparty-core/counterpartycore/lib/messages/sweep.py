@@ -86,15 +86,12 @@ def compose(
 
     if protocol.enabled("taproot_support"):
         data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
-        data_content = b"|".join(
-            [
-                short_address_bytes,
-                helpers.int_to_bytes(flags),
-                memo_bytes,
-            ]
+        data += helpers.encode_data(
+            short_address_bytes,
+            helpers.int_to_bytes(flags),
+            memo_bytes,
         )
-        logger.warning(f"data_content: {data_content}")
-        data += struct.pack(f">{len(data_content)}s", data_content)
+        logger.warning(f"data_content: {data}")
     else:
         data = messagetype.pack(ID)
         data += struct.pack(FORMAT, short_address_bytes, flags)
