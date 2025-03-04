@@ -345,3 +345,21 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
         }
     }
+
+
+def test_get_transactions(apiv2_client, monkeypatch):
+    url = "/v2/transactions?limit=1&verbose=true"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert "unpacked_data" in result[0]
+    assert "message_data" in result[0]["unpacked_data"]
+
+    def unpack_mock(*args):
+        raise Exception("Unpack error")
+
+    monkeypatch.setattr("counterpartycore.lib.api.compose.unpack", unpack_mock)
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert "unpacked_data" in result[0]
+    assert "error" in result[0]["unpacked_data"]
+    assert result[0]["unpacked_data"]["error"] == "Could not unpack data"
