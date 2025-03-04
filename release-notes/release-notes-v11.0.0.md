@@ -43,6 +43,7 @@ counterparty-server start
 
 ## CLI
 
+- Adds support for the `SLACK_HOOK` environment variable containing a webhook URL called after a rebuild
 
 # Credits
 
