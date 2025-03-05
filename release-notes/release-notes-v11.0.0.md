@@ -33,12 +33,12 @@ counterparty-server start
 
 - Fix verbose mode when unpack fails
 - Handle correctly `DatabaseError` on API calls
+- Fix verbose mode in get transactions endpoints
 - Fix `script_to_address` function, handle correctly taproot addresses
 - Prevent taproot address for MPMA sends and dispenser Oracle
 - Fix Testnet4 bootsrap with custom url
 - Fix Composer for taproot address
 - Fix `address.pack` and `address.unpack` functions, handle correctly taproot addresses
-
 
 ## Codebase
 
@@ -50,6 +50,7 @@ counterparty-server start
 
 ## CLI
 
+- Adds support for the `SLACK_HOOK` environment variable containing a webhook URL called after a rebuild
 
 # Credits
 
