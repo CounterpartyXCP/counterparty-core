@@ -129,6 +129,36 @@ def test_compose_2(ledger_db, defaults):
         b"\x04\x15\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x01\x01\x00",
     )
 
+    assert sweep.compose(
+        ledger_db, defaults["addresses"][6], defaults["addresses"][5], 7, "cafebabe"
+    ) == (
+        "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+        [],
+        b"\x04\x15\x01\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01\x07\x04\xca\xfe\xba\xbe",
+    )
+
+    assert sweep.compose(
+        ledger_db, defaults["addresses"][6], defaults["addresses"][5], 3, "test"
+    ) == (
+        "mwtPsLQxW9xpm7gdLmwWvJK5ABdPUVJm42",
+        [],
+        b"\x04\x15\x01\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01\x03\x04test",
+    )
+
+
+def test_new_unpack(defaults):
+    assert sweep.unpack(
+        b"\x15\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x01\x01\x00"
+    ) == {"destination": defaults["addresses"][1], "flags": 1, "memo": None}
+
+    assert sweep.unpack(
+        b"\x15\x01\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01\x07\x04\xca\xfe\xba\xbe"
+    ) == {"destination": defaults["addresses"][5], "flags": 7, "memo": b"\xca\xfe\xba\xbe"}
+
+    assert sweep.unpack(
+        b"\x15\x01\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01\x03\x04test"
+    ) == {"destination": defaults["addresses"][5], "flags": 3, "memo": "test"}
+
 
 def test_unpack(defaults):
     with ProtocolChangesDisabled("taproot_support"):
