@@ -88,7 +88,6 @@ def compose(
     skip_validation: bool = False,
     no_dispense: bool = False,
 ):
-    logger.warning("compose_send1")
     cursor = db.cursor()
 
     # Just send BTC?

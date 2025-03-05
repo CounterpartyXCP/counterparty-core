@@ -195,9 +195,8 @@ class CounterpartyServer(threading.Thread):
         try:
             self.run_server()
         except Exception as e:  # pylint: disable=broad-except
-            import traceback
-
-            print(traceback.format_exc())
+            # import traceback
+            # print(traceback.format_exc())
             logger.error("Error in server thread: %s", e, stack_info=True)
             _thread.interrupt_main()
 
