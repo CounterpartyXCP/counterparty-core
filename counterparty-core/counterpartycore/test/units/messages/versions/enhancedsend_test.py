@@ -90,3 +90,10 @@ def test_unpack(ledger_db, defaults):
         enhancedsend.unpack(
             b'\x01\x00\x02\xe8\x03"\x03\x01qe0u\xb3n\xe3\xd25\x1bU\x81\xd9\xb9\x90W!\xcb\xfe`\xb7\x1c\xe2%\x01\xe1\xb4N\xd0:\x96\x84\x03\xab\xcd\xef'
         )
+
+    with ProtocolChangesDisabled(["taproot_support"]):
+        with pytest.raises(exceptions.UnpackError, match="could not unpack"):
+            result = enhancedsend.unpack(
+                "x02\xe1\xb4N\xd0:\x96x02\xe1\xb4N\xd0:\x96x02\xe1\xb4N\xd0:\x96x02\xe1\xb4N\xd0:\x96a"
+            )
+            print(result)
