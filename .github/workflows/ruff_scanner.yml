@@ -16,7 +16,7 @@ jobs:
       - uses: chartboost/ruff-action@v1
         with:
           args: "format --check"
-          version: 0.9.7
+          version: 0.9.9
       - uses: chartboost/ruff-action@v1
         with:
-          version: 0.9.7
+          version: 0.9.9
