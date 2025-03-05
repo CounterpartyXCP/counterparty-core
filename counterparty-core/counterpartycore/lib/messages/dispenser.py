@@ -246,7 +246,7 @@ def compose(
     oracle_address: str = None,
     skip_validation: bool = False,
 ):
-    if oracle_address is not None and len(oracle_address) > 42:
+    if oracle_address is not None and len(address_pack(oracle_address)) > 21:
         raise exceptions.ComposeError("Oracle address not supported by dispenser")
 
     asset_id, problems = validate(
