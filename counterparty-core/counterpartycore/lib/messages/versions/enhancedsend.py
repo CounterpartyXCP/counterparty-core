@@ -18,9 +18,9 @@ ID = 2  # 0x02
 
 def new_unpack(message):
     try:
-        (asset_id_bytes, quantity_bytes, short_address_bytes, memo_bytes) = helpers.decode_data(
+        (asset_id_bytes, quantity_bytes, short_address_bytes, memo_bytes) = helpers.decode_data(  # pylint: disable=unbalanced-tuple-unpacking
             message
-        )  # pylint: disable=unbalanced-tuple-unpacking
+        )
 
         asset_id = helpers.bytes_to_int(asset_id_bytes)
         asset = ledger.issuances.generate_asset_name(asset_id)
