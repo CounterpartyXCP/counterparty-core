@@ -34,9 +34,10 @@ def mock_deserialize():
 @pytest.fixture
 def mock_blocks():
     """Fixture pour mocker blocks.list_tx et blocks.parse_block"""
-    with mock.patch("counterpartycore.lib.parser.blocks.list_tx") as mock_list_tx, mock.patch(
-        "counterpartycore.lib.parser.blocks.parse_block"
-    ) as mock_parse_block:
+    with (
+        mock.patch("counterpartycore.lib.parser.blocks.list_tx") as mock_list_tx,
+        mock.patch("counterpartycore.lib.parser.blocks.parse_block") as mock_parse_block,
+    ):
         yield mock_list_tx, mock_parse_block
 
 
