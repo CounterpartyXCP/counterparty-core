@@ -17,7 +17,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import address, helpers
 from counterpartycore.lib.utils.address import pack_legacy as address_pack
 from counterpartycore.lib.utils.address import unpack_legacy as address_unpack
 
@@ -246,7 +246,7 @@ def compose(
     oracle_address: str = None,
     skip_validation: bool = False,
 ):
-    if oracle_address is not None and len(address_pack(oracle_address)) > 22:
+    if oracle_address is not None and len(address.pack(oracle_address)) > 22:
         raise exceptions.ComposeError("Oracle address not supported by dispenser")
 
     asset_id, problems = validate(

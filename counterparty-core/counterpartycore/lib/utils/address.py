@@ -89,7 +89,6 @@ def pack_legacy(address):
             try:
                 validate(address)  # This will check if the address is valid
                 short_address_bytes = bitcoin.base58.decode(address)[:-4]
-                print("short_address_bytes", short_address_bytes)
                 return short_address_bytes
             except Exception as e:  # pylint: disable=broad-except  # noqa: F841
                 raise exceptions.AddressError(  # noqa: B904
@@ -146,7 +145,7 @@ def unpack(short_address_bytes):
             return utils.unpack_address(short_address_bytes, config.NETWORK_NAME)
         except Exception as e:  # pylint: disable=broad-except  # noqa: F841
             raise exceptions.DecodeError(  # noqa: B904
-                f"T{short_address_bytes} is not a valid packed bitcoin address ({config.NETWORK_NAME})"
+                f"{short_address_bytes} is not a valid packed bitcoin address ({config.NETWORK_NAME})"
             ) from e
 
     return unpack_legacy(short_address_bytes)

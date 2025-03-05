@@ -39,7 +39,7 @@ def new_unpack(message):
         }
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error(f"enhanced send unpack error: {e}")
-        raise exceptions.UnpackError("could not unpack") from e
+        raise exceptions.UnpackError(f"could not unpack: {e}") from e
 
 
 def unpack(message):
@@ -69,7 +69,7 @@ def unpack(message):
 
     except struct.error as e:
         logger.trace(f"enhanced send unpack error: {e}")
-        raise exceptions.UnpackError("could not unpack")  # noqa: B904
+        raise exceptions.UnpackError(f"could not unpack: {e}")  # noqa: B904
 
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
         logger.trace(f"enhanced send invalid asset id: {e}")
