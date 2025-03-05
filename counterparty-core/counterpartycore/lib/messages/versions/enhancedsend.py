@@ -20,7 +20,7 @@ def new_unpack(message):
     try:
         (asset_id_bytes, quantity_bytes, short_address_bytes, memo_bytes) = helpers.decode_data(
             message
-        )
+        )  # pylint: disable=unbalanced-tuple-unpacking
 
         asset_id = helpers.bytes_to_int(asset_id_bytes)
         asset = ledger.issuances.generate_asset_name(asset_id)
@@ -38,7 +38,7 @@ def new_unpack(message):
             "memo": None if memo_bytes == b"" else memo_bytes,
         }
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error(f"enhanced send unpack error: {e}")
+        logger.error("enhanced send unpack error: %s", e)
         raise exceptions.UnpackError(f"could not unpack: {e}") from e
 
 

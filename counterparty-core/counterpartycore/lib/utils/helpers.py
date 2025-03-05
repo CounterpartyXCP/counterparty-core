@@ -154,18 +154,15 @@ def bytes_to_int(bytes_in: bytes) -> int:
 
 
 def varint(number):
-    def _byte(b):
-        return bytes((b,))
-
     """Pack `number` into varint bytes"""
     buf = b""
     while True:
         towrite = number & 0x7F
         number >>= 7
         if number:
-            buf += _byte(towrite | 0x80)
+            buf += bytes((towrite | 0x80,))
         else:
-            buf += _byte(towrite)
+            buf += bytes((towrite,))
             break
     return buf
 
@@ -173,6 +170,7 @@ def varint(number):
 def encode_data(*args):
     data = b""
     for arg in args:
+        value = b""
         if isinstance(arg, str):
             if all(c in string.hexdigits for c in arg):
                 try:
@@ -197,7 +195,7 @@ def decode_varint(data, offset=0):
         byte = data[offset]
         result |= (byte & 0x7F) << shift
         offset += 1
-        if not (byte & 0x80):
+        if not byte & 0x80:
             break
         shift += 7
     return result, offset
