@@ -303,7 +303,8 @@ pub fn pack(address: &Address<NetworkChecked>) -> Option<Vec<u8>> {
             Some(packed)
         },
         (_, _, Some(witness_program)) => {
-            let mut packed = Vec::with_capacity(22);
+            let program_bytes = witness_program.program().as_bytes();
+            let mut packed = Vec::with_capacity(2 + program_bytes.len());
             packed.push(0x03);  // Witness prefix
             packed.push(witness_program.version() as u8);
             // Convert PushBytes to &[u8]
