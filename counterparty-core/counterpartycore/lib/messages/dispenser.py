@@ -40,8 +40,8 @@ with open(os.path.join(CURR_DIR, "data", "get_oldest_tx.json"), encoding="utf-8"
     GET_OLDEST_TX_DATA = json.load(f)
 
 
-def get_oldest_tx(address: str, block_index: int):
-    key = f"{address}-{block_index}"
+def get_oldest_tx(source_address: str, block_index: int):
+    key = f"{source_address}-{block_index}"
     if key in GET_OLDEST_TX_DATA:
         return GET_OLDEST_TX_DATA[key]
     return {}
@@ -707,14 +707,14 @@ class DispensableCache(metaclass=helpers.SingletonMeta):
         self.dispensable[source] = True
 
 
-def is_dispensable(db, address, amount):
-    if address is None:
+def is_dispensable(db, destination_address, amount):
+    if destination_address is None:
         return False
 
-    if not DispensableCache(db).could_be_dispensable(address):
+    if not DispensableCache(db).could_be_dispensable(destination_address):
         return False
 
-    dispensers = ledger.markets.get_dispensers(db, address=address, status_in=[0, 11])
+    dispensers = ledger.markets.get_dispensers(db, address=destination_address, status_in=[0, 11])
 
     for next_dispenser in dispensers:
         if next_dispenser["oracle_address"] is not None:

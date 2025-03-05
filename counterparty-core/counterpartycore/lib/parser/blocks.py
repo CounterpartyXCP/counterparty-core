@@ -653,6 +653,7 @@ def reparse(db, block_index=0):
             previous_ledger_hash = None
             previous_txlist_hash = None
             previous_messages_hash = None
+            previous_migration_hash = None
             if CurrentState().current_block_index() > config.BLOCK_FIRST:
                 previous_block = ledger.blocks.get_block(db, block["block_index"] - 1)
                 previous_ledger_hash = previous_block["ledger_hash"]
