@@ -101,7 +101,7 @@ def compose(
 
 def new_unpack(message):
     try:
-        (short_address_bytes, flags_bytes, memo_bytes) = helpers.decode_data(message)
+        (short_address_bytes, flags_bytes, memo_bytes) = helpers.decode_data(message)  # pylint: disable=unbalanced-tuple-unpacking
 
         flags = helpers.bytes_to_int(flags_bytes)
 
