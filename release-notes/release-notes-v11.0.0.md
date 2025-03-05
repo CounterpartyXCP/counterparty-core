@@ -39,6 +39,7 @@ counterparty-server start
 - Fix Testnet4 bootsrap with custom url
 - Fix Composer for taproot address
 - Fix `address.pack` and `address.unpack` functions, handle correctly taproot addresses
+- Make `APSWConnectionPool` thread safe
 
 ## Codebase
 
