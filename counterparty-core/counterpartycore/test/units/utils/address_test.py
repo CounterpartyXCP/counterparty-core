@@ -2,6 +2,7 @@ import binascii
 import re
 
 import pytest
+from counterparty_rs import utils
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.utils import address
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
@@ -141,3 +142,165 @@ def test_is_valid_address():
         assert not address.is_valid_address("toto", "testnet3")
         assert address.is_valid_address("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "testnet3")
         assert address.is_valid_address("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "testnet3")
+
+
+def address_roundtrip(address, network):
+    """Test that an address can be packed and then unpacked correctly"""
+    # Pack the address
+    packed = bytes(utils.pack_address(address, network))
+    # Decode the address from compact format
+    unpacked = utils.unpack_address(packed, network)
+    # Verify that the decoded address matches the original
+    assert address == unpacked, f"Failed for {address} on {network}"
+    # For debugging, also print the hex form
+    print(f"{address} ({network}) -> {binascii.hexlify(packed).decode()} -> {unpacked}")
+    return packed
+
+
+def test_p2pkh_addresses():
+    """Test P2PKH addresses on different networks"""
+    # Mainnet P2PKH
+    packed = address_roundtrip("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", "mainnet")
+    assert packed[0] == 0x01  # Verify P2PKH prefix
+    assert len(packed) == 21  # Verify length
+
+    # Testnet P2PKH
+    packed = address_roundtrip("mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn", "testnet3")
+    assert packed[0] == 0x01
+    assert len(packed) == 21
+
+    # Regtest P2PKH
+    packed = address_roundtrip("mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn", "regtest")
+    assert packed[0] == 0x01
+    assert len(packed) == 21
+
+
+def test_p2sh_addresses():
+    """Test P2SH addresses on different networks"""
+    # Mainnet P2SH
+    packed = address_roundtrip("3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy", "mainnet")
+    assert packed[0] == 0x02  # Verify P2SH prefix
+    assert len(packed) == 21  # Verify length
+
+    # Testnet P2SH
+    packed = address_roundtrip("2MzQwSSnBHWHqSAqtTVQ6v47XtaisrJa1Vc", "testnet3")
+    assert packed[0] == 0x02
+    assert len(packed) == 21
+
+    # Regtest P2SH
+    packed = address_roundtrip("2MzQwSSnBHWHqSAqtTVQ6v47XtaisrJa1Vc", "regtest")
+    assert packed[0] == 0x02
+    assert len(packed) == 21
+
+
+def test_p2wpkh_addresses():
+    """Test P2WPKH (Segwit v0) addresses on different networks"""
+    # Mainnet P2WPKH
+    packed = address_roundtrip("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", "mainnet")
+    assert packed[0] == 0x03  # Verify Witness prefix
+    assert packed[1] == 0x00  # Verify Segwit version (v0)
+    assert len(packed) == 22  # 1 (prefix) + 1 (version) + 20 (pubkey hash)
+
+    # Testnet P2WPKH
+    packed = address_roundtrip("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", "testnet3")
+    assert packed[0] == 0x03
+    assert packed[1] == 0x00
+    assert len(packed) == 22
+
+    # Regtest P2WPKH
+    packed = address_roundtrip("bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080", "regtest")
+    assert packed[0] == 0x03
+    assert packed[1] == 0x00
+    assert len(packed) == 22
+
+
+def test_p2wsh_addresses():
+    """Test P2WSH (Segwit v0) addresses on different networks"""
+    # Mainnet P2WSH
+    packed = address_roundtrip(
+        "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3", "mainnet"
+    )
+    assert packed[0] == 0x03  # Verify Witness prefix
+    assert packed[1] == 0x00  # Verify Segwit version (v0)
+    assert len(packed) == 34  # 1 (prefix) + 1 (version) + 32 (script hash)
+
+    # Testnet P2WSH
+    packed = address_roundtrip(
+        "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7", "testnet3"
+    )
+    assert packed[0] == 0x03
+    assert packed[1] == 0x00
+    assert len(packed) == 34
+
+    # Regtest P2WSH
+    packed = address_roundtrip(
+        "bcrt1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qzf4jry", "regtest"
+    )
+    assert packed[0] == 0x03
+    assert packed[1] == 0x00
+    assert len(packed) == 34
+
+
+def test_p2tr_addresses():
+    """Test P2TR (Taproot, Segwit v1) addresses on different networks"""
+    # Mainnet P2TR
+    packed = address_roundtrip(
+        "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0", "mainnet"
+    )
+    assert packed[0] == 0x03  # Verify Witness prefix
+    assert packed[1] == 0x01  # Verify Segwit version (v1 for Taproot)
+    assert len(packed) == 34  # 1 (prefix) + 1 (version) + 32 (x-only pubkey)
+
+    # Testnet P2TR
+    packed = address_roundtrip(
+        "tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c", "testnet3"
+    )
+    assert packed[0] == 0x03
+    assert packed[1] == 0x01
+    assert len(packed) == 34
+
+    # Regtest P2TR
+    packed = address_roundtrip(
+        "bcrt1pn8p562k8ztfd76lrnsgt4s3su5l630rwzra0jwaxgamurpj0elkqsflm7x", "regtest"
+    )
+    assert packed[0] == 0x03
+    assert packed[1] == 0x01
+    assert len(packed) == 34
+
+
+def test_future_witness_versions():
+    """Test for future witness program versions (if available)"""
+    # These addresses are hypothetical and might not be valid
+    # Comment out or modify based on availability of test addresses
+    """
+    # Version 2 Witness Program (hypothetical)
+    packed = address_roundtrip("bc1zw508d6qejxtdg4y5r3zarvaryv2wuatf", "mainnet")
+    assert packed[0] == 0x03
+    assert packed[1] == 0x02  # Version 2
+    """
+    pass
+
+
+def test_invalid_addresses():
+    """Test for invalid addresses that should raise exceptions"""
+    # Invalid address
+    with pytest.raises(ValueError):
+        utils.pack_address("invalid_address", "mainnet")
+
+    # Invalid network
+    with pytest.raises(ValueError):
+        utils.pack_address("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", "invalid_network")
+
+    # Valid address on wrong network
+    with pytest.raises(ValueError):
+        utils.pack_address("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", "testnet3")
+
+    # Unpacking invalid data
+    with pytest.raises(ValueError):
+        utils.unpack_address(b"\x05", "mainnet")  # Invalid prefix
+
+    with pytest.raises(ValueError):
+        utils.unpack_address(b"\x01\x01\x02", "mainnet")  # Incorrect length for P2PKH
+
+    with pytest.raises(ValueError):
+        utils.unpack_address(b"\x03\xff\x01\x02", "mainnet")  # Invalid witness version

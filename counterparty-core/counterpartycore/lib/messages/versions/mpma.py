@@ -127,8 +127,8 @@ def compose(
     for send in asset_dest_quant_list:
         destination = send[1]
 
-        if len(address.pack(destination)) > 21:
-            raise exceptions.ComposeError(f"Address not supported by MPMA send: {address}")
+        if len(address.pack(destination)) > 22:
+            raise exceptions.ComposeError(f"Address not supported by MPMA send: {destination}")
 
     if memo and not isinstance(memo, str):
         raise exceptions.ComposeError("`memo` must be a string")

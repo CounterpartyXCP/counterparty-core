@@ -35,7 +35,7 @@ def new_unpack(message):
             "asset": asset,
             "quantity": quantity,
             "address": full_address,
-            "memo": memo_bytes,
+            "memo": None if memo_bytes == b"" else memo_bytes,
         }
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error(f"enhanced send unpack error: {e}")
