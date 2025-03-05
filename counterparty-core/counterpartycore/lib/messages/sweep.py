@@ -91,7 +91,6 @@ def compose(
             flags,
             memo_bytes,
         )
-        logger.warning(f"data_content: {data}")
     else:
         data = messagetype.pack(ID)
         data += struct.pack(FORMAT, short_address_bytes, flags)
@@ -113,7 +112,6 @@ def new_unpack(message):
             "memo": memo_bytes,
         }
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error(f"sweep unpack error: {e}")
         raise exceptions.UnpackError("could not unpack") from e
 
 
@@ -137,7 +135,6 @@ def unpack(message):
         # unpack address
         full_address = address.unpack(short_address_bytes)
     except struct.error as e:
-        logger.warning("sweep send unpack error: %s", e)
         raise exceptions.UnpackError("could not unpack") from e
 
     unpacked = {
@@ -156,7 +153,6 @@ def parse(db, tx, message):
     # Unpack message.
     try:
         unpacked = unpack(message)
-        logger.warning("unpacked: %s", unpacked)
         destination, flags, memo_bytes = (
             unpacked["destination"],
             unpacked["flags"],

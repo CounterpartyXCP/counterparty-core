@@ -187,12 +187,10 @@ def compose(
             short_address_bytes,
             memo_bytes,
         )
-        logger.warning(f"data1: {data}")
     else:
         data = messagetype.pack(ID)
         data += struct.pack(FORMAT, asset_id, quantity, short_address_bytes)
         data += memo_bytes
-        logger.warning(f"data2: {data}")
 
     cursor.close()
     # return an empty array as the second argument because we don't need to send BTC dust to the recipient
