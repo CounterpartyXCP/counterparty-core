@@ -34,9 +34,17 @@ counterparty-server start
 - Fix verbose mode when unpack fails
 - Handle correctly `DatabaseError` on API calls
 - Fix verbose mode in get transactions endpoints
+- Fix `script_to_address` function, handle correctly taproot addresses
+- Prevent taproot address for MPMA sends and dispenser Oracle
+- Fix Testnet4 bootsrap with custom url
+- Fix Composer for taproot address
+- Fix `address.pack` and `address.unpack` functions, handle correctly taproot addresses
+
 
 ## Codebase
 
+- Use a new data encoding format for Sweep and Enhanced Send, with variable length for every data field
+- Update ledger hashes checkpoints using truncated addresses
 
 ## API
 
