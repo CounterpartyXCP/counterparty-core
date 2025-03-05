@@ -1,6 +1,7 @@
 import binascii
 import re
 
+import bitcoin
 import pytest
 from counterparty_rs import utils
 from counterpartycore.lib import config, exceptions
@@ -142,6 +143,15 @@ def test_is_valid_address():
         assert not address.is_valid_address("toto", "testnet3")
         assert address.is_valid_address("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc", "testnet3")
         assert address.is_valid_address("mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns", "testnet3")
+        assert address.is_valid_address(
+            "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3", "mainnet"
+        )
+        assert address.is_valid_address(
+            "tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c", "testnet3"
+        )
+        assert address.is_valid_address(
+            "bcrt1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qzf4jry", "regtest"
+        )
 
 
 def address_roundtrip(address, network):
@@ -268,39 +278,52 @@ def test_p2tr_addresses():
     assert len(packed) == 34
 
 
-def test_future_witness_versions():
-    """Test for future witness program versions (if available)"""
-    # These addresses are hypothetical and might not be valid
-    # Comment out or modify based on availability of test addresses
-    """
-    # Version 2 Witness Program (hypothetical)
-    packed = address_roundtrip("bc1zw508d6qejxtdg4y5r3zarvaryv2wuatf", "mainnet")
-    assert packed[0] == 0x03
-    assert packed[1] == 0x02  # Version 2
-    """
-    pass
-
-
 def test_invalid_addresses():
     """Test for invalid addresses that should raise exceptions"""
     # Invalid address
-    with pytest.raises(ValueError):
-        utils.pack_address("invalid_address", "mainnet")
+    with pytest.raises(
+        exceptions.AddressError,
+        match=re.escape("The address invalid_address is not a valid bitcoin address (mainnet)"),
+    ):
+        config.NETWORK_NAME = "mainnet"
+        address.pack("invalid_address")
 
     # Invalid network
-    with pytest.raises(ValueError):
-        utils.pack_address("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", "invalid_network")
+    with pytest.raises(exceptions.AddressError):
+        config.NETWORK_NAME = "invalid_network"
+        address.pack("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2")
 
     # Valid address on wrong network
-    with pytest.raises(ValueError):
-        utils.pack_address("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", "testnet3")
+    with pytest.raises(exceptions.AddressError):
+        config.NETWORK_NAME = "testnet3"
+        address.pack("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2")
 
     # Unpacking invalid data
-    with pytest.raises(ValueError):
-        utils.unpack_address(b"\x05", "mainnet")  # Invalid prefix
+    with pytest.raises(
+        exceptions.DecodeError,
+        match=re.escape("b'\\x05' is not a valid packed bitcoin address (mainnet)"),
+    ):
+        config.NETWORK_NAME = "mainnet"
+        address.unpack(b"\x05")  # Invalid prefix
 
-    with pytest.raises(ValueError):
-        utils.unpack_address(b"\x01\x01\x02", "mainnet")  # Incorrect length for P2PKH
+    with pytest.raises(exceptions.DecodeError):
+        config.NETWORK_NAME = "mainnet"
+        address.unpack(b"\x01\x01\x02")  # Incorrect length for P2PKH
 
-    with pytest.raises(ValueError):
-        utils.unpack_address(b"\x03\xff\x01\x02", "mainnet")  # Invalid witness version
+    with pytest.raises(exceptions.DecodeError):
+        config.NETWORK_NAME = "mainnet"
+        address.unpack(b"\x03\xff\x01\x02")  # Invalid witness version
+
+    config.NETWORK_NAME = "regtest"
+
+
+def test_pack_legacy():
+    with ProtocolChangesDisabled(["taproot_support", "segwit_support"]):
+        assert (
+            address.pack_legacy("mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc")
+            == b"oH8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607"
+        )
+
+        with pytest.raises(bitcoin.base58.InvalidBase58Error):
+            address.pack_legacy("bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080")
+            address.pack_legacy("invalid_address")
