@@ -104,6 +104,12 @@ def new_unpack(message):
         (short_address_bytes, flags_bytes, memo_bytes) = helpers.decode_data(message)
 
         flags = helpers.bytes_to_int(flags_bytes)
+
+        if len(memo_bytes) == 0:
+            memo_bytes = None
+        elif not flags & FLAG_BINARY_MEMO:
+            memo_bytes = memo_bytes.decode("utf-8")
+
         full_address = address.unpack(short_address_bytes)
 
         return {
