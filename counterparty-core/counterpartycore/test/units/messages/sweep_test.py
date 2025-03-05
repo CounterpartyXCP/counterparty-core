@@ -159,6 +159,11 @@ def test_new_unpack(defaults):
         b"\x15\x01\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01\x03\x04test"
     ) == {"destination": defaults["addresses"][5], "flags": 3, "memo": "test"}
 
+    with pytest.raises(exceptions.UnpackError, match="could not unpack"):
+        sweep.new_unpack(
+            b"\x01\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01\x03"
+        )
+
 
 def test_unpack(defaults):
     with ProtocolChangesDisabled("taproot_support"):

@@ -67,7 +67,7 @@ def unpack(message):
         if asset == config.BTC:
             raise exceptions.AssetNameError(f"{config.BTC} not allowed")
 
-    except struct.error as e:
+    except (struct.error, TypeError) as e:
         logger.trace(f"enhanced send unpack error: {e}")
         raise exceptions.UnpackError(f"could not unpack: {e}")  # noqa: B904
 
