@@ -244,7 +244,6 @@ def compose(
             int(divisible) or "",
             description,
         )
-        print("PACK", data)
     else:
         packed_value += []
         packed_value += [
@@ -277,8 +276,6 @@ def unpack(message, return_dict=False):
         if protocol.enabled("fairminter_v2"):
             decoded_data = helpers.decode_data(message)
             description = decoded_data.pop().decode("utf-8")
-            print("UNPACK", decoded_data)
-            print([helpers.bytes_to_int(value or b"\x00") for value in decoded_data])
             (
                 asset_id,
                 asset_parent_id,
@@ -354,8 +351,6 @@ def unpack(message, return_dict=False):
                 "description": description,
             }
 
-        print("quantity_by_price0", quantity_by_price)
-        print("asset", asset)
         return (
             asset,
             asset_parent,
