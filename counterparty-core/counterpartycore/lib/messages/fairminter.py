@@ -76,7 +76,7 @@ def validate(
                 "`minted_asset_commission` must be less than 0 or greater than or equal to 1"
             )
 
-    if max_mint_per_tx > max_mint_by_address:
+    if max_mint_per_tx > max_mint_by_address > 0:
         problems.append("max_mint_per_tx must be <= max_mint_by_address.")
 
     # check asset name format
@@ -281,9 +281,11 @@ def unpack(message, return_dict=False):
         description = "|".join(data_content[arg_count - 1 :])
 
         if protocol.enabled("fairminter_v2"):
-            asset = ledger.issuances.generate_asset_name(asset)
+            asset = ledger.issuances.generate_asset_name(int(asset))
             asset_parent = (
-                ledger.issuances.generate_asset_name(asset_parent) if asset_parent != "0" else ""
+                ledger.issuances.generate_asset_name(int(asset_parent))
+                if asset_parent != "0"
+                else ""
             )
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
