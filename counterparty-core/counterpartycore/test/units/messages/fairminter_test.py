@@ -266,7 +266,7 @@ def test_unpack():
 def test_parse_fairminter_start_block(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b"\x06_\xeb\xcd\xfd\xc0\x18\x01\x00\x01\x00\x01\x01\x01\n\x01\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x01\x00\x01\x00\x01\x01\x01\x01\x13une asset super top"
     fairminter.parse(ledger_db, tx, message)
 
@@ -350,7 +350,7 @@ def test_parse_fairminter_soft_cap(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
     with ProtocolChangesDisabled(["fairminter_v2"]):
-        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
         message = (
             b"FAIRMINTED||0|1|10|1000|100|0|900000|50|850000|10000000|0|0|1|1|une asset super top"
         )
@@ -404,7 +404,7 @@ def test_parse_fairminter_no_start(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
     with ProtocolChangesDisabled(["fairminter_v2"]):
-        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
         message = b"FAIRMINTED||0|1|10|1000|100|0|900000|0|0|10000000|0|0|1|1|une asset super top"
         fairminter.parse(ledger_db, tx, message)
 

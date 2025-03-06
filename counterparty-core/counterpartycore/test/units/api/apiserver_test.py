@@ -222,7 +222,7 @@ def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults):
         "tx_index": dispenses["tx_index"],
         "dispense_index": 1,
         "tx_hash": dispenses["tx_hash"],
-        "block_index": 1225,
+        "block_index": 1228,
         "source": defaults["addresses"][5],
         "destination": defaults["addresses"][0],
         "asset": "XCP",

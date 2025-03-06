@@ -87,7 +87,7 @@ def test_unpack():
 
 
 def tes_parse_freefairmint(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b"\x07u\xdbH\x16\xb1\xd6\x02\x00"
     fairmint.parse(ledger_db, tx, message)
 
@@ -148,7 +148,7 @@ def tes_parse_freefairmint(ledger_db, blockchain_mock, defaults, test_helpers, c
 def test_parse_escrowed_fairmint(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b"\x07\xf5>sZ\xcb\x07\x08\x01\n"
     fairmint.parse(ledger_db, tx, message)
 

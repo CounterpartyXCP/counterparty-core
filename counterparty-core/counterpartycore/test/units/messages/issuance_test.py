@@ -1096,7 +1096,7 @@ def test_invalid_compose(ledger_db, defaults):
 
 
 def test_parse_basset(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b"\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00"
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
@@ -1149,7 +1149,7 @@ def test_parse_basset(ledger_db, blockchain_mock, defaults, test_helpers, curren
 
 
 def test_parse_divisibleb(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = (
         b"\x00\x00\x10}U\x15\xa8]\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00second divisible asset"
     )
@@ -1182,7 +1182,7 @@ def test_parse_divisibleb(ledger_db, blockchain_mock, defaults, test_helpers):
 
 
 def test_parse_divisiblec(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = (
         b"\x00\x00\x10}U\x15\xa8^\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00third divisible asset"
     )
@@ -1269,7 +1269,7 @@ def test_parse_bsset(ledger_db, blockchain_mock, defaults, test_helpers, current
 
 def test_parse_divisible(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(
-        ledger_db, defaults["addresses"][0], defaults["p2ms_addresses"][0]
+        ledger_db, defaults["addresses"][0], defaults["p2ms_addresses"][0], use_first_tx=True
     )
     message = b"\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
     issuance.parse(ledger_db, tx, message, issuance.ID)
@@ -1312,7 +1312,7 @@ def test_parse_divisible(ledger_db, blockchain_mock, defaults, test_helpers, cur
 
 
 def test_parse_maximum(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = (
         b"\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00Maximum quantity"
     )
@@ -1367,7 +1367,7 @@ def test_parse_maximum(ledger_db, blockchain_mock, defaults, test_helpers, curre
 
 
 def test_parse_numeric(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = (
         b"\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\xc0NULL"
     )
@@ -1422,7 +1422,7 @@ def test_parse_numeric(ledger_db, blockchain_mock, defaults, test_helpers, curre
 
 
 def test_parse_too_short(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = binascii.unhexlify("00000000000002bf0000000005f5e10001")
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
@@ -1455,7 +1455,7 @@ def test_parse_too_short(ledger_db, blockchain_mock, defaults, test_helpers, cur
 def test_parse_paid_subasset(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b"\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LF"
     with ProtocolChangesDisabled(["free_subassets"]):
         issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
@@ -1520,7 +1520,7 @@ def test_parse_paid_subasset(
 def test_parse_paid_subasset_with_description(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b"\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LFhello world"
     with ProtocolChangesDisabled(["free_subassets"]):
         issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
@@ -1583,7 +1583,7 @@ def test_parse_paid_subasset_with_description(
 
 
 def test_parse_paid_subasset_before_activation(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b"\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LFhello world"
     with ProtocolChangesDisabled(["free_subassets", "subassets"]):
         issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
@@ -1615,7 +1615,7 @@ def test_parse_paid_subasset_before_activation(ledger_db, blockchain_mock, defau
 
 
 def test_parse_paid_subasset_invalid_length(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = (
         b"\x01S\x08!g\x1b\x10\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\xf0W\xc6\xf3m\xe2:\x1f_LF"
     )
@@ -1649,7 +1649,7 @@ def test_parse_paid_subasset_invalid_length(ledger_db, blockchain_mock, defaults
 
 
 def test_parse_paid_subasset_reissuance(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b'\x01S\x08"\x06\xe4c%\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00'
     with ProtocolChangesDisabled(["free_subassets"]):
         issuance.parse(ledger_db, tx, message, issuance.ID)
@@ -1721,7 +1721,7 @@ def test_reset_issuance(apiv2_client, ledger_db, state_db, defaults, blockchain_
         data,
     )
     message = data[1:]
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
     test_helpers.check_records(
