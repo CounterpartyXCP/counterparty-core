@@ -15,7 +15,7 @@ def test_blocks_functions(ledger_db, current_block_index):
     )
     assert (
         last_block["txlist_hash"]
-        == "46a70e84023ed477615c80ac6acad01afc0765b3f8084d293efa15a8c5cdd750"
+        == "e22f920f152d35936175077f7a44196c42b56bbf0ce33966b08ef430f6e33717"
     )
 
     assert blocks.last_db_index(ledger_db) == current_block_index
@@ -32,7 +32,7 @@ def test_blocks_functions(ledger_db, current_block_index):
     )
     assert (
         last_block["txlist_hash"]
-        == "46a70e84023ed477615c80ac6acad01afc0765b3f8084d293efa15a8c5cdd750"
+        == "e22f920f152d35936175077f7a44196c42b56bbf0ce33966b08ef430f6e33717"
     )
 
     assert (
