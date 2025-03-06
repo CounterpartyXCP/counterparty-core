@@ -37,13 +37,13 @@ def validate(
 
     asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
 
-    if fairminter["max_mint_by_address"] > 0:
+    if fairminter["max_mint_per_address"] > 0:
         alread_minted = ledger.issuances.get_fairmint_by_address(db, fairminter["tx_hash"], source)
         if fairminter["price"] > 0:
-            if alread_minted + quantity > fairminter["max_mint_by_address"]:
+            if alread_minted + quantity > fairminter["max_mint_per_address"]:
                 problems.append("quantity exceeds maximum allowed by address")
         else:
-            if alread_minted + fairminter["max_mint_per_tx"] > fairminter["max_mint_by_address"]:
+            if alread_minted + fairminter["max_mint_per_tx"] > fairminter["max_mint_per_address"]:
                 problems.append("quantity exceeds maximum allowed by address")
 
     if fairminter["price"] > 0:

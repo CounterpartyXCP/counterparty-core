@@ -1,1 +1,1 @@
-ALTER TABLE fairminters ADD COLUMN max_mint_by_address INTEGER;
+ALTER TABLE fairminters ADD COLUMN max_mint_per_address INTEGER;
