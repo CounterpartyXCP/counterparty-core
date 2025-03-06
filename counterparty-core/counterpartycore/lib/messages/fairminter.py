@@ -143,8 +143,12 @@ def validate(
     if start_block > end_block > 0:
         problems.append("Start block must be <= end block.")  # could be one block fair minter
 
-    if soft_cap >= hard_cap > 0:
-        problems.append("Soft cap must be < hard cap.")
+    if protocol.enabled("fairminter_v2"):
+        if soft_cap > hard_cap > 0:
+            problems.append("Soft cap must be <= hard cap.")
+    else:
+        if soft_cap >= hard_cap > 0:
+            problems.append("Soft cap must be < hard cap.")
     if soft_cap > 0:
         if not soft_cap_deadline_block:
             problems.append("Soft cap deadline block must be specified if soft cap is specified.")
