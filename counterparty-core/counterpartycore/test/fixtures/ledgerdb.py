@@ -644,7 +644,7 @@ UNITTEST_FIXTURE = [
             "quantity_by_price": 1,
             "max_mint_per_tx": 10,
         },
-        {"encoding": "opreturn"},
+        {"encoding": "multisig"},
     ],
     [
         "fairminter",

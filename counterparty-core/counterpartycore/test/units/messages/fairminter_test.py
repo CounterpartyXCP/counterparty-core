@@ -78,6 +78,7 @@ def test_validate(ledger_db, defaults):
         0,  # price=0,
         1,  # quantity_by_price,
         -10,  # max_mint_per_tx,
+        0,  # max_mint_by_address,
         40,  # hard_cap=0,
         50,  # premint_quantity=0,
         50,  # start_block=0,
@@ -92,7 +93,7 @@ def test_validate(ledger_db, defaults):
         "minted_asset_commission must be a float",
         "Premint quantity must be < hard cap.",
         "Start block must be <= end block.",
-        "Soft cap must be < hard cap.",
+        "Soft cap must be <= hard cap.",
         "Soft cap deadline block must be specified if soft cap is specified.",
     ]
 
@@ -130,6 +131,7 @@ def test_validate(ledger_db, defaults):
         0,  # price=0,
         1,  # quantity_by_price,
         10,  # max_mint_per_tx,
+        0,  # max_mint_by_address,
         defaults["quantity"] * 900,  # hard_cap=0,
     ) == ["Hard cap of asset `DIVISIBLE` is already reached."]
 
@@ -179,7 +181,7 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"ZFAIRMINTED||0|1|10|0|0|0|0|0|0|0|0|0|0|1|",
+        b"Z27217170918239|0|0|1|10|0|0|0|0|0|0|0|0|0|0|0|1|",
     )
 
     assert fairminter.compose(
@@ -190,6 +192,7 @@ def test_compose(ledger_db, defaults):
         0,  # price,
         1,  # quantity_by_price,
         10,  # max_mint_per_tx,
+        0,  # max_mint_by_address,
         1000,  # hard_cap,
         100,  # premint_quantity,
         800000,  # start_block,
@@ -205,13 +208,13 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"ZFAIRMINTED||0|1|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+        b"Z27217170918239|0|0|1|10|0|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
     )
 
 
 def test_unpack():
     assert fairminter.unpack(
-        b"FAIRMINTED||0|1|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+        b"27217170918239|0|0|1|10|0|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
         True,
     ) == {
         "asset": "FAIRMINTED",
@@ -219,6 +222,7 @@ def test_unpack():
         "price": 0,
         "quantity_by_price": 1,
         "max_mint_per_tx": 10,
+        "max_mint_by_address": 0,
         "hard_cap": 1000,
         "premint_quantity": 100,
         "start_block": 800000,
@@ -234,7 +238,7 @@ def test_unpack():
     }
 
     assert fairminter.unpack(
-        b"FAIRMINTED||0|1|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+        b"27217170918239|0|0|1|10|0|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
         False,
     ) == (
         "FAIRMINTED",
@@ -242,6 +246,7 @@ def test_unpack():
         0,
         1,
         10,
+        0,
         1000,
         100,
         800000,
@@ -261,9 +266,7 @@ def test_parse_fairminter_start_block(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = (
-        b"FAIRMINTED||0|1|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top"
-    )
+    message = b"27217170918239|0|0|1|10|0|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top"
     fairminter.parse(ledger_db, tx, message)
 
     test_helpers.check_records(
@@ -279,6 +282,7 @@ def test_parse_fairminter_start_block(
                     "price": 0,
                     "quantity_by_price": 1,
                     "max_mint_per_tx": 10,
+                    "max_mint_by_address": 0,
                     "hard_cap": 1000,
                     "premint_quantity": 100,
                     "start_block": 800000,
@@ -345,7 +349,7 @@ def test_parse_fairminter_soft_cap(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b"FAIRMINTED||0|1|10|1000|100|0|900000|50|850000|10000000|0|0|1|1|une asset super top"
+    message = b"27217170918239|0|0|1|10|0|1000|100|0|900000|50|850000|10000000|0|0|1|1|une asset super top"
     fairminter.parse(ledger_db, tx, message)
 
     test_helpers.check_records(
@@ -361,6 +365,7 @@ def test_parse_fairminter_soft_cap(
                     "price": 0,
                     "quantity_by_price": 1,
                     "max_mint_per_tx": 10,
+                    "max_mint_by_address": 0,
                     "hard_cap": 1000,
                     "premint_quantity": 100,
                     "start_block": 0,
@@ -395,7 +400,9 @@ def test_parse_fairminter_no_start(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b"FAIRMINTED||0|1|10|1000|100|0|900000|0|0|10000000|0|0|1|1|une asset super top"
+    message = (
+        b"27217170918239|0|0|1|10|0|1000|100|0|900000|0|0|10000000|0|0|1|1|une asset super top"
+    )
     fairminter.parse(ledger_db, tx, message)
 
     test_helpers.check_records(
@@ -412,6 +419,7 @@ def test_parse_fairminter_no_start(
                     "price": 0,
                     "quantity_by_price": 1,
                     "max_mint_per_tx": 10,
+                    "max_mint_by_address": 0,
                     "hard_cap": 1000,
                     "premint_quantity": 100,
                     "start_block": 0,
