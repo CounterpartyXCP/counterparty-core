@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from counterpartycore.lib.messages import fairminter
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_validate(ledger_db, defaults):
@@ -181,7 +182,7 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z27217170918239|0|0|1|10|0|0|0|0|0|0|0|0|0|0|0|1|",
+        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00",
     )
 
     assert fairminter.compose(
@@ -208,13 +209,13 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z27217170918239|0|0|1|10|0|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x13une asset super top",
     )
 
 
 def test_unpack():
     assert fairminter.unpack(
-        b"27217170918239|0|0|1|10|0|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+        b"\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x13une asset super top",
         True,
     ) == {
         "asset": "FAIRMINTED",
@@ -238,7 +239,7 @@ def test_unpack():
     }
 
     assert fairminter.unpack(
-        b"27217170918239|0|0|1|10|0|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+        b"\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x13une asset super top",
         False,
     ) == (
         "FAIRMINTED",
@@ -266,7 +267,7 @@ def test_parse_fairminter_start_block(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b"27217170918239|0|0|1|10|0|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top"
+    message = b"\x06_\xeb\xcd\xfd\xc0\x18\x01\x00\x01\x00\x01\x01\x01\n\x01\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x01\x00\x01\x00\x01\x01\x01\x01\x13une asset super top"
     fairminter.parse(ledger_db, tx, message)
 
     test_helpers.check_records(
@@ -348,103 +349,105 @@ def test_parse_fairminter_start_block(
 def test_parse_fairminter_soft_cap(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b"27217170918239|0|0|1|10|0|1000|100|0|900000|50|850000|10000000|0|0|1|1|une asset super top"
-    fairminter.parse(ledger_db, tx, message)
+    with ProtocolChangesDisabled(["fairminter_v2"]):
+        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+        message = (
+            b"FAIRMINTED||0|1|10|1000|100|0|900000|50|850000|10000000|0|0|1|1|une asset super top"
+        )
+        fairminter.parse(ledger_db, tx, message)
 
-    test_helpers.check_records(
-        ledger_db,
-        [
-            {
-                "table": "fairminters",
-                "values": {
-                    "tx_hash": tx["tx_hash"],
-                    "block_index": tx["block_index"],
-                    "asset": "FAIRMINTED",
-                    "asset_parent": None,
-                    "price": 0,
-                    "quantity_by_price": 1,
-                    "max_mint_per_tx": 10,
-                    "max_mint_by_address": 0,
-                    "hard_cap": 1000,
-                    "premint_quantity": 100,
-                    "start_block": 0,
-                    "end_block": 900000,
-                    "soft_cap": 50,
-                    "soft_cap_deadline_block": 850000,
-                    "minted_asset_commission_int": 10000000,
-                    "burn_payment": False,
-                    "lock_description": False,
-                    "lock_quantity": True,
-                    "divisible": True,
-                    "description": "une asset super top",
-                    "status": "open",
+        test_helpers.check_records(
+            ledger_db,
+            [
+                {
+                    "table": "fairminters",
+                    "values": {
+                        "tx_hash": tx["tx_hash"],
+                        "block_index": tx["block_index"],
+                        "asset": "FAIRMINTED",
+                        "asset_parent": None,
+                        "price": 0,
+                        "quantity_by_price": 1,
+                        "max_mint_per_tx": 10,
+                        "max_mint_by_address": 0,
+                        "hard_cap": 1000,
+                        "premint_quantity": 100,
+                        "start_block": 0,
+                        "end_block": 900000,
+                        "soft_cap": 50,
+                        "soft_cap_deadline_block": 850000,
+                        "minted_asset_commission_int": 10000000,
+                        "burn_payment": False,
+                        "lock_description": False,
+                        "lock_quantity": True,
+                        "divisible": True,
+                        "description": "une asset super top",
+                        "status": "open",
+                    },
                 },
-            },
-            {
-                "table": "credits",
-                "values": {
-                    "block_index": current_block_index,
-                    "address": defaults["unspendable"],
-                    "asset": "FAIRMINTED",
-                    "quantity": 100,
-                    "calling_function": "escrowed premint",
-                    "event": tx["tx_hash"],
+                {
+                    "table": "credits",
+                    "values": {
+                        "block_index": current_block_index,
+                        "address": defaults["unspendable"],
+                        "asset": "FAIRMINTED",
+                        "quantity": 100,
+                        "calling_function": "escrowed premint",
+                        "event": tx["tx_hash"],
+                    },
                 },
-            },
-        ],
-    )
+            ],
+        )
 
 
 def test_parse_fairminter_no_start(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = (
-        b"27217170918239|0|0|1|10|0|1000|100|0|900000|0|0|10000000|0|0|1|1|une asset super top"
-    )
-    fairminter.parse(ledger_db, tx, message)
+    with ProtocolChangesDisabled(["fairminter_v2"]):
+        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+        message = b"FAIRMINTED||0|1|10|1000|100|0|900000|0|0|10000000|0|0|1|1|une asset super top"
+        fairminter.parse(ledger_db, tx, message)
 
-    test_helpers.check_records(
-        ledger_db,
-        [
-            {
-                "table": "fairminters",
-                "values": {
-                    "tx_hash": tx["tx_hash"],
-                    "block_index": tx["block_index"],
-                    "source": defaults["addresses"][0],
-                    "asset": "FAIRMINTED",
-                    "asset_parent": None,
-                    "price": 0,
-                    "quantity_by_price": 1,
-                    "max_mint_per_tx": 10,
-                    "max_mint_by_address": 0,
-                    "hard_cap": 1000,
-                    "premint_quantity": 100,
-                    "start_block": 0,
-                    "end_block": 900000,
-                    "soft_cap": 0,
-                    "soft_cap_deadline_block": 0,
-                    "minted_asset_commission_int": 10000000,
-                    "burn_payment": False,
-                    "lock_description": False,
-                    "lock_quantity": True,
-                    "divisible": True,
-                    "description": "une asset super top",
-                    "status": "open",
+        test_helpers.check_records(
+            ledger_db,
+            [
+                {
+                    "table": "fairminters",
+                    "values": {
+                        "tx_hash": tx["tx_hash"],
+                        "block_index": tx["block_index"],
+                        "source": defaults["addresses"][0],
+                        "asset": "FAIRMINTED",
+                        "asset_parent": None,
+                        "price": 0,
+                        "quantity_by_price": 1,
+                        "max_mint_per_tx": 10,
+                        "max_mint_by_address": 0,
+                        "hard_cap": 1000,
+                        "premint_quantity": 100,
+                        "start_block": 0,
+                        "end_block": 900000,
+                        "soft_cap": 0,
+                        "soft_cap_deadline_block": 0,
+                        "minted_asset_commission_int": 10000000,
+                        "burn_payment": False,
+                        "lock_description": False,
+                        "lock_quantity": True,
+                        "divisible": True,
+                        "description": "une asset super top",
+                        "status": "open",
+                    },
                 },
-            },
-            {
-                "table": "credits",
-                "values": {
-                    "block_index": current_block_index,
-                    "address": defaults["addresses"][0],
-                    "asset": "FAIRMINTED",
-                    "quantity": 100,
-                    "calling_function": "premint",
-                    "event": tx["tx_hash"],
+                {
+                    "table": "credits",
+                    "values": {
+                        "block_index": current_block_index,
+                        "address": defaults["addresses"][0],
+                        "asset": "FAIRMINTED",
+                        "quantity": 100,
+                        "calling_function": "premint",
+                        "event": tx["tx_hash"],
+                    },
                 },
-            },
-        ],
-    )
+            ],
+        )
