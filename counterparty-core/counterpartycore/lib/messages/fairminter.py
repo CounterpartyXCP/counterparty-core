@@ -210,30 +210,34 @@ def compose(
     # to optimize the data size (avoiding fixed sizes per parameter) we use a simple
     # string of characters separated by `|`.
     # The description is placed last to be able to contain `|`.
-    data_content = "|".join(
-        [
-            str(value)
-            for value in [
-                asset,
-                asset_parent,
-                price,
-                quantity_by_price,
-                max_mint_per_tx,
-                hard_cap,
-                premint_quantity,
-                start_block,
-                end_block,
-                soft_cap,
-                soft_cap_deadline_block,
-                minted_asset_commission_int,
-                int(burn_payment),
-                int(lock_description),
-                int(lock_quantity),
-                int(divisible),
-                description,
-            ]
-        ]
-    ).encode("utf-8")
+    packed_value = []
+    if protocol.enabled("fairminter_v2"):
+        asset_id = ledger.issuances.generate_asset_id(asset)
+        asset_parent_id = (
+            ledger.issuances.generate_asset_id(asset_parent) if asset_parent != "" else 0
+        )
+        packed_value += [asset_id, asset_parent_id]
+    else:
+        packed_value += [asset, asset_parent]
+
+    packed_value += [
+        price,
+        quantity_by_price,
+        max_mint_per_tx,
+        hard_cap,
+        premint_quantity,
+        start_block,
+        end_block,
+        soft_cap,
+        soft_cap_deadline_block,
+        minted_asset_commission_int,
+        int(burn_payment),
+        int(lock_description),
+        int(lock_quantity),
+        int(divisible),
+        description,
+    ]
+    data_content = "|".join([str(value) for value in packed_value]).encode("utf-8")
     data += struct.pack(f">{len(data_content)}s", data_content)
     return (source, [], data)
 
@@ -262,6 +266,12 @@ def unpack(message, return_dict=False):
         ) = data_content[0 : arg_count - 1]
         # The description is placed last to be able to contain `|`.
         description = "|".join(data_content[arg_count - 1 :])
+
+        if protocol.enabled("fairminter_v2"):
+            asset = ledger.issuances.generate_asset_name(asset)
+            asset_parent = (
+                ledger.issuances.generate_asset_name(asset_parent) if asset_parent != "0" else ""
+            )
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
