@@ -67,6 +67,7 @@ SCENARIO = [
                             "lock_description": False,
                             "lock_quantity": False,
                             "max_mint_per_tx": 0,
+                            "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
                             "pre_minted": False,
                             "premint_quantity": 0,

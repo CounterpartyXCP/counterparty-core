@@ -33,6 +33,7 @@ SCENARIO = [
                         "hard_cap": 100 * 10**8,
                         "burn_payment": False,
                         "max_mint_per_tx": 0,
+                        "max_mint_per_address": 0,
                         "premint_quantity": 0,
                         "start_block": 0,
                         "end_block": 0,
