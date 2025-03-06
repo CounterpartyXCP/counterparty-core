@@ -770,5 +770,18 @@ UNITTEST_FIXTURE = [
         },
         {"encoding": "opreturn"},
     ],
-    ["mine_empty_blocks", 703],
+    [
+        "fairminter",
+        {
+            "source": DP["addresses"][0],
+            "asset": "SAIDFAIRMIN",
+            "asset_parent": "",
+            "price": 1,
+            "quantity_by_price": 1,
+            "max_mint_per_tx": 0,
+            "max_mint_per_address": 2,
+        },
+        {"encoding": "opreturn"},
+    ],
+    ["mine_empty_blocks", 702],
 ]
