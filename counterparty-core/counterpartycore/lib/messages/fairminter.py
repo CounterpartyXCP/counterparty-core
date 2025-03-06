@@ -20,6 +20,7 @@ def validate(
     price=0,
     quantity_by_price=1,
     max_mint_per_tx=0,
+    max_mint_by_address=0,
     hard_cap=0,
     premint_quantity=0,
     start_block=0,
@@ -40,6 +41,7 @@ def validate(
         "price": price,
         "quantity_by_price": quantity_by_price,
         "max_mint_per_tx": max_mint_per_tx,
+        "max_mint_by_address": max_mint_by_address,
         "hard_cap": hard_cap,
         "premint_quantity": premint_quantity,
         "start_block": start_block,
@@ -73,6 +75,9 @@ def validate(
             problems.append(
                 "`minted_asset_commission` must be less than 0 or greater than or equal to 1"
             )
+
+    if max_mint_per_tx > max_mint_by_address:
+        problems.append("max_mint_per_tx must be <= max_mint_by_address.")
 
     # check asset name format
     try:
@@ -168,6 +173,7 @@ def compose(
     price: int = 0,
     quantity_by_price: int = 1,
     max_mint_per_tx: int = 0,
+    max_mint_by_address: int = 0,
     hard_cap: int = 0,
     premint_quantity: int = 0,
     start_block: int = 0,
@@ -191,6 +197,7 @@ def compose(
         price,
         quantity_by_price,
         max_mint_per_tx,
+        max_mint_by_address,
         hard_cap,
         premint_quantity,
         start_block,
@@ -228,6 +235,7 @@ def compose(
         price,
         quantity_by_price,
         max_mint_per_tx,
+        max_mint_by_address,
         hard_cap,
         premint_quantity,
         start_block,
@@ -256,6 +264,7 @@ def unpack(message, return_dict=False):
             price,
             quantity_by_price,
             max_mint_per_tx,
+            max_mint_by_address,
             hard_cap,
             premint_quantity,
             start_block,
@@ -286,6 +295,7 @@ def unpack(message, return_dict=False):
                 "price": int(price),
                 "quantity_by_price": int(quantity_by_price),
                 "max_mint_per_tx": int(max_mint_per_tx),
+                "max_mint_by_address": int(max_mint_by_address),
                 "hard_cap": int(hard_cap),
                 "premint_quantity": int(premint_quantity),
                 "start_block": int(start_block),
@@ -306,6 +316,7 @@ def unpack(message, return_dict=False):
             int(price),
             int(quantity_by_price),
             int(max_mint_per_tx),
+            int(max_mint_by_address),
             int(hard_cap),
             int(premint_quantity),
             int(start_block),
@@ -320,7 +331,7 @@ def unpack(message, return_dict=False):
             description,
         )
     except Exception:  # pylint: disable=broad-exception-caught
-        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
+        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
 
 
 def parse(db, tx, message):
@@ -330,6 +341,7 @@ def parse(db, tx, message):
         price,
         quantity_by_price,
         max_mint_per_tx,
+        max_mint_by_address,
         hard_cap,
         premint_quantity,
         start_block,
@@ -352,6 +364,7 @@ def parse(db, tx, message):
         price,
         quantity_by_price,
         max_mint_per_tx,
+        max_mint_by_address,
         hard_cap,
         premint_quantity,
         start_block,
@@ -442,6 +455,7 @@ def parse(db, tx, message):
         "hard_cap": hard_cap,
         "burn_payment": burn_payment,
         "max_mint_per_tx": max_mint_per_tx,
+        "max_mint_by_address": max_mint_by_address,
         "premint_quantity": premint_quantity,
         "start_block": start_block,
         "end_block": end_block,
