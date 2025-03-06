@@ -1,11 +1,18 @@
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::opcodes::all::*;
 use bitcoin::blockdata::script::Instruction;
-use bitcoin::{Address, Network, ScriptBuf, WitnessProgram, WitnessVersion};
+use bitcoin::{
+    Address, Network, ScriptBuf, WitnessProgram, WitnessVersion,
+    PubkeyHash, 
+    ScriptHash,
+    address::NetworkChecked,
+    hashes::Hash,
+};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use std::panic;
+use std::str::FromStr;
 
 #[pyfunction]
 fn inverse_hash(hashstring: &str) -> String {
@@ -20,127 +27,6 @@ fn inverse_hash(hashstring: &str) -> String {
 
 #[pyfunction]
 pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
-    // Convert the script pubkey to a Script object
-    let script = ScriptBuf::from(script_pubkey);
-
-    // Convert the network string to a Network enum value
-    let network_enum = match network {
-        "mainnet" => Network::Bitcoin,
-        "testnet3" => Network::Testnet,
-        "testnet4" => Network::Testnet4,
-        "signet" => Network::Signet,
-        "regtest" => Network::Regtest,
-        _ => {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Invalid network value",
-            ))
-        }
-    };
-    if script.is_witness_program() {
-        // This block below is necessary to reproduce a prior truncation bug in the python codebase.
-        let version = match WitnessVersion::try_from(opcodes::Opcode::from(script.as_bytes()[0])) {
-            Ok(vers) => vers,
-            Err(_) => {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    "Invalid version value",
-                ))
-            }
-        };
-
-        let n = 22;
-        if script.len() < n {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Script length is less than 22",
-            ));
-        }
-        let program = WitnessProgram::new(version, &script.as_bytes()[2..n]).map_err(|e| {
-            return PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                "Could not create witness program from script: {}",
-                e
-            ));
-        })?;
-        let address = Address::from_witness_program(program, network_enum);
-        Ok(address.to_string())
-    } else {
-        /*
-         * the code below is correct, but not sure about the invocation path
-         * and untested bug compatibility
-         */
-        let _address = match Address::from_script(&script, network_enum) {
-            Ok(addr) => addr,
-            Err(_) => {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    "Failed to derive address",
-                ))
-            }
-        };
-        panic!("we thought this shouldn't happen!");
-        //Ok(address.to_string())
-    }
-}
-
-#[pyfunction]
-pub fn script_to_address2(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
-    // Convert the script pubkey to a Script object
-    let script = ScriptBuf::from(script_pubkey);
-
-    // Convert the network string to a Network enum value
-    let network_enum = match network {
-        "mainnet" => Network::Bitcoin,
-        "testnet3" => Network::Testnet,
-        "testnet4" => Network::Testnet4,
-        "signet" => Network::Signet,
-        "regtest" => Network::Regtest,
-        _ => {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Invalid network value",
-            ))
-        }
-    };
-    if script.is_witness_program() {
-        // This block below is necessary to reproduce a prior truncation bug in the python codebase.
-        let version = match WitnessVersion::try_from(opcodes::Opcode::from(script.as_bytes()[0])) {
-            Ok(vers) => vers,
-            Err(_) => {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    "Invalid version value",
-                ))
-            }
-        };
-
-        let n = 22;
-        if script.len() < n {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Script length is less than 22",
-            ));
-        }
-        let program = WitnessProgram::new(version, &script.as_bytes()[2..n]).map_err(|e| {
-            return PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                "Could not create witness program from script: {}",
-                e
-            ));
-        })?;
-        let address = Address::from_witness_program(program, network_enum);
-        Ok(address.to_string())
-    } else {
-        /*
-         * the code below is correct, but not sure about the invocation path
-         * and untested bug compatibility
-         */
-        let address = match Address::from_script(&script, network_enum) {
-            Ok(addr) => addr,
-            Err(_) => {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    "Failed to derive address",
-                ))
-            }
-        };
-        Ok(address.to_string())
-    }
-}
-
-#[pyfunction]
-pub fn script_to_address3(script_pubkey: Vec<u8>, network: &str) -> PyResult<String> {
     // Convert the script pubkey to a Script object
     let script = ScriptBuf::from(script_pubkey);
 
@@ -396,13 +282,124 @@ fn opcode_to_bytes(opcode: bitcoin::blockdata::opcodes::Opcode) -> Vec<u8> {
     }
 }
 
+
+/// Pack an Address into a compact Vec<u8>
+pub fn pack(address: &Address<NetworkChecked>) -> Option<Vec<u8>> {
+    match (
+        address.pubkey_hash(),
+        address.script_hash(),
+        address.witness_program()
+    ) {
+        (Some(pubkey_hash), _, _) => {
+            let mut packed = Vec::with_capacity(21);
+            packed.push(0x01);  // P2PKH prefix
+            packed.extend_from_slice(pubkey_hash.as_byte_array());
+            Some(packed)
+        },
+        (_, Some(script_hash), _) => {
+            let mut packed = Vec::with_capacity(21);
+            packed.push(0x02);  // P2SH prefix
+            packed.extend_from_slice(script_hash.as_byte_array());
+            Some(packed)
+        },
+        (_, _, Some(witness_program)) => {
+            let program_bytes = witness_program.program().as_bytes();
+            let mut packed = Vec::with_capacity(2 + program_bytes.len());
+            packed.push(0x03);  // Witness prefix
+            packed.push(witness_program.version() as u8);
+            // Convert PushBytes to &[u8]
+            packed.extend_from_slice(witness_program.program().as_bytes());
+            Some(packed)
+        },
+        _ => None
+    }
+}
+
+#[pyfunction]
+pub fn pack_address(address: &str, network: &str) -> PyResult<Vec<u8>> {
+    let network_enum = match network {
+        "mainnet" => Network::Bitcoin,
+        "testnet3" => Network::Testnet,
+        "testnet4" => Network::Testnet4,
+        "signet" => Network::Signet,
+        "regtest" => Network::Regtest,
+        _ => {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Invalid network value",
+            ))
+        }
+    };
+
+    // Parse the address string and validate for the specified network
+    let addr = Address::from_str(address)
+        .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid address format"))?;
+    
+    let addr_with_network = addr.require_network(network_enum)
+        .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Address is not valid for the specified network"))?;
+    
+    // Pack the address into a compact format
+    pack(&addr_with_network)
+        .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to pack address"))
+}
+
+#[pyfunction]
+pub fn unpack_address(packed: Vec<u8>, network: &str) -> PyResult<String> {
+    if packed.is_empty() {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Empty packed address"));
+    }
+
+    let network_enum = match network {
+        "mainnet" => Network::Bitcoin,
+        "testnet3" => Network::Testnet,
+        "testnet4" => Network::Testnet4,
+        "signet" => Network::Signet,
+        "regtest" => Network::Regtest,
+        _ => {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Invalid network value",
+            ))
+        }
+    };
+
+    let address = match packed[0] {
+        0x01 if packed.len() == 21 => {
+            // Handle P2PKH address format
+            let pubkey_hash = PubkeyHash::from_slice(&packed[1..])
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid P2PKH data"))?;
+            Address::p2pkh(pubkey_hash, network_enum)
+        },
+        0x02 if packed.len() == 21 => {
+            // Handle P2SH address format
+            let script_hash = ScriptHash::from_slice(&packed[1..])
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid P2SH data"))?;
+            Address::p2sh_from_hash(script_hash, network_enum)
+        },
+        0x03 if packed.len() >= 22 => {
+            // Handle witness program address format (P2WPKH, P2WSH, etc.)
+            let version = packed[1];
+            let program = &packed[2..];
+            let witness_version: WitnessVersion = version.try_into()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid witness version"))?;
+            
+            let witness_program = WitnessProgram::new(witness_version, program)
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid witness program"))?;
+            
+            Address::from_witness_program(witness_program, network_enum)
+        },
+        _ => return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid packed address format"))
+    };
+
+    // Return the address as a string for Python
+    Ok(address.to_string())
+}
+
 pub fn register_utils_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new_bound(parent_module.py(), "utils")?;
     m.add_function(wrap_pyfunction!(inverse_hash, &m)?)?;
     m.add_function(wrap_pyfunction!(script_to_asm, &m)?)?;
     m.add_function(wrap_pyfunction!(script_to_address, &m)?)?;
-    m.add_function(wrap_pyfunction!(script_to_address2, &m)?)?;
-    m.add_function(wrap_pyfunction!(script_to_address3, &m)?)?;
+    m.add_function(wrap_pyfunction!(pack_address, &m)?)?;
+    m.add_function(wrap_pyfunction!(unpack_address, &m)?)?;
     parent_module.add_submodule(&m)?;
     Ok(())
 }

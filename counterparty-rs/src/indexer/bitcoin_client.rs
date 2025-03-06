@@ -90,9 +90,27 @@ fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
     result
 }
 
-fn is_valid_segwit_script(script: &Script) -> bool {
+
+fn is_valid_segwit_script_legacy(script: &Script) -> bool {
     if let Some(Ok(PushBytes(pb))) = script.instructions().next() {
         return pb.is_empty();
+    }
+    false
+}
+
+fn is_valid_segwit_script(script: &Script) -> bool {
+    if let Some(instruction) = script.instructions().next() {
+        match instruction {
+            Ok(bitcoin::blockdata::script::Instruction::PushBytes(pb)) => {
+                return pb.is_empty();
+            },
+            Ok(inst) => {
+                return format!("{:?}", inst).contains("OP_PUSHNUM_1");
+            },
+            Err(_) => {
+                return false;
+            }
+        }
     }
     false
 }
@@ -352,7 +370,8 @@ fn parse_vout(
             "Encountered invalid P2SH script | tx: {}, vout: {}",
             txid, vi
         )));
-    } else if config.segwit_supported(height) && is_valid_segwit_script(&vout.script_pubkey) {
+    } else if (config.segwit_supported(height) && is_valid_segwit_script_legacy(&vout.script_pubkey)) || 
+                (config.taproot_support_enabled(height) && is_valid_segwit_script(&vout.script_pubkey)) {
         let destination = script_to_address(
             vout.script_pubkey.as_bytes().to_vec(),
             config.network.to_string().as_str(),

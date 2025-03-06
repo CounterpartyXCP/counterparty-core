@@ -70,11 +70,10 @@ def test_get_pubkeyhash(current_block_index, monkeypatch):
 
 
 def test_get_address(current_block_index, monkeypatch):
+    # "bcrt1q50kxp76j9l0k9jgwasvcz4mcz0v03fv2vmrn2u"
     scriptpubkey = b"\x00\x14" + b"\xa3\xec`\xfbR/\xdfb\xc9\x0e\xec\x19\x81Wx\x13\xd8\xf8\xa5\x8a"
-    assert (
-        gettxinfolegacy.get_address(scriptpubkey, current_block_index)
-        == "bcrt1q50kxp76j9l0k9jgwasvcz4mcz0v03fv2vmrn2u"
-    )
+    # gettxinfolegacy does not support bech32 addresses
+    assert not gettxinfolegacy.get_address(scriptpubkey, current_block_index)
 
     scriptpubkey = "a9141f4dfe5d2bdc0778119a834591f8e441ee00ce77"
     assert not gettxinfolegacy.get_address(scriptpubkey, current_block_index)

@@ -7,7 +7,7 @@ from bitstring import ReadError
 
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import address, helpers
 from counterpartycore.lib.utils.mpmaencoding import (
     _decode_mpma_send_decode,
     _encode_mpma_send,
@@ -123,6 +123,12 @@ def compose(
     :param memo_is_hex: optional boolean indicating if the memo is in hex format
     """
     cursor = db.cursor()
+
+    for send in asset_dest_quant_list:
+        destination = send[1]
+
+        if len(address.pack(destination)) > 22:
+            raise exceptions.ComposeError(f"Address not supported by MPMA send: {destination}")
 
     if memo and not isinstance(memo, str):
         raise exceptions.ComposeError("`memo` must be a string")

@@ -78,7 +78,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
             ]
             address = f"{signatures_required}_{'_'.join(addresses)}_{len(addresses)}"
         else:
-            address = script.script_to_address2(decoded_tx["vout"][-1]["script_pub_key"])
+            address = script.script_to_address(decoded_tx["vout"][-1]["script_pub_key"])
         value = decoded_tx["vout"][-1]["value"]
         utxo = f"{decoded_tx['tx_id']}:0"
         self.address_and_value_by_utxo[utxo] = (address, value)

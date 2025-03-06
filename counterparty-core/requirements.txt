@@ -21,7 +21,7 @@ itsdangerous==2.1.2
 arc4==0.4.0
 halo==0.0.31
 termcolor==2.4.0
-sentry-sdk==2.10.0
+sentry-sdk==2.22.0
 docstring_parser==0.16
 psutil==5.9.8
 influxdb-client==1.42.0

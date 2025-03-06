@@ -612,6 +612,8 @@ def create_app():
                 exceptions.BalanceError,
             ) as error:
                 # TypeError happens when unexpected keyword arguments are passed in
+                # import traceback
+                # print(traceback.format_exc())
                 error_msg = f"Error composing {tx} transaction via API: {str(error)}"
                 logger.trace(error_msg)
                 raise JSONRPCDispatchException(
