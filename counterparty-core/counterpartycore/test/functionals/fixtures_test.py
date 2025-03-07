@@ -48,7 +48,7 @@ def test_state_db(state_db):
         {"asset": "QAIDFAIRMIN", "quantity": 20},
         {"asset": "RAIDFAIRMIN", "quantity": 20},
         {"asset": "TESTDISP", "quantity": 900},
-        {"asset": "XCP", "quantity": 603414652282},
+        {"asset": "XCP", "quantity": 603364652282},
     ]
 
 
