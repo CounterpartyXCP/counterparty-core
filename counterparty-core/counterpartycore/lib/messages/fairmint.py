@@ -114,7 +114,7 @@ def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: boo
 def unpack(message, return_dict=False):
     try:
         if protocol.enabled("fairminter_v2"):
-            asset_id, quantity = helpers.decode_data(message)
+            asset_id, quantity = helpers.decode_data(message)  # pylint: disable=unbalanced-tuple-unpacking
             asset = ledger.issuances.generate_asset_name(helpers.bytes_to_int(asset_id))
             quantity = helpers.bytes_to_int(quantity or b"\x00")
         else:

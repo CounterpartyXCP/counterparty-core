@@ -132,6 +132,13 @@ def test_unpack():
         "quantity": 0,
     }
 
+    with ProtocolChangesDisabled(["fairminter_v2"]):
+        assert fairmint.unpack(b"FREEFAIRMIN|0", False) == ("FREEFAIRMIN", 0)
+        assert fairmint.unpack(b"FREEFAIRMIN|0", True) == {
+            "asset": "FREEFAIRMIN",
+            "quantity": 0,
+        }
+
 
 def tes_parse_freefairmint_legacy(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
