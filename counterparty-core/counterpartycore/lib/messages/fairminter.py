@@ -371,8 +371,7 @@ def unpack(message, return_dict=False):
             bool(int(divisible)),
             description,
         )
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("fairminter unpack error: %s", e, exc_info=True)
+    except Exception:  # pylint: disable=broad-exception-caught
         return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
 
 

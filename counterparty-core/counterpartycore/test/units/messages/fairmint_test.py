@@ -1,6 +1,7 @@
 import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import fairmint
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_validate(ledger_db, defaults):
@@ -100,6 +101,29 @@ def test_compose(ledger_db, defaults):
             35,  # quantity
         )
 
+    with ProtocolChangesDisabled(["fairminter_v2"]):
+        assert fairmint.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "FREEFAIRMIN",  # asset
+            0,  # quantity
+        ) == (
+            defaults["addresses"][1],
+            [],
+            b"[FREEFAIRMIN|0",
+        )
+
+        assert fairmint.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "QAIDFAIRMIN",  # asset
+            10,  # quantity
+        ) == (
+            defaults["addresses"][1],
+            [],
+            b"[QAIDFAIRMIN|10",
+        )
+
 
 def test_unpack():
     assert fairmint.unpack(b"\x07u\xdbH\x16\xb1\xd6\x02\x00", False) == ("FREEFAIRMIN", 0)
@@ -107,6 +131,68 @@ def test_unpack():
         "asset": "FREEFAIRMIN",
         "quantity": 0,
     }
+
+
+def tes_parse_freefairmint_legacy(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    with ProtocolChangesDisabled(["fairminter_v2"]):
+        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+        message = b"FREEFAIRMIN|0"
+        fairmint.parse(ledger_db, tx, message)
+
+        test_helpers.check_records(
+            ledger_db,
+            [
+                {
+                    "table": "fairmints",
+                    "values": {
+                        "tx_hash": tx["tx_hash"],
+                        "block_index": tx["block_index"],
+                        "source": defaults["addresses"][0],
+                        "asset": "FREEFAIRMIN",
+                        "earn_quantity": 10,
+                        "paid_quantity": 0,
+                        "commission": 0,
+                        "status": "valid",
+                    },
+                },
+                {
+                    "table": "issuances",
+                    "values": {
+                        "tx_hash": tx["tx_hash"],
+                        "block_index": tx["block_index"],
+                        "asset": "FREEFAIRMIN",
+                        "quantity": 10,
+                        "divisible": True,
+                        "source": defaults["addresses"][0],
+                        "issuer": defaults["addresses"][0],
+                        "transfer": False,
+                        "callable": False,
+                        "call_date": 0,
+                        "call_price": 0,
+                        "description": "",
+                        "fee_paid": 0,
+                        "locked": False,
+                        "reset": False,
+                        "status": "valid",
+                        "asset_longname": None,
+                        "fair_minting": True,
+                    },
+                },
+                {
+                    "table": "credits",
+                    "values": {
+                        "block_index": current_block_index,
+                        "address": defaults["addresses"][0],
+                        "asset": "FREEFAIRMIN",
+                        "quantity": 10,
+                        "calling_function": "fairmint",
+                        "event": tx["tx_hash"],
+                    },
+                },
+            ],
+        )
 
 
 def tes_parse_freefairmint(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
