@@ -3,9 +3,9 @@ from counterpartycore.lib.ledger import supplies
 
 def test_supplies_functions(ledger_db, defaults):
     assert supplies.xcp_created(ledger_db) == 604514652382
-    assert supplies.xcp_destroyed(ledger_db) == 750000000
-    assert supplies.xcp_supply(ledger_db) == 603764652382
-    assert supplies.destructions(ledger_db) == {"XCP": 750000000}
+    assert supplies.xcp_destroyed(ledger_db) == 800000000
+    assert supplies.xcp_supply(ledger_db) == 603714652382
+    assert supplies.destructions(ledger_db) == {"XCP": 800000000}
     assert supplies.asset_supply(ledger_db, "DIVISIBLE") == 100000000000
 
     assert supplies.creations(ledger_db) == {
@@ -25,12 +25,13 @@ def test_supplies_functions(ledger_db, defaults):
         "QAIDFAIRMIN": 20,
         "RAIDFAIRMIN": 20,
         "SAIDFAIRMIN": 0,
+        "TAIDFAIRMIN": 1,
         "TESTDISP": 1000,
         "A160361285792733729": 50,
     }
 
     assert supplies.supplies(ledger_db) == {
-        "XCP": 603764652382,
+        "XCP": 603714652382,
         "A95428959342453541": 100000000,
         "CALLABLE": 1000,
         "DIVIDEND": 100,
@@ -46,6 +47,7 @@ def test_supplies_functions(ledger_db, defaults):
         "QAIDFAIRMIN": 20,
         "RAIDFAIRMIN": 20,
         "SAIDFAIRMIN": 0,
+        "TAIDFAIRMIN": 1,
         "A160361285792733729": 50,
         "TESTDISP": 1000,
     }
@@ -53,7 +55,7 @@ def test_supplies_functions(ledger_db, defaults):
     assert supplies.holders(ledger_db, "XCP") == [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "address_quantity": 91649999693,
+            "address_quantity": 91599999693,
             "escrow": None,
         },
         {
@@ -192,6 +194,7 @@ def test_supplies_functions(ledger_db, defaults):
         "PAYTOSCRIPT": 1000,
         "QAIDFAIRMIN": 20,
         "RAIDFAIRMIN": 20,
+        "TAIDFAIRMIN": 1,
         "TESTDISP": 1000,
-        "XCP": 603764652382,
+        "XCP": 603714652382,
     }

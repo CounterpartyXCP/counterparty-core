@@ -35,6 +35,29 @@ def test_validate(ledger_db, defaults):
         35,  # quantity
     ) == ["asset supply quantity exceeds hard cap"]
 
+    assert (
+        fairmint.validate(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "SAIDFAIRMIN",  # asset
+            2,  # quantity
+        )
+        == []
+    )
+
+    assert fairmint.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "SAIDFAIRMIN",  # asset
+        3,  # quantity
+    ) == ["quantity exceeds maximum allowed by address"]
+
+    assert fairmint.validate(
+        ledger_db,
+        defaults["addresses"][0],  # source
+        "TAIDFAIRMIN",  # asset
+    ) == ["quantity exceeds maximum allowed by address"]
+
 
 def test_compose(ledger_db, defaults):
     assert fairmint.compose(
