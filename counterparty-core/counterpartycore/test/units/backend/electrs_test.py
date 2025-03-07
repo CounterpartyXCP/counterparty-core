@@ -1,198 +1,702 @@
-from counterpartycore.lib.backend import electrs
-from counterpartycore.lib.utils import helpers
+import binascii
+import unittest.mock as mock
+
+import pytest
+import requests
+from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.backend import electrs as electrum_connector
 
 
-def test_search_pubkey_bech32(monkeypatch):
-    monkeypatch.setattr(
-        "counterpartycore.lib.backend.electrs.get_history",
-        lambda x: [
+# Fixture for mocking requests.get
+@pytest.fixture
+def mock_requests_get():
+    with mock.patch("requests.get") as mock_get:
+        yield mock_get
+
+
+# Tests for electr_query
+def test_electr_query_success(mock_requests_get):
+    """Test the electr_query function with a successful result"""
+    # Ensure config.ELECTRS_URL is set before calling electr_query
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    mock_response = mock.Mock()
+    mock_response.json.return_value = {"test": "data"}
+    mock_requests_get.return_value = mock_response
+
+    result = electrum_connector.electr_query("test/url")
+
+    mock_requests_get.assert_called_once_with("http://localhost:3000/test/url", timeout=10)
+    assert result == {"test": "data"}
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+def test_electr_query_no_url():
+    """Test the electr_query function without a configured URL"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = None
+
+    with pytest.raises(exceptions.ElectrsError, match="Electrs server not configured"):
+        electrum_connector.electr_query("test/url")
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+def test_electr_query_request_exception(mock_requests_get):
+    """Test the electr_query function when a request exception is raised"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    mock_requests_get.side_effect = requests.RequestException("Connection error")
+
+    with pytest.raises(exceptions.ElectrsError):
+        electrum_connector.electr_query("test/url")
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+# Tests for get_utxos
+def test_get_utxos_confirmed():
+    """Test get_utxos with confirmed transactions"""
+    # Set required config values
+    previous_unit = getattr(config, "UNIT", None)
+    config.UNIT = 10**8
+
+    with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
+        mock_query.return_value = [
+            {"txid": "tx1", "vout": 0, "value": 10000000, "status": {"confirmed": True}},
+            {"txid": "tx2", "vout": 1, "value": 20000000, "status": {"confirmed": True}},
+        ]
+
+        result = electrum_connector.get_utxos("test_address")
+
+        expected = [
             {
-                "txid": "f8d74847198e409c3aa79eeb2c101e8fbb894a03858493d2ac3deb7970d12015",
-                "version": 2,
-                "locktime": 0,
-                "vin": [
-                    {
-                        "txid": "e05a9501ac6f4cdc3f393a20e0e65a5079e6c346201722493294fe6033895219",
-                        "vout": 1,
-                        "prevout": {
-                            "scriptpubkey": "00146150f9d41f5f0b7841f6be50eda0b5f9a7a81357",
-                            "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 6150f9d41f5f0b7841f6be50eda0b5f9a7a81357",
-                            "scriptpubkey_type": "v0_p2wpkh",
-                            "scriptpubkey_address": "tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a",
-                            "value": 499368,
-                        },
-                        "scriptsig": "",
-                        "scriptsig_asm": "",
-                        "witness": [
-                            "304402206c7475c0ef65f369ec2ff0bdb35b433f3ad2215b75b0856965e92b575f112d030220515a8aeeb4dc460a545e40c174879d80c9467b4926a328531078ab3d6c67e86101",
-                            "03821862113e63dcc139fb2e2c752ddcf64b2aaf40bf13ad6a0a29790f3ead77ac",
-                        ],
-                        "is_coinbase": False,
-                        "sequence": 4294967295,
-                    }
-                ],
-                "vout": [
-                    {
-                        "scriptpubkey": "0014ece41d226060118079cbea4f35ac5c1dbd11fe86",
-                        "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 ece41d226060118079cbea4f35ac5c1dbd11fe86",
-                        "scriptpubkey_type": "v0_p2wpkh",
-                        "scriptpubkey_address": "tb1qanjp6gnqvqgcq7wtaf8nttzurk73rl5xqk08hs",
-                        "value": 10000,
-                    },
-                    {
-                        "scriptpubkey": "00146150f9d41f5f0b7841f6be50eda0b5f9a7a81357",
-                        "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 6150f9d41f5f0b7841f6be50eda0b5f9a7a81357",
-                        "scriptpubkey_type": "v0_p2wpkh",
-                        "scriptpubkey_address": "tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a",
-                        "value": 487958,
-                    },
-                ],
-                "size": 222,
-                "weight": 561,
-                "sigops": 1,
-                "fee": 1410,
-                "status": {
-                    "confirmed": True,
-                    "block_height": 68994,
-                    "block_hash": "000000000bf9eab2adae97280fbf4a352385c932e93f0a042da4c125a4ec493e",
-                    "block_time": 1738780028,
-                },
+                "txid": "tx1",
+                "vout": 0,
+                "value": 10000000,
+                "amount": 0.1,
+                "status": {"confirmed": True},
+            },
+            {
+                "txid": "tx2",
+                "vout": 1,
+                "value": 20000000,
+                "amount": 0.2,
+                "status": {"confirmed": True},
+            },
+        ]
+        assert result == expected
+        mock_query.assert_called_once_with("address/test_address/utxo")
+
+    # Restore original value
+    config.UNIT = previous_unit
+
+
+def test_get_utxos_include_unconfirmed():
+    """Test get_utxos including unconfirmed transactions"""
+    previous_unit = getattr(config, "UNIT", None)
+    config.UNIT = 10**8
+
+    with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
+        mock_query.return_value = [
+            {"txid": "tx1", "vout": 0, "value": 10000000, "status": {"confirmed": True}},
+            {"txid": "tx2", "vout": 1, "value": 20000000, "status": {"confirmed": False}},
+        ]
+
+        result = electrum_connector.get_utxos("test_address", unconfirmed=True)
+
+        expected = [
+            {
+                "txid": "tx1",
+                "vout": 0,
+                "value": 10000000,
+                "amount": 0.1,
+                "status": {"confirmed": True},
+            },
+            {
+                "txid": "tx2",
+                "vout": 1,
+                "value": 20000000,
+                "amount": 0.2,
+                "status": {"confirmed": False},
+            },
+        ]
+        assert result == expected
+
+    # Restore original value
+    config.UNIT = previous_unit
+
+
+def test_get_utxos_exclude_unconfirmed():
+    """Test get_utxos excluding unconfirmed transactions"""
+    previous_unit = getattr(config, "UNIT", None)
+    config.UNIT = 10**8
+
+    with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
+        mock_query.return_value = [
+            {"txid": "tx1", "vout": 0, "value": 10000000, "status": {"confirmed": True}},
+            {"txid": "tx2", "vout": 1, "value": 20000000, "status": {"confirmed": False}},
+        ]
+
+        result = electrum_connector.get_utxos("test_address", unconfirmed=False)
+
+        expected = [
+            {
+                "txid": "tx1",
+                "vout": 0,
+                "value": 10000000,
+                "amount": 0.1,
+                "status": {"confirmed": True},
+            }
+        ]
+        assert result == expected
+
+    # Restore original value
+    config.UNIT = previous_unit
+
+
+def test_get_utxos_filter_by_tx_hash():
+    """Test get_utxos with transaction hash filtering"""
+    previous_unit = getattr(config, "UNIT", None)
+    config.UNIT = 10**8
+
+    with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
+        mock_query.return_value = [
+            {"txid": "tx1", "vout": 0, "value": 10000000, "status": {"confirmed": True}},
+            {"txid": "tx2", "vout": 1, "value": 20000000, "status": {"confirmed": True}},
+        ]
+
+        result = electrum_connector.get_utxos("test_address", unspent_tx_hash="tx1")
+
+        expected = [
+            {
+                "txid": "tx1",
+                "vout": 0,
+                "value": 10000000,
+                "amount": 0.1,
+                "status": {"confirmed": True},
+            }
+        ]
+        assert result == expected
+
+    # Restore original value
+    config.UNIT = previous_unit
+
+
+def test_get_utxos_empty_list():
+    """Test get_utxos with an empty transaction list"""
+    previous_unit = getattr(config, "UNIT", None)
+    config.UNIT = 10**8
+
+    with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
+        mock_query.return_value = []
+
+        result = electrum_connector.get_utxos("test_address")
+
+        assert result == []
+
+    # Restore original value
+    config.UNIT = previous_unit
+
+
+# Tests for get_history
+def test_get_history_confirmed_only():
+    """Test get_history including only confirmed transactions"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
+        mock_query.return_value = [
+            {"txid": "tx1", "status": {"confirmed": True}},
+            {"txid": "tx2", "status": {"confirmed": False}},
+        ]
+
+        result = electrum_connector.get_history("test_address")
+
+        expected = [{"txid": "tx1", "status": {"confirmed": True}}]
+        assert result == expected
+        mock_query.assert_called_once_with("address/test_address/txs")
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+def test_get_history_include_unconfirmed():
+    """Test get_history including unconfirmed transactions"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
+        mock_query.return_value = [
+            {"txid": "tx1", "status": {"confirmed": True}},
+            {"txid": "tx2", "status": {"confirmed": False}},
+        ]
+
+        result = electrum_connector.get_history("test_address", unconfirmed=True)
+
+        expected = [
+            {"txid": "tx1", "status": {"confirmed": True}},
+            {"txid": "tx2", "status": {"confirmed": False}},
+        ]
+        assert result == expected
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+def test_get_history_empty_list():
+    """Test get_history with an empty transaction list"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
+        mock_query.return_value = []
+
+        result = electrum_connector.get_history("test_address")
+
+        assert result == []
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+# Tests for get_utxos_by_addresses
+def test_get_utxos_by_addresses():
+    """Test get_utxos_by_addresses with multiple addresses"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
+        mock_get_utxos.side_effect = [
+            [
+                {
+                    "txid": "tx1",
+                    "vout": 0,
+                    "value": 10000000,
+                    "amount": 0.1,
+                    "status": {"confirmed": True},
+                }
+            ],
+            [
+                {
+                    "txid": "tx2",
+                    "vout": 1,
+                    "value": 20000000,
+                    "amount": 0.2,
+                    "status": {"confirmed": True},
+                }
+            ],
+        ]
+
+        result = electrum_connector.get_utxos_by_addresses("addr1,addr2")
+
+        expected = [
+            {
+                "txid": "tx1",
+                "vout": 0,
+                "value": 10000000,
+                "amount": 0.1,
+                "status": {"confirmed": True},
+                "address": "addr1",
+            },
+            {
+                "txid": "tx2",
+                "vout": 1,
+                "value": 20000000,
+                "amount": 0.2,
+                "status": {"confirmed": True},
+                "address": "addr2",
+            },
+        ]
+        assert result == expected
+        assert mock_get_utxos.call_count == 2
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+def test_get_utxos_by_addresses_with_params():
+    """Test get_utxos_by_addresses with additional parameters"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
+        mock_get_utxos.return_value = [
+            {
+                "txid": "tx1",
+                "vout": 0,
+                "value": 10000000,
+                "amount": 0.1,
+                "status": {"confirmed": True},
+            }
+        ]
+
+        result = electrum_connector.get_utxos_by_addresses(
+            "addr1", unconfirmed=True, unspent_tx_hash="tx1"
+        )
+
+        expected = [
+            {
+                "txid": "tx1",
+                "vout": 0,
+                "value": 10000000,
+                "amount": 0.1,
+                "status": {"confirmed": True},
+                "address": "addr1",
+            }
+        ]
+        assert result == expected
+        mock_get_utxos.assert_called_once_with("addr1", True, "tx1")
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+def test_get_utxos_by_addresses_empty_string():
+    """Test get_utxos_by_addresses with an empty string"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    # Mock get_utxos to return an empty list when called
+    with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
+        # It's crucial to set a return value for the mock
+        mock_get_utxos.return_value = []
+
+        result = electrum_connector.get_utxos_by_addresses("")
+
+        # Verify the function returns an empty list for an empty string input
+        assert result == []
+
+        # Check if get_utxos was called with empty string
+        # (you can remove this if the function should skip calling get_utxos for empty inputs)
+        mock_get_utxos.assert_called_with("", False, None)
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+# Tests for pubkey_from_tx
+def test_pubkey_from_tx_witness():
+    """Test pubkey_from_tx with a witness"""
+    with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
+        mock_segwit_addr = mock.Mock()
+        mock_segwit_addr.to_string.return_value = "test_pubkeyhash"
+        mock_pubkey_instance = mock.Mock()
+        mock_pubkey_instance.get_segwit_address.return_value = mock_segwit_addr
+        mock_pubkey.from_hex.return_value = mock_pubkey_instance
+
+        tx = {"vin": [{"witness": ["witness0", "pubkey_witness"]}], "vout": []}
+
+        result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+        assert result == "pubkey_witness"
+
+
+def test_pubkey_from_tx_witness_binascii_error():
+    """Test pubkey_from_tx with a binascii error on the witness"""
+    with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
+        mock_pubkey.from_hex.side_effect = binascii.Error()
+
+        tx = {"vin": [{"witness": ["witness0", "invalid_pubkey"]}], "vout": []}
+
+        result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+        assert result is None
+
+
+def test_pubkey_from_tx_witness_short():
+    """Test pubkey_from_tx with a witness that's too short"""
+    tx = {
+        "vin": [
+            {
+                "witness": ["witness0"]  # Only one element, no public key
             }
         ],
-    )
+        "vout": [],
+    }
 
-    helpers.setup_bitcoinutils("testnet")
+    result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
 
-    assert electrs.search_pubkey("tb1qanjp6gnqvqgcq7wtaf8nttzurk73rl5xqk08hs") is None
-    assert (
-        electrs.search_pubkey("tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a")
-        == "03821862113e63dcc139fb2e2c752ddcf64b2aaf40bf13ad6a0a29790f3ead77ac"
-    )
-
-    helpers.setup_bitcoinutils("regtest")
+    assert result is None
 
 
-def test_search_pubkey_p2pkh(monkeypatch):
-    monkeypatch.setattr(
-        "counterpartycore.lib.backend.electrs.get_history",
-        lambda x: [
+def test_pubkey_from_tx_p2pkh_uncompressed():
+    """Test pubkey_from_tx with uncompressed p2pkh"""
+    with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
+        mock_addr_uncompressed = mock.Mock()
+        mock_addr_uncompressed.to_string.return_value = "test_pubkeyhash"
+        mock_addr_compressed = mock.Mock()
+        mock_addr_compressed.to_string.return_value = "different_pubkeyhash"
+        mock_pubkey_instance = mock.Mock()
+        mock_pubkey_instance.get_address.side_effect = [
+            mock_addr_uncompressed,
+            mock_addr_compressed,
+        ]
+        mock_pubkey.from_hex.return_value = mock_pubkey_instance
+
+        tx = {"vin": [{"scriptsig_asm": "asm0 asm1 asm2 pubkey_asm"}], "vout": []}
+
+        result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+        assert result == "pubkey_asm"
+
+
+def test_pubkey_from_tx_p2pkh_compressed():
+    """Test pubkey_from_tx with compressed p2pkh"""
+    with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
+        mock_addr_uncompressed = mock.Mock()
+        mock_addr_uncompressed.to_string.return_value = "different_pubkeyhash"
+        mock_addr_compressed = mock.Mock()
+        mock_addr_compressed.to_string.return_value = "test_pubkeyhash"
+        mock_pubkey_instance = mock.Mock()
+        mock_pubkey_instance.get_address.side_effect = [
+            mock_addr_uncompressed,
+            mock_addr_compressed,
+        ]
+        mock_pubkey.from_hex.return_value = mock_pubkey_instance
+
+        tx = {"vin": [{"scriptsig_asm": "asm0 asm1 asm2 pubkey_asm"}], "vout": []}
+
+        result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+        assert result == "pubkey_asm"
+
+
+def test_pubkey_from_tx_p2pkh_binascii_error():
+    """Test pubkey_from_tx with a binascii error on p2pkh"""
+    with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
+        mock_pubkey.from_hex.side_effect = binascii.Error()
+
+        tx = {"vin": [{"scriptsig_asm": "asm0 asm1 asm2 invalid_pubkey"}], "vout": []}
+
+        result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+        assert result is None
+
+
+def test_pubkey_from_tx_p2pkh_invalid_format():
+    """Test pubkey_from_tx with an invalid ASM format"""
+    tx = {
+        "vin": [
             {
-                "txid": "c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32",
-                "version": 2,
-                "locktime": 0,
-                "vin": [
-                    {
-                        "txid": "33e3ce1cd0c5a956ba6e253d6ebb9ce3b391bce1c7d07a95468c842ea4a07e02",
-                        "vout": 1,
-                        "prevout": {
-                            "scriptpubkey": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
-                            "scriptpubkey_asm": "OP_DUP OP_HASH160 OP_PUSHBYTES_20 412463039be25be1bef6e6dbc5eb8eb18cf95694 OP_EQUALVERIFY OP_CHECKSIG",
-                            "scriptpubkey_type": "p2pkh",
-                            "scriptpubkey_address": "mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G",
-                            "value": 52385296,
-                        },
-                        "scriptsig": "4730440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde7012103a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6",
-                        "scriptsig_asm": "OP_PUSHBYTES_71 30440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde701 OP_PUSHBYTES_33 03a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6",
-                        "is_coinbase": False,
-                        "sequence": 4294967295,
-                    }
-                ],
-                "vout": [
-                    {
-                        "scriptpubkey": "6a34696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947",
-                        "scriptpubkey_asm": "OP_RETURN OP_PUSHBYTES_52 696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947",
-                        "scriptpubkey_type": "op_return",
-                        "value": 0,
-                    },
-                    {
-                        "scriptpubkey": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
-                        "scriptpubkey_asm": "OP_DUP OP_HASH160 OP_PUSHBYTES_20 412463039be25be1bef6e6dbc5eb8eb18cf95694 OP_EQUALVERIFY OP_CHECKSIG",
-                        "scriptpubkey_type": "p2pkh",
-                        "scriptpubkey_address": "mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G",
-                        "value": 52310396,
-                    },
-                ],
-                "size": 254,
-                "weight": 1016,
-                "sigops": 4,
-                "fee": 74900,
-                "status": {
-                    "confirmed": True,
-                    "block_height": 66100,
-                    "block_hash": "0000000056ed6b0f69fb51d0a690b78b1ffaf44ef01f1380d3528fc430903f76",
-                    "block_time": 1737479508,
-                },
+                "scriptsig_asm": "invalid_format"  # Not 4 elements
             }
         ],
-    )
+        "vout": [],
+    }
 
-    helpers.setup_bitcoinutils("testnet")
-    assert (
-        electrs.search_pubkey("mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G")
-        == "03a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6"
-    )
-    assert electrs.search_pubkey("tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a") is None
-    helpers.setup_bitcoinutils("regtest")
+    result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+    assert result is None
 
 
-def test_search_pubkey_p2pk(monkeypatch):
-    monkeypatch.setattr(
-        "counterpartycore.lib.backend.electrs.get_history",
-        lambda x: [
+def test_pubkey_from_tx_p2pk_uncompressed():
+    """Test pubkey_from_tx with uncompressed p2pk"""
+    with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
+        mock_addr_uncompressed = mock.Mock()
+        mock_addr_uncompressed.to_string.return_value = "test_pubkeyhash"
+        mock_addr_compressed = mock.Mock()
+        mock_addr_compressed.to_string.return_value = "different_pubkeyhash"
+        mock_pubkey_instance = mock.Mock()
+        mock_pubkey_instance.get_address.side_effect = [
+            mock_addr_uncompressed,
+            mock_addr_compressed,
+        ]
+        mock_pubkey.from_hex.return_value = mock_pubkey_instance
+
+        tx = {"vin": [], "vout": [{"scriptpubkey_asm": "OP_PUBKEY pubkey_asm OP_CHECKSIG"}]}
+
+        result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+        assert result == "pubkey_asm"
+
+
+def test_pubkey_from_tx_p2pk_compressed():
+    """Test pubkey_from_tx with compressed p2pk"""
+    with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
+        mock_addr_uncompressed = mock.Mock()
+        mock_addr_uncompressed.to_string.return_value = "different_pubkeyhash"
+        mock_addr_compressed = mock.Mock()
+        mock_addr_compressed.to_string.return_value = "test_pubkeyhash"
+        mock_pubkey_instance = mock.Mock()
+        mock_pubkey_instance.get_address.side_effect = [
+            mock_addr_uncompressed,
+            mock_addr_compressed,
+        ]
+        mock_pubkey.from_hex.return_value = mock_pubkey_instance
+
+        tx = {"vin": [], "vout": [{"scriptpubkey_asm": "OP_PUBKEY pubkey_asm OP_CHECKSIG"}]}
+
+        result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+        assert result == "pubkey_asm"
+
+
+def test_pubkey_from_tx_p2pk_binascii_error():
+    """Test pubkey_from_tx with a binascii error on p2pk"""
+    with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
+        mock_pubkey.from_hex.side_effect = binascii.Error()
+
+        tx = {"vin": [], "vout": [{"scriptpubkey_asm": "OP_PUBKEY invalid_pubkey OP_CHECKSIG"}]}
+
+        result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+        assert result is None
+
+
+def test_pubkey_from_tx_p2pk_invalid_format():
+    """Test pubkey_from_tx with an invalid ASM format in vout"""
+    tx = {
+        "vin": [],
+        "vout": [
             {
-                "txid": "c9affbbc45a8749dcb96632356976578fa9f72d4578a34b6bba23e9021b30b32",
-                "version": 2,
-                "locktime": 0,
-                "vin": [
-                    {
-                        "txid": "33e3ce1cd0c5a956ba6e253d6ebb9ce3b391bce1c7d07a95468c842ea4a07e02",
-                        "vout": 1,
-                        "prevout": {
-                            "scriptpubkey": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
-                            "scriptpubkey_asm": "OP_DUP OP_HASH160 OP_PUSHBYTES_20 412463039be25be1bef6e6dbc5eb8eb18cf95694 OP_EQUALVERIFY OP_CHECKSIG",
-                            "scriptpubkey_type": "p2pkh",
-                            "scriptpubkey_address": "mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G",
-                            "value": 52385296,
-                        },
-                        "scriptsig": "4730440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde7012103a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6",
-                        "scriptsig_asm": "OP_PUSHBYTES_71 30440220087bd28db6494b706e59a8e019a00f98b47e04abc77c0aa1b6abdf9c79039c6a0220680eec608563c7827e69d50d199652e4e4ca61a1c6eba3711e87180658e4dde701 OP_PUSHBYTES_33 03a3770379e091cf67ee8a30752c4df2b5bcc61e2bca1e061da78438f18efe8be6",
-                        "is_coinbase": False,
-                        "sequence": 4294967295,
-                    }
-                ],
-                "vout": [
-                    {
-                        "scriptpubkey": "6a34696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947",
-                        "scriptpubkey_asm": "OP_RETURN OP_PUSHBYTES_52 696f6e3a312e516d5a5a6534715150626774314d68453645534771464d57763855786f59505768735654355a59627535756d6947",
-                        "scriptpubkey_type": "op_return",
-                        "value": 0,
-                    },
-                    {
-                        "scriptpubkey": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
-                        "scriptpubkey_asm": "OP_PUSHBYTES_65 049464205950188c29d377eebca6535e0f3699ce4069ecd77ffebfbd0bcf95e3c134cb7d2742d800a12df41413a09ef87a80516353a2f0a280547bb5512dc03da8 OP_CHECKSIG",
-                        "scriptpubkey_type": "p2pk",
-                        "scriptpubkey_address": "ms1J6ZT5X2n7vRiDdoJeNomprGsTrSEXUd",
-                        "value": 52310396,
-                    },
-                ],
-                "size": 254,
-                "weight": 1016,
-                "sigops": 4,
-                "fee": 74900,
-                "status": {
-                    "confirmed": True,
-                    "block_height": 66100,
-                    "block_hash": "0000000056ed6b0f69fb51d0a690b78b1ffaf44ef01f1380d3528fc430903f76",
-                    "block_time": 1737479508,
-                },
+                "scriptpubkey_asm": "invalid_format"  # Not 3 elements or no OP_CHECKSIG
             }
         ],
-    )
+    }
 
-    helpers.setup_bitcoinutils("testnet")
-    assert (
-        electrs.search_pubkey("ms1J6ZT5X2n7vRiDdoJeNomprGsTrSEXUd")
-        == "049464205950188c29d377eebca6535e0f3699ce4069ecd77ffebfbd0bcf95e3c134cb7d2742d800a12df41413a09ef87a80516353a2f0a280547bb5512dc03da8"
-    )
-    assert electrs.search_pubkey("tb1qv9g0n4qltu9hss0khegwmg94lxn6sy6haqhj7a") is None
-    helpers.setup_bitcoinutils("regtest")
+    result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+    assert result is None
+
+
+def test_pubkey_from_tx_coinbase():
+    """Test pubkey_from_tx with a coinbase transaction"""
+    tx = {"vin": [{"is_coinbase": True}], "vout": []}
+
+    result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+    assert result is None
+
+
+# Tests for search_pubkey
+def test_search_pubkey_found():
+    """Test search_pubkey when the public key is found"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch(
+        "counterpartycore.lib.backend.electrs.get_history"
+    ) as mock_get_history, mock.patch(
+        "counterpartycore.lib.backend.electrs.pubkey_from_tx"
+    ) as mock_pubkey_from_tx:
+        mock_get_history.return_value = [{"txid": "tx1"}, {"txid": "tx2"}]
+        mock_pubkey_from_tx.side_effect = [None, "found_pubkey"]
+
+        result = electrum_connector.search_pubkey("test_pubkeyhash")
+
+        assert result == "found_pubkey"
+        assert mock_pubkey_from_tx.call_count == 2
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+def test_search_pubkey_not_found():
+    """Test search_pubkey when the public key is not found"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch(
+        "counterpartycore.lib.backend.electrs.get_history"
+    ) as mock_get_history, mock.patch(
+        "counterpartycore.lib.backend.electrs.pubkey_from_tx"
+    ) as mock_pubkey_from_tx:
+        mock_get_history.return_value = [{"txid": "tx1"}, {"txid": "tx2"}]
+        mock_pubkey_from_tx.return_value = None
+
+        result = electrum_connector.search_pubkey("test_pubkeyhash")
+
+        assert result is None
+        assert mock_pubkey_from_tx.call_count == 2
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+def test_search_pubkey_empty_history():
+    """Test search_pubkey with an empty history"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch("counterpartycore.lib.backend.electrs.get_history") as mock_get_history:
+        mock_get_history.return_value = []
+
+        result = electrum_connector.search_pubkey("test_pubkeyhash")
+
+        assert result is None
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
+
+
+# Tests for list_unspent
+def test_list_unspent_with_utxos():
+    """Test list_unspent with available UTXOs"""
+    previous_unit = getattr(config, "UNIT", None)
+    config.UNIT = 10**8
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
+        mock_get_utxos.return_value = [
+            {"txid": "tx1", "vout": 0, "value": 10000000, "status": {"confirmed": True}},
+            {"txid": "tx2", "vout": 1, "value": 20000000, "status": {"confirmed": True}},
+        ]
+
+        result = electrum_connector.list_unspent("test_source", True)
+
+        expected = [
+            {"txid": "tx1", "vout": 0, "value": 10000000, "amount": 0.1},
+            {"txid": "tx2", "vout": 1, "value": 20000000, "amount": 0.2},
+        ]
+        assert result == expected
+        mock_get_utxos.assert_called_once_with("test_source", unconfirmed=True)
+
+    # Restore original values
+    config.UNIT = previous_unit
+    config.ELECTRS_URL = previous_url
+
+
+def test_list_unspent_no_utxos():
+    """Test list_unspent without available UTXOs"""
+    previous_unit = getattr(config, "UNIT", None)
+    config.UNIT = 10**8
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
+        mock_get_utxos.return_value = []
+
+        result = electrum_connector.list_unspent("test_source", False)
+
+        assert result == []
+        mock_get_utxos.assert_called_once_with("test_source", unconfirmed=False)
+
+    # Restore original values
+    config.UNIT = previous_unit
+    config.ELECTRS_URL = previous_url
+
+
+# Tests for pubkeyhash_to_pubkey
+def test_pubkeyhash_to_pubkey():
+    """Test pubkeyhash_to_pubkey"""
+    previous_url = config.ELECTRS_URL
+    config.ELECTRS_URL = "http://localhost:3000"
+
+    with mock.patch("counterpartycore.lib.backend.electrs.search_pubkey") as mock_search_pubkey:
+        mock_search_pubkey.return_value = "found_pubkey"
+
+        result = electrum_connector.pubkeyhash_to_pubkey("test_address")
+
+        assert result == "found_pubkey"
+        mock_search_pubkey.assert_called_once_with("test_address")
+
+    # Restore original URL
+    config.ELECTRS_URL = previous_url
