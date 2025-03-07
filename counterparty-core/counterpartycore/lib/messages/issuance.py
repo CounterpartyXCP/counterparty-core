@@ -203,9 +203,9 @@ def validate(
                     fee = int(0.5 * config.UNIT)
             elif protocol.after_block_or_test_network(block_index, 291700):  # Protocol change.
                 fee = int(0.5 * config.UNIT)
-            elif protocol.after_block_or_test_network(block_index, 286000):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_2"):  # Protocol change.
                 fee = 5 * config.UNIT
-            elif protocol.after_block_or_test_network(block_index, 281237):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_1"):  # Protocol change.
                 fee = 5
             if fee and (balance < fee):
                 problems.append("insufficient funds")
@@ -558,8 +558,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                     except UnicodeDecodeError:
                         description = ""
         elif (
-            protocol.after_block_or_test_network(block_index, 283272)
-            and len(message) >= asset_format_length
+            protocol.enabled("issuance_format_update") and len(message) >= asset_format_length
         ):  # Protocol change.
             if (len(message) - asset_format_length <= 42) and not protocol.enabled(
                 "pascal_string_removed"
