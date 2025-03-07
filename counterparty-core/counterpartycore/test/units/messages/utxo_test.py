@@ -122,7 +122,7 @@ def test_parse_attach(ledger_db, blockchain_mock, defaults, test_helpers, curren
             {
                 "table": "messages",
                 "values": {
-                    "block_index": tx["block_index"],
+                    "block_index": current_block_index,
                     "command": "insert",
                     "category": "sends",
                     "event": "ATTACH_TO_UTXO",
