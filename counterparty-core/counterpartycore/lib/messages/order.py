@@ -178,7 +178,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
         }
         ledger.markets.update_order(db, order_match["tx1_hash"], set_data)
 
-    if block_index < 286500:  # Protocol change.
+    if protocol.enabled("no_backwards_compatibility"):  # Protocol change.
         # Sanity check: one of the two must have expired.
         tx0_order_time_left = tx0_order["expire_index"] - block_index
         tx1_order_time_left = tx1_order["expire_index"] - block_index
@@ -496,7 +496,7 @@ def match(db, tx, block_index=None):
         db, tx1["tx_hash"], give_asset=tx1["give_asset"], get_asset=tx1["get_asset"]
     )
 
-    if protocol.after_block_or_test_network(tx["block_index"], 284501):  # Protocol change.
+    if protocol.enabled("sort_bet_matches"):  # Protocol change.
         order_matches = sorted(
             order_matches, key=lambda x: x["tx_index"]
         )  # Sort by tx index second.
@@ -576,7 +576,7 @@ def match(db, tx, block_index=None):
         tx1_inverse_price = ledger.issuances.price(tx1["give_quantity"], tx1["get_quantity"])
 
         # Protocol change.
-        if tx["block_index"] < 286000:
+        if protocol.enabled("issuance_fee_update_2"):
             tx1_inverse_price = ledger.issuances.price(1, tx1_price)
 
         logger.trace(
@@ -598,7 +598,7 @@ def match(db, tx, block_index=None):
             if not forward_quantity:
                 logger.trace("Skipping: zero forward quantity.")
                 continue
-            if protocol.after_block_or_test_network(block_index, 286500):  # Protocol change.
+            if protocol.enabled("no_backwards_compatibility"):  # Protocol change.
                 if not backward_quantity:
                     logger.trace("Skipping: zero backward quantity.")
                     continue
@@ -618,8 +618,8 @@ def match(db, tx, block_index=None):
 
             # Check and update fee remainings.
             fee = 0
-            if protocol.after_block_or_test_network(
-                block_index, 286500
+            if protocol.enabled(
+                "no_backwards_compatibility"
             ):  # Protocol change. Deduct fee_required from provided_remaining, etc., if possible (else don’t match).
                 if tx1["get_asset"] == config.BTC:
                     if protocol.after_block_or_test_network(
@@ -645,9 +645,7 @@ def match(db, tx, block_index=None):
                         continue
 
                     tx0_fee_provided_remaining -= fee
-                    if protocol.after_block_or_test_network(
-                        block_index, 287800
-                    ):  # Protocol change.
+                    if protocol.enabled("fix_fee_required_remaining_2"):  # Protocol change.
                         tx1_fee_required_remaining -= fee
 
                 elif tx1["give_asset"] == config.BTC:
@@ -676,9 +674,7 @@ def match(db, tx, block_index=None):
                         continue
 
                     tx1_fee_provided_remaining -= fee
-                    if protocol.after_block_or_test_network(
-                        block_index, 287800
-                    ):  # Protocol change.
+                    if protocol.enabled("fix_fee_required_remaining_2"):  # Protocol change.
                         tx0_fee_required_remaining -= fee
 
             else:  # Don’t deduct.
@@ -776,7 +772,7 @@ def match(db, tx, block_index=None):
             # Calculate when the match will expire.
             if protocol.after_block_or_test_network(block_index, 308000):  # Protocol change.
                 match_expire_index = block_index + 20
-            elif protocol.after_block_or_test_network(block_index, 286500):  # Protocol change.
+            elif protocol.enabled("no_backwards_compatibility"):  # Protocol change.
                 match_expire_index = block_index + 10
             else:
                 match_expire_index = min(tx0["expire_index"], tx1["expire_index"])
