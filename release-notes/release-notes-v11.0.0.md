@@ -40,6 +40,7 @@ counterparty-server start
 
 ## API
 
+- Adds `asset` as optional param to Get Balances by Addresses endpoint
 
 ## CLI
 
