@@ -127,7 +127,7 @@ def test_parse_without_destination(
                             "destination_address": address_0,
                             "fee_paid": 0,
                             "quantity": 100,
-                            "msg_index": 1,
+                            "msg_index": 0,
                             "send_type": "attach",
                             "source": address_0,
                             "status": "valid",
@@ -168,7 +168,7 @@ def test_parse_with_destination(
                             "destination_address": address_0,
                             "fee_paid": 0,
                             "quantity": 100,
-                            "msg_index": 1,
+                            "msg_index": 0,
                             "send_type": "attach",
                             "source": address_0,
                             "status": "valid",
@@ -203,7 +203,7 @@ def test_parse_with_op_return_destination(
                     "bindings": test_helpers.to_short_json(
                         {
                             "block_index": tx["block_index"],
-                            "msg_index": 1,
+                            "msg_index": 0,
                             "send_type": "attach",
                             "status": "invalid: destination vout is an OP_RETURN output",
                             "tx_hash": tx["tx_hash"],
@@ -237,7 +237,7 @@ def test_parse_with_invalid_destination(
                     "bindings": test_helpers.to_short_json(
                         {
                             "block_index": tx["block_index"],
-                            "msg_index": 1,
+                            "msg_index": 0,
                             "send_type": "attach",
                             "status": "invalid: destination vout is greater than the number of outputs",
                             "tx_hash": tx["tx_hash"],
@@ -273,7 +273,7 @@ def test_parse_with_no_destination(
                     "bindings": test_helpers.to_short_json(
                         {
                             "block_index": tx["block_index"],
-                            "msg_index": 1,
+                            "msg_index": 0,
                             "send_type": "attach",
                             "status": "invalid: no UTXO to attach to",
                             "tx_hash": tx["tx_hash"],

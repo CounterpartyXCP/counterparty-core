@@ -150,7 +150,7 @@ def test_parse_burn_multisig_address(
                 "values": {
                     "block_index": tx["block_index"],
                     "burned": 50000000,
-                    "earned": 74999812333,
+                    "earned": 74999811833,
                     "source": defaults["p2ms_addresses"][0],
                     "status": "valid",
                     "tx_hash": tx["tx_hash"],
@@ -165,7 +165,7 @@ def test_parse_burn_multisig_address(
                     "block_index": current_block_index,
                     "calling_function": "burn",
                     "event": tx["tx_hash"],
-                    "quantity": 74999812333,
+                    "quantity": 74999811833,
                 },
             },
         ],

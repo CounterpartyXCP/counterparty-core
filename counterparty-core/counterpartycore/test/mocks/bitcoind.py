@@ -109,6 +109,7 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
             f"SELECT * FROM transactions WHERE source = ? ORDER BY rowid {'ASC' if use_first_tx else 'DESC'} LIMIT 1",  # noqa S608
             (source,),
         ).fetchone()
+        print(tx)
         if tx is None:
             tx = cursor.execute("SELECT * FROM transactions ORDER BY rowid DESC LIMIT 1").fetchone()
 

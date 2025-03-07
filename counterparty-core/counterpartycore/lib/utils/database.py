@@ -119,14 +119,10 @@ class APSWConnectionPool:
         if not hasattr(self.thread_local, "connections"):
             self.thread_local.connections = []
 
-        print(f"max size {config.DB_CONNECTION_POOL_SIZE}")
-        print(f"current size {len(self.thread_local.connections)}")
-
         # If the pool is closed, create a temporary connection
         if self.closed:
             db = get_db_connection(self.db_file, read_only=True, check_wal=False)
             try:
-                print("Connection")
                 yield db
             finally:
                 db.close()
@@ -136,13 +132,11 @@ class APSWConnectionPool:
         if self.thread_local.connections:
             # Reuse an existing connection for this thread
             db = self.thread_local.connections.pop(0)
-            print("Connection (reused)")
         else:
             # Create a new connection for this thread
             db = get_db_connection(self.db_file, read_only=True, check_wal=False)
             with self.lock:
                 self.all_connections.add(db)
-            print("Connection")
 
         try:
             yield db
@@ -165,16 +159,12 @@ class APSWConnectionPool:
                     # Return the connection to the thread-local pool if not full
                     if len(self.thread_local.connections) < config.DB_CONNECTION_POOL_SIZE:
                         self.thread_local.connections.append(db)
-                        print(
-                            f"Connection returned to pool, new size: {len(self.thread_local.connections)}"
-                        )
                     else:
                         # Otherwise close the connection
                         logger.warning("Closing connection due to pool size limit (%s).", self.name)
                         try:
                             db.close()
                             self.all_connections.discard(db)
-                            print("Connection closed due to pool size limit")
                         except apsw.ThreadingViolationError:
                             logger.trace(
                                 "ThreadingViolationError occurred while closing connection."
