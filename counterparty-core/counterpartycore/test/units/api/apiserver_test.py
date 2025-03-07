@@ -413,3 +413,14 @@ def test_get_balances_by_addresses(apiv2_client, defaults):
             balance["address"] == defaults["addresses"][0]
             or balance["utxo_address"] == defaults["addresses"][0]
         )
+
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=A95428959342453541&type=address"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert result[0]["asset"] == "A95428959342453541"
+    for balance in result[0]["addresses"]:
+        assert balance["address"] == defaults["addresses"][0]
+
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=A95428959342453541&type=utxo"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 0

@@ -2037,8 +2037,7 @@ def get_balances_by_addresses(
         return QueryResult(
             result, assets_result.next_cursor, "balances", assets_result.result_count
         )
-    else:
-        return QueryResult(result, None, "balances", 1)
+    return QueryResult(result, None, "balances", 1)
 
 
 def get_balances_by_address_and_asset(
