@@ -581,11 +581,10 @@ def test_search_pubkey_found():
     previous_url = config.ELECTRS_URL
     config.ELECTRS_URL = "http://localhost:3000"
 
-    with mock.patch(
-        "counterpartycore.lib.backend.electrs.get_history"
-    ) as mock_get_history, mock.patch(
-        "counterpartycore.lib.backend.electrs.pubkey_from_tx"
-    ) as mock_pubkey_from_tx:
+    with (
+        mock.patch("counterpartycore.lib.backend.electrs.get_history") as mock_get_history,
+        mock.patch("counterpartycore.lib.backend.electrs.pubkey_from_tx") as mock_pubkey_from_tx,
+    ):
         mock_get_history.return_value = [{"txid": "tx1"}, {"txid": "tx2"}]
         mock_pubkey_from_tx.side_effect = [None, "found_pubkey"]
 
@@ -603,11 +602,10 @@ def test_search_pubkey_not_found():
     previous_url = config.ELECTRS_URL
     config.ELECTRS_URL = "http://localhost:3000"
 
-    with mock.patch(
-        "counterpartycore.lib.backend.electrs.get_history"
-    ) as mock_get_history, mock.patch(
-        "counterpartycore.lib.backend.electrs.pubkey_from_tx"
-    ) as mock_pubkey_from_tx:
+    with (
+        mock.patch("counterpartycore.lib.backend.electrs.get_history") as mock_get_history,
+        mock.patch("counterpartycore.lib.backend.electrs.pubkey_from_tx") as mock_pubkey_from_tx,
+    ):
         mock_get_history.return_value = [{"txid": "tx1"}, {"txid": "tx2"}]
         mock_pubkey_from_tx.return_value = None
 
