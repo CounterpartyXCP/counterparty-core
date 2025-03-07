@@ -115,9 +115,7 @@ def unpack(message, return_dict=False):
     try:
         if protocol.enabled("fairminter_v2"):
             asset_id, quantity = helpers.decode_data(message)
-            print(asset_id, quantity)
             asset = ledger.issuances.generate_asset_name(helpers.bytes_to_int(asset_id))
-            print(asset)
             quantity = helpers.bytes_to_int(quantity or b"\x00")
         else:
             data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")

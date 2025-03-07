@@ -98,6 +98,34 @@ def test_validate(ledger_db, defaults):
         "Soft cap deadline block must be specified if soft cap is specified.",
     ]
 
+    with ProtocolChangesDisabled(["fairminter_v2"]):
+        assert fairminter.validate(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "FAIRMINTED",  # asset
+            "",  # asset_parent,
+            0,  # price=0,
+            1,  # quantity_by_price,
+            -10,  # max_mint_per_tx,
+            0,  # max_mint_per_address,
+            40,  # hard_cap=0,
+            50,  # premint_quantity=0,
+            50,  # start_block=0,
+            49,  # end_block=0,
+            55,  # soft_cap=0,
+            0,  # soft_cap_deadline_block=0,
+            500,  # minted_asset_commission=0.0,
+            0,  # burn_payment=False,
+        ) == [
+            "`max_mint_per_tx` must be >= 0.",
+            "`burn_payment` must be a boolean.",
+            "minted_asset_commission must be a float",
+            "Premint quantity must be < hard cap.",
+            "Start block must be <= end block.",
+            "Soft cap must be < hard cap.",
+            "Soft cap deadline block must be specified if soft cap is specified.",
+        ]
+
     assert fairminter.validate(
         ledger_db,
         defaults["addresses"][1],  # source
@@ -325,6 +353,11 @@ def test_unpack():
         True,
         "une asset super top",
     )
+
+    assert fairminter.unpack(
+        b"\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x01\x01\x01\x01\x13une asset super top",
+        False,
+    ) == ("", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "")
 
 
 def test_parse_fairminter_start_block(
