@@ -53,6 +53,7 @@ SCENARIO = [
                             "transfer": False,
                             "tx_hash": "$TX_HASH",
                             "tx_index": "$TX_INDEX",
+                            "msg_index": 0,
                         },
                         "tx_hash": "$TX_HASH",
                     },
