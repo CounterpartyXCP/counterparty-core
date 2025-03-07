@@ -371,3 +371,45 @@ def test_get_all_transactions_verbose(apiv2_client):
     for tx in result:
         assert "unpacked_data" in tx
         assert "message_data" in tx["unpacked_data"]
+
+
+def test_get_balances_by_addresses(apiv2_client, defaults):
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true"
+    result = apiv2_client.get(url).json["result"]
+
+    assert result[0]["asset"] == "A95428959342453541"
+    assert result[1]["asset"] == "CALLABLE"
+    assert result[2]["asset"] == "DIVISIBLE"
+    assert result[3]["asset"] == "FREEFAIRMIN"
+    assert result[4]["asset"] == "LOCKED"
+    assert result[5]["asset"] == "MAXI"
+    assert result[6]["asset"] == "NODIVISIBLE"
+    assert result[7]["asset"] == "PARENT"
+    assert result[8]["asset"] == "RAIDFAIRMIN"
+    assert result[9]["asset"] == "XCP"
+
+    for balance in result[9]["addresses"]:
+        assert (
+            balance["address"] == defaults["addresses"][0]
+            or balance["utxo_address"] == defaults["addresses"][0]
+        )
+
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=A95428959342453541"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert result[0]["asset"] == "A95428959342453541"
+    for balance in result[0]["addresses"]:
+        assert (
+            balance["address"] == defaults["addresses"][0]
+            or balance["utxo_address"] == defaults["addresses"][0]
+        )
+
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=NODIVISIBLE"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert result[0]["asset"] == "NODIVISIBLE"
+    for balance in result[0]["addresses"]:
+        assert (
+            balance["address"] == defaults["addresses"][0]
+            or balance["utxo_address"] == defaults["addresses"][0]
+        )
