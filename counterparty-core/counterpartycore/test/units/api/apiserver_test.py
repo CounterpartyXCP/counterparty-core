@@ -206,7 +206,7 @@ def test_invalid_hash(apiv2_client):
     )
 
 
-def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults):
+def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults, current_block_index):
     tx = blockchain_mock.dummy_tx(
         ledger_db, defaults["addresses"][0], defaults["addresses"][5], btc_amount=100
     )
@@ -222,7 +222,7 @@ def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults):
         "tx_index": dispenses["tx_index"],
         "dispense_index": 1,
         "tx_hash": dispenses["tx_hash"],
-        "block_index": 1228,
+        "block_index": dispenses["block_index"],
         "source": defaults["addresses"][5],
         "destination": defaults["addresses"][0],
         "asset": "XCP",

@@ -5,8 +5,8 @@ from counterpartycore.lib.ledger import caches, events
 
 def test_events_functions(ledger_db, defaults):
     result = events.last_message(ledger_db)
-    assert result["block_index"] == 1929
-    assert result["message_index"] == 4001
+    assert result["block_index"] == 1930
+    assert result["message_index"] == 4014
     assert result["event"] == "BLOCK_PARSED"
 
     assert events.debit(ledger_db, defaults["addresses"][0], "XCP", 1, 0) is None
