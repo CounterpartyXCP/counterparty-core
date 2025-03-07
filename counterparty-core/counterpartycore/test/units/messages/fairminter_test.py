@@ -169,6 +169,28 @@ def test_validate(ledger_db, defaults):
         10,  # max_mint_per_tx,
     ) == ["Fair minter already opened for `FREEFAIRMIN`."]
 
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][0],  # source
+        "MAXADDRESS",  # asset
+        "",  # asset_parent,
+        0,  # price=0,
+        1,  # quantity_by_price,
+        10,  # max_mint_per_tx,
+        9,  # max_mint_per_address,
+    ) == ["max_mint_per_tx must be <= max_mint_per_address."]
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][0],  # source
+        "MAXADDRESS",  # asset
+        "",  # asset_parent,
+        1,  # price=0,
+        1,  # quantity_by_price,
+        10,  # max_mint_per_tx,
+        9,  # max_mint_per_address,
+    ) == ["max_mint_per_tx must be <= max_mint_per_address."]
+
 
 def test_compose(ledger_db, defaults):
     assert fairminter.compose(
@@ -211,6 +233,48 @@ def test_compose(ledger_db, defaults):
         [],
         b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x13une asset super top",
     )
+
+    with ProtocolChangesDisabled(["fairminter_v2"]):
+        assert fairminter.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "FAIRMINTED",  # asset
+            "",  # asset_parent,
+            0,  # price=0,
+            1,  # quantity_by_price,
+            10,  # max_mint_per_tx,
+        ) == (
+            defaults["addresses"][1],
+            [],
+            b"ZFAIRMINTED||0|1|10|0|0|0|0|0|0|0|0|0|0|1|",
+        )
+
+        assert fairminter.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "FAIRMINTED",  # asset
+            "",  # asset_parent,
+            0,  # price,
+            1,  # quantity_by_price,
+            10,  # max_mint_per_tx,
+            0,  # max_mint_per_address,
+            1000,  # hard_cap,
+            100,  # premint_quantity,
+            800000,  # start_block,
+            900000,  # end_block,
+            50,  # soft_cap,
+            850000,  # soft_cap_deadline_block,
+            0.1,  # minted_asset_commission,
+            False,  # burn_payment,
+            False,  # lock_description,
+            True,  # lock_quantity,
+            True,  # divisible,
+            "une asset super top",  # description
+        ) == (
+            defaults["addresses"][1],
+            [],
+            b"ZFAIRMINTED||0|1|10|1000|100|800000|900000|50|850000|10000000|0|0|1|1|une asset super top",
+        )
 
 
 def test_unpack():
