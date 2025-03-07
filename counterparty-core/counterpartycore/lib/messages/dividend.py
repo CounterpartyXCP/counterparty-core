@@ -80,6 +80,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         address = holder["address"]
         address_quantity = holder["address_quantity"]
 
+        # TODO: what the purpose here?
         if protocol.after_block_or_test_network(block_index, 296000):  # Protocol change.
             if address == source:
                 continue
