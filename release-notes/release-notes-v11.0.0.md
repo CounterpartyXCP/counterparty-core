@@ -49,6 +49,7 @@ counterparty-server start
 - Use asset ID instead asset name in Fairminter and Fairmint messages
 - Allow `soft_cap` to be equal to `hard_cap` in Fairminter
 - Add `max_mint_per_address` parameter
+- Clean up hard-coded protocol changes distributed throughout codebase
 
 ## API
 
