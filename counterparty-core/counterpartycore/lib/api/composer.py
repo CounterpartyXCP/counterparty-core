@@ -9,7 +9,15 @@ from collections import OrderedDict
 from decimal import Decimal as D
 
 from arc4 import ARC4  # pylint: disable=no-name-in-module
-from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2trAddress, P2wpkhAddress, PublicKey
+from bitcoinutils.keys import (
+    ControlBlock,
+    P2pkhAddress,
+    P2shAddress,
+    P2trAddress,
+    P2wpkhAddress,
+    PrivateKey,
+    PublicKey,
+)
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 
@@ -163,7 +171,7 @@ def determine_encoding(data, construct_params):
             encoding = "multisig"
     else:
         encoding = desired_encoding
-    if encoding not in ("multisig", "opreturn"):
+    if encoding not in ("multisig", "opreturn", "taproot"):
         raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
     return encoding
 
@@ -256,7 +264,7 @@ def data_to_pubkey_pairs(data, arc4_key):
     return pubkey_pairs
 
 
-def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params):
+def get_source_pubkey(source, unspent_list, construct_params):
     # determine multisig pubkey
     multisig_pubkey = construct_params.get("multisig_pubkey")
     if multisig_pubkey is None:
@@ -267,6 +275,11 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
         )
     if not is_valid_pubkey(multisig_pubkey):
         raise exceptions.ComposeError(f"Invalid multisig pubkey: {multisig_pubkey}")
+    return multisig_pubkey
+
+
+def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params):
+    multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
     # generate pubkey pairs from data
     pubkey_pairs = data_to_pubkey_pairs(data, arc4_key)
     outputs = []
@@ -278,6 +291,69 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
     return outputs
 
 
+def generate_raw_reveal_tx(commit_txid, commit_vout):
+    tx_in = TxInput(commit_txid, commit_vout)
+    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(b"CNTRPRTY").decode("ascii")]))
+    reveal_tx = Transaction([tx_in], [tx_out], has_segwit=True)
+    return reveal_tx.serialize()
+
+
+def get_reveal_transaction_vsize(envelope_script):
+    # use fake private key and fake input to calculate the size
+    private_key = PrivateKey(secret_exponent=1)
+    source_pubkey = private_key.get_public_key()
+    commit_address = source_pubkey.get_taproot_address([[envelope_script]])
+    tx_in = TxInput("0" * 64, 0)
+    # use source address as output
+    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(b"CNTRPRTY").decode("ascii")]))
+    reveal_tx = Transaction([tx_in], [tx_out], has_segwit=True)
+    # sign the input containing the inscription script
+    sig = private_key.sign_taproot_input(
+        reveal_tx,
+        0,
+        [commit_address.to_script_pub_key()],
+        [config.DEFAULT_SEGWIT_DUST_SIZE],
+        script_path=True,
+        tapleaf_script=envelope_script,
+        tweak=False,
+    )
+    # generate the control block
+    control_block = ControlBlock(
+        source_pubkey,
+        scripts=[envelope_script],
+        index=0,
+        is_odd=commit_address.is_odd(),
+    )
+    # add the witness to the transaction
+    reveal_tx.witnesses.append(
+        TxWitnessInput([sig, envelope_script.to_hex(), control_block.to_hex()])
+    )
+    # for taproot tx, we assume tthat adjusted vsize is equal to vsize
+    return reveal_tx.get_vsize()
+
+
+def generate_envelope_script(data):
+    # split the data in chunks of 520 bytes
+    datas = helpers.chunkify(data, 520)
+    datas = [binascii.hexlify(data).decode("utf-8") for data in datas]
+    # Build inscription envelope script
+    return Script(["OP_FALSE", "OP_IF"] + datas + ["OP_ENDIF"])
+
+
+def prepare_taproot_output(source, data, unspent_list, construct_params):
+    multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
+    source_pubkey = PublicKey.from_hex(multisig_pubkey)
+    # Build inscription envelope script
+    envelope_script = generate_envelope_script(data)
+    # use source address as destination
+    commit_address = source_pubkey.get_taproot_address([[envelope_script]])
+    reveal_tx_vsize = get_reveal_transaction_vsize(envelope_script)
+    # commit value must pay fees for the reveal tx
+    commit_value = reveal_tx_vsize * get_sat_per_vbyte(construct_params)
+    tx_out = TxOutput(commit_value, commit_address.to_script_pub_key())
+    return [tx_out]
+
+
 def prepare_data_outputs(source, data, unspent_list, construct_params):
     encoding = determine_encoding(data, construct_params)
     arc4_key = unspent_list[0]["txid"]
@@ -285,6 +361,8 @@ def prepare_data_outputs(source, data, unspent_list, construct_params):
         return prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params)
     if encoding == "opreturn":
         return prepare_opreturn_output(data, arc4_key)
+    if encoding == "taproot":
+        return prepare_taproot_output(source, data, unspent_list, construct_params)
     raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
 
 
@@ -734,6 +812,17 @@ def prepare_fee_parameters(construct_params):
     return exact_fee, sat_per_vbyte, max_fee
 
 
+def get_sat_per_vbyte(construct_params):
+    exact_fee, sat_per_vbyte, max_fee = prepare_fee_parameters(construct_params)
+    if sat_per_vbyte is None:
+        confirmation_target = construct_params.get("confirmation_target")
+        if confirmation_target is not None:
+            sat_per_vbyte = backend.bitcoind.satoshis_per_vbyte(confirmation_target)
+        else:
+            sat_per_vbyte = backend.bitcoind.satoshis_per_vbyte()
+    return sat_per_vbyte
+
+
 def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_params):
     # prepare fee parameters
     exact_fee, sat_per_vbyte, max_fee = prepare_fee_parameters(construct_params)
@@ -875,7 +964,7 @@ def construct(db, tx_info, construct_params):
     unsigned_tx_hex = tx.serialize()
     adjusted_vsize, virtual_size, sigops_count = get_size_info(tx, selected_utxos)
 
-    return {
+    result = {
         "rawtransaction": unsigned_tx_hex,
         "btc_in": btc_in,
         "btc_out": btc_out,
@@ -890,6 +979,11 @@ def construct(db, tx_info, construct_params):
             "sigops_count": sigops_count,
         },
     }
+
+    encoding = determine_encoding(data, construct_params)
+    if encoding == "taproot":
+        result["envelope_script"] = generate_envelope_script(data).to_hex()
+        result["reveal_rawtransaction"] = generate_raw_reveal_tx(tx.get_txid(), 0)
 
 
 def check_transaction_sanity(tx_info, composed_tx, construct_params):
@@ -1017,6 +1111,7 @@ CONSTRUCT_PARAMS = {
         "Include additional information in the result including data and psbt",
     ),
     "return_only_data": (bool, False, "Return only the data part of the transaction"),
+    "segwit_dust_size": (int, None, "The dust size for segwit outputs (default is 330)"),
     # deprecated parameters
     "fee_per_kb": (int, None, "Deprecated, use `sat_per_vbyte` instead"),
     "fee_provided": (int, None, "Deprecated, use `max_fee` instead"),
