@@ -149,6 +149,18 @@ fn parse_vout(
             .collect::<Vec<_>>()
             .as_slice()
         {
+            if config.taproot_support_enabled(height) {
+                let bytes = pb.as_bytes();
+                if bytes == b"CNTRPRTY" {
+                    return Ok((
+                        ParseOutput::Data(bytes.to_vec()),
+                        Some(PotentialDispenser {
+                            destination: None,
+                            value: None,
+                        }),
+                    ));
+                }
+            }
             let bytes = arc4_decrypt(&key, pb.as_bytes());
             if bytes.starts_with(&config.prefix) {
                 return Ok((
@@ -462,7 +474,34 @@ pub fn parse_transaction(
                     } else if parse_output.is_destination() {
                         break;
                     } else if let ParseOutput::Data(mut new_data) = parse_output {
-                        data.append(&mut new_data)
+
+                        if config.taproot_support_enabled(height) && new_data == b"CNTRPRTY" && !vtxinwit.is_empty() && vtxinwit[0].len() == 3 {
+
+                            if let Ok(bytes) = hex::decode(&vtxinwit[0][1]) {
+                                let script = Script::from_bytes(&bytes);
+                                let mut inscription_data = Vec::new();
+                                let instructions: Vec<_> = script.instructions().collect();
+                                
+                                if instructions.len() > 3 {
+                                    for i in 2..instructions.len()-1 {
+                                        if let Ok(PushBytes(bytes)) = &instructions[i] {
+                                            inscription_data.extend_from_slice(bytes.as_bytes());
+                                        }
+                                    }
+                                    if !inscription_data.is_empty() {
+                                        data.append(&mut inscription_data);
+                                    }
+                                }
+                            } else {
+                                err = Some(Error::ParseVout(format!(
+                                    "Failed to decode taproot witness hex for tx: {}",
+                                    tx.compute_txid().to_string()
+                                )));
+                            }
+                        } else {
+                            data.append(&mut new_data)
+                        }
+                        
                     }
                 }
             }
