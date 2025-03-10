@@ -303,7 +303,7 @@ def get_reveal_transaction_vsize(envelope_script):
     private_key = PrivateKey(secret_exponent=1)
     source_pubkey = private_key.get_public_key()
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
-    tx_in = TxInput("0" * 64, 0)
+    tx_in = TxInput("F" * 64, 0)
     # use source address as output
     tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))
     reveal_tx = Transaction([tx_in], [tx_out], has_segwit=True)
@@ -813,7 +813,7 @@ def prepare_fee_parameters(construct_params):
 
 
 def get_sat_per_vbyte(construct_params):
-    exact_fee, sat_per_vbyte, max_fee = prepare_fee_parameters(construct_params)
+    _exact_fee, sat_per_vbyte, _max_fee = prepare_fee_parameters(construct_params)
     if sat_per_vbyte is None:
         confirmation_target = construct_params.get("confirmation_target")
         if confirmation_target is not None:
