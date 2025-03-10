@@ -38,8 +38,7 @@ def unpack(message):
         raise exceptions.UnpackError("invalid asset in mpma send") from e
     except ReadError as e:
         raise exceptions.UnpackError("truncated data") from e
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        raise exceptions.UnpackError(f"could not unpack; {e}") from e
+
     return unpacked
 
 
