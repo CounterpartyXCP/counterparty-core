@@ -159,7 +159,7 @@ def parse_tx(db, tx):
                 return supported
 
             # Protocol change.
-            rps_enabled = protocol.after_block_or_test_network(tx["block_index"], 308500)
+            rps_enabled = protocol.enabled("enable_rps", block_index=tx["block_index"])
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
