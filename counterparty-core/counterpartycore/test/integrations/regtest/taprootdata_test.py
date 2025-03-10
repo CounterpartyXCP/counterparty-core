@@ -42,10 +42,10 @@ def test_p2ptr_inscription():
         source_pubkey = source_private_key.get_public_key()
         source_address = source_pubkey.get_taproot_address()
 
-        _txid = node.bitcoin_wallet("sendtoaddress", source_address.to_string(), 1).strip()
+        txid = node.bitcoin_wallet("sendtoaddress", source_address.to_string(), 1).strip()
         node.mine_blocks(1)
 
-        node.send_transaction(
+        result = node.send_transaction(
             node.addresses[0],
             "send",
             {
@@ -53,9 +53,8 @@ def test_p2ptr_inscription():
                 "quantity": 100,
                 "asset": "XCP",
             },
+            return_result=True,
         )
-        node.start_electrs()
-        node.wait_for_electrs()
 
         result = node.send_transaction(
             source_address.to_string(),
@@ -65,7 +64,10 @@ def test_p2ptr_inscription():
                 "quantity": 10,
                 "asset": "XCP",
                 "encoding": "taproot",
+                "multisig_pubkey": source_pubkey.to_hex(),
+                "inputs_set": f"{txid}:0",
             },
+            return_result=True,
         )
         result = list(result).pop()
         print(result)

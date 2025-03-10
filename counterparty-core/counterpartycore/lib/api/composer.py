@@ -267,6 +267,7 @@ def data_to_pubkey_pairs(data, arc4_key):
 def get_source_pubkey(source, unspent_list, construct_params):
     # determine multisig pubkey
     multisig_pubkey = construct_params.get("multisig_pubkey")
+    print("MULTISIG PUBKEY", multisig_pubkey)
     if multisig_pubkey is None:
         multisig_pubkey = search_pubkey(source, unspent_list, construct_params)
     if multisig_pubkey is None:
@@ -361,6 +362,7 @@ def prepare_taproot_output(source, data, unspent_list, construct_params):
 
 def prepare_data_outputs(source, data, unspent_list, construct_params):
     encoding = determine_encoding(data, construct_params)
+    print("ENCODING", encoding, construct_params)
     arc4_key = unspent_list[0]["txid"]
     if encoding == "multisig":
         return prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params)
@@ -1105,7 +1107,7 @@ CONSTRUCT_PARAMS = {
     ),
     "use_all_inputs_set": (bool, False, "Use all UTXOs provide with `inputs_set` parameter"),
     # outputs parameters
-    "mutlisig_pubkey": (
+    "multisig_pubkey": (
         str,
         None,
         "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -1133,7 +1135,7 @@ CONSTRUCT_PARAMS = {
     "fee_per_kb": (int, None, "Deprecated, use `sat_per_vbyte` instead"),
     "fee_provided": (int, None, "Deprecated, use `max_fee` instead"),
     "unspent_tx_hash": (str, None, "Deprecated, use `inputs_set` instead"),
-    "dust_return_pubkey": (str, None, "Deprecated, use `mutlisig_pubkey` instead"),
+    "dust_return_pubkey": (str, None, "Deprecated, use `multisig_pubkey` instead"),
     "return_psbt": (bool, False, "Deprecated, use `verbose` instead"),
     "regular_dust_size": (int, None, "Deprecated, automatically calculated"),
     "multisig_dust_size": (int, None, "Deprecated, automatically calculated"),
@@ -1169,7 +1171,7 @@ def prepare_construct_params(construct_params):
     for deprecated_param, new_param, copyer in [
         ("fee_per_kb", "sat_per_vbyte", fee_per_kb_to_sat_per_vbyte),
         ("fee_provided", "max_fee", lambda x: x),
-        ("dust_return_pubkey", "mutlisig_pubkey", lambda x: x),
+        ("dust_return_pubkey", "multisig_pubkey", lambda x: x),
         ("return_psbt", "verbose", lambda x: x),
     ]:
         if deprecated_param in construct_params:
@@ -1188,9 +1190,11 @@ def prepare_construct_params(construct_params):
 
 
 def compose_transaction(db, name, params, construct_parameters):
+    print("COMPOSE", construct_parameters)
     helpers.setup_bitcoinutils()
 
     construct_params, warnings = prepare_construct_params(construct_parameters)
+    print("COMPOSE2", construct_params)
 
     # prepare data
     skip_validation = not construct_params.get("validate", True)

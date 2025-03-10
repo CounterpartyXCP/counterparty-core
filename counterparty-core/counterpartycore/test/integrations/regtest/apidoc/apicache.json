@@ -15456,7 +15456,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -15522,7 +15522,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -15709,7 +15709,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -15775,7 +15775,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -15944,7 +15944,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -16010,7 +16010,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -16186,7 +16186,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -16252,7 +16252,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -16421,7 +16421,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -16487,7 +16487,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -16668,7 +16668,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -16734,7 +16734,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -16941,7 +16941,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -17007,7 +17007,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -17188,7 +17188,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -17254,7 +17254,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -17489,7 +17489,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -17555,7 +17555,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -17764,7 +17764,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -17830,7 +17830,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -18029,7 +18029,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -18095,7 +18095,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -18304,7 +18304,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -18370,7 +18370,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -18551,7 +18551,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -18617,7 +18617,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -18811,7 +18811,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -18877,7 +18877,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -19158,7 +19158,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -19224,7 +19224,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -19400,7 +19400,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -19466,7 +19466,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -19655,7 +19655,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -19721,7 +19721,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -19911,7 +19911,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -19977,7 +19977,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
@@ -20153,7 +20153,7 @@
                         "required": false
                     },
                     {
-                        "name": "mutlisig_pubkey",
+                        "name": "multisig_pubkey",
                         "type": "str",
                         "default": null,
                         "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -20219,7 +20219,7 @@
                         "name": "dust_return_pubkey",
                         "type": "str",
                         "default": null,
-                        "description": "Deprecated, use `mutlisig_pubkey` instead",
+                        "description": "Deprecated, use `multisig_pubkey` instead",
                         "required": false
                     },
                     {
