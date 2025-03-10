@@ -82,6 +82,10 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         address = holder["address"]
         address_quantity = holder["address_quantity"]
 
+        if protocol.enabled("no_dividend_to_self"):  # Protocol change.
+            if address == source:
+                continue
+
         dividend_quantity = address_quantity * quantity_per_unit
 
         if divisible:

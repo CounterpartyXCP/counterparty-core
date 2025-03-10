@@ -95,6 +95,14 @@
         "testnet3_block_index": 0,
         "testnet4_block_index": 0
     },
+    "no_dividend_to_self": {
+        "minimum_version_major": 0,
+        "minimum_version_minor": 0,
+        "minimum_version_revision": 0,
+        "block_index": 296000,
+        "testnet3_block_index": 0,
+        "testnet4_block_index": 0
+    },
     "fix_fee_required_remaining": {
         "minimum_version_major": 0,
         "minimum_version_minor": 0,
