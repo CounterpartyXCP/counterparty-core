@@ -398,17 +398,14 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
 
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
-    try:
-        if p2sh_encoding_source is None:
-            if not composing:
-                check_signatures_sighash_flag(decoded_tx)
-            sources, outputs_value = get_transaction_sources(decoded_tx)
-            if not fee_added:
-                fee += outputs_value
-        else:  # use the source from the p2sh data source
-            sources = p2sh_encoding_source
-    except Exception as e:
-        logger.error(f"Error while getting transaction sources: {e}", exc_info=True)
+    if p2sh_encoding_source is None:
+        if not composing:
+            check_signatures_sighash_flag(decoded_tx)
+        sources, outputs_value = get_transaction_sources(decoded_tx)
+        if not fee_added:
+            fee += outputs_value
+    else:  # use the source from the p2sh data source
+        sources = p2sh_encoding_source
 
     if not data and destinations != [
         config.UNSPENDABLE,

@@ -207,3 +207,14 @@ def test_compose_transaction(ledger_db, defaults):
     assert reveal_tx.outputs[0].script_pubkey == Script(
         ["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]
     )
+
+
+def test_get_sat_per_vbyte():
+    sat_per_vbyte = composer.get_sat_per_vbyte({})
+    assert sat_per_vbyte == 2
+
+    sat_per_vbyte = composer.get_sat_per_vbyte({"sat_per_vbyte": 10})
+    assert sat_per_vbyte == 10
+
+    sat_per_vbyte = composer.get_sat_per_vbyte({"confirmation_target": 10})
+    assert sat_per_vbyte == 2
