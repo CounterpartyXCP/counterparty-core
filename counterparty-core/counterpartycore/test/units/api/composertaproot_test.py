@@ -172,3 +172,45 @@ def test_prepare_taproot_output(defaults):
     assert outputs[0].script_pubkey == Script(
         ["OP_1", "dbf963209b9d74c19b2ddadac83fbd16f427f4266369a999feefdc32ab5466f7"]
     )
+
+    outputs = composer.prepare_data_outputs(
+        defaults["p2tr_addresses"][0],
+        b"Hello world",
+        [
+            {
+                "txid": "ff" * 32,
+            }
+        ],
+        {"encoding": "taproot"},
+    )
+    assert len(outputs) == 1
+    assert outputs[0].amount == 200
+    assert outputs[0].script_pubkey == Script(
+        ["OP_1", "dbf963209b9d74c19b2ddadac83fbd16f427f4266369a999feefdc32ab5466f7"]
+    )
+
+
+def test_compose_transaction(ledger_db, defaults):
+    params = {
+        "memo": "0102030405",
+        "memo_is_hex": True,
+        "source": defaults["addresses"][0],
+        "destination": defaults["addresses"][1],
+        "asset": "XCP",
+        "quantity": defaults["small"],
+    }
+    construct_params = {
+        "encoding": "taproot",
+    }
+
+    result = composer.compose_transaction(ledger_db, "send", params, construct_params)
+    assert "envelope_script" in result
+    assert "reveal_rawtransaction" in result
+
+    reveal_tx = Transaction.from_raw(result["reveal_rawtransaction"])
+    assert len(reveal_tx.inputs) == 1
+    assert len(reveal_tx.outputs) == 1
+    assert reveal_tx.outputs[0].amount == 0
+    assert reveal_tx.outputs[0].script_pubkey == Script(
+        ["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]
+    )
