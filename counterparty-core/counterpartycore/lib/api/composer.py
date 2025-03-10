@@ -10,7 +10,6 @@ from decimal import Decimal as D
 
 from arc4 import ARC4  # pylint: disable=no-name-in-module
 from bitcoinutils.keys import (
-    ControlBlock,
     P2pkhAddress,
     P2shAddress,
     P2trAddress,
@@ -20,6 +19,7 @@ from bitcoinutils.keys import (
 )
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
+from bitcoinutils.utils import ControlBlock
 
 from counterpartycore.lib import (
     backend,
@@ -979,11 +979,13 @@ def construct(db, tx_info, construct_params):
             "sigops_count": sigops_count,
         },
     }
+    if data:
+        encoding = determine_encoding(data, construct_params)
+        if encoding == "taproot":
+            result["envelope_script"] = generate_envelope_script(data).to_hex()
+            result["reveal_rawtransaction"] = generate_raw_reveal_tx(tx.get_txid(), 0)
 
-    encoding = determine_encoding(data, construct_params)
-    if encoding == "taproot":
-        result["envelope_script"] = generate_envelope_script(data).to_hex()
-        result["reveal_rawtransaction"] = generate_raw_reveal_tx(tx.get_txid(), 0)
+    return result
 
 
 def check_transaction_sanity(tx_info, composed_tx, construct_params):
@@ -1205,6 +1207,9 @@ def compose_transaction(db, name, params, construct_parameters):
         result = {
             "rawtransaction": result["rawtransaction"],
         }
+        if "reveal_rawtransaction" in result:
+            result["reveal_rawtransaction"] = result["reveal_rawtransaction"]
+            result["envelope_script"] = result["envelope_script"]
 
     if len(warnings) > 0:
         result["warnings"] = warnings
