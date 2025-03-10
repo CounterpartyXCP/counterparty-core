@@ -167,23 +167,7 @@
         "testnet3_block_index": 0,
         "testnet4_block_index": 0
     },
-    "disable_rematch": {
-        "minimum_version_major": 0,
-        "minimum_version_minor": 0,
-        "minimum_version_revision": 0,
-        "block_index": 315000,
-        "testnet3_block_index": 0,
-        "testnet4_block_index": 0
-    },
     "no_zero_expiration": {
-        "minimum_version_major": 0,
-        "minimum_version_minor": 0,
-        "minimum_version_revision": 0,
-        "block_index": 317500,
-        "testnet3_block_index": 0,
-        "testnet4_block_index": 0
-    },
-    "limit_broadcast_text": {
         "minimum_version_major": 0,
         "minimum_version_minor": 0,
         "minimum_version_revision": 0,
