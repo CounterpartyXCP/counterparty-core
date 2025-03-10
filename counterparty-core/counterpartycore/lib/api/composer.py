@@ -298,7 +298,8 @@ def generate_raw_reveal_tx(commit_txid, commit_vout):
     return reveal_tx.serialize()
 
 
-def get_reveal_transaction_vsize(envelope_script):
+def get_dummy_signed_reveal_tx(data):
+    envelope_script = generate_envelope_script(data)
     # use fake private key and fake input to calculate the size
     private_key = PrivateKey(secret_exponent=1)
     source_pubkey = private_key.get_public_key()
@@ -328,7 +329,11 @@ def get_reveal_transaction_vsize(envelope_script):
     reveal_tx.witnesses.append(
         TxWitnessInput([sig, envelope_script.to_hex(), control_block.to_hex()])
     )
-    # for taproot tx, we assume tthat adjusted vsize is equal to vsize
+    return reveal_tx
+
+
+def get_reveal_transaction_vsize(data):
+    reveal_tx = get_dummy_signed_reveal_tx(data)
     return reveal_tx.get_vsize()
 
 
@@ -347,7 +352,7 @@ def prepare_taproot_output(source, data, unspent_list, construct_params):
     envelope_script = generate_envelope_script(data)
     # use source address as destination
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
-    reveal_tx_vsize = get_reveal_transaction_vsize(envelope_script)
+    reveal_tx_vsize = get_reveal_transaction_vsize(data)
     # commit value must pay fees for the reveal tx
     commit_value = reveal_tx_vsize * get_sat_per_vbyte(construct_params)
     tx_out = TxOutput(commit_value, commit_address.to_script_pub_key())
