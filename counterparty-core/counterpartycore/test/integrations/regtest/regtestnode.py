@@ -178,6 +178,7 @@ class RegtestNode:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
         else:
             compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
+        print("Compose URL:", compose_url)
         return self.api_call(compose_url)
 
     def send_transaction(
@@ -200,6 +201,8 @@ class RegtestNode:
         params["verbose"] = True
 
         result = self.compose(source, tx_name, params)
+
+        print("Compose result:", result)
 
         # print(result)
         if "error" in result:
@@ -228,6 +231,32 @@ class RegtestNode:
             tx_hash, block_hash, block_time = self.broadcast_transaction(
                 signed_transaction, no_confirmation, dont_wait_mempool=dont_wait_mempool
             )
+            if "reveal_rawtransaction" in result["result"]:
+                reveal_rawtransaction = result["result"]["reveal_rawtransaction"]
+                envelope_script = result["result"]["envelope_script"]
+                commit_tx = Transaction.from_raw(signed_transaction)
+                script_pub_key = commit_tx.outputs[0].script_pubkey.to_hex()
+                prev_tx = json.dumps(
+                    [
+                        {
+                            "txid": tx_hash,
+                            "vout": 0,
+                            "scriptPubKey": script_pub_key,
+                            "witnessScript": envelope_script,
+                            "amount": result["result"]["btc_out"] / 1e8,
+                        }
+                    ]
+                )
+                print("Reveal raw transaction:", reveal_rawtransaction)
+                print("Prev tx:", prev_tx)
+                signed_reveal_transaction_json = self.bitcoin_wallet(
+                    "signrawtransactionwithwallet", reveal_rawtransaction, prev_tx
+                ).strip()
+                print("Signed reveal transaction:", signed_reveal_transaction_json)
+                signed_reveal_transaction = json.loads(signed_transaction_json)["hex"]
+                tx_hash, block_hash, block_time = self.broadcast_transaction(
+                    signed_reveal_transaction, no_confirmation, dont_wait_mempool=dont_wait_mempool
+                )
         except sh.ErrorReturnCode_25 as e:
             if retry < 6:
                 print("Error: bad-txns-inputs-missingorspent")
