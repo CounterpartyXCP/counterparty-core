@@ -1,7 +1,9 @@
 import json
+import os
 import time
 
 import requests
+from bitcoinutils.keys import PrivateKey
 from bitcoinutils.setup import setup
 from regtestnode import RegtestNodeThread
 
@@ -35,18 +37,38 @@ def test_p2ptr_inscription():
             time.sleep(1)
         node = regtest_node_thread.node
 
-        result = node.send_transaction(
+        random = os.urandom(32)
+        source_private_key = PrivateKey(b=random)
+        source_pubkey = source_private_key.get_public_key()
+        source_address = source_pubkey.get_taproot_address()
+
+        _txid = node.bitcoin_wallet("sendtoaddress", source_address.to_string(), 1).strip()
+        node.mine_blocks(1)
+
+        node.send_transaction(
             node.addresses[0],
             "send",
             {
+                "destination": source_address.to_string(),
+                "quantity": 100,
+                "asset": "XCP",
+            },
+        )
+        node.start_electrs()
+        node.wait_for_electrs()
+
+        result = node.send_transaction(
+            source_address.to_string(),
+            "send",
+            {
                 "destination": node.addresses[1],
-                "quantity": 1,
+                "quantity": 10,
                 "asset": "XCP",
                 "encoding": "taproot",
             },
         )
-
+        result = list(result).pop()
         print(result)
-
     finally:
+        print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
