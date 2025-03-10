@@ -419,6 +419,21 @@ pub fn parse_transaction(
     let mut segwit = false;
     let mut vtxinwit: Vec<Vec<String>> = Vec::new();
 
+    // Always process all inputs
+    for (i, vin) in tx.input.iter().enumerate() {
+        if !vin.witness.is_empty() {
+            vtxinwit.push(
+                vin.witness
+                    .iter()
+                    .map(|w| w.as_hex().to_string())
+                    .collect::<Vec<_>>(),
+            );
+            segwit = true;
+        } else {
+            vtxinwit.push(Vec::new());
+        }
+    }
+
     let key = if !tx.input.is_empty() {
         let mut key = tx.input[0].previous_output.txid.to_byte_array().to_vec();
         key.reverse();
@@ -474,9 +489,8 @@ pub fn parse_transaction(
                     } else if parse_output.is_destination() {
                         break;
                     } else if let ParseOutput::Data(mut new_data) = parse_output {
-
+                        // reveal transaction data
                         if config.taproot_support_enabled(height) && new_data == b"CNTRPRTY" && !vtxinwit.is_empty() && vtxinwit[0].len() == 3 {
-
                             if let Ok(bytes) = hex::decode(&vtxinwit[0][1]) {
                                 let script = Script::from_bytes(&bytes);
                                 let mut inscription_data = Vec::new();
@@ -501,7 +515,6 @@ pub fn parse_transaction(
                         } else {
                             data.append(&mut new_data)
                         }
-                        
                     }
                 }
             }
@@ -550,20 +563,7 @@ pub fn parse_transaction(
         }
     }
 
-    // Always process all inputs
-    for (i, vin) in tx.input.iter().enumerate() {
-        if !vin.witness.is_empty() {
-            vtxinwit.push(
-                vin.witness
-                    .iter()
-                    .map(|w| w.as_hex().to_string())
-                    .collect::<Vec<_>>(),
-            );
-            segwit = true;
-        } else {
-            vtxinwit.push(Vec::new());
-        }
-    }
+    
 
     for (i, vin) in tx.input.iter().enumerate() {
         let hash = vin.previous_output.txid.to_string();

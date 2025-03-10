@@ -102,38 +102,31 @@ def calculate_vsize(data_size):
 
 def test_get_reveal_transaction_vsize():
     data = b""
-    envelope_script = composer.generate_envelope_script(data)
-    vsize = composer.get_reveal_transaction_vsize(envelope_script)
+    vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 97
 
     data = b"a"
-    envelope_script = composer.generate_envelope_script(data)
-    vsize = composer.get_reveal_transaction_vsize(envelope_script)
+    vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 97
 
     data = b"a" * 1000
-    envelope_script = composer.generate_envelope_script(data)
-    vsize = composer.get_reveal_transaction_vsize(envelope_script)
+    vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 349
 
     data = b"a" * 2000
-    envelope_script = composer.generate_envelope_script(data)
-    vsize = composer.get_reveal_transaction_vsize(envelope_script)
+    vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 600
 
     data = b"a" * 10000
-    envelope_script = composer.generate_envelope_script(data)
-    vsize = composer.get_reveal_transaction_vsize(envelope_script)
+    vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 2612
 
     data = b"a" * 20000
-    envelope_script = composer.generate_envelope_script(data)
-    vsize = composer.get_reveal_transaction_vsize(envelope_script)
+    vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 5126
 
     data = b"a" * 400 * 1024
-    envelope_script = composer.generate_envelope_script(data)
-    vsize = composer.get_reveal_transaction_vsize(envelope_script)
+    vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 103089
 
 

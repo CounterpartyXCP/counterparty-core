@@ -53,7 +53,10 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         ]
 
     def get_vin_info(self, vin):
-        source = self.source_by_txid[vin["hash"]]
+        if vin["hash"] == "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff":
+            source = self.source_by_txid[list(self.source_by_txid.keys())[0]]
+        else:
+            source = self.source_by_txid[vin["hash"]]
         value = int(10 * config.UNIT)
         script_pub_key = composer.address_to_script_pub_key(
             source, network=config.NETWORK_NAME
