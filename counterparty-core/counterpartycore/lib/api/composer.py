@@ -294,7 +294,7 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
 def generate_raw_reveal_tx(commit_txid, commit_vout):
     tx_in = TxInput(commit_txid, commit_vout)
     tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))
-    reveal_tx = Transaction([tx_in], [tx_out], has_segwit=True)
+    reveal_tx = Transaction([tx_in], [tx_out])
     return reveal_tx.serialize()
 
 
@@ -1039,13 +1039,23 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
 
     # check if data matches the output data
     if data:
-        if isinstance(decoded_tx["parsed_vouts"], Exception):
-            raise exceptions.ComposeError(
-                f"Sanity check error: cannot parse the output data from the transaction ({decoded_tx['parsed_vouts']})"
-            )
-        _, _, _, tx_data, _ = decoded_tx["parsed_vouts"]
-        if tx_data != data:
-            raise exceptions.ComposeError("Sanity check error: data does not match the output data")
+        if "reveal_rawtransaction" in composed_tx:
+            envelope_script = composed_tx["envelope_script"]
+            envelope_script = generate_envelope_script(data).to_hex()
+            if envelope_script != composed_tx["envelope_script"]:
+                raise exceptions.ComposeError(
+                    "Sanity check error: envelope script does not match the data"
+                )
+        else:
+            if isinstance(decoded_tx["parsed_vouts"], Exception):
+                raise exceptions.ComposeError(
+                    f"Sanity check error: cannot parse the output data from the transaction ({decoded_tx['parsed_vouts']})"
+                )
+            _, _, _, tx_data, _ = decoded_tx["parsed_vouts"]
+            if tx_data != data:
+                raise exceptions.ComposeError(
+                    "Sanity check error: data does not match the output data"
+                )
 
 
 CONSTRUCT_PARAMS = {
@@ -1198,20 +1208,19 @@ def compose_transaction(db, name, params, construct_parameters):
 
     # return result
     if construct_params.get("verbose", False):
-        result = result | {
+        final_result = result | {
             "psbt": backend.bitcoind.convert_to_psbt(result["rawtransaction"]),
             "params": params,
             "name": name.split(".")[-1],
         }
     else:
-        result = {
-            "rawtransaction": result["rawtransaction"],
-        }
+        final_result = {}
         if "reveal_rawtransaction" in result:
-            result["reveal_rawtransaction"] = result["reveal_rawtransaction"]
-            result["envelope_script"] = result["envelope_script"]
+            final_result["reveal_rawtransaction"] = result["reveal_rawtransaction"]
+            final_result["envelope_script"] = result["envelope_script"]
+        final_result["rawtransaction"] = result["rawtransaction"]
 
     if len(warnings) > 0:
-        result["warnings"] = warnings
+        final_result["warnings"] = warnings
 
-    return result
+    return final_result
