@@ -293,7 +293,7 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
 
 def generate_raw_reveal_tx(commit_txid, commit_vout):
     tx_in = TxInput(commit_txid, commit_vout)
-    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(b"CNTRPRTY").decode("ascii")]))
+    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))
     reveal_tx = Transaction([tx_in], [tx_out], has_segwit=True)
     return reveal_tx.serialize()
 
@@ -305,7 +305,7 @@ def get_reveal_transaction_vsize(envelope_script):
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
     tx_in = TxInput("0" * 64, 0)
     # use source address as output
-    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(b"CNTRPRTY").decode("ascii")]))
+    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))
     reveal_tx = Transaction([tx_in], [tx_out], has_segwit=True)
     # sign the input containing the inscription script
     sig = private_key.sign_taproot_input(
