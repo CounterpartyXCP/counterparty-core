@@ -40,4 +40,4 @@ sh==2.0.6
 PyYAML==6.0.2
 multiprocessing-logging==0.3.4
 locust==2.32.8
-counterparty-rs==10.10.1
+counterparty-rs==11.0.0-alpha.1
