@@ -1057,7 +1057,7 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
                 raise exceptions.ComposeError(
                     f"Sanity check error: cannot parse the output data from the transaction ({decoded_tx['parsed_vouts']})"
                 )
-            _, _, _, tx_data, _ = decoded_tx["parsed_vouts"]
+            _, _, _, tx_data, _, _ = decoded_tx["parsed_vouts"]
             if tx_data != data:
                 raise exceptions.ComposeError(
                     "Sanity check error: data does not match the output data"

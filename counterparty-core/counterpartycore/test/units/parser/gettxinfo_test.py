@@ -1095,7 +1095,7 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers, b""),
             },
             current_block_index,
         )
@@ -1106,7 +1106,14 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
                 ledger_db,
                 {
                     "coinbase": False,
-                    "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                    "parsed_vouts": (
+                        destinations,
+                        btc_amount,
+                        fee,
+                        data,
+                        potential_dispensers,
+                        b"",
+                    ),
                 },
                 current_block_index,
             )
@@ -1117,7 +1124,14 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
                 ledger_db,
                 {
                     "coinbase": False,
-                    "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                    "parsed_vouts": (
+                        destinations,
+                        btc_amount,
+                        fee,
+                        data,
+                        potential_dispensers,
+                        b"",
+                    ),
                 },
                 current_block_index,
                 composing=True,
@@ -1127,7 +1141,14 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
         ledger_db,
         {
             "coinbase": False,
-            "parsed_vouts": ([config.UNSPENDABLE], btc_amount, fee, data, potential_dispensers),
+            "parsed_vouts": (
+                [config.UNSPENDABLE],
+                btc_amount,
+                fee,
+                data,
+                potential_dispensers,
+                b"",
+            ),
         },
         current_block_index,
         composing=True,
@@ -1146,7 +1167,7 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers, b""),
             },
             current_block_index,
         ) == (
@@ -1175,7 +1196,7 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
         ledger_db,
         {
             "coinbase": False,
-            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, b""),
         },
         current_block_index,
     ) == (defaults["addresses"][1], defaults["addresses"][0], 100, 10000, b"z", [])
@@ -1204,7 +1225,7 @@ def test_get_tx_info_new_3b(ledger_db, current_block_index, defaults, monkeypatc
         ledger_db,
         {
             "coinbase": False,
-            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, b""),
         },
         current_block_index,
     ) == (
@@ -1243,7 +1264,7 @@ def test_get_tx_info_4(ledger_db, defaults, monkeypatch):
         ledger_db,
         {
             "coinbase": False,
-            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, b""),
         },
         block_index=None,
     ) == (
@@ -1263,7 +1284,7 @@ def test_get_tx_info_4(ledger_db, defaults, monkeypatch):
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, b""),
             },
             block_index=None,
         ) == (
@@ -1284,7 +1305,14 @@ def test_get_tx_info_4(ledger_db, defaults, monkeypatch):
                 ledger_db,
                 {
                     "coinbase": False,
-                    "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+                    "parsed_vouts": (
+                        destinations,
+                        btc_amount,
+                        fee,
+                        b"z",
+                        potential_dispensers,
+                        b"",
+                    ),
                 },
                 block_index=None,
             ) == (
@@ -1527,7 +1555,7 @@ def test_get_tx_info_5(ledger_db, defaults, monkeypatch, current_block_index):
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers, b""),
                 "tx_id": "tx_id",
                 "tx_hash": "tx_hash",
                 "vin": [{"hash": txid, "n": vout}],
@@ -1538,9 +1566,9 @@ def test_get_tx_info_5(ledger_db, defaults, monkeypatch, current_block_index):
         assert result == (b"", None, None, None, None, None, [utxo, "", "1", "0"])
 
 
-def test_get_tx_info_taproot(ledger_db, current_block_index, blockchain_mock):
+def test_get_tx_info_taproot(defaults, ledger_db, current_block_index, blockchain_mock):
     data = b"Hello world"
-    reveal_tx = composer.get_dummy_signed_reveal_tx(data)
+    reveal_tx = composer.get_dummy_signed_reveal_tx(defaults["addresses"][0], data)
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize.deserialize_tx(
         reveal_tx_hex,
@@ -1554,7 +1582,7 @@ def test_get_tx_info_taproot(ledger_db, current_block_index, blockchain_mock):
         current_block_index,
         True,
     ) == (
-        "17askaM3RknEAw8AFwdiP9ffSNtZyfzFBw",
+        defaults["addresses"][0],
         "",
         0,
         1000000000,

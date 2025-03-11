@@ -5,6 +5,7 @@ from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction
 from counterpartycore.lib import config
 from counterpartycore.lib.api import composer
+from counterpartycore.lib.utils import address
 from counterpartycore.test.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
 
 PROVIDED_PUBKEYS = ",".join(
@@ -25,19 +26,27 @@ def test_generate_raw_reveal_tx():
     )
 
 
-def test_generate_envelope_script():
+def test_generate_envelope_script(defaults):
+    source = defaults["addresses"][0]
     data = b"Hello, World!"
-    envelope_script = composer.generate_envelope_script(data)
-    assert envelope_script == Script(
-        ["OP_FALSE", "OP_IF", binascii.hexlify(data).decode("ascii"), "OP_ENDIF"]
-    )
-
-    data = b"a" * 1000
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(source, data)
     assert envelope_script == Script(
         [
             "OP_FALSE",
             "OP_IF",
+            binascii.hexlify(address.pack(source)).decode("ascii"),
+            binascii.hexlify(data).decode("ascii"),
+            "OP_ENDIF",
+        ]
+    )
+
+    data = b"a" * 1000
+    envelope_script = composer.generate_envelope_script(source, data)
+    assert envelope_script == Script(
+        [
+            "OP_FALSE",
+            "OP_IF",
+            binascii.hexlify(address.pack(source)).decode("ascii"),
             binascii.hexlify(b"a" * 520).decode("ascii"),
             binascii.hexlify(b"a" * 480).decode("ascii"),
             "OP_ENDIF",
@@ -45,11 +54,12 @@ def test_generate_envelope_script():
     )
 
     data = b"a" * 1041
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(source, data)
     assert envelope_script == Script(
         [
             "OP_FALSE",
             "OP_IF",
+            binascii.hexlify(address.pack(source)).decode("ascii"),
             binascii.hexlify(b"a" * 520).decode("ascii"),
             binascii.hexlify(b"a" * 520).decode("ascii"),
             binascii.hexlify(b"a").decode("ascii"),
@@ -100,34 +110,36 @@ def calculate_vsize(data_size):
     return math.ceil(vsize)
 
 
-def test_get_reveal_transaction_vsize():
+def test_get_reveal_transaction_vsize(defaults):
+    source = defaults["addresses"][0]
+
     data = b""
-    vsize = composer.get_reveal_transaction_vsize(data)
-    assert vsize == 97
+    vsize = composer.get_reveal_transaction_vsize(source, data)
+    assert vsize == 102
 
     data = b"a"
-    vsize = composer.get_reveal_transaction_vsize(data)
-    assert vsize == 97
+    vsize = composer.get_reveal_transaction_vsize(source, data)
+    assert vsize == 103
 
     data = b"a" * 1000
-    vsize = composer.get_reveal_transaction_vsize(data)
-    assert vsize == 349
+    vsize = composer.get_reveal_transaction_vsize(source, data)
+    assert vsize == 354
 
     data = b"a" * 2000
-    vsize = composer.get_reveal_transaction_vsize(data)
-    assert vsize == 600
+    vsize = composer.get_reveal_transaction_vsize(source, data)
+    assert vsize == 606
 
     data = b"a" * 10000
-    vsize = composer.get_reveal_transaction_vsize(data)
-    assert vsize == 2612
+    vsize = composer.get_reveal_transaction_vsize(source, data)
+    assert vsize == 2618
 
     data = b"a" * 20000
-    vsize = composer.get_reveal_transaction_vsize(data)
-    assert vsize == 5126
+    vsize = composer.get_reveal_transaction_vsize(source, data)
+    assert vsize == 5132
 
     data = b"a" * 400 * 1024
-    vsize = composer.get_reveal_transaction_vsize(data)
-    assert vsize == 103089
+    vsize = composer.get_reveal_transaction_vsize(source, data)
+    assert vsize == 103094
 
 
 def test_prepare_taproot_output(defaults):
@@ -140,9 +152,9 @@ def test_prepare_taproot_output(defaults):
         },
     )
     assert len(outputs) == 1
-    assert outputs[0].amount == 200
+    assert outputs[0].amount == 210
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "f5f05f105fff2aa11354afd243beeb8a45ce37becc0dd52da01b6612bfb0bc36"]
+        ["OP_1", "ac1cc2b5afd4fc5dcba10636890ec211008832a0e1e7cfcc1385f3ba54ef65ac"]
     )
 
     outputs = composer.prepare_taproot_output(
@@ -154,16 +166,16 @@ def test_prepare_taproot_output(defaults):
         },
     )
     assert len(outputs) == 1
-    assert outputs[0].amount == 200
+    assert outputs[0].amount == 212
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "a08105b2c25dfe0d5b3ef9471ae2bf886a81206f9e972bc2855d53048ec9a611"]
+        ["OP_1", "71ad6357d03e8e494a3ab306159cf6a82565b2c99cb8a955838cc0af0a903e07"]
     )
 
     outputs = composer.prepare_taproot_output(defaults["p2tr_addresses"][0], b"Hello world", [], {})
     assert len(outputs) == 1
-    assert outputs[0].amount == 200
+    assert outputs[0].amount == 218
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "dbf963209b9d74c19b2ddadac83fbd16f427f4266369a999feefdc32ab5466f7"]
+        ["OP_1", "9f11bd2a4d36837a00fc02913dd6ea3a711ae49e217d8fd9ebe1d8b1d85c53ce"]
     )
 
     outputs = composer.prepare_data_outputs(
@@ -177,9 +189,9 @@ def test_prepare_taproot_output(defaults):
         {"encoding": "taproot"},
     )
     assert len(outputs) == 1
-    assert outputs[0].amount == 200
+    assert outputs[0].amount == 218
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "dbf963209b9d74c19b2ddadac83fbd16f427f4266369a999feefdc32ab5466f7"]
+        ["OP_1", "9f11bd2a4d36837a00fc02913dd6ea3a711ae49e217d8fd9ebe1d8b1d85c53ce"]
     )
 
 

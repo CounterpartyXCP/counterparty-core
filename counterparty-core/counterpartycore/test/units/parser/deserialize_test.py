@@ -188,13 +188,24 @@ def test_deserialize_error():
         )
 
 
-def test_desrialize_reveal_tx():
+def test_desrialize_reveal_tx(defaults):
     for data in [
         b"Hello, World!",
-        b"",
         b"a" * 1024 * 400,
     ]:
-        reveal_tx = composer.get_dummy_signed_reveal_tx(data)
+        reveal_tx = composer.get_dummy_signed_reveal_tx(defaults["addresses"][0], data)
         reveal_tx_hex = reveal_tx.serialize()
         decoded_tx = deserialize_rust(reveal_tx_hex)
-        assert decoded_tx["parsed_vouts"] == ([], 0, 0, data, [(None, None)])
+        assert decoded_tx["parsed_vouts"] == (
+            [],
+            0,
+            0,
+            data,
+            [(None, None)],
+            b"\x01H8\xd8\xb3X\x8cL{\xa7\xc1\xd0o\x86n\x9b79\xc607",
+        )
+
+    reveal_tx = composer.get_dummy_signed_reveal_tx(defaults["addresses"][0], b"")
+    reveal_tx_hex = reveal_tx.serialize()
+    decoded_tx = deserialize_rust(reveal_tx_hex)
+    assert decoded_tx["parsed_vouts"] == ([], 0, 0, b"", [(None, None)], b"")

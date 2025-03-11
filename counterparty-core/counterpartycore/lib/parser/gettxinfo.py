@@ -10,7 +10,7 @@ from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import gettxinfolegacy, messagetype, p2sh, protocol
-from counterpartycore.lib.utils import base58, multisig, opcodes, script
+from counterpartycore.lib.utils import address, base58, multisig, opcodes, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -410,7 +410,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         sources = p2sh_encoding_source
 
     if protocol.enabled("taproot_suport") and p2tr_source is not None and p2tr_source != b"":
-        sources = p2tr_source
+        sources = address.unpack(p2tr_source)
 
     if not data and destinations != [
         config.UNSPENDABLE,
