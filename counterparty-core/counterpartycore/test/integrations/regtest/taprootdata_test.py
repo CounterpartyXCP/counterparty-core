@@ -4,8 +4,10 @@ import time
 
 import requests
 from bitcoinutils.keys import PrivateKey
+from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxWitnessInput
+from bitcoinutils.utils import ControlBlock
 from regtestnode import RegtestNodeThread
 
 
@@ -42,6 +44,7 @@ def test_p2ptr_inscription():
         source_private_key = PrivateKey(b=random)
         source_pubkey = source_private_key.get_public_key()
         source_address = source_pubkey.get_taproot_address()
+        print("Source address", source_address.to_string())
 
         txid = node.bitcoin_wallet("sendtoaddress", source_address.to_string(), 1).strip()
         node.mine_blocks(1)
@@ -62,6 +65,8 @@ def test_p2ptr_inscription():
             },
         )
 
+        print("script_pub_key", source_address.to_script_pub_key().to_hex())
+
         result = node.send_transaction(
             source_address.to_string(),
             "send",
@@ -75,7 +80,7 @@ def test_p2ptr_inscription():
             },
             return_result=True,
         )
-        print(result)
+        print("TAPROOT result", result)
 
         commit_tx = Transaction.from_raw(result["rawtransaction"])
         commit_tx.has_segwit = True
@@ -86,9 +91,39 @@ def test_p2ptr_inscription():
         # add the witness to the transaction
         commit_tx.witnesses.append(TxWitnessInput([sig]))
 
-        print("signed commit", commit_tx.serialize())
+        print("Commit tx script_pubket", commit_tx.outputs[0].script_pubkey.to_hex())
 
         node.broadcast_transaction(commit_tx.serialize())
+
+        commit_value = commit_tx.outputs[0].amount
+        inscription_script = Script.from_raw(result["envelope_script"])
+        reveal_tx = Transaction.from_raw(result["reveal_rawtransaction"])
+        reveal_tx.has_segwit = True
+
+        # sign the input containing the inscription script
+        sig = source_private_key.sign_taproot_input(
+            reveal_tx,
+            0,
+            [source_address.to_script_pub_key()],
+            [commit_value],
+            script_path=True,
+            tapleaf_script=inscription_script,
+            tweak=False,
+        )
+        # generate the control block
+        control_block = ControlBlock(
+            source_pubkey,
+            scripts=[inscription_script],
+            index=0,
+            is_odd=source_address.is_odd(),
+        )
+
+        # add the witness to the transaction
+        reveal_tx.witnesses.append(
+            TxWitnessInput([sig, inscription_script.to_hex(), control_block.to_hex()])
+        )
+
+        node.broadcast_transaction(reveal_tx.serialize())
 
     finally:
         print(regtest_node_thread.node.server_out.getvalue())

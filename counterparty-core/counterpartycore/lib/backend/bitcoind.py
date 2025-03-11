@@ -549,6 +549,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
 
 def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
+    print("VIN INFO", vin_info, binascii.hexlify(vin_info["script_pub_key"]))
     if vin_info is None:
         logger.error("vin_info not found for vin %s", vin)
         try:

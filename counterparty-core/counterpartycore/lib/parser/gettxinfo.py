@@ -366,7 +366,9 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if decoded_tx["parsed_vouts"] == "DecodeError":
         raise DecodeError("unrecognised output type")
 
-    destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
+    destinations, btc_amount, fee, data, potential_dispensers, p2tr_source = decoded_tx[
+        "parsed_vouts"
+    ]
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output
@@ -406,6 +408,9 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
             fee += outputs_value
     else:  # use the source from the p2sh data source
         sources = p2sh_encoding_source
+
+    if protocol.enabled("taproot_suport") and p2tr_source is not None and p2tr_source != b"":
+        sources = p2tr_source
 
     if not data and destinations != [
         config.UNSPENDABLE,

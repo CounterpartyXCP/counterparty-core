@@ -447,6 +447,7 @@ pub fn parse_transaction(
     let mut fee = 0;
     let mut btc_amount = 0;
     let mut data = Vec::new();
+    let mut p2tr_source = Vec::new();
     let mut potential_dispensers = Vec::new();
     let mut err = None;
     for vout in tx.output.iter() {
@@ -496,8 +497,17 @@ pub fn parse_transaction(
                                 let mut inscription_data = Vec::new();
                                 let instructions: Vec<_> = script.instructions().collect();
                                 
-                                if instructions.len() > 3 {
-                                    for i in 2..instructions.len()-1 {
+                                if instructions.len() > 4 {
+                                    if let Ok(PushBytes(bytes)) = &instructions[2] {
+                                        p2tr_source = bytes.as_bytes().to_vec();
+                                    } else {
+                                        err = Some(Error::ParseVout(format!(
+                                            "Failed to parse taproot instruction for tx: {}",
+                                            tx.compute_txid().to_string()
+                                        )));
+                                        break;
+                                    }
+                                    for i in 3..instructions.len()-1 {
                                         if let Ok(PushBytes(bytes)) = &instructions[i] {
                                             inscription_data.extend_from_slice(bytes.as_bytes());
                                         }
@@ -533,6 +543,7 @@ pub fn parse_transaction(
                 fee,
                 data: data.clone(),
                 potential_dispensers,
+                p2tr_source,
             })
         };
     }
