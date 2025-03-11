@@ -5,6 +5,7 @@ import time
 import requests
 from bitcoinutils.keys import PrivateKey
 from bitcoinutils.setup import setup
+from bitcoinutils.transactions import Transaction, TxWitnessInput
 from regtestnode import RegtestNodeThread
 
 
@@ -44,8 +45,14 @@ def test_p2ptr_inscription():
 
         txid = node.bitcoin_wallet("sendtoaddress", source_address.to_string(), 1).strip()
         node.mine_blocks(1)
+        raw_tx = rpc_call("getrawtransaction", [txid, 1])["result"]
+        n = 0
+        for i, vout in enumerate(raw_tx["vout"]):
+            if vout["scriptPubKey"]["address"] == source_address.to_string():
+                n = i
+                break
 
-        result = node.send_transaction(
+        node.send_transaction(
             node.addresses[0],
             "send",
             {
@@ -53,7 +60,6 @@ def test_p2ptr_inscription():
                 "quantity": 100,
                 "asset": "XCP",
             },
-            return_result=True,
         )
 
         result = node.send_transaction(
@@ -65,12 +71,25 @@ def test_p2ptr_inscription():
                 "asset": "XCP",
                 "encoding": "taproot",
                 "multisig_pubkey": source_pubkey.to_hex(),
-                "inputs_set": f"{txid}:0",
+                "inputs_set": f"{txid}:{n}",
             },
             return_result=True,
         )
-        result = list(result).pop()
         print(result)
+
+        commit_tx = Transaction.from_raw(result["rawtransaction"])
+        commit_tx.has_segwit = True
+        # sign the input
+        sig = source_private_key.sign_taproot_input(
+            commit_tx, 0, [source_address.to_script_pub_key()], [int(1 * 10**8)]
+        )
+        # add the witness to the transaction
+        commit_tx.witnesses.append(TxWitnessInput([sig]))
+
+        print("signed commit", commit_tx.serialize())
+
+        node.broadcast_transaction(commit_tx.serialize())
+
     finally:
         print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()
