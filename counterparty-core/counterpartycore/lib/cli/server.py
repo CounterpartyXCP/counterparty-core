@@ -1,11 +1,9 @@
 import _thread
 import binascii
-import cProfile
 import decimal
 import logging
 import multiprocessing
 import os
-import pstats
 import threading
 import time
 
@@ -23,7 +21,7 @@ from counterpartycore.lib.api import apiv1, dbbuilder
 from counterpartycore.lib.cli import bootstrap, log
 from counterpartycore.lib.ledger.backendheight import BackendHeight
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.monitors import slack
+from counterpartycore.lib.monitors import profiler, slack
 from counterpartycore.lib.parser import blocks, check, follow
 from counterpartycore.lib.utils import database, helpers
 
@@ -87,7 +85,7 @@ class CounterpartyServer(threading.Thread):
         self.api_stop_event = None
         self.backend_height_thread = None
         self.log_stream = log_stream
-        self.profiler = None
+        self.periodic_profiler = None
         self.stop_when_ready = stop_when_ready
         self.stopped = False
 
@@ -174,14 +172,12 @@ class CounterpartyServer(threading.Thread):
 
         # Catch Up
         if config.PROFILE:
-            logger.info("Starting profiler before catchup...")
-            self.profiler = cProfile.Profile()
-            self.profiler.enable()
-            blocks.catch_up(self.db)
-            logger.info("Stopping profiler after catchup...")
-            self.profiler.disable()
-        else:
-            blocks.catch_up(self.db)
+            self.periodic_profiler = profiler.PeriodicProfilerThread(
+                interval_minutes=config.PROFILE_INTERVAL_MINUTES
+            )
+            self.periodic_profiler.start()
+
+        blocks.catch_up(self.db)
 
         if self.stop_when_ready:
             slack.trigger_webhook()
@@ -223,19 +219,9 @@ class CounterpartyServer(threading.Thread):
         if self.apiserver_v2:
             self.apiserver_v2.stop()
 
-        # Dump profiling data
-        if config.PROFILE and self.profiler:
-            logger.info("Dumping profiling data...")
-            profile_path = os.path.join(config.CACHE_DIR, "catchup.prof")
-            try:
-                self.profiler.dump_stats(profile_path)
-                stats = pstats.Stats(self.profiler).sort_stats("cumtime")
-                stats.print_stats(20)
-                stats = pstats.Stats(self.profiler).sort_stats("tottime")
-                stats.print_stats(20)
-            except Exception as e:  # pylint: disable=broad-except
-                logger.error("Error dumping profiler stats: %s", e)
-            self.profiler = None
+        if self.periodic_profiler:
+            logger.info("Stopping periodic profiler...")
+            self.periodic_profiler.stop()
 
         self.stopped = True
         logger.info("Shutdown complete.")
