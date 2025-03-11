@@ -1,7 +1,6 @@
 import cProfile
 import logging
 import os
-import pstats
 import threading
 import time
 from datetime import datetime
@@ -25,7 +24,9 @@ class PeriodicProfilerThread(threading.Thread):
         self.stop_event = threading.Event()
         self.profiler = None
         self.active_profiling = False
-        logger.info(f"Periodic profiler initialized with an interval of {interval_minutes} minutes")
+        logger.info(
+            "Periodic profiler initialized with an interval of %s minutes", interval_minutes
+        )
 
     def start_profiling(self):
         """Starts a profiling session"""
@@ -47,24 +48,12 @@ class PeriodicProfilerThread(threading.Thread):
         profile_path = os.path.join(config.CACHE_DIR, f"profile_{timestamp}.prof")
 
         try:
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(profile_path), exist_ok=True)
+
             # Save profiling data
             self.profiler.dump_stats(profile_path)
             logger.info(f"Profiling report saved to {profile_path}")
-
-            # Display a summary in the logs
-            stats = pstats.Stats(self.profiler)
-            stats_path = os.path.join(config.CACHE_DIR, f"profile_{timestamp}.txt")
-
-            with open(stats_path, "w") as stats_file:
-                # Functions most expensive in cumulative time
-                stats_file.write("=== Top 20 functions (cumulative time) ===\n")
-                stats.sort_stats("cumtime").print_stats(20, file=stats_file)
-
-                # Functions most expensive in total time
-                stats_file.write("\n=== Top 20 functions (total time) ===\n")
-                stats.sort_stats("tottime").print_stats(20, file=stats_file)
-
-            logger.info(f"Profiling summary saved to {stats_path}")
 
         except Exception as e:
             logger.error(f"Error generating profiling report: {e}")
@@ -88,17 +77,16 @@ class PeriodicProfilerThread(threading.Thread):
                 self.start_profiling()
                 last_report_time = time.time()
 
-            # Check every second if stop is requested
-            time.sleep(1)
-
-        # Generate a final report on shutdown
-        if self.active_profiling:
-            logger.info("Generating final profiling report before shutdown")
-            self.stop_profiling_and_save()
+            # Adjust sleep time based on interval for better precision with short intervals
+            # Small intervals get shorter sleep times for more frequent checks
+            sleep_time = min(1.0, max(0.1, self.interval_minutes * 60 / 10))
+            time.sleep(sleep_time)
 
     def stop(self):
         """Stops the profiling thread"""
         logger.info("Stopping periodic profiler thread...")
+        if self.active_profiling:
+            self.stop_profiling_and_save()
         self.stop_event.set()
         self.join()
         logger.info("Periodic profiler thread stopped.")
