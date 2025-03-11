@@ -447,7 +447,7 @@ pub fn parse_transaction(
     let mut fee = 0;
     let mut btc_amount = 0;
     let mut data = Vec::new();
-    let mut p2tr_source = Vec::new();
+    let mut is_reveal_tx = false;
     let mut potential_dispensers = Vec::new();
     let mut err = None;
     for vout in tx.output.iter() {
@@ -497,22 +497,14 @@ pub fn parse_transaction(
                                 let mut inscription_data = Vec::new();
                                 let instructions: Vec<_> = script.instructions().collect();
                                 
-                                if instructions.len() > 4 {
-                                    if let Ok(PushBytes(bytes)) = &instructions[2] {
-                                        p2tr_source = bytes.as_bytes().to_vec();
-                                    } else {
-                                        err = Some(Error::ParseVout(format!(
-                                            "Failed to parse taproot instruction for tx: {}",
-                                            tx.compute_txid().to_string()
-                                        )));
-                                        break;
-                                    }
-                                    for i in 3..instructions.len()-1 {
+                                if instructions.len() > 3 {
+                                    for i in 2..instructions.len()-1 {
                                         if let Ok(PushBytes(bytes)) = &instructions[i] {
                                             inscription_data.extend_from_slice(bytes.as_bytes());
                                         }
                                     }
                                     if !inscription_data.is_empty() {
+                                        is_reveal_tx = true;
                                         data.append(&mut inscription_data);
                                     }
                                 }
@@ -543,7 +535,6 @@ pub fn parse_transaction(
                 fee,
                 data: data.clone(),
                 potential_dispensers,
-                p2tr_source,
             })
         };
     }
@@ -563,36 +554,60 @@ pub fn parse_transaction(
         }
 
         if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
-            let input_txids: Vec<_> = tx
-                .input
-                .iter()
-                .map(|vin| vin.previous_output.txid)
-                .collect();
-            prev_txs = batch_client
-                .get_transactions(&input_txids)
-                .unwrap_or_default();
+            if config.p2sh_address_supported(height) && !tx.input.is_empty() {
+                // we get only one input
+                let input_txid = tx.input[0].previous_output.txid;
+                if let Ok(fetched_txs) = batch_client.get_transactions(&[input_txid]) {
+                    if !fetched_txs.is_empty() {
+                        prev_txs[0] = fetched_txs[0].clone();
+                    }
+                }
+                if is_reveal_tx && !prev_txs.is_empty() {
+                    if let Some(prev_tx) = &prev_txs[0] {
+                        if !prev_tx.input.is_empty() {
+                            let input_txid = prev_tx.input[0].previous_output.txid;
+                            if let Ok(fetched_txs) = batch_client.get_transactions(&[input_txid]) {
+                                if !fetched_txs.is_empty() {
+                                    prev_txs[0] = fetched_txs[0].clone();
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                let input_txids: Vec<_> = tx
+                    .input
+                    .iter()
+                    .map(|vin| vin.previous_output.txid)
+                    .collect();
+                prev_txs = batch_client
+                    .get_transactions(&input_txids)
+                    .unwrap_or_default();
+            }
         }
     }
 
-    
-
     for (i, vin) in tx.input.iter().enumerate() {
         let hash = vin.previous_output.txid.to_string();
-        let vin_info = prev_txs.get(i).and_then(|prev_tx| {
-            prev_tx.as_ref().and_then(|tx| {
-                let vout_idx = vin.previous_output.vout as usize;
+        let vin_info = if config.p2sh_address_supported(height) && i > 0 {
+            None
+        } else {
+            prev_txs.get(i).and_then(|prev_tx| {
+                prev_tx.as_ref().and_then(|tx| {
+                    let vout_idx = vin.previous_output.vout as usize;
 
-                let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
-                    tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
-                });
+                    let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
+                        tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
+                    });
 
-                tx.output.get(vout_idx).map(|output| VinOutput {
-                    value: output.value.to_sat(),
-                    script_pub_key: output.script_pubkey.to_bytes(),
-                    is_segwit: is_segwit,
+                    tx.output.get(vout_idx).map(|output| VinOutput {
+                        value: output.value.to_sat(),
+                        script_pub_key: output.script_pubkey.to_bytes(),
+                        is_segwit: is_segwit,
+                    })
                 })
             })
-        });
+        };
 
         vins.push(Vin {
             hash,
