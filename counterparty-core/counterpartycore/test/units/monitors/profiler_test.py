@@ -160,9 +160,9 @@ class TestPeriodicProfilerThread:
         # Wait for another complete cycle to verify the creation of a new report
         time.sleep(1.2)
         new_files = os.listdir(config.CACHE_DIR)
-        assert len(new_files) > len(
-            files
-        ), f"No new files created. Before: {len(files)}, After: {len(new_files)}"
+        assert len(new_files) > len(files), (
+            f"No new files created. Before: {len(files)}, After: {len(new_files)}"
+        )
 
         # Stop the thread
         self.profiler_thread.stop()
