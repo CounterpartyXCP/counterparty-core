@@ -257,7 +257,9 @@ def get_transaction_sources(decoded_tx):
             protocol.enabled("taproot_support") and asm[0] == b"\x01"
         ):
             # Segwit output
+            logger.warning("Segwit output detected: %s", binascii.hexlify(script_pubkey))
             new_source = script.script_to_address(script_pubkey)
+            logger.warning("Segwit output address: %s", new_source)
             new_data = None
         else:
             raise DecodeError("unrecognised source type")
@@ -268,6 +270,9 @@ def get_transaction_sources(decoded_tx):
             # Collect unique sources.
             if new_source not in sources:
                 sources.append(new_source)
+
+        if protocol.enabled("first_input_is_source") and len(sources) > 0:
+            break
 
     return "-".join(sources), outputs_value
 
