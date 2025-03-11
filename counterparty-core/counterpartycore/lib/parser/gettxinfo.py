@@ -10,7 +10,7 @@ from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import gettxinfolegacy, messagetype, p2sh, protocol
-from counterpartycore.lib.utils import address, base58, multisig, opcodes, script
+from counterpartycore.lib.utils import base58, multisig, opcodes, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -366,7 +366,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if decoded_tx["parsed_vouts"] == "DecodeError":
         raise DecodeError("unrecognised output type")
 
-    destinations, btc_amount, fee, data, potential_dispensers, p2tr_source = decoded_tx[
+    destinations, btc_amount, fee, data, potential_dispensers, is_reveal_tx = decoded_tx[
         "parsed_vouts"
     ]
 
@@ -408,9 +408,6 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
             fee += outputs_value
     else:  # use the source from the p2sh data source
         sources = p2sh_encoding_source
-
-    if protocol.enabled("taproot_suport") and p2tr_source is not None and p2tr_source != b"":
-        sources = address.unpack(p2tr_source)
 
     if not data and destinations != [
         config.UNSPENDABLE,

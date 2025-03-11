@@ -535,6 +535,7 @@ pub fn parse_transaction(
                 fee,
                 data: data.clone(),
                 potential_dispensers,
+                is_reveal_tx,
             })
         };
     }
