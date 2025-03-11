@@ -269,8 +269,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     }
     insert_record(db, "debits", bindings, "DEBIT")
 
-    ConsensusHashBuilder().append_to_block_ledger(f"{block_index}{address}{asset}{quantity}")
-    ConsensusHashBuilder().append_to_block_migration(
+    ConsensusHashBuilder().append_to_block_ledger(
         f"{block_index}{str(address)[0:36]}{asset}{quantity}"
     )
     return utxo_address
@@ -349,8 +348,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     }
     insert_record(db, "credits", bindings, "CREDIT")
 
-    ConsensusHashBuilder().append_to_block_ledger(f"{block_index}{address}{asset}{quantity}")
-    ConsensusHashBuilder().append_to_block_migration(
+    ConsensusHashBuilder().append_to_block_ledger(
         f"{block_index}{str(address)[0:36]}{asset}{quantity}"
     )
 
