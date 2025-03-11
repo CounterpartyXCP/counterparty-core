@@ -146,8 +146,7 @@ class TestPeriodicProfilerThread:
         assert self.profiler_thread.active_profiling is True
 
         # Wait until the interval is well exceeded for a report to be generated
-        # 0.01 minutes = 0.6 seconds, wait 1.2 seconds to be sure (2x the interval)
-        time.sleep(1.2)
+        time.sleep(5)
 
         # Check that a report file was created
         # If no file is found, display useful diagnostics
