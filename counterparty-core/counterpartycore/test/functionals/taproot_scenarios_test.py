@@ -8,7 +8,7 @@ def test_taproot_scenario_1(empty_ledger_db, bitcoind_mock, defaults):
         defaults,
         defaults["p2tr_addresses"][0],
         defaults["addresses"][0],
-        "6f488077d790fa369c53bccd1d09a548201fad6c56f48cf150f6c2f0e7062a01",
+        "69d117c318f6c2202548b655fda33567599e70d2660c72dca6d1db5e26967c5f",
     )
 
 
@@ -19,7 +19,7 @@ def test_taproot_scenario_2(empty_ledger_db, bitcoind_mock, defaults):
         defaults,
         defaults["addresses"][0],
         defaults["p2tr_addresses"][0],
-        "4330fdfa070eb72f65742a23fe9e68bbf2e67c55d28ad4b85ad11288f2eeb7ab",
+        "13cb36258e94e0d375ea20cfb75110d351146bcec3daac6efd16919f4dd72727",
     )
 
 
@@ -30,5 +30,5 @@ def test_taproot_scenario_3(empty_ledger_db, bitcoind_mock, defaults):
         defaults,
         defaults["p2tr_addresses"][0],
         defaults["p2tr_addresses"][1],
-        "1da2ffb3052684b760c5974e8008479be1b76c8f35fc069fbb1985f02377ffe4",
+        "da1769d1a8817c3fee91281cbc9eee5ce733681ceb70dd7fa45429ffa4ffc8ba",
     )
