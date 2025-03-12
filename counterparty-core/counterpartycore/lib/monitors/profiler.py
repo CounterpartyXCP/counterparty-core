@@ -1,6 +1,7 @@
 import cProfile
 import logging
 import os
+import sys
 import threading
 import time
 from datetime import datetime
@@ -33,10 +34,21 @@ class PeriodicProfilerThread(threading.Thread):
         if self.active_profiling:
             return
 
-        self.profiler = cProfile.Profile()
-        self.profiler.enable()
-        self.active_profiling = True
-        logger.info("Profiling session started")
+        # Reset any active profiler in Python 3.12+
+        try:
+            # This disables any active system-wide profiler
+            sys.setprofile(None)
+        except Exception:
+            logger.warning("Failed to reset profiler state before starting new profiler")
+
+        try:
+            self.profiler = cProfile.Profile()
+            self.profiler.enable()
+            self.active_profiling = True
+            logger.info("Profiling session started")
+        except ValueError as e:
+            logger.error(f"Error starting profiling: {e}")
+            self.profiler = None
 
     def stop_profiling_and_save(self):
         """Stops the profiling session and generates a report"""
