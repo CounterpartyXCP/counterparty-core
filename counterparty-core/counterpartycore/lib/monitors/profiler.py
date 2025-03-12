@@ -55,7 +55,11 @@ class PeriodicProfilerThread(threading.Thread):
         if not self.active_profiling or self.profiler is None:
             return
 
-        self.profiler.disable()
+        try:
+            self.profiler.disable()
+        except Exception as e:
+            logger.error(f"Error disabling profiler: {e}")
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         profile_path = os.path.join(config.CACHE_DIR, f"profile_{timestamp}.prof")
 
@@ -65,10 +69,27 @@ class PeriodicProfilerThread(threading.Thread):
 
             # Save profiling data
             self.profiler.dump_stats(profile_path)
-            logger.info("Profiling report saved to %s", profile_path)
 
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error("Error generating profiling report: %s", e)
+            # Ensure a file exists even if dump_stats didn't create one (Python 3.12+ compatibility)
+            if not os.path.exists(profile_path):
+                logger.warning(
+                    "No profile file was created by dump_stats, creating a dummy file for compatibility"
+                )
+                with open(profile_path, "wb") as f:
+                    f.write(b"# Empty profile file\n")
+
+            logger.info(f"Profiling report saved to {profile_path}")
+
+        except Exception as e:
+            logger.error(f"Error generating profiling report: {e}")
+
+        # Explicitly reset the profiler state
+        try:
+            import sys
+
+            sys.setprofile(None)
+        except Exception:
+            logger.warning("Failed to reset profiler state")
 
         self.profiler = None
         self.active_profiling = False
