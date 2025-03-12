@@ -44,7 +44,7 @@ counterparty-server start
 
 ## Codebase
 
-- Use a new data encoding format for Sweep and Enhanced Send, with variable length for every data field
+- Use a new data encoding format for Sweep, Enhanced Send, Fairminter and Fairmint, with variable length for every data field
 - Update ledger hashes checkpoints using truncated addresses
 
 ## API
