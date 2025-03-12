@@ -18,6 +18,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1, dbbuilder
+from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.cli import bootstrap, log
 from counterpartycore.lib.ledger.backendheight import BackendHeight
 from counterpartycore.lib.ledger.currentstate import CurrentState
@@ -200,8 +201,9 @@ class CounterpartyServer(threading.Thread):
         if self.stopped:
             return
         logger.info("Shutting down...")
-        if self.db:
-            CurrentState().set_ledger_state(self.db, "Stopping")
+
+        CurrentState().set_stopping()
+        rsfetcher.RSFetcher().stop()
 
         # Ensure all threads are stopped
         if self.follower_daemon:
