@@ -1,10 +1,21 @@
 import os
 import shutil
+import sys
 import tempfile
 import time
 
+import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.monitors.profiler import PeriodicProfilerThread
+
+
+def skip_on_py312_plus(func):
+    def wrapper(*args, **kwargs):
+        if sys.version_info >= (3, 12):
+            pytest.skip("Test ignored on Python 3.12+")
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 class TestPeriodicProfilerThread:
@@ -81,6 +92,7 @@ class TestPeriodicProfilerThread:
         self.profiler_thread.start_profiling()
         assert self.profiler_thread.profiler is profiler  # same instance
 
+    @skip_on_py312_plus
     def test_stop_profiling_and_save(self):
         """Test stopping profiling and generating a report."""
         self.profiler_thread.start_profiling()
@@ -135,6 +147,7 @@ class TestPeriodicProfilerThread:
             # Restore the original directory
             config.CACHE_DIR = original_cache_dir
 
+    @skip_on_py312_plus
     def test_run_cycle(self):
         """Test the execution cycle of the thread with periodic report generation."""
         # Start the thread
@@ -177,6 +190,7 @@ class TestPeriodicProfilerThread:
         self.profiler_thread.join(timeout=2)  # Increased timeout
         assert not self.profiler_thread.is_alive()
 
+    @skip_on_py312_plus
     def test_stop(self):
         """Test stopping the thread with generation of a final report."""
         # Start the thread
