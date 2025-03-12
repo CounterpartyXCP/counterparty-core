@@ -38,7 +38,7 @@ class PeriodicProfilerThread(threading.Thread):
         try:
             # This disables any active system-wide profiler
             sys.setprofile(None)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             logger.warning("Failed to reset profiler state before starting new profiler")
 
         try:
@@ -47,7 +47,7 @@ class PeriodicProfilerThread(threading.Thread):
             self.active_profiling = True
             logger.info("Profiling session started")
         except ValueError as e:
-            logger.error(f"Error starting profiling: {e}")
+            logger.error("Error starting profiling: %s", e)
             self.profiler = None
 
     def stop_profiling_and_save(self):
@@ -57,8 +57,8 @@ class PeriodicProfilerThread(threading.Thread):
 
         try:
             self.profiler.disable()
-        except Exception as e:
-            logger.error(f"Error disabling profiler: {e}")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error("Error disabling profiler: %s", e)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         profile_path = os.path.join(config.CACHE_DIR, f"profile_{timestamp}.prof")
@@ -78,17 +78,15 @@ class PeriodicProfilerThread(threading.Thread):
                 with open(profile_path, "wb") as f:
                     f.write(b"# Empty profile file\n")
 
-            logger.info(f"Profiling report saved to {profile_path}")
+            logger.info("Profiling report saved to %s", profile_path)
 
-        except Exception as e:
-            logger.error(f"Error generating profiling report: {e}")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error("Error generating profiling report: %s", e)
 
         # Explicitly reset the profiler state
         try:
-            import sys
-
             sys.setprofile(None)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             logger.warning("Failed to reset profiler state")
 
         self.profiler = None
