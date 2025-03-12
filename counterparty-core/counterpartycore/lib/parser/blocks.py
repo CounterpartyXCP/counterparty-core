@@ -910,7 +910,7 @@ def catch_up(db):
         parsed_blocks = 0
 
         while CurrentState().current_block_index() < block_count:
-            if CurrentState().ledger_state() == "Stopping":
+            if CurrentState().stopping():
                 return
             # Get block information and transactions
             fetch_time_start = time.time()

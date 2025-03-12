@@ -75,6 +75,12 @@ class CurrentState(metaclass=helpers.SingletonMeta):
         with LedgerDBConnectionPool().connection() as ledger_db:
             return get_config_value(ledger_db, "LEDGER_STATE") or "Starting"
 
+    def set_stopping(self):
+        self.state["STOPPING"] = True
+
+    def stopping(self):
+        return self.state.get("STOPPING", False)
+
 
 class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):
     def __init__(self):

@@ -42,7 +42,7 @@ def clean_url_for_log(url):
 
 # for testing
 def should_retry():
-    if CurrentState().ledger_state() == "Stopping":
+    if CurrentState().stopping():
         return False
     return True
 

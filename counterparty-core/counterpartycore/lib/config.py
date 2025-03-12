@@ -250,3 +250,5 @@ DEFAULT_UTXO_VALUE = 546
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 LEDGER_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "ledger", "migrations")
 STATE_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "api", "migrations")
+
+PROFILE_INTERVAL_MINUTES = 15

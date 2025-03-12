@@ -45,6 +45,7 @@ counterparty-server start
 ## CLI
 
 - Adds support for the `SLACK_HOOK` environment variable containing a webhook URL called after a rebuild
+- The `--profile` flag now generates a report every 15 minutes instead of just one at shutdown
 
 # Credits
 
