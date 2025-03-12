@@ -25,6 +25,8 @@ logging.TRACE = logging.DEBUG - 5
 logging.addLevelName(logging.TRACE, "TRACE")
 logging.EVENT = logging.DEBUG - 4
 logging.addLevelName(logging.EVENT, "EVENT")
+logging.IMPORTANT = logging.ERROR + 1
+logging.addLevelName(logging.IMPORTANT, "IMPORTANT")
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -44,6 +46,10 @@ def event(self, msg, *args, **kwargs):
 
 def debug(self, msg, *args, **kwargs):
     self._log(logging.DEBUG, msg, args, **kwargs)  # pylint: disable=protected-access
+
+
+def important(self, msg, *args, **kwargs):
+    self._log(logging.IMPORTANT, msg, args, **kwargs)  # pylint: disable=protected-access
 
 
 def format_time(record, _datefmt=None):
@@ -189,6 +195,7 @@ def set_up(
 ):
     logging.Logger.trace = trace
     logging.Logger.event = event
+    logging.Logger.important = important
 
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]  # pylint: disable=no-member
     for logger_item in loggers:

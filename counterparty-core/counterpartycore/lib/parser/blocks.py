@@ -958,6 +958,11 @@ def catch_up(db):
                     "duration": formatted_duration,
                 },
             )
+            if config.QUIET and hasattr(logger, "important"):
+                logger.important(
+                    "Block %(current)s/%(total)s parsed",
+                    {"current": CurrentState().current_block_index(), "total": block_count},
+                )
 
             # Refresh block count.
             if CurrentState().current_block_index() == block_count:
