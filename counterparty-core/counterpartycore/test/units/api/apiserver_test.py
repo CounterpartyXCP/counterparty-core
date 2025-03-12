@@ -390,7 +390,8 @@ def test_get_balances_by_addresses(apiv2_client, defaults):
     assert result[6]["asset"] == "NODIVISIBLE"
     assert result[7]["asset"] == "PARENT"
     assert result[8]["asset"] == "RAIDFAIRMIN"
-    assert result[9]["asset"] == "XCP"
+    assert result[9]["asset"] == "TAIDFAIRMIN"
+    assert result[10]["asset"] == "XCP"
 
     for balance in result[9]["addresses"]:
         assert (
