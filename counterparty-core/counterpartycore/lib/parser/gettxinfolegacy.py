@@ -98,9 +98,7 @@ def get_tx_info_legacy(decoded_tx, block_index):
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1 : data_chunk_length + 1]
             data += data_chunk
-        elif len(asm) == 5 and protocol.after_block_or_test_network(
-            block_index, 293000
-        ):  # Protocol change.
+        elif len(asm) == 5 and protocol.enabled("data_in_pubkeyhash"):  # Protocol change.
             # Be strict.
             pubkeyhash, _address_version = get_pubkeyhash(script_pub_key, block_index)
             if not pubkeyhash:

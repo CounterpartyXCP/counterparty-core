@@ -180,9 +180,7 @@ def validate(
         problems.append("negative deadline")
     if expiration < 0:
         problems.append("negative expiration")
-    if expiration == 0 and not protocol.after_block_or_test_network(
-        block_index, 317500
-    ):  # Protocol change.
+    if expiration == 0 and not protocol.enabled("no_zero_expiration"):  # Protocol change.
         problems.append("zero expiration")
 
     if target_value:
@@ -411,7 +409,7 @@ def match(db, tx):
     tx1_counterwager_remaining = tx1["counterwager_remaining"]
 
     bet_matches = ledger.other.get_matching_bets(db, tx1["feed_address"], counterbet_type)
-    if protocol.after_block_or_test_network(tx["block_index"], 284501):  # Protocol change.
+    if protocol.enabled("sort_bet_matches"):  # Protocol change.
         sorted(bet_matches, key=lambda x: x["tx_index"])  # Sort by tx index second.
         sorted(
             bet_matches,
@@ -460,7 +458,7 @@ def match(db, tx):
         )
         tx1_odds = ledger.issuances.price(tx1["wager_quantity"], tx1["counterwager_quantity"])
 
-        if tx["block_index"] < 286000:
+        if protocol.enabled("issuance_fee_update_2"):
             tx0_inverse_odds = ledger.issuances.price(1, tx0_odds)  # Protocol change.
 
         logger.debug(
@@ -487,7 +485,7 @@ def match(db, tx):
             if not forward_quantity:
                 logger.debug("Skipping: zero forward quantity.")
                 continue
-            if protocol.after_block_or_test_network(tx1["block_index"], 286500):  # Protocol change.
+            if protocol.enabled("no_backwards_compatibility"):  # Protocol change.
                 if not backward_quantity:
                     logger.debug("Skipping: zero backward quantity.")
                     continue
@@ -527,7 +525,7 @@ def match(db, tx):
             }
             logger.info("Bet %(bet_hash)s updated (%(tx_hash)s) [%(status)s]", log_data)
 
-            if protocol.after_block_or_test_network(tx1["block_index"], 292000):  # Protocol change
+            if protocol.enabled("recredit_give_remaining"):  # Protocol change
                 if tx1_wager_remaining <= 0 or tx1_counterwager_remaining <= 0:
                     # Fill order, and recredit give_remaining.
                     tx1_status = "filled"

@@ -90,10 +90,10 @@ def validate(
 
     # Callable, or not.
     if not callable_:
-        if protocol.after_block_or_test_network(block_index, 312500):  # Protocol change.
+        if protocol.enabled("default_values_for_callable"):  # Protocol change.
             call_date = 0
             call_price = 0.0
-        elif block_index >= 310000:  # Protocol change.
+        elif protocol.enabled("enable_rematch"):  # Protocol change.
             if call_date:
                 problems.append("call date for non‐callable asset")
             if call_price:
@@ -132,7 +132,11 @@ def validate(
         ) != bool(callable_):
             problems.append("cannot change callability")
         if last_issuance["call_date"] > call_date and (
-            call_date != 0 or (block_index < 312500 and not protocol.is_test_network())
+            call_date != 0
+            or (
+                not protocol.enabled("default_values_for_callable")
+                and not protocol.is_test_network()
+            )
         ):
             problems.append("cannot advance call date")
         if last_issuance["call_price"] > call_price:
@@ -181,9 +185,9 @@ def validate(
             problems.append("a subasset must be a numeric asset")
 
     # Check for existence of fee funds.
-    if quantity or protocol.after_block_or_test_network(block_index, 315000):  # Protocol change.
+    if quantity or protocol.enabled("pay_only_first_issuance"):  # Protocol change.
         if not reissuance or (
-            block_index < 310000 and not protocol.is_test_network()
+            not protocol.enabled("enable_rematch") and not protocol.is_test_network()
         ):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
             balance = ledger.balances.get_balance(db, source, config.XCP)
@@ -201,16 +205,16 @@ def validate(
                     fee = 0
                 else:
                     fee = int(0.5 * config.UNIT)
-            elif protocol.after_block_or_test_network(block_index, 291700):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_3"):  # Protocol change.
                 fee = int(0.5 * config.UNIT)
-            elif protocol.after_block_or_test_network(block_index, 286000):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_2"):  # Protocol change.
                 fee = 5 * config.UNIT
-            elif protocol.after_block_or_test_network(block_index, 281237):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_1"):  # Protocol change.
                 fee = 5
             if fee and (balance < fee):
                 problems.append("insufficient funds")
 
-    if not protocol.after_block_or_test_network(block_index, 317500):  # Protocol change.
+    if not protocol.enabled("no_zero_expiration"):  # Protocol change.
         if len(description) > 42:
             problems.append("description too long")
 
@@ -558,8 +562,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                     except UnicodeDecodeError:
                         description = ""
         elif (
-            protocol.after_block_or_test_network(block_index, 283272)
-            and len(message) >= asset_format_length
+            protocol.enabled("issuance_format_update") and len(message) >= asset_format_length
         ):  # Protocol change.
             if (len(message) - asset_format_length <= 42) and not protocol.enabled(
                 "pascal_string_removed"
