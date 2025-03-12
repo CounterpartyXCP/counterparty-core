@@ -108,7 +108,7 @@ class PeriodicProfilerThread(threading.Thread):
                 self.start_profiling()
                 last_report_time = time.time()
 
-            self.stop_event.wait(timeout=30)
+            self.stop_event.wait(timeout=(self.interval_minutes * 60) / 2)
 
     def stop(self):
         """Stops the profiling thread"""
