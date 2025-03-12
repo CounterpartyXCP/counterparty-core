@@ -65,10 +65,10 @@ class PeriodicProfilerThread(threading.Thread):
 
             # Save profiling data
             self.profiler.dump_stats(profile_path)
-            logger.info(f"Profiling report saved to {profile_path}")
+            logger.info("Profiling report saved to %s", profile_path)
 
-        except Exception as e:
-            logger.error(f"Error generating profiling report: {e}")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error("Error generating profiling report: %s", e)
 
         self.profiler = None
         self.active_profiling = False
@@ -84,7 +84,7 @@ class PeriodicProfilerThread(threading.Thread):
 
             # If the interval has elapsed, generate a new report
             if elapsed_minutes >= self.interval_minutes:
-                logger.info(f"Generating profiling report after {elapsed_minutes:.2f} minutes")
+                logger.info("Generating profiling report after %s minutes", elapsed_minutes)
                 self.stop_profiling_and_save()
                 self.start_profiling()
                 last_report_time = time.time()
