@@ -108,10 +108,7 @@ class PeriodicProfilerThread(threading.Thread):
                 self.start_profiling()
                 last_report_time = time.time()
 
-            # Adjust sleep time based on interval for better precision with short intervals
-            # Small intervals get shorter sleep times for more frequent checks
-            sleep_time = min(1.0, max(0.1, self.interval_minutes * 60 / 10))
-            time.sleep(sleep_time)
+            self.stop_event.wait(timeout=(self.interval_minutes * 60) / 2)
 
     def stop(self):
         """Stops the profiling thread"""

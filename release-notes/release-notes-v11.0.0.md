@@ -46,6 +46,7 @@ counterparty-server start
 
 - Adds support for the `SLACK_HOOK` environment variable containing a webhook URL called after a rebuild
 - The `--profile` flag now generates a report every 15 minutes instead of just one at shutdown
+- Add `URGENT` log level displayed even with `--quiet` flag
 
 # Credits
 

@@ -173,7 +173,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                             break  # Break out of the inner loop after successfully putting the block
                         except queue.Full:
                             logger.debug("Prefetch queue is full; waiting...")
-                            time.sleep(0.1)
+                            self.stopped_event.wait(timeout=0.1)
                 elif not self.stopped_event.is_set():
                     retry += 1
                     logger.debug(
