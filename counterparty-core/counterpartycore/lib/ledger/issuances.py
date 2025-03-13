@@ -512,6 +512,20 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
     return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
 
 
+def get_fairmint_by_address(db, fairminter_tx_hash, source):
+    cursor = db.cursor()
+    query = """
+        SELECT
+            SUM(earn_quantity) AS quantity
+        FROM fairmints
+        WHERE fairminter_tx_hash = ? AND status = ? AND source = ?
+    """
+    bindings = (fairminter_tx_hash, "valid", source)
+    cursor.execute(query, bindings)
+    sums = cursor.fetchone()
+    return sums["quantity"] or 0
+
+
 def get_fairminters_by_soft_cap_deadline(db, block_index):
     cursor = db.cursor()
     query = """

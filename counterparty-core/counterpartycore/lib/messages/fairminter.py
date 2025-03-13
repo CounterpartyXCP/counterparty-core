@@ -4,7 +4,7 @@ import struct
 
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import assetnames
+from counterpartycore.lib.utils import assetnames, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -20,6 +20,7 @@ def validate(
     price=0,
     quantity_by_price=1,
     max_mint_per_tx=0,
+    max_mint_per_address=0,
     hard_cap=0,
     premint_quantity=0,
     start_block=0,
@@ -40,6 +41,7 @@ def validate(
         "price": price,
         "quantity_by_price": quantity_by_price,
         "max_mint_per_tx": max_mint_per_tx,
+        "max_mint_per_address": max_mint_per_address,
         "hard_cap": hard_cap,
         "premint_quantity": premint_quantity,
         "start_block": start_block,
@@ -73,6 +75,9 @@ def validate(
             problems.append(
                 "`minted_asset_commission` must be less than 0 or greater than or equal to 1"
             )
+
+    if max_mint_per_tx > max_mint_per_address > 0:
+        problems.append("max_mint_per_tx must be <= max_mint_per_address.")
 
     # check asset name format
     try:
@@ -143,8 +148,12 @@ def validate(
     if start_block > end_block > 0:
         problems.append("Start block must be <= end block.")  # could be one block fair minter
 
-    if soft_cap >= hard_cap > 0:
-        problems.append("Soft cap must be < hard cap.")
+    if protocol.enabled("fairminter_v2"):
+        if soft_cap > hard_cap > 0:
+            problems.append("Soft cap must be <= hard cap.")
+    else:
+        if soft_cap >= hard_cap > 0:
+            problems.append("Soft cap must be < hard cap.")
     if soft_cap > 0:
         if not soft_cap_deadline_block:
             problems.append("Soft cap deadline block must be specified if soft cap is specified.")
@@ -164,6 +173,7 @@ def compose(
     price: int = 0,
     quantity_by_price: int = 1,
     max_mint_per_tx: int = 0,
+    max_mint_per_address: int = 0,
     hard_cap: int = 0,
     premint_quantity: int = 0,
     start_block: int = 0,
@@ -187,6 +197,7 @@ def compose(
         price,
         quantity_by_price,
         max_mint_per_tx,
+        max_mint_per_address,
         hard_cap,
         premint_quantity,
         start_block,
@@ -207,42 +218,35 @@ def compose(
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
-    # to optimize the data size (avoiding fixed sizes per parameter) we use a simple
-    # string of characters separated by `|`.
-    # The description is placed last to be able to contain `|`.
-    data_content = "|".join(
-        [
-            str(value)
-            for value in [
-                asset,
-                asset_parent,
-                price,
-                quantity_by_price,
-                max_mint_per_tx,
-                hard_cap,
-                premint_quantity,
-                start_block,
-                end_block,
-                soft_cap,
-                soft_cap_deadline_block,
-                minted_asset_commission_int,
-                int(burn_payment),
-                int(lock_description),
-                int(lock_quantity),
-                int(divisible),
-                description,
-            ]
-        ]
-    ).encode("utf-8")
-    data += struct.pack(f">{len(data_content)}s", data_content)
-    return (source, [], data)
-
-
-def unpack(message, return_dict=False):
-    try:
-        data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
-        arg_count = len(data_content)
-        (
+    packed_value = []
+    if protocol.enabled("fairminter_v2"):
+        asset_id = ledger.issuances.generate_asset_id(asset)
+        asset_parent_id = (
+            ledger.issuances.generate_asset_id(asset_parent) if asset_parent != "" else 0
+        )
+        data += helpers.encode_data(
+            asset_id,
+            asset_parent_id or "",
+            price or "",
+            quantity_by_price or "",
+            max_mint_per_tx or "",
+            max_mint_per_address or "",
+            hard_cap or "",
+            premint_quantity or "",
+            start_block or "",
+            end_block or "",
+            soft_cap or "",
+            soft_cap_deadline_block or "",
+            minted_asset_commission_int or "",
+            int(burn_payment) or "",
+            int(lock_description) or "",
+            int(lock_quantity) or "",
+            int(divisible) or "",
+            description,
+        )
+    else:
+        packed_value += []
+        packed_value += [
             asset,
             asset_parent,
             price,
@@ -255,13 +259,73 @@ def unpack(message, return_dict=False):
             soft_cap,
             soft_cap_deadline_block,
             minted_asset_commission_int,
-            burn_payment,
-            lock_description,
-            lock_quantity,
-            divisible,
-        ) = data_content[0 : arg_count - 1]
-        # The description is placed last to be able to contain `|`.
-        description = "|".join(data_content[arg_count - 1 :])
+            int(burn_payment),
+            int(lock_description),
+            int(lock_quantity),
+            int(divisible),
+            description,
+        ]
+        data_content = "|".join([str(value) for value in packed_value]).encode("utf-8")
+        data += struct.pack(f">{len(data_content)}s", data_content)
+
+    return (source, [], data)
+
+
+def unpack(message, return_dict=False):
+    try:
+        if protocol.enabled("fairminter_v2"):
+            decoded_data = helpers.decode_data(message)
+            description = decoded_data.pop().decode("utf-8")
+            (
+                asset_id,
+                asset_parent_id,
+                price,
+                quantity_by_price,
+                max_mint_per_tx,
+                max_mint_per_address,
+                hard_cap,
+                premint_quantity,
+                start_block,
+                end_block,
+                soft_cap,
+                soft_cap_deadline_block,
+                minted_asset_commission_int,
+                burn_payment,
+                lock_description,
+                lock_quantity,
+                divisible,
+            ) = [helpers.bytes_to_int(value or b"\x00") for value in decoded_data]
+
+            asset = ledger.issuances.generate_asset_name(asset_id)
+            asset_parent = (
+                ledger.issuances.generate_asset_name(asset_parent_id)
+                if asset_parent_id != 0
+                else ""
+            )
+        else:
+            data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
+            arg_count = len(data_content)
+            (
+                asset,
+                asset_parent,
+                price,
+                quantity_by_price,
+                max_mint_per_tx,
+                hard_cap,
+                premint_quantity,
+                start_block,
+                end_block,
+                soft_cap,
+                soft_cap_deadline_block,
+                minted_asset_commission_int,
+                burn_payment,
+                lock_description,
+                lock_quantity,
+                divisible,
+            ) = data_content[0 : arg_count - 1]
+            # The description is placed last to be able to contain `|`.
+            description = "|".join(data_content[arg_count - 1 :])
+            max_mint_per_address = 0
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
@@ -272,6 +336,7 @@ def unpack(message, return_dict=False):
                 "price": int(price),
                 "quantity_by_price": int(quantity_by_price),
                 "max_mint_per_tx": int(max_mint_per_tx),
+                "max_mint_per_address": int(max_mint_per_address),
                 "hard_cap": int(hard_cap),
                 "premint_quantity": int(premint_quantity),
                 "start_block": int(start_block),
@@ -292,6 +357,7 @@ def unpack(message, return_dict=False):
             int(price),
             int(quantity_by_price),
             int(max_mint_per_tx),
+            int(max_mint_per_address),
             int(hard_cap),
             int(premint_quantity),
             int(start_block),
@@ -306,7 +372,7 @@ def unpack(message, return_dict=False):
             description,
         )
     except Exception:  # pylint: disable=broad-exception-caught
-        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
+        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
 
 
 def parse(db, tx, message):
@@ -316,6 +382,7 @@ def parse(db, tx, message):
         price,
         quantity_by_price,
         max_mint_per_tx,
+        max_mint_per_address,
         hard_cap,
         premint_quantity,
         start_block,
@@ -338,6 +405,7 @@ def parse(db, tx, message):
         price,
         quantity_by_price,
         max_mint_per_tx,
+        max_mint_per_address,
         hard_cap,
         premint_quantity,
         start_block,
@@ -428,6 +496,7 @@ def parse(db, tx, message):
         "hard_cap": hard_cap,
         "burn_payment": burn_payment,
         "max_mint_per_tx": max_mint_per_tx,
+        "max_mint_per_address": max_mint_per_address,
         "premint_quantity": premint_quantity,
         "start_block": start_block,
         "end_block": end_block,

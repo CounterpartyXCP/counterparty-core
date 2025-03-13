@@ -949,6 +949,7 @@ def parse(db, tx, message, message_type_id):
             "status": status,
             "asset_longname": asset_longname,
             "asset_events": " ".join(asset_events),
+            "msg_index": ledger.other.get_issuance_msg_index(db, tx["tx_hash"]),
         }
         # ensure last issuance is locked when fair minting is active
         if "cannot issue during fair minting" in status:

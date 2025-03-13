@@ -88,7 +88,7 @@ def test_validate(ledger_db, defaults):
     ) == (
         None,
         [
-            "address doesn't have enough balance of XCP (91699999693 < 9223372036854775808)",
+            "address doesn't have enough balance of XCP (91599999693 < 9223372036854775808)",
             "integer overflow",
         ],
     )
