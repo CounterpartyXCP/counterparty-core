@@ -67,6 +67,11 @@ impl From<serde_json::Error> for BatchRpcError {
 
 impl BatchRpcClient {
     pub fn new(url: String, user: String, password: String) -> Result<Self, BatchRpcError> {
+
+        println!("Creating RPC client with URL: '{}'", url);
+        println!("Creating RPC client with user: '{}'", user);
+        println!("Creating RPC client with password: '{}'", password);
+
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 

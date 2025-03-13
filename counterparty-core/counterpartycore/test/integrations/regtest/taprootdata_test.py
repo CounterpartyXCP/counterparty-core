@@ -45,16 +45,21 @@ def test_p2ptr_inscription():
         source_pubkey = source_private_key.get_public_key()
         source_address = source_pubkey.get_taproot_address()
         print("Source address", source_address.to_string())
+        print("Source script_pub_key", source_address.to_script_pub_key().to_hex())
 
+        # send some BTC to the source address
         txid = node.bitcoin_wallet("sendtoaddress", source_address.to_string(), 1).strip()
         node.mine_blocks(1)
         raw_tx = rpc_call("getrawtransaction", [txid, 1])["result"]
-        n = 0
+        n = None
         for i, vout in enumerate(raw_tx["vout"]):
             if vout["scriptPubKey"]["address"] == source_address.to_string():
                 n = i
                 break
+        if n is None:
+            raise Exception("Could not find the vout for the source address")
 
+        # send some XCP to the source address
         node.send_transaction(
             node.addresses[0],
             "send",
@@ -65,8 +70,7 @@ def test_p2ptr_inscription():
             },
         )
 
-        print("script_pub_key", source_address.to_script_pub_key().to_hex())
-
+        # send XCP from the source address
         result = node.send_transaction(
             source_address.to_string(),
             "send",
@@ -80,8 +84,8 @@ def test_p2ptr_inscription():
             },
             return_result=True,
         )
-        print("TAPROOT result", result)
 
+        # sign commit tx
         commit_tx = Transaction.from_raw(result["rawtransaction"])
         commit_tx.has_segwit = True
         # sign the input
@@ -90,21 +94,24 @@ def test_p2ptr_inscription():
         )
         # add the witness to the transaction
         commit_tx.witnesses.append(TxWitnessInput([sig]))
-
-        print("Commit tx script_pubket", commit_tx.outputs[0].script_pubkey.to_hex())
-
         node.broadcast_transaction(commit_tx.serialize())
 
-        commit_value = commit_tx.outputs[0].amount
+        print("Commit TX Broadcasted:", commit_tx.get_txid())
+        node.mine_blocks(1)
+        time.sleep(5)
+
         inscription_script = Script.from_raw(result["envelope_script"])
         reveal_tx = Transaction.from_raw(result["reveal_rawtransaction"])
         reveal_tx.has_segwit = True
+
+        commit_address = source_pubkey.get_taproot_address([[inscription_script]])
+        commit_value = commit_tx.outputs[0].amount
 
         # sign the input containing the inscription script
         sig = source_private_key.sign_taproot_input(
             reveal_tx,
             0,
-            [source_address.to_script_pub_key()],
+            [commit_address.to_script_pub_key()],
             [commit_value],
             script_path=True,
             tapleaf_script=inscription_script,
