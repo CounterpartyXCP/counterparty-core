@@ -361,9 +361,6 @@ def handle_route(**kwargs):
             TypeError,
             ValueError,
         ) as e:
-            import traceback
-
-            print(traceback.format_exc())
             return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
         except Exception as e:  # pylint: disable=broad-except
             # import traceback

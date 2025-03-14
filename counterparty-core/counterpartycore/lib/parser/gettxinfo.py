@@ -269,8 +269,8 @@ def get_transaction_sources(decoded_tx):
             if new_source not in sources:
                 sources.append(new_source)
 
-        # if protocol.enabled("first_input_is_source") and len(sources) > 0:
-        #    break
+        if protocol.enabled("first_input_is_source") and len(sources) > 0:
+            break
 
     return "-".join(sources), outputs_value
 
