@@ -51,9 +51,7 @@ def test_p2ptr_inscription():
         txid = node.bitcoin_wallet("sendtoaddress", source_address.to_string(), 1).strip()
         node.mine_blocks(1)
         raw_tx = rpc_call("getrawtransaction", [txid, 1])["result"]
-        import json
 
-        print(json.dumps(raw_tx, indent=4))
         n = None
         for i, vout in enumerate(raw_tx["vout"]):
             if vout["scriptPubKey"]["address"] == source_address.to_string():
@@ -100,14 +98,14 @@ def test_p2ptr_inscription():
         node.broadcast_transaction(commit_tx.serialize())
 
         print("Commit TX Broadcasted:", commit_tx.get_txid(), commit_tx.serialize())
+
         node.mine_blocks(1)
-        time.sleep(5)
 
         inscription_script = Script.from_raw(result["envelope_script"])
         reveal_tx = Transaction.from_raw(result["reveal_rawtransaction"])
         reveal_tx.has_segwit = True
 
-        commit_address = source_pubkey.get_taproot_address([inscription_script])
+        commit_address = source_pubkey.get_taproot_address([[inscription_script]])
         commit_value = commit_tx.outputs[0].amount
 
         # sign the input containing the inscription script
@@ -125,21 +123,13 @@ def test_p2ptr_inscription():
             source_pubkey,
             scripts=[inscription_script],
             index=0,
-            is_odd=source_address.is_odd(),
+            is_odd=commit_address.is_odd(),
         )
 
         # add the witness to the transaction
         reveal_tx.witnesses.append(
             TxWitnessInput([sig, inscription_script.to_hex(), control_block.to_hex()])
         )
-
-        print("Internal Key:", source_pubkey.to_hex())
-        print("Inscription Script Hash:", inscription_script.to_hex())
-        print("Commit Address:", commit_address.to_string())
-        print("Control Block:", control_block.to_hex())
-        print("Witness Length:", len(reveal_tx.witnesses))
-        print("Is Odd Flag:", source_address.is_odd())
-        print("Sig", sig)
 
         node.broadcast_transaction(reveal_tx.serialize())
 
