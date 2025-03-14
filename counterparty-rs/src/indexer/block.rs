@@ -89,6 +89,7 @@ pub struct ParsedVouts {
     pub fee: i64,
     pub data: Vec<u8>,
     pub potential_dispensers: Vec<Option<PotentialDispenser>>,
+    pub is_reveal_tx: bool,
 }
 
 impl IntoPy<PyObject> for ParsedVouts {
@@ -106,6 +107,7 @@ impl IntoPy<PyObject> for ParsedVouts {
                 self.fee.into_py(py),
                 PyBytes::new_bound(py, &self.data).into_py(py),
                 dispensers.into_py(py),
+                self.is_reveal_tx.into_py(py),
             ],
         )
         .into_py(py)

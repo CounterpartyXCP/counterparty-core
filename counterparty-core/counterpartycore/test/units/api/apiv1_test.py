@@ -57,7 +57,6 @@ def test_create_burn(apiv1_client, defaults):
             "asset": "XCP",
             "quantity": defaults["small"],
             "encoding": "multisig",
-            "dust_return_pubkey": False,
             "regular_dust_size": defaults["regular_dust_size"],
         },
     ).json

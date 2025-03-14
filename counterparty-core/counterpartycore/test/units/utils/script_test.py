@@ -1,10 +1,13 @@
 import binascii
+import os
 import time
 
 import bitcoin as bitcoinlib
 from bitcoin import bech32 as bech32lib
+from bitcoinutils.keys import PrivateKey
 from counterparty_rs import utils
 from counterpartycore.lib.parser.gettxinfo import get_checksig
+from counterpartycore.lib.utils import script
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
 from counterpartycore.lib.utils.script import script_to_asm
 
@@ -183,3 +186,18 @@ def test_decode_p2w():
         utils.script_to_address(script_pubkey, "mainnet")
         == "bc1qwzrryqr3ja8w7hnja2spmkgfdcgvqwp5swz4af4ngsjecfz0w0pqud7k38"
     )
+
+
+def test_taproot_script_to_address():
+    random = os.urandom(32)
+    source_private_key = PrivateKey(b=random)
+    source_pubkey = source_private_key.get_public_key()
+    source_address = source_pubkey.get_taproot_address()
+    print("Source address", source_address.to_string())
+
+    script_pubkey = source_address.to_script_pub_key()
+
+    check_address = script.script_to_address(script_pubkey.to_hex())
+    print("Check address", check_address)
+
+    assert source_address.to_string() == check_address

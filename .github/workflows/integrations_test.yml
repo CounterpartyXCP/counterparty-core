@@ -41,6 +41,10 @@ jobs:
           - name: Regtest Scenarios
             test-path: integrations/regtest/scenarios_test.py
             install_bitcoin: true
+          
+          - name: Taproot Data Envelope Test
+            test-path: integrations/regtest/taprootdata_test.py
+            install_bitcoin: true
 
           # Testnet4 tests
 

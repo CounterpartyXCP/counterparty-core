@@ -11112,7 +11112,7 @@ The following parameters are deprecated in the new composer and will no longer b
 - `fee_per_kb`: Use `sat_per_vbyte` instead
 - `fee_provided`: Ue `max_fee` instead
 - `unspent_tx_hash`: Use `inputs_set` instead
-- `dust_return_pubkey`: Use `mutlisig_pubkey` instead
+- `dust_return_pubkey`: Use `multisig_pubkey` instead
 - `return_psbt`: Use `verbose` instead
 - `regular_dust_size`: Automatically calculated
 - `multisig_dust_size`: Automatically calculated
@@ -11121,7 +11121,7 @@ The following parameters are deprecated in the new composer and will no longer b
 - `p2sh_pretx_txid`: Ignored, P2SH disabled
 - `segwit`: Ignored, Segwit automatically detected
 
-### Compose Bet [GET /v2/addresses/{address}/compose/bet{?feed_address,bet_type,deadline,wager_quantity,counterwager_quantity,expiration,leverage,target_value,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Bet [GET /v2/addresses/{address}/compose/bet{?feed_address,bet_type,deadline,wager_quantity,counterwager_quantity,expiration,leverage,target_value,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to issue a bet against a feed.
 
@@ -11163,7 +11163,7 @@ Composes a transaction to issue a bet against a feed.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -11218,7 +11218,7 @@ Composes a transaction to issue a bet against a feed.
         }
     ```
 
-### Compose Broadcast [GET /v2/addresses/{address}/compose/broadcast{?timestamp,value,fee_fraction,text,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Broadcast [GET /v2/addresses/{address}/compose/broadcast{?timestamp,value,fee_fraction,text,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to broadcast textual and numerical information to the network.
 
@@ -11254,7 +11254,7 @@ Composes a transaction to broadcast textual and numerical information to the net
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -11305,7 +11305,7 @@ Composes a transaction to broadcast textual and numerical information to the net
         }
     ```
 
-### Compose BTCPay [GET /v2/addresses/{address}/compose/btcpay{?order_match_id,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose BTCPay [GET /v2/addresses/{address}/compose/btcpay{?order_match_id,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to pay for a BTC order match.
 
@@ -11338,7 +11338,7 @@ Composes a transaction to pay for a BTC order match.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -11386,7 +11386,7 @@ Composes a transaction to pay for a BTC order match.
         }
     ```
 
-### Compose Burn [GET /v2/addresses/{address}/compose/burn{?quantity,overburn,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Burn [GET /v2/addresses/{address}/compose/burn{?quantity,overburn,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, possible between blocks 278310 and 283810; on testnet it is still available).
 
@@ -11421,7 +11421,7 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -11470,7 +11470,7 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
         }
     ```
 
-### Compose Cancel [GET /v2/addresses/{address}/compose/cancel{?offer_hash,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Cancel [GET /v2/addresses/{address}/compose/cancel{?offer_hash,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to cancel an open order or bet.
 
@@ -11503,7 +11503,7 @@ Composes a transaction to cancel an open order or bet.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -11551,7 +11551,7 @@ Composes a transaction to cancel an open order or bet.
         }
     ```
 
-### Compose Destroy [GET /v2/addresses/{address}/compose/destroy{?asset,quantity,tag,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Destroy [GET /v2/addresses/{address}/compose/destroy{?asset,quantity,tag,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to destroy a quantity of an asset.
 
@@ -11586,7 +11586,7 @@ Composes a transaction to destroy a quantity of an asset.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -11645,7 +11645,7 @@ Composes a transaction to destroy a quantity of an asset.
         }
     ```
 
-### Compose Dispenser [GET /v2/addresses/{address}/compose/dispenser{?asset,give_quantity,escrow_quantity,mainchainrate,status,open_address,oracle_address,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Dispenser [GET /v2/addresses/{address}/compose/dispenser{?asset,give_quantity,escrow_quantity,mainchainrate,status,open_address,oracle_address,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to opens or closes a dispenser for a given asset at a given rate of main chain asset (BTC). Escrowed quantity on open must be equal or greater than give_quantity. It is suggested that you escrow multiples of give_quantity to ease dispenser operation.
 
@@ -11686,7 +11686,7 @@ Composes a transaction to opens or closes a dispenser for a given asset at a giv
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -11750,7 +11750,7 @@ Composes a transaction to opens or closes a dispenser for a given asset at a giv
         }
     ```
 
-### Compose Dividend [GET /v2/addresses/{address}/compose/dividend{?quantity_per_unit,asset,dividend_asset,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Dividend [GET /v2/addresses/{address}/compose/dividend{?quantity_per_unit,asset,dividend_asset,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to issue a dividend to holders of a given asset.
 
@@ -11785,7 +11785,7 @@ Composes a transaction to issue a dividend to holders of a given asset.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -11870,7 +11870,7 @@ Returns the estimated fee for issuing a dividend.
         }
     ```
 
-### Compose Issuance [GET /v2/addresses/{address}/compose/issuance{?asset,quantity,transfer_destination,divisible,lock,reset,description,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Issuance [GET /v2/addresses/{address}/compose/issuance{?asset,quantity,transfer_destination,divisible,lock,reset,description,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to Issue a new asset, issue more of an existing asset, lock an asset, reset existing supply, or transfer the ownership of an asset.
 
@@ -11914,7 +11914,7 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -11969,7 +11969,7 @@ Composes a transaction to Issue a new asset, issue more of an existing asset, lo
         }
     ```
 
-### Compose MPMA [GET /v2/addresses/{address}/compose/mpma{?assets,destinations,quantities,memos,memos_are_hex,memo,memo_is_hex,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose MPMA [GET /v2/addresses/{address}/compose/mpma{?assets,destinations,quantities,memos,memos_are_hex,memo,memo_is_hex,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to send multiple payments to multiple addresses.
 
@@ -12012,7 +12012,7 @@ Composes a transaction to send multiple payments to multiple addresses.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -12073,7 +12073,7 @@ Composes a transaction to send multiple payments to multiple addresses.
         }
     ```
 
-### Compose Order [GET /v2/addresses/{address}/compose/order{?give_asset,give_quantity,get_asset,get_quantity,expiration,fee_required,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Order [GET /v2/addresses/{address}/compose/order{?give_asset,give_quantity,get_asset,get_quantity,expiration,fee_required,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to place an order on the distributed exchange.
 
@@ -12111,7 +12111,7 @@ Composes a transaction to place an order on the distributed exchange.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -12183,7 +12183,7 @@ Composes a transaction to place an order on the distributed exchange.
         }
     ```
 
-### Compose Send [GET /v2/addresses/{address}/compose/send{?destination,asset,quantity,memo,memo_is_hex,use_enhanced_send,no_dispense,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Send [GET /v2/addresses/{address}/compose/send{?destination,asset,quantity,memo,memo_is_hex,use_enhanced_send,no_dispense,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to send a quantity of an asset to another address.
 
@@ -12226,7 +12226,7 @@ Composes a transaction to send a quantity of an asset to another address.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -12289,7 +12289,7 @@ Composes a transaction to send a quantity of an asset to another address.
         }
     ```
 
-### Compose Sweep [GET /v2/addresses/{address}/compose/sweep{?destination,flags,memo,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Sweep [GET /v2/addresses/{address}/compose/sweep{?destination,flags,memo,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to Sends all assets and/or transfer ownerships to a destination address.
 
@@ -12324,7 +12324,7 @@ Composes a transaction to Sends all assets and/or transfer ownerships to a desti
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -12391,7 +12391,7 @@ Returns the estimated fee for sweeping all assets and/or transfer ownerships to 
         }
     ```
 
-### Compose Dispense [GET /v2/addresses/{address}/compose/dispense{?dispenser,quantity,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Dispense [GET /v2/addresses/{address}/compose/dispense{?dispenser,quantity,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to send BTC to a dispenser.
 
@@ -12425,7 +12425,7 @@ Composes a transaction to send BTC to a dispenser.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -12474,7 +12474,7 @@ Composes a transaction to send BTC to a dispenser.
         }
     ```
 
-### Compose Fairminter [GET /v2/addresses/{address}/compose/fairminter{?asset,asset_parent,price,quantity_by_price,max_mint_per_tx,hard_cap,premint_quantity,start_block,end_block,soft_cap,soft_cap_deadline_block,minted_asset_commission,burn_payment,lock_description,lock_quantity,divisible,description,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Fairminter [GET /v2/addresses/{address}/compose/fairminter{?asset,asset_parent,price,quantity_by_price,max_mint_per_tx,hard_cap,premint_quantity,start_block,end_block,soft_cap,soft_cap_deadline_block,minted_asset_commission,burn_payment,lock_description,lock_quantity,divisible,description,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to issue a new asset using the FairMinter protocol.
 
@@ -12539,7 +12539,7 @@ Composes a transaction to issue a new asset using the FairMinter protocol.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -12610,7 +12610,7 @@ Composes a transaction to issue a new asset using the FairMinter protocol.
         }
     ```
 
-### Compose Fairmint [GET /v2/addresses/{address}/compose/fairmint{?asset,quantity,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Fairmint [GET /v2/addresses/{address}/compose/fairmint{?asset,quantity,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to mint a quantity of an asset using the FairMinter protocol.
 
@@ -12645,7 +12645,7 @@ Composes a transaction to mint a quantity of an asset using the FairMinter proto
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -12703,7 +12703,7 @@ Composes a transaction to mint a quantity of an asset using the FairMinter proto
         }
     ```
 
-### Compose Attach [GET /v2/addresses/{address}/compose/attach{?asset,quantity,utxo_value,destination_vout,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Attach [GET /v2/addresses/{address}/compose/attach{?asset,quantity,utxo_value,destination_vout,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to attach assets from an address to UTXO.
 Warning: after attaching assets to a UTXO, remember to use the `exclude_utxos` parameter to exclude it from subsequent transactions. This is done automatically by the Composer but only once the attach is confirmed.
@@ -12742,7 +12742,7 @@ Warning: after attaching assets to a UTXO, remember to use the `exclude_utxos` p
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -12820,7 +12820,7 @@ Returns the estimated fee for attaching assets to a UTXO.
         }
     ```
 
-### Compose Detach [GET /v2/utxos/{utxo}/compose/detach{?destination,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Detach [GET /v2/utxos/{utxo}/compose/detach{?destination,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction to detach assets from UTXO to an address.
 
@@ -12854,7 +12854,7 @@ Composes a transaction to detach assets from UTXO to an address.
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -12902,7 +12902,7 @@ Composes a transaction to detach assets from UTXO to an address.
         }
     ```
 
-### Compose Movetoutxo [GET /v2/utxos/{utxo}/compose/movetoutxo{?destination,utxo_value,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,mutlisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
+### Compose Movetoutxo [GET /v2/utxos/{utxo}/compose/movetoutxo{?destination,utxo_value,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,fee_per_kb,fee_provided,unspent_tx_hash,dust_return_pubkey,return_psbt,regular_dust_size,multisig_dust_size,extended_tx_info,old_style_api,p2sh_pretx_txid,segwit,verbose}]
 
 Composes a transaction like a send but for moving from one UTXO to another, with the destination is specified as an address.
 
@@ -12937,7 +12937,7 @@ Composes a transaction like a send but for moving from one UTXO to another, with
         + Default: `null`
     + use_all_inputs_set (bool, optional) - Use all UTXOs provide with `inputs-set` parameter
         + Default: `null`
-    + mutlisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
+    + multisig_pubkey (str, optional) - The reedem public key to use for multisig encoding, by default it is searched for the source address
         + Default: `null`
     + change_address (str, optional) - The address to send the change to
         + Default: `null`
@@ -22789,7 +22789,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -22855,7 +22855,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -23042,7 +23042,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -23108,7 +23108,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -23277,7 +23277,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -23343,7 +23343,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -23519,7 +23519,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -23585,7 +23585,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -23754,7 +23754,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -23820,7 +23820,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -24001,7 +24001,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -24067,7 +24067,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -24274,7 +24274,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -24340,7 +24340,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -24521,7 +24521,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -24587,7 +24587,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -24822,7 +24822,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -24888,7 +24888,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -25097,7 +25097,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -25163,7 +25163,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -25362,7 +25362,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -25428,7 +25428,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -25637,7 +25637,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -25703,7 +25703,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -25884,7 +25884,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -25950,7 +25950,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -26144,7 +26144,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -26210,7 +26210,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -26491,7 +26491,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -26557,7 +26557,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -26733,7 +26733,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -26799,7 +26799,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -26988,7 +26988,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -27054,7 +27054,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -27244,7 +27244,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -27310,7 +27310,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {
@@ -27486,7 +27486,7 @@ Return the API routes.
                             "required": false
                         },
                         {
-                            "name": "mutlisig_pubkey",
+                            "name": "multisig_pubkey",
                             "type": "str",
                             "default": null,
                             "description": "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -27552,7 +27552,7 @@ Return the API routes.
                             "name": "dust_return_pubkey",
                             "type": "str",
                             "default": null,
-                            "description": "Deprecated, use `mutlisig_pubkey` instead",
+                            "description": "Deprecated, use `multisig_pubkey` instead",
                             "required": false
                         },
                         {

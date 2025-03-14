@@ -178,6 +178,7 @@ class RegtestNode:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
         else:
             compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
+        print("Compose URL:", compose_url)
         return self.api_call(compose_url)
 
     def send_transaction(
@@ -188,6 +189,7 @@ class RegtestNode:
         return_only_data=False,
         no_confirmation=False,
         dont_wait_mempool=False,
+        return_result=False,
         retry=0,
     ):
         self.wait_for_counterparty_server()
@@ -218,6 +220,8 @@ class RegtestNode:
             raise exceptions.ComposeError(result["error"])
         if return_only_data:
             return result["result"]["data"]
+        if return_result:
+            return result["result"]
         raw_transaction = result["result"]["rawtransaction"]
         # print(f"Raw transaction: {raw_transaction}")
         signed_transaction_json = self.bitcoin_wallet(
@@ -245,6 +249,7 @@ class RegtestNode:
             else:
                 raise e
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
+
         return tx_hash, block_hash, block_time, result["result"]["data"]
 
     def wait_for_counterparty_server(self, block=None):
