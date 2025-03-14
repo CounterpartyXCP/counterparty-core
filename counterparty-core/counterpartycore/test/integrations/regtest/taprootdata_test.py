@@ -132,6 +132,17 @@ def test_p2ptr_inscription():
 
         node.broadcast_transaction(reveal_tx.serialize())
 
+        result = node.api_call(f"addresses/{source_address.to_string()}/sends")
+        assert len(result["result"]) == 2
+        assert result["result"][0]["asset"] == "XCP"
+        assert result["result"][0]["quantity"] == 10
+        assert result["result"][0]["source"] == source_address.to_string()
+        assert result["result"][0]["destination"] == node.addresses[1]
+        assert result["result"][1]["asset"] == "XCP"
+        assert result["result"][1]["quantity"] == 100
+        assert result["result"][1]["source"] == node.addresses[0]
+        assert result["result"][1]["destination"] == source_address.to_string()
+
     finally:
         print(regtest_node_thread.node.server_out.getvalue())
         regtest_node_thread.stop()

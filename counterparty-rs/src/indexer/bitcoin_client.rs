@@ -544,10 +544,6 @@ pub fn parse_transaction(
     let mut prev_txs = vec![None; tx.input.len()];
     if !data.is_empty() {
         if BATCH_CLIENT.lock().unwrap().is_none() {
-            println!("Creating new batch client");
-            println!("RPC Address: {:?}", config.rpc_address);
-            println!("RPC User: {:?}", config.rpc_user);
-            println!("RPC Password: {:?}", config.rpc_password);
             *BATCH_CLIENT.lock().unwrap() = Some(
                 BatchRpcClient::new(
                     config.rpc_address.clone(),
@@ -562,29 +558,15 @@ pub fn parse_transaction(
             if config.p2sh_address_supported(height) && !tx.input.is_empty() {
                 // we get only one input
                 let input_txid = tx.input[0].previous_output.txid;
-                println!("Input txid: {:?}", input_txid);
-                match batch_client.get_transactions(&[input_txid]) {
-                    Ok(fetched_txs) => {
-                        println!("Successfully fetched txs: {}", fetched_txs.len());
-                        if !fetched_txs.is_empty() {
-                            prev_txs[0] = fetched_txs[0].clone();
-                            println!("Is tx Some: {}", prev_txs[0].is_some());
-                        } else {
-                            println!("Fetched txs array is empty");
-                        }
-                    },
-                    Err(err) => {
-                        println!("Error fetching transaction: {:?}", err);
+                if let Ok(fetched_txs) =  batch_client.get_transactions(&[input_txid]) {
+                    if !fetched_txs.is_empty() {
+                        prev_txs[0] = fetched_txs[0].clone();
                     }
                 }
-                println!("no reveal");
                 if is_reveal_tx && !prev_txs.is_empty() {
-                    println!("Reveal tx: {:?}", tx.compute_txid().to_string());
                     if let Some(prev_tx) = &prev_txs[0] {
-                        println!("inside");
                         if !prev_tx.input.is_empty() {
                             let input_txid = prev_tx.input[0].previous_output.txid;
-                            println!("parent Input txid: {:?}", input_txid);
                             if let Ok(fetched_txs) = batch_client.get_transactions(&[input_txid]) {
                                 if !fetched_txs.is_empty() {
                                     prev_txs[0] = fetched_txs[0].clone();

@@ -49,7 +49,6 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                 "json_format": config.JSON_LOGS,
                 "only_write_in_reorg_window": True,
             }
-            logger.error("RPC Address: %s", rpc_address)
             if (
                 isinstance(config.LOG_EXCLUDE_FILTERS, list)
                 and "RSFETCHER" in config.LOG_EXCLUDE_FILTERS
