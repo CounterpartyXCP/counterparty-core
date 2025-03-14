@@ -67,6 +67,9 @@ jobs:
 
           - name: RSFetcher Test
             test-path: integrations/rsfetcher_test.py
+          
+          - name: Taproot Data Envelope Test
+            test-path: integrations/taprootdata_test.py
 
     # run pytest_action.yml for the matrix
     uses: ./.github/workflows/pytest_action.yml
