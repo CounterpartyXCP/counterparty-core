@@ -2,6 +2,7 @@ import binascii
 import hashlib
 import inspect
 import logging
+import math
 import string
 import sys
 import time
@@ -316,7 +317,7 @@ def get_dummy_signed_reveal_tx(data):
         [config.DEFAULT_SEGWIT_DUST_SIZE],
         script_path=True,
         tapleaf_script=envelope_script,
-        tweak=False,
+        tweak=True,
     )
     # generate the control block
     control_block = ControlBlock(
@@ -354,7 +355,7 @@ def prepare_taproot_output(source, data, unspent_list, construct_params):
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
     reveal_tx_vsize = get_reveal_transaction_vsize(data)
     # commit value must pay fees for the reveal tx
-    commit_value = reveal_tx_vsize * get_sat_per_vbyte(construct_params)
+    commit_value = math.ceil(reveal_tx_vsize * get_sat_per_vbyte(construct_params))
     tx_out = TxOutput(commit_value, commit_address.to_script_pub_key())
     return [tx_out]
 
@@ -838,6 +839,9 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
             change_address = utxo_to_address(db, source)
         else:
             change_address = source
+
+    print("Source: ", source)
+    print("Change Address: ", change_address)
 
     outputs_total = sum(output.amount for output in outputs)
 

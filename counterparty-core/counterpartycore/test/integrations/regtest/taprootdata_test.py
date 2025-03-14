@@ -10,6 +10,8 @@ from bitcoinutils.transactions import Transaction, TxWitnessInput
 from bitcoinutils.utils import ControlBlock
 from regtestnode import RegtestNodeThread
 
+SENDS_COUNT = 0
+
 
 def rpc_call(method, params):
     headers = {"content-type": "application/json"}
@@ -31,6 +33,7 @@ def rpc_call(method, params):
 
 
 def send_taproot_transaction(node, utxo, source_private_key, tx_name, params):
+    print(utxo)
     source_pubkey = source_private_key.get_public_key()
     source_address = source_pubkey.get_taproot_address()
 
@@ -92,10 +95,16 @@ def send_taproot_transaction(node, utxo, source_private_key, tx_name, params):
 
     node.broadcast_transaction(reveal_tx.serialize())
 
-    return reveal_tx.get_txid()
+    return {
+        "txid": commit_tx.get_txid(),
+        "n": 1,
+        "value": commit_tx.outputs[1].amount,
+    }
 
 
 def generate_taproot_funded_address(node):
+    global SENDS_COUNT  # pylint: disable=global-statement # noqa PLW0603
+
     random = os.urandom(32)
     source_private_key = PrivateKey(b=random)
     source_pubkey = source_private_key.get_public_key()
@@ -126,6 +135,7 @@ def generate_taproot_funded_address(node):
             "asset": "XCP",
         },
     )
+    SENDS_COUNT += 1
     return source_private_key, {
         "txid": txid,
         "n": n,
@@ -133,28 +143,66 @@ def generate_taproot_funded_address(node):
     }
 
 
-def check_send(node, source_private_key, utxo):
-    reveal_txid = send_taproot_transaction(
+def check_send(node, source_private_key, utxo, quantity):
+    global SENDS_COUNT  # pylint: disable=global-statement # noqa PLW0603
+
+    new_utxo = send_taproot_transaction(
         node,
         utxo,
         source_private_key,
         "send",
         {
             "destination": node.addresses[1],
-            "quantity": 10,
+            "quantity": quantity,
             "asset": "XCP",
         },
     )
+    SENDS_COUNT += 1
 
     source_address = source_private_key.get_public_key().get_taproot_address().to_string()
     result = node.api_call(f"addresses/{source_address}/sends")
-    assert len(result["result"]) == 2
+    assert len(result["result"]) == SENDS_COUNT
     assert result["result"][0]["asset"] == "XCP"
-    assert result["result"][0]["quantity"] == 10
+    assert result["result"][0]["quantity"] == quantity
     assert result["result"][0]["source"] == source_address
     assert result["result"][0]["destination"] == node.addresses[1]
 
-    return reveal_txid
+    return new_utxo
+
+
+def check_mpma_send(node, source_private_key, utxo, quantity):
+    global SENDS_COUNT  # pylint: disable=global-statement # noqa PLW0603
+
+    destination_count = 7
+    assets = ["XCP"] * destination_count
+    quantities = [str(quantity)] * destination_count
+    destination_addresses = [node.addresses[i] for i in range(1, 1 + destination_count)]
+
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "mpma",
+        {
+            "assets": ",".join(assets),
+            "quantities": ",".join(quantities),
+            "destinations": ",".join(destination_addresses),
+            "memo": "lore ipsum, lore ipsum, lore ipsum, lore ipsum, lorem ipsum",
+        },
+    )
+    SENDS_COUNT += destination_count
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/sends")
+
+    assert len(result["result"]) == SENDS_COUNT
+    for i in reversed(range(destination_count)):
+        assert result["result"][i]["asset"] == "XCP"
+        assert result["result"][i]["quantity"] == quantity
+        assert result["result"][i]["source"] == source_address
+        assert result["result"][i]["destination"] == node.addresses[destination_count - i]
+
+    return new_utxo
 
 
 def test_p2ptr_inscription():
@@ -168,8 +216,10 @@ def test_p2ptr_inscription():
         node = regtest_node_thread.node
 
         source_private_key, utxo = generate_taproot_funded_address(node)
-        reveal_txid = check_send(node, source_private_key, utxo)
-        print("Taproot send OK:", reveal_txid)
+
+        utxo = check_send(node, source_private_key, utxo, 10)
+        utxo = check_send(node, source_private_key, utxo, 20)
+        utxo = check_mpma_send(node, source_private_key, utxo, 10)
 
     finally:
         print(regtest_node_thread.node.server_out.getvalue())
