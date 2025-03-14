@@ -22,6 +22,7 @@ class Deserializer(metaclass=SingletonMeta):
                 "json_format": config.JSON_LOGS,
                 "only_write_in_reorg_window": True,
                 "network": config.NETWORK_NAME,
+                "prefix": config.PREFIX,
             }
         )
 

@@ -99,7 +99,7 @@ def test_p2ptr_inscription():
 
         print("Commit TX Broadcasted:", commit_tx.get_txid(), commit_tx.serialize())
 
-        node.mine_blocks(1)
+        # node.mine_blocks(1)
 
         inscription_script = Script.from_raw(result["envelope_script"])
         reveal_tx = Transaction.from_raw(result["reveal_rawtransaction"])

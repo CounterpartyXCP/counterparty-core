@@ -16,6 +16,7 @@ from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_get_tx_info(ledger_db, current_block_index, blockchain_mock):
+    deserialize.Deserializer.reset_instance()
     original_prefix = config.PREFIX
     config.PREFIX = b"TESTXXXX"
     blockchain_mock.source_by_txid[

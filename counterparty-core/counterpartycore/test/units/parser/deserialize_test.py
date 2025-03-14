@@ -37,6 +37,7 @@ def create_block_hex(transactions_hex):
 
 
 def test_deserialize():
+    deserialize.Deserializer.reset_instance()
     original_network_name = config.NETWORK_NAME
     config.NETWORK_NAME = "testnet3"
 
@@ -189,6 +190,8 @@ def test_deserialize_error():
 
 
 def test_desrialize_reveal_tx():
+    deserialize.Deserializer.reset_instance()
+
     for data in [
         b"Hello, World!",
         b"a" * 1024 * 400,

@@ -257,9 +257,7 @@ def get_transaction_sources(decoded_tx):
             protocol.enabled("taproot_support") and asm[0] == b"\x01"
         ):
             # Segwit output
-            logger.warning("Segwit input detected: %s", binascii.hexlify(script_pubkey))
             new_source = script.script_to_address(script_pubkey)
-            logger.warning("Segwit input address: %s", new_source)
             new_data = None
         else:
             raise DecodeError("unrecognised source type")
@@ -360,6 +358,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     change, if it exists, always comes after.
     """
     # Ignore coinbase transactions.
+    print(decoded_tx)
     if decoded_tx["coinbase"]:
         raise DecodeError("coinbase transaction")
 
@@ -374,6 +373,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     destinations, btc_amount, fee, data, potential_dispensers, is_reveal_tx = decoded_tx[
         "parsed_vouts"
     ]
+    print(destinations, btc_amount, fee, data, potential_dispensers, is_reveal_tx)
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output
@@ -390,6 +390,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
 
     # Only look for source if data were found or destination is `UNSPENDABLE`,
     # for speed.
+    print("GETTXINFO1")
     dispensers_outputs = []
     if not data and destinations != [
         config.UNSPENDABLE,
@@ -403,6 +404,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         else:
             raise BTCOnlyError("no data and not unspendable")
 
+    print("GETTXINFO2")
     # Collect all (unique) source addresses.
     #   if we haven't found them yet
     if p2sh_encoding_source is None:
@@ -413,6 +415,8 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
             fee += outputs_value
     else:  # use the source from the p2sh data source
         sources = p2sh_encoding_source
+
+    print("GETTXINFO3")
 
     if not data and destinations != [
         config.UNSPENDABLE,
@@ -438,6 +442,8 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
         # and so we avoid a db query (dispenser.is_dispensable()).
         # If one of them is not a dispenser `dispenser.dispense()` will silently skip it
         return get_dispensers_tx_info(sources, potential_dispensers)
+
+    print("GETTXINFO4")
 
     return sources, destinations, btc_amount, round(fee), data, []
 

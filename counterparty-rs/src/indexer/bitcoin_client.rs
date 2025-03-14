@@ -560,14 +560,9 @@ pub fn parse_transaction(
             if config.p2sh_address_supported(height) && !tx.input.is_empty() {
                 // we get only one input
                 let input_txid = tx.input[0].previous_output.txid;
-                match batch_client.get_transactions(&[input_txid]) {
-                    Ok(fetched_txs) => {
-                        if !fetched_txs.is_empty() {
-                            prev_txs[0] = fetched_txs[0].clone();
-                        }
-                    },
-                    Err(err) => {
-                        println!("Error fetching transaction: {:?}", err);
+                if let Ok(fetched_txs) =  batch_client.get_transactions(&[input_txid]) {
+                    if !fetched_txs.is_empty() {
+                        prev_txs[0] = fetched_txs[0].clone();
                     }
                 }
                 if is_reveal_tx && !prev_txs.is_empty() {
