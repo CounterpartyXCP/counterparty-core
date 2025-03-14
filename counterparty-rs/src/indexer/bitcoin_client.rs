@@ -13,7 +13,7 @@ use bitcoin::{
         OP_PUSHNUM_3, OP_RETURN,
     },
     script::Instruction::{Op, PushBytes},
-    Block, BlockHash, Script, TxOut,
+    Block, BlockHash, Script, TxOut, Txid,
 };
 
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
@@ -448,6 +448,8 @@ pub fn parse_transaction(
     let mut btc_amount = 0;
     let mut data = Vec::new();
     let mut is_reveal_tx = false;
+    let mut commit_parent_txid = Txid::from_raw_hash(Sha256dHash::all_zeros());
+    let mut commit_parent_vout = 0;
     let mut potential_dispensers = Vec::new();
     let mut err = None;
     for vout in tx.output.iter() {
@@ -558,16 +560,22 @@ pub fn parse_transaction(
             if config.p2sh_address_supported(height) && !tx.input.is_empty() {
                 // we get only one input
                 let input_txid = tx.input[0].previous_output.txid;
-                if let Ok(fetched_txs) =  batch_client.get_transactions(&[input_txid]) {
-                    if !fetched_txs.is_empty() {
-                        prev_txs[0] = fetched_txs[0].clone();
+                match batch_client.get_transactions(&[input_txid]) {
+                    Ok(fetched_txs) => {
+                        if !fetched_txs.is_empty() {
+                            prev_txs[0] = fetched_txs[0].clone();
+                        }
+                    },
+                    Err(err) => {
+                        println!("Error fetching transaction: {:?}", err);
                     }
                 }
                 if is_reveal_tx && !prev_txs.is_empty() {
                     if let Some(prev_tx) = &prev_txs[0] {
                         if !prev_tx.input.is_empty() {
-                            let input_txid = prev_tx.input[0].previous_output.txid;
-                            if let Ok(fetched_txs) = batch_client.get_transactions(&[input_txid]) {
+                            commit_parent_txid = prev_tx.input[0].previous_output.txid;
+                            commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
+                            if let Ok(fetched_txs) = batch_client.get_transactions(&[commit_parent_txid]) {
                                 if !fetched_txs.is_empty() {
                                     prev_txs[0] = fetched_txs[0].clone();
                                 }
@@ -595,7 +603,12 @@ pub fn parse_transaction(
         } else {
             prev_txs.get(i).and_then(|prev_tx| {
                 prev_tx.as_ref().and_then(|tx| {
-                    let vout_idx = vin.previous_output.vout as usize;
+                    let vout_idx;
+                    if tx.compute_txid() == commit_parent_txid {
+                        vout_idx = commit_parent_vout
+                    } else {
+                        vout_idx = vin.previous_output.vout as usize;
+                    }
 
                     let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
                         tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
