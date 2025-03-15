@@ -116,8 +116,12 @@ def test_all_routes(
         tx,
         b"\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x01",
     )
+
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01"
+    _source, _destination, data = sweep.compose(
+        ledger_db, defaults["addresses"][0], defaults["addresses"][1], 1, None, False
+    )
+    message = data[1:]
     sweep.parse(ledger_db, tx, message)
     apiwatcher.catch_up(ledger_db, state_db)
 

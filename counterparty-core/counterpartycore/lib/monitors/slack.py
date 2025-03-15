@@ -18,5 +18,5 @@ def trigger_webhook():
         logging.info("Message sent to slack")
         return True
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error sending message to slack: {e}")
+        logging.error("Error sending message to slack: %s", e)
         return False

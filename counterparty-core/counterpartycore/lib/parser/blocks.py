@@ -351,7 +351,7 @@ def parse_block(
             parse_tx(db, tx)
             data = binascii.hexlify(tx["data"]).decode("UTF-8") if tx["data"] else ""
             txlist.append(
-                f"{tx['tx_hash']}{tx['source']}{tx['destination']}{tx['btc_amount']}{tx['fee']}{data}"
+                f"{tx['tx_hash']}{str(tx['source'])[0:36]}{str(tx['destination'])[0:36]}{tx['btc_amount']}{tx['fee']}{data}"
             )
         except exceptions.ParseTransactionError as e:
             logger.warning("ParseTransactionError for tx %s: %s", tx["tx_hash"], e)
@@ -378,6 +378,8 @@ def parse_block(
             previous_messages_hash,
             ledger.currentstate.ConsensusHashBuilder().block_journal(),
         )
+
+        # Update block
 
         update_block_query = """
             UPDATE blocks
@@ -418,7 +420,7 @@ def parse_block(
         return new_ledger_hash, new_txlist_hash, new_messages_hash
 
     cursor.close()
-    return None, None, None
+    return None, None, None, None
 
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
@@ -794,7 +796,11 @@ def parse_new_block(db, decoded_block, tx_index=None):
 
         duration = time.time() - start_time
 
-        log_message = "Block %(block_index)s - Parsing complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
+        log_message = "Block %(block_index)s - Parsing complete. "
+        log_message += "L: %(ledger_hash)s, "
+        log_message += "TX: %(txlist_hash)s, "
+        log_message += "M: %(messages_hash)s "
+        log_message += "(%(duration).2fs)"
         logger.info(
             log_message,
             {

@@ -799,5 +799,13 @@
         "block_index": 871900,
         "testnet3_block_index": 3195137,
         "testnet4_block_index": 0
+    },
+    "taproot_support": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 0,
+        "minimum_version_revision": 0,
+        "block_index": 900000,
+        "testnet3_block_index": 5000000,
+        "testnet4_block_index": 80000
     }
 }

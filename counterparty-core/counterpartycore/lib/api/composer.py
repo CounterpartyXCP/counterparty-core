@@ -67,7 +67,7 @@ def is_address_script(address, script_pub_key):
         ]
         script_address = f"{asm[0]}_{'_'.join(addresses)}_{asm[-2]}"
     else:
-        script_address = script.script_to_address2(script_pub_key)
+        script_address = script.script_to_address(script_pub_key)
     return address == script_address
 
 
@@ -609,7 +609,7 @@ OP_PUSHBYTES_73 = "49"
 DUMMY_DER_SIG = "3045" + "00" * 69 + "01"
 DUMMY_REEDEM_SCRIPT = OP_PUSHBYTES_72 + DUMMY_DER_SIG
 DUMMY_PUBKEY = "03" + 32 * "00"
-DUMMY_SCHNORR_SIG = "00" * 65
+DUMMY_SCHNORR_SIG = "00" * 64 + "01"
 
 
 # dummies script_sig from https://learnmeabitcoin.com/technical/script/

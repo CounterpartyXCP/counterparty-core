@@ -368,7 +368,7 @@ def test_multisig_1_of_2_scenario(empty_ledger_db, bitcoind_mock, defaults):
             defaults,
             defaults["p2ms_addresses"][0],
             defaults["p2ms_addresses"][1],
-            "24b52df5dcdf9341260237c6ad9bdd0d6f060e20470aa39528078185a8042eba",
+            "b2a9d1c4348837820f50daa7183b339aa96227026f3f9fc062047de47582ecd3",
         )
 
 
@@ -380,7 +380,7 @@ def test_multisig_2_of_2_scenario(empty_ledger_db, bitcoind_mock, defaults):
             defaults,
             defaults["p2ms_addresses"][3],
             defaults["p2ms_addresses"][4],
-            "bb413c2bd3ea862c54366a7024df02d0980a6f35860f0a2f7f6663275c9688ca",
+            "668203a184d45edf5e6f9e69635689beab5853e84ebe4ac8d1e3399272466a8c",
         )
 
 
@@ -392,7 +392,7 @@ def test_multisig_1_of_3_scenario(empty_ledger_db, bitcoind_mock, defaults):
             defaults,
             defaults["p2ms_addresses"][5],
             defaults["p2ms_addresses"][6],
-            "3a3de61b47b2a1c05805e63dedd298d6757a4a5f55997ba82c2b2e892de05992",
+            "4f46f4834ac7680aa771d8e92e4cb768e1f5c77393576ee29c7df9a570ca8866",
         )
 
 
@@ -404,7 +404,7 @@ def test_multisig_2_of_3_scenario(empty_ledger_db, bitcoind_mock, defaults):
             defaults,
             defaults["p2ms_addresses"][7],
             defaults["p2ms_addresses"][8],
-            "8e908ca910facebd0f36d71fab68766fea6b3096fab762326630aa4541cb9807",
+            "b848c8d93bf402b7203a59567ab5bdf6346d1f0281a1adbfe425c6fe84d45f50",
         )
 
 
@@ -416,5 +416,5 @@ def test_multisig_3_of_3_scenario(empty_ledger_db, bitcoind_mock, defaults):
             defaults,
             defaults["p2ms_addresses"][9],
             defaults["p2ms_addresses"][10],
-            "a269b831b30baaa5506145564f85d6b494d5ed47f9ad43b6c678c17f1691f035",
+            "565eb55a00eea4f1f2b1859f93b64933c4d19feac3d87b95cd1f2cd66514b5fd",
         )

@@ -99,7 +99,8 @@ DEFAULT_PARAMS["p2sh_addresses"] = [
 
 DEFAULT_PARAMS["p2wpkh_addresses"] = ["bcrt1qfaw3f6ryl9jn4f5l0x7qdccxyl82snmwkrcfh9"]
 DEFAULT_PARAMS["p2tr_addresses"] = [
-    "bcrt1ps7gfq0h0hwu2cql9azz0wcf8rphr6xxeeyenrugd6yf263pxg9tqzsj5ec"
+    "bcrt1ps7gfq0h0hwu2cql9azz0wcf8rphr6xxeeyenrugd6yf263pxg9tqzsj5ec",
+    "bcrt1pw9jnqadndm3aydgm2kqanwvs2usuhlnqkuwwyfgpux6ya5p6j6zqv8fklm",
 ]
 
 DEFAULT_PARAMS["privkey"] = {addr: priv for (addr, pubkeyhash, priv, pub) in ADDRESSES}
@@ -121,4 +122,10 @@ DEFAULT_PARAMS["privkey"]["bcrt1ps7gfq0h0hwu2cql9azz0wcf8rphr6xxeeyenrugd6yf263p
 )
 DEFAULT_PARAMS["pubkey"]["bcrt1ps7gfq0h0hwu2cql9azz0wcf8rphr6xxeeyenrugd6yf263pxg9tqzsj5ec"] = (
     "02668438245808cbdae4ad03651c184c13be0f46d5153f3363d3d3bf1267d1df7e"
+)
+DEFAULT_PARAMS["privkey"]["bcrt1pw9jnqadndm3aydgm2kqanwvs2usuhlnqkuwwyfgpux6ya5p6j6zqv8fklm"] = (
+    "cS4VaPdnSe4fKbHjp7HTytcMaYtrmdmwPctAFRQkSm9dLXnC3L5F"
+)
+DEFAULT_PARAMS["pubkey"]["bcrt1pw9jnqadndm3aydgm2kqanwvs2usuhlnqkuwwyfgpux6ya5p6j6zqv8fklm"] = (
+    "0228d528e9cb4df1d4953772799a9d1c3ed50b8c766d9f3e282c38bcb95b8a5900"
 )
