@@ -139,3 +139,82 @@ def dhash(text):
 
 def dhash_string(text):
     return binascii.hexlify(dhash(text)).decode()
+
+
+def int_to_bytes(integer_in: int) -> bytes:
+    if integer_in == 0:
+        return b"\x00"
+    binary = bin(integer_in)[2:]
+    byte_length = (len(binary) + 7) // 8
+    return integer_in.to_bytes(byte_length, "little")
+
+
+def bytes_to_int(bytes_in: bytes) -> int:
+    return int.from_bytes(bytes_in, "little")
+
+
+def varint(number):
+    """Pack `number` into varint bytes"""
+    buf = b""
+    while True:
+        towrite = number & 0x7F
+        number >>= 7
+        if number:
+            buf += bytes((towrite | 0x80,))
+        else:
+            buf += bytes((towrite,))
+            break
+    return buf
+
+
+def encode_data(*args):
+    data = b""
+    for arg in args:
+        value = b""
+        if isinstance(arg, str):
+            if all(c in string.hexdigits for c in arg):
+                try:
+                    value = bytes.fromhex(arg)
+                except ValueError:
+                    value = arg.encode("utf-8")
+            else:
+                value = arg.encode("utf-8")
+        elif isinstance(arg, int):
+            value = int_to_bytes(arg)
+        elif isinstance(arg, bytes):
+            value = arg
+        data += varint(len(value)) + value
+    return data
+
+
+def decode_varint(data, offset=0):
+    """Unpack varint bytes starting at offset into a number."""
+    result = 0
+    shift = 0
+    while True:
+        byte = data[offset]
+        result |= (byte & 0x7F) << shift
+        offset += 1
+        if not byte & 0x80:
+            break
+        shift += 7
+    return result, offset
+
+
+def decode_data(data):
+    """Decode data encoded with encode_data back into a list of values."""
+    if not isinstance(data, bytes):
+        raise TypeError("Input must be bytes")
+
+    result = []
+    offset = 0
+    while offset < len(data):
+        # Decode the length of the next value
+        length, new_offset = decode_varint(data, offset)
+        # Extract the value bytes
+        value = data[new_offset : new_offset + length]
+        result.append(value)
+        # Update offset to point after this value
+        offset = new_offset + length
+
+    return result

@@ -184,7 +184,7 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
 
 
 def generate_urls(counterparty_zst_url):
-    state_zst_url = counterparty_zst_url.replace("/counterparty.db", "/state.db")
+    state_zst_url = counterparty_zst_url.replace("/counterparty.", "/state.")
     return [
         (
             counterparty_zst_url,

@@ -464,6 +464,21 @@ def test_compose_invalid(ledger_db, defaults):
             None,
         )
 
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(f"Address not supported by MPMA send: {defaults['p2tr_addresses'][1]}"),
+    ):
+        mpma.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [
+                ("XCP", defaults["addresses"][2], defaults["quantity"]),
+                ("XCP", defaults["p2tr_addresses"][1], 0.1),
+            ],
+            None,
+            None,
+        )
+
 
 def test_parse_2_sends(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])

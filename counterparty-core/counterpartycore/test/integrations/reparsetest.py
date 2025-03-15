@@ -48,7 +48,11 @@ def prepare(network):
 
 
 def bootstrap(sh_counterparty_server):
-    sh_counterparty_server("bootstrap")
+    sh_counterparty_server(
+        "bootstrap",
+        "--bootstrap-url",
+        "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.v11.0.0.zst",
+    )
 
 
 def reparse(sh_counterparty_server, db_file):
