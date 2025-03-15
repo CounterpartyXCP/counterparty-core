@@ -205,6 +205,121 @@ def check_mpma_send(node, source_private_key, utxo, quantity):
     return new_utxo
 
 
+def check_broadcast(node, source_private_key, utxo, text):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "broadcast",
+        {
+            "timestamp": 4003903983,
+            "value": 999,
+            "fee_fraction": 0.0,
+            "text": text,
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/broadcasts")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["text"] == text
+
+    return new_utxo
+
+
+def check_fairminter(node, source_private_key, utxo):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "fairminter",
+        {
+            "asset": "FAIRMINT",
+            "price": 1,
+            "hard_cap": 100 * 10**8,
+            "description": "lore ipsum, lore ipsum, lore ipsum, lore ipsum, lorem ipsum",
+            "premint_quantity": 100,
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/fairminters")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "FAIRMINT"
+
+    return new_utxo
+
+
+def check_fairmint(node, source_private_key, utxo):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "fairmint",
+        {
+            "asset": "FAIRMINT",
+            "quantity": 1,
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/fairmints")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "FAIRMINT"
+
+    return new_utxo
+
+
+def check_dispensers(node, source_private_key, utxo):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "dispenser",
+        {
+            "asset": "FAIRMINT",
+            "give_quantity": 1,
+            "escrow_quantity": 10,
+            "mainchainrate": 1,  # 1 BTC for 1 XCP
+            "status": 0,
+            "validate": False,
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/dispensers")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "FAIRMINT"
+
+    return new_utxo
+
+
+def check_dispense(node, source_private_key, utxo, dispenser):
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "dispense",
+        {
+            "dispenser": dispenser,
+            "quantity": 1,
+        },
+    )
+
+    result = node.api_call(f"addresses/{source_address}/dispenses/receives")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "FAIRMINT"
+
+    return new_utxo
+
+
 def test_p2ptr_inscription():
     setup("regtest")
 
@@ -220,6 +335,15 @@ def test_p2ptr_inscription():
         utxo = check_send(node, source_private_key, utxo, 10)
         utxo = check_send(node, source_private_key, utxo, 20)
         utxo = check_mpma_send(node, source_private_key, utxo, 10)
+        utxo = check_broadcast(node, source_private_key, utxo, "a" * 10000)
+        utxo = check_fairminter(node, source_private_key, utxo)
+        utxo = check_fairmint(node, source_private_key, utxo)
+        utxo = check_dispensers(node, source_private_key, utxo)
+
+        # source_private_key_2, utxo_2 = generate_taproot_funded_address(node)
+        # dispenser_address = source_private_key.get_public_key().get_taproot_address().to_string()
+
+        # utxo = check_dispense(node, source_private_key_2, utxo_2, dispenser_address)
 
     finally:
         print(regtest_node_thread.node.server_out.getvalue())
