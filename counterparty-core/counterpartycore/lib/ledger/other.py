@@ -115,6 +115,21 @@ def get_send_msg_index(db, tx_hash):
     return msg_index
 
 
+def get_issuance_msg_index(db, tx_hash):
+    cursor = db.cursor()
+    last_msg_index = cursor.execute(
+        """
+        SELECT MAX(msg_index) as msg_index FROM issuances WHERE tx_hash = ?
+    """,
+        (tx_hash,),
+    ).fetchone()
+    if last_msg_index and last_msg_index["msg_index"] is not None:
+        msg_index = last_msg_index["msg_index"] + 1
+    else:
+        msg_index = 0
+    return msg_index
+
+
 #####################
 #       BETS        #
 #####################
