@@ -13,7 +13,7 @@ use bitcoin::{
         OP_PUSHNUM_3, OP_RETURN,
     },
     script::Instruction::{Op, PushBytes},
-    Block, BlockHash, Script, TxOut,
+    Block, BlockHash, Script, TxOut, Txid,
 };
 
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
@@ -149,6 +149,18 @@ fn parse_vout(
             .collect::<Vec<_>>()
             .as_slice()
         {
+            if config.taproot_support_enabled(height) {
+                let bytes = pb.as_bytes();
+                if bytes == b"CNTRPRTY" {
+                    return Ok((
+                        ParseOutput::Data(bytes.to_vec()),
+                        Some(PotentialDispenser {
+                            destination: None,
+                            value: None,
+                        }),
+                    ));
+                }
+            }
             let bytes = arc4_decrypt(&key, pb.as_bytes());
             if bytes.starts_with(&config.prefix) {
                 return Ok((
@@ -407,6 +419,21 @@ pub fn parse_transaction(
     let mut segwit = false;
     let mut vtxinwit: Vec<Vec<String>> = Vec::new();
 
+    // Always process all inputs
+    for (i, vin) in tx.input.iter().enumerate() {
+        if !vin.witness.is_empty() {
+            vtxinwit.push(
+                vin.witness
+                    .iter()
+                    .map(|w| w.as_hex().to_string())
+                    .collect::<Vec<_>>(),
+            );
+            segwit = true;
+        } else {
+            vtxinwit.push(Vec::new());
+        }
+    }
+
     let key = if !tx.input.is_empty() {
         let mut key = tx.input[0].previous_output.txid.to_byte_array().to_vec();
         key.reverse();
@@ -420,6 +447,9 @@ pub fn parse_transaction(
     let mut fee = 0;
     let mut btc_amount = 0;
     let mut data = Vec::new();
+    let mut is_reveal_tx = false;
+    let mut commit_parent_txid = Txid::from_raw_hash(Sha256dHash::all_zeros());
+    let mut commit_parent_vout = 0;
     let mut potential_dispensers = Vec::new();
     let mut err = None;
     for vout in tx.output.iter() {
@@ -462,7 +492,33 @@ pub fn parse_transaction(
                     } else if parse_output.is_destination() {
                         break;
                     } else if let ParseOutput::Data(mut new_data) = parse_output {
-                        data.append(&mut new_data)
+                        // reveal transaction data
+                        if config.taproot_support_enabled(height) && new_data == b"CNTRPRTY" && !vtxinwit.is_empty() && vtxinwit[0].len() == 3 {
+                            if let Ok(bytes) = hex::decode(&vtxinwit[0][1]) {
+                                let script = Script::from_bytes(&bytes);
+                                let mut inscription_data = Vec::new();
+                                let instructions: Vec<_> = script.instructions().collect();
+                                
+                                if instructions.len() > 3 {
+                                    for i in 2..instructions.len()-1 {
+                                        if let Ok(PushBytes(bytes)) = &instructions[i] {
+                                            inscription_data.extend_from_slice(bytes.as_bytes());
+                                        }
+                                    }
+                                    if !inscription_data.is_empty() {
+                                        is_reveal_tx = true;
+                                        data.append(&mut inscription_data);
+                                    }
+                                }
+                            } else {
+                                err = Some(Error::ParseVout(format!(
+                                    "Failed to decode taproot witness hex for tx: {}",
+                                    tx.compute_txid().to_string()
+                                )));
+                            }
+                        } else {
+                            data.append(&mut new_data)
+                        }
                     }
                 }
             }
@@ -481,6 +537,7 @@ pub fn parse_transaction(
                 fee,
                 data: data.clone(),
                 potential_dispensers,
+                is_reveal_tx,
             })
         };
     }
@@ -500,49 +557,66 @@ pub fn parse_transaction(
         }
 
         if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
-            let input_txids: Vec<_> = tx
-                .input
-                .iter()
-                .map(|vin| vin.previous_output.txid)
-                .collect();
-            prev_txs = batch_client
-                .get_transactions(&input_txids)
-                .unwrap_or_default();
-        }
-    }
-
-    // Always process all inputs
-    for (i, vin) in tx.input.iter().enumerate() {
-        if !vin.witness.is_empty() {
-            vtxinwit.push(
-                vin.witness
+            if config.p2sh_address_supported(height) && !tx.input.is_empty() {
+                // we get only one input
+                let input_txid = tx.input[0].previous_output.txid;
+                if let Ok(fetched_txs) =  batch_client.get_transactions(&[input_txid]) {
+                    if !fetched_txs.is_empty() {
+                        prev_txs[0] = fetched_txs[0].clone();
+                    }
+                }
+                if is_reveal_tx && !prev_txs.is_empty() {
+                    if let Some(prev_tx) = &prev_txs[0] {
+                        if !prev_tx.input.is_empty() {
+                            commit_parent_txid = prev_tx.input[0].previous_output.txid;
+                            commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
+                            if let Ok(fetched_txs) = batch_client.get_transactions(&[commit_parent_txid]) {
+                                if !fetched_txs.is_empty() {
+                                    prev_txs[0] = fetched_txs[0].clone();
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                let input_txids: Vec<_> = tx
+                    .input
                     .iter()
-                    .map(|w| w.as_hex().to_string())
-                    .collect::<Vec<_>>(),
-            );
-            segwit = true;
-        } else {
-            vtxinwit.push(Vec::new());
+                    .map(|vin| vin.previous_output.txid)
+                    .collect();
+                prev_txs = batch_client
+                    .get_transactions(&input_txids)
+                    .unwrap_or_default();
+            }
         }
     }
 
     for (i, vin) in tx.input.iter().enumerate() {
         let hash = vin.previous_output.txid.to_string();
-        let vin_info = prev_txs.get(i).and_then(|prev_tx| {
-            prev_tx.as_ref().and_then(|tx| {
-                let vout_idx = vin.previous_output.vout as usize;
+        let vin_info = if config.p2sh_address_supported(height) && i > 0 {
+            None
+        } else {
+            prev_txs.get(i).and_then(|prev_tx| {
+                prev_tx.as_ref().and_then(|tx| {
+                    let vout_idx;
+                    if tx.compute_txid() == commit_parent_txid {
+                        vout_idx = commit_parent_vout
+                    } else {
+                        vout_idx = vin.previous_output.vout as usize;
+                    }
 
-                let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
-                    tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
-                });
+                    let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
+                        tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
+                    });
 
-                tx.output.get(vout_idx).map(|output| VinOutput {
-                    value: output.value.to_sat(),
-                    script_pub_key: output.script_pubkey.to_bytes(),
-                    is_segwit: is_segwit,
+                    tx.output.get(vout_idx).map(|output| VinOutput {
+                        value: output.value.to_sat(),
+                        script_pub_key: output.script_pubkey.to_bytes(),
+                        is_segwit: is_segwit,
+                    })
                 })
             })
-        });
+        };
 
         vins.push(Vin {
             hash,

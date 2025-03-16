@@ -1447,7 +1447,7 @@ def test_prepare_construct_params(defaults):
     expected_params = {
         "sat_per_vbyte": 1,
         "max_fee": 666,
-        "mutlisig_pubkey": defaults["pubkey"][defaults["addresses"][0]],
+        "multisig_pubkey": defaults["pubkey"][defaults["addresses"][0]],
         "verbose": True,
         "regular_dust_size": 357,
         "multisig_dust_size": 1200,
@@ -1461,7 +1461,7 @@ def test_prepare_construct_params(defaults):
     expected_warnings = [
         "The `fee_per_kb` parameter is deprecated, use `sat_per_vbyte` instead",
         "The `fee_provided` parameter is deprecated, use `max_fee` instead",
-        "The `dust_return_pubkey` parameter is deprecated, use `mutlisig_pubkey` instead",
+        "The `dust_return_pubkey` parameter is deprecated, use `multisig_pubkey` instead",
         "The `return_psbt` parameter is deprecated, use `verbose` instead",
         "The `regular_dust_size` parameter is deprecated, automatically calculated",
         "The `multisig_dust_size` parameter is deprecated, automatically calculated",
@@ -1494,7 +1494,7 @@ def test_prepare_construct_params(defaults):
     expected_params = {
         "sat_per_vbyte": 1023 / 1024,
         "max_fee": 666,
-        "mutlisig_pubkey": defaults["pubkey"][defaults["addresses"][0]],
+        "multisig_pubkey": defaults["pubkey"][defaults["addresses"][0]],
         "verbose": True,
         "regular_dust_size": 357,
         "multisig_dust_size": 1200,

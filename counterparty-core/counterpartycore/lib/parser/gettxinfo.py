@@ -269,6 +269,9 @@ def get_transaction_sources(decoded_tx):
             if new_source not in sources:
                 sources.append(new_source)
 
+        if protocol.enabled("first_input_is_source") and len(sources) > 0:
+            break
+
     return "-".join(sources), outputs_value
 
 
@@ -366,7 +369,9 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if decoded_tx["parsed_vouts"] == "DecodeError":
         raise DecodeError("unrecognised output type")
 
-    destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
+    destinations, btc_amount, fee, data, potential_dispensers, is_reveal_tx = decoded_tx[
+        "parsed_vouts"
+    ]
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output
